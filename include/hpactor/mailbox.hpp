@@ -1,8 +1,13 @@
 #pragma once
 #include <cstddef>
+#include <memory>
 #include <hpactor/message.hpp>
 
 namespace hpactor {
+
+// Forward declaration - full definition in mutex_mailbox.hpp
+template<typename T>
+class MutexMailbox;
 
 template<typename T>
 class IMailbox {
@@ -19,5 +24,20 @@ public:
     virtual size_t size() const = 0;
     virtual bool empty() const = 0;
 };
+
+// Default implementation selector
+enum class MailboxType {
+    Mutex,       // Thread-safe, slower
+    LockFree,   // TODO: Implementation TBD after stress tests pass
+};
+
+// Factory function
+template<typename T, MailboxType Type = MailboxType::Mutex>
+std::unique_ptr<IMailbox<T>> create_mailbox() {
+    if constexpr (Type == MailboxType::Mutex) {
+        return std::make_unique<MutexMailbox<T>>();
+    }
+    // LockFree would be added here later
+}
 
 }
