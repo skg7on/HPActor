@@ -17,8 +17,8 @@ public:
 
 protected:
     virtual Behavior make_behavior() { return {}; }
-    virtual void on_activate();
-    virtual void on_deactivate();
+    void on_activate() override;
+    void on_deactivate() override;
     virtual void on_exit() {}
 
     event_based_actor(ActorContext* ctx, ActorSystem& sys);
