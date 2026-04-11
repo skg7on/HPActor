@@ -4,6 +4,7 @@
 #include <chrono>
 #include <cstdint>
 #include <string>
+#include <variant>
 #include <vector>
 
 namespace hpactor {
@@ -101,6 +102,45 @@ constexpr uint32_t mailbox_full = 4;
 constexpr uint32_t timeout = 5;
 constexpr uint32_t user = 1000;
 } // namespace errors
+
+// -----------------------------------------------------------------------------
+// result<T> - return type for message handlers
+// -----------------------------------------------------------------------------
+template<typename T>
+class result {
+public:
+    static result<T> make(T&& value) { return result<T>(std::move(value)); }
+    static result<T> make(class error err) { return result<T>(std::move(err)); }
+
+    bool has_value() const { return has_value_; }
+    T& value() { return std::get<0>(value_); }
+    const class error& error() const { return std::get<1>(value_); }
+
+private:
+    result(T&& val) : has_value_(true), value_(std::move(val)) {}
+    result(class error err) : has_value_(false), value_(err) {}
+
+    bool has_value_;
+    std::variant<T, class error> value_;
+};
+
+template<>
+class result<void> {
+public:
+    static result<void> make() { return result<void>(); }
+    static result<void> make(class error err) { return result<void>(std::move(err)); }
+
+    bool has_value() const { return has_value_; }
+    void value() const {} // No-op for void
+    const class error& error() const { return error_; }
+
+private:
+    result<void>() : has_value_(true) {}
+    result<void>(class error err) : has_value_(false), error_(std::move(err)) {}
+
+    bool has_value_;
+    class error error_;
+};
 
 // -----------------------------------------------------------------------------
 // Clock - for time-based operations

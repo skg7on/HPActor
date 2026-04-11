@@ -28,6 +28,10 @@ target_link_libraries(test_mailbox_factory hpactor)
 add_executable(test_types test_types.cpp)
 target_link_libraries(test_types hpactor)
 
+# test_result
+add_executable(test_result test_result.cpp)
+target_link_libraries(test_result hpactor)
+
 # Register all tests with CTest
 add_test(NAME test_message COMMAND test_message)
 add_test(NAME test_message_advanced COMMAND test_message_advanced)
@@ -36,3 +40,4 @@ add_test(NAME test_mutex_mailbox COMMAND test_mutex_mailbox)
 add_test(NAME test_mailbox_stress COMMAND test_mailbox_stress)
 add_test(NAME test_mailbox_factory COMMAND test_mailbox_factory)
 add_test(NAME test_types COMMAND test_types)
+add_test(NAME test_result COMMAND test_result)
