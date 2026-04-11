@@ -48,6 +48,10 @@ target_link_libraries(test_abstract_actor hpactor)
 add_executable(test_event_based_actor test_event_based_actor.cpp)
 target_link_libraries(test_event_based_actor hpactor)
 
+# test_blocking_actor
+add_executable(test_blocking_actor test_blocking_actor.cpp)
+target_link_libraries(test_blocking_actor hpactor)
+
 # Register all tests with CTest
 add_test(NAME test_message COMMAND test_message)
 add_test(NAME test_message_advanced COMMAND test_message_advanced)
@@ -61,3 +65,4 @@ add_test(NAME test_actor_address COMMAND test_actor_address)
 add_test(NAME test_actor_ref COMMAND test_actor_ref)
 add_test(NAME test_abstract_actor COMMAND test_abstract_actor)
 add_test(NAME test_event_based_actor COMMAND test_event_based_actor)
+add_test(NAME test_blocking_actor COMMAND test_blocking_actor)

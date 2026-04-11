@@ -17,6 +17,9 @@ protected:
     local_actor(ActorContext* ctx, ActorSystem& sys);
     local_actor(ActorId id, ActorContext* ctx, ActorSystem& sys);
 
+    virtual void on_activate() {}
+    virtual void on_deactivate() {}
+
 private:
     ActorContext* ctx_ = nullptr;
 };
