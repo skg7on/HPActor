@@ -1,7 +1,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor_context.hpp>
 
 namespace hpactor {
 
