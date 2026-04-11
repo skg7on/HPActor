@@ -8,9 +8,6 @@
 
 namespace hpactor {
 
-// Forward declarations
-class Connection;
-
 namespace net {
 
 // -----------------------------------------------------------------------------
@@ -23,43 +20,6 @@ enum class TransportError {
     SerializationFailed = 3,
     BufferOverflow = 4,
     NotConnected = 5,
-};
-
-// -----------------------------------------------------------------------------
-// Transport - abstraction for network communication
-// -----------------------------------------------------------------------------
-// The Transport interface provides connection management and message sending
-// for distributed actor communication. Each Transport is associated with
-// a specific node and handles all outgoing connections to remote nodes.
-// -----------------------------------------------------------------------------
-class Transport {
-public:
-    virtual ~Transport() = default;
-
-    // Connect to a remote node (blocking)
-    // Returns a Connection pointer on success, nullptr on failure
-    virtual std::unique_ptr<Connection> connect(NodeId remote_node,
-                                                const std::string& host,
-                                                uint16_t port) = 0;
-
-    // Start listening for incoming connections (non-blocking)
-    virtual void listen(uint16_t port) = 0;
-
-    // Stop listening
-    virtual void stop_listening() = 0;
-
-    // Send a message to a remote actor
-    // The encoded parameter contains the serialized message
-    virtual void send(const ActorAddress& target, const bytes& encoded) = 0;
-
-    // Check if connected to a specific node
-    virtual bool is_connected(NodeId remote_node) const = 0;
-
-    // Get this transport's node ID
-    virtual NodeId node_id() const = 0;
-
-    // Close connection to a specific node
-    virtual void close_connection(NodeId remote_node) = 0;
 };
 
 // -----------------------------------------------------------------------------
@@ -113,6 +73,43 @@ private:
 
 // Connection pointer type
 using ConnectionPtr = std::shared_ptr<Connection>;
+
+// -----------------------------------------------------------------------------
+// Transport - abstraction for network communication
+// -----------------------------------------------------------------------------
+// The Transport interface provides connection management and message sending
+// for distributed actor communication. Each Transport is associated with
+// a specific node and handles all outgoing connections to remote nodes.
+// -----------------------------------------------------------------------------
+class Transport {
+public:
+    virtual ~Transport() = default;
+
+    // Connect to a remote node (blocking)
+    // Returns a Connection pointer on success, nullptr on failure
+    virtual ConnectionPtr connect(NodeId remote_node,
+                                const std::string& host,
+                                uint16_t port) = 0;
+
+    // Start listening for incoming connections (non-blocking)
+    virtual void listen(uint16_t port) = 0;
+
+    // Stop listening
+    virtual void stop_listening() = 0;
+
+    // Send a message to a remote actor
+    // The encoded parameter contains the serialized message
+    virtual void send(const ActorAddress& target, const bytes& encoded) = 0;
+
+    // Check if connected to a specific node
+    virtual bool is_connected(NodeId remote_node) const = 0;
+
+    // Get this transport's node ID
+    virtual NodeId node_id() const = 0;
+
+    // Close connection to a specific node
+    virtual void close_connection(NodeId remote_node) = 0;
+};
 
 } // namespace net
 } // namespace hpactor

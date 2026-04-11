@@ -66,6 +66,10 @@ add_library(hpactor_lib STATIC
     src/local_actor.cpp
     src/supervision.cpp
     src/scheduler.cpp
+    src/event_loop.cpp
+    src/acceptor.cpp
+    src/connection.cpp
+    src/tcp_transport.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 
