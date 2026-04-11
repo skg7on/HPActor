@@ -14,8 +14,10 @@ class error;
 using NodeId = uint32_t;
 using ActorType = uint32_t;
 using incarnation_type = uint64_t;
-using AlarmHandle = uint64_t;
-using Clock = std::chrono::steady_clock;
+class AlarmHandle;
+class Clock;
+template<typename T>
+class Task;
 
 namespace errors {
 constexpr uint32_t unknown = 1;

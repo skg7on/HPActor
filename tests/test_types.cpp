@@ -56,7 +56,8 @@ int main() {
     assert(id1 != id2); // Each call should be unique
 
     // Test 11: Clock
-    hpactor::Clock::time_point tp = hpactor::Clock::now();
+    hpactor::Clock clock;
+    hpactor::Clock::time_point tp = clock.now();
     hpactor::Clock::duration dur = hpactor::Clock::duration(100);
     hpactor::Clock::time_point tp2 = tp + dur;
     assert(tp2 > tp);

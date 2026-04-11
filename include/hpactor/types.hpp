@@ -104,7 +104,12 @@ constexpr uint32_t user = 1000;
 // -----------------------------------------------------------------------------
 // Clock - for time-based operations
 // -----------------------------------------------------------------------------
-using Clock = std::chrono::steady_clock;
+class Clock {
+public:
+    using time_point = std::chrono::steady_clock::time_point;
+    using duration = std::chrono::milliseconds;
+    time_point now() const { return std::chrono::steady_clock::now(); }
+};
 
 // -----------------------------------------------------------------------------
 // AlarmHandle - opaque handle for alarms
