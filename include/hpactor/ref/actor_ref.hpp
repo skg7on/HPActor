@@ -12,21 +12,21 @@ class Actor {
   public:
     Actor() = default;
 
-    explicit Actor(std::shared_ptr<abstract_actor> ptr)
+    explicit Actor(std::shared_ptr<AbstractActor> ptr)
         : actor_(std::move(ptr)) {}
 
     ActorId id() const {
-        // TODO: delegate to actor_->id() once abstract_actor is defined
+        // TODO: delegate to actor_->id() once AbstractActor is defined
         return ActorId{};
     }
 
     ActorType type() const {
-        // TODO: delegate to actor_->type() once abstract_actor is defined
+        // TODO: delegate to actor_->type() once AbstractActor is defined
         return ActorType{0};
     }
 
     ActorAddress address() const {
-        // TODO: delegate to actor_->address() once abstract_actor is defined
+        // TODO: delegate to actor_->address() once AbstractActor is defined
         return ActorAddress{};
     }
 
@@ -43,7 +43,7 @@ class Actor {
     }
 
   private:
-    std::shared_ptr<abstract_actor> actor_;
+    std::shared_ptr<AbstractActor> actor_;
 };
 
 } // namespace hpactor

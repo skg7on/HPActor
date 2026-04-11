@@ -6,10 +6,10 @@
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
-// event_based_actor - cooperatively scheduled actor with behavior-based
+// EventBasedActor - cooperatively scheduled actor with behavior-based
 // handling
 // -----------------------------------------------------------------------------
-class event_based_actor : public local_actor {
+class EventBasedActor : public LocalActor {
   public:
     void become(Behavior bh);
     void become_empty();
@@ -24,7 +24,7 @@ class event_based_actor : public local_actor {
     void on_deactivate() override;
     virtual void on_exit() {}
 
-    event_based_actor(ActorContext* ctx, ActorSystem& sys);
+    EventBasedActor(ActorContext* ctx, ActorSystem& sys);
 
   private:
     Behavior behavior_;

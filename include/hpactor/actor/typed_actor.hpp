@@ -8,12 +8,12 @@
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
-// typed_event_based_actor - statically typed event-based actor
+// TypedEventBasedActor - statically typed event-based actor
 // -----------------------------------------------------------------------------
 template <typename... Signatures>
-class typed_event_based_actor : public local_actor {
+class TypedEventBasedActor : public LocalActor {
   public:
-    using behavior_type = typed_behavior<Signatures...>;
+    using behavior_type = TypedBehavior<Signatures...>;
 
     void become(behavior_type bh) {
         behavior_ = std::move(bh);
@@ -28,11 +28,11 @@ class typed_event_based_actor : public local_actor {
   protected:
     virtual behavior_type make_behavior() = 0;
 
-    typed_event_based_actor(ActorContext* ctx, ActorSystem& sys)
-        : local_actor(ctx, sys) {}
+    TypedEventBasedActor(ActorContext* ctx, ActorSystem& sys)
+        : LocalActor(ctx, sys) {}
 
-    typed_event_based_actor(ActorId id, ActorContext* ctx, ActorSystem& sys)
-        : local_actor(id, ctx, sys) {}
+    TypedEventBasedActor(ActorId id, ActorContext* ctx, ActorSystem& sys)
+        : LocalActor(id, ctx, sys) {}
 
     void on_activate() override {}
     void on_deactivate() override {}
@@ -44,11 +44,11 @@ class typed_event_based_actor : public local_actor {
 };
 
 // -----------------------------------------------------------------------------
-// typed_actor - type-safe reference to a typed_event_based_actor
+// typed_actor - type-safe reference to a TypedEventBasedActor
 // -----------------------------------------------------------------------------
 template <typename... Signatures> class typed_actor {
   public:
-    using base_type = typed_event_based_actor<Signatures...>;
+    using base_type = TypedEventBasedActor<Signatures...>;
 
     typed_actor() = default;
     explicit typed_actor(std::shared_ptr<base_type> ptr)

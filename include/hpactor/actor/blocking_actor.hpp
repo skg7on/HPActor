@@ -12,9 +12,9 @@
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
-// blocking_actor - actor that runs in its own thread with blocking receive
+// BlockingActor - actor that runs in its own thread with blocking receive
 // -----------------------------------------------------------------------------
-class blocking_actor : public local_actor {
+class BlockingActor : public LocalActor {
   public:
     template <typename... Handlers> void receive(Handlers&&... handlers);
 
@@ -33,8 +33,8 @@ class blocking_actor : public local_actor {
     }
 
   protected:
-    blocking_actor(ActorContext* ctx, ActorSystem& sys);
-    blocking_actor(ActorId id, ActorContext* ctx, ActorSystem& sys);
+    BlockingActor(ActorContext* ctx, ActorSystem& sys);
+    BlockingActor(ActorId id, ActorContext* ctx, ActorSystem& sys);
 
     virtual void on_activate() override;
     virtual void on_deactivate() override;

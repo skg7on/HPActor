@@ -5,10 +5,10 @@
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
-// stateful_actor - event_based_actor with explicit state managed via a state
+// StatefulActor - EventBasedActor with explicit state managed via a state
 // class T
 // -----------------------------------------------------------------------------
-template <typename T> class stateful_actor : public event_based_actor {
+template <typename T> class StatefulActor : public EventBasedActor {
   public:
     T& state() {
         return state_;

@@ -36,10 +36,10 @@ class Supervisor {
     virtual void on_child_stopped(ActorId child_id);
 };
 
-// supervisor_actor - event_based_actor that implements supervision
-class supervisor_actor : public event_based_actor {
+// SupervisorActor - EventBasedActor that implements supervision
+class SupervisorActor : public EventBasedActor {
   public:
-    supervisor_actor(ActorContext* ctx, ActorSystem& sys, Supervisor& strategy,
+    SupervisorActor(ActorContext* ctx, ActorSystem& sys, Supervisor& strategy,
                      std::vector<Actor> children);
 
   protected:
@@ -55,10 +55,10 @@ class supervisor_actor : public event_based_actor {
     std::chrono::steady_clock::time_point first_failure_time_;
 };
 
-// self_supervising_actor - event_based_actor that manages its own children
-class self_supervising_actor : public event_based_actor {
+// SelfSupervisingActor - EventBasedActor that manages its own children
+class SelfSupervisingActor : public EventBasedActor {
   public:
-    self_supervising_actor(ActorContext* ctx, ActorSystem& sys,
+    SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
                            SupervisionPolicy policy = SupervisionPolicy{});
 
     void add_child(Actor child);

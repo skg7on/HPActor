@@ -8,12 +8,12 @@ namespace hpactor {
 class ActorSystem;
 
 // -----------------------------------------------------------------------------
-// scoped_actor - blocking actor for non-actor contexts (e.g., main function)
+// ScopedActor - blocking actor for non-actor contexts (e.g., main function)
 // -----------------------------------------------------------------------------
-class scoped_actor : public blocking_actor {
+class ScopedActor : public BlockingActor {
   public:
-    explicit scoped_actor(ActorSystem& sys);
-    ~scoped_actor();
+    explicit ScopedActor(ActorSystem& sys);
+    ~ScopedActor();
 
     template <typename T> T receive();
 };

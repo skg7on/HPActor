@@ -43,8 +43,8 @@ std::unique_ptr<IMailbox<T>> create_mailbox() {
     // LockFree would be added here later
 }
 
-// ActorBase - alias for abstract_actor (base class for all actors)
-using ActorBase = abstract_actor;
+// ActorBase - alias for AbstractActor (base class for all actors)
+using ActorBase = AbstractActor;
 
 // ActorMailbox - mailbox with owner association for actor-specific features
 template <typename T> class ActorMailbox : public IMailbox<T> {

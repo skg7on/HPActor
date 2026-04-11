@@ -30,15 +30,15 @@ template <typename R, typename Msg> struct handler_type<result<R>(Msg)> {
 };
 
 // -----------------------------------------------------------------------------
-// typed_behavior - statically typed behavior for typed actors
+// TypedBehavior - statically typed behavior for typed actors
 // -----------------------------------------------------------------------------
-template <typename... Signatures> class typed_behavior {
+template <typename... Signatures> class TypedBehavior {
   public:
     using result_type = void;
 
-    typed_behavior() = default;
+    TypedBehavior() = default;
 
-    template <typename T> typed_behavior& operator()(T&& /*handler*/) {
+    template <typename T> TypedBehavior& operator()(T&& /*handler*/) {
         return *this;
     }
 
