@@ -1,5 +1,6 @@
 #pragma once
 
+#include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <string>
@@ -58,15 +59,15 @@ struct MessageId {
     bool operator==(const MessageId& other) const { return value_ == other.value_; }
     bool operator!=(const MessageId& other) const { return !(*this == other); }
 
-    static MessageId generate() { return MessageId(next_id_++); }
+    static MessageId generate() { return MessageId(next_id_.fetch_add(1)); }
 
 private:
     counter_type value_ = 0;
-    static counter_type next_id_;
+    static std::atomic<uint64_t> next_id_;
 };
 
 // Definition of static member
-inline MessageId::counter_type MessageId::next_id_ = 1;
+inline std::atomic<uint64_t> MessageId::next_id_{1};
 
 // -----------------------------------------------------------------------------
 // error - error code wrapper (no exceptions in hot path)
