@@ -19,10 +19,10 @@ struct ActorId {
 
     explicit ActorId(counter_type value) : value_(value) {}
 
-    counter_type value() const { return value_; }
+    counter_type value() const noexcept { return value_; }
 
-    bool operator==(const ActorId& other) const { return value_ == other.value_; }
-    bool operator!=(const ActorId& other) const { return !(*this == other); }
+    bool operator==(const ActorId& other) const noexcept { return value_ == other.value_; }
+    bool operator!=(const ActorId& other) const noexcept { return !(*this == other); }
 
 private:
     counter_type value_ = 0;
