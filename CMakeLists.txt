@@ -12,6 +12,7 @@ project(HPActor VERSION 0.1.0 LANGUAGES CXX)
 # =============================================================================
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
+option(ENABLE_EXAMPLES "Build example programs" ON)
 
 # Sanitizer mutual exclusivity
 if(ENABLE_ASAN AND ENABLE_TSAN)
@@ -74,3 +75,10 @@ add_library(hpactor ALIAS hpactor_lib)
 # =============================================================================
 enable_testing()
 add_subdirectory(tests)
+
+# =============================================================================
+# Examples
+# =============================================================================
+if(ENABLE_EXAMPLES)
+    add_subdirectory(examples)
+endif()
