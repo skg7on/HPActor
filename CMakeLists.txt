@@ -57,19 +57,19 @@ endif()
 # Library Sources
 # =============================================================================
 add_library(hpactor_lib STATIC
-    src/abstract_actor.cpp
-    src/actor_context.cpp
-    src/actor_proxy.cpp
-    src/actor_ref.cpp
-    src/actor_system.cpp
-    src/event_based_actor.cpp
-    src/local_actor.cpp
-    src/supervision.cpp
-    src/scheduler.cpp
-    src/event_loop.cpp
-    src/acceptor.cpp
-    src/connection.cpp
-    src/tcp_transport.cpp
+    src/actor/abstract_actor.cpp
+    src/actor/actor_context.cpp
+    src/actor/actor_system.cpp
+    src/actor/event_based_actor.cpp
+    src/actor/local_actor.cpp
+    src/actor/scheduler.cpp
+    src/ref/actor_proxy.cpp
+    src/ref/actor_ref.cpp
+    src/supervision/supervision.cpp
+    src/net/event_loop.cpp
+    src/net/acceptor.cpp
+    src/net/connection.cpp
+    src/net/tcp_transport.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 
