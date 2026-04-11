@@ -21,7 +21,7 @@ int main() {
     for (int i = 0; i < num_threads; ++i) {
         threads.emplace_back([&mailbox, &count, i]() {
             for (int j = 0; j < msgs_per_thread; ++j) {
-                mailbox.push(hpactor::Message<StressMsg>{StressMsg{i * 1000 + j}});
+                mailbox.push(hpactor::Message<StressMsg>{StressMsg{i * 1000 + j, {}}});
                 count.fetch_add(1, std::memory_order_relaxed);
             }
         });

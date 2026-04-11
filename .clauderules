@@ -1,6 +1,11 @@
 Design Rules:
 - Core Architecture: Actor Model (Zero shared memory).
 
+Building Rules:
+- DO NOT use cmake reconfiguration if the cmake files not changed.
+- Use Ninja as generator.
+- Generate `compile_commands.json` database file during CMake config phase by default.
+
 Implementation & Coding Rules:
 - Programming Language：C++20
 - Coding Style: Strictly adhere to the LLVM Coding Standards.
