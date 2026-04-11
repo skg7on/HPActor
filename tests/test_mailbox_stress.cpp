@@ -1,14 +1,14 @@
-#include <hpactor/mutex_mailbox.hpp>
-#include <hpactor/message.hpp>
+#include <atomic>
 #include <cassert>
+#include <cstdio>
+#include <hpactor/message.hpp>
+#include <hpactor/mutex_mailbox.hpp>
 #include <thread>
 #include <vector>
-#include <atomic>
-#include <cstdio>
 
 struct StressMsg {
     int value;
-    char padding[60];  // Cache line padding
+    char padding[60]; // Cache line padding
 };
 
 int main() {
@@ -21,12 +21,14 @@ int main() {
     for (int i = 0; i < num_threads; ++i) {
         threads.emplace_back([&mailbox, &count, i]() {
             for (int j = 0; j < msgs_per_thread; ++j) {
-                mailbox.push(hpactor::Message<StressMsg>{StressMsg{i * 1000 + j, {}}});
+                mailbox.push(
+                    hpactor::Message<StressMsg>{StressMsg{i * 1000 + j, {}}});
                 count.fetch_add(1, std::memory_order_relaxed);
             }
         });
     }
-    for (auto& t : threads) t.join();
+    for (auto& t : threads)
+        t.join();
 
     // Drain all messages
     int popped = 0;

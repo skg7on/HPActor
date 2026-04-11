@@ -1,7 +1,7 @@
-#include <hpactor/mutex_mailbox.hpp>
-#include <hpactor/message.hpp>
-#include <string>
 #include <cassert>
+#include <hpactor/message.hpp>
+#include <hpactor/mutex_mailbox.hpp>
+#include <string>
 #include <thread>
 #include <vector>
 
@@ -26,7 +26,7 @@ int main() {
 
     // Test try_pop on empty
     bool tried = mailbox.try_pop(msg);
-    assert(!tried);  // Should return false
+    assert(!tried); // Should return false
 
     // Test thread safety - push from multiple threads
     std::vector<std::thread> threads;
@@ -37,9 +37,10 @@ int main() {
             }
         });
     }
-    for (auto& t : threads) t.join();
+    for (auto& t : threads)
+        t.join();
 
-    assert(mailbox.size() == 1000);  // All messages delivered
+    assert(mailbox.size() == 1000); // All messages delivered
 
     return 0;
 }

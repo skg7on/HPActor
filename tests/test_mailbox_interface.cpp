@@ -1,8 +1,8 @@
 // tests/test_mailbox_interface.cpp
+#include <cassert>
 #include <hpactor/mailbox.hpp>
 #include <hpactor/message.hpp>
 #include <string>
-#include <cassert>
 #include <thread>
 
 struct PingMsg {

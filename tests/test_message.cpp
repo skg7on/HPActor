@@ -1,6 +1,6 @@
+#include <cassert>
 #include <hpactor/message.hpp>
 #include <string>
-#include <cassert>
 
 struct TestPayload {
     int value;
