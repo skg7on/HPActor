@@ -40,6 +40,10 @@ target_link_libraries(test_actor_address hpactor)
 add_executable(test_actor_ref test_actor_ref.cpp)
 target_link_libraries(test_actor_ref hpactor)
 
+# test_abstract_actor
+add_executable(test_abstract_actor test_abstract_actor.cpp)
+target_link_libraries(test_abstract_actor hpactor)
+
 # Register all tests with CTest
 add_test(NAME test_message COMMAND test_message)
 add_test(NAME test_message_advanced COMMAND test_message_advanced)
@@ -51,3 +55,4 @@ add_test(NAME test_types COMMAND test_types)
 add_test(NAME test_result COMMAND test_result)
 add_test(NAME test_actor_address COMMAND test_actor_address)
 add_test(NAME test_actor_ref COMMAND test_actor_ref)
+add_test(NAME test_abstract_actor COMMAND test_abstract_actor)
