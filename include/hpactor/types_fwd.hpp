@@ -8,7 +8,7 @@ struct ActorId;
 struct MessageId;
 struct TraceContext;
 class error;
-class AlarmHandle;
+struct AlarmHandle;
 class Clock;
 template<typename T>
 class Task;
