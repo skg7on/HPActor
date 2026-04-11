@@ -1,0 +1,53 @@
+#pragma once
+
+#include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/ref/actor_address.hpp>
+#include <hpactor/types.hpp>
+
+namespace hpactor {
+
+// Forward declarations
+namespace net {
+class Transport;
+}
+
+// -----------------------------------------------------------------------------
+// ActorProxy - reference to a remote actor
+// -----------------------------------------------------------------------------
+// ActorProxy represents an actor on a remote node. It holds the actor's
+// address and a reference to the transport used to communicate with it.
+// Messages sent to a remote actor go through the transport layer.
+// -----------------------------------------------------------------------------
+class ActorProxy {
+public:
+    // Create an actor proxy for a remote actor
+    // The transport pointer must outlive this proxy
+    ActorProxy(ActorAddress address, net::Transport* transport);
+
+    // Get the actor's address
+    ActorAddress address() const { return address_; }
+
+    // Get the node ID where this actor resides
+    NodeId node_id() const { return address_.node_id; }
+
+    // Check if this is a local actor (always false for proxy)
+    bool is_local() const { return false; }
+
+    // Check if this actor is valid (has a valid address)
+    explicit operator bool() const {
+        return address_.operator bool();
+    }
+
+    // Send a message to this actor (fire-and-forget)
+    // Serialization will be implemented in Phase 3
+    void send(const ActorAddress& target, MessageVariant msg);
+
+    // Access the underlying transport (for internal use)
+    net::Transport* transport() const { return transport_; }
+
+private:
+    ActorAddress address_;
+    net::Transport* transport_;  // Non-owning pointer to the transport
+};
+
+} // namespace hpactor
