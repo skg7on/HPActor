@@ -76,6 +76,14 @@ target_link_libraries(test_typed_actor hpactor)
 add_executable(test_supervision test_supervision.cpp)
 target_link_libraries(test_supervision hpactor)
 
+# test_one_for_one_supervisor
+add_executable(test_one_for_one_supervisor test_one_for_one_supervisor.cpp)
+target_link_libraries(test_one_for_one_supervisor hpactor)
+
+# test_all_for_one_supervisor
+add_executable(test_all_for_one_supervisor test_all_for_one_supervisor.cpp)
+target_link_libraries(test_all_for_one_supervisor hpactor)
+
 # Register all tests with CTest
 add_test(NAME test_message COMMAND test_message)
 add_test(NAME test_message_advanced COMMAND test_message_advanced)
@@ -96,3 +104,5 @@ add_test(NAME test_actor_system COMMAND test_actor_system)
 add_test(NAME test_actor_mailbox COMMAND test_actor_mailbox)
 add_test(NAME test_typed_actor COMMAND test_typed_actor)
 add_test(NAME test_supervision COMMAND test_supervision)
+add_test(NAME test_one_for_one_supervisor COMMAND test_one_for_one_supervisor)
+add_test(NAME test_all_for_one_supervisor COMMAND test_all_for_one_supervisor)

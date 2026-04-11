@@ -59,6 +59,7 @@ add_library(hpactor_lib STATIC
     src/actor_context.cpp
     src/actor_ref.cpp
     src/actor_system.cpp
+    src/supervision.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 
