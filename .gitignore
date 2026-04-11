@@ -2,6 +2,9 @@
 build/
 build_tsan/
 
+# Worktrees
+.worktrees/
+
 # IDE and editor
 .DS_Store
 *.swp
