@@ -1,4 +1,5 @@
 #include <hpactor/actor_context.hpp>
+#include <hpactor/actor_system.hpp>
 
 namespace hpactor {
 
@@ -7,9 +8,12 @@ ActorContext::ActorContext(Actor owner) : owner_(std::move(owner)) {}
 ActorContext::~ActorContext() = default;
 
 void ActorContext::send(const ActorAddress& target, MessageVariant msg) {
-    // TODO: delegate to actor system's enqueue mechanism
-    (void)target;
-    (void)msg;
+    if (target.is_local()) {
+        owner_.get()->system().deliver_local(target.id, std::move(msg));
+    } else {
+        // Remote delivery - will be implemented in Phase 1
+        // For now, ignore remote sends
+    }
 }
 
 void ActorContext::reply(MessageVariant msg) {

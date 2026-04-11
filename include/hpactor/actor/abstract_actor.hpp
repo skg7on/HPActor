@@ -53,6 +53,9 @@ public:
     ActorSystem& system() { return system_; }
     const ActorSystem& system() const { return system_; }
 
+    // Set actor address (called by ActorSystem during spawn)
+    void set_address(ActorAddress addr) { address_ = addr; }
+
     // Linking - death sharing
     void link_to(const ActorAddr& other);
     void unlink_from(const ActorAddr& other);

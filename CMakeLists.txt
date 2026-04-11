@@ -64,6 +64,7 @@ add_library(hpactor_lib STATIC
     src/event_based_actor.cpp
     src/local_actor.cpp
     src/supervision.cpp
+    src/scheduler.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 

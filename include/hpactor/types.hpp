@@ -36,9 +36,10 @@ struct ActorId {
 
 // -----------------------------------------------------------------------------
 // NodeId - identifier for a node in a distributed system
+// 0 = local node, > 0 = remote node
 // -----------------------------------------------------------------------------
 using NodeId = uint32_t;
-constexpr NodeId InvalidNodeId = 0;
+constexpr NodeId LocalNodeId = 0;
 
 // -----------------------------------------------------------------------------
 // ActorType - type identifier for an actor

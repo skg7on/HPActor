@@ -23,9 +23,9 @@ int main() {
     // Test 5: ActorId value accessor
     assert(actor_id1.value() == 100);
 
-    // Test 6: NodeId with InvalidNodeId
-    hpactor::NodeId node = hpactor::InvalidNodeId;
-    assert(node == hpactor::InvalidNodeId);
+    // Test 6: NodeId with LocalNodeId
+    hpactor::NodeId node = hpactor::LocalNodeId;
+    assert(node == hpactor::LocalNodeId);
 
     // Test 7: ActorType with InvalidActorType
     hpactor::ActorType actor_type = hpactor::InvalidActorType;

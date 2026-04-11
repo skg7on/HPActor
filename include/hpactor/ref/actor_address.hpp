@@ -26,7 +26,7 @@ struct ActorAddress {
         return !(*this == other);
     }
     bool is_local() const noexcept {
-        return node_id == InvalidNodeId;
+        return node_id == LocalNodeId;
     }
     explicit operator bool() const {
         return id.value() != 0;
