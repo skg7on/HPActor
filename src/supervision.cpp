@@ -24,4 +24,123 @@ SupervisionDirective AllForOneSupervisor::on_child_failure(const ChildFailure& /
   return SupervisionDirective::Restart;
 }
 
+// supervisor_actor implementation
+supervisor_actor::supervisor_actor(ActorContext* ctx, ActorSystem& sys,
+                                   Supervisor& strategy, std::vector<Actor> children)
+    : event_based_actor(ctx, sys),
+      strategy_(strategy),
+      children_(std::move(children)),
+      first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
+
+Behavior supervisor_actor::make_behavior() {
+    return Behavior{
+        [this](MessageVariant msg) {
+            std::visit([this](auto&& m) {
+                using T = std::decay_t<decltype(m)>;
+                if constexpr (std::is_same_v<T, down_msg>) {
+                    handle_child_down(m);
+                }
+            }, msg);
+        }
+    };
+}
+
+void supervisor_actor::handle_child_down(const down_msg& msg) {
+    auto child_id = msg.terminated_actor.id;
+
+    ChildFailure failure{
+        child_id,
+        msg.reason,
+        SupervisionDirective::Restart
+    };
+
+    auto directive = strategy_.on_child_failure(failure);
+
+    switch (directive) {
+        case SupervisionDirective::Restart:
+            restart_child(child_id);
+            break;
+        case SupervisionDirective::Stop:
+            children_.erase(
+                std::remove_if(children_.begin(), children_.end(),
+                    [&child_id](const Actor& a) { return a.id() == child_id; }),
+                children_.end());
+            break;
+        case SupervisionDirective::Escalate:
+            // TODO: escalate to parent supervisor
+            break;
+    }
+}
+
+void supervisor_actor::restart_child(ActorId child_id) {
+    auto now = std::chrono::steady_clock::now();
+    auto& count = restart_counts_[child_id];
+
+    if (now - first_failure_time_ > std::chrono::milliseconds(5000)) {
+        count = 0;
+        first_failure_time_ = now;
+    }
+
+    if (count >= 10) {
+        children_.erase(
+            std::remove_if(children_.begin(), children_.end(),
+                [&child_id](const Actor& a) { return a.id() == child_id; }),
+            children_.end());
+        restart_counts_.erase(child_id);
+        return;
+    }
+
+    ++count;
+    // TODO: Actual restart would recreate and add the child actor
+}
+
+void supervisor_actor::restart_all_children() {
+    for (auto& child : children_) {
+        restart_child(child.id());
+    }
+}
+
+// self_supervising_actor implementation
+self_supervising_actor::self_supervising_actor(ActorContext* ctx, ActorSystem& sys,
+                                                SupervisionPolicy policy)
+    : event_based_actor(ctx, sys),
+      policy_(std::move(policy)),
+      first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
+
+void self_supervising_actor::add_child(Actor child) {
+    children_.push_back(std::move(child));
+}
+
+void self_supervising_actor::remove_child(Actor child) {
+    children_.erase(
+        std::remove_if(children_.begin(), children_.end(),
+            [&child](const Actor& a) { return a.address() == child.address(); }),
+        children_.end());
+}
+
+SupervisionDirective self_supervising_actor::on_failure(ActorId child_id, const error& err) {
+    return decide_restart(child_id, err);
+}
+
+void self_supervising_actor::handle_child_down(const down_msg& msg) {
+    decide_restart(msg.terminated_actor.id, msg.reason);
+}
+
+SupervisionDirective self_supervising_actor::decide_restart(ActorId child_id, const error& err) {
+    auto now = std::chrono::steady_clock::now();
+    auto& count = restart_counts_[child_id];
+
+    if (now - first_failure_time_ > policy_.restart_interval) {
+        count = 0;
+        first_failure_time_ = now;
+    }
+
+    if (count >= policy_.max_restarts) {
+        return SupervisionDirective::Stop;
+    }
+
+    ++count;
+    return on_failure(child_id, err);
+}
+
 } // namespace hpactor
