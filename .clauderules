@@ -1,0 +1,8 @@
+Design Rules:
+- Core Architecture: Actor Model (Zero shared memory).
+
+Implementation & Coding Rules:
+- Programming Language：C++20
+- Coding Style: Strictly adhere to the LLVM Coding Standards.
+- Performance Constraints: Avoid RTTI, disable Exceptions, and prioritize stack allocation.
+- Memory Safety: All tests must pass AddressSanitizer (ASan).
