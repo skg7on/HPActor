@@ -19,8 +19,9 @@ void test_result_void_success() {
 }
 
 void test_result_void_error() {
-    auto r = hpactor::result<void>::make(hpactor::error{1});
+    auto r = hpactor::result<void>::make(hpactor::error{42, "specific error"});
     assert(!r.has_value());
+    assert(r.error().code() == 42);
 }
 
 int main() {
