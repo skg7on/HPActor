@@ -1,10 +1,10 @@
 #pragma once
+#include <chrono>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types.hpp>
-#include <chrono>
 #include <unordered_map>
 #include <vector>
 
@@ -30,22 +30,22 @@ struct SupervisionPolicy {
 
 // Supervisor - interface for supervision strategy
 class Supervisor {
-public:
+  public:
     virtual ~Supervisor() = default;
     virtual SupervisionDirective on_child_failure(const ChildFailure& failure) = 0;
     virtual void on_child_stopped(ActorId child_id);
 };
 
-// supervisor_actor - event_based_actor that implements supervision
-class supervisor_actor : public event_based_actor {
-public:
-    supervisor_actor(ActorContext* ctx, ActorSystem& sys, Supervisor& strategy,
+// SupervisorActor - EventBasedActor that implements supervision
+class SupervisorActor : public EventBasedActor {
+  public:
+    SupervisorActor(ActorContext* ctx, ActorSystem& sys, Supervisor& strategy,
                      std::vector<Actor> children);
 
-protected:
+  protected:
     Behavior make_behavior() override;
 
-private:
+  private:
     void handle_child_down(const down_msg& msg);
     void restart_child(ActorId child_id);
     void restart_all_children();
@@ -55,19 +55,19 @@ private:
     std::chrono::steady_clock::time_point first_failure_time_;
 };
 
-// self_supervising_actor - event_based_actor that manages its own children
-class self_supervising_actor : public event_based_actor {
-public:
-    self_supervising_actor(ActorContext* ctx, ActorSystem& sys,
+// SelfSupervisingActor - EventBasedActor that manages its own children
+class SelfSupervisingActor : public EventBasedActor {
+  public:
+    SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
                            SupervisionPolicy policy = SupervisionPolicy{});
 
     void add_child(Actor child);
     void remove_child(Actor child);
 
-protected:
+  protected:
     virtual SupervisionDirective on_failure(ActorId child_id, const error& err);
 
-private:
+  private:
     void handle_child_down(const down_msg& msg);
     SupervisionDirective decide_restart(ActorId child_id, const error& err);
     std::vector<Actor> children_;

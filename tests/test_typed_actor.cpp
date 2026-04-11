@@ -32,7 +32,7 @@ void test_handler_type() {
 }
 
 void test_typed_behavior() {
-    hpactor::typed_behavior<hpactor::result<int>(add_message)> bh;
+    hpactor::TypedBehavior<hpactor::result<int>(add_message)> bh;
     (void)bh;
     assert(true);
 }

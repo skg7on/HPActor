@@ -40,7 +40,8 @@ Actor ActorSystem::resolve_actor(const std::string& name) {
     if (!addr) {
         return Actor{};
     }
-    // Return an actor handle - actual resolution would require more infrastructure
+    // Return an actor handle - actual resolution would require more
+    // infrastructure
     return Actor{};
 }
 

@@ -11,14 +11,14 @@ namespace hpactor {
 // actor_registry - maintains a map of actor names to their addresses
 // -----------------------------------------------------------------------------
 class actor_registry {
-public:
+  public:
     explicit actor_registry(NodeId node_id);
 
     void put(const std::string& name, ActorAddress addr);
     ActorAddress get(const std::string& name) const;
     void erase(const std::string& name);
 
-private:
+  private:
     [[maybe_unused]] NodeId node_id_;
     std::unordered_map<std::string, ActorAddress> actors_;
 };

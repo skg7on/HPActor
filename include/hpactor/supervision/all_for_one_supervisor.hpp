@@ -4,12 +4,12 @@
 namespace hpactor {
 
 class AllForOneSupervisor : public Supervisor {
-public:
-  explicit AllForOneSupervisor(SupervisionPolicy policy = {});
-  SupervisionDirective on_child_failure(const ChildFailure& failure) override;
+  public:
+    explicit AllForOneSupervisor(SupervisionPolicy policy = {});
+    SupervisionDirective on_child_failure(const ChildFailure& failure) override;
 
-private:
-  SupervisionPolicy policy_;
+  private:
+    SupervisionPolicy policy_;
 };
 
 } // namespace hpactor

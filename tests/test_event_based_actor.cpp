@@ -7,8 +7,8 @@
 using namespace hpactor;
 
 void test_event_based_actor_become() {
-    // Test that event_based_actor can change behavior
-    static_assert(sizeof(hpactor::event_based_actor) > 0, "should not be empty");
+    // Test that EventBasedActor can change behavior
+    static_assert(sizeof(hpactor::EventBasedActor) > 0, "should not be empty");
 }
 
 int main() {

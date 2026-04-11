@@ -1,58 +1,55 @@
-#include <hpactor/supervision/supervision.hpp>
-#include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/all_for_one_supervisor.hpp>
+#include <hpactor/supervision/one_for_one_supervisor.hpp>
+#include <hpactor/supervision/supervision.hpp>
 
 namespace hpactor {
 
 void Supervisor::on_child_stopped(ActorId /*child_id*/) {
-  // Default implementation does nothing
+    // Default implementation does nothing
 }
 
 OneForOneSupervisor::OneForOneSupervisor(SupervisionPolicy policy)
     : policy_(std::move(policy)) {}
 
-SupervisionDirective OneForOneSupervisor::on_child_failure(const ChildFailure& failure) {
-  // OneForOne: only the failed child is affected
-  return failure.directive;
+SupervisionDirective
+OneForOneSupervisor::on_child_failure(const ChildFailure& failure) {
+    // OneForOne: only the failed child is affected
+    return failure.directive;
 }
 
 AllForOneSupervisor::AllForOneSupervisor(SupervisionPolicy policy)
     : policy_(std::move(policy)) {}
 
-SupervisionDirective AllForOneSupervisor::on_child_failure(const ChildFailure& /*failure*/) {
-  // AllForOne: failure affects all children, restart all
-  return SupervisionDirective::Restart;
+SupervisionDirective
+AllForOneSupervisor::on_child_failure(const ChildFailure& /*failure*/) {
+    // AllForOne: failure affects all children, restart all
+    return SupervisionDirective::Restart;
 }
 
-// supervisor_actor implementation
-supervisor_actor::supervisor_actor(ActorContext* ctx, ActorSystem& sys,
+// SupervisorActor implementation
+SupervisorActor::SupervisorActor(ActorContext* ctx, ActorSystem& sys,
                                    Supervisor& strategy, std::vector<Actor> children)
-    : event_based_actor(ctx, sys),
-      strategy_(strategy),
+    : EventBasedActor(ctx, sys), strategy_(strategy),
       children_(std::move(children)),
       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
 
-Behavior supervisor_actor::make_behavior() {
-    return Behavior{
-        [this](MessageVariant msg) {
-            std::visit([this](auto&& m) {
+Behavior SupervisorActor::make_behavior() {
+    return Behavior{[this](MessageVariant msg) {
+        std::visit(
+            [this](auto&& m) {
                 using T = std::decay_t<decltype(m)>;
                 if constexpr (std::is_same_v<T, down_msg>) {
                     handle_child_down(m);
                 }
-            }, msg);
-        }
-    };
+            },
+            msg);
+    }};
 }
 
-void supervisor_actor::handle_child_down(const down_msg& msg) {
+void SupervisorActor::handle_child_down(const down_msg& msg) {
     auto child_id = msg.terminated_actor.id;
 
-    ChildFailure failure{
-        child_id,
-        msg.reason,
-        SupervisionDirective::Restart
-    };
+    ChildFailure failure{child_id, msg.reason, SupervisionDirective::Restart};
 
     auto directive = strategy_.on_child_failure(failure);
 
@@ -61,10 +58,11 @@ void supervisor_actor::handle_child_down(const down_msg& msg) {
             restart_child(child_id);
             break;
         case SupervisionDirective::Stop:
-            children_.erase(
-                std::remove_if(children_.begin(), children_.end(),
-                    [&child_id](const Actor& a) { return a.id() == child_id; }),
-                children_.end());
+            children_.erase(std::remove_if(children_.begin(), children_.end(),
+                                           [&child_id](const Actor& a) {
+                                               return a.id() == child_id;
+                                           }),
+                            children_.end());
             break;
         case SupervisionDirective::Escalate:
             // TODO: escalate to parent supervisor
@@ -72,7 +70,7 @@ void supervisor_actor::handle_child_down(const down_msg& msg) {
     }
 }
 
-void supervisor_actor::restart_child(ActorId child_id) {
+void SupervisorActor::restart_child(ActorId child_id) {
     auto now = std::chrono::steady_clock::now();
     auto& count = restart_counts_[child_id];
 
@@ -82,10 +80,11 @@ void supervisor_actor::restart_child(ActorId child_id) {
     }
 
     if (count >= 10) {
-        children_.erase(
-            std::remove_if(children_.begin(), children_.end(),
-                [&child_id](const Actor& a) { return a.id() == child_id; }),
-            children_.end());
+        children_.erase(std::remove_if(children_.begin(), children_.end(),
+                                       [&child_id](const Actor& a) {
+                                           return a.id() == child_id;
+                                       }),
+                        children_.end());
         restart_counts_.erase(child_id);
         return;
     }
@@ -94,39 +93,41 @@ void supervisor_actor::restart_child(ActorId child_id) {
     // TODO: Actual restart would recreate and add the child actor
 }
 
-void supervisor_actor::restart_all_children() {
+void SupervisorActor::restart_all_children() {
     for (auto& child : children_) {
         restart_child(child.id());
     }
 }
 
-// self_supervising_actor implementation
-self_supervising_actor::self_supervising_actor(ActorContext* ctx, ActorSystem& sys,
-                                                SupervisionPolicy policy)
-    : event_based_actor(ctx, sys),
-      policy_(std::move(policy)),
+// SelfSupervisingActor implementation
+SelfSupervisingActor::SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
+                                               SupervisionPolicy policy)
+    : EventBasedActor(ctx, sys), policy_(std::move(policy)),
       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
 
-void self_supervising_actor::add_child(Actor child) {
+void SelfSupervisingActor::add_child(Actor child) {
     children_.push_back(std::move(child));
 }
 
-void self_supervising_actor::remove_child(Actor child) {
-    children_.erase(
-        std::remove_if(children_.begin(), children_.end(),
-            [&child](const Actor& a) { return a.address() == child.address(); }),
-        children_.end());
+void SelfSupervisingActor::remove_child(Actor child) {
+    children_.erase(std::remove_if(children_.begin(), children_.end(),
+                                   [&child](const Actor& a) {
+                                       return a.address() == child.address();
+                                   }),
+                    children_.end());
 }
 
-SupervisionDirective self_supervising_actor::on_failure(ActorId child_id, const error& err) {
+SupervisionDirective
+SelfSupervisingActor::on_failure(ActorId child_id, const error& err) {
     return decide_restart(child_id, err);
 }
 
-void self_supervising_actor::handle_child_down(const down_msg& msg) {
+void SelfSupervisingActor::handle_child_down(const down_msg& msg) {
     decide_restart(msg.terminated_actor.id, msg.reason);
 }
 
-SupervisionDirective self_supervising_actor::decide_restart(ActorId child_id, const error& err) {
+SupervisionDirective
+SelfSupervisingActor::decide_restart(ActorId child_id, const error& err) {
     auto now = std::chrono::steady_clock::now();
     auto& count = restart_counts_[child_id];
 

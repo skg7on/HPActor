@@ -2,29 +2,29 @@
 
 namespace hpactor {
 
-event_based_actor::event_based_actor(ActorContext* ctx, ActorSystem& sys)
-    : local_actor(ctx, sys) {}
+EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
+    : LocalActor(ctx, sys) {}
 
-void event_based_actor::become(Behavior bh) {
+void EventBasedActor::become(Behavior bh) {
     behavior_ = std::move(bh);
 }
 
-void event_based_actor::become_empty() {
+void EventBasedActor::become_empty() {
     behavior_ = Behavior{};
 }
 
-void event_based_actor::receive(MessageVariant&& msg) {
+void EventBasedActor::receive(MessageVariant&& msg) {
     if (behavior_) {
         behavior_(std::move(msg));
     }
 }
 
-void event_based_actor::on_activate() {
+void EventBasedActor::on_activate() {
     // Default implementation: set initial behavior
     behavior_ = make_behavior();
 }
 
-void event_based_actor::on_deactivate() {
+void EventBasedActor::on_deactivate() {
     // Default implementation: clear behavior
     behavior_ = Behavior{};
 }

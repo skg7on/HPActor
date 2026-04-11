@@ -7,11 +7,11 @@
 using namespace hpactor;
 
 void test_blocking_actor_interface() {
-    static_assert(sizeof(hpactor::blocking_actor) > 0, "should not be empty");
+    static_assert(sizeof(hpactor::BlockingActor) > 0, "should not be empty");
 }
 
 void test_scoped_actor_interface() {
-    static_assert(sizeof(hpactor::scoped_actor) > 0, "should not be empty");
+    static_assert(sizeof(hpactor::ScopedActor) > 0, "should not be empty");
 }
 
 int main() {

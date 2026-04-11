@@ -7,20 +7,20 @@
 
 using namespace hpactor;
 
-// Test that abstract_actor has the required interface
+// Test that AbstractActor has the required interface
 void test_abstract_actor_interface() {
     // Abstract actor cannot be instantiated directly
     // Test that it has the required virtual interface
-    static_assert(sizeof(hpactor::abstract_actor) > 0, "abstract_actor should not be empty");
+    static_assert(sizeof(hpactor::AbstractActor) > 0, "AbstractActor should not be empty");
 
-    // Check that abstract_actor is abstract (has pure virtual methods)
-    static_assert(!std::is_default_constructible_v<abstract_actor>,
-                  "abstract_actor should not be default constructible");
+    // Check that AbstractActor is abstract (has pure virtual methods)
+    static_assert(!std::is_default_constructible_v<AbstractActor>,
+                  "AbstractActor should not be default constructible");
 
     // Check that it inherits from enable_shared_from_this
     static_assert(
-        std::is_base_of_v<std::enable_shared_from_this<abstract_actor>, abstract_actor>,
-        "abstract_actor must inherit from enable_shared_from_this");
+        std::is_base_of_v<std::enable_shared_from_this<AbstractActor>, AbstractActor>,
+        "AbstractActor must inherit from enable_shared_from_this");
 }
 
 void test_message_variant_types() {

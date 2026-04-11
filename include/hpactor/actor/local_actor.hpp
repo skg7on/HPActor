@@ -6,16 +6,16 @@
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
-// local_actor - base class for actors with access to ActorContext
+// LocalActor - base class for actors with access to ActorContext
 // -----------------------------------------------------------------------------
-class local_actor : public abstract_actor {
+class LocalActor : public AbstractActor {
 public:
     ActorContext* context() { return ctx_; }
     ActorSystem& home_system() { return system(); }
 
 protected:
-    local_actor(ActorContext* ctx, ActorSystem& sys);
-    local_actor(ActorId id, ActorContext* ctx, ActorSystem& sys);
+    LocalActor(ActorContext* ctx, ActorSystem& sys);
+    LocalActor(ActorId id, ActorContext* ctx, ActorSystem& sys);
 
     virtual void on_activate() {}
     virtual void on_deactivate() {}

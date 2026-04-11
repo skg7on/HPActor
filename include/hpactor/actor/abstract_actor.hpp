@@ -41,11 +41,11 @@ using MessageVariant = std::variant<
 >;
 
 // -----------------------------------------------------------------------------
-// abstract_actor - base class for all actors
+// AbstractActor - base class for all actors
 // -----------------------------------------------------------------------------
-class abstract_actor : public std::enable_shared_from_this<abstract_actor> {
+class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
 public:
-    virtual ~abstract_actor() = default;
+    virtual ~AbstractActor() = default;
 
     ActorId id() const { return id_; }
     ActorType type() const { return type_; }
@@ -65,7 +65,7 @@ public:
     virtual void receive(MessageVariant&& msg) = 0;
 
 protected:
-    abstract_actor(ActorId id, ActorType type, ActorSystem& sys);
+    AbstractActor(ActorId id, ActorType type, ActorSystem& sys);
 
 private:
     ActorId id_;

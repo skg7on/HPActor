@@ -2,7 +2,7 @@
 #include <cassert>
 
 void test_self_supervising_actor_interface() {
-    static_assert(sizeof(hpactor::self_supervising_actor) > 0, "should not be empty");
+    static_assert(sizeof(hpactor::SelfSupervisingActor) > 0, "should not be empty");
 }
 
 int main() {

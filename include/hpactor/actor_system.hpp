@@ -1,7 +1,7 @@
 #pragma once
 
-#include <hpactor/actor_registry.hpp>
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/actor_registry.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types.hpp>
 
@@ -29,7 +29,7 @@ struct ActorTypeDef {
 // ActorSystem - the actor environment containing schedulers, registry, etc.
 // -----------------------------------------------------------------------------
 class ActorSystem {
-public:
+  public:
     explicit ActorSystem(const Config& config);
     ~ActorSystem();
 
@@ -40,11 +40,10 @@ public:
     ActorSystem& operator=(ActorSystem&&) = delete;
 
     // Spawn actors at system level
-    template<typename Fn, typename... Args>
+    template <typename Fn, typename... Args>
     Actor spawn(Fn&& fn, Args&&... /*args*/);
 
-    template<typename T, typename... Args>
-    T spawn(Args&&... /*args*/);
+    template <typename T, typename... Args> T spawn(Args&&... /*args*/);
 
     // Actor registry
     void register_actor(const std::string& name, Actor actor);
@@ -56,15 +55,21 @@ public:
     ActorTypeDef get_actor_type(ActorType type) const;
 
     // Clock
-    Clock& clock() { return clock_; }
+    Clock& clock() {
+        return clock_;
+    }
 
     // System actor
-    Actor system_actor() { return system_actor_; }
+    Actor system_actor() {
+        return system_actor_;
+    }
 
     // Registry access
-    actor_registry& registry() { return registry_; }
+    actor_registry& registry() {
+        return registry_;
+    }
 
-private:
+  private:
     Config config_;
     Clock clock_;
     actor_registry registry_;
@@ -76,14 +81,14 @@ private:
 // Template implementations
 // -----------------------------------------------------------------------------
 
-template<typename Fn, typename... Args>
+template <typename Fn, typename... Args>
 Actor ActorSystem::spawn(Fn&& /*fn*/, Args&&... /*args*/) {
     // TODO: Implement actual actor spawning via scheduler
     static_assert(sizeof(Fn) == 0, "spawn not yet implemented");
     return Actor{};
 }
 
-template<typename T, typename... Args>
+template <typename T, typename... Args>
 T ActorSystem::spawn(Args&&... /*args*/) {
     // TODO: Implement actual actor spawning via scheduler
     static_assert(sizeof(T) == 0, "spawn not yet implemented");

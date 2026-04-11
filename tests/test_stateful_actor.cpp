@@ -7,7 +7,7 @@ struct counter_state {
 };
 
 void test_stateful_actor_state_access() {
-    static_assert(sizeof(hpactor::stateful_actor<counter_state>) > 0, "should not be empty");
+    static_assert(sizeof(hpactor::StatefulActor<counter_state>) > 0, "should not be empty");
 }
 
 int main() {
