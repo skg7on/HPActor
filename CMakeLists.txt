@@ -53,10 +53,17 @@ elseif(ENABLE_TSAN)
 endif()
 
 # =============================================================================
-# Header-only Library
+# Library Sources
 # =============================================================================
-add_library(hpactor INTERFACE)
-target_include_directories(hpactor INTERFACE include)
+add_library(hpactor_lib STATIC
+    src/actor_context.cpp
+    src/actor_ref.cpp
+    src/actor_system.cpp
+)
+target_include_directories(hpactor_lib PUBLIC include)
+
+# Alias for backwards compatibility
+add_library(hpactor ALIAS hpactor_lib)
 
 # =============================================================================
 # Tests
