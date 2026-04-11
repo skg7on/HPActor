@@ -32,26 +32,32 @@ struct unlink_msg {
     ActorAddress target;
 };
 
-using MessageVariant = std::variant<
-    down_msg,
-    exit_msg,
-    link_msg,
-    unlink_msg
-    // ... user-defined types
->;
+using MessageVariant = std::variant<down_msg, exit_msg, link_msg, unlink_msg
+                                    // ... user-defined types
+                                    >;
 
 // -----------------------------------------------------------------------------
 // abstract_actor - base class for all actors
 // -----------------------------------------------------------------------------
 class abstract_actor : public std::enable_shared_from_this<abstract_actor> {
-public:
+  public:
     virtual ~abstract_actor() = default;
 
-    ActorId id() const { return id_; }
-    ActorType type() const { return type_; }
-    ActorAddress address() const { return address_; }
-    ActorSystem& system() { return system_; }
-    const ActorSystem& system() const { return system_; }
+    ActorId id() const {
+        return id_;
+    }
+    ActorType type() const {
+        return type_;
+    }
+    ActorAddress address() const {
+        return address_;
+    }
+    ActorSystem& system() {
+        return system_;
+    }
+    const ActorSystem& system() const {
+        return system_;
+    }
 
     // Linking - death sharing
     void link_to(const ActorAddr& other);
@@ -64,10 +70,10 @@ public:
     // Receive message (called by scheduler)
     virtual void receive(MessageVariant&& msg) = 0;
 
-protected:
+  protected:
     abstract_actor(ActorId id, ActorType type, ActorSystem& sys);
 
-private:
+  private:
     ActorId id_;
     ActorType type_;
     ActorSystem& system_;

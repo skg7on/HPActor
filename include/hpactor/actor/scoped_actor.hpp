@@ -11,12 +11,11 @@ class ActorSystem;
 // scoped_actor - blocking actor for non-actor contexts (e.g., main function)
 // -----------------------------------------------------------------------------
 class scoped_actor : public blocking_actor {
-public:
+  public:
     explicit scoped_actor(ActorSystem& sys);
     ~scoped_actor();
 
-    template<typename T>
-    T receive();
+    template <typename T> T receive();
 };
 
 } // namespace hpactor

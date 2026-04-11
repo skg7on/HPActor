@@ -9,10 +9,11 @@ namespace hpactor {
 // Actor - opaque handle to a local actor
 // -----------------------------------------------------------------------------
 class Actor {
-public:
+  public:
     Actor() = default;
 
-    explicit Actor(std::shared_ptr<abstract_actor> ptr) : actor_(std::move(ptr)) {}
+    explicit Actor(std::shared_ptr<abstract_actor> ptr)
+        : actor_(std::move(ptr)) {}
 
     ActorId id() const {
         // TODO: delegate to actor_->id() once abstract_actor is defined
@@ -29,13 +30,19 @@ public:
         return ActorAddress{};
     }
 
-    operator ActorAddress() const { return address(); }
+    operator ActorAddress() const {
+        return address();
+    }
 
-    explicit operator bool() const { return actor_ != nullptr; }
+    explicit operator bool() const {
+        return actor_ != nullptr;
+    }
 
-    void swap(Actor& other) noexcept { actor_.swap(other.actor_); }
+    void swap(Actor& other) noexcept {
+        actor_.swap(other.actor_);
+    }
 
-private:
+  private:
     std::shared_ptr<abstract_actor> actor_;
 };
 

@@ -89,7 +89,8 @@ template <typename T> class ActorMailbox : public IMailbox<T> {
 
     bool pop_with_timeout(Message<T>& out, std::chrono::milliseconds timeout) {
         std::unique_lock<std::mutex> lock(mutex_);
-        bool result = cv_.wait_for(lock, timeout, [this] { return !queue_.empty(); });
+        bool result =
+            cv_.wait_for(lock, timeout, [this] { return !queue_.empty(); });
         if (result) {
             out = std::move(queue_.front());
             queue_.pop();
@@ -97,7 +98,9 @@ template <typename T> class ActorMailbox : public IMailbox<T> {
         return result;
     }
 
-    void set_owner(ActorBase* owner) { owner_ = owner; }
+    void set_owner(ActorBase* owner) {
+        owner_ = owner;
+    }
 
   private:
     mutable std::mutex mutex_;

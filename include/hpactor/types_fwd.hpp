@@ -10,7 +10,6 @@ struct TraceContext;
 class error;
 struct AlarmHandle;
 class Clock;
-template<typename T>
-class Task;
+template <typename T> class Task;
 
 } // namespace hpactor

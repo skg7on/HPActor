@@ -14,16 +14,15 @@ namespace hpactor {
 // ActorContext - execution context for actors
 // -----------------------------------------------------------------------------
 class ActorContext {
-public:
+  public:
     explicit ActorContext(Actor owner);
     ~ActorContext();
 
     // Spawn child actors
-    template<typename Fn, typename... Args>
+    template <typename Fn, typename... Args>
     Actor spawn(Fn&& fn, Args&&... args);
 
-    template<typename T, typename... Args>
-    T spawn(Args&&... args);
+    template <typename T, typename... Args> T spawn(Args&&... args);
 
     // Send messages
     void send(const ActorAddress& target, MessageVariant msg);
@@ -46,7 +45,7 @@ public:
     // Monitoring
     void monitor(const ActorAddress& target);
 
-private:
+  private:
     Actor owner_;
     std::vector<Actor> children_;
     std::vector<ActorAddress> linked_;

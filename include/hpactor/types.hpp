@@ -19,12 +19,18 @@ struct ActorId {
 
     explicit ActorId(counter_type value) : value_(value) {}
 
-    counter_type value() const noexcept { return value_; }
+    counter_type value() const noexcept {
+        return value_;
+    }
 
-    bool operator==(const ActorId& other) const noexcept { return value_ == other.value_; }
-    bool operator!=(const ActorId& other) const noexcept { return !(*this == other); }
+    bool operator==(const ActorId& other) const noexcept {
+        return value_ == other.value_;
+    }
+    bool operator!=(const ActorId& other) const noexcept {
+        return !(*this == other);
+    }
 
-private:
+  private:
     counter_type value_ = 0;
 };
 
@@ -55,14 +61,22 @@ struct MessageId {
 
     explicit MessageId(counter_type value) : value_(value) {}
 
-    counter_type value() const { return value_; }
+    counter_type value() const {
+        return value_;
+    }
 
-    bool operator==(const MessageId& other) const { return value_ == other.value_; }
-    bool operator!=(const MessageId& other) const { return !(*this == other); }
+    bool operator==(const MessageId& other) const {
+        return value_ == other.value_;
+    }
+    bool operator!=(const MessageId& other) const {
+        return !(*this == other);
+    }
 
-    static MessageId generate() { return MessageId(next_id_.fetch_add(1)); }
+    static MessageId generate() {
+        return MessageId(next_id_.fetch_add(1));
+    }
 
-private:
+  private:
     counter_type value_ = 0;
     static std::atomic<uint64_t> next_id_;
 };
@@ -74,19 +88,27 @@ inline std::atomic<uint64_t> MessageId::next_id_{1};
 // error - error code wrapper (no exceptions in hot path)
 // -----------------------------------------------------------------------------
 class error {
-public:
+  public:
     error() = default;
 
     explicit error(uint32_t code, std::string msg = {})
         : code_(code), message_(std::move(msg)) {}
 
-    uint32_t code() const { return code_; }
-    const std::string& message() const { return message_; }
+    uint32_t code() const {
+        return code_;
+    }
+    const std::string& message() const {
+        return message_;
+    }
 
-    bool ok() const { return code_ == 0; }
-    explicit operator bool() const { return !ok(); }
+    bool ok() const {
+        return code_ == 0;
+    }
+    explicit operator bool() const {
+        return !ok();
+    }
 
-private:
+  private:
     uint32_t code_ = 0;
     std::string message_;
 };
@@ -106,17 +128,26 @@ constexpr uint32_t user = 1000;
 // -----------------------------------------------------------------------------
 // result<T> - return type for message handlers
 // -----------------------------------------------------------------------------
-template<typename T>
-class result {
-public:
-    static result<T> make(T&& value) { return result<T>(std::move(value)); }
-    static result<T> make(class error err) { return result<T>(std::move(err)); }
+template <typename T> class result {
+  public:
+    static result<T> make(T&& value) {
+        return result<T>(std::move(value));
+    }
+    static result<T> make(class error err) {
+        return result<T>(std::move(err));
+    }
 
-    bool has_value() const { return has_value_; }
-    T& value() { return std::get<0>(value_); }
-    const class error& error() const { return std::get<1>(value_); }
+    bool has_value() const {
+        return has_value_;
+    }
+    T& value() {
+        return std::get<0>(value_);
+    }
+    const class error& error() const {
+        return std::get<1>(value_);
+    }
 
-private:
+  private:
     result(T&& val) : has_value_(true), value_(std::move(val)) {}
     result(class error err) : has_value_(false), value_(err) {}
 
@@ -124,17 +155,24 @@ private:
     std::variant<T, class error> value_;
 };
 
-template<>
-class result<void> {
-public:
-    static result<void> make() { return result<void>(); }
-    static result<void> make(class error err) { return result<void>(std::move(err)); }
+template <> class result<void> {
+  public:
+    static result<void> make() {
+        return result<void>();
+    }
+    static result<void> make(class error err) {
+        return result<void>(std::move(err));
+    }
 
-    bool has_value() const { return has_value_; }
+    bool has_value() const {
+        return has_value_;
+    }
     void value() const {} // No-op for void
-    const class error& error() const { return error_; }
+    const class error& error() const {
+        return error_;
+    }
 
-private:
+  private:
     result<void>() : has_value_(true) {}
     result<void>(class error err) : has_value_(false), error_(std::move(err)) {}
 
@@ -146,10 +184,12 @@ private:
 // Clock - for time-based operations
 // -----------------------------------------------------------------------------
 class Clock {
-public:
+  public:
     using time_point = std::chrono::steady_clock::time_point;
     using duration = std::chrono::milliseconds;
-    time_point now() const { return std::chrono::steady_clock::now(); }
+    time_point now() const {
+        return std::chrono::steady_clock::now();
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -160,9 +200,11 @@ struct AlarmHandle {
 
     explicit AlarmHandle(uint64_t id) : id_(id) {}
 
-    uint64_t id() const { return id_; }
+    uint64_t id() const {
+        return id_;
+    }
 
-private:
+  private:
     uint64_t id_ = 0;
 };
 
@@ -175,11 +217,17 @@ struct TraceContext {
     TraceContext(uint64_t trace_id, uint64_t span_id, uint32_t flags)
         : trace_id_(trace_id), span_id_(span_id), flags_(flags) {}
 
-    uint64_t trace_id() const { return trace_id_; }
-    uint64_t span_id() const { return span_id_; }
-    uint32_t flags() const { return flags_; }
+    uint64_t trace_id() const {
+        return trace_id_;
+    }
+    uint64_t span_id() const {
+        return span_id_;
+    }
+    uint32_t flags() const {
+        return flags_;
+    }
 
-private:
+  private:
     uint64_t trace_id_ = 0;
     uint64_t span_id_ = 0;
     uint32_t flags_ = 0;
