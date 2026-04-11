@@ -36,6 +36,10 @@ target_link_libraries(test_result hpactor)
 add_executable(test_actor_address test_actor_address.cpp)
 target_link_libraries(test_actor_address hpactor)
 
+# test_actor_ref
+add_executable(test_actor_ref test_actor_ref.cpp)
+target_link_libraries(test_actor_ref hpactor)
+
 # Register all tests with CTest
 add_test(NAME test_message COMMAND test_message)
 add_test(NAME test_message_advanced COMMAND test_message_advanced)
@@ -46,3 +50,4 @@ add_test(NAME test_mailbox_factory COMMAND test_mailbox_factory)
 add_test(NAME test_types COMMAND test_types)
 add_test(NAME test_result COMMAND test_result)
 add_test(NAME test_actor_address COMMAND test_actor_address)
+add_test(NAME test_actor_ref COMMAND test_actor_ref)
