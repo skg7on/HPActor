@@ -64,6 +64,10 @@ target_link_libraries(test_actor_context hpactor)
 add_executable(test_actor_system test_actor_system.cpp)
 target_link_libraries(test_actor_system hpactor)
 
+# test_actor_mailbox
+add_executable(test_actor_mailbox test_actor_mailbox.cpp)
+target_link_libraries(test_actor_mailbox hpactor)
+
 # Register all tests with CTest
 add_test(NAME test_message COMMAND test_message)
 add_test(NAME test_message_advanced COMMAND test_message_advanced)
@@ -81,3 +85,4 @@ add_test(NAME test_blocking_actor COMMAND test_blocking_actor)
 add_test(NAME test_stateful_actor COMMAND test_stateful_actor)
 add_test(NAME test_actor_context COMMAND test_actor_context)
 add_test(NAME test_actor_system COMMAND test_actor_system)
+add_test(NAME test_actor_mailbox COMMAND test_actor_mailbox)
