@@ -4,6 +4,8 @@
 #include <hpactor/spawn.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/tcp_transport.hpp>
+#include <hpactor/actor/spawn_receiver.hpp>
+#include <hpactor/actor_system_ids.hpp>
 
 namespace hpactor {
 
@@ -68,6 +70,25 @@ ActorSystem::ActorSystem(const Config& config)
                 // Process events until stopped
             }
         });
+
+        // Spawn the SpawnReceiver system actor using well-known ID
+        // SpawnReceiverId = ActorId(0xFFFF0001) is reserved for spawn handling
+        auto spawn_receiver = std::make_shared<SpawnReceiver>(
+            *this, *actor_type_registry_, transport_.get());
+        spawn_receiver->set_address(
+            ActorAddress{node_id_, SystemActorType, SpawnReceiverId, 0});
+
+        {
+            std::lock_guard<std::mutex> lock(actors_mutex_);
+            actors_.emplace(SpawnReceiverId, spawn_receiver);
+        }
+
+        // Create mailbox for spawn receiver
+        {
+            std::lock_guard<std::mutex> lock(mailboxes_mutex_);
+            mailboxes_.emplace(SpawnReceiverId,
+                              std::make_unique<ActorMailbox<MessageVariant>>());
+        }
     }
 }
 
