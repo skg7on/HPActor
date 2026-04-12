@@ -17,7 +17,17 @@ namespace hpactor {
 namespace net {
 
 // -----------------------------------------------------------------------------
-// RegistrarConfig - configuration for UDP registrar
+// AcceptorInfo - information about a server acceptor
+// -----------------------------------------------------------------------------
+struct AcceptorInfo {
+    uint16_t port = 0;
+    uint8_t handshake_version = 0;
+    uint8_t protocol_version = 0;
+    bool tls_required = false;
+};
+
+// -----------------------------------------------------------------------------
+// RegistrarConfig - configuration for registrar
 // -----------------------------------------------------------------------------
 struct StaticRouteConfig {
     NodeId node_id = 0;
@@ -26,11 +36,13 @@ struct StaticRouteConfig {
 };
 
 struct RegistrarConfig {
-    uint16_t udp_port = 5353;                     // Default mDNS-style port
+    uint16_t udp_port = 5353;
+    uint16_t tcp_port = 5353;
     std::chrono::milliseconds heartbeat_interval{5000};
     std::chrono::milliseconds expiration_timeout{15000};
+    std::chrono::milliseconds probe_interval{30000};
     std::vector<StaticRouteConfig> static_routes;
-    bool enable_broadcast = true;
+    bool disable_server = false;
 };
 
 // -----------------------------------------------------------------------------
@@ -38,10 +50,11 @@ struct RegistrarConfig {
 // -----------------------------------------------------------------------------
 struct NodeEndpoint {
     NodeId node_id = 0;
-    std::string host;        // IP or DNS hostname
-    uint16_t tcp_port = 0; // TCP listening port
-    std::chrono::steady_clock::time_point last_seen;
+    std::string host;
+    uint16_t tcp_port = 0;
     bool is_static_route = false;
+    std::vector<AcceptorInfo> acceptors;
+    std::chrono::steady_clock::time_point last_seen;
 };
 
 // -----------------------------------------------------------------------------
@@ -110,15 +123,19 @@ private:
 };
 
 // -----------------------------------------------------------------------------
-// UDP Registrar Protocol
+// Registrar Protocol Messages
 // -----------------------------------------------------------------------------
 enum class RegistrarMessageType : uint8_t {
-    NodeAnnounce = 0x01,
-    NodeQuery = 0x02,
-    NodeResponse = 0x03,
+    // TCP messages (server/client registration)
+    Register = 0x01,
+    Heartbeat = 0x02,
+    NodeJoin = 0x03,
     NodeLeave = 0x04,
-    NodeProbe = 0x05,
-    NodeProbeAck = 0x06,
+    Accept = 0x05,
+    Error = 0x06,
+    // UDP messages (resolution)
+    ResolveQuery = 0x10,
+    ResolveResponse = 0x11,
 };
 
 // Protocol constants

@@ -315,29 +315,33 @@ void UdpRegistrar::handle_packet(const bytes& data, const std::string& from_host
     const bytes payload(data.begin() + RegistrarHeaderSize, data.end());
 
     switch (static_cast<RegistrarMessageType>(type)) {
-        case RegistrarMessageType::NodeAnnounce:
+        case RegistrarMessageType::NodeJoin:
             handle_announce(sender_id, payload, from_host, from_port);
             break;
-        case RegistrarMessageType::NodeQuery:
+        case RegistrarMessageType::ResolveQuery:
             handle_query(sender_id, payload, from_host, from_port);
             break;
-        case RegistrarMessageType::NodeResponse:
+        case RegistrarMessageType::ResolveResponse:
             handle_response(sender_id, payload, from_host, from_port);
             break;
         case RegistrarMessageType::NodeLeave:
             handle_leave(sender_id);
             break;
-        case RegistrarMessageType::NodeProbe:
+        case RegistrarMessageType::Register:
             handle_probe(sender_id, payload);
             break;
-        case RegistrarMessageType::NodeProbeAck:
+        case RegistrarMessageType::Heartbeat:
             handle_probe_ack(sender_id, payload);
+            break;
+        case RegistrarMessageType::Accept:
+        case RegistrarMessageType::Error:
+            // TCP messages - not handled in UDP registrar
             break;
     }
 }
 
 void UdpRegistrar::send_announce() {
-    if (udp_socket_ < 0 || !config_.enable_broadcast) {
+    if (udp_socket_ < 0 || config_.disable_server) {
         return;
     }
 
@@ -345,7 +349,7 @@ void UdpRegistrar::send_announce() {
     payload.tcp_port = 0;  // Would be set from actual TCP port
     payload.actor_count = 0;
 
-    bytes msg = build_message(RegistrarMessageType::NodeAnnounce, &payload, sizeof(payload));
+    bytes msg = build_message(RegistrarMessageType::NodeJoin, &payload, sizeof(payload));
 
     // Broadcast to 255.255.255.255
     struct sockaddr_in dest_addr;
@@ -377,7 +381,7 @@ void UdpRegistrar::send_probe(NodeEndpoint& ep) {
         std::chrono::duration_cast<std::chrono::milliseconds>(
             std::chrono::steady_clock::now().time_since_epoch()).count());
 
-    bytes msg = build_message(RegistrarMessageType::NodeProbe, &payload, sizeof(payload));
+    bytes msg = build_message(RegistrarMessageType::Register, &payload, sizeof(payload));
 
     // Resolve hostname
     std::string ip = host_resolver_.resolve(ep.host);
@@ -436,7 +440,7 @@ void UdpRegistrar::handle_query(NodeId /*sender_id*/, const bytes& payload,
         // This query was for us
         NodeResponsePayload resp;
         resp.tcp_port = 0;  // Would be our TCP port
-        bytes msg = build_message(RegistrarMessageType::NodeResponse, &resp, sizeof(resp));
+        bytes msg = build_message(RegistrarMessageType::ResolveResponse, &resp, sizeof(resp));
 
         struct sockaddr_in dest_addr;
         std::memset(&dest_addr, 0, sizeof(dest_addr));
@@ -490,7 +494,7 @@ void UdpRegistrar::handle_probe(NodeId sender_id, const bytes& payload) {
     ack.probe_id = probe.probe_id;
     ack.timestamp = probe.timestamp;
 
-    bytes msg = build_message(RegistrarMessageType::NodeProbeAck, &ack, sizeof(ack));
+    bytes msg = build_message(RegistrarMessageType::Heartbeat, &ack, sizeof(ack));
 
     NodeEndpoint* ep = registry_.get(sender_id);
     if (ep == nullptr) {
