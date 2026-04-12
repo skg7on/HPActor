@@ -9,6 +9,8 @@
 #include <unistd.h>
 #elif defined(__linux__)
 #include <sys/epoll.h>
+#include <sys/eventfd.h>
+#include <sys/timerfd.h>
 #include <unistd.h>
 #else
 #error "Unsupported platform"
@@ -83,6 +85,57 @@ bool EventLoop::has_event(int /*fd*/, Event /*event*/) const {
     return true;
 }
 
+uint64_t EventLoop::run_after(timer_callback callback, int delay_ms) {
+    uint64_t handle = next_timer_handle_++;
+    timer_callbacks_[handle] = std::move(callback);
+
+    int pipe_fds[2];
+    if (pipe(pipe_fds) < 0) {
+        timer_callbacks_.erase(handle);
+        return 0;
+    }
+
+    struct kevent ke;
+    // EVFILT_TIMER: data field contains timeout in milliseconds
+    // Use NOTE_ABSOLUTE for absolute time, otherwise relative
+    EV_SET(&ke, pipe_fds[0], EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, delay_ms, nullptr);
+    if (kevent(kqueue_fd_, &ke, 1, nullptr, 0, nullptr) != 0) {
+        timer_callbacks_.erase(handle);
+        close(pipe_fds[0]);
+        close(pipe_fds[1]);
+        return 0;
+    }
+    // Note: pipe_fds[1] is kept for potential future use
+    (void)pipe_fds;  // Avoid unused warning
+    return handle;
+}
+
+uint64_t EventLoop::run_every(timer_callback callback, int interval_ms) {
+    uint64_t handle = next_timer_handle_++;
+    timer_callbacks_[handle] = std::move(callback);
+
+    int pipe_fds[2];
+    if (pipe(pipe_fds) < 0) {
+        timer_callbacks_.erase(handle);
+        return 0;
+    }
+
+    struct kevent ke;
+    EV_SET(&ke, pipe_fds[0], EVFILT_TIMER, EV_ADD | EV_ENABLE, 0, interval_ms, nullptr);
+    if (kevent(kqueue_fd_, &ke, 1, nullptr, 0, nullptr) != 0) {
+        timer_callbacks_.erase(handle);
+        close(pipe_fds[0]);
+        close(pipe_fds[1]);
+        return 0;
+    }
+    (void)pipe_fds;
+    return handle;
+}
+
+void EventLoop::cancel_timer(uint64_t timer_handle) {
+    timer_callbacks_.erase(timer_handle);
+}
+
 #elif defined(__linux__)
 // -----------------------------------------------------------------------------
 // epoll implementation (Linux)
@@ -135,6 +188,68 @@ bool EventLoop::has_event(int /*fd*/, Event /*event*/) const {
     // For epoll, triggered events are returned from wait()
     // Caller should iterate wait() results
     return true;
+}
+
+uint64_t EventLoop::run_after(timer_callback callback, int delay_ms) {
+    uint64_t handle = next_timer_handle_++;
+    timer_callbacks_[handle] = std::move(callback);
+
+    int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
+    if (timer_fd < 0) {
+        timer_callbacks_.erase(handle);
+        return 0;
+    }
+
+    struct itimerspec ts;
+    ts.it_value.tv_sec = delay_ms / 1000;
+    ts.it_value.tv_nsec = (delay_ms % 1000) * 1000000;
+    ts.it_interval.tv_sec = 0;
+    ts.it_interval.tv_nsec = 0;
+    timerfd_settime(timer_fd, 0, &ts, nullptr);
+
+    struct epoll_event ev;
+    std::memset(&ev, 0, sizeof(ev));
+    ev.events = EPOLLIN | EPOLLET;
+    ev.data.fd = timer_fd;
+    if (epoll_ctl(kqueue_fd_, EPOLL_CTL_ADD, timer_fd, &ev) != 0) {
+        timer_callbacks_.erase(handle);
+        close(timer_fd);
+        return 0;
+    }
+    return handle;
+}
+
+uint64_t EventLoop::run_every(timer_callback callback, int interval_ms) {
+    uint64_t handle = next_timer_handle_++;
+    timer_callbacks_[handle] = std::move(callback);
+
+    int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
+    if (timer_fd < 0) {
+        timer_callbacks_.erase(handle);
+        return 0;
+    }
+
+    struct itimerspec ts;
+    ts.it_value.tv_sec = interval_ms / 1000;
+    ts.it_value.tv_nsec = (interval_ms % 1000) * 1000000;
+    ts.it_interval.tv_sec = interval_ms / 1000;
+    ts.it_interval.tv_nsec = (interval_ms % 1000) * 1000000;
+    timerfd_settime(timer_fd, 0, &ts, nullptr);
+
+    struct epoll_event ev;
+    std::memset(&ev, 0, sizeof(ev));
+    ev.events = EPOLLIN | EPOLLET;
+    ev.data.fd = timer_fd;
+    if (epoll_ctl(kqueue_fd_, EPOLL_CTL_ADD, timer_fd, &ev) != 0) {
+        timer_callbacks_.erase(handle);
+        close(timer_fd);
+        return 0;
+    }
+    return handle;
+}
+
+void EventLoop::cancel_timer(uint64_t timer_handle) {
+    timer_callbacks_.erase(timer_handle);
 }
 
 #endif

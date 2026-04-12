@@ -2,8 +2,10 @@
 
 #include <hpactor/types.hpp>
 
+#include <atomic>
 #include <functional>
 #include <memory>
+#include <unordered_map>
 #include <vector>
 
 namespace hpactor {
@@ -50,8 +52,25 @@ public:
     // Get the underlying system fd (for socket operations)
     int system_fd() const { return kqueue_fd_; }
 
+    // Timer callback type
+    using timer_callback = std::function<void()>;
+
+    // Schedule a one-shot timer to fire after delay_ms milliseconds
+    // Returns a timer handle that can be used to cancel the timer
+    uint64_t run_after(timer_callback callback, int delay_ms);
+
+    // Schedule a repeating timer to fire every interval_ms milliseconds
+    // Returns a timer handle that can be used to cancel the timer
+    uint64_t run_every(timer_callback callback, int interval_ms);
+
+    // Cancel a scheduled timer
+    void cancel_timer(uint64_t timer_handle);
+
 private:
     int kqueue_fd_;  // kqueue fd on macOS/BSD, epoll fd on Linux
+
+    std::unordered_map<uint64_t, timer_callback> timer_callbacks_;
+    std::atomic<uint64_t> next_timer_handle_{1};
 };
 
 } // namespace net
