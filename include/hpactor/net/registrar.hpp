@@ -188,6 +188,13 @@ enum class RegistrarError : uint8_t {
 };
 
 // -----------------------------------------------------------------------------
+// Forward declarations
+// -----------------------------------------------------------------------------
+class RegistrarServer;
+class RegistrarClient;
+class NodeRegistry;
+
+// -----------------------------------------------------------------------------
 // RegistrarServer - TCP-based authoritative registrar
 // -----------------------------------------------------------------------------
 class RegistrarServer {
@@ -233,7 +240,7 @@ private:
 };
 
 // -----------------------------------------------------------------------------
-// UdpRegistrar - UDP-based node discovery
+// UdpRegistrar - Dual-mode registrar (server or client)
 // -----------------------------------------------------------------------------
 class UdpRegistrar {
 public:
@@ -244,12 +251,9 @@ public:
     UdpRegistrar(const UdpRegistrar&) = delete;
     UdpRegistrar& operator=(const UdpRegistrar&) = delete;
 
-    // Start listening and broadcasting
+    // Start listening - determines server vs client mode based on bind result
     void start();
     void stop();
-
-    // Add static route manually
-    void add_static_route(NodeId node_id, const std::string& host, uint16_t port);
 
     // Query endpoint
     NodeEndpoint* get_endpoint(NodeId node_id);
@@ -261,45 +265,22 @@ public:
     using node_callback = std::function<void(NodeId, bool online)>;
     void set_node_callback(node_callback cb);
 
-    // Handle incoming UDP packet
-    void handle_packet(const bytes& data, const std::string& from_host, uint16_t from_port);
+    // Handle incoming UDP packet (for resolution)
+    void handle_udp_packet(const bytes& data, const std::string& from_host, uint16_t from_port);
 
 private:
-    // Send broadcast announcement
-    void send_announce();
-
-    // Send probe to static route
-    void send_probe(NodeEndpoint& ep);
-
-    // Parse incoming messages
-    void handle_announce(NodeId sender_id, const bytes& payload,
-                         const std::string& from_host, uint16_t from_port);
-    void handle_query(NodeId sender_id, const bytes& payload,
-                      const std::string& from_host, uint16_t from_port);
-    void handle_response(NodeId sender_id, const bytes& payload,
-                         const std::string& from_host, uint16_t from_port);
-    void handle_leave(NodeId sender_id);
-    void handle_probe(NodeId sender_id, const bytes& payload);
-    void handle_probe_ack(NodeId sender_id, const bytes& payload);
-
-    // Build outgoing messages
-    bytes build_message(RegistrarMessageType type, const void* payload, size_t payload_size);
+    void start_server_mode();
+    void start_client_mode();
+    void failover();
 
     RegistrarConfig config_;
     NodeId local_node_id_;
-    NodeRegistry registry_;
-    HostResolver host_resolver_;
 
-    int udp_socket_ = -1;
-    std::atomic<bool> running_{false};
+    // Either server or client (not both)
+    std::unique_ptr<RegistrarServer> server_;
+    std::unique_ptr<RegistrarClient> client_;
 
     node_callback node_callback_;
-    std::chrono::steady_clock::time_point last_broadcast_;
-
-    // For probes
-    std::atomic<uint64_t> next_probe_id_{1};
-    std::unordered_map<uint64_t, NodeId> pending_probes_;
-    std::mutex probes_mutex_;
 };
 
 // -----------------------------------------------------------------------------
