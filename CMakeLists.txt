@@ -79,6 +79,7 @@ add_library(hpactor_lib STATIC
     src/net/tls_connection.cpp
     src/net/connection_pool.cpp
     src/net/registrar.cpp
+    src/net/registrar_server.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 

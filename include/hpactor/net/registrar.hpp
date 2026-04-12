@@ -9,6 +9,7 @@
 #include <memory>
 #include <mutex>
 #include <string>
+#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -160,6 +161,75 @@ struct NodeResponsePayload {
 struct NodeProbePayload {
     uint64_t probe_id;
     uint64_t timestamp;
+};
+
+// -----------------------------------------------------------------------------
+// TCP Message Framing for RegistrarServer
+// -----------------------------------------------------------------------------
+constexpr uint32_t TcpRegistrarMagic = 0x48505243;  // "HPRC"
+constexpr uint8_t TcpRegistrarVersion = 0x01;
+constexpr size_t TcpHeaderSize = 10;
+
+// TCP Message types (different from UDP types)
+enum class TcpMessageType : uint8_t {
+    Register = 0x01,
+    Heartbeat = 0x02,
+    NodeJoin = 0x03,
+    NodeLeave = 0x04,
+    Accept = 0x05,
+    Error = 0x06,
+};
+
+// Error codes for TCP Error messages
+enum class RegistrarError : uint8_t {
+    None = 0,
+    NameTaken = 1,
+    InvalidMessage = 2,
+};
+
+// -----------------------------------------------------------------------------
+// RegistrarServer - TCP-based authoritative registrar
+// -----------------------------------------------------------------------------
+class RegistrarServer {
+public:
+    RegistrarServer(const RegistrarConfig& config, NodeId local_node_id);
+    ~RegistrarServer();
+
+    // Non-copyable
+    RegistrarServer(const RegistrarServer&) = delete;
+    RegistrarServer& operator=(const RegistrarServer&) = delete;
+
+    // Start TCP server and UDP listener
+    void start();
+    void stop();
+
+    // Get registry for reading
+    NodeRegistry* registry() { return &registry_; }
+
+    // Handle incoming TCP connection
+    void handle_accept(int client_fd);
+
+    // Broadcast event to all connected clients
+    void broadcast_node_joined(NodeId node_id, const NodeEndpoint& ep);
+    void broadcast_node_left(NodeId node_id);
+
+private:
+    void accept_loop();
+    void handle_tcp_message(int client_fd, const bytes& data);
+
+    RegistrarConfig config_;
+    [[maybe_unused]] NodeId local_node_id_;
+    NodeRegistry registry_;
+
+    int tcp_socket_ = -1;
+    int udp_socket_ = -1;
+    std::atomic<bool> running_{false};
+
+    // Connected clients (node_id -> fd)
+    std::unordered_map<NodeId, int> clients_;
+    std::mutex clients_mutex_;
+
+    std::thread accept_thread_;
 };
 
 // -----------------------------------------------------------------------------
