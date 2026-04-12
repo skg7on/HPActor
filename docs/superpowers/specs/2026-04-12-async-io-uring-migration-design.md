@@ -43,6 +43,11 @@ The goal is to replace the reactive (epoll/kqueue) model with **proactive io_uri
 
 ## 3. AsyncIoBackend Interface
 
+### Opaque Timer Handle
+Timer handles are backend-internal and comparison-equivalent only within the same `AsyncIoBackend` instance. Callers store handles as `uint64_t` (as returned) and pass them back to `cancel_timer()` on the same backend instance.
+
+### Interface
+
 ```cpp
 class AsyncIoBackend {
 public:
@@ -57,17 +62,35 @@ public:
     virtual bool update_fd(int fd, IoEvent events) = 0;
     virtual bool remove_fd(int fd) = 0;
 
-    // --- Async I/O operations (fixed buffer, linked SQE support) ---
+    // --- Async I/O: vectored (uses WRITEV/READV, no fixed buffer) ---
     // user_data carries ActorId + op type for completion routing
     virtual void async_send(int fd, const iovec* bufs, int buf_count,
                             ActorId actor, uint32_t op_type) = 0;
     virtual void async_recv(int fd, const iovec* bufs, int buf_count,
                             ActorId actor, uint32_t op_type) = 0;
+
+    // --- Async I/O: fixed buffer (uses WRITE_FIXED/READ_FIXED) ---
+    // buffer_id is index into pre-registered buffer array
+    virtual void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                                   ActorId actor, uint32_t op_type) = 0;
+    virtual void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                                   ActorId actor, uint32_t op_type) = 0;
+
+    // --- Connection operations ---
     virtual void async_accept(int fd, ActorId actor) = 0;
     virtual void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
                                ActorId actor) = 0;
 
-    // --- Timer operations (via io_uring timeouts) ---
+    // --- UDP operations (for RegistrarClient node resolution) ---
+    virtual void async_recvfrom(int fd, const iovec* bufs, int buf_count,
+                                 ActorId actor, uint32_t op_type) = 0;
+    virtual void async_sendto(int fd, const iovec* bufs, int buf_count,
+                               const sockaddr* addr, socklen_t addrlen,
+                               ActorId actor, uint32_t op_type) = 0;
+
+    // --- Timer operations (via io_uring timeouts on Linux) ---
+    // TimerHandle is backend-internal; uint64_t is comparison-equivalent within
+    // a single backend instance only.
     virtual uint64_t run_after(ActorId actor, int delay_ms) = 0;
     virtual uint64_t run_every(ActorId actor, int interval_ms) = 0;
     virtual void cancel_timer(uint64_t handle) = 0;
@@ -80,8 +103,8 @@ public:
 
 - All async operations are **non-blocking**; results come asynchronously via actor message delivery
 - `user_data` encodes `ActorId` and `op_type` so the completion handler routes the result to the correct actor
-- Fixed buffers are pre-registered with io_uring (`io_uring_register()` with `IORING_REGISTER_BUFFERS`)
-- Linked SQEs are used for compound operations (e.g., send header + body as one atomic chain)
+- Two tiers of async I/O: **vectored** (`async_send`/`async_recv` via `WRITEV`/`READV`) and **fixed-buffer** (`async_send_fixed`/`async_recv_fixed` via `WRITE_FIXED`/`READ_FIXED`). Fixed buffer operations require buffers to be pre-registered with the backend.
+- Linked SQEs are used for compound operations (e.g., send + recv as one atomic chain)
 
 ## 4. IoUringBackend — Linux Implementation
 
@@ -98,10 +121,14 @@ Socket file descriptors pre-registered via `io_uring_register()` with `IORING_RE
 
 | Operation | io_uring Opcode | Notes |
 |-----------|-----------------|-------|
-| Send | `IORING_OP_WRITE_FIXED` | Uses pre-registered fixed buffers |
-| Recv | `IORING_OP_READ_FIXED` | Uses pre-registered fixed buffers |
+| Send (vectored) | `IORING_OP_WRITEV` | Uses iovec, no fixed buffer |
+| Send (fixed) | `IORING_OP_WRITE_FIXED` | Uses pre-registered buffer ID |
+| Recv (vectored) | `IORING_OP_READV` | Uses iovec, no fixed buffer |
+| Recv (fixed) | `IORING_OP_READ_FIXED` | Uses pre-registered buffer ID |
 | Accept | `IORING_OP_ACCEPT` | Direct async accept |
 | Connect | `IORING_OP_CONNECT` | Direct async connect |
+| RecvFrom | `IORING_OP_RECVMSG` | UDP receive with address |
+| SendTo | `IORING_OP_SENDMSG` | UDP send with address |
 | Timeout | `IORING_OP_TIMEOUT` | Monotonic clock, `clockid=CLOCK_MONOTONIC` |
 
 ### Linked SQEs
@@ -124,6 +151,8 @@ Uses Apple's **Grand Central Dispatch** (libdispatch) async socket APIs:
 | Recv | `dispatch_read()` |
 | Accept | `dispatch_source` with `DISPATCH_SOURCE_TYPE_READ` on listen fd |
 | Connect | `dispatch_connect()` |
+| RecvFrom | `dispatch_source` with `DISPATCH_SOURCE_TYPE_READ` on UDP socket |
+| SendTo | `dispatch_write()` to UDP socket with address |
 | Timer | `dispatch_after()` / `dispatch_source` with `DISPATCH_SOURCE_TYPE_TIMER` |
 
 ### Fixed Buffers
@@ -149,7 +178,9 @@ void TlsConnection::send_raw(const bytes& data) {
 ```cpp
 void TlsConnection::send_raw(const bytes& data) {
     if (fd_ < 0) return;
-    loop_->async_send(fd_, bufs, count, actor_id_, OpType::Send);
+    // Use fixed-buffer path for performance; buffer_id pre-registered
+    loop_->async_send_fixed(fd_, buffer_id_, 0, data.size(),
+                            actor_id_, OpType::Send);
     // Actor yields — Behavior suspends
     // Later: CQE fires → message delivered to actor
     // Actor's current Behavior resumes, handles send completion
@@ -164,7 +195,7 @@ void TlsConnection::send_raw(const bytes& data) {
 5. The actor's `Behavior` handles the I/O completion as a normal message
 
 ### Linked SQEs During Handshake
-- Client: submits `WRITE_FIXED(ClientHello)` linked with `READ_FIXED(ServerHello buffer)` in one `io_uring_enter()` call
+- Client: submits `WRITE_FIXED(ClientHello)` linked with `READ_FIXED(ServerHello buffer)` via `IOSQE_IO_LINK` flag in one `io_uring_enter()` call
 - Server: submits `ACCEPT` linked with `READ_FIXED(ClientHello buffer)` in one call
 
 ## 7. Registrar Migration
@@ -250,9 +281,10 @@ endif()
 | Linux backend | io_uring (liburing) | Proactive SQ/CQ model, zero-copy via fixed buffers |
 | macOS backend | libdispatch | Native Apple async I/O framework |
 | Linux mode | `IORING_SETUP_SQPOLL` | Proactive polling, no userspace busy-wait |
-| Fixed buffers | Yes | Zero-copy, avoids per-op malloc |
+| Buffer API | Two-tier: vectored (`WRITEV`/`READV`) + fixed (`WRITE_FIXED`/`READ_FIXED`) | Simple vectored path for flexibility; fixed path for performance |
 | Linked SQEs | Yes | Compound ops (send+recv, accept+recv) atomic |
 | Timer mechanism | io_uring timeout (Linux), dispatch_source (macOS) | Unified timer interface |
+| Timer handle | `uint64_t`, backend-internal encoding | Callers treat as opaque; comparison only within same backend |
 | Actor integration | `user_data` → actor ID → actor mailbox | Fits existing Behavior/message model |
 | Completion model | Actor messages (no direct callbacks) | Consistent with HPActor actor model |
 | Error handling | Submission failure = fatal; completion error = message | Distinguishes programmer error from runtime |
