@@ -99,6 +99,10 @@ add_executable(test_frame net/test_frame.cpp)
 target_link_libraries(test_frame hpactor)
 add_test(NAME test_frame COMMAND test_frame)
 
+add_executable(test_tls_context net/test_tls_context.cpp)
+target_link_libraries(test_tls_context hpactor)
+add_test(NAME test_tls_context COMMAND test_tls_context)
+
 # =============================================================================
 # Supervision tests
 # =============================================================================
