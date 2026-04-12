@@ -87,6 +87,21 @@ target_include_directories(hpactor_lib PUBLIC include)
 find_package(OpenSSL REQUIRED)
 target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
+# Async I/O backends
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    find_package(liburing REQUIRED)
+    target_link_libraries(hpactor_lib PUBLIC liburing::uring)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # Compute macOS SDK path and link libdispatch from the SDK
+    execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE HPACTOR_SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
+    string(STRIP "${HPACTOR_SDK_PATH}" HPACTOR_SDK_PATH)
+    set(HPACTOR_DISPATCH_LIB "${HPACTOR_SDK_PATH}/usr/lib/system/libdispatch.tbd")
+    if(NOT EXISTS "${HPACTOR_DISPATCH_LIB}")
+        message(FATAL_ERROR "libdispatch not found at ${HPACTOR_DISPATCH_LIB}")
+    endif()
+    target_link_libraries(hpactor_lib PUBLIC "${HPACTOR_DISPATCH_LIB}")
+endif()
+
 # Alias for backwards compatibility
 add_library(hpactor ALIAS hpactor_lib)
 
