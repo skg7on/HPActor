@@ -96,12 +96,23 @@ Client                          Server
   |====== ENCRYPTED MODE =========|
 ```
 
-### RSA Key Transport
+### RSA Key Transport (TLS 1.2-style)
 
-1. Client generates random 256-bit session key
-2. Client RSA-encrypts session key with server's public key from certificate
-3. Server RSA-decrypts to obtain session key
-4. Both derive AES key + IV from session key using SHA-256 KDF
+1. Client generates random 48-byte **pre_master_secret**
+2. Client RSA-encrypts pre_master_secret with server's public key from certificate
+3. Server RSA-decrypts to obtain pre_master_secret
+4. Both derive **master_secret** = PRF(pre_master_secret, "master secret", client_random + server_random)
+5. Both derive **session keys** = PRF(master_secret, "key expansion", server_random + client_random)
+   - AES-256 key for encryption
+   - IV for CBC mode (or use AEAD like AES-GCM)
+
+**Key derivation uses TLS PRF** (SHA-256 based):
+```
+master_secret = PRF(pre_master_secret, "master secret", client_random || server_random)
+session_key = PRF(master_secret, "key expansion", server_random || client_random)
+```
+
+Both Finished messages contain verify_data = PRF(master_secret, "client/server finished", SHA-256(handshake_messages)), allowing each side to confirm the other derived the same keys.
 
 ### Certificate Format
 
@@ -143,15 +154,21 @@ struct PoolConfig {
 
 ### Connection Selection
 
-Round-robin across active connections for a given node:
+Round-robin across active connections for a given node. Thread-safe via `std::atomic<size_t>`:
 
 ```cpp
-ConnectionPtr pool.get_connection() {
-    if (active.empty()) return nullptr;
-    auto conn = active[next_index_ % active.size()];
-    next_index_++;
-    return conn;
-}
+class ConnectionPool {
+    std::vector<ConnectionPtr> active_;
+    std::atomic<size_t> next_index_{0};
+
+public:
+    ConnectionPtr get_connection() {
+        if (active_.empty()) return nullptr;
+        auto index = next_index_.fetch_add(1) % active_.size();
+        return active_[index];
+    }
+};
+```
 ```
 
 ## Data Flow
@@ -203,8 +220,9 @@ struct TlsConfig {
 | Error | Handling |
 |-------|----------|
 | TLS handshake timeout | Close connection, start reconnect |
-| Certificate invalid | Close connection, log error, don't reconnect |
-| Certificate revoked | Close connection, alert via monitoring |
+| Certificate invalid (CertVerifyResult::Invalid) | Close connection, log error, don't reconnect |
+| Certificate untrusted (CertVerifyResult::Untrusted) | Close connection, log error, don't reconnect |
+| Certificate expired (CertVerifyResult::Expired) | Close connection, log error, don't reconnect |
 | Session key mismatch | Close connection, restart handshake |
 | Connection pool exhausted | Return `error::mailbox_full` to sender |
 | All reconnects failed | Mark node unreachable, return errors |
@@ -213,12 +231,15 @@ struct TlsConfig {
 
 ### Required Operations
 
-- `RSA_generate_key()` / `RSA_free()` — key generation
-- `RSA_public_encrypt()` / `RSA_private_decrypt()` — session key exchange
-- `X509_new()` / `X509_free()` — certificate parsing
+- `EVP_PKEY_CTX_new()` / `EVP_PKEY_CTX_free()` — key generation context
+- `EVP_PKEY_keygen_init()` / `EVP_PKEY_keygen()` — RSA key generation (OpenSSL 3.0 compatible)
+- `RSA_public_encrypt()` / `RSA_private_decrypt()` — pre_master_secret exchange
+- `d2i_X509()` / `X509_free()` — DER certificate parsing
 - `X509_verify()` — certificate verification
-- `SHA256()` — digest computation
-- `AES_encrypt()` / `AES_decrypt()` — session encryption
+- `EVP_MD_CTX_new()` / `EVP_MD_CTX_free()` — signing/verification context
+- `EVP_DigestSign()` / `EVP_DigestVerify()` — for CertificateVerify signatures
+- `EVP_CIPHER_CTX_new()` / `EVP_CIPHER_CTX_free()` — AES encryption context
+- `EVP_CipherInit_ex()` / `EVP_CipherUpdate()` / `EVP_CipherFinal_ex()` — AES-CBC encryption
 
 ### Linkage
 
@@ -272,6 +293,13 @@ public:
     // Stats
     size_t active_connections() const;
     size_t pending_messages() const;
+
+    // Graceful shutdown: drain pending messages, close all connections
+    // Returns number of messages that could not be sent
+    size_t drain();
+
+    // Stop accepting new messages and close connections immediately
+    void abort();
 };
 ```
 
@@ -287,7 +315,14 @@ public:
     static TlsContext from_config(const TlsConfig& config);
 
     // Verify peer certificate
-    bool verify_certificate(const bytes& cert_der) const;
+    enum class CertVerifyResult {
+        Ok,              // Certificate is valid
+        Invalid,         // Malformed, wrong signature, unsupported extensions
+        Untrusted,       // Not signed by a trusted CA
+        Expired,         // Certificate validity period has passed
+        UnknownError
+    };
+    CertVerifyResult verify_certificate(const bytes& cert_der) const;
 
     // Sign challenge (for CertificateVerify)
     bytes sign_challenge(const bytes& challenge) const;
