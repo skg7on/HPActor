@@ -400,7 +400,8 @@ pending_sqes_.push_back(sqe);
 ```cpp
 struct io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
 io_uring_prep_accept(sqe, fd, nullptr, nullptr, 0);
-sqe->user_data = encode_user_data(actor, op_type);
+sqe->user_data = encode_user_data(fd, actor,
+                                   static_cast<uint32_t>(OpType::Accept));
 pending_sqes_.push_back(sqe);
 ```
 
@@ -408,7 +409,8 @@ pending_sqes_.push_back(sqe);
 ```cpp
 struct io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
 io_uring_prep_connect(sqe, fd, addr, addrlen);
-sqe->user_data = encode_user_data(actor, op_type);
+sqe->user_data = encode_user_data(fd, actor,
+                                   static_cast<uint32_t>(OpType::Connect));
 pending_sqes_.push_back(sqe);
 ```
 
@@ -873,7 +875,7 @@ The new `EventLoop` looks like:
 ```cpp
 class EventLoop {
 public:
-    EventLoop();
+    EventLoop(ActorSystem* actor_system = nullptr);
     ~EventLoop();
     EventLoop(const EventLoop&) = delete;
     EventLoop& operator=(const EventLoop&) = delete;
@@ -881,6 +883,9 @@ public:
     bool add_fd(int fd, IoEvent events);
     bool update_fd(int fd, IoEvent events);
     bool remove_fd(int fd);
+
+    int register_buffer(const void* addr, size_t len);
+    bool unregister_buffer(int buffer_id);
 
     int wait(int timeout_ms);
 
@@ -913,6 +918,7 @@ public:
 
 private:
     std::unique_ptr<AsyncIoBackend> backend_;
+    ActorSystem* actor_system_ = nullptr;
 };
 ```
 
@@ -952,7 +958,9 @@ std::unique_ptr<AsyncIoBackend> EventLoop::create_backend() {
 #endif
 }
 
-EventLoop::EventLoop() : backend_(create_backend()) {
+EventLoop::EventLoop(ActorSystem* actor_system)
+    : backend_(create_backend()),
+      actor_system_(actor_system) {
     if (!backend_ || !backend_->start()) {
         // Log error but don't throw (no exceptions)
     }
@@ -974,6 +982,14 @@ bool EventLoop::update_fd(int fd, IoEvent events) {
 
 bool EventLoop::remove_fd(int fd) {
     return backend_->remove_fd(fd);
+}
+
+int EventLoop::register_buffer(const void* addr, size_t len) {
+    return backend_->register_buffer(addr, len);
+}
+
+bool EventLoop::unregister_buffer(int buffer_id) {
+    return backend_->unregister_buffer(buffer_id);
 }
 
 int EventLoop::wait(int timeout_ms) {
@@ -1148,11 +1164,6 @@ ninja -C build 2>&1 | tail -20
 ```bash
 git add include/hpactor/actor_system.hpp src/actor/actor_system.cpp src/net/event_loop.cpp src/net/tcp_transport.cpp
 git commit -m "feat: add ActorSystem::enqueue_completion for async I/O completions"
-```
-
-```bash
-git add include/hpactor/net/event_loop.hpp src/net/event_loop.cpp
-git commit -m "refactor: EventLoop delegates to AsyncIoBackend"
 ```
 
 ---
