@@ -66,12 +66,17 @@ add_library(hpactor_lib STATIC
     src/ref/actor_proxy.cpp
     src/ref/actor_ref.cpp
     src/supervision/supervision.cpp
+    src/serialization.cpp
     src/net/event_loop.cpp
     src/net/acceptor.cpp
     src/net/connection.cpp
     src/net/tcp_transport.cpp
+    src/net/frame.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
+
+find_package(OpenSSL REQUIRED)
+target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 
 # Alias for backwards compatibility
 add_library(hpactor ALIAS hpactor_lib)
