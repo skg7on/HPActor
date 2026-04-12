@@ -66,7 +66,7 @@ add_library(hpactor_lib STATIC
     src/ref/actor_proxy.cpp
     src/ref/actor_ref.cpp
     src/supervision/supervision.cpp
-    src/serialization.cpp
+    src/core/serialization.cpp
     src/net/event_loop.cpp
     src/net/acceptor.cpp
     src/net/connection.cpp
