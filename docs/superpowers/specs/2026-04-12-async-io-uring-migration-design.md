@@ -62,6 +62,13 @@ public:
     virtual bool update_fd(int fd, IoEvent events) = 0;
     virtual bool remove_fd(int fd) = 0;
 
+    // --- Fixed buffer registration ---
+    // Registers a memory region for use with async_send_fixed/async_recv_fixed.
+    // Returns a buffer_id (index into backend's registered buffer array) or -1 on error.
+    // The buffer must remain valid until unregistered.
+    virtual int register_buffer(const void* addr, size_t len) = 0;
+    virtual bool unregister_buffer(int buffer_id) = 0;
+
     // --- Async I/O: vectored (uses WRITEV/READV, no fixed buffer) ---
     // user_data carries ActorId + op type for completion routing
     virtual void async_send(int fd, const iovec* bufs, int buf_count,
@@ -82,6 +89,8 @@ public:
                                ActorId actor) = 0;
 
     // --- UDP operations (for RegistrarClient node resolution) ---
+    // Note: on macOS, libdispatch dispatch_read on UDP does not expose source
+    // address; callers needing peer address must use getpeername() after receive.
     virtual void async_recvfrom(int fd, const iovec* bufs, int buf_count,
                                  ActorId actor, uint32_t op_type) = 0;
     virtual void async_sendto(int fd, const iovec* bufs, int buf_count,
@@ -112,7 +121,7 @@ public:
 Uses `io_uring_setup()` with `IORING_SETUP_SQPOLL` for proactive (kernel-side busy-polling) mode. When the application is idle, the kernel polls the SQ head — no userspace polling needed, no syscalls until work arrives.
 
 ### Fixed Buffers
-Pre-registered memory regions via `io_uring_register()` with `IORING_REGISTER_BUFFERS`. Eliminates per-operation `malloc`/`free` in the fast path.
+Fixed buffers are registered via `register_buffer()` which calls `io_uring_register()` with `IORING_REGISTER_BUFFERS`. The returned `buffer_id` is the index into the registered buffer array, used by `async_send_fixed()` / `async_recv_fixed()` with `IORING_OP_WRITE_FIXED` / `IORING_OP_READ_FIXED`. Eliminates per-operation `malloc`/`free` in the fast path.
 
 ### File Descriptor Registration
 Socket file descriptors pre-registered via `io_uring_register()` with `IORING_REGISTER_FILES`. Avoids `O_NONBLOCK` setup per socket.
