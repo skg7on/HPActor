@@ -307,7 +307,7 @@ public:
 
 private:
     // Encode actor + op_type into user_data
-    static uint64_t encode_user_data(ActorId actor, uint32_t op_type);
+    static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type);
     static void decode_user_data(uint64_t user_data, ActorId& actor, uint32_t& op_type);
 
     // Submit pending SQEs to kernel
