@@ -32,7 +32,6 @@
 |------|--------|
 | `src/net/tcp_transport.cpp` | Replace single connections with ConnectionPool, integrate TLS |
 | `src/net/tcp_transport.hpp` | Update TcpTransport constructor to accept TlsConfig + PoolConfig |
-| `include/hpactor/net/transport.hpp` | Add ConnectionState::Handshake documentation |
 | `CMakeLists.txt` | Add new .cpp files, link OpenSSL |
 | `tests/CMakeLists.txt` | Add new test executables |
 
@@ -247,7 +246,7 @@ TlsContext TlsContext::from_filesystem(NodeId node_id,
     std::string cert_path = cert_dir + "/node_" + std::to_string(node_id) + ".pem";
     FILE* cert_file = fopen(cert_path.c_str(), "r");
     if (!cert_file) {
-        return ctx;  // TODO: set error state
+        return ctx;  // Caller should check node_id() == 0 to detect init failure
     }
     X509* cert = PEM_read_X509(cert_file, nullptr, nullptr, nullptr);
     fclose(cert_file);
@@ -743,11 +742,11 @@ bytes TlsConnection::encrypt_aes(const bytes& plaintext) {
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx) return ciphertext;
 
-    int len = 0;
-    unsigned char iv[16] = {0};
-    std::memcpy(iv, session_iv_.data(), std::min(session_iv_.size(), size_t(16)));
+    unsigned char iv[16];
+    std::memcpy(iv, session_iv_.data(), 16);
 
     EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, session_key_.data(), iv);
+    int len = 0;
     ciphertext.resize(plaintext.size() + AES_BLOCK_SIZE);
     EVP_EncryptUpdate(ctx, ciphertext.data(), &len, plaintext.data(), plaintext.size());
     int ciphertext_len = len;
@@ -764,11 +763,11 @@ bytes TlsConnection::decrypt_aes(const bytes& ciphertext) {
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx) return plaintext;
 
-    int len = 0;
-    unsigned char iv[16] = {0};
-    std::memcpy(iv, session_iv_.data(), std::min(session_iv_.size(), size_t(16)));
+    unsigned char iv[16];
+    std::memcpy(iv, session_iv_.data(), 16);
 
     EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, session_key_.data(), iv);
+    int len = 0;
     plaintext.resize(ciphertext.size());
     EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertext.size());
     int plaintext_len = len;
