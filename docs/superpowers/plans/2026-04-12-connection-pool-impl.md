@@ -671,19 +671,120 @@ private:
 
 - [ ] **Step 2: Write tls_connection.cpp**
 
-Create `src/net/tls_connection.cpp` - implement the TLS state machine following the handshake flow in the spec.
+Create `src/net/tls_connection.cpp` with complete TLS state machine and crypto implementations.
 
-Key implementation points:
-- `create_client()`: creates connection, calls `start_client_handshake()`
-- `start_client_handshake()`: generates client nonce, calls `send_raw(build_client_hello())`
-- `handle_server_hello()`: stores server nonce, transitions to `WaitingForCertificate`
-- `handle_certificate()`: verifies server cert, transitions to `WaitingForCertificateVerify`
-- `handle_certificate_verify()`: verifies signature, generates `pre_master_secret`, encrypts with server's public key, sends `CertificateVerify`
-- `handle_finished()`: verifies server's finished message, transitions to `Encrypted`
-- `send()`: if encrypted, calls `encrypt_aes()` then `send_raw()`
-- `handle_read()`: if encrypted, calls `decrypt_aes()` then delivers to `frame_handler_`
+```cpp
+#include <hpactor/net/tls_connection.hpp>
 
-Use `EVP_CIPHER_CTX` for AES encryption/decryption.
+#include <openssl/hmac.h>
+#include <openssl/crypto.h>
+#include <openssl/aes.h>
+#include <openssl/evp.h>
+
+namespace hpactor {
+
+namespace net {
+
+// TLS 1.2 PRF using SHA-256
+// PRF(secret, label, seed) = P_sha256(secret, label + seed)
+bytes TlsConnection::prf_sha256(const bytes& secret,
+                               const char* label,
+                               const bytes& data) {
+    bytes result;
+    bytes label_seed;
+    label_seed.insert(label_seed.end(), label, label + std::strlen(label));
+    label_seed.insert(label_seed.end(), data.begin(), data.end());
+
+    // A(0) = label + seed
+    bytes a = label_seed;
+    const size_t hmac_size = 32;  // SHA-256 output size
+
+    while (result.size() < secret.size() + label_seed.size()) {
+        // A(n) = HMAC_sha256(secret, A(n-1))
+        bytes a_hmac(hmac_size, 0);
+        HMAC(EVP_sha256(), secret.data(), secret.size(),
+             a.data(), a.size(), a_hmac.data(), nullptr);
+        a = a_hmac;
+
+        // HMAC_sha256(secret, A(n) + label + seed)
+        bytes a_label_seed = a;
+        a_label_seed.insert(a_label_seed.end(), label_seed.begin(), label_seed.end());
+        bytes h(hmac_size, 0);
+        HMAC(EVP_sha256(), secret.data(), secret.size(),
+             a_label_seed.data(), a_label_seed.size(), h.data(), nullptr);
+
+        result.insert(result.end(), h.begin(), h.end());
+    }
+    return result;
+}
+
+void TlsConnection::derive_session_keys(const bytes& pre_master_secret,
+                                       const Nonce& client_nonce,
+                                       const Nonce& server_nonce) {
+    // master_secret = PRF(pre_master_secret, "master secret", client_random + server_random)
+    bytes random_data;
+    random_data.insert(random_data.end(), client_nonce.begin(), client_nonce.end());
+    random_data.insert(random_data.end(), server_nonce.begin(), server_nonce.end());
+    master_secret_ = prf_sha256(pre_master_secret, "master secret", random_data);
+
+    // session_key = PRF(master_secret, "key expansion", server_random + client_random)
+    random_data.clear();
+    random_data.insert(random_data.end(), server_nonce.begin(), server_nonce.end());
+    random_data.insert(random_data.end(), client_nonce.begin(), client_nonce.end());
+    bytes key_block = prf_sha256(master_secret_, "key expansion", random_data);
+
+    // Extract session_key_ (first 32 bytes) and session_iv_ (next 16 bytes)
+    session_key_.assign(key_block.begin(), key_block.begin() + 32);
+    session_iv_.assign(key_block.begin() + 32, key_block.begin() + 48);
+}
+
+bytes TlsConnection::encrypt_aes(const bytes& plaintext) {
+    bytes ciphertext;
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return ciphertext;
+
+    int len = 0;
+    unsigned char iv[16] = {0};
+    std::memcpy(iv, session_iv_.data(), std::min(session_iv_.size(), size_t(16)));
+
+    EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, session_key_.data(), iv);
+    ciphertext.resize(plaintext.size() + AES_BLOCK_SIZE);
+    EVP_EncryptUpdate(ctx, ciphertext.data(), &len, plaintext.data(), plaintext.size());
+    int ciphertext_len = len;
+    EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len);
+    ciphertext_len += len;
+    ciphertext.resize(ciphertext_len);
+
+    EVP_CIPHER_CTX_free(ctx);
+    return ciphertext;
+}
+
+bytes TlsConnection::decrypt_aes(const bytes& ciphertext) {
+    bytes plaintext;
+    EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
+    if (!ctx) return plaintext;
+
+    int len = 0;
+    unsigned char iv[16] = {0};
+    std::memcpy(iv, session_iv_.data(), std::min(session_iv_.size(), size_t(16)));
+
+    EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, session_key_.data(), iv);
+    plaintext.resize(ciphertext.size());
+    EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), ciphertext.size());
+    int plaintext_len = len;
+    EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len);
+    plaintext_len += len;
+    plaintext.resize(plaintext_len);
+
+    EVP_CIPHER_CTX_free(ctx);
+    return plaintext;
+}
+
+// ... state machine handlers follow the handshake flow:
+// create_client() -> start_client_handshake() -> build_client_hello()
+// handle_server_hello() -> handle_certificate() -> handle_certificate_verify()
+// -> build_finished() -> on_connection_ready()
+// ...
 
 - [ ] **Step 3: Write tls_connection unit test**
 
