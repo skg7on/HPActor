@@ -73,7 +73,7 @@ public:
 private:
     NodeId node_id_ = 0;
     std::chrono::milliseconds timeout_{5000};
-    std::mutex mutex_;
+    mutable std::mutex mutex_;
     std::condition_variable cv_;
     bool ready_ = false;
     bool cancelled_ = false;

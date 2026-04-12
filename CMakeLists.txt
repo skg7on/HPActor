@@ -65,6 +65,7 @@ add_library(hpactor_lib STATIC
     src/actor/scheduler.cpp
     src/ref/actor_proxy.cpp
     src/ref/actor_ref.cpp
+    src/spawn.cpp
     src/supervision/supervision.cpp
     src/core/serialization.cpp
     src/net/event_loop.cpp
