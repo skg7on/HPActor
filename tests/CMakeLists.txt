@@ -115,6 +115,10 @@ add_executable(test_tls_integration net/test_tls_integration.cpp)
 target_link_libraries(test_tls_integration hpactor)
 add_test(NAME test_tls_integration COMMAND test_tls_integration)
 
+add_executable(test_registrar net/test_registrar.cpp)
+target_link_libraries(test_registrar hpactor)
+add_test(NAME test_registrar COMMAND test_registrar)
+
 # =============================================================================
 # Supervision tests
 # =============================================================================
