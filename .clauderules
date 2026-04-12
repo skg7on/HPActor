@@ -1,13 +1,21 @@
-Design Rules:
+# Design Rules:
 - Core Architecture: Actor Model (Zero shared memory).
 
-Building Rules:
+# Building Rules:
 - DO NOT use cmake reconfiguration if the cmake files not changed.
 - Use Ninja as generator.
 - Generate `compile_commands.json` database file during CMake config phase by default.
 
-Implementation & Coding Rules:
+# Implementation & Coding Rules:
 - Programming Language：C++20
 - Coding Style: Strictly adhere to the LLVM Coding Standards.
 - Performance Constraints: Avoid RTTI, disable Exceptions, and prioritize stack allocation.
 - Memory Safety: All tests must pass AddressSanitizer (ASan).
+
+# Naming Conventions
+- **Classes/Structs/Enums:** UpperCamelCase (e.g., `class TargetLowering;`)
+- **Functions/Methods:** lowerCamelCase (e.g., `void doSomething();`)
+- **Variables (Local & Parameters):** UpperCamelCase (e.g., `unsigned NumElements;`)
+- **Member Variables:** UpperCamelCase (e.g., `int MemberVariable;`). Do NOT use `m_` or `_` prefixes.
+- **Files:** UpperCamelCase (e.g., `VirtRegMap.cpp`)
+- **Namespaces:** lower_case or UpperCamelCase (usually nested like `namespace llvm::vfs`)
