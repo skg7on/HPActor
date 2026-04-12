@@ -1,5 +1,9 @@
 #include <hpactor/actor_system.hpp>
 #include <hpactor/scheduler.hpp>
+#include <hpactor/actor_type_registry.hpp>
+#include <hpactor/spawn.hpp>
+#include <hpactor/net/frame.hpp>
+#include <hpactor/net/tcp_transport.hpp>
 
 namespace hpactor {
 
@@ -31,11 +35,54 @@ ActorSystem::ActorSystem(const Config& config)
     : config_(config),
       node_id_(config.node_id),
       registry_(node_id_),
-      scheduler_(std::make_unique<Scheduler>(*this, config.scheduler_threads)) {
+      scheduler_(std::make_unique<Scheduler>(*this, config.scheduler_threads)),
+      actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
+
     scheduler_->start();
+
+    if (config.enable_network) {
+        // Initialize network components
+        network_loop_ = std::make_unique<net::EventLoop>();
+
+        // Create registrar first (before transport)
+        if (config.udp_port > 0) {
+            registrar_ = std::make_unique<net::UdpRegistrar>(
+                config.registrar, node_id_);
+            registrar_->start();
+        }
+
+        // Create transport with registry
+        // Note: TcpTransport expects NodeRegistry*, but UdpRegistrar owns one internally.
+        // For now, pass nullptr and rely on UdpRegistrar for discovery.
+        transport_ = std::make_unique<net::TcpTransport>(
+            node_id_, config.tls, config.pool, nullptr);
+
+        // Listen on TCP port if specified
+        if (config.tcp_port > 0) {
+            transport_->listen(config.tcp_port);
+        }
+
+        // Start network event loop in background thread
+        network_thread_ = std::thread([this]() {
+            while (network_loop_->wait(100) >= 0) {
+                // Process events until stopped
+            }
+        });
+    }
 }
 
 ActorSystem::~ActorSystem() {
+    if (config_.enable_network) {
+        if (network_thread_.joinable()) {
+            network_thread_.join();
+        }
+        if (transport_) {
+            transport_->stop_listening();
+        }
+        if (registrar_) {
+            registrar_->stop();
+        }
+    }
     scheduler_->stop();
 }
 
@@ -101,6 +148,59 @@ void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
         mailbox->push(Message<MessageVariant>(std::move(msg)));
         scheduler_->enqueue(target, MessageVariant{});  // Enqueue for processing
     }
+}
+
+result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
+                                           const std::string& actor_type,
+                                           const bytes& /*args*/) {
+    return spawn_remote_async(node_name, actor_type, bytes{}).get();
+}
+
+AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
+                                           const std::string& actor_type,
+                                           const bytes& /*args*/) {
+    AsyncActor handle(node_id_, config_.spawn_timeout);
+
+    if (!config_.enable_network || !transport_) {
+        // No network - mark as failed
+        SpawnResponse resp;
+        resp.error_code = spawn_errors::node_unreachable;
+        handle.set_response(resp);
+        return handle;
+    }
+
+    // TODO: Look up node by name via registrar
+    // For now, assume node_name is a NodeId string
+    NodeId remote_node_id = static_cast<NodeId>(std::stoul(node_name));
+
+    // Create spawn request
+    SpawnRequest request;
+    request.actor_type_name = actor_type;
+    request.args_type = TypeTag::User;
+    request.serialized_args = bytes{};
+
+    // Serialize request - for now, use simple manual encoding
+    // TODO: Integrate with DefaultSerializer when SpawnRequest is MessageVariant
+    bytes request_bytes;
+    // [4 bytes: name length][name bytes...]
+
+    // Create frame for spawn request
+    net::Frame frame;
+    frame.sender = system_actor_.address();
+    frame.receiver = ActorAddress{remote_node_id, SystemActorType, SpawnReceiverId, 0};
+    frame.message_id = MessageId::generate().value();
+    frame.payload = request_bytes;
+
+    // Store pending spawn for response routing
+    {
+        std::lock_guard<std::mutex> lock(pending_spawns_mutex_);
+        pending_spawns_.emplace(frame.message_id, std::make_shared<AsyncActor>(std::move(handle)));
+    }
+
+    // Send via transport
+    transport_->send(frame.receiver, frame.encode());
+
+    return handle;
 }
 
 } // namespace hpactor

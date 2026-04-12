@@ -3,18 +3,24 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor_registry.hpp>
 #include <hpactor/mailbox.hpp>
+#include <hpactor/net/registrar.hpp>
+#include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <memory>
 #include <mutex>
+#include <thread>
 #include <unordered_map>
 
 namespace hpactor {
 
-// Forward declaration
+// Forward declarations
 class Scheduler;
+class AsyncActor;
+class ActorTypeRegistry;
 
 // -----------------------------------------------------------------------------
 // Config - configuration for ActorSystem
@@ -23,6 +29,19 @@ struct Config {
     size_t scheduler_threads = 4;
     size_t max_queue_depth = 1024;
     NodeId node_id = LocalNodeId;
+
+    // Network configuration
+    bool enable_network = false;
+    uint16_t tcp_port = 0;  // TCP port to listen on (0 = don't listen)
+    uint16_t udp_port = 5353;  // UDP discovery port
+
+    // Remote spawn configuration
+    std::chrono::milliseconds spawn_timeout{5000};
+
+    // TLS and pool config (used if enable_network=true)
+    net::TlsConfig tls;
+    net::PoolConfig pool;
+    net::RegistrarConfig registrar;
 };
 
 // -----------------------------------------------------------------------------
@@ -86,6 +105,23 @@ class ActorSystem {
     // Deliver message to local actor
     void deliver_local(ActorId target, MessageVariant msg);
 
+    // Network access
+    net::Transport* transport() { return transport_.get(); }
+    net::UdpRegistrar* registrar() { return registrar_.get(); }
+
+    // Remote actor spawning (main/non-actor context only)
+    result<ActorRef> spawn_remote(const std::string& node_name,
+                                  const std::string& actor_type,
+                                  const bytes& args);
+
+    AsyncActor spawn_remote_async(const std::string& node_name,
+                                  const std::string& actor_type,
+                                  const bytes& args);
+
+    // Actor type registry for remote spawning
+    ActorTypeRegistry& actor_type_registry() { return *actor_type_registry_; }
+    const ActorTypeRegistry& actor_type_registry() const { return *actor_type_registry_; }
+
   private:
     friend class Scheduler;
 
@@ -109,6 +145,19 @@ class ActorSystem {
 
     // Scheduler
     std::unique_ptr<Scheduler> scheduler_;
+
+    // Network components (owned)
+    std::unique_ptr<net::TcpTransport> transport_;
+    std::unique_ptr<net::UdpRegistrar> registrar_;
+    std::unique_ptr<net::EventLoop> network_loop_;
+    std::thread network_thread_;
+
+    // Actor type registry for remote spawning (owned via pointer to avoid circular dep)
+    std::unique_ptr<ActorTypeRegistry> actor_type_registry_;
+
+    // Pending remote spawns awaiting response
+    std::unordered_map<uint64_t, std::shared_ptr<AsyncActor>> pending_spawns_;
+    std::mutex pending_spawns_mutex_;
 };
 
 // -----------------------------------------------------------------------------
