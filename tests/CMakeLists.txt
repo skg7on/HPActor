@@ -107,6 +107,10 @@ add_executable(test_tls_connection net/test_tls_connection.cpp)
 target_link_libraries(test_tls_connection hpactor)
 add_test(NAME test_tls_connection COMMAND test_tls_connection)
 
+add_executable(test_connection_pool net/test_connection_pool.cpp)
+target_link_libraries(test_connection_pool hpactor)
+add_test(NAME test_connection_pool COMMAND test_connection_pool)
+
 # =============================================================================
 # Supervision tests
 # =============================================================================

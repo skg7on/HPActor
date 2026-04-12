@@ -74,6 +74,7 @@ add_library(hpactor_lib STATIC
     src/net/frame.cpp
     src/net/tls_context.cpp
     src/net/tls_connection.cpp
+    src/net/connection_pool.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 
