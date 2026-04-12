@@ -1,7 +1,9 @@
 #pragma once
 
 #include <hpactor/net/acceptor.hpp>
+#include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
 
 #include <unordered_map>
@@ -11,11 +13,13 @@ namespace hpactor {
 namespace net {
 
 // -----------------------------------------------------------------------------
-// TcpTransport - TCP implementation of Transport
+// TcpTransport - TCP implementation of Transport with TLS and pooling
 // -----------------------------------------------------------------------------
 class TcpTransport : public Transport {
 public:
-    TcpTransport(NodeId node_id);
+    TcpTransport(NodeId node_id,
+                 const TlsConfig& tls_config,
+                 const PoolConfig& pool_config);
     ~TcpTransport() override;
 
     // Transport interface
@@ -36,37 +40,15 @@ public:
 private:
     void handle_accept(int client_fd);
 
+    // Get or create a connection pool for a remote node
+    std::shared_ptr<ConnectionPool> get_or_create_pool(NodeId remote_node);
+
     NodeId node_id_;
     EventLoop loop_;
     Acceptor acceptor_;
-    std::unordered_map<NodeId, ConnectionPtr> connections_;
-};
-
-// -----------------------------------------------------------------------------
-// TcpConnection - TCP implementation of Connection
-// -----------------------------------------------------------------------------
-class TcpConnection : public Connection {
-public:
-    TcpConnection(int fd, NodeId remote_node);
-    ~TcpConnection() override;
-
-    // Connection interface
-    void send(const bytes& data) override;
-    void close() override;
-
-    // Get underlying socket fd
-    int fd() const { return fd_; }
-
-    // Set file descriptor (for accepted connections)
-    void set_fd(int fd);
-
-private:
-    void handle_read();
-    void handle_write();
-
-    int fd_ = -1;
-    bytes write_buffer_;
-    bool write_pending_ = false;
+    TlsContext tls_context_;
+    PoolConfig pool_config_;
+    std::unordered_map<NodeId, std::shared_ptr<ConnectionPool>> pools_;
 };
 
 } // namespace net

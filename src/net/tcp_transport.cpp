@@ -15,15 +15,34 @@ namespace net {
 // TcpTransport implementation
 // -----------------------------------------------------------------------------
 
-TcpTransport::TcpTransport(NodeId node_id)
-    : node_id_(node_id), loop_(), acceptor_(&loop_) {}
+TcpTransport::TcpTransport(NodeId node_id,
+                           const TlsConfig& tls_config,
+                           const PoolConfig& pool_config)
+    : node_id_(node_id),
+      loop_(),
+      acceptor_(&loop_),
+      tls_context_(TlsContext::from_config(tls_config)),
+      pool_config_(pool_config) {}
 
 TcpTransport::~TcpTransport() {
     stop_listening();
-    // Close all connections
-    for (auto& [node, conn] : connections_) {
-        conn->close();
+    // Abort all connection pools
+    for (auto& [node, pool] : pools_) {
+        pool->abort();
     }
+}
+
+std::shared_ptr<ConnectionPool> TcpTransport::get_or_create_pool(NodeId remote_node) {
+    auto it = pools_.find(remote_node);
+    if (it != pools_.end()) {
+        return it->second;
+    }
+    auto pool = std::make_shared<ConnectionPool>(remote_node,
+                                                  pool_config_,
+                                                  &tls_context_,
+                                                  &loop_);
+    pools_[remote_node] = pool;
+    return pool;
 }
 
 ConnectionPtr TcpTransport::connect(NodeId remote_node,
@@ -57,10 +76,16 @@ ConnectionPtr TcpTransport::connect(NodeId remote_node,
         return nullptr;
     }
 
-    ConnectionPtr connection = std::make_shared<TcpConnection>(fd, remote_node);
-    connections_[remote_node] = connection;
+    // Create a TlsConnection as client and get the pool
+    auto pool = get_or_create_pool(remote_node);
 
-    return connection;
+    // Create client-side TLS connection
+    auto conn = TlsConnection::create_client(remote_node, &tls_context_, &loop_);
+    conn->start_client_handshake();
+
+    // For the return value, we return the pool as a Connection
+    // The pool itself manages the actual TlsConnection(s)
+    return pool;
 }
 
 void TcpTransport::listen(uint16_t port) {
@@ -76,25 +101,23 @@ void TcpTransport::stop_listening() {
 
 void TcpTransport::send(const ActorAddress& target, const bytes& encoded) {
     NodeId remote_node = target.node_id;
-    auto it = connections_.find(remote_node);
-    if (it != connections_.end()) {
-        it->second->send(encoded);
-    }
+    auto pool = get_or_create_pool(remote_node);
+    pool->send(target, encoded);
 }
 
 bool TcpTransport::is_connected(NodeId remote_node) const {
-    auto it = connections_.find(remote_node);
-    if (it != connections_.end()) {
-        return it->second->state() == ConnectionState::Connected;
+    auto it = pools_.find(remote_node);
+    if (it != pools_.end()) {
+        return it->second->is_connected();
     }
     return false;
 }
 
 void TcpTransport::close_connection(NodeId remote_node) {
-    auto it = connections_.find(remote_node);
-    if (it != connections_.end()) {
-        it->second->close();
-        connections_.erase(it);
+    auto it = pools_.find(remote_node);
+    if (it != pools_.end()) {
+        it->second->abort();
+        pools_.erase(it);
     }
 }
 
@@ -102,92 +125,9 @@ void TcpTransport::handle_accept(int client_fd) {
     // For accepted connections, we don't know the remote node ID yet
     // The connection will be registered when we receive the handshake
     // TODO: implement proper node ID exchange during handshake
-    ConnectionPtr conn = std::make_shared<TcpConnection>(client_fd, 0);
+    // Create server-side TLS connection
+    auto conn = TlsConnection::create_server(client_fd, 0, &tls_context_, &loop_);
     (void)conn;
-}
-
-// -----------------------------------------------------------------------------
-// TcpConnection implementation
-// -----------------------------------------------------------------------------
-
-TcpConnection::TcpConnection(int fd, NodeId remote_node)
-    : Connection(remote_node), fd_(fd) {
-    set_state(ConnectionState::Connected);
-}
-
-TcpConnection::~TcpConnection() {
-    close();
-}
-
-void TcpConnection::send(const bytes& data) {
-    if (fd_ < 0) {
-        return;
-    }
-
-    // If no pending write, try direct send
-    if (!write_pending_) {
-        ssize_t result = ::send(fd_, data.data(), data.size(), 0);
-        if (result > 0) {
-            if (static_cast<size_t>(result) < data.size()) {
-                // Partial send, buffer the rest
-                write_buffer_.insert(write_buffer_.end(),
-                                    data.begin() + result, data.end());
-                write_pending_ = true;
-            }
-            return;
-        }
-        if (result < 0 && errno == EAGAIN) {
-            // Would block, buffer it
-            write_buffer_.insert(write_buffer_.end(), data.begin(), data.end());
-            write_pending_ = true;
-        }
-    } else {
-        // Append to existing buffer
-        write_buffer_.insert(write_buffer_.end(), data.begin(), data.end());
-    }
-}
-
-void TcpConnection::close() {
-    if (fd_ >= 0) {
-        ::close(fd_);
-        fd_ = -1;
-    }
-    set_state(ConnectionState::Disconnected);
-}
-
-void TcpConnection::set_fd(int fd) {
-    fd_ = fd;
-    set_state(ConnectionState::Connected);
-}
-
-void TcpConnection::handle_read() {
-    if (fd_ < 0) {
-        return;
-    }
-
-    bytes buffer(4096, 0);
-    ssize_t n = ::recv(fd_, buffer.data(), buffer.size(), 0);
-    if (n > 0) {
-        buffer.resize(static_cast<size_t>(n));
-        Connection::handle_read(buffer);
-    } else if (n == 0) {
-        // Connection closed
-        close();
-    }
-}
-
-void TcpConnection::handle_write() {
-    if (fd_ < 0 || write_buffer_.empty()) {
-        return;
-    }
-
-    ssize_t n = ::send(fd_, write_buffer_.data(), write_buffer_.size(), 0);
-    if (n > 0) {
-        write_buffer_.erase(write_buffer_.begin(), write_buffer_.begin() + n);
-        if (write_buffer_.empty()) {
-            write_pending_ = false;
-        }
-    }
 }
 
 } // namespace net

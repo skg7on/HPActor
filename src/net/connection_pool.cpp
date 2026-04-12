@@ -8,7 +8,8 @@ ConnectionPool::ConnectionPool(NodeId remote_node_id,
                               const PoolConfig& config,
                               TlsContext* tls_context,
                               EventLoop* loop)
-    : remote_node_id_(remote_node_id),
+    : Connection(remote_node_id),
+      remote_node_id_(remote_node_id),
       config_(config),
       tls_context_(tls_context),
       loop_(loop) {}
@@ -44,6 +45,17 @@ void ConnectionPool::send(const ActorAddress& target, const bytes& encoded) {
 
     // Create connection
     create_connection();
+}
+
+void ConnectionPool::send(const bytes& data) {
+    // Create a minimal actor address using the remote node ID
+    ActorAddress target;
+    target.node_id = remote_node();
+    send(target, data);
+}
+
+void ConnectionPool::close() {
+    abort();
 }
 
 bool ConnectionPool::is_connected() const {

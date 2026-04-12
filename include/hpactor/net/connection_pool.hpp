@@ -3,6 +3,7 @@
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_address.hpp>
 
 #include <atomic>
@@ -44,7 +45,7 @@ struct PoolStats {
     bool is_connected = false;
 };
 
-class ConnectionPool : public std::enable_shared_from_this<ConnectionPool> {
+class ConnectionPool : public Connection, public std::enable_shared_from_this<ConnectionPool> {
 public:
     ConnectionPool(NodeId remote_node_id,
                    const PoolConfig& config,
@@ -56,7 +57,13 @@ public:
     ConnectionPool(const ConnectionPool&) = delete;
     ConnectionPool& operator=(const ConnectionPool&) = delete;
 
-    // Send message to remote node (uses pool)
+    // Connection interface - send raw bytes (uses default target)
+    void send(const bytes& data) override;
+
+    // Close the connection
+    void close() override;
+
+    // Send message to specific actor on remote node (uses pool)
     void send(const ActorAddress& target, const bytes& encoded);
 
     // Check if pool has active connections
