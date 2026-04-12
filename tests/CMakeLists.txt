@@ -120,6 +120,11 @@ target_link_libraries(test_registrar hpactor)
 add_test(NAME test_registrar COMMAND test_registrar)
 
 # =============================================================================
+# Spawn tests - remote actor spawn
+# =============================================================================
+add_subdirectory(spawn)
+
+# =============================================================================
 # Supervision tests
 # =============================================================================
 add_executable(test_supervision supervision/test_supervision.cpp)

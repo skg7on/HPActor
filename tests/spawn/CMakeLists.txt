@@ -1,0 +1,3 @@
+add_executable(test_async_actor test_async_actor.cpp)
+target_link_libraries(test_async_actor hpactor)
+add_test(NAME test_async_actor COMMAND test_async_actor)
