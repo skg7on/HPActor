@@ -1,3 +1,7 @@
 add_executable(test_async_actor test_async_actor.cpp)
 target_link_libraries(test_async_actor hpactor)
 add_test(NAME test_async_actor COMMAND test_async_actor)
+
+add_executable(test_actor_type_registry test_actor_type_registry.cpp)
+target_link_libraries(test_actor_type_registry hpactor)
+add_test(NAME test_actor_type_registry COMMAND test_actor_type_registry)
