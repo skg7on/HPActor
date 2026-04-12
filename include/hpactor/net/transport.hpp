@@ -85,11 +85,15 @@ class Transport {
 public:
     virtual ~Transport() = default;
 
-    // Connect to a remote node (blocking)
+    // Connect to a remote node using explicit host/port (blocking)
     // Returns a Connection pointer on success, nullptr on failure
     virtual ConnectionPtr connect(NodeId remote_node,
                                 const std::string& host,
                                 uint16_t port) = 0;
+
+    // Connect to a remote node using registry lookup (DNS resolution if needed)
+    // Returns ConnectionPtr on success, nullptr on failure
+    virtual ConnectionPtr connect(NodeId remote_node) = 0;
 
     // Start listening for incoming connections (non-blocking)
     virtual void listen(uint16_t port) = 0;

@@ -3,6 +3,7 @@
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
 
@@ -19,13 +20,16 @@ class TcpTransport : public Transport {
 public:
     TcpTransport(NodeId node_id,
                  const TlsConfig& tls_config,
-                 const PoolConfig& pool_config);
+                 const PoolConfig& pool_config,
+                 NodeRegistry* registry = nullptr);
     ~TcpTransport() override;
 
     // Transport interface
     ConnectionPtr connect(NodeId remote_node,
                         const std::string& host,
                         uint16_t port) override;
+
+    ConnectionPtr connect(NodeId remote_node) override;
 
     void listen(uint16_t port) override;
     void stop_listening() override;
@@ -48,6 +52,8 @@ private:
     Acceptor acceptor_;
     TlsContext tls_context_;
     PoolConfig pool_config_;
+    NodeRegistry* registry_ = nullptr;  // Optional registry for node lookup
+    HostResolver host_resolver_;
     std::unordered_map<NodeId, std::shared_ptr<ConnectionPool>> pools_;
 };
 

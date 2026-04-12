@@ -12,7 +12,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current State
 
-**Actor Core Framework:** ✅ Complete (30 tests passing)
+**Actor Core Framework:** ✅ Complete (Phase A-G)
 - Fundamental types: ActorId, error, Clock, AlarmHandle, TraceContext, MessageId, result<T>
 - Actor base classes: abstract_actor, local_actor, event_based_actor
 - ActorContext, ActorSystem, actor_registry
@@ -22,12 +22,23 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - ActorMailbox integration
 - Supervision: OneForOne, AllForOne, supervisor_actor, self_supervising_actor
 
-**Network Layer:** ✅ Complete (Phase 4)
+**Network Layer:** ✅ Complete (Phase 4-5)
 - TlsContext — certificate loading, RSA signing, pre-master secret decryption
 - TlsConnection — TLS state machine, AES-256-CBC encryption
 - ConnectionPool — dynamic pooling per node, round-robin, exponential backoff
 - TcpTransport — updated to use ConnectionPool + TLS
 - EventLoop timer support — EVFILT_TIMER/timerfd for reconnect backoff
+- UdpRegistrar — UDP-based node discovery
+- HostResolver — DNS resolution with caching
+- NodeRegistry — registry of known nodes with static routes
+
+**Phase 6: Remote Actor Spawn** ✅ Complete (34 tests passing)
+- AsyncActor handle for non-blocking spawn with get(), ready(), cancel()
+- SpawnRequest/SpawnResponse message types
+- ActorTypeRegistry for registering spawnable actor types
+- SpawnReceiver system actor for handling spawn requests
+- ActorSystem::spawn_remote() and spawn_remote_async()
+- Well-known system ActorIds (SpawnReceiverId, SystemActorType)
 
 **Examples:** ✅ Complete
 - `examples/01_echo_actor.cpp` — EventBasedActor, make_behavior(), become()
@@ -49,31 +60,36 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Both statically and dynamically typed actors
 - Hierarchical supervision (OneForOne, AllForOne)
 - Swap-in mailbox interface (earned lock-free through testing)
-- Header-only library, C++20, no external dependencies
+- Header-only library, C++20, no external dependencies (except OpenSSL for TLS)
+- No exceptions (-fno-exceptions), no RTTI (-fno-rtti)
+- constexpr ActorId constructor for constant initialization
 
 ## Current Progress
 
-**Phase 0-4 Complete** (30 tests passing)
+**Phase 0-6 Complete** (34 tests passing)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
 - Phase 3: Message Serialization — TypeTag enum, DefaultSerializer, Frame encode/decode
 - Phase 4: Connection Pool and Handshake — TlsContext, TlsConnection, ConnectionPool, TLS handshake, AES-256-CBC encryption
+- Phase 5: Service Discovery — UdpRegistrar, HostResolver, NodeRegistry, static routes, DNS resolution
+- Phase 6: Remote Actor Spawn — AsyncActor, ActorTypeRegistry, SpawnReceiver, spawn_remote()
 
-**Next Steps (Phase 5-6)**
-- Phase 5: Service Discovery — UDP registrar, static routes
-- Phase 6: Remote Actor Spawn — Spawn actors on remote nodes
+**Next Steps (Phase 7)**
+- Phase 7: Remote Actor Spawn Completion
+  - Full serialization integration (SpawnRequest/SpawnResponse as MessageVariant)
+  - Transport response routing (Transport calling AsyncActor::set_response)
+  - Registrar node lookup (translating node names to NodeId)
+  - Argument deserialization (passing constructor args through spawn)
+  - Integration test (two-process remote spawn test)
 
 **Source Reorganization**
-- `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, scheduler.cpp, event_based_actor.cpp, local_actor.cpp
-- `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp
-- `src/ref/` — actor_proxy.cpp
-- Tests: `tests/{actor,core,mailbox,net,ref,supervision}/`
-
-## Next Steps
-
-- Phase 5: Service Discovery
-- Phase 6: Remote Actor Spawn
+- `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, scheduler.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
+- `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
+- `src/ref/` — actor_proxy.cpp, actor_ref.cpp
+- `src/spawn.cpp` — AsyncActor implementation
+- `src/actor_type_registry.cpp` — ActorTypeRegistry implementation
+- Tests: `tests/{actor,core,mailbox,net,ref,supervision,spawn}/`
 
 ## Build Commands
 
@@ -82,8 +98,10 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 cmake -S . -B build -GNinja && ninja -C build
 ctest --output-on-failure
 
-# With examples (default)
-cmake -DENABLE_EXAMPLES=ON ..
-# Without examples
+# With sanitizers
+cmake -DENABLE_TSAN=ON ..  # ThreadSanitizer
+cmake -DENABLE_ASAN=ON ..  # AddressSanitizer
+
+# Enable/disable examples (default ON)
 cmake -DENABLE_EXAMPLES=OFF ..
 ```

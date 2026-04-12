@@ -17,7 +17,7 @@ struct ActorId {
 
     ActorId() = default;
 
-    explicit ActorId(counter_type value) : value_(value) {}
+    explicit constexpr ActorId(counter_type value) : value_(value) {}
 
     counter_type value() const noexcept {
         return value_;

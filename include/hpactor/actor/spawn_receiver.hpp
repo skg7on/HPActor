@@ -18,7 +18,7 @@ public:
     Behavior make_behavior() override;
 
 private:
-    void handle_spawn_request(const SpawnRequest& req, uint64_t message_id);
+    void handle_spawn_request(const SpawnRequest& req);
 
     ActorTypeRegistry& registry_;
     net::Transport* transport_;  // non-owning

@@ -50,7 +50,9 @@ struct SpawnResponse {
 // WARNING: get() blocks the calling thread.
 class AsyncActor {
 public:
-    AsyncActor() = default;
+    AsyncActor();
+    AsyncActor(AsyncActor&& other) noexcept;
+    AsyncActor& operator=(AsyncActor&& other) noexcept;
 
     // Construct with node_id and timeout
     AsyncActor(NodeId node_id, std::chrono::milliseconds timeout);
@@ -73,8 +75,8 @@ public:
 private:
     NodeId node_id_ = 0;
     std::chrono::milliseconds timeout_{5000};
-    mutable std::mutex mutex_;
-    std::condition_variable cv_;
+    mutable std::unique_ptr<std::mutex> mutex_;
+    std::unique_ptr<std::condition_variable> cv_;
     bool ready_ = false;
     bool cancelled_ = false;
     SpawnResponse response_{};

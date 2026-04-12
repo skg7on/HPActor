@@ -17,12 +17,14 @@ namespace net {
 
 TcpTransport::TcpTransport(NodeId node_id,
                            const TlsConfig& tls_config,
-                           const PoolConfig& pool_config)
+                           const PoolConfig& pool_config,
+                           NodeRegistry* registry)
     : node_id_(node_id),
       loop_(),
       acceptor_(&loop_),
       tls_context_(TlsContext::from_config(tls_config)),
-      pool_config_(pool_config) {}
+      pool_config_(pool_config),
+      registry_(registry) {}
 
 TcpTransport::~TcpTransport() {
     stop_listening();
@@ -86,6 +88,23 @@ ConnectionPtr TcpTransport::connect(NodeId remote_node,
     // For the return value, we return the pool as a Connection
     // The pool itself manages the actual TlsConnection(s)
     return pool;
+}
+
+ConnectionPtr TcpTransport::connect(NodeId remote_node_id) {
+    if (!registry_) {
+        return nullptr;  // No registry configured
+    }
+
+    NodeEndpoint* ep = registry_->get(remote_node_id);
+    if (!ep) {
+        return nullptr;  // Unknown node
+    }
+
+    // Resolve hostname to IP if needed
+    std::string ip = host_resolver_.resolve(ep->host);
+
+    // Connect to resolved IP:port
+    return connect(remote_node_id, ip, ep->tcp_port);
 }
 
 void TcpTransport::listen(uint16_t port) {

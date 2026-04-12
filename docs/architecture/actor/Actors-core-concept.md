@@ -1102,7 +1102,7 @@ include/hpactor/
 - `typed_event_based_actor<Signatures...>`
 - `typed_behavior<Signatures...>`
 - `result<T>`
-- Typed actor spawn工厂
+- Typed actor spawn factory
 
 ### Phase C: Supervision (Week 3)
 - `Supervisor`, `OneForOneSupervisor`, `AllForOneSupervisor`

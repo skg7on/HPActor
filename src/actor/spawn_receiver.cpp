@@ -11,18 +11,21 @@ SpawnReceiver::SpawnReceiver(ActorSystem& sys,
     : EventBasedActor(nullptr, sys), registry_(registry), transport_(transport) {}
 
 Behavior SpawnReceiver::make_behavior() {
-    return {
-        {[this](const SpawnRequest& req, uint64_t message_id) {
-            handle_spawn_request(req, message_id);
-        }}
-    };
+    return Behavior{[this](MessageVariant&& msg) {
+        std::visit([this](auto&& m) {
+            using T = std::decay_t<decltype(m)>;
+            if constexpr (std::is_same_v<T, SpawnRequest>) {
+                handle_spawn_request(m);
+            }
+        }, std::move(msg));
+    }};
 }
 
-void SpawnReceiver::handle_spawn_request(const SpawnRequest& req, uint64_t message_id) {
+void SpawnReceiver::handle_spawn_request(const SpawnRequest& req) {
     SpawnResponse response;
 
     auto result = registry_.spawn(system(), req.actor_type_name);
-    if (result) {
+    if (result.has_value()) {
         response.actor_addr = result.value();
         response.error_code = spawn_errors::success;
     } else {
@@ -31,7 +34,8 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req, uint64_t messa
 
     // TODO: Send response back via transport using Frame.message_id to route
     // This requires transport to support reply routing
-    (void)message_id;
+    (void)response;
+    (void)transport_;
 }
 
 } // namespace hpactor
