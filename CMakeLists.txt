@@ -80,6 +80,7 @@ add_library(hpactor_lib STATIC
     src/net/connection_pool.cpp
     src/net/registrar.cpp
     src/net/registrar_server.cpp
+    src/net/registrar_client.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 

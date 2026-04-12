@@ -302,5 +302,60 @@ private:
     std::mutex probes_mutex_;
 };
 
+// -----------------------------------------------------------------------------
+// RegistrarClient - TCP client for connecting to RegistrarServer
+// -----------------------------------------------------------------------------
+class RegistrarClient {
+public:
+    RegistrarClient(const RegistrarConfig& config, NodeId local_node_id,
+                    NodeId server_node_id, NodeRegistry* shared_registry);
+    ~RegistrarClient();
+
+    // Non-copyable
+    RegistrarClient(const RegistrarClient&) = delete;
+    RegistrarClient& operator=(const RegistrarClient&) = delete;
+
+    void start();
+    void stop();
+
+    // Reconnect to server (used after disconnection)
+    void reconnect();
+
+    // Check if connected
+    bool is_connected() const { return connected_.load(); }
+
+private:
+    void connection_loop();
+    void heartbeat_loop();
+    void send_registration();
+    void send_heartbeat();
+
+    // TCP connection to server
+    bool connect_to_server();
+    void disconnect_from_server();
+
+    // Resolve node via UDP query to server
+    NodeEndpoint* resolve_node(NodeId node_id);
+
+    // Failover: try to become server or find new server
+    void failover();
+
+    RegistrarConfig config_;
+    NodeId local_node_id_;
+    NodeId server_node_id_;
+    NodeRegistry* shared_registry_;  // Not owned
+
+    int tcp_socket_ = -1;
+    int udp_socket_ = -1;
+    std::atomic<bool> running_{false};
+    std::atomic<bool> connected_{false};
+
+    std::thread connection_thread_;
+    std::thread heartbeat_thread_;
+
+    // For heartbeat tracking
+    std::chrono::steady_clock::time_point last_heartbeat_sent_;
+};
+
 } // namespace net
 } // namespace hpactor
