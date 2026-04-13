@@ -105,6 +105,10 @@ class ActorSystem {
     // Deliver message to local actor
     void deliver_local(ActorId target, MessageVariant msg);
 
+    // Enqueue an I/O completion to be delivered to an actor
+    // Called by EventLoop when async operations complete
+    void enqueue_completion(net::OpCompletion completion);
+
     // Network access
     net::Transport* transport() { return transport_.get(); }
     net::UdpRegistrar* registrar() { return registrar_.get(); }

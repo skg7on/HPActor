@@ -186,9 +186,9 @@ void EventLoop::process_completions() {
 void EventLoop::enqueue_completion(OpCompletion completion) {
     if (completion.type == OpType::TimerFired) {
         deliver_timer_completion(completion);
+    } else if (actor_system_) {
+        actor_system_->enqueue_completion(completion);
     }
-    // I/O completions routed to ActorSystem in Phase 5.5
-    // actor_system_->enqueue_completion(completion);
 }
 
 void EventLoop::deliver_timer_completion(OpCompletion completion) {

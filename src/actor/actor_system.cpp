@@ -171,6 +171,13 @@ void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
     }
 }
 
+void ActorSystem::enqueue_completion(net::OpCompletion completion) {
+    // TODO: Route completion to the actor's mailbox as a CompletionMessage
+    // This is Phase 5.5+ work - for now completions are handled via
+    // EventLoop's timer callback bridging
+    (void)completion;
+}
+
 result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
                                            const std::string& actor_type,
                                            const bytes& /*args*/) {
