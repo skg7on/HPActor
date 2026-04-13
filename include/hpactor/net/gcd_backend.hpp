@@ -66,7 +66,7 @@ public:
     void process_completions() override;
 
     // Deliver completion to actor (public for trampoline access)
-    void deliver_completion(OpCompletion completion);
+    void deliver_completion(OpCompletion completion) override;
 
     // Check if timer handle was cancelled (public for trampoline access)
     bool is_timer_cancelled(uint64_t handle) const {

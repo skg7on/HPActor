@@ -69,6 +69,9 @@ public:
 
     virtual int wait(int timeout_ms) = 0;
     virtual void process_completions() = 0;
+
+    // Called by backend implementations to deliver a completion
+    virtual void deliver_completion(OpCompletion completion) = 0;
 };
 
 [[maybe_unused]] static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type) {

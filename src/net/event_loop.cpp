@@ -1,258 +1,213 @@
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/actor_system.hpp>
 
-#include <cstring>
-#include <cstdlib>
-
-// Platform-specific includes
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
-#include <sys/event.h>
-#include <unistd.h>
+#if defined(__APPLE__)
+#include <hpactor/net/gcd_backend.hpp>
 #elif defined(__linux__)
-#include <sys/epoll.h>
-#include <sys/eventfd.h>
-#include <sys/timerfd.h>
-#include <unistd.h>
-#else
-#error "Unsupported platform"
+#include <hpactor/net/iouring_backend.hpp>
 #endif
 
 namespace hpactor {
 
 namespace net {
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__)
-// -----------------------------------------------------------------------------
-// kqueue implementation (macOS, BSD)
-// -----------------------------------------------------------------------------
+namespace {
 
-EventLoop::EventLoop() : kqueue_fd_(kqueue()) {
-    // kqueue_fd_ is initialized in member initializer
-}
+// BackendAdapter wraps the real AsyncIoBackend and intercepts
+// deliver_completion to route to EventLoop
+class BackendAdapter : public AsyncIoBackend {
+public:
+    BackendAdapter(EventLoop* loop, std::unique_ptr<AsyncIoBackend> backend)
+        : loop_(loop), backend_(std::move(backend)) {}
 
-EventLoop::~EventLoop() {
-    if (kqueue_fd_ >= 0) {
-        ::close(kqueue_fd_);
+    bool start() override { return backend_->start(); }
+    void stop() override { backend_->stop(); }
+
+    bool add_fd(int fd, IoEvent events) override {
+        return backend_->add_fd(fd, events);
     }
-}
-
-bool EventLoop::add_fd(int fd, Event events) {
-    struct kevent ke;
-    uint16_t flags = EV_ADD | EV_ENABLE;
-
-    if (int(events) & int(Event::EdgeTriggered)) {
-        flags |= EV_CLEAR;
+    bool update_fd(int fd, IoEvent events) override {
+        return backend_->update_fd(fd, events);
     }
-
-    EV_SET(&ke, fd, EVFILT_READ, flags, 0, 0, nullptr);
-    if (kevent(kqueue_fd_, &ke, 1, nullptr, 0, nullptr) != 0) {
-        return false;
+    bool remove_fd(int fd) override {
+        return backend_->remove_fd(fd);
     }
 
-    if (int(events) & int(Event::Write)) {
-        EV_SET(&ke, fd, EVFILT_WRITE, flags, 0, 0, nullptr);
-        return kevent(kqueue_fd_, &ke, 1, nullptr, 0, nullptr) == 0;
+    int register_buffer(const void* addr, size_t len) override {
+        return backend_->register_buffer(addr, len);
     }
-    return true;
-}
-
-bool EventLoop::update_fd(int fd, Event events) {
-    return add_fd(fd, events);  // kqueue auto-updates
-}
-
-bool EventLoop::remove_fd(int fd) {
-    struct kevent ke;
-    EV_SET(&ke, fd, EVFILT_READ, EV_DELETE, 0, 0, nullptr);
-    kevent(kqueue_fd_, &ke, 1, nullptr, 0, nullptr);
-
-    EV_SET(&ke, fd, EVFILT_WRITE, EV_DELETE, 0, 0, nullptr);
-    kevent(kqueue_fd_, &ke, 1, nullptr, 0, nullptr);
-    return true;
-}
-
-int EventLoop::wait(int timeout_ms) {
-    struct timespec ts;
-    ts.tv_sec = timeout_ms / 1000;
-    ts.tv_nsec = static_cast<long>(timeout_ms % 1000) * 1000000;
-
-    std::vector<struct kevent> events(64);
-    return kevent(kqueue_fd_, nullptr, 0, events.data(),
-                  static_cast<int>(events.size()), &ts);
-}
-
-bool EventLoop::has_event(int /*fd*/, Event /*event*/) const {
-    // For kqueue, triggered events are returned from wait()
-    // Caller should iterate wait() results
-    return true;
-}
-
-uint64_t EventLoop::run_after(timer_callback callback, int delay_ms) {
-    uint64_t handle = next_timer_handle_++;
-    timer_callbacks_[handle] = std::move(callback);
-
-    int pipe_fds[2];
-    if (pipe(pipe_fds) < 0) {
-        timer_callbacks_.erase(handle);
-        return 0;
+    bool unregister_buffer(int buffer_id) override {
+        return backend_->unregister_buffer(buffer_id);
     }
 
-    struct kevent ke;
-    // EVFILT_TIMER: data field contains timeout in milliseconds
-    // Use NOTE_ABSOLUTE for absolute time, otherwise relative
-    EV_SET(&ke, pipe_fds[0], EVFILT_TIMER, EV_ADD | EV_ENABLE | EV_ONESHOT, 0, delay_ms, nullptr);
-    if (kevent(kqueue_fd_, &ke, 1, nullptr, 0, nullptr) != 0) {
-        timer_callbacks_.erase(handle);
-        close(pipe_fds[0]);
-        close(pipe_fds[1]);
-        return 0;
+    void async_send(int fd, const iovec* bufs, int buf_count,
+                    ActorId actor, uint32_t op_type) override {
+        backend_->async_send(fd, bufs, buf_count, actor, op_type);
     }
-    // Note: pipe_fds[1] is kept for potential future use
-    (void)pipe_fds;  // Avoid unused warning
-    return handle;
-}
-
-uint64_t EventLoop::run_every(timer_callback callback, int interval_ms) {
-    uint64_t handle = next_timer_handle_++;
-    timer_callbacks_[handle] = std::move(callback);
-
-    int pipe_fds[2];
-    if (pipe(pipe_fds) < 0) {
-        timer_callbacks_.erase(handle);
-        return 0;
+    void async_recv(int fd, const iovec* bufs, int buf_count,
+                    ActorId actor, uint32_t op_type) override {
+        backend_->async_recv(fd, bufs, buf_count, actor, op_type);
     }
 
-    struct kevent ke;
-    EV_SET(&ke, pipe_fds[0], EVFILT_TIMER, EV_ADD | EV_ENABLE, 0, interval_ms, nullptr);
-    if (kevent(kqueue_fd_, &ke, 1, nullptr, 0, nullptr) != 0) {
-        timer_callbacks_.erase(handle);
-        close(pipe_fds[0]);
-        close(pipe_fds[1]);
-        return 0;
+    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type) override {
+        backend_->async_send_fixed(fd, buffer_id, offset, len, actor, op_type);
     }
-    (void)pipe_fds;
-    return handle;
-}
+    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type) override {
+        backend_->async_recv_fixed(fd, buffer_id, offset, len, actor, op_type);
+    }
 
-void EventLoop::cancel_timer(uint64_t timer_handle) {
-    timer_callbacks_.erase(timer_handle);
-}
+    void async_accept(int fd, ActorId actor) override {
+        backend_->async_accept(fd, actor);
+    }
+    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
+                       ActorId actor) override {
+        backend_->async_connect(fd, addr, addrlen, actor);
+    }
 
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count,
+                        ActorId actor, uint32_t op_type) override {
+        backend_->async_recvfrom(fd, bufs, buf_count, actor, op_type);
+    }
+    void async_sendto(int fd, const iovec* bufs, int buf_count,
+                      const sockaddr* addr, socklen_t addrlen,
+                      ActorId actor, uint32_t op_type) override {
+        backend_->async_sendto(fd, bufs, buf_count, addr, addrlen, actor, op_type);
+    }
+
+    uint64_t run_after(ActorId actor, int delay_ms) override {
+        return backend_->run_after(actor, delay_ms);
+    }
+    uint64_t run_every(ActorId actor, int interval_ms) override {
+        return backend_->run_every(actor, interval_ms);
+    }
+    void cancel_timer(uint64_t handle) override {
+        backend_->cancel_timer(handle);
+    }
+
+    int wait(int timeout_ms) override {
+        return backend_->wait(timeout_ms);
+    }
+    void process_completions() override {
+        backend_->process_completions();
+    }
+
+    // Override deliver_completion to intercept and route to EventLoop
+    void deliver_completion(OpCompletion completion) override {
+        loop_->enqueue_completion(completion);
+    }
+
+private:
+    EventLoop* loop_;
+    std::unique_ptr<AsyncIoBackend> backend_;
+};
+
+} // anonymous namespace
+
+EventLoop::EventLoop() {
+#if defined(__APPLE__)
+    auto gcd_backend = std::make_unique<GcdBackend>();
+    gcd_backend->start();
+    backend_ = std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
 #elif defined(__linux__)
-// -----------------------------------------------------------------------------
-// epoll implementation (Linux)
-// -----------------------------------------------------------------------------
-
-EventLoop::EventLoop() : kqueue_fd_(epoll_create1(0)) {
-    // kqueue_fd_ is initialized in member initializer
+    auto iouring_backend = std::make_unique<IoUringBackend>();
+    iouring_backend->start();
+    backend_ = std::make_unique<BackendAdapter>(this, std::move(iouring_backend));
+#else
+    #error "Unsupported platform"
+#endif
 }
 
-EventLoop::~EventLoop() {
-    if (kqueue_fd_ >= 0) {
-        ::close(kqueue_fd_);
-    }
-}
+EventLoop::~EventLoop() = default;
 
 bool EventLoop::add_fd(int fd, Event events) {
-    struct epoll_event ev;
-    std::memset(&ev, 0, sizeof(ev));
-    ev.events = EPOLLIN | EPOLLET;
+    IoEvent io_events = IoEvent::Read;
     if (int(events) & int(Event::Write)) {
-        ev.events |= EPOLLOUT;
+        io_events = static_cast<IoEvent>(static_cast<uint32_t>(io_events) |
+                                         static_cast<uint32_t>(IoEvent::Write));
     }
-    ev.data.fd = fd;
-    return epoll_ctl(kqueue_fd_, EPOLL_CTL_ADD, fd, &ev) == 0;
+    fd_events_[fd] = events;
+    return backend_->add_fd(fd, io_events);
 }
 
 bool EventLoop::update_fd(int fd, Event events) {
-    struct epoll_event ev;
-    std::memset(&ev, 0, sizeof(ev));
-    ev.events = EPOLLIN | EPOLLET;
-    if (int(events) & int(Event::Write)) {
-        ev.events |= EPOLLOUT;
-    }
-    ev.data.fd = fd;
-    return epoll_ctl(kqueue_fd_, EPOLL_CTL_MOD, fd, &ev) == 0;
+    return add_fd(fd, events);
 }
 
 bool EventLoop::remove_fd(int fd) {
-    epoll_ctl(kqueue_fd_, EPOLL_CTL_DEL, fd, nullptr);
-    return true;
+    fd_events_.erase(fd);
+    return backend_->remove_fd(fd);
 }
 
 int EventLoop::wait(int timeout_ms) {
-    std::vector<struct epoll_event> events(64);
-    return epoll_wait(kqueue_fd_, events.data(),
-                      static_cast<int>(events.size()), timeout_ms);
+    return backend_->wait(timeout_ms);
 }
 
 bool EventLoop::has_event(int /*fd*/, Event /*event*/) const {
-    // For epoll, triggered events are returned from wait()
-    // Caller should iterate wait() results
     return true;
 }
 
 uint64_t EventLoop::run_after(timer_callback callback, int delay_ms) {
     uint64_t handle = next_timer_handle_++;
     timer_callbacks_[handle] = std::move(callback);
-
-    int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
-    if (timer_fd < 0) {
+    // Use ActorId(0) as a sentinel - we'll intercept timer completions
+    // The backend will deliver completion with user_data = handle
+    uint64_t backend_handle = backend_->run_after(ActorId(0), delay_ms);
+    if (backend_handle == 0) {
         timer_callbacks_.erase(handle);
         return 0;
     }
-
-    struct itimerspec ts;
-    ts.it_value.tv_sec = delay_ms / 1000;
-    ts.it_value.tv_nsec = (delay_ms % 1000) * 1000000;
-    ts.it_interval.tv_sec = 0;
-    ts.it_interval.tv_nsec = 0;
-    timerfd_settime(timer_fd, 0, &ts, nullptr);
-
-    struct epoll_event ev;
-    std::memset(&ev, 0, sizeof(ev));
-    ev.events = EPOLLIN | EPOLLET;
-    ev.data.fd = timer_fd;
-    if (epoll_ctl(kqueue_fd_, EPOLL_CTL_ADD, timer_fd, &ev) != 0) {
-        timer_callbacks_.erase(handle);
-        close(timer_fd);
-        return 0;
-    }
+    backend_handle_to_handle_[backend_handle] = handle;
     return handle;
 }
 
 uint64_t EventLoop::run_every(timer_callback callback, int interval_ms) {
     uint64_t handle = next_timer_handle_++;
     timer_callbacks_[handle] = std::move(callback);
-
-    int timer_fd = timerfd_create(CLOCK_MONOTONIC, 0);
-    if (timer_fd < 0) {
+    uint64_t backend_handle = backend_->run_every(ActorId(0), interval_ms);
+    if (backend_handle == 0) {
         timer_callbacks_.erase(handle);
         return 0;
     }
-
-    struct itimerspec ts;
-    ts.it_value.tv_sec = interval_ms / 1000;
-    ts.it_value.tv_nsec = (interval_ms % 1000) * 1000000;
-    ts.it_interval.tv_sec = interval_ms / 1000;
-    ts.it_interval.tv_nsec = (interval_ms % 1000) * 1000000;
-    timerfd_settime(timer_fd, 0, &ts, nullptr);
-
-    struct epoll_event ev;
-    std::memset(&ev, 0, sizeof(ev));
-    ev.events = EPOLLIN | EPOLLET;
-    ev.data.fd = timer_fd;
-    if (epoll_ctl(kqueue_fd_, EPOLL_CTL_ADD, timer_fd, &ev) != 0) {
-        timer_callbacks_.erase(handle);
-        close(timer_fd);
-        return 0;
-    }
+    backend_handle_to_handle_[backend_handle] = handle;
     return handle;
 }
 
 void EventLoop::cancel_timer(uint64_t timer_handle) {
     timer_callbacks_.erase(timer_handle);
+    backend_->cancel_timer(timer_handle);
 }
 
-#endif
+void EventLoop::process_completions() {
+    backend_->process_completions();
+}
+
+void EventLoop::enqueue_completion(OpCompletion completion) {
+    if (completion.type == OpType::TimerFired) {
+        deliver_timer_completion(completion);
+    }
+    // I/O completions routed to ActorSystem in Phase 5.5
+    // actor_system_->enqueue_completion(completion);
+}
+
+void EventLoop::deliver_timer_completion(OpCompletion completion) {
+    uint64_t backend_handle = completion.user_data;
+    auto it = backend_handle_to_handle_.find(backend_handle);
+    if (it != backend_handle_to_handle_.end()) {
+        uint64_t handle = it->second;
+        auto callback_it = timer_callbacks_.find(handle);
+        if (callback_it != timer_callbacks_.end()) {
+            callback_it->second();
+            timer_callbacks_.erase(callback_it);
+        }
+        backend_handle_to_handle_.erase(it);
+    }
+}
+
+void EventLoop::set_actor_system(ActorSystem* actor_system) {
+    actor_system_ = actor_system;
+}
 
 } // namespace net
 } // namespace hpactor

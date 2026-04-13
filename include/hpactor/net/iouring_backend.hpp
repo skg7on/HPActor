@@ -72,7 +72,7 @@ private:
     int submit();
 
     // Called by completions to deliver to actor
-    void deliver_completion(OpCompletion completion);
+    void deliver_completion(OpCompletion completion) override;
 
     struct io_uring ring_;
 
