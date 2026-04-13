@@ -91,6 +91,8 @@ target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(liburing REQUIRED)
     target_link_libraries(hpactor_lib PUBLIC liburing::uring)
+    # io_uring backend
+    target_sources(hpactor_lib PRIVATE src/net/iouring_backend.cpp)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     # Compute macOS SDK path and link libdispatch from the SDK
     execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE HPACTOR_SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
