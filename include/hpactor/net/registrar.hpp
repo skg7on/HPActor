@@ -250,12 +250,16 @@ private:
 // -----------------------------------------------------------------------------
 class UdpRegistrar {
 public:
-    UdpRegistrar(const RegistrarConfig& config, NodeId local_node_id);
+    UdpRegistrar(const RegistrarConfig& config, NodeId local_node_id,
+                EventLoop* loop = nullptr);
     ~UdpRegistrar();
 
     // Non-copyable
     UdpRegistrar(const UdpRegistrar&) = delete;
     UdpRegistrar& operator=(const UdpRegistrar&) = delete;
+
+    // Set event loop for async I/O (can be changed before start())
+    void set_event_loop(EventLoop* loop) { loop_ = loop; }
 
     // Start listening - determines server vs client mode based on bind result
     void start();
@@ -281,6 +285,7 @@ private:
 
     RegistrarConfig config_;
     NodeId local_node_id_;
+    EventLoop* loop_ = nullptr;
 
     // Either server or client (not both)
     std::unique_ptr<RegistrarServer> server_;
@@ -295,7 +300,8 @@ private:
 class RegistrarClient {
 public:
     RegistrarClient(const RegistrarConfig& config, NodeId local_node_id,
-                    NodeId server_node_id, NodeRegistry* shared_registry);
+                   NodeId server_node_id, NodeRegistry* shared_registry,
+                   EventLoop* loop = nullptr);
     ~RegistrarClient();
 
     // Non-copyable
@@ -304,6 +310,9 @@ public:
 
     void start();
     void stop();
+
+    // Set event loop for async I/O (can be changed before start())
+    void set_event_loop(EventLoop* loop) { loop_ = loop; }
 
     // Reconnect to server (used after disconnection)
     void reconnect();
@@ -331,6 +340,7 @@ private:
     NodeId local_node_id_;
     NodeId server_node_id_;
     NodeRegistry* shared_registry_;  // Not owned
+    EventLoop* loop_ = nullptr;
 
     int tcp_socket_ = -1;
     int udp_socket_ = -1;
@@ -339,6 +349,10 @@ private:
 
     std::thread connection_thread_;
     std::thread heartbeat_thread_;
+
+    // Timer handles for EventLoop-based timers
+    uint64_t connection_timer_ = 0;
+    uint64_t heartbeat_timer_ = 0;
 
     // For heartbeat tracking
     std::chrono::steady_clock::time_point last_heartbeat_sent_;

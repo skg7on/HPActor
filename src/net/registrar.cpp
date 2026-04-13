@@ -172,9 +172,10 @@ size_t NodeRegistry::remove_expired() {
 // UdpRegistrar Implementation
 // -----------------------------------------------------------------------------
 
-UdpRegistrar::UdpRegistrar(const RegistrarConfig& config, NodeId local_node_id)
+UdpRegistrar::UdpRegistrar(const RegistrarConfig& config, NodeId local_node_id, EventLoop* loop)
     : config_(config),
-      local_node_id_(local_node_id) {}
+      local_node_id_(local_node_id),
+      loop_(loop) {}
 
 UdpRegistrar::~UdpRegistrar() {
     stop();
@@ -215,7 +216,7 @@ void UdpRegistrar::stop() {
 }
 
 void UdpRegistrar::start_server_mode() {
-    server_ = std::make_unique<RegistrarServer>(config_, local_node_id_);
+    server_ = std::make_unique<RegistrarServer>(config_, local_node_id_, loop_);
     server_->start();
 }
 
@@ -226,7 +227,7 @@ void UdpRegistrar::start_client_mode() {
     if (!config_.static_routes.empty()) {
         server_node_id = config_.static_routes[0].node_id;
     }
-    client_ = std::make_unique<RegistrarClient>(config_, local_node_id_, server_node_id, nullptr);
+    client_ = std::make_unique<RegistrarClient>(config_, local_node_id_, server_node_id, nullptr, loop_);
     client_->start();
 }
 

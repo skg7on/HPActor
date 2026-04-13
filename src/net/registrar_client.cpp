@@ -17,11 +17,13 @@ namespace net {
 // -----------------------------------------------------------------------------
 
 RegistrarClient::RegistrarClient(const RegistrarConfig& config, NodeId local_node_id,
-                                 NodeId server_node_id, NodeRegistry* shared_registry)
+                                 NodeId server_node_id, NodeRegistry* shared_registry,
+                                 EventLoop* loop)
     : config_(config),
       local_node_id_(local_node_id),
       server_node_id_(server_node_id),
       shared_registry_(shared_registry),
+      loop_(loop),
       last_heartbeat_sent_(std::chrono::steady_clock::now()) {}
 
 RegistrarClient::~RegistrarClient() {
@@ -42,11 +44,17 @@ void RegistrarClient::start() {
         return;
     }
 
+    if (loop_) {
+        // Use EventLoop timers for heartbeat
+        heartbeat_timer_ = loop_->run_every([this]() {
+            if (connected_.load()) {
+                send_heartbeat();
+            }
+        }, static_cast<int>(config_.heartbeat_interval.count()));
+    }
+
     // Start connection thread
     connection_thread_ = std::thread(&RegistrarClient::connection_loop, this);
-
-    // Start heartbeat thread
-    heartbeat_thread_ = std::thread(&RegistrarClient::heartbeat_loop, this);
 }
 
 void RegistrarClient::stop() {
@@ -56,6 +64,18 @@ void RegistrarClient::stop() {
 
     running_.store(false);
     connected_.store(false);
+
+    // Cancel EventLoop timers
+    if (loop_) {
+        if (heartbeat_timer_ != 0) {
+            loop_->cancel_timer(heartbeat_timer_);
+            heartbeat_timer_ = 0;
+        }
+        if (connection_timer_ != 0) {
+            loop_->cancel_timer(connection_timer_);
+            connection_timer_ = 0;
+        }
+    }
 
     disconnect_from_server();
 
