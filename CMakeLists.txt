@@ -102,6 +102,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         message(FATAL_ERROR "libdispatch not found at ${HPACTOR_DISPATCH_LIB}")
     endif()
     target_link_libraries(hpactor_lib PUBLIC "${HPACTOR_DISPATCH_LIB}")
+    # GCD backend
+    target_sources(hpactor_lib PRIVATE src/net/gcd_backend.cpp)
 endif()
 
 # Alias for backwards compatibility

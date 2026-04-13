@@ -1,0 +1,103 @@
+#pragma once
+
+#include <hpactor/net/async_io_backend.hpp>
+
+#if defined(__APPLE__)
+#include <dispatch/dispatch.h>
+#else
+// Stub for Linux compilation safety
+struct dispatch_queue_s { int unused; };
+struct dispatch_source_s { int unused; };
+struct dispatch_data_s { int unused; };
+using dispatch_queue_t = struct dispatch_queue_s*;
+using dispatch_source_t = struct dispatch_source_s*;
+using dispatch_data_t = struct dispatch_data_s*;
+#endif
+
+#include <atomic>
+#include <unordered_map>
+#include <unordered_set>
+#include <utility>
+#include <vector>
+
+namespace hpactor {
+namespace net {
+
+class GcdBackend : public AsyncIoBackend {
+public:
+    GcdBackend();
+    ~GcdBackend() override;
+
+    bool start() override;
+    void stop() override;
+
+    bool add_fd(int fd, IoEvent events) override;
+    bool update_fd(int fd, IoEvent events) override;
+    bool remove_fd(int fd) override;
+
+    int register_buffer(const void* addr, size_t len) override;
+    bool unregister_buffer(int buffer_id) override;
+
+    void async_send(int fd, const iovec* bufs, int buf_count,
+                    ActorId actor, uint32_t op_type) override;
+    void async_recv(int fd, const iovec* bufs, int buf_count,
+                    ActorId actor, uint32_t op_type) override;
+
+    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type) override;
+    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type) override;
+
+    void async_accept(int fd, ActorId actor) override;
+    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
+                        ActorId actor) override;
+
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count,
+                         ActorId actor, uint32_t op_type) override;
+    void async_sendto(int fd, const iovec* bufs, int buf_count,
+                        const sockaddr* addr, socklen_t addrlen,
+                        ActorId actor, uint32_t op_type) override;
+
+    uint64_t run_after(ActorId actor, int delay_ms) override;
+    uint64_t run_every(ActorId actor, int interval_ms) override;
+    void cancel_timer(uint64_t handle) override;
+
+    int wait(int timeout_ms) override;
+    void process_completions() override;
+
+    // Deliver completion to actor (public for trampoline access)
+    void deliver_completion(OpCompletion completion);
+
+    // Check if timer handle was cancelled (public for trampoline access)
+    bool is_timer_cancelled(uint64_t handle) const {
+        return cancelled_timers_.count(handle) > 0;
+    }
+
+private:
+
+    // Active timer handles for cancellation
+    std::unordered_set<uint64_t> cancelled_timers_;
+
+    dispatch_queue_t dispatch_queue_ = nullptr;
+
+    // Timer handle → dispatch_source_t (for cancellation)
+    std::unordered_map<uint64_t, dispatch_source_t> timer_sources_;
+    std::atomic<uint64_t> next_timer_handle_{1};
+
+    // Registered buffers: buffer_id → (addr, len)
+    std::vector<std::pair<const void*, size_t>> registered_buffers_;
+
+    // fd → dispatch_source_t (for remove_fd)
+    std::unordered_map<int, dispatch_source_t> fd_sources_;
+
+    // fd → dispatch_source_t (for async_accept)
+    std::unordered_map<int, dispatch_source_t> accept_sources_;
+
+    // fd → dispatch_source_t (for async_connect)
+    std::unordered_map<int, dispatch_source_t> connect_sources_;
+
+    bool running_ = false;
+};
+
+} // namespace net
+} // namespace hpactor
