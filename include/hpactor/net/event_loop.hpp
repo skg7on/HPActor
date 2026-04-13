@@ -6,6 +6,7 @@
 #include <functional>
 #include <memory>
 #include <unordered_map>
+#include <unordered_set>
 
 namespace hpactor {
 
@@ -93,6 +94,9 @@ private:
 
     // Map backend timer handles to our timer handles
     std::unordered_map<uint64_t, uint64_t> backend_handle_to_handle_;
+
+    // Set of timer handles that are repeating (run_every)
+    std::unordered_set<uint64_t> repeating_timers_;
 
     // For has_event tracking
     std::unordered_map<int, Event> fd_events_;

@@ -1,13 +1,16 @@
 #include <hpactor/net/gcd_backend.hpp>
+#include <hpactor/net/event_loop.hpp>
 
 #if defined(__APPLE__)
 #include <dispatch/dispatch.h>
 #include <sys/socket.h>
 #include <sys/uio.h>
+#include <sys/select.h>
 #include <unistd.h>
 #include <cstring>
 #include <cerrno>
 #include <cstdlib>
+#include <fcntl.h>
 #endif
 
 namespace hpactor {
@@ -52,6 +55,19 @@ struct ConnectContext {
     ActorId actor;
 };
 
+struct RunAfterContext {
+    GcdBackend* self;
+    uint64_t handle;
+    ActorId actor;
+};
+
+struct TimerContext {
+    GcdBackend* self;
+    uint64_t handle;
+    ActorId actor;
+    int interval_ms;
+};
+
 void async_send_trampoline(void* ctx) {
     auto* c = static_cast<AsyncSendContext*>(ctx);
     ssize_t n = ::write(c->fd, c->data.data(), c->data.size());
@@ -64,6 +80,7 @@ void async_send_trampoline(void* ctx) {
         .user_data = 0,
     };
     c->self->deliver_completion(completion);
+    delete c;
 }
 
 void async_recv_trampoline(void* ctx) {
@@ -97,6 +114,7 @@ void async_recv_trampoline(void* ctx) {
         c->self->deliver_completion(completion);
     }
     std::free(buf);
+    delete c;
 }
 
 void accept_trampoline(void* ctx) {
@@ -112,6 +130,7 @@ void accept_trampoline(void* ctx) {
         };
         c->self->deliver_completion(completion);
     }
+    delete c;
 }
 
 void connect_trampoline(void* ctx) {
@@ -127,23 +146,90 @@ void connect_trampoline(void* ctx) {
         .user_data = 0,
     };
     c->self->deliver_completion(completion);
+    delete c;
 }
 
 } // anonymous namespace
 
+// Helper function for run_after dispatch (must be static to convert to function pointer)
+static void run_after_dispatch(void* ctx) {
+    auto* c = static_cast<RunAfterContext*>(ctx);
+    if (c->self->is_timer_cancelled(c->handle)) {
+        delete c;
+        return;
+    }
+    OpCompletion completion{
+        .actor = c->actor,
+        .type = OpType::TimerFired,
+        .fd = -1,
+        .result = 0,
+        .user_data = c->handle,
+    };
+    c->self->deliver_completion(completion);
+    delete c;
+}
+
 bool GcdBackend::start() {
     dispatch_queue_ = dispatch_queue_create("com.hpactor.gcdbackend",
                                             DISPATCH_QUEUE_SERIAL);
+
+    // Create wakeup pipe for signaling wait()
+    if (pipe(wakeup_pipe_) < 0) {
+        wakeup_pipe_[0] = -1;
+        wakeup_pipe_[1] = -1;
+    } else {
+        // Set non-blocking for the read end
+        int flags = fcntl(wakeup_pipe_[0], F_GETFL, 0);
+        fcntl(wakeup_pipe_[0], F_SETFL, flags | O_NONBLOCK);
+    }
+
     running_ = true;
     return true;
 }
 
 void GcdBackend::stop() {
+    running_ = false;
+
+    // Cancel all timer sources
+    for (auto& [handle, source] : timer_sources_) {
+        dispatch_source_cancel(source);
+        dispatch_release(source);
+    }
+    timer_sources_.clear();
+
+    // Cancel all fd sources
+    for (auto& [fd, source] : fd_sources_) {
+        dispatch_source_cancel(source);
+        dispatch_release(source);
+    }
+    fd_sources_.clear();
+
+    // Cancel all accept sources
+    for (auto& [fd, source] : accept_sources_) {
+        dispatch_source_cancel(source);
+        dispatch_release(source);
+    }
+    accept_sources_.clear();
+
+    // Cancel all connect sources
+    for (auto& [fd, source] : connect_sources_) {
+        dispatch_source_cancel(source);
+        dispatch_release(source);
+    }
+    connect_sources_.clear();
+
+    // Close wakeup pipe
+    if (wakeup_pipe_[0] >= 0) {
+        close(wakeup_pipe_[0]);
+        close(wakeup_pipe_[1]);
+        wakeup_pipe_[0] = -1;
+        wakeup_pipe_[1] = -1;
+    }
+
     if (dispatch_queue_) {
         dispatch_release(dispatch_queue_);
         dispatch_queue_ = nullptr;
     }
-    running_ = false;
 }
 
 bool GcdBackend::add_fd(int fd, IoEvent events) {
@@ -281,44 +367,22 @@ void GcdBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
     async_send(fd, bufs, buf_count, actor, op_type);
 }
 
-struct RunAfterContext {
-    GcdBackend* self;
-    uint64_t handle;
-    ActorId actor;
-};
-
-void run_after_trampoline(void* ctx) {
-    auto* c = static_cast<RunAfterContext*>(ctx);
-    if (c->self->is_timer_cancelled(c->handle)) return;
-    OpCompletion completion{
-        .actor = c->actor,
-        .type = OpType::TimerFired,
-        .fd = -1,
-        .result = 0,
-        .user_data = c->handle,
-    };
-    c->self->deliver_completion(completion);
-}
-
 uint64_t GcdBackend::run_after(ActorId actor, int delay_ms) {
     uint64_t handle = next_timer_handle_++;
     auto* ctx = new RunAfterContext{this, handle, actor};
     dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(delay_ms) * 1000000LL),
-                    dispatch_queue_, ctx, [](void* ctx) {
-        delete static_cast<RunAfterContext*>(ctx);
-    });
+                    dispatch_queue_, ctx, run_after_dispatch);
     return handle;
 }
 
-struct TimerContext {
-    GcdBackend* self;
-    uint64_t handle;
-    ActorId actor;
-};
-
 void timer_trampoline(void* ctx) {
     auto* c = static_cast<TimerContext*>(ctx);
-    if (c->self->is_timer_cancelled(c->handle)) return;
+    if (c->self->is_timer_cancelled(c->handle)) {
+        // Cancelled - delete context and don't reschedule
+        delete c;
+        return;
+    }
+    // Deliver the completion
     OpCompletion completion{
         .actor = c->actor,
         .type = OpType::TimerFired,
@@ -327,24 +391,17 @@ void timer_trampoline(void* ctx) {
         .user_data = c->handle,
     };
     c->self->deliver_completion(completion);
+    // Reschedule for next interval (context stays alive)
+    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(c->interval_ms) * 1000000LL),
+                    c->self->get_dispatch_queue(), c, timer_trampoline);
 }
 
 uint64_t GcdBackend::run_every(ActorId actor, int interval_ms) {
     uint64_t handle = next_timer_handle_++;
-    dispatch_source_t source = dispatch_source_create(
-        DISPATCH_SOURCE_TYPE_TIMER, 0, 0, dispatch_queue_);
-    int64_t interval_ns = static_cast<int64_t>(interval_ms) * 1000000LL;
-    dispatch_source_set_timer(source,
-                              dispatch_time(DISPATCH_TIME_NOW, interval_ns),
-                              static_cast<uint64_t>(interval_ns), 0);
-    auto* ctx = new TimerContext{this, handle, actor};
-    dispatch_set_context(source, ctx);
-    dispatch_set_finalizer_f(source, [](void* ctx) {
-        delete static_cast<TimerContext*>(ctx);
-    });
-    dispatch_source_set_event_handler_f(source, timer_trampoline);
-    dispatch_resume(source);
-    timer_sources_[handle] = source;
+    auto* ctx = new TimerContext{this, handle, actor, interval_ms};
+    // Start the repeating cycle with first fire after interval
+    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(interval_ms) * 1000000LL),
+                    dispatch_queue_, ctx, timer_trampoline);
     return handle;
 }
 
@@ -359,15 +416,52 @@ void GcdBackend::cancel_timer(uint64_t handle) {
 }
 
 int GcdBackend::wait(int timeout_ms) {
-    (void)timeout_ms;
-    return 0;
+    if (wakeup_pipe_[0] < 0) {
+        // No wakeup pipe - just sleep briefly
+        usleep(static_cast<useconds_t>(timeout_ms) * 1000);
+        return 0;
+    }
+
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(wakeup_pipe_[0], &read_fds);
+
+    struct timeval tv;
+    tv.tv_sec = timeout_ms / 1000;
+    tv.tv_usec = (timeout_ms % 1000) * 1000;
+
+    int result = select(wakeup_pipe_[0] + 1, &read_fds, nullptr, nullptr, &tv);
+    if (result > 0 && FD_ISSET(wakeup_pipe_[0], &read_fds)) {
+        // Drain the wakeup pipe
+        uint8_t buf[64];
+        while (read(wakeup_pipe_[0], buf, sizeof(buf)) > 0) {}
+        return 1;
+    }
+    return result;
 }
 
 void GcdBackend::process_completions() {
+    std::lock_guard<std::mutex> lock(completion_mutex_);
+    while (!completion_queue_.empty()) {
+        auto completion = completion_queue_.front();
+        completion_queue_.pop();
+        // Route to EventLoop if set
+        if (loop_) {
+            loop_->enqueue_completion(completion);
+        }
+    }
 }
 
 void GcdBackend::deliver_completion(OpCompletion completion) {
-    (void)completion;
+    {
+        std::lock_guard<std::mutex> lock(completion_mutex_);
+        completion_queue_.push(completion);
+    }
+    // Wake up wait() by writing to the pipe
+    if (wakeup_pipe_[1] >= 0) {
+        uint8_t byte = 1;
+        (void)write(wakeup_pipe_[1], &byte, 1);
+    }
 }
 
 #else // !defined(__APPLE__)

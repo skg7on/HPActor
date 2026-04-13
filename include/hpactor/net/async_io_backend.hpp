@@ -76,13 +76,13 @@ public:
 
 [[maybe_unused]] static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type) {
     return (static_cast<uint64_t>(fd) & 0xFFFFFFFFULL) |
-           ((actor.value() & 0xFFFFFFFFULL) << 32) |
+           ((actor.value() & 0xFFFFULL) << 32) |
            ((static_cast<uint64_t>(op_type) & 0xFFULL) << 56);
 }
 
 [[maybe_unused]] static void decode_user_data(uint64_t ud, int& fd, ActorId& actor, uint32_t& op_type) {
     fd = static_cast<int>(ud & 0xFFFFFFFFULL);
-    actor = ActorId((ud >> 32) & 0xFFFFFFFFULL);
+    actor = ActorId(static_cast<uint32_t>((ud >> 32) & 0xFFFFULL));
     op_type = static_cast<uint32_t>((ud >> 56) & 0xFFULL);
 }
 

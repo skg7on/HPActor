@@ -15,6 +15,9 @@ using dispatch_data_t = struct dispatch_data_s*;
 #endif
 
 #include <atomic>
+#include <condition_variable>
+#include <mutex>
+#include <queue>
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
@@ -22,6 +25,11 @@ using dispatch_data_t = struct dispatch_data_s*;
 
 namespace hpactor {
 namespace net {
+
+// Forward declaration to avoid circular include
+class EventLoop;
+
+
 
 class GcdBackend : public AsyncIoBackend {
 public:
@@ -73,12 +81,26 @@ public:
         return cancelled_timers_.count(handle) > 0;
     }
 
+    // Set the EventLoop pointer for routing completions
+    void set_loop(net::EventLoop* loop) { loop_ = loop; }
+
+    // Get the dispatch queue for timer rescheduling
+    dispatch_queue_t get_dispatch_queue() const { return dispatch_queue_; }
+
 private:
 
     // Active timer handles for cancellation
     std::unordered_set<uint64_t> cancelled_timers_;
 
     dispatch_queue_t dispatch_queue_ = nullptr;
+
+    // Wakeup pipe for signaling wait()
+    int wakeup_pipe_[2] = {-1, -1};
+
+    // Completion queue for delivering to EventLoop
+    std::queue<OpCompletion> completion_queue_;
+    std::mutex completion_mutex_;
+    std::condition_variable completion_cv_;
 
     // Timer handle → dispatch_source_t (for cancellation)
     std::unordered_map<uint64_t, dispatch_source_t> timer_sources_;
@@ -95,6 +117,9 @@ private:
 
     // fd → dispatch_source_t (for async_connect)
     std::unordered_map<int, dispatch_source_t> connect_sources_;
+
+    // EventLoop pointer for routing completions
+    net::EventLoop* loop_ = nullptr;
 
     bool running_ = false;
 };

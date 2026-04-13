@@ -108,6 +108,7 @@ private:
 EventLoop::EventLoop() {
 #if defined(__APPLE__)
     auto gcd_backend = std::make_unique<GcdBackend>();
+    gcd_backend->set_loop(this);
     gcd_backend->start();
     backend_ = std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
 #elif defined(__linux__)
@@ -171,11 +172,13 @@ uint64_t EventLoop::run_every(timer_callback callback, int interval_ms) {
         return 0;
     }
     backend_handle_to_handle_[backend_handle] = handle;
+    repeating_timers_.insert(handle);  // Mark as repeating timer
     return handle;
 }
 
 void EventLoop::cancel_timer(uint64_t timer_handle) {
     timer_callbacks_.erase(timer_handle);
+    repeating_timers_.erase(timer_handle);
     backend_->cancel_timer(timer_handle);
 }
 
@@ -199,9 +202,12 @@ void EventLoop::deliver_timer_completion(OpCompletion completion) {
         auto callback_it = timer_callbacks_.find(handle);
         if (callback_it != timer_callbacks_.end()) {
             callback_it->second();
-            timer_callbacks_.erase(callback_it);
+            // Only erase callback for one-shot timers; repeating timers stay
+            if (repeating_timers_.find(handle) == repeating_timers_.end()) {
+                timer_callbacks_.erase(callback_it);
+                backend_handle_to_handle_.erase(it);
+            }
         }
-        backend_handle_to_handle_.erase(it);
     }
 }
 
