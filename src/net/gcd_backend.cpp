@@ -377,6 +377,11 @@ uint64_t GcdBackend::run_after(ActorId actor, int delay_ms) {
 
 void timer_trampoline(void* ctx) {
     auto* c = static_cast<TimerContext*>(ctx);
+    // Check if backend is still running (not destroyed)
+    if (!c->self->is_running()) {
+        delete c;
+        return;
+    }
     if (c->self->is_timer_cancelled(c->handle)) {
         // Cancelled - delete context and don't reschedule
         delete c;

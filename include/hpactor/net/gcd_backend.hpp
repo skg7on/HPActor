@@ -87,6 +87,9 @@ public:
     // Get the dispatch queue for timer rescheduling
     dispatch_queue_t get_dispatch_queue() const { return dispatch_queue_; }
 
+    // Check if backend is still running (for timer trampoline safety)
+    bool is_running() const { return running_; }
+
 private:
 
     // Active timer handles for cancellation
