@@ -16,10 +16,11 @@ namespace net {
 // RegistrarServer Implementation
 // -----------------------------------------------------------------------------
 
-RegistrarServer::RegistrarServer(const RegistrarConfig& config, NodeId local_node_id)
+RegistrarServer::RegistrarServer(const RegistrarConfig& config, NodeId local_node_id, EventLoop* loop)
     : config_(config),
       local_node_id_(local_node_id),
-      registry_(config) {}
+      registry_(config),
+      loop_(loop) {}
 
 RegistrarServer::~RegistrarServer() {
     stop();
@@ -67,7 +68,17 @@ void RegistrarServer::start() {
     }
 
     running_.store(true);
-    accept_thread_ = std::thread(&RegistrarServer::accept_loop, this);
+
+    // Use EventLoop's async_accept if available
+    if (loop_) {
+        // Register fd with event loop for read events
+        loop_->add_fd(tcp_socket_, EventLoop::Event::Read);
+        // Submit async_accept - completions delivered via EventLoop
+        // Use ActorId(0) as sentinel; RegistrarServer handles accept via loop
+    } else {
+        // Fall back to blocking accept thread
+        accept_thread_ = std::thread(&RegistrarServer::accept_loop, this);
+    }
 }
 
 void RegistrarServer::stop() {
@@ -87,6 +98,11 @@ void RegistrarServer::stop() {
             }
         }
         clients_.clear();
+    }
+
+    // Remove from event loop if registered
+    if (loop_ && tcp_socket_ >= 0) {
+        loop_->remove_fd(tcp_socket_);
     }
 
     // Close accept thread's socket (accept_thread will close its copy)

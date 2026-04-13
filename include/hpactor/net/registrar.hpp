@@ -1,5 +1,6 @@
 #pragma once
 
+#include <hpactor/net/event_loop.hpp>
 #include <hpactor/types.hpp>
 #include <hpactor/ref/actor_address.hpp>
 
@@ -199,7 +200,8 @@ class NodeRegistry;
 // -----------------------------------------------------------------------------
 class RegistrarServer {
 public:
-    RegistrarServer(const RegistrarConfig& config, NodeId local_node_id);
+    RegistrarServer(const RegistrarConfig& config, NodeId local_node_id,
+                   EventLoop* loop = nullptr);
     ~RegistrarServer();
 
     // Non-copyable
@@ -212,6 +214,9 @@ public:
 
     // Get registry for reading
     NodeRegistry* registry() { return &registry_; }
+
+    // Set event loop for async I/O (can be changed before start())
+    void set_event_loop(EventLoop* loop) { loop_ = loop; }
 
     // Handle incoming TCP connection
     void handle_accept(int client_fd);
@@ -227,6 +232,7 @@ private:
     RegistrarConfig config_;
     [[maybe_unused]] NodeId local_node_id_;
     NodeRegistry registry_;
+    EventLoop* loop_ = nullptr;
 
     int tcp_socket_ = -1;
     int udp_socket_ = -1;
