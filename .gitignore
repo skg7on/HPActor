@@ -2,6 +2,9 @@
 build/
 build_tsan/
 
+# Testing
+Testing/
+
 # Cache
 .cache/
 
