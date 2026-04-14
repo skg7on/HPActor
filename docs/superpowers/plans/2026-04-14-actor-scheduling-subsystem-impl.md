@@ -39,7 +39,8 @@ tests/
 └── sched/                   # [NEW] tests/sched/ subdirectory
     ├── test_chaselev_deque.cpp
     ├── test_multi_priority_work_queue.cpp
-    └── test_hybrid_scheduler.cpp  # Phase 2+
+    ├── test_hybrid_scheduler.cpp  # Phase 2+
+    └── test_edf_a2ws.cpp          # Phase 3
 ```
 
 **Modified:**
@@ -1044,9 +1045,27 @@ In `include/hpactor/core/actor_system.hpp`:
 - Change `class Scheduler;` forward declaration to `class IScheduler;`
 - Change `std::unique_ptr<Scheduler> scheduler_` to `std::unique_ptr<sched::IScheduler> scheduler_`
 
-- [ ] **Step 2: Update `ActorSystem::spawn()` to use `IScheduler`**
+- [ ] **Step 2: Update `ActorSystem::deliver_local()` to call `scheduler_->notify_ready()` with priority/deadline**
 
-The existing `spawn()` creates the mailbox but does not yet wire `scheduler_->notify_ready()`. In the current design, `ActorContext::send()` triggers `scheduler_->notify_ready()`. Ensure that when `ActorSystem::deliver_local()` or the mailbox's edge-trigger fires, `scheduler_->notify_ready()` is called. This is already wired in the existing `Scheduler::enqueue()` flow — the change is to call through `IScheduler` instead.
+The current `ActorSystem::deliver_local()` signature is:
+```cpp
+void deliver_local(ActorId target, MessageVariant msg);
+```
+It calls `scheduler_->enqueue(target, msg)` with only 2 args. `IScheduler::notify_ready()` requires 3 args `(ActorId, uint8_t priority, int64_t deadline_ns)`.
+
+**For Phase 2**, use defaults: `priority = 0` (highest), `deadline_ns = INT64_MAX` (no real-time deadline). Update `deliver_local()`:
+
+```cpp
+// In src/actor/actor_system.cpp
+void ActorSystem::deliver_local(ActorId target, MessageVariant /*msg*/) {
+    // ... existing mailbox delivery ...
+    scheduler_->notify_ready(target, 0, INT64_MAX);
+}
+```
+
+> **Note:** Phase 3 will thread per-actor priority/deadline from `ActorContext::send()` through to `notify_ready()`. Phase 2 uses the simplest possible wiring with hardcoded defaults.
+
+> **Architectural note:** `ActorContext::send()` is called from actor code (inside `Behavior::invoke`). The priority/deadline needs to come from the actor's `ActorConfig` or be passed as a parameter. For Phase 2, the caller of `deliver_local()` provides these values — since actors are currently spawned without explicit scheduling parameters, all use the Phase 2 defaults above.
 
 - [ ] **Step 3: Replace `Scheduler` instantiation with `HybridScheduler` in `ActorSystem` constructor**
 
@@ -1646,6 +1665,105 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 
 ---
 
+### Task 3.6: Create Phase 3 EDF + A2WS test
+
+**Files:**
+- Create: `tests/sched/test_edf_a2ws.cpp`
+- Depends on: Task 3.5
+
+**Tasks:**
+- [ ] **Step 1: Write EDF + A2WS unit tests**
+
+```cpp
+// tests/sched/test_edf_a2ws.cpp
+#include <cassert>
+#include <hpactor/sched/edf_queue.hpp>
+#include <hpactor/sched/a2ws.hpp>
+#include <thread>
+#include <vector>
+
+int main() {
+    // --- EDFPriorityQueue tests ---
+    hpactor::sched::EDFPriorityQueue q;
+
+    // Test: empty returns false
+    hpactor::sched::EDFPriorityQueue::EDFEntry out;
+    assert(!q.pop_min(out));
+
+    // Test: insert two actors, earliest deadline returns first
+    q.upsert({hpactor::ActorId{1}, 0, 1000, 0});  // deadline 1000
+    q.upsert({hpactor::ActorId{2}, 0, 500, 0});   // deadline 500 (earlier)
+    q.upsert({hpactor::ActorId{3}, 0, 1500, 0});  // deadline 1500
+
+    assert(q.pop_min(out));
+    assert(out.actor.value() == 2);   // earliest deadline
+    assert(q.pop_min(out));
+    assert(out.actor.value() == 1);  // next
+    assert(q.pop_min(out));
+    assert(out.actor.value() == 3);  // last
+
+    // Test: same deadline, lower priority returns first
+    hpactor::sched::EDFPriorityQueue q2;
+    q2.upsert({hpactor::ActorId{1}, 2, 1000, 0});  // priority 2
+    q2.upsert({hpactor::ActorId{2}, 1, 1000, 0});  // priority 1 (higher)
+    assert(q2.pop_min(out));
+    assert(out.actor.value() == 2);   // priority 1 is higher
+    assert(q2.pop_min(out));
+    assert(out.actor.value() == 1);
+
+    // Test: remove mid-heap
+    hpactor::sched::EDFPriorityQueue q3;
+    q3.upsert({hpactor::ActorId{1}, 0, 1000, 0});
+    q3.upsert({hpactor::ActorId{2}, 0, 500, 0});
+    q3.upsert({hpactor::ActorId{3}, 0, 1500, 0});
+    q3.remove(hpactor::ActorId{2});  // remove middle element
+    assert(q3.size() == 2);
+    q3.pop_min(out);
+    assert(out.actor.value() == 1);  // 500 was removed; next is 1000
+
+    // --- A2WSCoordinator tests ---
+    hpactor::sched::A2WSCoordinator a2ws(4, 2);  // 4 workers, threshold=2
+
+    // Test: best_victim returns SIZE_MAX when load is balanced
+    assert(a2ws.best_victim(0, 0) == SIZE_MAX);  // all zero
+
+    // Test: imbalanced load triggers steal
+    a2ws.update_snapshot(0, 10);   // worker 0 has 10 tasks
+    a2ws.update_snapshot(1, 0);   // worker 1 has 0
+    a2ws.update_snapshot(2, 0);
+    a2ws.update_snapshot(3, 0);
+    assert(a2ws.best_victim(1, 0) == 0);  // worker 1 should steal from worker 0
+
+    // Test: steal_count halving heuristic
+    assert(a2ws.steal_count(0, 10) == 5);  // (10-0)/2 = 5
+    assert(a2ws.steal_count(0, 3) == 1);   // (3-0)/2 = 1 (min 1)
+
+    return 0;
+}
+```
+
+- [ ] **Step 2: Build and run**
+
+```bash
+g++ -std=c++20 -fno-exceptions -fno-rtti -I include tests/sched/test_edf_a2ws.cpp src/sched/edf_queue.cpp src/sched/a2ws.cpp -o build/test_edf_a2ws 2>&1
+./build/test_edf_a2ws; echo "Exit: $?"
+# Expected: 0
+```
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add tests/sched/test_edf_a2ws.cpp
+git commit -m "test(sched): add EDFPriorityQueue and A2WS unit tests
+
+EDF tests verify earliest-deadline-first ordering and priority tie-breaking.
+A2WS tests verify threshold-based victim selection and steal_count halving.
+
+Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
+```
+
+---
+
 ## Phase 4: Hierarchical Timing Wheel
 
 ### Task 4.1: Create `include/hpactor/timer/timing_wheel.hpp`
@@ -1773,19 +1891,23 @@ g++ -std=c++20 -fno-exceptions -fno-rtti -I include -c include/hpactor/timer/tim
 - Depends on: Task 4.1
 
 **Tasks:**
-- [ ] **Step 1: Write implementation (full)**
+- [ ] **Step 1: Write implementation (full) — with `expires_at_ns` computed correctly**
 
 ```cpp
 // src/timer/timing_wheel.cpp
 #include <hpactor/timer/timing_wheel.hpp>
+#include <chrono>
 #include <cassert>
 #include <climits>
 
 namespace hpactor::timer {
 
+inline int64_t now_ns() {
+    return std::chrono::steady_clock::now().time_since_epoch().count();
+}
+
 HierarchicalTimingWheel::HierarchicalTimingWheel(Config cfg)
     : cfg_(cfg), entries_(), next_id_(1), base_tick_ns_(cfg.base_tick_ns) {
-    // Build wheels: level 0 has base_slots; subsequent levels have 64 slots
     int64_t resolution = cfg.base_tick_ns;
     for (uint32_t k = 0; k < cfg.levels; ++k) {
         Wheel w;
@@ -1793,42 +1915,44 @@ HierarchicalTimingWheel::HierarchicalTimingWheel(Config cfg)
         w.slots.resize(num_slots);
         w.resolution_ns = resolution;
         wheels_.push_back(std::move(w));
-        resolution *= num_slots;  // geometric progression
+        resolution *= num_slots;
     }
 }
 
 HierarchicalTimingWheel::~HierarchicalTimingWheel() = default;
 
 TimerHandle HierarchicalTimingWheel::insert_after(int64_t delay_ns, timer_callback cb) {
+    int64_t expiry = now_ns() + delay_ns;
     auto* entry = new TimerEntry{
-        .handle    = TimerHandle{next_id_.fetch_add(1)},
-        .expires_at_ns = 0,  // set in place()
-        .interval_ns  = 0,
-        .cb           = std::move(cb),
-        .next         = nullptr
+        .handle        = TimerHandle{next_id_.fetch_add(1)},
+        .expires_at_ns = expiry,
+        .interval_ns   = 0,
+        .cb            = std::move(cb),
+        .next          = nullptr
     };
     entries_[entry->handle.id] = entry;
-    place(entry, delay_ns);
+    place(entry, expiry, delay_ns);
     return entry->handle;
 }
 
 TimerHandle HierarchicalTimingWheel::insert_every(int64_t interval_ns, timer_callback cb) {
+    int64_t expiry = now_ns() + interval_ns;
     auto* entry = new TimerEntry{
-        .handle    = TimerHandle{next_id_.fetch_add(1)},
-        .expires_at_ns = 0,
-        .interval_ns  = interval_ns,
-        .cb           = std::move(cb),
-        .next         = nullptr
+        .handle        = TimerHandle{next_id_.fetch_add(1)},
+        .expires_at_ns = expiry,
+        .interval_ns   = interval_ns,
+        .cb            = std::move(cb),
+        .next          = nullptr
     };
     entries_[entry->handle.id] = entry;
-    place(entry, interval_ns);
+    place(entry, expiry, interval_ns);
     return entry->handle;
 }
 
 void HierarchicalTimingWheel::cancel(TimerHandle handle) {
     auto it = entries_.find(handle.id);
     if (it != entries_.end()) {
-        it->second->cb = nullptr;  // mark as cancelled — skip at fire time
+        it->second->cb = nullptr;  // mark cancelled — skip at fire time
     }
 }
 
@@ -1837,8 +1961,6 @@ int HierarchicalTimingWheel::advance(int64_t now_ns) {
 }
 
 int64_t HierarchicalTimingWheel::next_expiry_ns() const {
-    // Scan all entries for the minimum expiry — O(n) but called rarely
-    // (only for scheduling the next advance; n = number of pending timers)
     int64_t min_expiry = INT64_MAX;
     for (const auto& [id, entry] : entries_) {
         if (entry->cb && entry->expires_at_ns < min_expiry) {
@@ -1848,54 +1970,51 @@ int64_t HierarchicalTimingWheel::next_expiry_ns() const {
     return min_expiry;
 }
 
-void HierarchicalTimingWheel::place(TimerEntry* entry, int64_t delay_ns) {
-    int64_t expires_at_ns = 0;  // caller sets based on current time
-    (void)expires_at_ns;  // deferred to fire_expired which recalculates
-
-    // Determine target level
+void HierarchicalTimingWheel::place(TimerEntry* entry, int64_t expiry_ns, int64_t delay_ns) {
+    // Determine target level based on delay_ns
     int64_t remaining = delay_ns;
     size_t  target_level = 0;
     for (size_t k = 0; k < wheels_.size(); ++k) {
-        int64_t level_span = static_cast<int64_t>(wheels_[k].slots.size()) * wheels_[k].resolution_ns;
+        int64_t level_span = static_cast<int64_t>(wheels_[k].slots.size())
+                             * wheels_[k].resolution_ns;
         if (remaining < level_span) {
             target_level = k;
             break;
         }
         if (k == wheels_.size() - 1) {
-            target_level = k;  // cap at last level
+            target_level = k;
         }
     }
 
     Wheel& w = wheels_[target_level];
+    // Slot = (current + delay / resolution) mod slot_count
     uint32_t slot = static_cast<uint32_t>(
         (w.current + remaining / w.resolution_ns) % w.slots.size()
     );
 
-    // Prepend to slot list
     entry->next = w.slots[slot].head;
-    w.slots[slot].head = entry;
+    w.slots_[slot].head = entry;
+    (void)expiry_ns;  // expiry_ns stored in entry->expires_at_ns by caller
 }
 
 int HierarchicalTimingWheel::fire_expired(int64_t now_ns) {
     int fired = 0;
     Wheel& w0 = wheels_[0];
 
-    // Advance level 0
     uint32_t slot = w0.current;
-    TimerEntry** prev = &w0.slots[slot].head;
+    TimerEntry** prev = &w0.slots_[slot].head;
     while (*prev) {
         TimerEntry* entry = *prev;
         if (entry->expires_at_ns <= now_ns) {
-            // Fire
             *prev = entry->next;
             if (entry->cb) {
                 entry->cb();
                 ++fired;
             }
-            // Reschedule if repeating
             if (entry->interval_ns > 0) {
+                // Reschedule repeating timer
                 entry->expires_at_ns = now_ns + entry->interval_ns;
-                place(entry, entry->interval_ns);
+                place(entry, entry->expires_at_ns, entry->interval_ns);
             } else {
                 delete entry;
                 entries_.erase(entry->handle.id);
@@ -1905,56 +2024,30 @@ int HierarchicalTimingWheel::fire_expired(int64_t now_ns) {
         }
     }
 
-    // Advance current position
-    w0.current = (w0.current + 1) % w0.slots.size();
+    w0.current = (w0.current + 1) % w0.slots_[0].size();
     return fired;
 }
 
 } // namespace hpactor::timer
 ```
 
-> **Bug to fix:** `place()` sets `expires_at_ns` to 0 instead of computing from `now_ns`. When `fire_expired` is called, it compares `entry->expires_at_ns <= now_ns` which would be 0 always true. Fix: have `insert_after` compute `expires_at_ns` before calling `place()`:
-> ```cpp
-> entry->expires_at_ns = /* current_time_ns */ + delay_ns;  // pass current time in
-> ```
-> Alternatively, store the target absolute time in a separate field. For simplicity, compute it in `insert_after`/`insert_every` and pass it to `place` to store.
+> **Critical:** `expires_at_ns` must be set **before** calling `place()` in both `insert_after` and `insert_every`. The `place()` function uses `delay_ns` to compute the slot, not `expiry_ns`. This avoids the logic bug where `fire_expired` would incorrectly fire all timers because `expires_at_ns == 0`.
 
-- [ ] **Step 2: Fix the `expires_at_ns` bug in `insert_after` and `insert_every`**
-
-```cpp
-TimerHandle HierarchicalTimingWheel::insert_after(int64_t delay_ns, timer_callback cb) {
-    auto* entry = new TimerEntry{
-        .handle        = TimerHandle{next_id_.fetch_add(1)},
-        .expires_at_ns = 0,  // will be set before storage
-        .interval_ns   = 0,
-        .cb            = std::move(cb),
-        .next          = nullptr
-    };
-    // Fix: compute expiry time before placing
-    int64_t now_ns = /* need clock access — pass as param or capture globally */;
-    entry->expires_at_ns = now_ns + delay_ns;  // ← add this
-    entries_[entry->handle.id] = entry;
-    place(entry, delay_ns);
-    return entry->handle;
-}
-```
-
-> **Design note:** `HierarchicalTimingWheel` needs access to `CLOCK_MONOTONIC` to compute absolute expiry times. Since it runs on its own thread, it can call `clock_gettime(CLOCK_MONOTONIC, ...)` directly. Add a `int64_t now_ns()` helper using `std::chrono::steady_clock::now().time_since_epoch().count()`.
-
-- [ ] **Step 3: Verify build**
+- [ ] **Step 2: Verify it compiles and the bug is absent**
 
 ```bash
 g++ -std=c++20 -fno-exceptions -fno-rtti -I include -c src/timer/timing_wheel.cpp -o /dev/null 2>&1
+# Expected: no errors
 ```
 
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
 git add include/hpactor/timer/timing_wheel.hpp include/hpactor/timer/timer_entry.hpp src/timer/timing_wheel.cpp
 git commit -m "feat(timer): add HierarchicalTimingWheel with O(1) amortized insert/cancel
 
-4-level wheel (ms/s/min/hr). insert_after/insert_every are O(1).
-advance() runs on dedicated thread. Repeating timers reschedule automatically.
+4-level wheel (ms/s/min/hr). insert_after/insert_every compute absolute
+expiry before place(). Repeating timers reschedule via place() after firing.
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ```
@@ -2207,32 +2300,46 @@ memory::CoroutineFramePool& frame_pool() { return frame_pool_; }
 
 - [ ] **Step 2: Expose `CoroutineFramePool` allocation to coroutine `promise_type`**
 
-The interception mechanism is via a thread-local pointer set by `WorkerThread::start()`:
+**Where to add the interception:** In `include/hpactor/actor/event_based_actor.hpp`, the `EventBasedActor` class has a nested `promise_type` struct that defines `get_return_object()`, `initial_suspend()`, etc. Add the thread-local pointer and `operator new`/`operator delete` overrides there:
 
 ```cpp
-// In worker_thread.cpp, WorkerThread::start():
-thread_local CoroutineFramePool* tl_pool = nullptr;
+// In include/hpactor/actor/event_based_actor.hpp
 
+// Forward-declare CoroutineFramePool
+namespace hpactor::memory { class CoroutineFramePool; }
+
+// Thread-local pointer to the current worker's frame pool
+inline thread_local memory::CoroutineFramePool* tl_frame_pool = nullptr;
+
+struct EventBasedActor::promise_type {
+    // ... existing methods ...
+
+    static void* operator new(size_t sz) {
+        if (tl_frame_pool) {
+            void* ptr = tl_frame_pool->allocate(sz);
+            if (ptr) return ptr;
+        }
+        return ::operator new(sz);
+    }
+
+    static void operator delete(void* ptr) noexcept {
+        if (tl_frame_pool) tl_frame_pool->deallocate(ptr);
+        else ::operator delete(ptr);
+    }
+};
+```
+
+The thread-local `tl_frame_pool` is set by `WorkerThread::start()`:
+
+```cpp
+// In src/sched/worker_thread.cpp
 void WorkerThread::start() {
-    tl_pool = &frame_pool_;  // set before thread runs
+    tl_frame_pool = &frame_pool_;  // expose pool to coroutine allocations
     thread_ = std::thread([this] { run_loop(); });
 }
 ```
 
-Then in each `promise_type::operator new`:
-```cpp
-void* operator new(size_t sz) {
-    if (tl_pool) {
-        void* ptr = tl_pool->allocate(sz);
-        if (ptr) return ptr;
-    }
-    return ::operator new(sz);
-}
-void operator delete(void* ptr) noexcept {
-    if (tl_pool) tl_pool->deallocate(ptr);
-    else ::operator delete(ptr);
-}
-```
+> **Why this location?** `promise_type` is a nested struct of `EventBasedActor`. Adding `operator new`/`operator delete` overrides here intercepts all coroutine frame allocations for every actor type that uses `EventBasedActor` as a base — which covers all event-based actors in the system.
 
 - [ ] **Step 3: Verify full build**
 
@@ -2264,8 +2371,9 @@ Phase 1 ──┬── 1.1 (test) ── 1.2 (header) ── 1.3 (.cpp) ── 
 Phase 2 ──┬── 2.1 (scheduler.hpp) ── 2.2 (worker_thread.hpp)
           ├──── 2.3 (worker_thread.cpp) ── 2.4 (scheduler.cpp) ── 2.5 (ActorSystem)
           └──── 2.6 (integration test)
-Phase 3 ──┬── 3.1 (edf_queue.hpp) ── 3.2 (edf_queue.cpp) ── 3.5 (integration)
-          ├──── 3.3 (a2ws.hpp) ── 3.4 (a2ws.cpp) ───────────────↑
+Phase 3 ──┬── 3.1 (edf_queue.hpp) ── 3.2 (edf_queue.cpp)
+          ├──── 3.3 (a2ws.hpp) ── 3.4 (a2ws.cpp)
+          └──── 3.5 (HybridScheduler upgrade) ── 3.6 (EDF+A2WS test)
 Phase 4 ──┬── 4.1 (timing_wheel.hpp) ── 4.2 (timing_wheel.cpp) ── 4.3 (integration)
 Phase 5 ──┬── 5.1 (frame_pool.hpp) ── 5.2 (frame_pool.cpp) ── 5.3 (WorkerThread wire)
 ```
