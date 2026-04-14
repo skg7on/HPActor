@@ -18,8 +18,14 @@ namespace net {
 // EventLoop - async I/O backend wrapper
 // -----------------------------------------------------------------------------
 // Provides a unified interface over platform-specific async I/O backends:
-//   - io_uring on Linux
-//   - libdispatch (GCD) on macOS
+//   - io_uring on Linux (preferred), epoll fallback
+//   - libdispatch (GCD) on macOS (preferred), kqueue fallback
+//
+// Usage:
+//   EventLoop loop;  // Creates backend but doesn't start
+//   loop.run();       // Explicitly start processing
+//   // ... event loop runs ...
+//   loop.stop();      // Stop when done
 // -----------------------------------------------------------------------------
 class EventLoop {
 public:
@@ -31,6 +37,19 @@ public:
     EventLoop& operator=(const EventLoop&) = delete;
     EventLoop(EventLoop&&) = delete;
     EventLoop& operator=(EventLoop&&) = delete;
+
+    // Start the backend and begin processing events
+    // Call this explicitly after construction
+    bool run();
+
+    // Stop the backend
+    void stop();
+
+    // Check if the backend is running
+    bool is_running() const { return running_.load(); }
+
+    // Get the backend name for debugging
+    const char* backend_name() const;
 
     // File descriptor registration
     enum class Event : uint32_t {
@@ -87,6 +106,8 @@ private:
     void deliver_timer_completion(OpCompletion completion);
 
     std::unique_ptr<AsyncIoBackend> backend_;
+    std::atomic<bool> running_{false};
+    const char* backend_name_ = "unknown";
 
     // Map timer handles to callbacks (for bridging backend completions to callbacks)
     std::unordered_map<uint64_t, timer_callback> timer_callbacks_;

@@ -91,8 +91,8 @@ target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
     find_package(liburing REQUIRED)
     target_link_libraries(hpactor_lib PUBLIC liburing::uring)
-    # io_uring backend
-    target_sources(hpactor_lib PRIVATE src/net/iouring_backend.cpp)
+    # io_uring backend (with epoll fallback)
+    target_sources(hpactor_lib PRIVATE src/net/iouring_backend.cpp src/net/epoll_backend.cpp)
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     # Compute macOS SDK path and link libdispatch from the SDK
     execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE HPACTOR_SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
@@ -102,8 +102,8 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
         message(FATAL_ERROR "libdispatch not found at ${HPACTOR_DISPATCH_LIB}")
     endif()
     target_link_libraries(hpactor_lib PUBLIC "${HPACTOR_DISPATCH_LIB}")
-    # GCD backend
-    target_sources(hpactor_lib PRIVATE src/net/gcd_backend.cpp)
+    # GCD backend (with kqueue fallback)
+    target_sources(hpactor_lib PRIVATE src/net/gcd_backend.cpp src/net/kqueue_backend.cpp)
 endif()
 
 # Alias for backwards compatibility

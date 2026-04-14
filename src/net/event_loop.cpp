@@ -3,8 +3,10 @@
 
 #if defined(__APPLE__)
 #include <hpactor/net/gcd_backend.hpp>
+#include <hpactor/net/kqueue_backend.hpp>
 #elif defined(__linux__)
 #include <hpactor/net/iouring_backend.hpp>
+#include <hpactor/net/epoll_backend.hpp>
 #endif
 
 namespace hpactor {
@@ -12,6 +14,15 @@ namespace hpactor {
 namespace net {
 
 namespace {
+
+// Backend factory helper - tries to create a backend, returns nullptr on failure
+template<typename Backend, typename... Args>
+std::unique_ptr<Backend> try_create_backend(Args&&... args) {
+    auto backend = std::make_unique<Backend>(std::forward<Args>(args)...);
+    return backend;
+}
+
+} // anonymous namespace
 
 // BackendAdapter wraps the real AsyncIoBackend and intercepts
 // deliver_completion to route to EventLoop
@@ -103,24 +114,59 @@ private:
     std::unique_ptr<AsyncIoBackend> backend_;
 };
 
-} // anonymous namespace
-
 EventLoop::EventLoop() {
 #if defined(__APPLE__)
-    auto gcd_backend = std::make_unique<GcdBackend>();
-    gcd_backend->set_loop(this);
-    gcd_backend->start();
-    backend_ = std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
+    // Try GCD first (preferred on macOS)
+    auto gcd_backend = try_create_backend<GcdBackend>();
+    if (gcd_backend->start()) {
+        backend_name_ = "gcd";
+        static_cast<GcdBackend*>(gcd_backend.get())->set_loop(this);
+        backend_ = std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
+    } else {
+        // Fall back to kqueue
+        auto kqueue_backend = try_create_backend<KqueueBackend>();
+        if (kqueue_backend->start()) {
+            backend_name_ = "kqueue";
+            static_cast<KqueueBackend*>(kqueue_backend.get())->set_loop(this);
+            backend_ = std::make_unique<BackendAdapter>(this, std::move(kqueue_backend));
+        }
+    }
 #elif defined(__linux__)
-    auto iouring_backend = std::make_unique<IoUringBackend>();
-    iouring_backend->start();
-    backend_ = std::make_unique<BackendAdapter>(this, std::move(iouring_backend));
-#else
-    #error "Unsupported platform"
+    // Try io_uring first (preferred on Linux)
+    auto iouring_backend = try_create_backend<IoUringBackend>();
+    if (iouring_backend->start()) {
+        backend_name_ = "iouring";
+        backend_ = std::make_unique<BackendAdapter>(this, std::move(iouring_backend));
+    } else {
+        // Fall back to epoll
+        auto epoll_backend = try_create_backend<EpollBackend>();
+        if (epoll_backend->start()) {
+            backend_name_ = "epoll";
+            static_cast<EpollBackend*>(epoll_backend.get())->set_loop(this);
+            backend_ = std::make_unique<BackendAdapter>(this, std::move(epoll_backend));
+        }
+    }
 #endif
 }
 
 EventLoop::~EventLoop() = default;
+
+bool EventLoop::run() {
+    if (running_.load()) {
+        return true;
+    }
+    running_.store(backend_->start());
+    return running_.load();
+}
+
+void EventLoop::stop() {
+    running_.store(false);
+    backend_->stop();
+}
+
+const char* EventLoop::backend_name() const {
+    return backend_name_;
+}
 
 bool EventLoop::add_fd(int fd, Event events) {
     IoEvent io_events = IoEvent::Read;
