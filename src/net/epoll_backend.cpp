@@ -87,7 +87,7 @@ bool EpollBackend::add_fd(int fd, IoEvent events) {
     }
 
     struct epoll_event ev;
-    ev.events = epoll_events;
+    ev.events = epoll_events | EPOLLET;
     ev.data.fd = fd;
 
     int op = fd_events_.count(fd) ? EPOLL_CTL_MOD : EPOLL_CTL_ADD;
@@ -95,7 +95,7 @@ bool EpollBackend::add_fd(int fd, IoEvent events) {
         return false;
     }
 
-    fd_events_[fd] = epoll_events;
+    fd_events_[fd] = epoll_events | EPOLLET;
     return true;
 }
 
