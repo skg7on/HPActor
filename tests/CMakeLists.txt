@@ -154,3 +154,14 @@ add_test(NAME test_supervisor_actor COMMAND test_supervisor_actor)
 add_executable(test_self_supervising_actor supervision/test_self_supervising_actor.cpp)
 target_link_libraries(test_self_supervising_actor hpactor)
 add_test(NAME test_self_supervising_actor COMMAND test_self_supervising_actor)
+
+# =============================================================================
+# Scheduling tests
+# =============================================================================
+add_executable(test_chaselev_deque sched/test_chaselev_deque.cpp)
+target_link_libraries(test_chaselev_deque hpactor)
+add_test(NAME test_chaselev_deque COMMAND test_chaselev_deque)
+
+add_executable(test_multi_priority_work_queue sched/test_multi_priority_work_queue.cpp)
+target_link_libraries(test_multi_priority_work_queue hpactor)
+add_test(NAME test_multi_priority_work_queue COMMAND test_multi_priority_work_queue)
