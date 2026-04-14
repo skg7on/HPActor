@@ -28,6 +28,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - ConnectionPool — dynamic pooling per node, round-robin, exponential backoff
 - TcpTransport — updated to use ConnectionPool + TLS
 - EventLoop timer support — EVFILT_TIMER/timerfd for reconnect backoff
+- EventLoop backend fallback — EpollBackend (Linux), KqueueBackend (macOS) with explicit run()/stop()
 - UdpRegistrar — UDP-based node discovery with server/client dual mode
 - HostResolver — DNS resolution with caching
 - NodeRegistry — registry of known nodes with static routes
@@ -56,6 +57,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Plan: `docs/superpowers/plans/2026-04-11-actor-core-impl.md`
 - Spec: `docs/superpowers/specs/2026-04-14-registrar-refactor-design.md` (registrar bug fixes)
 - Plan: `docs/superpowers/plans/2026-04-14-registrar-refactor-impl.md`
+- Spec: `docs/superpowers/specs/2026-04-14-event-loop-backend-fallback-design.md`
+- Plan: `docs/superpowers/plans/2026-04-14-event-loop-backend-fallback-impl.md`
 
 ## Key Decisions
 

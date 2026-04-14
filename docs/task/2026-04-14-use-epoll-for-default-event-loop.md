@@ -3,6 +3,8 @@
 # support default epoll/kqueue for older kernel 
  - in /Users/skg7on/Workspace/Projects/HPActor/src/net/event_loop.cpp, if the OS(linux or macos) kernel doesn't support new feature(io_using or libdispatch), fall back to use epool/queue.
  - provide explicit EventLoop::run() method, instead of start directly on object construction.
+ - use Edge Triggered mode in Linux epoll implementation.
+ 
 ```c++
 EventLoop::EventLoop() {
 #if defined(__APPLE__)
