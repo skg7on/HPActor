@@ -1,8 +1,8 @@
 #pragma once
 
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/mailbox.hpp>
-#include <hpactor/message.hpp>
+#include <hpactor/core/mailbox.hpp>
+#include <hpactor/actor/message.hpp>
 #include <hpactor/types.hpp>
 
 #include <chrono>
