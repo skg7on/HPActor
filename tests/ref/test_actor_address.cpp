@@ -3,7 +3,7 @@
 #include <functional>
 #include <hpactor/actor/actor_fwd.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 void test_actor_address_default() {
     hpactor::ActorAddress addr;

@@ -1,5 +1,5 @@
 #include <hpactor/actor_type_registry.hpp>
-#include <hpactor/actor_system.hpp>
+#include <hpactor/core/actor_system.hpp>
 
 namespace hpactor {
 

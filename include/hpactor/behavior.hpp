@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <hpactor/message.hpp>
+#include <hpactor/actor/message.hpp>
 
 namespace hpactor {
 

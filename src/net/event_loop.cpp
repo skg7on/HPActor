@@ -1,5 +1,5 @@
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/actor_system.hpp>
+#include <hpactor/core/actor_system.hpp>
 
 #if defined(__APPLE__)
 #include <hpactor/net/gcd_backend.hpp>

@@ -1,7 +1,7 @@
 // tests/test_mailbox_interface.cpp
 #include <cassert>
-#include <hpactor/mailbox.hpp>
-#include <hpactor/message.hpp>
+#include <hpactor/core/mailbox.hpp>
+#include <hpactor/actor/message.hpp>
 #include <string>
 #include <thread>
 

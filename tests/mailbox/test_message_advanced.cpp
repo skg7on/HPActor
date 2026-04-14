@@ -1,5 +1,5 @@
 #include <cassert>
-#include <hpactor/message.hpp>
+#include <hpactor/actor/message.hpp>
 #include <string>
 
 struct MoveOnly {

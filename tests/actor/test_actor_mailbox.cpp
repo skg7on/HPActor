@@ -1,6 +1,6 @@
 #include <cassert>
-#include <hpactor/mailbox.hpp>
-#include <hpactor/message.hpp>
+#include <hpactor/core/mailbox.hpp>
+#include <hpactor/actor/message.hpp>
 
 using namespace hpactor;
 

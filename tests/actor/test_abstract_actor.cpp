@@ -1,6 +1,6 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_fwd.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <cassert>
 #include <type_traits>

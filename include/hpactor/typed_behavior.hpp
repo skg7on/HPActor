@@ -6,7 +6,7 @@
 #include <variant>
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 namespace hpactor {
 

@@ -1,7 +1,7 @@
 // ActorProxy implementation - see actor_proxy.hpp
 
 #include <hpactor/ref/actor_proxy.hpp>
-#include <hpactor/serialization.hpp>
+#include <hpactor/types/serialization.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/transport.hpp>
 

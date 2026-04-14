@@ -1,7 +1,7 @@
 #pragma once
 
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <functional>
 #include <memory>

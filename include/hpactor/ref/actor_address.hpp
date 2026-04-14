@@ -1,7 +1,7 @@
 #pragma once
 
 #include <functional>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 namespace hpactor {
 

@@ -3,7 +3,7 @@
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <hpactor/actor/message.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <chrono>
 #include <condition_variable>

@@ -1,5 +1,5 @@
 #include <cassert>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 void test_result_value() {
     auto r = hpactor::result<int>::make(42);

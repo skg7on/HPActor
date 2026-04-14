@@ -18,8 +18,8 @@
 
 #include <hpactor/actor/typed_actor.hpp>
 #include <hpactor/actor_context.hpp>
-#include <hpactor/actor_system.hpp>
-#include <hpactor/message.hpp>
+#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/message.hpp>
 #include <hpactor/typed_behavior.hpp>
 #include <iostream>
 #include <string>

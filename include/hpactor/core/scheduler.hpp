@@ -1,7 +1,7 @@
 #pragma once
 
-#include <hpactor/actor_system.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/core/actor_system.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <atomic>
 #include <thread>

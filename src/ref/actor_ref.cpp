@@ -1,6 +1,6 @@
 // Actor reference implementation - see actor_ref.hpp
 
-#include <hpactor/actor_system.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 
 namespace hpactor {

@@ -2,7 +2,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/serialization.hpp>
+#include <hpactor/types/serialization.hpp>
 
 namespace hpactor {
 

@@ -3,7 +3,7 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <chrono>
 #include <vector>

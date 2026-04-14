@@ -1,12 +1,12 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor_registry.hpp>
-#include <hpactor/mailbox.hpp>
+#include <hpactor/core/actor_registry.hpp>
+#include <hpactor/core/mailbox.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <atomic>
 #include <chrono>

@@ -1,10 +1,10 @@
 #pragma once
 
-#include <hpactor/actor_system_ids.hpp>
+#include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/serialization.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/serialization.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <condition_variable>
 #include <memory>

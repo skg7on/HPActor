@@ -1,6 +1,6 @@
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
-#include <hpactor/actor_system.hpp>
+#include <hpactor/core/actor_system.hpp>
 
 #include <iostream>
 #include <cassert>

@@ -1,11 +1,11 @@
-#include <hpactor/actor_system.hpp>
-#include <hpactor/scheduler.hpp>
+#include <hpactor/core/actor_system.hpp>
+#include <hpactor/core/scheduler.hpp>
 #include <hpactor/actor_type_registry.hpp>
 #include <hpactor/spawn.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
-#include <hpactor/actor_system_ids.hpp>
+#include <hpactor/core/actor_system_ids.hpp>
 
 namespace hpactor {
 

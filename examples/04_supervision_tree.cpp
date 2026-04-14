@@ -18,9 +18,9 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_context.hpp>
-#include <hpactor/actor_system.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/behavior.hpp>
-#include <hpactor/message.hpp>
+#include <hpactor/actor/message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/supervision.hpp>

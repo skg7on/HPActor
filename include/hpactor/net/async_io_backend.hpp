@@ -2,7 +2,7 @@
 
 #include <sys/uio.h>
 #include <sys/socket.h>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 namespace hpactor { namespace net {
 

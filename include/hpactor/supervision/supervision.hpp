@@ -4,7 +4,7 @@
 #include <hpactor/actor_context.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 #include <unordered_map>
 #include <vector>
 

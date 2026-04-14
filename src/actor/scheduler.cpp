@@ -1,4 +1,4 @@
-#include <hpactor/scheduler.hpp>
+#include <hpactor/core/scheduler.hpp>
 
 namespace hpactor {
 

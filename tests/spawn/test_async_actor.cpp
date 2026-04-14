@@ -1,5 +1,5 @@
 #include <hpactor/spawn.hpp>
-#include <hpactor/actor_system_ids.hpp>
+#include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 
 #include <thread>

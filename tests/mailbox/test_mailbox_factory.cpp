@@ -1,7 +1,7 @@
 #include <cassert>
-#include <hpactor/mailbox.hpp>
-#include <hpactor/message.hpp>
-#include <hpactor/mutex_mailbox.hpp>
+#include <hpactor/core/mailbox.hpp>
+#include <hpactor/actor/message.hpp>
+#include <hpactor/core/mutex_mailbox.hpp>
 
 struct SimpleMsg {};
 

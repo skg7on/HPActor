@@ -1,4 +1,4 @@
-#include <hpactor/serialization.hpp>
+#include <hpactor/types/serialization.hpp>
 
 #include <cassert>
 

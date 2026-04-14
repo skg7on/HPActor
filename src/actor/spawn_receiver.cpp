@@ -1,7 +1,7 @@
 #include <hpactor/actor/spawn_receiver.hpp>
-#include <hpactor/actor_system.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/frame.hpp>
-#include <hpactor/serialization.hpp>
+#include <hpactor/types/serialization.hpp>
 
 namespace hpactor {
 

@@ -3,7 +3,7 @@
 #include <condition_variable>
 #include <cstddef>
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/message.hpp>
+#include <hpactor/actor/message.hpp>
 #include <memory>
 #include <mutex>
 #include <queue>

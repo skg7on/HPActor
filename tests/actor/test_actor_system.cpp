@@ -1,4 +1,4 @@
-#include <hpactor/actor_system.hpp>
+#include <hpactor/core/actor_system.hpp>
 
 #include <cassert>
 #include <type_traits>

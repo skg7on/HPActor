@@ -1,6 +1,6 @@
 #pragma once
 
-#include "../types_fwd.hpp"
+#include "../types/types_fwd.hpp"
 
 namespace hpactor {
 

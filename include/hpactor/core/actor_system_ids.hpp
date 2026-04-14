@@ -1,6 +1,6 @@
 #pragma once
 
-#include <hpactor/types.hpp>
+#include <hpactor/types/types.hpp>
 
 namespace hpactor {
 

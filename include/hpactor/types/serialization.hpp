@@ -1,8 +1,8 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/message.hpp>
-#include <hpactor/types.hpp>
+#include <hpactor/actor/message.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <cstring>
 #include <functional>
