@@ -1112,84 +1112,72 @@ Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 - Create: `tests/sched/test_hybrid_scheduler.cpp`
 - Depends on: Task 2.5
 
+> **Note:** The existing `Behavior` class uses `std::function<void(MessageVariant&&)>` — no fluent `.on<T>()` builder. `ActorContext::reply()` is a stub. This test focuses on scheduler lifecycle and routing without those.
+
 **Tasks:**
-- [ ] **Step 1: Write integration test**
+- [ ] **Step 1: Write scheduler lifecycle test**
 
 ```cpp
 // tests/sched/test_hybrid_scheduler.cpp
 #include <cassert>
+#include <thread>
+#include <chrono>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/message.hpp>
-#include <thread>
-#include <atomic>
 
-struct PingMsg { int value; };
-struct PongMsg { int value; };
-
-using hpactor::Actor;
-using hpactor::ActorContext;
-using hpactor::Behavior;
-
-class PingActor : public hpactor::EventBasedActor {
+class TestActor : public hpactor::EventBasedActor {
 public:
-    PingActor(hpactor::ActorConfig* cfg, hpactor::ActorSystem& sys, Actor pong)
-        : EventBasedActor(cfg, sys), pong_(std::move(pong)) {
-        become(Behavior{
-            .template on<PingMsg>([this](const PingMsg& msg) {
-                reply(PongMsg{msg.value + 1});
-            })
-        });
-    }
-
-private:
-    Actor pong_;
-};
-
-class PongActor : public hpactor::EventBasedActor {
-public:
-    PongActor(hpactor::ActorConfig* cfg, hpactor::ActorSystem& sys)
-        : EventBasedActor(cfg, sys) {
-        become(Behavior{
-            .template on<PongMsg>([this](const PongMsg& msg) {
-                count_++;
-                if (count_ < 5) {
-                    send(ping_, PingMsg{msg.value});
-                }
-            })
-        });
-    }
-    void set_ping(Actor a) { ping_ = std::move(a); }
-    int count() const { return count_; }
-
-private:
-    Actor ping_;
-    int count_ = 0;
+    TestActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
+        : EventBasedActor(ctx, sys) {}
 };
 
 int main() {
-    hpactor::Config config;
-    config.scheduler_threads = 2;
-    hpactor::ActorSystem system(config);
+    // Test 1: ActorSystem starts and stops cleanly with HybridScheduler
+    {
+        hpactor::Config config;
+        config.scheduler_threads = 2;
+        hpactor::ActorSystem system(config);
+        assert(system.scheduler() != nullptr);
+    }
 
-    auto pong = system.spawn<PongActor>();
-    auto ping = system.spawn<PingActor>(pong);
+    // Test 2: Spawn several actors — they get unique valid ActorIds
+    {
+        hpactor::Config config;
+        config.scheduler_threads = 4;
+        hpactor::ActorSystem system(config);
 
-    // Kick off the ping-pong
-    system.send(ping, PingMsg{0});
+        auto a1 = system.spawn<TestActor>();
+        auto a2 = system.spawn<TestActor>();
+        auto a3 = system.spawn<TestActor>();
 
-    // Wait for 5 exchanges
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        assert(a1.id().value() != 0);
+        assert(a2.id().value() != 0);
+        assert(a3.id().value() != 0);
+        assert(a1.id() != a2.id());
+        assert(a2.id() != a3.id());
+    }
 
-    // Verify messages were delivered through the scheduler
-    // (This test verifies the scheduler routes to the right actor)
-    assert(pong.count() > 0);
+    // Test 3: Scheduler worker count matches config
+    {
+        hpactor::Config config;
+        config.scheduler_threads = 3;
+        hpactor::ActorSystem system(config);
+        assert(system.scheduler()->worker_count() == 3);
+    }
 
     return 0;
 }
 ```
 
-- [ ] **Step 2: Build and run**
+- [ ] **Step 2: Add `scheduler()` accessor to `ActorSystem`**
+
+In `include/hpactor/core/actor_system.hpp`, add:
+```cpp
+sched::IScheduler* scheduler() { return scheduler_.get(); }
+```
+Also add `#include "sched/scheduler.hpp"` at the top.
+
+- [ ] **Step 3: Build and run**
 
 ```bash
 ninja -C build test_hybrid_scheduler 2>&1 | tail -20
@@ -1197,21 +1185,18 @@ ninja -C build test_hybrid_scheduler 2>&1 | tail -20
 # Expected: 0
 ```
 
-> **Note:** This test may reveal missing includes or incomplete ActorSystem wiring. Fix incrementally.
-
-- [ ] **Step 3: Commit**
+- [ ] **Step 4: Commit**
 
 ```bash
 git add tests/sched/test_hybrid_scheduler.cpp
-git commit -m "test(sched): add hybrid scheduler integration test
+git commit -m "test(sched): add hybrid scheduler lifecycle integration test
 
-Ping-pong between two actors through HybridScheduler. Verifies
-notify_ready routing and message delivery through worker threads.
+Verifies HybridScheduler starts/stops cleanly, actors get unique ids,
+and worker_count() matches config. Full actor messaging (Behavior::on<T>(),
+reply()) deferred to future phase.
 
 Co-Authored-By: Claude Opus 4.6 <noreply@anthropic.com>"
 ```
-
----
 
 ## Phase 3: EDF Priority Queue + A2WS Load Balancing
 
@@ -1850,7 +1835,7 @@ public:
     int64_t next_expiry_ns() const;
 
 private:
-    void place(TimerEntry* entry, int64_t delay_ns);
+    void place(TimerEntry* entry, int64_t expiry_ns, int64_t delay_ns);
     void cascade(size_t level, uint32_t slot);
     int fire_expired(int64_t now_ns);
 
