@@ -28,9 +28,11 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - ConnectionPool — dynamic pooling per node, round-robin, exponential backoff
 - TcpTransport — updated to use ConnectionPool + TLS
 - EventLoop timer support — EVFILT_TIMER/timerfd for reconnect backoff
-- UdpRegistrar — UDP-based node discovery
+- UdpRegistrar — UDP-based node discovery with server/client dual mode
 - HostResolver — DNS resolution with caching
 - NodeRegistry — registry of known nodes with static routes
+- RegistrarServer — TCP server for node registration, heartbeat, broadcasts
+- RegistrarClient — TCP client with failover, local IP detection, AcceptorInfo
 
 **Phase 6: Remote Actor Spawn** ✅ Complete (34 tests passing)
 - AsyncActor handle for non-blocking spawn with get(), ready(), cancel()
@@ -52,6 +54,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Tutorial: `docs/superpowers/tutorials/actor-framework-tutorial.md`
 - Spec: `docs/superpowers/specs/2026-04-11-actor-design.md`
 - Plan: `docs/superpowers/plans/2026-04-11-actor-core-impl.md`
+- Spec: `docs/superpowers/specs/2026-04-14-registrar-refactor-design.md` (registrar bug fixes)
+- Plan: `docs/superpowers/plans/2026-04-14-registrar-refactor-impl.md`
 
 ## Key Decisions
 
@@ -72,7 +76,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
 - Phase 3: Message Serialization — TypeTag enum, DefaultSerializer, Frame encode/decode
 - Phase 4: Connection Pool and Handshake — TlsContext, TlsConnection, ConnectionPool, TLS handshake, AES-256-CBC encryption
-- Phase 5: Service Discovery — UdpRegistrar, HostResolver, NodeRegistry, static routes, DNS resolution
+- Phase 5: Service Discovery — UdpRegistrar, HostResolver, NodeRegistry, static routes, DNS resolution, RegistrarServer/RegistrarClient with TCP registration, heartbeat, failover
 - Phase 6: Remote Actor Spawn — AsyncActor, ActorTypeRegistry, SpawnReceiver, spawn_remote()
 
 **Next Steps (Phase 7)**
@@ -84,11 +88,19 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - Integration test (two-process remote spawn test)
 
 **Source Reorganization**
+- `include/hpactor/` — header-only library, organized by architectural group:
+  - `actor/` — Actor base classes, behaviors, typed actors, spawn
+  - `ref/` — Actor references (address, ref, proxy)
+  - `net/` — Networking (event loop, TLS, connection pool, transports)
+  - `supervision/` — Supervision strategies
+  - `core/` — Core runtime (actor_system, scheduler, mailbox, registry)
+  - `types/` — Type system (types, types_fwd, serialization)
 - `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, scheduler.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
 - `src/spawn.cpp` — AsyncActor implementation
 - `src/actor_type_registry.cpp` — ActorTypeRegistry implementation
+- `src/core/serialization.cpp` — DefaultSerializer implementation
 - Tests: `tests/{actor,core,mailbox,net,ref,supervision,spawn}/`
 
 ## Build Commands

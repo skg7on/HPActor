@@ -2,7 +2,7 @@
 
 > **Spec Status:** Draft
 > **Created:** 2026-04-11
-> **Based on:** Distributed Actor System Architecture.md, CAF Actors.rst
+> **Based on:** Distributed Actor System Architecture.md,
 
 ## 1. Executive Summary
 

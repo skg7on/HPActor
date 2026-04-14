@@ -213,21 +213,46 @@ void UdpRegistrar::start() {
 void UdpRegistrar::stop() {
     server_.reset();
     client_.reset();
+    client_registry_.reset();
+
+    if (udp_socket_ >= 0) {
+        close(udp_socket_);
+        udp_socket_ = -1;
+    }
 }
 
 void UdpRegistrar::start_server_mode() {
     server_ = std::make_unique<RegistrarServer>(config_, local_node_id_, loop_);
     server_->start();
+
+    // Create UDP socket for sending resolution responses
+    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
 }
 
 void UdpRegistrar::start_client_mode() {
-    // In client mode, we need to connect to a server
-    // For now, use first static route as server if available
+    // Create registry populated with static routes
+    client_registry_ = std::make_unique<NodeRegistry>(config_);
+
+    // Populate with static routes
+    for (const auto& route : config_.static_routes) {
+        NodeEndpoint ep;
+        ep.node_id = route.node_id;
+        ep.host = route.address;
+        ep.tcp_port = route.port;
+        ep.is_static_route = true;
+        client_registry_->upsert_endpoint(ep);
+    }
+
+    // Use first static route as server if available
     NodeId server_node_id = 0;
     if (!config_.static_routes.empty()) {
         server_node_id = config_.static_routes[0].node_id;
     }
-    client_ = std::make_unique<RegistrarClient>(config_, local_node_id_, server_node_id, nullptr, loop_);
+
+    // Create UDP socket for resolution queries
+    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
+
+    client_ = std::make_unique<RegistrarClient>(config_, local_node_id_, server_node_id, client_registry_.get(), loop_);
     client_->start();
 }
 
@@ -357,10 +382,17 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                     memcpy(response.data() + 6, &len_be, 4);
                     memcpy(response.data() + RegistrarHeaderSize, response_payload.data(), response_payload.size());
 
-                    // Would send response back to from_host:from_port via UDP
-                    (void)response;
-                    (void)from_host;
-                    (void)from_port;
+                    // Send response back to from_host:from_port via UDP
+                    if (udp_socket_ >= 0) {
+                        struct sockaddr_in dest_addr;
+                        memset(&dest_addr, 0, sizeof(dest_addr));
+                        dest_addr.sin_family = AF_INET;
+                        dest_addr.sin_port = htons(from_port);
+                        inet_pton(AF_INET, from_host.c_str(), &dest_addr.sin_addr);
+
+                        sendto(udp_socket_, response.data(), response.size(), 0,
+                               reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+                    }
                 }
             }
             break;

@@ -227,7 +227,10 @@ public:
 
 private:
     void accept_loop();
-    void handle_tcp_message(int client_fd, const bytes& data);
+    void handle_tcp_message(int client_fd, TcpMessageType type, const bytes& data);
+
+    // Send TCP response to client
+    void send_tcp_response(int client_fd, TcpMessageType type, const bytes& payload);
 
     RegistrarConfig config_;
     [[maybe_unused]] NodeId local_node_id_;
@@ -291,6 +294,12 @@ private:
     std::unique_ptr<RegistrarServer> server_;
     std::unique_ptr<RegistrarClient> client_;
 
+    // Client mode registry (populated from static routes)
+    std::unique_ptr<NodeRegistry> client_registry_;
+
+    // UDP socket for sending resolution responses
+    int udp_socket_ = -1;
+
     node_callback node_callback_;
 };
 
@@ -314,6 +323,9 @@ public:
     // Set event loop for async I/O (can be changed before start())
     void set_event_loop(EventLoop* loop) { loop_ = loop; }
 
+    // Set acceptors for registration announcement
+    void set_acceptors(std::vector<AcceptorInfo> acceptors);
+
     // Reconnect to server (used after disconnection)
     void reconnect();
 
@@ -336,6 +348,12 @@ private:
     // Failover: try to become server or find new server
     void failover();
 
+    // Handle connection loss (called on disconnect detection)
+    void handle_connection_lost();
+
+    // Find server via UDP broadcast
+    void find_server_via_broadcast();
+
     RegistrarConfig config_;
     NodeId local_node_id_;
     NodeId server_node_id_;
@@ -356,6 +374,9 @@ private:
 
     // For heartbeat tracking
     std::chrono::steady_clock::time_point last_heartbeat_sent_;
+
+    // Acceptors announced during registration
+    std::vector<AcceptorInfo> acceptors_;
 };
 
 } // namespace net

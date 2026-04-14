@@ -5,6 +5,8 @@
 #include <unistd.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <ifaddrs.h>
+#include <net/if.h>
 
 #include <cstring>
 
@@ -13,8 +15,43 @@ namespace hpactor {
 namespace net {
 
 // -----------------------------------------------------------------------------
+// Helper Functions
+// -----------------------------------------------------------------------------
+
+static std::string get_local_ip() {
+    struct ifaddrs* ifaddr = nullptr;
+    if (getifaddrs(&ifaddr) == -1) {
+        return "127.0.0.1";  // Fallback
+    }
+
+    // Prefer non-loopback, up, running interfaces
+    std::string result;
+    for (struct ifaddrs* ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
+        if (ifa->ifa_addr == nullptr) continue;
+        if (!(ifa->ifa_flags & IFF_UP)) continue;
+        if (!(ifa->ifa_flags & IFF_RUNNING)) continue;
+        if (ifa->ifa_flags & IFF_LOOPBACK) continue;
+        if (ifa->ifa_addr->sa_family != AF_INET) continue;
+
+        struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr);
+        char ip[INET_ADDRSTRLEN];
+        if (inet_ntop(AF_INET, &addr->sin_addr, ip, sizeof(ip)) != nullptr) {
+            result = ip;
+            break;  // Take first valid non-loopback
+        }
+    }
+
+    freeifaddrs(ifaddr);
+    return result.empty() ? "127.0.0.1" : result;
+}
+
+// -----------------------------------------------------------------------------
 // RegistrarClient Implementation
 // -----------------------------------------------------------------------------
+
+void RegistrarClient::set_acceptors(std::vector<AcceptorInfo> acceptors) {
+    acceptors_ = std::move(acceptors);
+}
 
 RegistrarClient::RegistrarClient(const RegistrarConfig& config, NodeId local_node_id,
                                  NodeId server_node_id, NodeRegistry* shared_registry,
@@ -189,12 +226,16 @@ void RegistrarClient::send_registration() {
     }
 
     // Build registration message
-    // Payload format: [NodeId: 4][HostLen: 1][Host: N][TcpPort: 2]
-    std::string host = "127.0.0.1";  // In production, get actual local IP
+    // Payload format: [NodeId: 4][HostLen: 1][Host: N][TcpPort: 2][AcceptorCount: 1][Acceptors: ...]
+    std::string host = get_local_ip();
     uint16_t tcp_port = config_.tcp_port;
 
+    // Calculate payload size
+    size_t payload_size = 4 + 1 + host.size() + 2 + 1;  // NodeId + HostLen + Host + TcpPort + AcceptorCount
+    payload_size += acceptors_.size() * 4;  // Each acceptor: Port(2) + HandshakeVer(1) + ProtocolVer(1) + TlsRequired(1)
+
     bytes payload;
-    payload.resize(4 + 1 + host.size() + 2);
+    payload.resize(payload_size);
 
     size_t offset = 0;
     uint32_t node_id_be = htonl(local_node_id_);
@@ -208,6 +249,18 @@ void RegistrarClient::send_registration() {
     uint16_t port_be = htons(tcp_port);
     memcpy(payload.data() + offset, &port_be, 2);
     offset += 2;
+
+    // Serialize acceptors
+    payload[offset++] = static_cast<uint8_t>(acceptors_.size());
+    for (const auto& acceptor : acceptors_) {
+        uint16_t acc_port_be = htons(acceptor.port);
+        memcpy(payload.data() + offset, &acc_port_be, 2);
+        offset += 2;
+
+        payload[offset++] = acceptor.handshake_version;
+        payload[offset++] = acceptor.protocol_version;
+        payload[offset++] = acceptor.tls_required ? 1 : 0;
+    }
 
     // Build full message with TCP header
     bytes message;
@@ -471,6 +524,187 @@ void RegistrarClient::reconnect() {
 
 void RegistrarClient::failover() {
     reconnect();
+}
+
+void RegistrarClient::handle_connection_lost() {
+    connected_.store(false);
+
+    // Stop heartbeat thread
+    if (heartbeat_thread_.joinable()) {
+        heartbeat_thread_.join();
+    }
+
+    // Close TCP socket
+    if (tcp_socket_ >= 0) {
+        close(tcp_socket_);
+        tcp_socket_ = -1;
+    }
+
+    // Try to become server (election)
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    if (sock >= 0) {
+        int reuse = 1;
+        setsockopt(sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_port = htons(config_.tcp_port);
+
+        if (bind(sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == 0) {
+            // Won! We could become server
+            // Close the socket - caller should transition to server mode
+            close(sock);
+            return;
+        }
+        close(sock);
+    }
+
+    // Can't become server - find one via broadcast
+    find_server_via_broadcast();
+}
+
+void RegistrarClient::find_server_via_broadcast() {
+    // Create UDP socket for broadcast
+    int broadcast_sock = socket(AF_INET, SOCK_DGRAM, 0);
+    if (broadcast_sock < 0) {
+        return;
+    }
+
+    int broadcast_enable = 1;
+    if (setsockopt(broadcast_sock, SOL_SOCKET, SO_BROADCAST, &broadcast_enable, sizeof(broadcast_enable)) < 0) {
+        close(broadcast_sock);
+        return;
+    }
+
+    struct sockaddr_in broadcast_addr;
+    memset(&broadcast_addr, 0, sizeof(broadcast_addr));
+    broadcast_addr.sin_family = AF_INET;
+    broadcast_addr.sin_addr.s_addr = htonl(INADDR_BROADCAST);
+    broadcast_addr.sin_port = htons(config_.udp_port);
+
+    // Build probe message
+    // Format: [Magic: 4][Version: 1][Type: 1][Length: 4][ProbeId: 8][Timestamp: 8]
+    bytes payload;
+    payload.resize(16);  // 8 bytes probe_id + 8 bytes timestamp
+
+    // Use node_id as probe_id and current time as timestamp
+    uint64_t probe_id = local_node_id_;
+    uint64_t timestamp = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
+        std::chrono::steady_clock::now().time_since_epoch()).count());
+
+    size_t offset = 0;
+    // Convert to big-endian manually
+    uint64_t probe_id_be = ((probe_id & 0xFF00000000000000ULL) >> 56) |
+                           ((probe_id & 0x00FF000000000000ULL) >> 40) |
+                           ((probe_id & 0x0000FF0000000000ULL) >> 24) |
+                           ((probe_id & 0x000000FF00000000ULL) >> 8) |
+                           ((probe_id & 0x00000000FF000000ULL) << 8) |
+                           ((probe_id & 0x0000000000FF0000ULL) << 24) |
+                           ((probe_id & 0x000000000000FF00ULL) << 40) |
+                           ((probe_id & 0x00000000000000FFULL) << 56);
+    memcpy(payload.data() + offset, &probe_id_be, 8);
+    offset += 8;
+
+    uint64_t timestamp_be = ((timestamp & 0xFF00000000000000ULL) >> 56) |
+                           ((timestamp & 0x00FF000000000000ULL) >> 40) |
+                           ((timestamp & 0x0000FF0000000000ULL) >> 24) |
+                           ((timestamp & 0x000000FF00000000ULL) >> 8) |
+                           ((timestamp & 0x00000000FF000000ULL) << 8) |
+                           ((timestamp & 0x0000000000FF0000ULL) << 24) |
+                           ((timestamp & 0x000000000000FF00ULL) << 40) |
+                           ((timestamp & 0x00000000000000FFULL) << 56);
+    memcpy(payload.data() + offset, &timestamp_be, 8);
+    offset += 8;
+
+    bytes message;
+    message.resize(RegistrarHeaderSize + payload.size());
+
+    uint32_t magic_be = htonl(RegistrarMagic);
+    memcpy(message.data(), &magic_be, 4);
+    message[4] = RegistrarVersion;
+    message[5] = static_cast<uint8_t>(RegistrarMessageType::ResolveQuery);
+    uint32_t len_be = htonl(static_cast<uint32_t>(payload.size()));
+    memcpy(message.data() + 6, &len_be, 4);
+    memcpy(message.data() + RegistrarHeaderSize, payload.data(), payload.size());
+
+    // Send broadcast
+    ssize_t sent = sendto(broadcast_sock, message.data(), message.size(), 0,
+                          reinterpret_cast<struct sockaddr*>(&broadcast_addr), sizeof(broadcast_addr));
+    (void)sent;  // Ignore send errors, we'll timeout anyway
+
+    // Wait for response
+    fd_set read_fds;
+    FD_ZERO(&read_fds);
+    FD_SET(static_cast<unsigned>(broadcast_sock), &read_fds);
+
+    struct timeval tv = {2, 0};  // 2 second timeout
+    int ret = select(broadcast_sock + 1, &read_fds, nullptr, nullptr, &tv);
+
+    if (ret > 0 && FD_ISSET(broadcast_sock, &read_fds)) {
+        bytes response(1024);
+        struct sockaddr_in from_addr;
+        socklen_t addr_len = sizeof(from_addr);
+
+        ssize_t received = recvfrom(broadcast_sock, response.data(), response.size(), 0,
+                                     reinterpret_cast<struct sockaddr*>(&from_addr), &addr_len);
+
+        if (received > 0) {
+            // Parse response - looking for server's endpoint info
+            // Response should contain server's node_id, host, port
+            if (static_cast<size_t>(received) >= RegistrarHeaderSize + 7) {
+                uint32_t resp_magic;
+                memcpy(&resp_magic, response.data(), 4);
+                resp_magic = ntohl(resp_magic);
+
+                if (resp_magic == RegistrarMagic) {
+                    uint8_t resp_version = response[4];
+                    if (resp_version == RegistrarVersion) {
+                        RegistrarMessageType resp_type = static_cast<RegistrarMessageType>(response[5]);
+
+                        if (resp_type == RegistrarMessageType::ResolveResponse) {
+                            // Parse the endpoint info
+                            size_t resp_offset = RegistrarHeaderSize;
+
+                            uint32_t resp_node_id;
+                            memcpy(&resp_node_id, response.data() + resp_offset, 4);
+                            resp_node_id = ntohl(resp_node_id);
+                            resp_offset += 4;
+
+                            uint8_t host_len = response[resp_offset++];
+                            if (resp_offset + host_len + 2 <= static_cast<size_t>(received)) {
+                                std::string resp_host(reinterpret_cast<char*>(response.data() + resp_offset), host_len);
+                                resp_offset += host_len;
+
+                                uint16_t resp_port;
+                                memcpy(&resp_port, response.data() + resp_offset, 2);
+                                resp_port = ntohs(resp_port);
+
+                                // Update registry with new server
+                                if (shared_registry_) {
+                                    NodeEndpoint server_ep;
+                                    server_ep.node_id = resp_node_id;
+                                    server_ep.host = resp_host;
+                                    server_ep.tcp_port = resp_port;
+                                    server_ep.last_seen = std::chrono::steady_clock::now();
+                                    shared_registry_->upsert_endpoint(server_ep);
+                                }
+
+                                // Update server_node_id_ and reconnect
+                                server_node_id_ = resp_node_id;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    close(broadcast_sock);
+
+    // Reset connection state to trigger reconnection
+    disconnect_from_server();
 }
 
 } // namespace net
