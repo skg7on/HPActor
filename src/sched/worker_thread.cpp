@@ -17,6 +17,9 @@
 
 namespace hpactor::sched {
 
+// Thread-local pointer to the current worker's frame pool
+thread_local CoroutineFramePool* tl_frame_pool = nullptr;
+
 WorkerThread::WorkerThread(const Config& config)
     : config_(config), local_queue_(config.priority_levels) {}
 
@@ -30,7 +33,12 @@ void WorkerThread::start() {
     }
     running_.store(true, std::memory_order_release);
     stop_requested_.store(false, std::memory_order_release);
-    thread_ = std::thread([this] { thread_loop(); });
+    thread_ = std::thread([this] {
+        if (frame_pool_) {
+            tl_frame_pool = frame_pool_;
+        }
+        thread_loop();
+    });
 }
 
 void WorkerThread::stop() {
