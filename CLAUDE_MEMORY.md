@@ -51,6 +51,26 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `examples/05_ping_pong.cpp` — Actor communication, ScopedActor, linking
 - Built via `ENABLE_EXAMPLES` CMake option (default ON)
 
+**Scheduling Subsystem:** ✅ Complete (Phase 0-7, 2026-04-15)
+- `ChaselevDeque<T>` — Lock-free work-stealing deque (LIFO owner pop, FIFO thief steal)
+- `MultiPriorityWorkQueue` — Array of ChaseLev deques, one per priority level (0=highest)
+- `EDFQueue` — Earliest Deadline First min-heap, O(log n) push/pop, FIFO tiebreaker
+- `A2WS` — Adaptive Two-Level Work Stealing with pool-based locality
+- `TimingWheel` — Hierarchical timer wheel (O(1) insert/cancel), 4 levels, cascading
+- `CoroutineFramePool` — Lock-free stack pool for coroutine frames, O(1) acquire/release
+- `HybridScheduler` — Work-stealing scheduler with IScheduler interface, wired to ActorSystem
+- `WorkerThread` — Per-thread worker with local queue and frame pool integration
+- `IScheduler` interface: `notify_ready()`, `notify_idle()`, `schedule_after()`, `schedule_every()`, `cancel_timer()`, `worker_count()`
+- Timer advancement thread with proper cancellation for recurring timers
+- `ActorState` — Atomic state machine (Idle/Ready/Running/IOWaiting/Terminated) with CAS transitions
+- `CoroutineTask` / `CoroutinePromise` — C++20 coroutine handle wrapper for actor coroutines
+- `MailboxAwaiter`, `TimerAwaiter`, `BlockingMailboxAwaiter` — awaiters for co_await patterns
+- `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue)
+- `execute_actor()` dispatch layer for coroutine resumption with state transitions
+
+**Tests:** ✅ 41 tests passing
+- Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws
+
 **Documentation:** ✅ Complete
 - Tutorial: `docs/superpowers/tutorials/actor-framework-tutorial.md`
 - Spec: `docs/superpowers/specs/2026-04-11-actor-design.md`
@@ -59,6 +79,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Plan: `docs/superpowers/plans/2026-04-14-registrar-refactor-impl.md`
 - Spec: `docs/superpowers/specs/2026-04-14-event-loop-backend-fallback-design.md`
 - Plan: `docs/superpowers/plans/2026-04-14-event-loop-backend-fallback-impl.md`
+- Spec: `docs/superpowers/specs/2026-04-15-coroutine-scheduling-design.md`
+- Plan: `docs/superpowers/plans/2026-04-15-coroutine-scheduling-impl.md`
 
 ## Key Decisions
 
@@ -73,7 +95,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Phase 0-6 Complete** (34 tests passing)
+**Phase 0-7 Complete** (41 tests passing)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -81,14 +103,16 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Phase 4: Connection Pool and Handshake — TlsContext, TlsConnection, ConnectionPool, TLS handshake, AES-256-CBC encryption
 - Phase 5: Service Discovery — UdpRegistrar, HostResolver, NodeRegistry, static routes, DNS resolution, RegistrarServer/RegistrarClient with TCP registration, heartbeat, failover
 - Phase 6: Remote Actor Spawn — AsyncActor, ActorTypeRegistry, SpawnReceiver, spawn_remote()
+- Scheduling Subsystem: ChaseLev deque, MultiPriorityWorkQueue, EDFQueue, A2WS, TimingWheel, CoroutineFramePool, HybridScheduler, WorkerThread, ActorState, CoroutineTask/CoroutinePromise, awaiters, MPSCMailbox
 
-**Next Steps (Phase 7)**
-- Phase 7: Remote Actor Spawn Completion
-  - Full serialization integration (SpawnRequest/SpawnResponse as MessageVariant)
-  - Transport response routing (Transport calling AsyncActor::set_response)
-  - Registrar node lookup (translating node names to NodeId)
-  - Argument deserialization (passing constructor args through spawn)
-  - Integration test (two-process remote spawn test)
+**Next Steps (Phase 7 completion)**
+- Full serialization integration (SpawnRequest/SpawnResponse as MessageVariant)
+- Transport response routing (Transport calling AsyncActor::set_response)
+- Registrar node lookup (translating node names to NodeId)
+- Argument deserialization (passing constructor args through spawn)
+- Integration test (two-process remote spawn test)
+- MPSCMailbox integration into EventBasedActor (mailbox_has_messages() stub)
+- WorkerThread integration into HybridScheduler (currently HybridScheduler uses inline WorkerState, WorkerThread is separate)
 
 **Source Reorganization**
 - `include/hpactor/` — header-only library, organized by architectural group:
@@ -97,14 +121,16 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `net/` — Networking (event loop, TLS, connection pool, transports)
   - `supervision/` — Supervision strategies
   - `core/` — Core runtime (actor_system, scheduler, mailbox, registry)
+  - `sched/` — Scheduling subsystem (work_queue, edf_queue, a2ws, timing_wheel, coroutine_frame_pool)
   - `types/` — Type system (types, types_fwd, serialization)
 - `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, scheduler.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
+- `src/sched/` — scheduler.cpp, worker_thread.cpp, edf_queue.cpp, a2ws.cpp, timing_wheel.cpp, coroutine_frame_pool.cpp
 - `src/spawn.cpp` — AsyncActor implementation
 - `src/actor_type_registry.cpp` — ActorTypeRegistry implementation
 - `src/core/serialization.cpp` — DefaultSerializer implementation
-- Tests: `tests/{actor,core,mailbox,net,ref,supervision,spawn}/`
+- Tests: `tests/{actor,core,mailbox,net,ref,supervision,spawn,sched}/`
 
 ## Build Commands
 
