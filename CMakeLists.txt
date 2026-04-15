@@ -85,6 +85,8 @@ add_library(hpactor_lib STATIC
     src/sched/worker_thread.cpp
     src/sched/edf_queue.cpp
     src/sched/a2ws.cpp
+    src/sched/timing_wheel.cpp
+    src/sched/coroutine_frame_pool.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 
