@@ -36,6 +36,15 @@ void HybridScheduler::start() {
     for (size_t i = 0; i < workers_.size(); ++i) {
         worker_threads_.emplace_back([this, i] { worker_loop(static_cast<uint32_t>(i)); });
     }
+
+    // Start timer advancement thread
+    timer_thread_ = std::thread([this] {
+        while (running_.load(std::memory_order_acquire)) {
+            auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+            timer_wheel_.advance(now);
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        }
+    });
 }
 
 HybridScheduler::~HybridScheduler() {
@@ -48,6 +57,11 @@ void HybridScheduler::stop() {
         if (t.joinable()) t.join();
     }
     worker_threads_.clear();
+
+    // Stop and join timer thread
+    if (timer_thread_.joinable()) {
+        timer_thread_.join();
+    }
 }
 
 void HybridScheduler::notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) {
@@ -192,16 +206,49 @@ void HybridScheduler::advance_time(int64_t now_ns) {
     timer_wheel_.advance(now_ns);
 }
 
-TimerHandle HybridScheduler::schedule_after(timer_callback /*cb*/, int64_t /*delay_ns*/) {
-    return TimerHandle{0};
+TimerHandle HybridScheduler::schedule_after(timer_callback cb, int64_t delay_ns) {
+    auto id = timer_wheel_.schedule(delay_ns, [cb = std::move(cb)]() { cb(); });
+    return TimerHandle{id};
 }
 
-TimerHandle HybridScheduler::schedule_every(timer_callback /*cb*/, int64_t /*interval_ns*/) {
-    return TimerHandle{0};
+TimerHandle HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
+    // For recurring timers, we wrap the callback to reschedule itself
+    // We need to use a shared_ptr to hold the interval value and the callback
+    // to avoid lifecycle issues with the lambda. We also use a cancellation
+    // flag to allow the recurring chain to be stopped.
+    auto cancelled = std::make_shared<std::atomic<bool>>(false);
+    auto interval = std::make_shared<int64_t>(interval_ns);
+    auto callback = std::make_shared<timer_callback>(std::move(cb));
+
+    std::function<void()> recurring;
+    recurring = [this, cancelled, interval, callback, recurring]() {
+        if (cancelled->load(std::memory_order_acquire)) return;
+        if (running_.load(std::memory_order_acquire)) {
+            (*callback)();
+            if (!cancelled->load(std::memory_order_acquire)) {
+                timer_wheel_.schedule(*interval, recurring);
+            }
+        }
+    };
+
+    auto id = timer_wheel_.schedule(*interval, recurring);
+    {
+        std::lock_guard<std::mutex> lock(cancellation_mutex_);
+        recurring_cancellations_[id] = cancelled;
+    }
+    return TimerHandle{id};
 }
 
-void HybridScheduler::cancel_timer(TimerHandle /*handle*/) {
-    // Phase 5
+void HybridScheduler::cancel_timer(TimerHandle handle) {
+    if (!handle.valid()) return;
+
+    std::lock_guard<std::mutex> lock(cancellation_mutex_);
+    auto it = recurring_cancellations_.find(handle.id);
+    if (it != recurring_cancellations_.end()) {
+        it->second->store(true, std::memory_order_release);
+        recurring_cancellations_.erase(it);
+    }
+    timer_wheel_.cancel(handle.id);
 }
 
 } // namespace hpactor::sched

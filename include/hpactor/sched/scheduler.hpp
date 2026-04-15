@@ -23,7 +23,9 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <thread>
+#include <unordered_map>
 #include <vector>
 
 namespace hpactor {
@@ -162,6 +164,13 @@ public:
 
     // Timing wheel for timer management
     TimingWheel timer_wheel_;
+
+    // For recurring timer cancellation: maps timer ID to cancellation flag
+    std::unordered_map<uint64_t, std::shared_ptr<std::atomic<bool>>> recurring_cancellations_;
+    std::mutex cancellation_mutex_;
+
+    // Timer advancement thread
+    std::thread timer_thread_;
 };
 
 } // namespace hpactor::sched
