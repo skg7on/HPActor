@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/sched/work_queue.hpp>
+#include <hpactor/sched/coroutine_frame_pool.hpp>
 #include <hpactor/actor/actor_fwd.hpp>
 
 #include <atomic>
@@ -85,6 +86,14 @@ public:
     uint64_t donation_count() const { return donation_count_.load(std::memory_order_relaxed); }
     void increment_donations() { donation_count_.fetch_add(1, std::memory_order_relaxed); }
 
+    // Coroutine frame pool integration
+    // Acquire a coroutine frame from the pool (for blocking operations)
+    CoroutineFramePool::Frame* acquire_frame();
+    void release_frame(CoroutineFramePool::Frame* frame);
+
+    // Set the frame pool (called by scheduler)
+    void set_frame_pool(CoroutineFramePool* pool) { frame_pool_ = pool; }
+
 private:
     void thread_loop();
 
@@ -98,6 +107,9 @@ private:
 
     // Donation counter for adaptive stealing
     std::atomic<uint64_t> donation_count_{0};
+
+    // Coroutine frame pool
+    CoroutineFramePool* frame_pool_{nullptr};
 };
 
 } // namespace hpactor::sched

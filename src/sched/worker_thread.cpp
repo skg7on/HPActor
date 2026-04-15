@@ -68,6 +68,19 @@ size_t WorkerThread::depth() const {
     return local_queue_.depth_approx();
 }
 
+CoroutineFramePool::Frame* WorkerThread::acquire_frame() {
+    if (frame_pool_) {
+        return frame_pool_->acquire();
+    }
+    return nullptr;
+}
+
+void WorkerThread::release_frame(CoroutineFramePool::Frame* frame) {
+    if (frame_pool_ && frame) {
+        frame_pool_->release(frame);
+    }
+}
+
 void WorkerThread::thread_loop() {
     while (!stop_requested_.load(std::memory_order_acquire) && running_.load(std::memory_order_acquire)) {
         WorkItem item;

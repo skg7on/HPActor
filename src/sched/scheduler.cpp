@@ -19,7 +19,7 @@ namespace hpactor::sched {
 
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers, uint32_t num_priorities)
     : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
-      workers_(num_workers), a2ws_(num_workers) {
+      workers_(num_workers), a2ws_(num_workers), timer_wheel_(1'000'000, 4) {
     for (uint32_t i = 0; i < num_workers; ++i) {
         workers_[i].queues = std::make_unique<ChaselevDeque<WorkItem>[]>(num_priorities);
         workers_[i].index = i;
@@ -171,6 +171,14 @@ void HybridScheduler::worker_loop(uint32_t worker_id) {
         // No work available - backoff
         // TODO: Implement proper backoff (exponential, yield, etc.)
     }
+}
+
+uint64_t HybridScheduler::schedule_timer(int64_t delay_ns, TimingWheel::TimerCallback callback) {
+    return timer_wheel_.schedule(delay_ns, std::move(callback));
+}
+
+void HybridScheduler::advance_time(int64_t now_ns) {
+    timer_wheel_.advance(now_ns);
 }
 
 } // namespace hpactor::sched

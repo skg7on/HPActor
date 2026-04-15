@@ -17,6 +17,7 @@
 #include <hpactor/sched/work_queue.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/a2ws.hpp>
+#include <hpactor/sched/timing_wheel.hpp>
 #include <hpactor/actor/actor_fwd.hpp>
 
 #include <atomic>
@@ -93,6 +94,14 @@ public:
     // Process one actor (called by worker loop)
     void process_actor(ActorId actor);
 
+    // Timing wheel integration
+    // Schedule a timer to fire after delay_ns (in nanoseconds)
+    // Returns timer ID that can be used to cancel
+    uint64_t schedule_timer(int64_t delay_ns, TimingWheel::TimerCallback callback);
+
+    // Advance time - processes expired timers
+    void advance_time(int64_t now_ns);
+
 private:
     struct alignas(64) WorkerState {
         // Using unique_ptr array to avoid move semantics issues with ChaselevDeque
@@ -113,6 +122,9 @@ private:
 
     // Adaptive two-level work stealing
     A2WS a2ws_;
+
+    // Timing wheel for timer management
+    TimingWheel timer_wheel_;
 };
 
 } // namespace hpactor::sched
