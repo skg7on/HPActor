@@ -1,3 +1,17 @@
+// Copyright 2026 HPActor Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // include/hpactor/sched/work_queue.hpp
 #pragma once
 
@@ -114,12 +128,12 @@ void ChaselevDeque<T>::push_bottom(T item) {
 
 template<typename T>
 bool ChaselevDeque<T>::pop_bottom(T& out) {
-    int64_t b = bottom_.load(std::memory_order_acquire) - 1;
+    int64_t b = bottom_.fetch_sub(1, std::memory_order_acq_rel) - 1;
     int64_t t = top_.load(std::memory_order_acquire);
 
     auto* arr = array_.load(std::memory_order_acquire);
     if (b - t < 0) {
-        // Empty or underflow — restore bottom
+        // Empty or underflow — restore bottom to original value
         bottom_.store(t, std::memory_order_release);
         return false;
     }
@@ -131,16 +145,14 @@ bool ChaselevDeque<T>::pop_bottom(T& out) {
         if (!top_.compare_exchange_strong(t, t + 1,
                                           std::memory_order_acq_rel,
                                           std::memory_order_acquire)) {
-            // Lost CAS — thief got the item
+            // Lost CAS — thief got the item, restore bottom to match
             bottom_.store(t, std::memory_order_release);
             return false;
         }
-        // Won CAS — owner claimed the last item, restore bottom
-        bottom_.store(t + 1, std::memory_order_release);
+        // Won CAS — owner claimed the last item
         return true;
     }
 
-    bottom_.store(b + 1, std::memory_order_release);
     return true;
 }
 
@@ -177,11 +189,29 @@ size_t ChaselevDeque<T>::size_approx() const {
 // directly on the target worker's deque via WorkerThread::try_steal().
 class MultiPriorityWorkQueue {
 public:
-    explicit MultiPriorityWorkQueue(uint32_t priority_levels = 4);
+    explicit MultiPriorityWorkQueue(uint32_t priority_levels = 4) : levels_(priority_levels) {}
 
-    void push(uint8_t priority, WorkItem item);   // owner only
-    bool pop(WorkItem& out);                     // scans high→low, owner only
-    size_t depth_approx() const;                  // sum of all level sizes
+    void push(uint8_t priority, WorkItem item) {
+        levels_[priority].push_bottom(item);
+    }
+
+    bool pop(WorkItem& out) {
+        // Scan from highest priority to lowest
+        for (uint32_t i = 0; i < levels_.size(); ++i) {
+            if (levels_[i].pop_bottom(out)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    size_t depth_approx() const {
+        size_t total = 0;
+        for (const auto& level : levels_) {
+            total += level.size_approx();
+        }
+        return total;
+    }
 
     uint32_t num_levels() const { return static_cast<uint32_t>(levels_.size()); }
 
