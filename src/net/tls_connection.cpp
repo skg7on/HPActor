@@ -210,6 +210,10 @@ bytes TlsConnection::build_client_hello() {
     // Client nonce (32 bytes)
     payload.insert(payload.end(), client_nonce_.begin(), client_nonce_.end());
     // Public key from TLS context
+    if (!tls_context_) {
+        set_handshake_state(TlsHandshakeState::Error);
+        return bytes{};
+    }
     const bytes& pub_key = tls_context_->public_key();
     payload.insert(payload.end(), pub_key.begin(), pub_key.end());
 
@@ -221,6 +225,10 @@ bytes TlsConnection::build_client_hello() {
 bytes TlsConnection::build_certificate() {
     bytes payload;
     // Certificate data from TLS context
+    if (!tls_context_) {
+        set_handshake_state(TlsHandshakeState::Error);
+        return bytes{};
+    }
     const bytes& cert = tls_context_->certificate();
     payload.insert(payload.end(), cert.begin(), cert.end());
 
@@ -233,6 +241,10 @@ bytes TlsConnection::build_certificate_verify(const Nonce& challenge) {
     bytes payload;
     // Sign the challenge nonce with our private key
     bytes data_to_sign(challenge.begin(), challenge.end());
+    if (!tls_context_) {
+        set_handshake_state(TlsHandshakeState::Error);
+        return bytes{};
+    }
     bytes signature = tls_context_->sign_data(data_to_sign);
     payload.insert(payload.end(), signature.begin(), signature.end());
 
@@ -282,6 +294,11 @@ void TlsConnection::handle_server_hello(const bytes& data) {
 
 void TlsConnection::handle_certificate(const bytes& data) {
     if (handshake_state_ != TlsHandshakeState::WaitingForCertificate) {
+        set_handshake_state(TlsHandshakeState::Error);
+        return;
+    }
+
+    if (!tls_context_) {
         set_handshake_state(TlsHandshakeState::Error);
         return;
     }

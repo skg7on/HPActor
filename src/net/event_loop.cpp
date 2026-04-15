@@ -169,13 +169,18 @@ bool EventLoop::run() {
     if (running_.load()) {
         return true;
     }
+    if (!backend_) {
+        return false;
+    }
     running_.store(backend_->start());
     return running_.load();
 }
 
 void EventLoop::stop() {
     running_.store(false);
-    backend_->stop();
+    if (backend_) {
+        backend_->stop();
+    }
 }
 
 const char* EventLoop::backend_name() const {
@@ -183,6 +188,9 @@ const char* EventLoop::backend_name() const {
 }
 
 bool EventLoop::add_fd(int fd, Event events) {
+    if (!backend_) {
+        return false;
+    }
     IoEvent io_events = IoEvent::Read;
     if (int(events) & int(Event::Write)) {
         io_events = static_cast<IoEvent>(static_cast<uint32_t>(io_events) |
@@ -198,10 +206,16 @@ bool EventLoop::update_fd(int fd, Event events) {
 
 bool EventLoop::remove_fd(int fd) {
     fd_events_.erase(fd);
+    if (!backend_) {
+        return false;
+    }
     return backend_->remove_fd(fd);
 }
 
 int EventLoop::wait(int timeout_ms) {
+    if (!backend_) {
+        return -1;
+    }
     return backend_->wait(timeout_ms);
 }
 
@@ -210,6 +224,9 @@ bool EventLoop::has_event(int /*fd*/, Event /*event*/) const {
 }
 
 uint64_t EventLoop::run_after(timer_callback callback, int delay_ms) {
+    if (!backend_) {
+        return 0;
+    }
     uint64_t handle = next_timer_handle_++;
     timer_callbacks_[handle] = std::move(callback);
     // Use ActorId(0) as a sentinel - we'll intercept timer completions
@@ -224,6 +241,9 @@ uint64_t EventLoop::run_after(timer_callback callback, int delay_ms) {
 }
 
 uint64_t EventLoop::run_every(timer_callback callback, int interval_ms) {
+    if (!backend_) {
+        return 0;
+    }
     uint64_t handle = next_timer_handle_++;
     timer_callbacks_[handle] = std::move(callback);
     uint64_t backend_handle = backend_->run_every(ActorId(0), interval_ms);
@@ -239,11 +259,15 @@ uint64_t EventLoop::run_every(timer_callback callback, int interval_ms) {
 void EventLoop::cancel_timer(uint64_t timer_handle) {
     timer_callbacks_.erase(timer_handle);
     repeating_timers_.erase(timer_handle);
-    backend_->cancel_timer(timer_handle);
+    if (backend_) {
+        backend_->cancel_timer(timer_handle);
+    }
 }
 
 void EventLoop::process_completions() {
-    backend_->process_completions();
+    if (backend_) {
+        backend_->process_completions();
+    }
 }
 
 void EventLoop::enqueue_completion(OpCompletion completion) {

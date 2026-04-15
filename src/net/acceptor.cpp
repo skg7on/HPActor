@@ -78,14 +78,18 @@ bool Acceptor::listen(uint16_t port, uint16_t port_range) {
     bound_port_ = port;
 
     // Register with event loop
-    loop_->add_fd(listening_fd_, EventLoop::Event::Read);
+    if (loop_) {
+        loop_->add_fd(listening_fd_, EventLoop::Event::Read);
+    }
 
     return true;
 }
 
 void Acceptor::close() {
     if (listening_fd_ >= 0) {
-        loop_->remove_fd(listening_fd_);
+        if (loop_) {
+            loop_->remove_fd(listening_fd_);
+        }
         ::close(listening_fd_);
         listening_fd_ = -1;
     }
