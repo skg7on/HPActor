@@ -63,7 +63,6 @@ add_library(hpactor_lib STATIC
     src/actor/event_based_actor.cpp
     src/actor/local_actor.cpp
     src/actor/scheduler.cpp
-    src/sched/work_queue.cpp
     src/actor/spawn_receiver.cpp
     src/actor_type_registry.cpp
     src/ref/actor_proxy.cpp
