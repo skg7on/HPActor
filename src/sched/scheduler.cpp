@@ -31,6 +31,11 @@ void HybridScheduler::start() {
         return;
     }
     running_.store(true, std::memory_order_release);
+
+    worker_threads_.reserve(workers_.size());
+    for (size_t i = 0; i < workers_.size(); ++i) {
+        worker_threads_.emplace_back([this, i] { worker_loop(static_cast<uint32_t>(i)); });
+    }
 }
 
 HybridScheduler::~HybridScheduler() {
@@ -39,36 +44,35 @@ HybridScheduler::~HybridScheduler() {
 
 void HybridScheduler::stop() {
     running_.store(false, std::memory_order_release);
-}
-
-void HybridScheduler::enqueue(ActorId actor, uint8_t priority) {
-    if (!running_.load(std::memory_order_acquire)) {
-        return;
+    for (auto& t : worker_threads_) {
+        if (t.joinable()) t.join();
     }
-
-    // Simple round-robin assignment to workers
-    // TODO: Could use affinity or load estimation for better placement
-    uint32_t victim = a2ws_.get_victim(0);  // Use A2WS for initial placement
-    (void)victim;  // TODO: Use affinity hint
-    WorkItem item{actor, INT64_MAX, 0};
-    // Push to highest priority queue (priority is inverted: 0 = highest)
-    workers_[0].queues[priority].push_bottom(item);
+    worker_threads_.clear();
 }
 
-void HybridScheduler::enqueue_deadline(ActorId actor, uint8_t priority, int64_t deadline_ns) {
+void HybridScheduler::notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) {
     if (!running_.load(std::memory_order_acquire)) {
         return;
     }
 
     uint32_t victim = a2ws_.get_victim(0);  // Use A2WS for initial placement
     (void)victim;  // TODO: Use affinity hint
-    (void)priority;  // Priority is handled by the EDF queue ordering
     WorkItem item{actor, deadline_ns, 0};
 
-    // If deadline is urgent (soon), push to EDF queue for priority processing
-    // Otherwise push to regular priority queue
-    // For now, push to the victim's EDF queue
-    workers_[victim % num_workers_].edf_queue.push(deadline_ns, item);
+    // If deadline is INT64_MAX, use priority queue; otherwise use EDF queue
+    if (deadline_ns == INT64_MAX) {
+        // Push to priority queue using A2WS-selected victim
+        workers_[victim % num_workers_].queues[priority].push_bottom(item);
+    } else {
+        // Push to EDF queue for deadline-ordered processing
+        workers_[victim % num_workers_].edf_queue.push(deadline_ns, item);
+    }
+}
+
+void HybridScheduler::notify_idle(ActorId actor) {
+    // Remove actor from EDF tracking if it was scheduled there
+    // For now, this is a stub - full implementation would need EDF cancellation
+    (void)actor;
 }
 
 bool HybridScheduler::try_steal(WorkItem& out) {
@@ -179,6 +183,18 @@ uint64_t HybridScheduler::schedule_timer(int64_t delay_ns, TimingWheel::TimerCal
 
 void HybridScheduler::advance_time(int64_t now_ns) {
     timer_wheel_.advance(now_ns);
+}
+
+TimerHandle HybridScheduler::schedule_after(timer_callback /*cb*/, int64_t /*delay_ns*/) {
+    return TimerHandle{0};
+}
+
+TimerHandle HybridScheduler::schedule_every(timer_callback /*cb*/, int64_t /*interval_ns*/) {
+    return TimerHandle{0};
+}
+
+void HybridScheduler::cancel_timer(TimerHandle /*handle*/) {
+    // Phase 5
 }
 
 } // namespace hpactor::sched

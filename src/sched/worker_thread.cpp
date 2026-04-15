@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/sched/worker_thread.hpp>
+#include <hpactor/sched/scheduler.hpp>
 
 namespace hpactor::sched {
 
@@ -79,6 +80,42 @@ void WorkerThread::release_frame(CoroutineFramePool::Frame* frame) {
     if (frame_pool_ && frame) {
         frame_pool_->release(frame);
     }
+}
+
+bool WorkerThread::try_steal(WorkItem& out) {
+    if (!owner_) {
+        return false;
+    }
+
+    uint32_t my_id = config_.worker_index;
+
+    // Try up to victim_scan_limit victims
+    for (uint32_t attempt = 0; attempt < config_.victim_scan_limit; ++attempt) {
+        uint32_t victim_idx = owner_->a2ws().get_victim(my_id);
+
+        if (victim_idx >= owner_->workers().size()) {
+            break;
+        }
+
+        auto& victim = owner_->workers()[victim_idx];
+
+        // Try EDF queue first
+        if (victim.edf_queue.pop(out)) {
+            owner_->a2ws().record_steal(my_id, victim_idx);
+            return true;
+        }
+
+        // Try each priority level
+        for (uint32_t p = 0; p < owner_->num_priorities_; ++p) {
+            if (victim.queues[p].steal_top(out)) {
+                owner_->a2ws().record_steal(my_id, victim_idx);
+                return true;
+            }
+        }
+
+        owner_->a2ws().record_attempt(my_id, victim_idx, false);
+    }
+    return false;
 }
 
 void WorkerThread::thread_loop() {

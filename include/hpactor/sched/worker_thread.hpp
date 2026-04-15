@@ -25,6 +25,9 @@
 
 namespace hpactor::sched {
 
+// Forward declaration
+class HybridScheduler;
+
 // -----------------------------------------------------------------------------
 // WorkerThread: per-thread worker for work-stealing scheduler
 // -----------------------------------------------------------------------------
@@ -94,6 +97,12 @@ public:
     // Set the frame pool (called by scheduler)
     void set_frame_pool(CoroutineFramePool* pool) { frame_pool_ = pool; }
 
+    // Set the owner scheduler (for A2WS-based stealing)
+    void set_owner(HybridScheduler* owner) { owner_ = owner; }
+
+    // Try to steal work using A2WS victim selection
+    bool try_steal(WorkItem& out);
+
 private:
     void thread_loop();
 
@@ -101,6 +110,9 @@ private:
     std::thread thread_;
     std::atomic<bool> running_{false};
     std::atomic<bool> stop_requested_{false};
+
+    // Owner scheduler (for A2WS access)
+    HybridScheduler* owner_{nullptr};
 
     // Local priority queue for this worker
     MultiPriorityWorkQueue local_queue_;

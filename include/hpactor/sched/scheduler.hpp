@@ -22,6 +22,8 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
+#include <thread>
 #include <vector>
 
 namespace hpactor {
@@ -32,6 +34,16 @@ class ActorSystem;
 } // namespace hpactor
 
 namespace hpactor::sched {
+
+// -----------------------------------------------------------------------------
+// TimerHandle and timer_callback types
+// -----------------------------------------------------------------------------
+struct TimerHandle {
+    uint64_t id = 0;
+    bool valid() const noexcept { return id != 0; }
+};
+
+using timer_callback = std::function<void()>;
 
 // -----------------------------------------------------------------------------
 // IScheduler: interface for actor schedulers
@@ -46,17 +58,27 @@ public:
     // Stop the scheduler
     virtual void stop() = 0;
 
-    // Enqueue an actor for processing at given priority
-    virtual void enqueue(ActorId actor, uint8_t priority) = 0;
+    // Thread-safe; may be called from any thread including I/O threads
+    // Notify scheduler that an actor is ready to run at given priority
+    virtual void notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) = 0;
 
-    // Enqueue an actor with deadline at given priority
-    virtual void enqueue_deadline(ActorId actor, uint8_t priority, int64_t deadline_ns) = 0;
+    // Notify scheduler that an actor has become idle (blocked on I/O, etc.)
+    virtual void notify_idle(ActorId actor) = 0;
+
+    // Schedule a one-shot timer to fire after delay_ns
+    virtual TimerHandle schedule_after(timer_callback cb, int64_t delay_ns) = 0;
+
+    // Schedule a recurring timer to fire every interval_ns
+    virtual TimerHandle schedule_every(timer_callback cb, int64_t interval_ns) = 0;
+
+    // Cancel a previously scheduled timer
+    virtual void cancel_timer(TimerHandle handle) = 0;
+
+    // Number of worker threads
+    virtual size_t worker_count() const = 0;
 
     // Check if scheduler is running
     virtual bool is_running() const = 0;
-
-    // Number of worker threads
-    virtual uint32_t num_workers() const = 0;
 };
 
 // -----------------------------------------------------------------------------
@@ -83,10 +105,13 @@ public:
 
     void start() override;
     void stop() override;
-    void enqueue(ActorId actor, uint8_t priority) override;
-    void enqueue_deadline(ActorId actor, uint8_t priority, int64_t deadline_ns) override;
+    void notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) override;
+    void notify_idle(ActorId actor) override;
     bool is_running() const override { return running_.load(std::memory_order_acquire); }
-    uint32_t num_workers() const override { return num_workers_; }
+    size_t worker_count() const override { return num_workers_; }
+    TimerHandle schedule_after(timer_callback cb, int64_t delay_ns) override;
+    TimerHandle schedule_every(timer_callback cb, int64_t interval_ns) override;
+    void cancel_timer(TimerHandle handle) override;
 
     // Try to steal work from another worker (called when local queue is empty)
     bool try_steal(WorkItem& out);
@@ -110,6 +135,13 @@ private:
         EDFQueue edf_queue;  // For deadline-ordered work
     };
 
+public:
+    // A2WS access for WorkerThread
+    A2WS& a2ws() { return a2ws_; }
+    std::vector<WorkerState>& workers() { return workers_; }
+
+    friend class WorkerThread;
+
     void worker_loop(uint32_t worker_id);
     bool pop_local(WorkItem& out, uint32_t worker_id);
     bool pop_edf(WorkItem& out, uint32_t worker_id);
@@ -119,6 +151,7 @@ private:
     uint32_t num_priorities_;
     std::atomic<bool> running_{false};
     std::vector<WorkerState> workers_;
+    std::vector<std::thread> worker_threads_;
 
     // Adaptive two-level work stealing
     A2WS a2ws_;

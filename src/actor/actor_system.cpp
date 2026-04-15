@@ -181,7 +181,7 @@ void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
 
     if (mailbox) {
         mailbox->push(Message<MessageVariant>(std::move(msg)));
-        scheduler_->enqueue(target, 0);  // Enqueue actor at highest priority for processing
+        scheduler_->notify_ready(target, 0, INT64_MAX);  // Enqueue actor at highest priority for processing
     }
 }
 
