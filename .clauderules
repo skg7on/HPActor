@@ -10,6 +10,7 @@
 - Programming Language：C++20
 - Coding Style: Strictly adhere to the LLVM Coding Standards.
 - Performance Constraints: Avoid RTTI, disable Exceptions, and prioritize stack allocation.
+- Check Pointer Before Use: Check the raw pointer or smart pointer(unique_ptr/shared_ptr) valid before use. 
 - Memory Safety: All tests must pass AddressSanitizer (ASan).
 
 # Naming Conventions

@@ -15,6 +15,8 @@
 #pragma once
 
 #include <hpactor/sched/work_queue.hpp>
+#include <hpactor/sched/edf_queue.hpp>
+#include <hpactor/sched/a2ws.hpp>
 #include <hpactor/actor/actor_fwd.hpp>
 
 #include <atomic>
@@ -96,10 +98,12 @@ private:
         // Using unique_ptr array to avoid move semantics issues with ChaselevDeque
         std::unique_ptr<ChaselevDeque<WorkItem>[]> queues;
         uint32_t index;
+        EDFQueue edf_queue;  // For deadline-ordered work
     };
 
     void worker_loop(uint32_t worker_id);
     bool pop_local(WorkItem& out, uint32_t worker_id);
+    bool pop_edf(WorkItem& out, uint32_t worker_id);
 
     ActorSystem& system_;
     uint32_t num_workers_;
@@ -107,8 +111,8 @@ private:
     std::atomic<bool> running_{false};
     std::vector<WorkerState> workers_;
 
-    // Victim selection: round-robin counter for work-stealing
-    std::atomic<uint32_t> victim_counter_{0};
+    // Adaptive two-level work stealing
+    A2WS a2ws_;
 };
 
 } // namespace hpactor::sched

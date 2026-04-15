@@ -169,3 +169,11 @@ add_test(NAME test_multi_priority_work_queue COMMAND test_multi_priority_work_qu
 add_executable(test_hybrid_scheduler sched/test_hybrid_scheduler.cpp)
 target_link_libraries(test_hybrid_scheduler hpactor)
 add_test(NAME test_hybrid_scheduler COMMAND test_hybrid_scheduler)
+
+add_executable(test_edf_queue sched/test_edf_queue.cpp)
+target_link_libraries(test_edf_queue hpactor)
+add_test(NAME test_edf_queue COMMAND test_edf_queue)
+
+add_executable(test_a2ws sched/test_a2ws.cpp)
+target_link_libraries(test_a2ws hpactor)
+add_test(NAME test_a2ws COMMAND test_a2ws)

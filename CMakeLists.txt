@@ -83,6 +83,8 @@ add_library(hpactor_lib STATIC
     src/net/registrar_client.cpp
     src/sched/scheduler.cpp
     src/sched/worker_thread.cpp
+    src/sched/edf_queue.cpp
+    src/sched/a2ws.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 
