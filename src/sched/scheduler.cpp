@@ -156,19 +156,26 @@ void HybridScheduler::process_actor(ActorId actor) {
     }
 }
 
+void HybridScheduler::execute_actor(const WorkItem& item) {
+    // TODO(Task 4.2): Integrate coroutine resumption when get_coroutine() and
+    // mailbox_has_messages() methods are available on actors.
+    // For now, fall back to non-coroutine receive path.
+    process_actor(item.actor);
+}
+
 void HybridScheduler::worker_loop(uint32_t worker_id) {
     while (running_.load(std::memory_order_acquire)) {
         WorkItem item;
 
         // Try local pop first (owner operation - wait-free)
         if (pop_local(item, worker_id)) {
-            process_actor(item.actor);
+            execute_actor(item);
             continue;
         }
 
         // Local empty - try stealing (lock-free but may fail)
         if (try_steal(item)) {
-            process_actor(item.actor);
+            execute_actor(item);
             continue;
         }
 

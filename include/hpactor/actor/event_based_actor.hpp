@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/behavior.hpp>
+#include <hpactor/sched/coroutine_task.hpp>
 
 namespace hpactor {
 
@@ -30,6 +31,15 @@ class EventBasedActor : public LocalActor {
 
     void receive(MessageVariant&& msg) override;
 
+    // Coroutine support
+    const sched::CoroutineTask& get_coroutine() const { return coroutine_; }
+    void set_coroutine(sched::CoroutineTask&& t) { coroutine_ = std::move(t); }
+
+    // Mailbox state for awaiter
+    // TODO: Implement when MPSC mailbox (Phase 7) is integrated
+    bool mailbox_has_messages() const { return false; }
+    bool mailbox_is_empty() const { return true; }
+
   protected:
     virtual Behavior make_behavior() {
         return {};
@@ -41,6 +51,7 @@ class EventBasedActor : public LocalActor {
     EventBasedActor(ActorContext* ctx, ActorSystem& sys);
 
   private:
+    sched::CoroutineTask coroutine_;
     Behavior behavior_;
 };
 

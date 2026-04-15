@@ -119,6 +119,10 @@ public:
     // Process one actor (called by worker loop)
     void process_actor(ActorId actor);
 
+    // Execute an actor (handles coroutine resumption when available)
+    // TODO(Task 4.2): Integrate coroutine resumption when get_coroutine() is available
+    void execute_actor(const WorkItem& item);
+
     // Timing wheel integration
     // Schedule a timer to fire after delay_ns (in nanoseconds)
     // Returns timer ID that can be used to cancel
