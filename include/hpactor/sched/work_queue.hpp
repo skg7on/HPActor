@@ -175,6 +175,16 @@ public:
         return false;
     }
 
+    // Steal from the highest priority queue first
+    bool steal(WorkItem& out) {
+        for (uint32_t i = 0; i < levels_.size(); ++i) {
+            if (levels_[i].steal_top(out)) {
+                return true;
+            }
+        }
+        return false;
+    }
+
     size_t depth_approx() const {
         size_t total = 0;
         for (const auto& level : levels_) {

@@ -81,6 +81,8 @@ add_library(hpactor_lib STATIC
     src/net/registrar.cpp
     src/net/registrar_server.cpp
     src/net/registrar_client.cpp
+    src/sched/scheduler.cpp
+    src/sched/worker_thread.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 

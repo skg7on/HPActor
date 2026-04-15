@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/core/scheduler.hpp>
+#include <hpactor/sched/scheduler.hpp>
 #include <hpactor/actor_type_registry.hpp>
 #include <hpactor/spawn.hpp>
 #include <hpactor/net/frame.hpp>
@@ -51,7 +51,7 @@ ActorSystem::ActorSystem(const Config& config)
     : config_(config),
       node_id_(config.node_id),
       registry_(node_id_),
-      scheduler_(std::make_unique<Scheduler>(*this, config.scheduler_threads)),
+      scheduler_(std::make_unique<sched::HybridScheduler>(*this, config.scheduler_threads)),
       actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
 
     scheduler_->start();
@@ -181,7 +181,7 @@ void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
 
     if (mailbox) {
         mailbox->push(Message<MessageVariant>(std::move(msg)));
-        scheduler_->enqueue(target, MessageVariant{});  // Enqueue for processing
+        scheduler_->enqueue(target, 0);  // Enqueue actor at highest priority for processing
     }
 }
 

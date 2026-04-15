@@ -32,9 +32,14 @@
 namespace hpactor {
 
 // Forward declarations
-class Scheduler;
 class AsyncActor;
 class ActorTypeRegistry;
+
+// Scheduler interface forward declaration
+namespace sched {
+class IScheduler;
+class HybridScheduler;
+} // namespace sched
 
 // -----------------------------------------------------------------------------
 // Config - configuration for ActorSystem
@@ -162,7 +167,7 @@ class ActorSystem {
     std::atomic<ActorId::counter_type> next_actor_id_{1};
 
     // Scheduler
-    std::unique_ptr<Scheduler> scheduler_;
+    std::unique_ptr<sched::IScheduler> scheduler_;
 
     // Network components (owned)
     std::unique_ptr<net::TcpTransport> transport_;

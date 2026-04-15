@@ -165,3 +165,7 @@ add_test(NAME test_chaselev_deque COMMAND test_chaselev_deque)
 add_executable(test_multi_priority_work_queue sched/test_multi_priority_work_queue.cpp)
 target_link_libraries(test_multi_priority_work_queue hpactor)
 add_test(NAME test_multi_priority_work_queue COMMAND test_multi_priority_work_queue)
+
+add_executable(test_hybrid_scheduler sched/test_hybrid_scheduler.cpp)
+target_link_libraries(test_hybrid_scheduler hpactor)
+add_test(NAME test_hybrid_scheduler COMMAND test_hybrid_scheduler)
