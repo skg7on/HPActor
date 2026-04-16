@@ -118,6 +118,14 @@ private:
 
     // Thread safety
     std::mutex mutex_;
+
+    // Pending completions from async_* calls (for process_completions)
+    std::vector<OpCompletion> pending_completions_;
+    mutable std::mutex completions_mutex_;
+
+    // Storage for kevent array from last wait()
+    struct kevent events_[16];
+    int last_num_events_ = 0;
 };
 
 } // namespace net
