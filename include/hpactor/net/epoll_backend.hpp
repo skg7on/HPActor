@@ -122,6 +122,10 @@ private:
 
     // Thread safety
     std::mutex mutex_;
+
+    // Pending completions from async_* calls (for process_completions)
+    std::vector<OpCompletion> pending_completions_;
+    mutable std::mutex completions_mutex_;
 };
 
 } // namespace net
