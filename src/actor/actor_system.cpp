@@ -59,6 +59,7 @@ ActorSystem::ActorSystem(const Config& config)
     if (config.enable_network) {
         // Initialize network components
         network_loop_ = std::make_unique<net::EventLoop>();
+        network_loop_->set_actor_system(this);
 
         // Create registrar first (before transport)
         if (config.udp_port > 0) {
@@ -81,7 +82,8 @@ ActorSystem::ActorSystem(const Config& config)
         // Start network event loop in background thread
         network_thread_ = std::thread([this]() {
             while (network_loop_->wait(100) >= 0) {
-                // Process events until stopped
+                network_loop_->process_completions();
+                if (!is_running()) break;
             }
         });
 
@@ -186,10 +188,14 @@ void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
-    // TODO: Route completion to the actor's mailbox as a CompletionMessage
-    // This is Phase 5.5+ work - for now completions are handled via
-    // EventLoop's timer callback bridging
-    (void)completion;
+    completion_msg msg;
+    msg.actor = completion.actor;
+    msg.type = completion.type;
+    msg.fd = completion.fd;
+    msg.result = completion.result;
+    msg.user_data = completion.user_data;
+
+    deliver_local(completion.actor, std::move(msg));
 }
 
 result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
