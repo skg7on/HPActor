@@ -324,7 +324,10 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void EpollBackend::async_recv(int fd, const iovec* bufs, int buf_count,
@@ -348,7 +351,10 @@ void EpollBackend::async_recv(int fd, const iovec* bufs, int buf_count,
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void EpollBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
@@ -365,7 +371,10 @@ void EpollBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t
         .result = -1,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void EpollBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
@@ -382,29 +391,24 @@ void EpollBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t
         .result = -1,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void EpollBackend::async_accept(int fd, ActorId actor) {
     int client_fd = ::accept(fd, nullptr, nullptr);
-    if (client_fd < 0) {
-        OpCompletion completion{
-            .actor = actor,
-            .type = OpType::Accept,
-            .fd = -1,
-            .result = errno,
-            .user_data = 0,
-        };
-        deliver_completion(completion);
-    } else {
-        OpCompletion completion{
-            .actor = actor,
-            .type = OpType::Accept,
-            .fd = client_fd,
-            .result = client_fd,
-            .user_data = 0,
-        };
-        deliver_completion(completion);
+    OpCompletion completion{
+        .actor = actor,
+        .type = OpType::Accept,
+        .fd = (client_fd >= 0) ? client_fd : -1,
+        .result = (client_fd >= 0) ? client_fd : errno,
+        .user_data = 0,
+    };
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
     }
 }
 
@@ -430,7 +434,10 @@ void EpollBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
@@ -448,7 +455,10 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
             .result = -EAGAIN,
             .user_data = 0,
         };
-        deliver_completion(completion);
+        {
+            std::lock_guard<std::mutex> lock(completions_mutex_);
+            pending_completions_.push_back(completion);
+        }
         return;
     }
 
@@ -462,7 +472,10 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
@@ -477,7 +490,10 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
             .result = -EAGAIN,
             .user_data = 0,
         };
-        deliver_completion(completion);
+        {
+            std::lock_guard<std::mutex> lock(completions_mutex_);
+            pending_completions_.push_back(completion);
+        }
         return;
     }
 
@@ -503,7 +519,10 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 int EpollBackend::wait(int timeout_ms) {
@@ -528,8 +547,15 @@ int EpollBackend::wait(int timeout_ms) {
 }
 
 void EpollBackend::process_completions() {
-    // Completions are delivered immediately in epoll backend
-    // This is a no-op for now
+    std::vector<OpCompletion> completions;
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        completions = std::move(pending_completions_);
+        pending_completions_.clear();
+    }
+    for (auto& completion : completions) {
+        deliver_completion(completion);
+    }
 }
 
 void EpollBackend::deliver_completion(OpCompletion completion) {
