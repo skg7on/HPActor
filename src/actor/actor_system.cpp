@@ -172,6 +172,11 @@ ActorMailbox<MessageVariant>* ActorSystem::get_mailbox(ActorId id) {
 }
 
 void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
+    deliver_local(target, std::move(msg), 0, INT64_MAX);
+}
+
+void ActorSystem::deliver_local(ActorId target, MessageVariant msg,
+                                uint8_t priority, int64_t deadline_ns) {
     ActorMailbox<MessageVariant>* mailbox = nullptr;
     {
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
@@ -183,7 +188,7 @@ void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
 
     if (mailbox) {
         mailbox->push(Message<MessageVariant>(std::move(msg)));
-        scheduler_->notify_ready(target, 0, INT64_MAX);  // Enqueue actor at highest priority for processing
+        scheduler_->notify_ready(target, priority, deadline_ns);
     }
 }
 

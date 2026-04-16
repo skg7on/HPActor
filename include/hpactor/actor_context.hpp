@@ -41,6 +41,12 @@ class ActorContext {
     // Send messages
     void send(const ActorAddress& target, MessageVariant msg);
 
+    // Send message with priority and deadline for scheduling
+    // priority: 0-3 (0 = highest)
+    // deadline_ns: absolute deadline in nanoseconds (INT64_MAX = no deadline)
+    void send_with_priority(const ActorAddress& target, MessageVariant msg,
+                          uint8_t priority, int64_t deadline_ns);
+
     // Replies
     void reply(MessageVariant msg);
     void reply_with_error(error err);

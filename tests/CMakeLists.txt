@@ -177,3 +177,7 @@ add_test(NAME test_edf_queue COMMAND test_edf_queue)
 add_executable(test_a2ws sched/test_a2ws.cpp)
 target_link_libraries(test_a2ws hpactor)
 add_test(NAME test_a2ws COMMAND test_a2ws)
+
+add_executable(test_priority_scheduler sched/test_priority_scheduler.cpp)
+target_link_libraries(test_priority_scheduler hpactor)
+add_test(NAME test_priority_scheduler COMMAND test_priority_scheduler)

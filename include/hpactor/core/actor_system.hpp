@@ -130,6 +130,12 @@ class ActorSystem {
     // Deliver message to local actor
     void deliver_local(ActorId target, MessageVariant msg);
 
+    // Deliver message to local actor with priority and deadline for scheduling
+    // priority: 0-3 (0 = highest)
+    // deadline_ns: absolute deadline in nanoseconds (INT64_MAX = no deadline)
+    void deliver_local(ActorId target, MessageVariant msg,
+                       uint8_t priority, int64_t deadline_ns);
+
     // Enqueue an I/O completion to be delivered to an actor
     // Called by EventLoop when async operations complete
     void enqueue_completion(net::OpCompletion completion);

@@ -34,6 +34,20 @@ void ActorContext::send(const ActorAddress& target, MessageVariant msg) {
     }
 }
 
+void ActorContext::send_with_priority(const ActorAddress& target, MessageVariant msg,
+                                    uint8_t priority, int64_t deadline_ns) {
+    if (target.is_local()) {
+        auto actor_ptr = owner_.get();
+        if (!actor_ptr) {
+            return;
+        }
+        actor_ptr->system().deliver_local(target.id, std::move(msg), priority, deadline_ns);
+    } else {
+        // Remote delivery - will be implemented in Phase 1
+        // For now, ignore remote sends
+    }
+}
+
 void ActorContext::reply(MessageVariant msg) {
     // TODO: reply to the sender of the current message
     (void)msg;
