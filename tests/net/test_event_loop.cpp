@@ -976,6 +976,65 @@ int main() {
         printf("PASS\n");
     }
 
+    // Test 29: async_recvfrom on socketpair using async_send on the other end
+    // This tests end-to-end async I/O without raw socket operations
+    {
+        printf("Test 29: async_recvfrom... ");
+        hpactor::net::EventLoop loop;
+        std::optional<OpCompletion> captured_send;
+        std::optional<OpCompletion> captured_recv;
+
+        int fds[2];
+        int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        assert(r == 0);
+
+        // Set up completion callback to capture both operations
+        loop.set_completion_callback([&captured_send, &captured_recv](OpCompletion c) {
+            if (c.type == OpType::Send) {
+                captured_send = c;
+            } else if (c.type == OpType::RecvFrom) {
+                captured_recv = c;
+            }
+        });
+
+        auto* backend = loop.backend();
+        assert(backend != nullptr);
+
+        // Sender: async_send on fd[0]
+        struct iovec send_iov;
+        char send_buf[] = "world";
+        send_iov.iov_base = send_buf;
+        send_iov.iov_len = 5;
+
+        backend->async_send(fds[0], &send_iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Send));
+
+        // Receiver: async_recvfrom on fd[1]
+        char recv_buf[64];
+        struct iovec recv_iov;
+        recv_iov.iov_base = recv_buf;
+        recv_iov.iov_len = 64;
+
+        backend->async_recvfrom(fds[1], &recv_iov, 1, ActorId(1), static_cast<uint32_t>(OpType::RecvFrom));
+
+        // Process completions - both send and receive should complete
+        loop.process_completions();
+
+        // Verify send completion
+        assert(captured_send.has_value() && "send completion should be captured");
+        assert(captured_send->result == 5 && "async_send should send 5 bytes");
+        assert(captured_send->type == OpType::Send && "completion type should be Send");
+
+        // Verify receive completion
+        assert(captured_recv.has_value() && "recv completion should be captured");
+        assert(captured_recv->result == 5 && "async_recvfrom should receive 5 bytes");
+        assert(captured_recv->type == OpType::RecvFrom && "completion type should be RecvFrom");
+        assert(memcmp(recv_buf, "world", 5) == 0 && "received data should match");
+
+        ::close(fds[0]);
+        ::close(fds[1]);
+        printf("PASS\n");
+    }
+
     printf("=== All EventLoop Tests Passed ===\n");
     return 0;
 }
