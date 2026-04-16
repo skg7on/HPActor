@@ -169,12 +169,17 @@ uint64_t KqueueBackend::run_after(ActorId actor, int delay_ms) {
 
     uint64_t handle = next_timer_handle_++;
 
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    int64_t now_ms = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
+    // Register timer with kqueue using EVFILT_TIMER
+    // On macOS: fflags = NOTE_USECONDS means data is in microseconds
+    struct kevent ev;
+    EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS, delay_ms * 1000, 0);
+    if (kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr) < 0) {
+        return 0;  // Failed to register
+    }
 
+    // Store timer info for lookup when it fires
     TimerEntry entry;
-    entry.expires_at_ms = now_ms + delay_ms;
+    entry.expires_at_ms = 0;  // Not used when using EVFILT_TIMER
     entry.actor = actor;
     entry.interval_ms = 0;
     entry.handle = handle;
@@ -189,15 +194,20 @@ uint64_t KqueueBackend::run_every(ActorId actor, int interval_ms) {
 
     uint64_t handle = next_timer_handle_++;
 
-    struct timespec ts;
-    clock_gettime(CLOCK_MONOTONIC, &ts);
-    int64_t now_ms = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;
-
+    // For repeating timers, we need to re-register after each fire
+    // Store interval for use when rescheduling
     TimerEntry entry;
-    entry.expires_at_ms = now_ms + interval_ms;
+    entry.expires_at_ms = 0;
     entry.actor = actor;
     entry.interval_ms = interval_ms;
     entry.handle = handle;
+
+    // Register first occurrence with kqueue
+    struct kevent ev;
+    EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS, interval_ms * 1000, 0);
+    if (kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr) < 0) {
+        return 0;  // Failed to register
+    }
 
     timers_.push_back(entry);
 
@@ -207,6 +217,11 @@ uint64_t KqueueBackend::run_every(ActorId actor, int interval_ms) {
 void KqueueBackend::cancel_timer(uint64_t handle) {
     std::lock_guard<std::mutex> lock(mutex_);
     cancelled_timers_.insert(handle);
+
+    // Remove timer from kqueue if it's still registered
+    struct kevent ev;
+    EV_SET(&ev, handle, EVFILT_TIMER, EV_DELETE, 0, 0, 0);
+    kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr);
 }
 
 void KqueueBackend::async_send(int fd, const iovec* bufs, int buf_count,
@@ -430,10 +445,6 @@ int KqueueBackend::wait(int timeout_ms) {
     }
 
     // Process timer expirations
-    struct timespec now;
-    clock_gettime(CLOCK_MONOTONIC, &now);
-    int64_t now_ms = now.tv_sec * 1000 + now.tv_nsec / 1000000;
-
     for (int i = 0; i < num_events; ++i) {
         if (events[i].filter == EVFILT_TIMER) {
             uint64_t handle = static_cast<uint64_t>(events[i].ident);
@@ -450,9 +461,11 @@ int KqueueBackend::wait(int timeout_ms) {
                         };
                         deliver_completion(completion);
 
-                        // Reschedule if repeating
+                        // Reschedule repeating timers by re-registering with kqueue
                         if (timer.interval_ms > 0) {
-                            timer.expires_at_ms = now_ms + timer.interval_ms;
+                            struct kevent ev;
+                            EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS, timer.interval_ms * 1000, 0);
+                            kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr);
                         }
                         break;
                     }
@@ -462,11 +475,11 @@ int KqueueBackend::wait(int timeout_ms) {
         }
     }
 
-    // Remove expired one-shot timers
+    // Clean up cancelled one-shot timers
     timers_.erase(
         std::remove_if(timers_.begin(), timers_.end(),
-                       [now_ms](const TimerEntry& t) {
-                           return t.expires_at_ms < now_ms && t.interval_ms == 0;
+                       [this](const TimerEntry& t) {
+                           return cancelled_timers_.count(t.handle) > 0 && t.interval_ms == 0;
                        }),
         timers_.end()
     );

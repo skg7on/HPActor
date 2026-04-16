@@ -130,19 +130,19 @@ private:
 
 EventLoop::EventLoop() {
 #if defined(__APPLE__)
-    // Try GCD first (preferred on macOS)
-    auto gcd_backend = try_create_backend<GcdBackend>();
-    if (gcd_backend->start()) {
-        backend_name_ = "gcd";
-        static_cast<GcdBackend*>(gcd_backend.get())->set_loop(this);
-        backend_ = std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
+    // Try kqueue first (for sync I/O testing)
+    auto kqueue_backend = try_create_backend<KqueueBackend>();
+    if (kqueue_backend->start()) {
+        backend_name_ = "kqueue";
+        static_cast<KqueueBackend*>(kqueue_backend.get())->set_loop(this);
+        backend_ = std::make_unique<BackendAdapter>(this, std::move(kqueue_backend));
     } else {
-        // Fall back to kqueue
-        auto kqueue_backend = try_create_backend<KqueueBackend>();
-        if (kqueue_backend->start()) {
-            backend_name_ = "kqueue";
-            static_cast<KqueueBackend*>(kqueue_backend.get())->set_loop(this);
-            backend_ = std::make_unique<BackendAdapter>(this, std::move(kqueue_backend));
+        // Fall back to GCD
+        auto gcd_backend = try_create_backend<GcdBackend>();
+        if (gcd_backend->start()) {
+            backend_name_ = "gcd";
+            static_cast<GcdBackend*>(gcd_backend.get())->set_loop(this);
+            backend_ = std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
         }
     }
 #elif defined(__linux__)
