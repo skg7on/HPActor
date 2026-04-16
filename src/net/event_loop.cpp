@@ -271,6 +271,10 @@ void EventLoop::process_completions() {
 }
 
 void EventLoop::enqueue_completion(OpCompletion completion) {
+    if (completion_callback_) {
+        completion_callback_(completion);
+        return;
+    }
     if (completion.type == OpType::TimerFired) {
         deliver_timer_completion(completion);
     } else if (actor_system_) {

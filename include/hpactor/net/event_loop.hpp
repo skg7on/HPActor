@@ -136,6 +136,14 @@ private:
     // For has_event tracking
     std::unordered_map<int, Event> fd_events_;
 
+    // Optional callback for test verification (disabled in production)
+    using completion_callback = std::function<void(OpCompletion)>;
+    void set_completion_callback(completion_callback cb) {
+        completion_callback_ = std::move(cb);
+    }
+
+    completion_callback completion_callback_;
+
     ActorSystem* actor_system_ = nullptr;
 };
 
