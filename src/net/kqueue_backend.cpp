@@ -233,7 +233,10 @@ void KqueueBackend::async_send(int fd, const iovec* bufs, int buf_count,
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void KqueueBackend::async_recv(int fd, const iovec* bufs, int buf_count,
@@ -248,7 +251,10 @@ void KqueueBackend::async_recv(int fd, const iovec* bufs, int buf_count,
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void KqueueBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
@@ -265,7 +271,10 @@ void KqueueBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_
         .result = -1,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void KqueueBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
@@ -282,29 +291,24 @@ void KqueueBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_
         .result = -1,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void KqueueBackend::async_accept(int fd, ActorId actor) {
     int client_fd = ::accept(fd, nullptr, nullptr);
-    if (client_fd < 0) {
-        OpCompletion completion{
-            .actor = actor,
-            .type = OpType::Accept,
-            .fd = -1,
-            .result = errno,
-            .user_data = 0,
-        };
-        deliver_completion(completion);
-    } else {
-        OpCompletion completion{
-            .actor = actor,
-            .type = OpType::Accept,
-            .fd = client_fd,
-            .result = client_fd,
-            .user_data = 0,
-        };
-        deliver_completion(completion);
+    OpCompletion completion{
+        .actor = actor,
+        .type = OpType::Accept,
+        .fd = (client_fd >= 0) ? client_fd : -1,
+        .result = (client_fd >= 0) ? client_fd : errno,
+        .user_data = 0,
+    };
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
     }
 }
 
@@ -329,7 +333,10 @@ void KqueueBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrle
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
@@ -338,30 +345,32 @@ void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
     socklen_t addrlen = sizeof(addr);
 
     ssize_t n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, reinterpret_cast<struct sockaddr*>(&addr), &addrlen);
+    int result;
+    OpCompletion completion;
     if (n < 0 && errno == EAGAIN) {
-        OpCompletion completion{
+        completion = {
             .actor = actor,
             .type = static_cast<OpType>(op_type),
             .fd = fd,
             .result = -EAGAIN,
             .user_data = 0,
         };
-        deliver_completion(completion);
-        return;
+    } else {
+        // Actually read data into the provided buffers
+        n = ::readv(fd, bufs, buf_count);
+        result = (n < 0) ? errno : static_cast<int>(n);
+        completion = {
+            .actor = actor,
+            .type = static_cast<OpType>(op_type),
+            .fd = fd,
+            .result = result,
+            .user_data = 0,
+        };
     }
-
-    // Actually read data into the provided buffers
-    n = ::readv(fd, bufs, buf_count);
-    int result = (n < 0) ? errno : static_cast<int>(n);
-
-    OpCompletion completion{
-        .actor = actor,
-        .type = static_cast<OpType>(op_type),
-        .fd = fd,
-        .result = result,
-        .user_data = 0,
-    };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 void KqueueBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
@@ -389,7 +398,10 @@ void KqueueBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
         .result = result,
         .user_data = 0,
     };
-    deliver_completion(completion);
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
 }
 
 int KqueueBackend::wait(int timeout_ms) {
@@ -399,6 +411,16 @@ int KqueueBackend::wait(int timeout_ms) {
 
     struct kevent events[16];
     int num_events = kevent(kqueue_fd_, nullptr, 0, events, 16, &ts);
+
+    // Store events for process_completions to handle
+    if (num_events > 0 && num_events <= 16) {
+        for (int i = 0; i < num_events; ++i) {
+            events_[i] = events[i];
+        }
+        last_num_events_ = num_events;
+    } else {
+        last_num_events_ = 0;
+    }
 
     if (num_events < 0) {
         if (errno == EINTR) {
@@ -453,7 +475,21 @@ int KqueueBackend::wait(int timeout_ms) {
 }
 
 void KqueueBackend::process_completions() {
-    // Completions are delivered immediately in kqueue backend
+    // Process pending completions from async_* calls
+    std::vector<OpCompletion> completions;
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        completions = std::move(pending_completions_);
+        pending_completions_.clear();
+    }
+    for (auto& completion : completions) {
+        deliver_completion(completion);
+    }
+
+    // Note: Socket events from wait() are handled synchronously in async_* methods
+    // which already queue completions. The kevent array from wait() is not needed
+    // for process_completions since all async operations complete immediately.
+    last_num_events_ = 0;
 }
 
 void KqueueBackend::deliver_completion(OpCompletion completion) {
