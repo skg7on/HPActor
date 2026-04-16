@@ -897,6 +897,45 @@ int main() {
         printf("PASS\n");
     }
 
+    // Test 27: async_recv on socketpair
+    {
+        printf("Test 27: async_recv... ");
+        hpactor::net::EventLoop loop;
+        std::optional<OpCompletion> captured;
+
+        int fds[2];
+        int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        assert(r == 0);
+
+        loop.set_completion_callback([&captured](OpCompletion c) {
+            captured = c;
+        });
+
+        auto* backend = loop.backend();
+
+        // Write data to fd[1] first
+        const char* msg = "hello";
+        ssize_t written = ::write(fds[1], msg, 5);
+        assert(written == 5);
+
+        char recv_buf[64];
+        struct iovec iov;
+        iov.iov_base = recv_buf;
+        iov.iov_len = 64;
+
+        backend->async_recv(fds[0], &iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Recv));
+        loop.process_completions();
+
+        assert(captured.has_value() && "completion should be captured");
+        assert(captured->result == 5 && "async_recv should receive 5 bytes");
+        assert(captured->type == OpType::Recv && "completion type should be Recv");
+        assert(memcmp(recv_buf, "hello", 5) == 0 && "received data should match");
+
+        ::close(fds[0]);
+        ::close(fds[1]);
+        printf("PASS\n");
+    }
+
     printf("=== All EventLoop Tests Passed ===\n");
     return 0;
 }
