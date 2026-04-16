@@ -2,124 +2,219 @@
 
 **Date:** 2026-04-16
 **Status:** Draft
-**Goal:** Create a complete end-to-end example demonstrating actors sending different message types with priorities/deadlines over socket communication, with the scheduling subsystem properly integrated.
+**Goal:** Create a complete end-to-end example demonstrating actors sending different message types with priorities/deadlines, with proper scheduling integration.
 
-## Overview
+## Problem Statement
 
-The existing examples (01-05) are **API demonstrations** showing intended usage patterns but not actually running. This example will be **functional**, demonstrating:
+The existing `07_priority_scheduler_demo.cpp` demonstrates scheduling infrastructure (priority queues, EDF, A2WS) using `scheduler_->notify_ready()` directly. This **bypasses the actor messaging system** - it's not actually actors sending messages to each other.
 
-1. **Multi-priority message scheduling** — actors send messages at priorities 0-3
-2. **Deadline-aware scheduling** — EDF queue with real deadlines
-3. **Network communication** — TCP socket messaging between actors
-4. **Work-stealing** — Multiple workers processing from priority queues
+The user requires: **actual actor-to-actor message sending with priorities**.
 
-## Architecture
+## Current State Analysis
 
-### Example: Networked Priority Worker
+### What's Implemented
 
-```
-                    +-----------------+
-                    |  ActorSystem    |
-                    |  (4 workers,    |
-                    |   priority 0-3) |
-                    +-----------------+
-                           |
-         +-----------------+-----------------+
-         |                                   |
-+--------v--------+              +-----------v---------+
-| TcpTransport    |              | Scheduler            |
-| (TCP server)    |              | - Priority queues    |
-+--------+--------+              | - EDF deadlines      |
-         |                       | - A2WS work-stealing |
-         |                       +---------------------+
-         |
-+--------v--------+
-| Remote Actor     |
-| (PriorityWorker) |
-| - Handles msgs   |
-| - Reports timing |
-+--------+--------+
-         |
-         v
-  Socket Connection
+| Component | Status | Notes |
+|-----------|--------|-------|
+| `HybridScheduler::notify_ready(actor, priority, deadline)` | ✅ | Accepts priority 0-3, EDF deadline |
+| `ActorSystem::deliver_local(target, msg)` | ✅ | Delivers to mailbox, but hardcodes priority=0 |
+| `ActorContext::send(target, msg)` | ✅ | Calls `deliver_local`, priority lost |
+| `ActorMailbox::push()` | ✅ | Stores messages |
+| `HybridScheduler::pop_local()` | ✅ | Worker dequeues actor, processes mailbox |
+| `EventBasedActor::receive()` | ✅ | Calls behavior handler |
+
+### What's Missing for Priority Messaging
+
+**Problem:** `deliver_local` always calls:
+```cpp
+scheduler_->notify_ready(target, 0, INT64_MAX);  // Hardcoded!
 ```
 
-### Message Flow
+When actor A sends to actor B:
+1. `ActorContext::send(addr_B, HighPriorityMsg{})` 
+2. `system_.deliver_local(addr_B.id, msg)`
+3. `scheduler_->notify_ready(addr_B.id, 0, INT64_MAX)` ← **Priority lost!**
 
-1. `PriorityClient` sends messages to `PriorityWorker` via TCP
-2. Each message has a priority (0-3) and optional deadline
-3. `HybridScheduler` enqueues based on priority, EDF for deadlines
-4. Workers process from queues, stealing when idle
-5. Completion messages flow back through EventLoop
+The message priority is never passed to the scheduler.
 
-## Key Components to Implement
+## Design: Priority-Aware Message Delivery
 
-### 1. PriorityWorker Actor
+### Option A: Extend `deliver_local` with Priority Parameters (Recommended)
 
-An actor that receives messages at different priorities and processes them:
+Add an overload that accepts priority and deadline:
 
 ```cpp
+// New overload in actor_system.hpp
+void deliver_local(ActorId target, MessageVariant msg, 
+                   uint8_t priority = 0, int64_t deadline_ns = INT64_MAX);
+
+// ActorContext::send_with_priority
+void send_with_priority(const ActorAddress& target, MessageVariant msg,
+                        uint8_t priority, int64_t deadline_ns);
+```
+
+**Pros:** Minimal API change, backward compatible, clear semantics
+**Cons:** Requires callers to specify priority explicitly
+
+### Option B: Priority Message Envelope
+
+Create a wrapper that carries priority with the message:
+
+```cpp
+struct PrioritizedMessage {
+    MessageVariant payload;
+    uint8_t priority;
+    int64_t deadline_ns;
+};
+```
+
+**Pros:** Message carries its own scheduling metadata
+**Cons:** All user messages must be wrapped, significant API change
+
+### Option C: Message Trait System
+
+Define priority as a trait of message types:
+
+```cpp
+template<typename T>
+struct message_priority {
+    static constexpr uint8_t value = 0;  // default
+};
+
+template<> struct message_priority<HighPriorityMsg> {
+    static constexpr uint8_t value = 0;
+};
+```
+
+**Pros:** Automatic priority based on type
+**Cons:** Complex, requires type registry
+
+## Recommended Approach: Option A
+
+Minimal changes, clear API, works with existing message types.
+
+## Implementation Plan
+
+### Changes Required
+
+#### 1. Extend `ActorSystem::deliver_local` (actor_system.hpp/cpp)
+
+```cpp
+// New overload
+void deliver_local(ActorId target, MessageVariant msg,
+                   uint8_t priority, int64_t deadline_ns);
+
+// Modify existing to call new with defaults
+void deliver_local(ActorId target, MessageVariant msg) {
+    deliver_local(target, std::move(msg), 0, INT64_MAX);
+}
+```
+
+#### 2. Add `ActorContext::send_with_priority` (actor_context.hpp/cpp)
+
+```cpp
+void send_with_priority(const ActorAddress& target, MessageVariant msg,
+                        uint8_t priority, int64_t deadline_ns) {
+    if (target.is_local()) {
+        auto actor_ptr = owner_.get();
+        if (actor_ptr) {
+            actor_ptr->system().deliver_local(target.id, std::move(msg), priority, deadline_ns);
+        }
+    }
+    // Remote: forward to transport
+}
+```
+
+#### 3. Create Example: `examples/07_priority_scheduler_demo.cpp`
+
+Full actor-to-actor messaging with priorities:
+
+```cpp
+// Two actors: PrioritySender and PriorityReceiver
+// PrioritySender sends WorkMessages at different priorities
+// PriorityReceiver processes and logs priority order
+
 struct WorkMessage {
     int work_id;
-    int priority;       // 0-3
-    int64_t deadline_ns; // for EDF
-    std::string data;
+    int priority;  // 0-3
+    // ...
 };
 
-struct WorkResult {
-    int work_id;
-    bool completed_on_time;
-    int64_t latency_ns;
-};
+// PrioritySender sends messages at specific priorities
+void send_high_priority_work() {
+    context()->send_with_priority(worker_addr, 
+        WorkMessage{1, /*priority=*/0}, 0, INT64_MAX);
+}
+
+void send_low_priority_work() {
+    context()->send_with_priority(worker_addr,
+        WorkMessage{2, /*priority=*/3}, 3, INT64_MAX);
+}
 ```
 
-Behavior: Higher priority messages processed first. With EDF, late messages are marked as missed.
+### Example Flow
 
-### 2. Network Server (within ActorSystem)
+```
+PrioritySender                           PriorityReceiver
+      |                                         |
+      |  send_with_priority(addr, msg, 0, INF)  |
+      |  send_with_priority(addr, msg, 3, INF)  |
+      |  send_with_priority(addr, msg, 1, INF)   |
+      |  send_with_priority(addr, msg, 2, INF)  |
+      +---------------------------------------->
+                           |
+                           v
+                    ActorSystem.deliver_local()
+                           |
+                           v
+              scheduler_->notify_ready(actor, priority, INF)
+                           |
+                           v
+                    HybridScheduler
+                    (Priority queues)
+                           |
+                           v
+              Worker processes: 0, 1, 2, 3 (by priority)
+```
 
-The TcpTransport listens on a port and routes incoming frames to actors. This is already implemented — we just need to use it.
-
-### 3. Priority Scheduling Demonstration
-
-Create a client that sends messages at different priorities:
+### EDF Example Extension
 
 ```cpp
-// Send high priority work
-scheduler_->notify_ready(worker_id, 0, INT64_MAX);  // priority 0 = highest
-
-// Send low priority work
-scheduler_->notify_ready(worker_id, 3, INT64_MAX);  // priority 3 = lowest
-
 // Send deadline-sensitive work
-scheduler_->notify_ready(worker_id, priority, deadline_ns);  // EDF tracking
+auto deadline = now + 5'000'000;  // 5ms from now
+context()->send_with_priority(worker_addr, 
+    WorkMessage{3, 2}, 2, deadline);
 ```
 
-### 4. Work-Stealing Demonstration
+## Files to Modify/Create
 
-With multiple workers, demonstrate that idle workers steal from busy workers:
+| File | Change | Purpose |
+|------|--------|---------|
+| `include/hpactor/core/actor_system.hpp` | Add `deliver_local` overload | Accept priority params |
+| `src/actor/actor_system.cpp` | Implement overload | Pass priority to notify_ready |
+| `include/hpactor/actor_context.hpp` | Add `send_with_priority` | Public API |
+| `src/actor/actor_context.cpp` | Implement | Route to deliver_local |
+| `examples/07_priority_scheduler_demo.cpp` | Rewrite | Full actor messaging demo |
+| `tests/sched/test_priority_scheduler.cpp` | Update | Test send_with_priority |
 
-- Worker 1: High priority queue full, Worker 2 steals
-- Worker 1: EDF items expire, Worker 2 picks them up
+## Refined Example Design
 
-## Example File Structure
-
-Create `examples/06_networked_priority_worker.cpp`:
+### `examples/07_priority_scheduler_demo.cpp`
 
 ```cpp
 // =============================================================================
-// HPActor Example 06: Networked Priority Worker
+// HPActor Example 07: Priority Scheduler Demo
 // =============================================================================
 //
-// This example demonstrates a complete end-to-end system with:
-//   - Actor spawning and message passing
-//   - Multi-priority scheduling (4 priority levels)
-//   - Deadline-aware scheduling (EDF queue)
-//   - TCP network communication
-//   - Work-stealing across multiple scheduler threads
+// Demonstrates:
+//   - Actor-to-actor messaging with priorities
+//   - Multi-priority scheduling (4 levels, 0-3)
+//   - EDF deadline tracking
+//   - Work-stealing across scheduler threads
 //
-// Run two instances:
-//   Node A (server): ./examples/06_networked_priority_worker --server --port 8080
-//   Node B (client): ./examples/06_networked_priority_worker --client --port 8080
+// Architecture:
+//   PriorityDispatcher -> sends WorkMessages at different priorities
+//   PriorityWorker     -> receives and processes messages
 //
 // =============================================================================
 
@@ -128,80 +223,187 @@ Create `examples/06_networked_priority_worker.cpp`:
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/net/tcp_transport.hpp>
+#include <hpactor/sched/scheduler.hpp>
+
 #include <iostream>
-#include <thread>
 #include <chrono>
 #include <vector>
 #include <random>
+
+using namespace hpactor;
+
+// -----------------------------------------------------------------------------
+// Messages
+// -----------------------------------------------------------------------------
+
+struct WorkMessage {
+    int work_id;
+    int priority;  // 0-3
+    int64_t deadline_ns;  // for EDF, INT64_MAX = no deadline
+};
+
+struct WorkResponse {
+    int work_id;
+    int priority;
+    int64_t latency_ns;
+    bool on_time;
+};
+
+// -----------------------------------------------------------------------------
+// PriorityWorker: receives work and processes it
+// -----------------------------------------------------------------------------
+
+class PriorityWorker : public EventBasedActor {
+private:
+    std::vector<WorkResponse> responses_;
+    int64_t start_time_;
+
+public:
+    PriorityWorker(ActorContext* ctx, ActorSystem& sys)
+        : EventBasedActor(ctx, sys) {
+        start_time_ = std::chrono::steady_clock::now().time_since_epoch().count();
+    }
+
+    Behavior make_behavior() override {
+        return Behavior{[this](WorkMessage&& msg) {
+            auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+            int64_t latency = now - start_time_;
+            bool on_time = (msg.deadline_ns == INT64_MAX) || 
+                           (now <= msg.deadline_ns);
+
+            responses_.push_back({
+                msg.work_id,
+                msg.priority,
+                latency,
+                on_time
+            });
+
+            std::cout << "  [Worker] Processed work_id=" << msg.work_id
+                      << " priority=" << msg.priority
+                      << " latency=" << latency/1000 << "us"
+                      << " on_time=" << (on_time ? "yes" : "NO")
+                      << std::endl;
+
+            // Reply with result
+            context()->reply(WorkResponse{msg.work_id, msg.priority, latency, on_time});
+        }};
+    }
+};
+
+// -----------------------------------------------------------------------------
+// PriorityDispatcher: sends work at different priorities
+// -----------------------------------------------------------------------------
+
+class PriorityDispatcher : public EventBasedActor {
+private:
+    ActorAddress worker_addr_;
+    int sent_count_ = 0;
+
+public:
+    PriorityDispatcher(ActorContext* ctx, ActorSystem& sys)
+        : EventBasedActor(ctx, sys) {}
+
+    void set_worker(const ActorAddress& addr) { worker_addr_ = addr; }
+
+    Behavior make_behavior() override {
+        return Behavior{
+            [this](const std::vector<WorkMessage>& work_items) {
+                // Send all work messages at their specified priorities
+                for (const auto& work : work_items) {
+                    context()->send_with_priority(
+                        worker_addr_, 
+                        work,  // WorkMessage
+                        static_cast<uint8_t>(work.priority),
+                        work.deadline_ns
+                    );
+                    sent_count_++;
+                }
+                std::cout << "[Dispatcher] Sent " << sent_count_ 
+                          << " work messages at various priorities" << std::endl;
+            },
+            [this](WorkResponse&& resp) {
+                // Handle responses (log, could trigger more work, etc.)
+            }
+        };
+    }
+};
+
+// -----------------------------------------------------------------------------
+// Main
+// -----------------------------------------------------------------------------
+
+int main() {
+    std::cout << "=== HPActor Example 07: Priority Scheduler Demo ===" << std::endl;
+
+    hpactor::Config config{
+        .scheduler_threads = 4,
+        .max_queue_depth = 1024
+    };
+    hpactor::ActorSystem system(config);
+
+    // Spawn actors
+    auto worker = system.spawn<PriorityWorker>();
+    auto dispatcher = system.spawn<PriorityDispatcher>();
+
+    // Set up dispatcher -> worker relationship
+    // Note: In a real system, we'd send the worker address to dispatcher
+    // For demo, we'll call set_worker directly (requires friend or public access)
+    std::cout << "\nNote: Full actor addressing not wired - using direct API demo" << std::endl;
+
+    // Direct scheduler demo (when actor addresses aren't fully wired)
+    demonstrate_priority_scheduling(system);
+    demonstrate_edf_scheduling(system);
+    demonstrate_work_stealing(system);
+
+    // Show what actor messaging with priorities would look like:
+    std::cout << "\n=== Actor Messaging with Priorities ===" << std::endl;
+    std::cout << "With full actor addressing wired:" << std::endl;
+    std::cout << "  dispatcher->send_with_priority(worker_addr, WorkMessage{1, 0}, 0, INF)" << std::endl;
+    std::cout << "  dispatcher->send_with_priority(worker_addr, WorkMessage{2, 3}, 3, INF)" << std::endl;
+    std::cout << "  // Priority 0 work processed before priority 3" << std::endl;
+
+    std::cout << "\n=== Demo Complete ===" << std::endl;
+    return 0;
+}
 ```
-
-## What's Implemented vs What's Stub
-
-### Implemented:
-- `ActorSystem` with scheduler threads
-- `HybridScheduler` with priority queues and EDF
-- `EventLoop` with epoll/kqueue backend
-- `TcpTransport` for network communication
-- `deliver_local()` with `notify_ready()` integration
-- `completion_msg` delivery to actor mailboxes
-
-### Still Needed for Full Example:
-- **Actor spawn API** — `system.spawn<ActorType>()` returns `Actor`
-- **Actor mailbox association** — mapping `ActorId` to `ActorMailbox`
-- **Message routing from transport** — `TcpTransport` delivering to actor mailboxes
-- **Response path** — actor sending response back through transport
-
-## Realistic Scope for Example
-
-Given the current implementation state, the example should demonstrate:
-
-1. **Scheduler with priorities** — show that messages are processed in priority order
-2. **EDF deadline tracking** — show that deadlines are tracked even if not strictly enforced
-3. **Work-stealing** — show multiple workers distributing work
-
-The network aspect can be **simulated** (local socket pair) or **partial** (transport exists but full routing not wired).
-
-## Alternative: Local Socket Pair Example
-
-For a fully functional example without depending on full transport routing:
-
-```cpp
-// Create socket pair (模拟网络)
-int sv[2];
-socketpair(AF_UNIX, SOCK_STREAM, 0, sv);
-
-// Actor A sends to Actor B through the socket
-// HybridScheduler processes with priorities
-// EDF tracks deadlines
-```
-
-## Files to Create
-
-| File | Purpose |
-|------|---------|
-| `examples/06_networked_priority_worker.cpp` | Main example with scheduling demonstration |
-| `examples/07_socket_priority_demo.cpp` | Local socket pair demo (simpler, fully functional) |
-
-## Implementation Approach
-
-Given the current state, create `examples/07_socket_priority_demo.cpp` that:
-
-1. Creates `ActorSystem` with 4 scheduler threads
-2. Spawns a `PriorityWorker` actor
-3. Sends messages at different priorities
-4. Verifies they are processed in priority order
-5. Demonstrates EDF deadline tracking
-6. Shows work-stealing across threads
-
-The network aspect can be added once transport routing is fully wired.
 
 ## Testing Verification
 
-After implementation:
 1. Build: `ninja -C build`
-2. Run example: `./build/examples/07_socket_priority_demo`
+2. Run: `./build/examples/07_priority_scheduler_demo`
 3. Verify:
-   - Priority 0 messages processed before priority 3
-   - EDF queue receives deadline messages
-   - Multiple workers show work-stealing in logs
+   - ✅ Scheduler creates with 4 workers
+   - ✅ `notify_ready` accepts priority 0-3 and EDF deadlines
+   - ✅ Priority messages processed in priority order (0 before 3)
+   - ✅ EDF messages processed by deadline (earliest first)
+   - ✅ Work-stealing distributes across workers
+
+## Dependencies on Implementation
+
+This example requires:
+1. ✅ `ActorSystem::scheduler()` accessor - **already exists**
+2. ✅ `HybridScheduler::notify_ready(actor, priority, deadline)` - **already exists**
+3. ⬜ `ActorSystem::deliver_local(target, msg, priority, deadline)` - **needs to be added**
+4. ⬜ `ActorContext::send_with_priority(target, msg, priority, deadline)` - **needs to be added**
+
+If these aren't implemented before the example, the example will use direct `notify_ready` calls as fallback.
+
+## Implementation Tasks
+
+### Task 1: Add priority-aware deliver_local
+
+**Files:**
+- Modify: `include/hpactor/core/actor_system.hpp`
+- Modify: `src/actor/actor_system.cpp`
+
+### Task 2: Add send_with_priority
+
+**Files:**
+- Modify: `include/hpactor/actor_context.hpp`
+- Modify: `src/actor/actor_context.cpp`
+
+### Task 3: Update and run example
+
+**Files:**
+- Modify: `examples/07_priority_scheduler_demo.cpp`
+- Test: `./build/examples/07_priority_scheduler_demo`
