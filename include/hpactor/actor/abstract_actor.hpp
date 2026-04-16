@@ -24,6 +24,9 @@ namespace hpactor {
 
 // Forward declarations
 class ActorSystem;
+namespace net {
+enum class OpType : uint32_t;
+}  // namespace net
 
 // -----------------------------------------------------------------------------
 // MessageVariant - std::variant for all message types
@@ -46,7 +49,17 @@ struct unlink_msg {
     ActorAddress target;
 };
 
+// CompletionMessage carries I/O completion data from EventLoop to actors
+struct CompletionMessage {
+    ActorId actor;       // target actor that initiated the operation
+    net::OpType type;    // Send, Recv, Accept, Connect, TimerFired, RecvFrom, SendTo
+    int fd;              // file descriptor
+    int result;          // bytes transferred (>= 0) or -errno on failure
+    uint64_t user_data;  // original user data from the async operation
+};
+
 using MessageVariant = std::variant<
+    CompletionMessage,
     down_msg,
     exit_msg,
     link_msg,
