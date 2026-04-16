@@ -49,8 +49,8 @@ struct unlink_msg {
     ActorAddress target;
 };
 
-// CompletionMessage carries I/O completion data from EventLoop to actors
-struct CompletionMessage {
+// completion_msg carries I/O completion data from EventLoop to actors
+struct completion_msg {
     ActorId actor;       // target actor that initiated the operation
     net::OpType type;    // Send, Recv, Accept, Connect, TimerFired, RecvFrom, SendTo
     int fd;              // file descriptor
@@ -59,7 +59,7 @@ struct CompletionMessage {
 };
 
 using MessageVariant = std::variant<
-    CompletionMessage,
+    completion_msg,
     down_msg,
     exit_msg,
     link_msg,
