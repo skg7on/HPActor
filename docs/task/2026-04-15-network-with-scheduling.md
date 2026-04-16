@@ -12,5 +12,3 @@ network_thread_ = std::thread([this]() {
         }
     });
 ```
-
-## Epoll backend
