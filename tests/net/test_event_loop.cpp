@@ -936,6 +936,46 @@ int main() {
         printf("PASS\n");
     }
 
+    // Test 28: async_sendto on socketpair (address ignored for connected sockets)
+    {
+        printf("Test 28: async_sendto... ");
+        hpactor::net::EventLoop loop;
+        std::optional<OpCompletion> captured;
+
+        int fds[2];
+        int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        assert(r == 0);
+
+        loop.set_completion_callback([&captured](OpCompletion c) {
+            captured = c;
+        });
+
+        auto* backend = loop.backend();
+
+        struct iovec iov;
+        char send_buf[] = "test";
+        iov.iov_base = send_buf;
+        iov.iov_len = 4;
+
+        // Address is ignored on connected sockets but we provide valid address
+        struct sockaddr_un addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sun_family = AF_UNIX;
+        strncpy(addr.sun_path, "/tmp/test", sizeof(addr.sun_path) - 1);
+
+        backend->async_sendto(fds[0], &iov, 1, reinterpret_cast<sockaddr*>(&addr),
+                             sizeof(addr), ActorId(1), static_cast<uint32_t>(OpType::SendTo));
+        loop.process_completions();
+
+        assert(captured.has_value() && "completion should be captured");
+        assert(captured->result == 4 && "async_sendto should send 4 bytes");
+        assert(captured->type == OpType::SendTo && "completion type should be SendTo");
+
+        ::close(fds[0]);
+        ::close(fds[1]);
+        printf("PASS\n");
+    }
+
     printf("=== All EventLoop Tests Passed ===\n");
     return 0;
 }
