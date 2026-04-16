@@ -118,6 +118,9 @@ class ActorSystem {
     // Check if actor system is running
     bool is_running() const { return running_.load(std::memory_order_acquire); }
 
+    // Get scheduler for direct scheduling operations
+    sched::IScheduler* scheduler() { return scheduler_.get(); }
+
     // Internal actor lookup (used by scheduler)
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
 

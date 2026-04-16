@@ -16,3 +16,6 @@ target_link_libraries(04_supervision_tree PRIVATE hpactor_lib)
 
 add_executable(05_ping_pong 05_ping_pong.cpp)
 target_link_libraries(05_ping_pong PRIVATE hpactor_lib)
+
+add_executable(07_priority_scheduler_demo 07_priority_scheduler_demo.cpp)
+target_link_libraries(07_priority_scheduler_demo PRIVATE hpactor_lib)
