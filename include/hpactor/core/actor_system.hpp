@@ -115,6 +115,9 @@ class ActorSystem {
     // Node ID
     NodeId node_id() const { return node_id_; }
 
+    // Check if actor system is running
+    bool is_running() const { return running_.load(std::memory_order_acquire); }
+
     // Internal actor lookup (used by scheduler)
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
 
@@ -165,6 +168,9 @@ class ActorSystem {
 
     // Actor ID generator
     std::atomic<ActorId::counter_type> next_actor_id_{1};
+
+    // Running flag for network thread loop
+    std::atomic<bool> running_{true};
 
     // Scheduler
     std::unique_ptr<sched::IScheduler> scheduler_;
