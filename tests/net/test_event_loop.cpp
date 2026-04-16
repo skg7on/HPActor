@@ -862,6 +862,41 @@ int main() {
     }
 #endif  // TEMPORARILY DISABLED - DEBUG
 
+    // Test 26: async_send on socketpair
+    {
+        printf("Test 26: async_send... ");
+        hpactor::net::EventLoop loop;
+        std::optional<OpCompletion> captured;
+
+        int fds[2];
+        int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        assert(r == 0 && "socketpair should succeed");
+
+        loop.set_completion_callback([&captured](OpCompletion c) {
+            captured = c;
+        });
+
+        auto* backend = loop.backend();
+        assert(backend != nullptr && "backend should exist");
+
+        struct iovec iov;
+        char send_buf[] = "hello";
+        iov.iov_base = send_buf;
+        iov.iov_len = 5;
+
+        backend->async_send(fds[0], &iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Send));
+        loop.process_completions();
+
+        assert(captured.has_value() && "completion should be captured");
+        assert(captured->result == 5 && "async_send should send 5 bytes");
+        assert(captured->type == OpType::Send && "completion type should be Send");
+        assert(captured->fd == fds[0] && "completion fd should match");
+
+        ::close(fds[0]);
+        ::close(fds[1]);
+        printf("PASS\n");
+    }
+
     printf("=== All EventLoop Tests Passed ===\n");
     return 0;
 }

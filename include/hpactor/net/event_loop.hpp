@@ -112,6 +112,12 @@ public:
     // Set the ActorSystem for delivering completions
     void set_actor_system(ActorSystem* actor_system);
 
+    // Set callback for test verification (test-only API)
+    using completion_callback = std::function<void(OpCompletion)>;
+    void set_completion_callback(completion_callback cb) {
+        completion_callback_ = std::move(cb);
+    }
+
     // Get the underlying backend for direct async operations
     AsyncIoBackend* backend() { return backend_.get(); }
 
@@ -137,11 +143,6 @@ private:
     std::unordered_map<int, Event> fd_events_;
 
     // Optional callback for test verification (disabled in production)
-    using completion_callback = std::function<void(OpCompletion)>;
-    void set_completion_callback(completion_callback cb) {
-        completion_callback_ = std::move(cb);
-    }
-
     completion_callback completion_callback_;
 
     ActorSystem* actor_system_ = nullptr;
