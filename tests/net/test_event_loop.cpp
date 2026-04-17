@@ -1141,6 +1141,48 @@ int main() {
         printf("PASS\n");
     }
 
+    // Test 33: async_recv with multiple iovec
+    {
+        printf("Test 33: async_recv multi-iovec... ");
+        hpactor::net::EventLoop loop;
+        std::optional<OpCompletion> captured;
+
+        int fds[2];
+        int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        assert(r == 0);
+
+        loop.set_completion_callback([&captured](OpCompletion c) {
+            captured = c;
+        });
+
+        auto* backend = loop.backend();
+
+        // Write data to fd[1] - split across two buffers when read
+        const char* msg = "helloworld";
+        ssize_t written = ::write(fds[1], msg, 10);
+        assert(written == 10);
+
+        char buf1[5];
+        char buf2[5];
+        struct iovec iov[2];
+        iov[0].iov_base = buf1;
+        iov[0].iov_len = 5;
+        iov[1].iov_base = buf2;
+        iov[1].iov_len = 5;
+
+        backend->async_recv(fds[0], iov, 2, ActorId(1), static_cast<uint32_t>(OpType::Recv));
+        loop.process_completions();
+
+        assert(captured.has_value() && "completion should be captured");
+        assert(captured->result == 10 && "async_recv multi-iovec should receive 10 bytes");
+        assert(memcmp(buf1, "hello", 5) == 0 && "first buffer should be 'hello'");
+        assert(memcmp(buf2, "world", 5) == 0 && "second buffer should be 'world'");
+
+        ::close(fds[0]);
+        ::close(fds[1]);
+        printf("PASS\n");
+    }
+
     printf("=== All EventLoop Tests Passed ===\n");
     return 0;
 }

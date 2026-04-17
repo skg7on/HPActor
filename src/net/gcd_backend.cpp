@@ -85,7 +85,7 @@ struct TimerContext {
 void async_send_trampoline(void* ctx) {
     auto* c = static_cast<AsyncSendContext*>(ctx);
     ssize_t n = ::write(c->fd, c->data.data(), c->data.size());
-    int result = (n < 0) ? errno : static_cast<int>(n);
+    int result = (n < 0) ? -errno : static_cast<int>(n);
     OpCompletion completion{
         .actor = c->actor,
         .type = static_cast<OpType>(c->op_type),
@@ -106,7 +106,7 @@ void async_recv_trampoline(void* ctx) {
             .actor = c->actor,
             .type = static_cast<OpType>(c->op_type),
             .fd = c->fd,
-            .result = errno,
+            .result = -errno,
             .user_data = 0,
         };
         c->self->deliver_completion(completion);

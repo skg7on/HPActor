@@ -239,7 +239,7 @@ void KqueueBackend::async_send(int fd, const iovec* bufs, int buf_count,
     }
 
     ssize_t n = ::send(fd, data.data(), data.size(), 0);
-    int result = (n < 0) ? errno : static_cast<int>(n);
+    int result = (n < 0) ? -errno : static_cast<int>(n);
 
     OpCompletion completion{
         .actor = actor,
@@ -257,7 +257,7 @@ void KqueueBackend::async_send(int fd, const iovec* bufs, int buf_count,
 void KqueueBackend::async_recv(int fd, const iovec* bufs, int buf_count,
                               ActorId actor, uint32_t op_type) {
     ssize_t n = ::readv(fd, bufs, buf_count);
-    int result = (n < 0) ? errno : static_cast<int>(n);
+    int result = (n < 0) ? -errno : static_cast<int>(n);
 
     OpCompletion completion{
         .actor = actor,
@@ -318,7 +318,7 @@ void KqueueBackend::async_accept(int fd, ActorId actor) {
         .actor = actor,
         .type = OpType::Accept,
         .fd = (client_fd >= 0) ? client_fd : -1,
-        .result = (client_fd >= 0) ? client_fd : errno,
+        .result = (client_fd >= 0) ? client_fd : -errno,
         .user_data = 0,
     };
     {
@@ -373,7 +373,7 @@ void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
     } else {
         // Actually read data into the provided buffers
         n = ::readv(fd, bufs, buf_count);
-        result = (n < 0) ? errno : static_cast<int>(n);
+        result = (n < 0) ? -errno : static_cast<int>(n);
         completion = {
             .actor = actor,
             .type = static_cast<OpType>(op_type),
@@ -404,7 +404,7 @@ void KqueueBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
     }
 
     ssize_t n = ::sendto(fd, data.data(), data.size(), 0, addr, addrlen);
-    int result = (n < 0) ? errno : static_cast<int>(n);
+    int result = (n < 0) ? -errno : static_cast<int>(n);
 
     OpCompletion completion{
         .actor = actor,
