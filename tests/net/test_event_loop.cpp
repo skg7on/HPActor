@@ -1106,6 +1106,41 @@ int main() {
         printf("PASS\n");
     }
 
+    // Test 32: async_send with multiple iovec
+    {
+        printf("Test 32: async_send multi-iovec... ");
+        hpactor::net::EventLoop loop;
+        std::optional<OpCompletion> captured;
+
+        int fds[2];
+        int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        assert(r == 0);
+
+        loop.set_completion_callback([&captured](OpCompletion c) {
+            captured = c;
+        });
+
+        auto* backend = loop.backend();
+
+        struct iovec iov[2];
+        char buf1[] = "hello";
+        char buf2[] = " world";
+        iov[0].iov_base = buf1;
+        iov[0].iov_len = 5;
+        iov[1].iov_base = buf2;
+        iov[1].iov_len = 6;  // " world" = 6 chars
+
+        backend->async_send(fds[0], iov, 2, ActorId(1), static_cast<uint32_t>(OpType::Send));
+        loop.process_completions();
+
+        assert(captured.has_value() && "completion should be captured");
+        assert(captured->result == 11 && "async_send multi-iovec should send 11 bytes");
+
+        ::close(fds[0]);
+        ::close(fds[1]);
+        printf("PASS\n");
+    }
+
     printf("=== All EventLoop Tests Passed ===\n");
     return 0;
 }
