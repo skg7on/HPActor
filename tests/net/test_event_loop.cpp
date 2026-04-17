@@ -1035,6 +1035,42 @@ int main() {
         printf("PASS\n");
     }
 
+    // Test 30: async_send error on closed fd
+    {
+        printf("Test 30: async_send error on closed fd... ");
+        hpactor::net::EventLoop loop;
+        std::optional<OpCompletion> captured;
+
+        int fds[2];
+        int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        assert(r == 0);
+
+        loop.set_completion_callback([&captured](OpCompletion c) {
+            captured = c;
+        });
+
+        auto* backend = loop.backend();
+
+        // Close fd[0] before async_send
+        ::close(fds[0]);
+        // fds[0] is now closed
+
+        struct iovec iov;
+        char send_buf[] = "hello";
+        iov.iov_base = send_buf;
+        iov.iov_len = 5;
+
+        backend->async_send(fds[0], &iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Send));
+        loop.process_completions();
+
+        assert(captured.has_value() && "completion should be captured");
+        assert(captured->result < 0 && "async_send on closed fd should return error");
+        // EBADF = 9
+
+        ::close(fds[1]);
+        printf("PASS\n");
+    }
+
     printf("=== All EventLoop Tests Passed ===\n");
     return 0;
 }
