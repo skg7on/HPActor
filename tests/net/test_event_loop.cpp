@@ -1071,6 +1071,41 @@ int main() {
         printf("PASS\n");
     }
 
+    // Test 31: async_recv with zero-length iovec (edge case)
+    {
+        printf("Test 31: async_recv empty buffer... ");
+        hpactor::net::EventLoop loop;
+        std::optional<OpCompletion> captured;
+
+        int fds[2];
+        int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        assert(r == 0);
+
+        loop.set_completion_callback([&captured](OpCompletion c) {
+            captured = c;
+        });
+
+        auto* backend = loop.backend();
+
+        // Call async_recv with zero-length read (just to trigger completion)
+        // On connected sockets, read with iov_len=0 still triggers notification
+        struct iovec iov;
+        char buf[1];  // not used since iov_len = 0
+        iov.iov_base = buf;
+        iov.iov_len = 0;  // zero-length read
+
+        backend->async_recv(fds[0], &iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Recv));
+        loop.process_completions();
+
+        assert(captured.has_value() && "completion should be captured");
+        // With iov_len=0, should return 0 (EOF or immediate completion)
+        assert(captured->result == 0 && "async_recv with empty buffer should return 0");
+
+        ::close(fds[0]);
+        ::close(fds[1]);
+        printf("PASS\n");
+    }
+
     printf("=== All EventLoop Tests Passed ===\n");
     return 0;
 }
