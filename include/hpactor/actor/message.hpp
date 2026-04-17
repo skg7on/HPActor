@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #pragma once
+#include <atomic>
 #include <type_traits>
 #include <utility>
 
@@ -45,6 +46,9 @@ template <typename T> class Message {
     T&& move_payload() noexcept {
         return std::move(payload_);
     }
+
+    // Intrusive link for MPSCMailbox
+    std::atomic<Message*> mpsc_next_{nullptr};
 
   private:
     T payload_;
