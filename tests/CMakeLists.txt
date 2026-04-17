@@ -181,3 +181,7 @@ add_test(NAME test_a2ws COMMAND test_a2ws)
 add_executable(test_priority_scheduler sched/test_priority_scheduler.cpp)
 target_link_libraries(test_priority_scheduler hpactor)
 add_test(NAME test_priority_scheduler COMMAND test_priority_scheduler)
+
+add_executable(test_mpsc_actor_mailbox sched/test_actor_mailbox.cpp)
+target_link_libraries(test_mpsc_actor_mailbox hpactor)
+add_test(NAME test_mpsc_actor_mailbox COMMAND test_mpsc_actor_mailbox)

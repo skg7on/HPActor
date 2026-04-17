@@ -14,7 +14,6 @@
 
 #pragma once
 #include <atomic>
-#include <type_traits>
 #include <utility>
 
 namespace hpactor {
@@ -31,7 +30,23 @@ template <typename T> class Message {
   public:
     Message() = default;
 
-    // Perfect forwarding constructor - handles both copy and move
+    // Copy and move constructors - needed because the templated constructor
+    // below would otherwise hide the implicit members.
+    Message(const Message& other) : payload_(other.payload_) {}
+    Message(Message&& other) noexcept : payload_(std::move(other.payload_)) {}
+
+    // Copy and move assignment - needed when a user-declared move constructor
+    // deletes the implicit copy assignment operator
+    Message& operator=(const Message& other) {
+        payload_ = other.payload_;
+        return *this;
+    }
+    Message& operator=(Message&& other) noexcept {
+        payload_ = std::move(other.payload_);
+        return *this;
+    }
+
+    // Perfect forwarding constructor - handles payload types that are not Message
     template <typename U>
     explicit Message(U&& payload) : payload_(std::forward<U>(payload)) {}
 
@@ -47,8 +62,8 @@ template <typename T> class Message {
         return std::move(payload_);
     }
 
-    // Intrusive link for MPSCMailbox
-    std::atomic<Message*> mpsc_next_{nullptr};
+    // Intrusive link for MPSCMailbox (name must be mpsc_next, no underscore)
+    std::atomic<Message*> mpsc_next{nullptr};
 
   private:
     T payload_;

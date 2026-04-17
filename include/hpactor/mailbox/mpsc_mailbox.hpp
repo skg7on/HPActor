@@ -2,12 +2,22 @@
 #pragma once
 
 #include <atomic>
-#include <cstddef>
 
 namespace hpactor::mailbox {
 
-// Intrusive Vyukov MPSC queue for actor mailboxes
+// Intrusive Vyukov MPSC queue for actor mailboxes.
 // T must provide: std::atomic<T*> mpsc_next
+//
+// Uses head/tail pointers with a dummy stub node. The dummy's mpsc_next
+// always points to the oldest element (or nullptr when empty).
+//
+// Queue structure:
+//   head_ (dummy) -> oldest -> ... -> newest -> nullptr
+//   tail_ always points to the dummy stub
+//   count_ tracks number of elements (producer increments, consumer decrements)
+//
+// The dummy node is a T (inherited) so &stub_ is a valid T*.
+//
 template<typename T>
 class MPSCMailbox {
 public:
@@ -15,49 +25,50 @@ public:
         stub_.mpsc_next.store(nullptr, std::memory_order_relaxed);
         head_.store(&stub_, std::memory_order_relaxed);
         tail_.store(&stub_, std::memory_order_relaxed);
+        count_.store(0, std::memory_order_relaxed);
     }
 
-    // Producer: enqueue node (wait-free)
+    // Producer: enqueue node at head (wait-free)
+    // Chain: head_ -> node -> old_head -> ... -> oldest -> nullptr
     void enqueue(T* node) noexcept {
         node->mpsc_next.store(nullptr, std::memory_order_relaxed);
         T* prev = head_.exchange(node, std::memory_order_acq_rel);
         prev->mpsc_next.store(node, std::memory_order_release);
+        count_.fetch_add(1, std::memory_order_release);
     }
 
-    // Consumer: dequeue node (lock-free, single consumer)
+    // Consumer: dequeue oldest node, or nullptr if empty
+    // The stub (tail_) is always a dummy; stub.mpsc_next → oldest element (or nullptr if empty).
+    // To return the oldest element, we advance stub.mpsc_next to skip over it (sever the link).
     T* dequeue() noexcept {
         T* tail = tail_.load(std::memory_order_acquire);
         T* next = tail->mpsc_next.load(std::memory_order_acquire);
+        if (next == nullptr) return nullptr;
 
-        if (tail == &stub_) {
-            if (!next) return nullptr;
-            tail_ = next;
-            tail = next;
-            next = tail->mpsc_next.load(std::memory_order_acquire);
-        }
-
-        if (next) {
-            tail_.store(next, std::memory_order_release);
-            return tail;
-        }
-
-        return nullptr;
+        // Sever the link from stub to the node we're about to return:
+        // advance stub.mpsc_next to skip over `next` (point to next->next)
+        tail->mpsc_next.store(next->mpsc_next.load(std::memory_order_relaxed),
+                              std::memory_order_release);
+        count_.fetch_sub(1, std::memory_order_release);
+        return next;
     }
 
-    // Check if empty
+    // Consumer: try dequeue once (non-blocking) — same as dequeue
+    T* try_dequeue() noexcept { return dequeue(); }
+
     bool empty() const noexcept {
-        T* tail = tail_.load(std::memory_order_acquire);
-        return tail == &stub_ && tail->mpsc_next.load(std::memory_order_acquire) == nullptr;
+        return count_.load(std::memory_order_acquire) == 0;
     }
 
 private:
-    struct Stub {
-        std::atomic<T*> mpsc_next{nullptr};
+    struct Stub : public T {
+        Stub() : T() {}
     };
 
-    alignas(64) std::atomic<T*> head_;
-    alignas(64) std::atomic<T*> tail_;
-    alignas(64) Stub stub_;
+    alignas(64) std::atomic<T*> head_;   // newest element
+    alignas(64) std::atomic<T*> tail_;   // always stub (dummy)
+    alignas(64) Stub stub_;             // dummy anchor
+    std::atomic<int64_t> count_;        // element count
 };
 
 } // namespace hpactor::mailbox
