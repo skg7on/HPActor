@@ -89,6 +89,7 @@ void EpollBackend::stop() {
     cancelled_timers_.clear();
     handle_to_timer_index_.clear();
     fd_events_.clear();
+    pending_ops_.clear();
 }
 
 bool EpollBackend::add_fd(int fd, IoEvent events) {
@@ -122,6 +123,7 @@ bool EpollBackend::remove_fd(int fd) {
         return false;
     }
     fd_events_.erase(fd);
+    pending_ops_.erase(fd);
     return true;
 }
 
@@ -222,6 +224,81 @@ int EpollBackend::process_timers() {
     return triggered;
 }
 
+void EpollBackend::process_pending_op(int fd, uint32_t events) {
+    auto it = pending_ops_.find(fd);
+    if (it == pending_ops_.end()) {
+        // No pending op for this fd - event was for monitoring only
+        return;
+    }
+
+    // Process pending operation based on type
+    PendingOp& op = it->second;
+    OpType optype = static_cast<OpType>(op.op_type);
+    ssize_t n = -1;
+    int result_err = 0;
+
+    if (optype == OpType::Accept) {
+        // Accept pending
+        if (int(events) & EPOLLIN) {
+            int client_fd = ::accept(fd, nullptr, nullptr);
+            if (client_fd >= 0) {
+                result_err = client_fd;
+            } else {
+                result_err = errno;
+            }
+        }
+    } else if (optype == OpType::Connect) {
+        // Connect pending - check result with getsockopt
+        if (int(events) & EPOLLOUT) {
+            int err = 0;
+            socklen_t errlen = sizeof(err);
+            getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
+            if (err == 0) {
+                result_err = 0;  // Connected successfully
+            } else {
+                result_err = err;
+            }
+        }
+    } else if (optype == OpType::Send || optype == OpType::SendTo) {
+        // Send pending
+        if (int(events) & EPOLLOUT) {
+            if (!op.data.empty()) {
+                n = ::sendto(fd, op.data.data(), op.data.size(), 0,
+                             reinterpret_cast<const sockaddr*>(&op.addr), op.addrlen);
+            } else {
+                n = ::send(fd, nullptr, 0, 0);
+            }
+            result_err = (n < 0) ? errno : static_cast<int>(n);
+        }
+    } else if (optype == OpType::Recv || optype == OpType::RecvFrom) {
+        // Recv pending
+        if (int(events) & EPOLLIN) {
+            if (optype == OpType::RecvFrom) {
+                n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
+            } else {
+                n = ::readv(fd, op.saved_bufs, op.buf_count);
+            }
+            result_err = (n < 0) ? errno : static_cast<int>(n);
+        }
+    } else {
+        // Unknown op type, deliver with error
+        result_err = EINVAL;
+    }
+
+    OpCompletion completion{
+        .actor = op.actor,
+        .type = optype,
+        .fd = fd,
+        .result = result_err,
+        .user_data = 0,
+    };
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
+    pending_ops_.erase(it);
+}
+
 uint64_t EpollBackend::run_after(ActorId actor, int delay_ms) {
     std::lock_guard<std::mutex> lock(mutex_);
 
@@ -299,9 +376,7 @@ void EpollBackend::cancel_timer(uint64_t handle) {
 
 void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
                               ActorId actor, uint32_t op_type) {
-    // Use non-blocking send in a background context
-    // For now, just do synchronous send (blocks) and deliver completion
-    // In a full implementation, would use a thread pool
+    // Concatenate scatter-gather buffers for potential pending storage
     size_t total_len = 0;
     for (int i = 0; i < buf_count; ++i) {
         total_len += bufs[i].iov_len;
@@ -315,6 +390,17 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
     }
 
     ssize_t n = ::send(fd, data.data(), data.size(), 0);
+    if (n < 0 && errno == EAGAIN) {
+        // Would block - store pending operation for wait() to process
+        PendingOp op;
+        op.actor = actor;
+        op.op_type = op_type;
+        op.data = std::move(data);
+        op.buf_count = buf_count;
+        pending_ops_[fd] = std::move(op);
+        return;
+    }
+
     int result = (n < 0) ? errno : static_cast<int>(n);
 
     OpCompletion completion{
@@ -332,16 +418,21 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
 
 void EpollBackend::async_recv(int fd, const iovec* bufs, int buf_count,
                               ActorId actor, uint32_t op_type) {
-    // Use non-blocking recv
-    ssize_t n = ::recvmsg(fd, nullptr, 0);  // Just peek to see if data available
+    // Try non-blocking recv
+    ssize_t n = ::readv(fd, bufs, buf_count);
     if (n < 0 && errno == EAGAIN) {
-        // Would block - need to wait for fd to be readable
-        // For now, return EAGAIN as the result
-        n = -EAGAIN;
+        // Would block - store pending operation for wait() to process
+        PendingOp op;
+        op.actor = actor;
+        op.op_type = op_type;
+        op.buf_count = std::min(buf_count, 16);
+        for (int i = 0; i < op.buf_count; ++i) {
+            op.saved_bufs[i] = bufs[i];
+        }
+        pending_ops_[fd] = std::move(op);
+        return;
     }
 
-    // Actually do the recv
-    n = ::readv(fd, bufs, buf_count);
     int result = (n < 0) ? errno : static_cast<int>(n);
 
     OpCompletion completion{
@@ -399,6 +490,14 @@ void EpollBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t
 
 void EpollBackend::async_accept(int fd, ActorId actor) {
     int client_fd = ::accept(fd, nullptr, nullptr);
+    if (client_fd < 0 && errno == EAGAIN) {
+        // Would block - store pending accept for wait() to process
+        PendingOp op;
+        op.actor = actor;
+        op.op_type = static_cast<uint32_t>(OpType::Accept);
+        pending_ops_[fd] = std::move(op);
+        return;
+    }
     OpCompletion completion{
         .actor = actor,
         .type = OpType::Accept,
@@ -415,17 +514,20 @@ void EpollBackend::async_accept(int fd, ActorId actor) {
 void EpollBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
                                  ActorId actor) {
     int ret = ::connect(fd, addr, addrlen);
-    int result;
-    if (ret < 0) {
-        if (errno == EINPROGRESS) {
-            // Connection in progress - wait for fd to be writable
-            result = 0;
-        } else {
-            result = errno;
+    if (ret < 0 && errno == EINPROGRESS) {
+        // Connection in progress - store for wait() to complete
+        PendingOp op;
+        op.actor = actor;
+        op.op_type = static_cast<uint32_t>(OpType::Connect);
+        if (addrlen <= sizeof(op.addr)) {
+            std::memcpy(&op.addr, addr, addrlen);
+            op.addrlen = addrlen;
         }
-    } else {
-        result = 0;  // Connected immediately
+        pending_ops_[fd] = std::move(op);
+        return;
     }
+
+    int result = (ret < 0) ? errno : 0;
 
     OpCompletion completion{
         .actor = actor,
@@ -447,22 +549,19 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
 
     ssize_t n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
     if (n < 0 && errno == EAGAIN) {
-        // Would block
-        OpCompletion completion{
-            .actor = actor,
-            .type = static_cast<OpType>(op_type),
-            .fd = fd,
-            .result = -EAGAIN,
-            .user_data = 0,
-        };
-        {
-            std::lock_guard<std::mutex> lock(completions_mutex_);
-            pending_completions_.push_back(completion);
+        // Would block - store pending for wait() to process
+        PendingOp op;
+        op.actor = actor;
+        op.op_type = op_type;
+        op.buf_count = std::min(buf_count, 16);
+        for (int i = 0; i < op.buf_count; ++i) {
+            op.saved_bufs[i] = bufs[i];
         }
+        pending_ops_[fd] = std::move(op);
         return;
     }
 
-    n = ::recvmsg(fd, nullptr, 0);
+    n = ::recvmsg(fd, &addr, &addrlen);
     int result = (n < 0) ? errno : static_cast<int>(n);
 
     OpCompletion completion{
@@ -481,23 +580,7 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
 void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
                                  const sockaddr* addr, socklen_t addrlen,
                                  ActorId actor, uint32_t op_type) {
-    ssize_t n = ::sendto(fd, nullptr, 0, 0, addr, addrlen);
-    if (n < 0 && errno == EAGAIN) {
-        OpCompletion completion{
-            .actor = actor,
-            .type = static_cast<OpType>(op_type),
-            .fd = fd,
-            .result = -EAGAIN,
-            .user_data = 0,
-        };
-        {
-            std::lock_guard<std::mutex> lock(completions_mutex_);
-            pending_completions_.push_back(completion);
-        }
-        return;
-    }
-
-    // Actually send
+    // Concatenate scatter-gather buffers
     size_t total_len = 0;
     for (int i = 0; i < buf_count; ++i) {
         total_len += bufs[i].iov_len;
@@ -509,7 +592,21 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
         offset += bufs[i].iov_len;
     }
 
-    n = ::sendto(fd, data.data(), data.size(), 0, addr, addrlen);
+    ssize_t n = ::sendto(fd, data.data(), data.size(), 0, addr, addrlen);
+    if (n < 0 && errno == EAGAIN) {
+        // Would block - store pending for wait() to process
+        PendingOp op;
+        op.actor = actor;
+        op.op_type = op_type;
+        op.data = std::move(data);
+        if (addrlen <= sizeof(op.addr)) {
+            std::memcpy(&op.addr, addr, addrlen);
+            op.addrlen = addrlen;
+        }
+        pending_ops_[fd] = std::move(op);
+        return;
+    }
+
     int result = (n < 0) ? errno : static_cast<int>(n);
 
     OpCompletion completion{
@@ -536,10 +633,16 @@ int EpollBackend::wait(int timeout_ms) {
         return -1;
     }
 
-    // Check for timerfd events
+    // Process all events
     for (int i = 0; i < num_events; ++i) {
-        if (events[i].data.fd == timerfd_) {
+        int fd = events[i].data.fd;
+
+        if (fd == timerfd_) {
+            // Timer event
             process_timers();
+        } else if (fd >= 0) {
+            // Socket I/O event - process pending operation
+            process_pending_op(fd, events[i].events);
         }
     }
 
