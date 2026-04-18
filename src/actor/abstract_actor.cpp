@@ -35,4 +35,12 @@ void AbstractActor::demonitor(const ActorAddr& /*target*/) {
     // TODO: implement demonitor mechanism
 }
 
+void AbstractActor::set_scheduler(sched::IScheduler* /*scheduler*/) {
+    // Default no-op; EventBasedActor overrides this
+}
+
+void AbstractActor::set_mailbox(mailbox::MPSCActorMailbox<Message<MessageVariant>>* /*mailbox*/) {
+    // Default no-op; EventBasedActor overrides this
+}
+
 } // namespace hpactor

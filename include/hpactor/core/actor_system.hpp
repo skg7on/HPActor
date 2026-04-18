@@ -21,6 +21,7 @@
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
+#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -125,7 +126,7 @@ class ActorSystem {
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
 
     // Get actor's mailbox (used by scheduler)
-    ActorMailbox<MessageVariant>* get_mailbox(ActorId id);
+    mailbox::MPSCActorMailbox<Message<MessageVariant>>* get_mailbox(ActorId id);
 
     // Deliver message to local actor
     void deliver_local(ActorId target, MessageVariant msg);
@@ -172,7 +173,7 @@ class ActorSystem {
     std::mutex actors_mutex_;
 
     // Actor mailboxes - maps ActorId to mailbox
-    std::unordered_map<ActorId, std::unique_ptr<ActorMailbox<MessageVariant>>> mailboxes_;
+    std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<Message<MessageVariant>>>> mailboxes_;
     std::mutex mailboxes_mutex_;
 
     // Actor ID generator
@@ -216,8 +217,13 @@ Actor ActorSystem::spawn(Args&&... args) {
     // Create mailbox
     {
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-        mailboxes_.emplace(id, std::make_unique<ActorMailbox<MessageVariant>>());
+        mailboxes_.emplace(id, std::make_unique<mailbox::MPSCActorMailbox<Message<MessageVariant>>>(
+            id, scheduler_.get()));
     }
+
+    // Set scheduler and mailbox on actor
+    actor->set_scheduler(scheduler_.get());
+    actor->set_mailbox(mailboxes_[id].get());
 
     return Actor(actor);
 }

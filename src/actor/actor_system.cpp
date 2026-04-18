@@ -103,7 +103,8 @@ ActorSystem::ActorSystem(const Config& config)
         {
             std::lock_guard<std::mutex> lock(mailboxes_mutex_);
             mailboxes_.emplace(SpawnReceiverId,
-                              std::make_unique<ActorMailbox<MessageVariant>>());
+                std::make_unique<mailbox::MPSCActorMailbox<Message<MessageVariant>>>(
+                    SpawnReceiverId, scheduler_.get()));
         }
     }
 }
@@ -162,7 +163,7 @@ std::shared_ptr<AbstractActor> ActorSystem::get_actor(ActorId id) {
     return nullptr;
 }
 
-ActorMailbox<MessageVariant>* ActorSystem::get_mailbox(ActorId id) {
+mailbox::MPSCActorMailbox<Message<MessageVariant>>* ActorSystem::get_mailbox(ActorId id) {
     std::lock_guard<std::mutex> lock(mailboxes_mutex_);
     auto it = mailboxes_.find(id);
     if (it != mailboxes_.end()) {
@@ -176,20 +177,10 @@ void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
 }
 
 void ActorSystem::deliver_local(ActorId target, MessageVariant msg,
-                                uint8_t priority, int64_t deadline_ns) {
-    ActorMailbox<MessageVariant>* mailbox = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-        auto it = mailboxes_.find(target);
-        if (it != mailboxes_.end()) {
-            mailbox = it->second.get();
-        }
-    }
-
-    if (mailbox) {
-        mailbox->push(Message<MessageVariant>(std::move(msg)));
-        scheduler_->notify_ready(target, priority, deadline_ns);
-    }
+                                uint8_t /*priority*/, int64_t /*deadline_ns*/) {
+    auto* mailbox = get_mailbox(target);
+    if (!mailbox) return;
+    mailbox->push(Message<MessageVariant>(std::move(msg)));
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {

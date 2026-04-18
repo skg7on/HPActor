@@ -14,8 +14,12 @@
 
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/event_based_actor.hpp>
 
 namespace hpactor::sched {
+
+// Thread-local pointer to the current worker executing on this thread
+thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers, uint32_t num_priorities)
     : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
@@ -87,6 +91,10 @@ void HybridScheduler::notify_idle(ActorId actor) {
     // Remove actor from EDF tracking if it was scheduled there
     // For now, this is a stub - full implementation would need EDF cancellation
     (void)actor;
+}
+
+void HybridScheduler::yield(ActorId actor, uint8_t priority) {
+    notify_ready(actor, priority, INT64_MAX);
 }
 
 bool HybridScheduler::try_steal(WorkItem& out) {
@@ -171,18 +179,61 @@ void HybridScheduler::process_actor(ActorId actor) {
 }
 
 void HybridScheduler::execute_actor(const WorkItem& item) {
-    // TODO(Task 4.2): Integrate coroutine resumption when get_coroutine() and
-    // mailbox_has_messages() methods are available on actors.
-    // For now, fall back to non-coroutine receive path.
-    process_actor(item.actor);
+    auto actor_ptr = system_.get_actor(item.actor);
+    if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
+        return;
+    }
+    auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
+
+    // Lazily start the coroutine on first pickup
+    actor->ensure_coroutine_started();
+
+    auto& coroutine = actor->get_actor_coroutine();
+    if (!coroutine) return;
+
+    auto& promise = coroutine.task().handle().promise();
+
+    // Transition: Ready → Running
+    // If already Running/Terminated, skip duplicate pickup
+    uint32_t expected = ActorState::kReady;
+    if (!promise.state.cas(expected, ActorState::kRunning)) {
+        if (promise.state.is_terminated()) {
+            actor->on_exit();
+        }
+        // Already running or idle/IOWaiting — skip
+        return;
+    }
+
+    // Resume the coroutine
+    coroutine.resume();
+
+    // Post-resume: coroutine suspended (Idle/IOWaiting) or terminated.
+    // Note: cannot access promise after resume() returns if coroutine terminated —
+    // the promise is destroyed with the coroutine frame.
+    // Use coroutine.done() which checks internal handle state (not the promise).
+    if (coroutine.done()) {
+        actor->on_exit();
+    }
+    // If idle or IOWaiting, the actor will be re-woken by:
+    // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue → notify_ready)
+    // - TimerAwaiter callback (EventLoop → notify_ready)
+    // Nothing to do here for suspended actors
 }
 
 void HybridScheduler::worker_loop(uint32_t worker_id) {
+    tl_current_worker_id = worker_id;  // set thread-local
+
     while (running_.load(std::memory_order_acquire)) {
         WorkItem item;
 
         // Try local pop first (owner operation - wait-free)
         if (pop_local(item, worker_id)) {
+            execute_actor(item);
+            continue;
+        }
+
+        // Check EDF queue for deadline-ordered work
+        if (pop_edf(item, worker_id)) {
             execute_actor(item);
             continue;
         }
@@ -194,7 +245,25 @@ void HybridScheduler::worker_loop(uint32_t worker_id) {
         }
 
         // No work available - backoff
-        // TODO: Implement proper backoff (exponential, yield, etc.)
+        backoff();
+    }
+}
+
+uint32_t HybridScheduler::current_worker_id() const {
+    return tl_current_worker_id;
+}
+
+void HybridScheduler::backoff() {
+    // Exponential backoff: yield for small counts, sleep for larger
+    static thread_local uint32_t count = 0;
+    uint32_t c = count++;
+
+    if (c < 4) {
+        std::this_thread::yield();
+    } else {
+        // Sleep for a short interval (exponential, capped)
+        uint32_t backoff_us = std::min<uint32_t>(1024u, 10u << (c - 4));
+        std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
     }
 }
 

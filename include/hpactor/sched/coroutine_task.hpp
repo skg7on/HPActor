@@ -38,6 +38,10 @@ struct CoroutinePromise {
     // Start suspended — scheduler decides when to resume
     std::suspend_always initial_suspend() noexcept { return {}; }
 
+    // Final suspend — keep coroutine frame alive for restart.
+    // Actor runtime calls resume() again to re-enter act().
+    std::suspend_always final_suspend() noexcept { return {}; }
+
     // Called on co_return
     void return_void() noexcept {
         state.set(ActorState::kTerminated);
@@ -61,6 +65,14 @@ struct CoroutinePromise {
     bool is_idle() const { return state.is_idle(); }
     bool is_running() const { return state.is_running(); }
     bool is_terminated() const { return state.is_terminated(); }
+
+    // Called by MPSCActorMailbox when a message arrives while actor is idle.
+    // If actor is suspended (waiting in MailboxAwaiter), resume it.
+    void notify_mailbox_nonempty() {
+        if (continuation && !continuation.done()) {
+            continuation.resume();
+        }
+    }
 };
 
 // CoroutineTask: return type of actor coroutines
@@ -109,6 +121,18 @@ public:
 private:
     handle_type handle_;
 };
+
+} // namespace hpactor::sched
+
+// Specialize std::coroutine_traits so CoroutineTask can be used as a
+// coroutine return type. The compiler looks for coroutine_traits<ReturnType>
+// to find promise_type.
+template<>
+struct std::coroutine_traits<hpactor::sched::CoroutineTask> {
+    using promise_type = hpactor::sched::CoroutinePromise;
+};
+
+namespace hpactor::sched {
 
 // Out-of-line definition for get_return_object
 inline CoroutineTask CoroutinePromise::get_return_object() {
