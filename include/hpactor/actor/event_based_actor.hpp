@@ -16,6 +16,8 @@
 
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/behavior.hpp>
+#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/sched/actor_coroutine.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
 
 namespace hpactor {
@@ -32,13 +34,38 @@ class EventBasedActor : public LocalActor {
     void receive(MessageVariant&& msg) override;
 
     // Coroutine support
-    const sched::CoroutineTask& get_coroutine() const { return coroutine_; }
-    void set_coroutine(sched::CoroutineTask&& t) { coroutine_ = std::move(t); }
+    // act() - entry point for actor coroutine; override to implement actor logic.
+    // Default returns an empty coroutine that terminates immediately.
+    virtual sched::CoroutineTask act() {
+        return {};  // Empty coroutine - subclasses override with their impl
+    }
 
-    // Mailbox state for awaiter
-    // TODO: Implement when MPSC mailbox (Phase 7) is integrated
-    bool mailbox_has_messages() const { return false; }
-    bool mailbox_is_empty() const { return true; }
+    // ActorCoroutine ownership
+    sched::ActorCoroutine& get_actor_coroutine() { return actor_coroutine_; }
+    void set_actor_coroutine(sched::ActorCoroutine&& coroutine) {
+        actor_coroutine_ = std::move(coroutine);
+    }
+
+    // Mailbox delegation
+    bool mailbox_has_messages() const {
+        return mailbox_ && !mailbox_->empty();
+    }
+    bool mailbox_is_empty() const {
+        return !mailbox_ || mailbox_->empty();
+    }
+
+    // Lazily create the actor coroutine on first execute_actor()
+    void ensure_coroutine_started() {
+        if (!actor_coroutine_) {
+            actor_coroutine_ = sched::ActorCoroutine{act(), id()};
+        }
+    }
+
+    // Setters for runtime dependencies
+    void set_scheduler(sched::IScheduler* scheduler) { scheduler_ = scheduler; }
+    void set_mailbox(mailbox::MPSCActorMailbox<MessageVariant>* mailbox) {
+        mailbox_ = mailbox;
+    }
 
   protected:
     virtual Behavior make_behavior() {
@@ -51,8 +78,10 @@ class EventBasedActor : public LocalActor {
     EventBasedActor(ActorContext* ctx, ActorSystem& sys);
 
   private:
-    sched::CoroutineTask coroutine_;
+    sched::ActorCoroutine actor_coroutine_;
     Behavior behavior_;
+    mailbox::MPSCActorMailbox<MessageVariant>* mailbox_ = nullptr;
+    sched::IScheduler* scheduler_ = nullptr;
 };
 
 } // namespace hpactor

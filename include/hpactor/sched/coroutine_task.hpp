@@ -118,6 +118,18 @@ private:
     handle_type handle_;
 };
 
+} // namespace hpactor::sched
+
+// Specialize std::coroutine_traits so CoroutineTask can be used as a
+// coroutine return type. The compiler looks for coroutine_traits<ReturnType>
+// to find promise_type.
+template<>
+struct std::coroutine_traits<hpactor::sched::CoroutineTask> {
+    using promise_type = hpactor::sched::CoroutinePromise;
+};
+
+namespace hpactor::sched {
+
 // Out-of-line definition for get_return_object
 inline CoroutineTask CoroutinePromise::get_return_object() {
     return CoroutineTask{handle_type::from_promise(*this)};
