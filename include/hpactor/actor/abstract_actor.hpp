@@ -16,6 +16,7 @@
 
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
+#include <hpactor/actor/message.hpp>
 
 #include <memory>
 #include <variant>
@@ -27,6 +28,13 @@ class ActorSystem;
 namespace net {
 enum class OpType : uint32_t;
 }  // namespace net
+namespace sched {
+class IScheduler;
+}  // namespace sched
+namespace mailbox {
+template<typename T>
+class MPSCActorMailbox;
+}  // namespace mailbox
 
 // -----------------------------------------------------------------------------
 // MessageVariant - std::variant for all message types
@@ -82,6 +90,11 @@ public:
 
     // Set actor address (called by ActorSystem during spawn)
     void set_address(ActorAddress addr) { address_ = addr; }
+
+    // Set scheduler and mailbox (called by ActorSystem during spawn)
+    // Default implementations in .cpp; EventBasedActor overrides these
+    virtual void set_scheduler(sched::IScheduler* scheduler);
+    virtual void set_mailbox(mailbox::MPSCActorMailbox<Message<MessageVariant>>* mailbox);
 
     // Linking - death sharing
     void link_to(const ActorAddr& other);

@@ -58,6 +58,15 @@ public:
         return node;
     }
 
+    // Non-blocking pop matching ActorMailbox interface
+    bool try_pop(T& out) noexcept {
+        T* node = dequeue();
+        if (!node) return false;
+        out = std::move(*node);
+        delete node;
+        return true;
+    }
+
     bool empty() const noexcept { return mailbox_.empty(); }
 
     // For MailboxAwaiter: was_empty before suspension?

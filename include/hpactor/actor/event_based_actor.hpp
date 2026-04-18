@@ -65,8 +65,8 @@ class EventBasedActor : public LocalActor {
     }
 
     // Setters for runtime dependencies
-    void set_scheduler(sched::IScheduler* scheduler) { scheduler_ = scheduler; }
-    void set_mailbox(mailbox::MPSCActorMailbox<MessageVariant>* mailbox) {
+    void set_scheduler(sched::IScheduler* scheduler) override { scheduler_ = scheduler; }
+    void set_mailbox(mailbox::MPSCActorMailbox<Message<MessageVariant>>* mailbox) override {
         mailbox_ = mailbox;
     }
 
@@ -85,7 +85,7 @@ class EventBasedActor : public LocalActor {
   private:
     sched::ActorCoroutine actor_coroutine_;
     Behavior behavior_;
-    mailbox::MPSCActorMailbox<MessageVariant>* mailbox_ = nullptr;
+    mailbox::MPSCActorMailbox<Message<MessageVariant>>* mailbox_ = nullptr;
     sched::IScheduler* scheduler_ = nullptr;
 };
 
