@@ -28,6 +28,9 @@ struct MockScheduler : public hpactor::sched::IScheduler {
         last_actor = actor;
     }
     void notify_idle(hpactor::ActorId) override {}
+    void yield(hpactor::ActorId actor, uint8_t priority) override {
+        notify_ready(actor, priority, INT64_MAX);
+    }
     hpactor::sched::TimerHandle schedule_after(hpactor::sched::timer_callback, int64_t) override { return {}; }
     hpactor::sched::TimerHandle schedule_every(hpactor::sched::timer_callback, int64_t) override { return {}; }
     void cancel_timer(hpactor::sched::TimerHandle) override {}

@@ -89,6 +89,10 @@ void HybridScheduler::notify_idle(ActorId actor) {
     (void)actor;
 }
 
+void HybridScheduler::yield(ActorId actor, uint8_t priority) {
+    notify_ready(actor, priority, INT64_MAX);
+}
+
 bool HybridScheduler::try_steal(WorkItem& out) {
     // Use A2WS for adaptive victim selection
     for (uint32_t attempt = 0; attempt < num_workers_; ++attempt) {

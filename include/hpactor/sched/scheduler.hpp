@@ -67,6 +67,9 @@ public:
     // Notify scheduler that an actor has become idle (blocked on I/O, etc.)
     virtual void notify_idle(ActorId actor) = 0;
 
+    // Voluntarily yield — re-enqueue actor at same priority for cooperative multitasking
+    virtual void yield(ActorId actor, uint8_t priority) = 0;
+
     // Schedule a one-shot timer to fire after delay_ns
     virtual TimerHandle schedule_after(timer_callback cb, int64_t delay_ns) = 0;
 
@@ -109,6 +112,7 @@ public:
     void stop() override;
     void notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) override;
     void notify_idle(ActorId actor) override;
+    void yield(ActorId actor, uint8_t priority) override;
     bool is_running() const override { return running_.load(std::memory_order_acquire); }
     size_t worker_count() const override { return num_workers_; }
     TimerHandle schedule_after(timer_callback cb, int64_t delay_ns) override;

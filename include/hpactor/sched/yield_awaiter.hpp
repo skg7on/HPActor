@@ -26,8 +26,7 @@ public:
         continuation_ = continuation;
         // Re-enqueue the actor at same priority, then return (suspend)
         // The worker loop will pick up this actor again via notify_ready
-        // TODO(Task 3.2): Replace with scheduler_->yield(actor_id_, priority_)
-        scheduler_->notify_ready(actor_id_, priority_, INT64_MAX);
+        scheduler_->yield(actor_id_, priority_);
     }
 
     void await_resume() noexcept {}
@@ -52,8 +51,7 @@ public:
         continuation_ = continuation;
         auto& promise = std::coroutine_handle<CoroutinePromise>::from_address(
                             continuation.address()).promise();
-        // TODO(Task 3.2): Replace with scheduler_->yield(promise.actor_id, priority_)
-        scheduler_->notify_ready(promise.actor_id, priority_, INT64_MAX);
+        scheduler_->yield(promise.actor_id, priority_);
     }
 
     void await_resume() noexcept {}
