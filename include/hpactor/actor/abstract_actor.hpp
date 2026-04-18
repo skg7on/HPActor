@@ -94,6 +94,9 @@ public:
     // Receive message (called by scheduler)
     virtual void receive(MessageVariant&& msg) = 0;
 
+    // Type query for safe downcasting without RTTI
+    virtual bool is_event_based_actor() const { return false; }
+
 protected:
     AbstractActor(ActorId id, ActorType type, ActorSystem& sys);
 

@@ -14,6 +14,7 @@
 
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/event_based_actor.hpp>
 
 namespace hpactor::sched {
 
@@ -175,10 +176,45 @@ void HybridScheduler::process_actor(ActorId actor) {
 }
 
 void HybridScheduler::execute_actor(const WorkItem& item) {
-    // TODO(Task 4.2): Integrate coroutine resumption when get_coroutine() and
-    // mailbox_has_messages() methods are available on actors.
-    // For now, fall back to non-coroutine receive path.
-    process_actor(item.actor);
+    auto actor_ptr = system_.get_actor(item.actor);
+    if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
+        return;
+    }
+    auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
+
+    // Lazily start the coroutine on first pickup
+    actor->ensure_coroutine_started();
+
+    auto& coroutine = actor->get_actor_coroutine();
+    if (!coroutine) return;
+
+    auto& promise = coroutine.task().handle().promise();
+
+    // Transition: Ready → Running
+    // If already Running/Terminated, skip duplicate pickup
+    uint32_t expected = ActorState::kReady;
+    if (!promise.state.cas(expected, ActorState::kRunning)) {
+        if (promise.state.is_terminated()) {
+            actor->on_exit();
+        }
+        // Already running or idle/IOWaiting — skip
+        return;
+    }
+
+    // Resume the coroutine
+    coroutine.resume();
+
+    // Post-resume: coroutine suspended (Idle/IOWaiting) or terminated.
+    // Note: cannot access promise after resume() returns if coroutine terminated —
+    // the promise is destroyed with the coroutine frame.
+    // Use coroutine.done() which checks internal handle state (not the promise).
+    if (coroutine.done()) {
+        actor->on_exit();
+    }
+    // If idle or IOWaiting, the actor will be re-woken by:
+    // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue → notify_ready)
+    // - TimerAwaiter callback (EventLoop → notify_ready)
+    // Nothing to do here for suspended actors
 }
 
 void HybridScheduler::worker_loop(uint32_t worker_id) {

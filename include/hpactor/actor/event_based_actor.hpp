@@ -33,6 +33,9 @@ class EventBasedActor : public LocalActor {
 
     void receive(MessageVariant&& msg) override;
 
+    // Type query for safe downcasting without RTTI
+    bool is_event_based_actor() const override { return true; }
+
     // Coroutine support
     // act() - entry point for actor coroutine; override to implement actor logic.
     // Default returns an empty coroutine that terminates immediately.
@@ -73,6 +76,8 @@ class EventBasedActor : public LocalActor {
     }
     void on_activate() override;
     void on_deactivate() override;
+
+  public:
     virtual void on_exit() {}
 
     EventBasedActor(ActorContext* ctx, ActorSystem& sys);
