@@ -185,3 +185,19 @@ add_test(NAME test_priority_scheduler COMMAND test_priority_scheduler)
 add_executable(test_mpsc_actor_mailbox sched/test_actor_mailbox.cpp)
 target_link_libraries(test_mpsc_actor_mailbox hpactor)
 add_test(NAME test_mpsc_actor_mailbox COMMAND test_mpsc_actor_mailbox)
+
+add_executable(test_coroutine_task sched/test_coroutine_task.cpp)
+target_link_libraries(test_coroutine_task hpactor)
+add_test(NAME test_coroutine_task COMMAND test_coroutine_task)
+
+add_executable(test_actor_state sched/test_actor_state.cpp)
+target_link_libraries(test_actor_state hpactor)
+add_test(NAME test_actor_state COMMAND test_actor_state)
+
+add_executable(test_mailbox_awaiter sched/test_mailbox_awaiter.cpp)
+target_link_libraries(test_mailbox_awaiter hpactor)
+add_test(NAME test_mailbox_awaiter COMMAND test_mailbox_awaiter)
+
+add_executable(test_coroutine_scheduling sched/test_coroutine_scheduling.cpp)
+target_link_libraries(test_coroutine_scheduling hpactor)
+add_test(NAME test_coroutine_scheduling COMMAND test_coroutine_scheduling)

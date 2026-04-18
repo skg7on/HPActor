@@ -79,9 +79,10 @@ public:
         mailbox_was_empty_.store(val, std::memory_order_release);
     }
 
-    // Inject a message for testing (bypasses edge-trigger)
+    // Inject a message for testing (bypasses scheduler notify_ready)
     void inject_for_test(T* node) noexcept {
         mailbox_.enqueue(node);
+        mailbox_was_empty_.store(false, std::memory_order_release);
     }
 
 private:

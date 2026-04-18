@@ -38,6 +38,10 @@ struct CoroutinePromise {
     // Start suspended — scheduler decides when to resume
     std::suspend_always initial_suspend() noexcept { return {}; }
 
+    // Final suspend — keep coroutine frame alive for restart.
+    // Actor runtime calls resume() again to re-enter act().
+    std::suspend_always final_suspend() noexcept { return {}; }
+
     // Called on co_return
     void return_void() noexcept {
         state.set(ActorState::kTerminated);

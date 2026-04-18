@@ -18,6 +18,9 @@
 
 namespace hpactor::sched {
 
+// Thread-local pointer to the current worker executing on this thread
+thread_local uint32_t tl_current_worker_id = UINT32_MAX;
+
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers, uint32_t num_priorities)
     : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
       workers_(num_workers), a2ws_(num_workers), timer_wheel_(1'000'000, 4) {
@@ -218,11 +221,19 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
 }
 
 void HybridScheduler::worker_loop(uint32_t worker_id) {
+    tl_current_worker_id = worker_id;  // set thread-local
+
     while (running_.load(std::memory_order_acquire)) {
         WorkItem item;
 
         // Try local pop first (owner operation - wait-free)
         if (pop_local(item, worker_id)) {
+            execute_actor(item);
+            continue;
+        }
+
+        // Check EDF queue for deadline-ordered work
+        if (pop_edf(item, worker_id)) {
             execute_actor(item);
             continue;
         }
@@ -234,7 +245,25 @@ void HybridScheduler::worker_loop(uint32_t worker_id) {
         }
 
         // No work available - backoff
-        // TODO: Implement proper backoff (exponential, yield, etc.)
+        backoff();
+    }
+}
+
+uint32_t HybridScheduler::current_worker_id() const {
+    return tl_current_worker_id;
+}
+
+void HybridScheduler::backoff() {
+    // Exponential backoff: yield for small counts, sleep for larger
+    static thread_local uint32_t count = 0;
+    uint32_t c = count++;
+
+    if (c < 4) {
+        std::this_thread::yield();
+    } else {
+        // Sleep for a short interval (exponential, capped)
+        uint32_t backoff_us = std::min<uint32_t>(1024u, 10u << (c - 4));
+        std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
     }
 }
 

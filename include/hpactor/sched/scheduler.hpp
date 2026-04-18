@@ -156,6 +156,12 @@ public:
     bool pop_local(WorkItem& out, uint32_t worker_id);
     bool pop_edf(WorkItem& out, uint32_t worker_id);
 
+    // Thread-local worker identification
+    uint32_t current_worker_id() const;
+
+    // Exponential backoff when no work available
+    void backoff();
+
     ActorSystem& system_;
     uint32_t num_workers_;
     uint32_t num_priorities_;
