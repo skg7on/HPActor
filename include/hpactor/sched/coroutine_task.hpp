@@ -61,6 +61,14 @@ struct CoroutinePromise {
     bool is_idle() const { return state.is_idle(); }
     bool is_running() const { return state.is_running(); }
     bool is_terminated() const { return state.is_terminated(); }
+
+    // Called by MPSCActorMailbox when a message arrives while actor is idle.
+    // If actor is suspended (waiting in MailboxAwaiter), resume it.
+    void notify_mailbox_nonempty() {
+        if (continuation && !continuation.done()) {
+            continuation.resume();
+        }
+    }
 };
 
 // CoroutineTask: return type of actor coroutines
