@@ -25,6 +25,11 @@
 //
 // Run: ./build/examples/08_coroutine_scheduler_demo
 //
+// Note: Message types (ping_msg, pong_msg, stop_msg, start_msg) are defined
+// in the framework's abstract_actor.hpp for convenience. In a real application,
+// custom message types would be defined in user code and included via a
+// user-defined MessageVariant type.
+//
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
@@ -65,8 +70,8 @@ class EchoActor : public hpactor::EventBasedActor {
             auto msg = co_await make_mailbox_awaiter();
             auto& variant = msg.payload();
 
-            if (std::holds_alternative<hpactor::ping_msg>(variant)) {
-                auto& ping = std::get<hpactor::ping_msg>(variant);
+            if (std::holds_alternative<ping_msg>(variant)) {
+                auto& ping = std::get<ping_msg>(variant);
                 std::cout << "[EchoActor] Got ping #" << ping.sequence
                           << " from node " << ping.from.node_id
                           << " -> thread " << std::this_thread::get_id() << "\n";
@@ -101,7 +106,7 @@ void demo_single_actor() {
     std::cout << "Spawned EchoActor at node " << echo_ref.address().node_id << "\n";
 
     // Send it a message
-    system.deliver_local(echo_ref.address().id, hpactor::ping_msg{echo_ref.address(), 0});
+    system.deliver_local(echo_ref.address().id, ping_msg{echo_ref.address(), 0});
 
     // Let scheduler run for a moment
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -137,11 +142,11 @@ void demo_multi_actor() {
 
     // Send messages to both echo actors
     system.deliver_local(echo1_ref.address().id,
-        hpactor::ping_msg{echo1_ref.address(), 1});
+        ping_msg{echo1_ref.address(), 1});
     system.deliver_local(echo2_ref.address().id,
-        hpactor::ping_msg{echo2_ref.address(), 2});
+        ping_msg{echo2_ref.address(), 2});
     system.deliver_local(echo1_ref.address().id,
-        hpactor::ping_msg{echo1_ref.address(), 3});
+        ping_msg{echo1_ref.address(), 3});
 
     // Let the actors exchange messages
     std::cout << "\nLetting actors exchange messages...\n";

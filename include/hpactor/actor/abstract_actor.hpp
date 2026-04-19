@@ -69,6 +69,8 @@ struct completion_msg {
 
 // -----------------------------------------------------------------------------
 // User message types for examples and testing
+// These are defined here for convenience but should typically be defined
+// in user code. See examples/08_coroutine_scheduler_demo.cpp
 // -----------------------------------------------------------------------------
 struct ping_msg {
     ActorAddress from;
