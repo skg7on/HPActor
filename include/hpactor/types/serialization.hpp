@@ -15,7 +15,6 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/message.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <cstring>
@@ -24,25 +23,6 @@
 #include <unordered_map>
 
 namespace hpactor {
-
-// -----------------------------------------------------------------------------
-// TypeTag - type identifier for serialization (replaces RTTI)
-// -----------------------------------------------------------------------------
-// Each serializable type gets a unique tag. System messages use tags 0-99,
-// user messages use tags 100+.
-// -----------------------------------------------------------------------------
-enum class TypeTag : uint32_t {
-    Invalid = 0,
-
-    // System messages (always present)
-    DownMsg = 1,
-    ExitMsg = 2,
-    LinkMsg = 3,
-    UnlinkMsg = 4,
-
-    // First available user tag
-    User = 100,
-};
 
 // -----------------------------------------------------------------------------
 // Serializer interface
@@ -63,6 +43,27 @@ public:
     // Register a user message type
     template <typename T>
     void register_type(TypeTag tag);
+};
+
+// -----------------------------------------------------------------------------
+// TypedMessage - type-erased message with runtime type identification
+// Applications define their own TypeTag values and serialize/deserialize
+// messages to/from bytes. This allows heterogeneous message types without
+// template proliferation.
+// -----------------------------------------------------------------------------
+class TypedMessage {
+public:
+    TypedMessage() = default;
+    TypedMessage(TypeTag tag, bytes payload)
+        : type_id_(tag), payload_(std::move(payload)) {}
+
+    TypeTag type_id() const { return type_id_; }
+    const bytes& payload() const { return payload_; }
+    bytes& payload() { return payload_; }
+
+private:
+    TypeTag type_id_ = TypeTag::Invalid;
+    bytes payload_;
 };
 
 // -----------------------------------------------------------------------------

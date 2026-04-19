@@ -13,6 +13,9 @@
 // limitations under the License.
 
 #pragma once
+
+#include <hpactor/types/types.hpp>
+
 #include <atomic>
 #include <utility>
 

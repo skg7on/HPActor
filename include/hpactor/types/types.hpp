@@ -253,4 +253,22 @@ struct TraceContext {
 // -----------------------------------------------------------------------------
 using bytes = std::vector<uint8_t>;
 
+// -----------------------------------------------------------------------------
+// TypeTag - type identifier for serialization (replaces RTTI)
+// Each serializable type gets a unique tag. System messages use tags 0-99,
+// user messages use tags 100+.
+// -----------------------------------------------------------------------------
+enum class TypeTag : uint32_t {
+    Invalid = 0,
+
+    // System messages (always present)
+    DownMsg = 1,
+    ExitMsg = 2,
+    LinkMsg = 3,
+    UnlinkMsg = 4,
+
+    // First available user tag
+    User = 100,
+};
+
 } // namespace hpactor
