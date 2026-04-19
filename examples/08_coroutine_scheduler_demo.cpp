@@ -49,6 +49,13 @@
 using namespace hpactor;
 
 // -----------------------------------------------------------------------------
+// Example message types (ping_msg, pong_msg, etc.) are defined in the
+// framework's abstract_actor.hpp as part of MessageVariant for convenience.
+// In a real application, you would define your own message types and
+// compose them with system messages in your own ApplicationMessageVariant.
+// -----------------------------------------------------------------------------
+
+// -----------------------------------------------------------------------------
 // Shared state for demonstration output
 // -----------------------------------------------------------------------------
 static std::atomic<int> g_context_switches{0};

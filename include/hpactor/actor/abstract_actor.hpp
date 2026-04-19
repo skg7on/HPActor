@@ -38,7 +38,9 @@ class MPSCActorMailbox;
 }  // namespace mailbox
 
 // -----------------------------------------------------------------------------
-// MessageVariant - std::variant for all message types
+// System message types - framework internal messages
+// These are delivered by the ActorSystem to actors for lifecycle events
+// and I/O completions. Applications do not send these directly.
 // -----------------------------------------------------------------------------
 struct down_msg {
     ActorAddress terminated_actor;
@@ -66,6 +68,19 @@ struct completion_msg {
     int result;          // bytes transferred (>= 0) or -errno on failure
     uint64_t user_data;  // original user data from the async operation
 };
+
+// -----------------------------------------------------------------------------
+// SystemMessageVariant - std::variant for framework system messages only
+// Applications define their own message types and compose them with
+// system messages using their own ApplicationMessageVariant type.
+// -----------------------------------------------------------------------------
+using SystemMessageVariant = std::variant<
+    completion_msg,
+    down_msg,
+    exit_msg,
+    link_msg,
+    unlink_msg
+>;
 
 // -----------------------------------------------------------------------------
 // User message types for examples and testing
@@ -101,7 +116,9 @@ struct status_msg {
 };
 
 // -----------------------------------------------------------------------------
-// MessageVariant - std::variant for all message types
+// MessageVariant - std::variant for all message types (system + example)
+// For new applications, prefer defining your own ApplicationMessageVariant
+// that extends SystemMessageVariant with your user-defined types.
 // -----------------------------------------------------------------------------
 using MessageVariant = std::variant<
     completion_msg,
@@ -109,7 +126,7 @@ using MessageVariant = std::variant<
     exit_msg,
     link_msg,
     unlink_msg,
-    // User-defined message types
+    // Example/user message types
     ping_msg,
     pong_msg,
     stop_msg,
