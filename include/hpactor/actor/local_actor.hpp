@@ -27,6 +27,9 @@ public:
     ActorContext* context() { return ctx_; }
     ActorSystem& home_system() { return system(); }
 
+    // Set the actor context (called by ActorSystem during spawn)
+    void set_context(ActorContext* ctx) { ctx_ = ctx; }
+
 protected:
     LocalActor(ActorContext* ctx, ActorSystem& sys);
     LocalActor(ActorId id, ActorContext* ctx, ActorSystem& sys);

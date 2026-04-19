@@ -19,14 +19,23 @@
 #include <hpactor/actor/message.hpp>
 
 #include <atomic>
+#include <functional>
 
 namespace hpactor::mailbox {
+
+// Continuation callback type - called when actor should be resumed
+using ActorContinuationCallback = std::function<void()>;
 
 template<typename T>
 class MPSCActorMailbox {
 public:
     MPSCActorMailbox(ActorId actor_id, sched::IScheduler* scheduler) noexcept
         : actor_id_(actor_id), scheduler_(scheduler) {}
+
+    // Set the continuation callback to resume the actor's coroutine
+    void set_continuation_callback(ActorContinuationCallback callback) {
+        continuation_callback_ = std::move(callback);
+    }
 
     // Producer: enqueue message and potentially wake actor (edge-trigger)
     void enqueue(T* node) noexcept {
@@ -38,6 +47,12 @@ public:
                     expected, false,
                     std::memory_order_acq_rel,
                     std::memory_order_acquire)) {
+                // Directly resume the actor's continuation if available
+                // This avoids the latency of queuing and later pickup
+                if (continuation_callback_) {
+                    continuation_callback_();
+                }
+                // Also notify scheduler for bookkeeping and potential requeue
                 scheduler_->notify_ready(actor_id_, 0, INT64_MAX);
             }
         }
@@ -90,6 +105,7 @@ private:
     sched::IScheduler* scheduler_;
     MPSCMailbox<T> mailbox_;
     std::atomic<bool> mailbox_was_empty_{true};
+    ActorContinuationCallback continuation_callback_;
 };
 
 } // namespace hpactor::mailbox

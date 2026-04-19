@@ -29,8 +29,11 @@ namespace hpactor {
 // -----------------------------------------------------------------------------
 class ActorContext {
   public:
-    explicit ActorContext(Actor owner);
+    explicit ActorContext(Actor owner, ActorSystem* system = nullptr);
     ~ActorContext();
+
+    // Set the system reference (used when owner is not set)
+    void set_system(ActorSystem* system) { system_ = system; }
 
     // Spawn child actors
     template <typename Fn, typename... Args>
@@ -67,6 +70,7 @@ class ActorContext {
 
   private:
     Actor owner_;
+    ActorSystem* system_ = nullptr;
     std::vector<Actor> children_;
     std::vector<ActorAddress> linked_;
     std::vector<ActorAddress> monitored_;

@@ -19,6 +19,7 @@
 #include <hpactor/actor/message.hpp>
 
 #include <memory>
+#include <string>
 #include <variant>
 
 namespace hpactor {
@@ -66,13 +67,54 @@ struct completion_msg {
     uint64_t user_data;  // original user data from the async operation
 };
 
+// -----------------------------------------------------------------------------
+// User message types for examples and testing
+// -----------------------------------------------------------------------------
+struct ping_msg {
+    ActorAddress from;
+    int sequence;
+};
+
+struct pong_msg {
+    ActorAddress from;
+    int sequence;
+};
+
+struct stop_msg {};
+
+struct start_msg {
+    int count;
+};
+
+struct work_msg {
+    int value;
+};
+
+struct result_msg {
+    int value;
+};
+
+struct status_msg {
+    std::string label;
+};
+
+// -----------------------------------------------------------------------------
+// MessageVariant - std::variant for all message types
+// -----------------------------------------------------------------------------
 using MessageVariant = std::variant<
     completion_msg,
     down_msg,
     exit_msg,
     link_msg,
-    unlink_msg
-    // ... user-defined types
+    unlink_msg,
+    // User-defined message types
+    ping_msg,
+    pong_msg,
+    stop_msg,
+    start_msg,
+    work_msg,
+    result_msg,
+    status_msg
 >;
 
 // -----------------------------------------------------------------------------

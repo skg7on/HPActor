@@ -65,8 +65,15 @@ public:
     }
 
     // Called when resuming (message arrived)
-    void await_resume() noexcept {
-        // State should already be Ready or Running
+    T await_resume() noexcept {
+        // Dequeue and return the message
+        auto* msg = mailbox_->dequeue();
+        if (msg) {
+            // Return by moving the Message out
+            return std::move(*msg);
+        }
+        // Return empty message if dequeue failed
+        return T{};
     }
 
 private:

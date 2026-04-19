@@ -193,14 +193,20 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
 
     auto& promise = coroutine.task().handle().promise();
 
+    // First transition: kIdle → kReady (if needed)
+    // This handles the case where actor is picked up after suspending
+    if (promise.state.is_idle()) {
+        promise.state.set(ActorState::kReady);
+    }
+
     // Transition: Ready → Running
-    // If already Running/Terminated, skip duplicate pickup
+    // If not in Ready state (already Running/Terminated), skip
     uint32_t expected = ActorState::kReady;
     if (!promise.state.cas(expected, ActorState::kRunning)) {
         if (promise.state.is_terminated()) {
             actor->on_exit();
         }
-        // Already running or idle/IOWaiting — skip
+        // Already running, idle, or IOWaiting — skip
         return;
     }
 

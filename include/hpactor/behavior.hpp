@@ -20,6 +20,12 @@
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
+// overloaded - helper for std::visit with lambdas (C++20 backport)
+// -----------------------------------------------------------------------------
+template<class... Ts> struct overloaded : Ts... { using Ts::operator()...; };
+template<class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
+
+// -----------------------------------------------------------------------------
 // Behavior - handler function for message processing
 // -----------------------------------------------------------------------------
 class Behavior {

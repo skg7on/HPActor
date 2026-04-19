@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/actor/actor_context.hpp>
 #include <hpactor/core/actor_registry.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <hpactor/net/registrar.hpp>
@@ -176,6 +177,10 @@ class ActorSystem {
     std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<Message<MessageVariant>>>> mailboxes_;
     std::mutex mailboxes_mutex_;
 
+    // Actor contexts - maps ActorId to context
+    std::unordered_map<ActorId, std::unique_ptr<ActorContext>> actor_contexts_;
+    std::mutex actor_contexts_mutex_;
+
     // Actor ID generator
     std::atomic<ActorId::counter_type> next_actor_id_{1};
 
@@ -221,9 +226,17 @@ Actor ActorSystem::spawn(Args&&... args) {
             id, scheduler_.get()));
     }
 
+    // Create actor context and set it on the actor
+    auto actor_ctx = std::make_unique<ActorContext>(Actor(actor), this);
+    actor->set_context(actor_ctx.get());
+    actor_contexts_.emplace(id, std::move(actor_ctx));
+
     // Set scheduler and mailbox on actor
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mailboxes_[id].get());
+
+    // Add actor to scheduler's queue so it gets executed
+    scheduler_->notify_ready(id, 0, INT64_MAX);
 
     return Actor(actor);
 }

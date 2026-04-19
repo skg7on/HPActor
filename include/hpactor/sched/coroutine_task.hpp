@@ -145,6 +145,18 @@ struct std::coroutine_traits<hpactor::sched::CoroutineTask> {
     using promise_type = hpactor::sched::CoroutinePromise;
 };
 
+// Specialize for member function calls (EventBasedActor&)
+// This allows act() to be a coroutine member function
+template<typename T>
+struct std::coroutine_traits<hpactor::sched::CoroutineTask, T&> {
+    using promise_type = hpactor::sched::CoroutinePromise;
+};
+
+template<typename T>
+struct std::coroutine_traits<hpactor::sched::CoroutineTask, const T&> {
+    using promise_type = hpactor::sched::CoroutinePromise;
+};
+
 namespace hpactor::sched {
 
 // Out-of-line definition for get_return_object

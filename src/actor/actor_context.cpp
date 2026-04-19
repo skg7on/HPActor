@@ -17,17 +17,20 @@
 
 namespace hpactor {
 
-ActorContext::ActorContext(Actor owner) : owner_(std::move(owner)) {}
+ActorContext::ActorContext(Actor owner, ActorSystem* system)
+    : owner_(std::move(owner)), system_(system) {}
 
 ActorContext::~ActorContext() = default;
 
 void ActorContext::send(const ActorAddress& target, MessageVariant msg) {
     if (target.is_local()) {
         auto actor_ptr = owner_.get();
-        if (!actor_ptr) {
-            return;
+        if (actor_ptr) {
+            actor_ptr->system().deliver_local(target.id, std::move(msg));
+        } else if (system_) {
+            // Fallback: use system directly when owner is not set
+            system_->deliver_local(target.id, std::move(msg));
         }
-        actor_ptr->system().deliver_local(target.id, std::move(msg));
     } else {
         // Remote delivery - will be implemented in Phase 1
         // For now, ignore remote sends
