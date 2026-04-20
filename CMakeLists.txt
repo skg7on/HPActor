@@ -145,6 +145,7 @@ add_library(hpactor_lib STATIC
     src/sched/a2ws.cpp
     src/sched/timing_wheel.cpp
     src/sched/coroutine_frame_pool.cpp
+    src/rpc/rpc_channel.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 

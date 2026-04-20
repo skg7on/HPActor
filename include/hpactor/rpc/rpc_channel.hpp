@@ -69,10 +69,10 @@ class RpcChannel {
 public:
     explicit RpcChannel(net::Transport* transport, sched::IScheduler* scheduler);
 
-    // Initiate RPC call
-    template<typename Request, typename Response>
-    RpcFuture<Response> call(const ActorAddress& target,
-                             const Request& request,
+    // Raw call - takes pre-encoded bytes, returns raw bytes response
+    // Callers handle their own serialization/deserialization
+    RpcFuture<bytes> call_raw(const ActorAddress& target,
+                             const bytes& encoded_request,
                              std::chrono::milliseconds timeout_ms);
 
     // Cancel all pending calls
@@ -89,7 +89,7 @@ private:
     net::Transport* transport_;
     sched::IScheduler* scheduler_;
 
-    std::unordered_map<MessageId, std::unique_ptr<PendingCall>> pending_;
+    std::unordered_map<uint64_t, std::unique_ptr<PendingCall>> pending_;
     mutable std::mutex mutex_;
 };
 
