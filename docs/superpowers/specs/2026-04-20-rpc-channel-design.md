@@ -12,18 +12,18 @@ Add an asynchronous RPC (Remote Procedure Call) layer on top of the existing `Tc
 
 ## Goals
 
-- RPC calls are independent of the actor message system (no interference with actor mailbox processing)
-- Reuses existing `ConnectionPool` for network transport
-- At-least-once delivery with configurable retries
+- RPC calls use the same `ConnectionPool` as actor messages (no separate connection pool)
+- At-least-once delivery with automatic retry on timeout (idempotent requests only)
 - Blocking `future::get()` API for result retrieval
 - Configurable timeout per call
-- `ActorContext::rpc()` convenience method for actor-initiated calls
+- `ActorContext::rpc()` convenience method for non-actor-thread callers (main thread, worker threads)
+- `ActorSystem::rpc_channel()` direct access for any thread
 
 ## Non-Goals
 
 - Connectionless (UDP) RPC — uses ConnectionPool TCP connections
 - Exactly-once semantics — callers must handle idempotency
-- Coroutine/callback APIs — blocking `get()` only
+- Non-blocking actor RPC — `ActorContext::rpc()` is for non-actor threads only; actors use message passing
 - Typed code generation — raw message types
 
 ---
@@ -122,10 +122,10 @@ struct Frame {
     // New RPC flag constants
     static constexpr uint32_t RpcRequest = 1 << 2;   // This frame is an RPC request
     static constexpr uint32_t RpcResponse = 1 << 3; // This frame is an RPC response
-// RpcNoRetry: set by client on retries. Server MUST deduplicate by MessageId
-    // before processing — if a request with this MessageId was already processed, return
-    // the cached response instead of re-processing. This provides at-least-once delivery
-    // without server-side exactly-once guarantees (callers must still handle idempotency).
+    // RpcIdempotent: set by client on retries. Server MUST deduplicate by MessageId
+    // before processing — if already processed, return cached response. This provides
+    // at-least-once delivery without server-side exactly-once guarantees (callers must
+    // still handle idempotency).
 };
 ```
 
@@ -148,14 +148,15 @@ struct Frame {
 1. `TlsConnection` receives `Frame` via existing handler
 2. If `Frame::RpcResponse` flag set, extract `MessageId`
 3. Look up `PendingCall` by `MessageId`
-4. Deserialize response into `PendingCall::promise`
-5. `RpcFuture::get()` returns deserialized response
+4. Deserialize response bytes into `result<Response>` via `TypeTag`
+5. Set `PendingCall::promise` with the deserialized `result<Response>`
+6. `RpcFuture::get()` returns the result — no further deserialization needed
 
 ### Timeout and Retry
 
 1. `RpcChannel` tracks `PendingCall::enqueued_at`
 2. On timeout expiration:
-   - If `retry_count < max_retries`: increment retry, resend with `RpcNoRetry` flag, reset timer
+   - If `retry_count < max_retries`: increment retry, resend with `RpcIdempotent` flag, reset timer
    - If `retry_count >= max_retries`: reject promise with `error::timeout`
 3. On connection error: same retry logic
 
