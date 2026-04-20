@@ -55,6 +55,10 @@ struct Frame {
     // Flag constants
     static constexpr uint32_t Important = 1 << 0;  // Requires delivery confirmation
     static constexpr uint32_t NoDrop = 1 << 1;       // Don't drop on congestion
+    static constexpr uint32_t RpcRequest = 1 << 2;    // This frame is an RPC request
+    static constexpr uint32_t RpcResponse = 1 << 3;  // This frame is an RPC response
+    static constexpr uint32_t RpcIdempotent = 1 << 4; // Set by client on retries; server MUST
+                                                      // deduplicate by MessageId before processing
 };
 
 // -----------------------------------------------------------------------------
