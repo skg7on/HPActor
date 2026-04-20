@@ -17,6 +17,7 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
+#include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
@@ -67,6 +68,12 @@ class ActorContext {
 
     // Monitoring
     void monitor(const ActorAddress& target);
+
+    // RPC calls (for non-actor threads only)
+    // Note: caller serializes request and deserializes response
+    RpcFuture<bytes> rpc(const ActorAddress& target,
+                         const bytes& encoded_request,
+                         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));
 
   private:
     Actor owner_;
