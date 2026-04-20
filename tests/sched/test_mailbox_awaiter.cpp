@@ -19,6 +19,11 @@
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/actor/message.hpp>
 #include <hpactor/types/types.hpp>
+#include <hpactor/hpactor_config.hpp>
+
+#if HPACTOR_USE_COROUTINES
+
+#include <coroutine>
 
 // Mock scheduler for MailboxAwaiter tests
 struct MockScheduler : public hpactor::sched::IScheduler {
@@ -125,3 +130,15 @@ int main() {
 
     return 0;
 }
+
+#else  // !HPACTOR_USE_COROUTINES
+
+// C++17 fallback: MailboxAwaiter is not available
+// This test is skipped in C++17 mode
+
+int main() {
+    // MailboxAwaiter requires C++20 coroutines
+    return 0;
+}
+
+#endif  // HPACTOR_USE_COROUTINES

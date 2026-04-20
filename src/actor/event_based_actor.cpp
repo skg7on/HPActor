@@ -15,6 +15,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/hpactor_config.hpp>
 
 namespace hpactor {
 
@@ -41,12 +42,14 @@ void EventBasedActor::become_empty() {
 }
 
 void EventBasedActor::on_deactivate() {
+#if HPACTOR_USE_COROUTINES
     // Clean up coroutine if still running
     if (actor_coroutine_ && !actor_coroutine_.done()) {
         // Force termination
         actor_coroutine_.task().handle().destroy();
         actor_coroutine_ = sched::ActorCoroutine{};
     }
+#endif
 }
 
 } // namespace hpactor

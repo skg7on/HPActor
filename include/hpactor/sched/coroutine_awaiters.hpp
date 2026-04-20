@@ -14,13 +14,18 @@
 
 #pragma once
 
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
+#include <hpactor/sched/scheduler.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/actor/message.hpp>
 
 #include <atomic>
-#include <coroutine>
 #include <cstdint>
+
+#if HPACTOR_USE_COROUTINES
+
+#include <coroutine>
 
 namespace hpactor::sched {
 
@@ -174,3 +179,5 @@ private:
 };
 
 } // namespace hpactor::sched
+
+#endif  // HPACTOR_USE_COROUTINES

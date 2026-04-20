@@ -14,13 +14,17 @@
 
 #pragma once
 
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/actor/actor_state.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
-#include <coroutine>
 #include <cstdint>
 #include <thread>
+
+#if HPACTOR_USE_COROUTINES
+#include <coroutine>
+#endif
 
 namespace hpactor::sched {
 
@@ -28,6 +32,8 @@ namespace hpactor::sched {
 class ActorCoroutine;
 class WorkerThread;
 class CoroutineTask;
+
+#if HPACTOR_USE_COROUTINES
 
 // CoroutinePromise: promise_type for actor coroutines
 // Controls lifecycle: initial_suspend → Running → (Suspend | Terminate)
@@ -63,7 +69,6 @@ struct CoroutinePromise {
     // Called on unhandled exception
     void unhandled_exception() noexcept {
         state.set(ActorState::kTerminated);
-        // Store exception info for error reporting (future)
     }
 
     CoroutineTask get_return_object();
@@ -138,15 +143,12 @@ private:
 } // namespace hpactor::sched
 
 // Specialize std::coroutine_traits so CoroutineTask can be used as a
-// coroutine return type. The compiler looks for coroutine_traits<ReturnType>
-// to find promise_type.
+// coroutine return type.
 template<>
 struct std::coroutine_traits<hpactor::sched::CoroutineTask> {
     using promise_type = hpactor::sched::CoroutinePromise;
 };
 
-// Specialize for member function calls (EventBasedActor&)
-// This allows act() to be a coroutine member function
 template<typename T>
 struct std::coroutine_traits<hpactor::sched::CoroutineTask, T&> {
     using promise_type = hpactor::sched::CoroutinePromise;
@@ -163,5 +165,50 @@ namespace hpactor::sched {
 inline CoroutineTask CoroutinePromise::get_return_object() {
     return CoroutineTask{handle_type::from_promise(*this)};
 }
+
+#else  // !HPACTOR_USE_COROUTINES
+
+// C++17 fallback: stub CoroutinePromise and CoroutineTask so that
+// the rest of the type system (ActorState, ActorId, etc.) still compiles.
+struct CoroutinePromise {
+    ActorId actor_id;
+    ActorState state;
+    WorkerThread* owner{nullptr};
+    void* mailbox{nullptr};
+    std::atomic<bool> mailbox_was_empty{true};
+
+    CoroutinePromise() = default;
+    ~CoroutinePromise() = default;
+
+    void set_running() { state.set(ActorState::kRunning); }
+    void set_idle() { state.set(ActorState::kIdle); }
+    void set_ready() { state.set(ActorState::kReady); }
+    void set_io_waiting() { state.set(ActorState::kIOWaiting); }
+    void set_terminated() { state.set(ActorState::kTerminated); }
+    bool is_idle() const { return state.is_idle(); }
+    bool is_running() const { return state.is_running(); }
+    bool is_terminated() const { return state.is_terminated(); }
+    void notify_mailbox_nonempty() {}
+};
+
+class CoroutineTask {
+public:
+    CoroutineTask() noexcept {}
+    explicit CoroutineTask(std::nullptr_t) noexcept {}
+
+    CoroutineTask(CoroutineTask&& /*other*/) noexcept {}
+    CoroutineTask& operator=(CoroutineTask&& /*other*/) noexcept { return *this; }
+
+    CoroutineTask(const CoroutineTask&) = delete;
+    CoroutineTask& operator=(const CoroutineTask&) = delete;
+
+    ~CoroutineTask() = default;
+
+    explicit operator bool() const noexcept { return false; }
+    bool done() const noexcept { return true; }
+    void resume() {}
+};
+
+#endif  // HPACTOR_USE_COROUTINES
 
 } // namespace hpactor::sched

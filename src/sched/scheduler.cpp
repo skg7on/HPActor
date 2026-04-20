@@ -15,6 +15,11 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/hpactor_config.hpp>
+
+#if HPACTOR_USE_COROUTINES
+#include <hpactor/sched/coroutine_task.hpp>
+#endif
 
 namespace hpactor::sched {
 
@@ -185,6 +190,8 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     }
     auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
 
+#if HPACTOR_USE_COROUTINES
+    // C++20 coroutine path
     // Lazily start the coroutine on first pickup
     actor->ensure_coroutine_started();
 
@@ -224,6 +231,29 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue → notify_ready)
     // - TimerAwaiter callback (EventLoop → notify_ready)
     // Nothing to do here for suspended actors
+
+#else  // !HPACTOR_USE_COROUTINES
+    // C++17 callback path: behavior-based scheduling
+    // Process actor by dispatching messages through Behavior
+    // The actor's receive() method calls the current behavior handler
+
+    auto mailbox = system_.get_mailbox(item.actor);
+    if (!mailbox) {
+        return;
+    }
+
+    Message<MessageVariant> msg;
+    if (mailbox->try_pop(msg)) {
+        actor->receive(msg.move_payload());
+    }
+
+    // After processing one message, check if there are more messages waiting.
+    // If so, re-enqueue the actor for immediate processing (no yield needed).
+    // This prevents message accumulation while still allowing fairness.
+    if (!mailbox->empty()) {
+        notify_ready(item.actor, 0, INT64_MAX);
+    }
+#endif  // HPACTOR_USE_COROUTINES
 }
 
 void HybridScheduler::worker_loop(uint32_t worker_id) {

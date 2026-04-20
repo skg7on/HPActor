@@ -14,12 +14,15 @@
 
 #pragma once
 
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <utility>
 
 namespace hpactor::sched {
+
+#if HPACTOR_USE_COROUTINES
 
 // ActorCoroutine: owns a coroutine handle for an actor.
 // Produced by EventBasedActor::act() and consumed by HybridScheduler::execute_actor().
@@ -77,5 +80,7 @@ private:
     CoroutineTask task_;
     ActorId actor_id_;
 };
+
+#endif  // HPACTOR_USE_COROUTINES
 
 } // namespace hpactor::sched

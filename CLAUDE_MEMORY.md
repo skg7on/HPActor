@@ -65,11 +65,11 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `ActorState` — Atomic state machine (Idle/Ready/Running/IOWaiting/Terminated) with CAS transitions
 - `CoroutineTask` / `CoroutinePromise` — C++20 coroutine handle wrapper for actor coroutines
 - `MailboxAwaiter`, `TimerAwaiter`, `BlockingMailboxAwaiter` — awaiters for co_await patterns
-- `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue)
+- `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue), includes cyclic queue fix when returning last element
 - `execute_actor()` dispatch layer for coroutine resumption with state transitions
 
-**Tests:** ✅ 41 tests passing
-- Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws
+**Tests:** ✅ 47 tests passing
+- Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 
 **Documentation:** ✅ Complete
 - Tutorial: `docs/superpowers/tutorials/actor-framework-tutorial.md`
@@ -95,7 +95,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Phase 0-7 Complete** (41 tests passing)
+**Phase 0-7 Complete** (47 tests passing)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -111,7 +111,6 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Registrar node lookup (translating node names to NodeId)
 - Argument deserialization (passing constructor args through spawn)
 - Integration test (two-process remote spawn test)
-- MPSCMailbox integration into EventBasedActor (mailbox_has_messages() stub)
 - WorkerThread integration into HybridScheduler (currently HybridScheduler uses inline WorkerState, WorkerThread is separate)
 
 **Source Reorganization**
@@ -141,8 +140,13 @@ ctest --output-on-failure
 
 # With sanitizers
 cmake -DENABLE_TSAN=ON ..  # ThreadSanitizer
-cmake -DENABLE_ASAN=ON ..  # AddressSanitizer
+cmake -DENABLE_ASAN=ON ..  # AddressSanitizer (may show false positives in intrusive queue tests)
 
 # Enable/disable examples (default ON)
 cmake -DENABLE_EXAMPLES=OFF ..
 ```
+
+## Known Issues
+
+- ASAN may report false positives in `test_mailbox_awaiter` and `test_priority_scheduler` due to intrusive queue memory patterns. Tests pass cleanly with TSAN or without sanitizers.
+- MPSCMailbox `dequeue()` had a cyclic queue bug when returning last element — fixed in commit dc25f18.

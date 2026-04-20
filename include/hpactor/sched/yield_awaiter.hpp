@@ -14,9 +14,12 @@
 
 #pragma once
 
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
 #include <hpactor/types/types.hpp>
+
+#if HPACTOR_USE_COROUTINES
 
 #include <coroutine>
 #include <cstdint>
@@ -26,8 +29,6 @@ namespace hpactor::sched {
 // YieldAwaiter: co_await scheduler.yield(actor_id, priority)
 // Voluntarily suspends and immediately re-enqueues the actor at the same priority.
 // Used for cooperative multitasking after processing a message.
-//
-// Note: Currently uses notify_ready() as IScheduler::yield() is added in Task 3.2.
 class YieldAwaiter {
 public:
     YieldAwaiter(IScheduler* scheduler, ActorId actor_id, uint8_t priority = 0) noexcept
@@ -76,3 +77,5 @@ private:
 };
 
 } // namespace hpactor::sched
+
+#endif  // HPACTOR_USE_COROUTINES

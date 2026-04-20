@@ -20,5 +20,7 @@ target_link_libraries(05_ping_pong PRIVATE hpactor_lib)
 add_executable(07_priority_scheduler_demo 07_priority_scheduler_demo.cpp)
 target_link_libraries(07_priority_scheduler_demo PRIVATE hpactor_lib)
 
+if(HPACTOR_USE_COROUTINES)
 add_executable(08_coroutine_scheduler_demo 08_coroutine_scheduler_demo.cpp)
 target_link_libraries(08_coroutine_scheduler_demo PRIVATE hpactor_lib)
+endif()

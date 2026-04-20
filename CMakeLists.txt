@@ -20,9 +20,67 @@ if(ENABLE_ASAN AND ENABLE_TSAN)
 endif()
 
 # =============================================================================
-# Compiler Settings - C++20 with LLVM Standards
+# Compiler Settings - C++20/C++17 with LLVM Standards
 # =============================================================================
-set(CMAKE_CXX_STANDARD 20)
+
+# Detect C++20 coroutine support. If the compiler supports C++20 and provides
+# the <coroutine> header, use C++20 features. Otherwise fall back to C++17.
+include(CheckCXXSourceCompiles)
+include(CheckIncludeFileCXX)
+
+# Check for <coroutine> header availability
+check_include_file_cxx(coroutine HPACTOR_HAVE_COROUTINE_HEADER)
+
+# Try to compile a minimal C++20 coroutine program with proper traits
+file(WRITE "${CMAKE_CURRENT_BINARY_DIR}/coro_test.cpp" "
+#include <coroutine>
+struct CoroutineTask;
+struct CoroutinePromise {
+    using handle_type = std::coroutine_handle<CoroutinePromise>;
+    std::suspend_always initial_suspend() noexcept { return {}; }
+    std::suspend_always final_suspend() noexcept { return {}; }
+    void return_void() noexcept {}
+    void unhandled_exception() noexcept {}
+    CoroutineTask get_return_object();
+};
+struct CoroutineTask {
+    using handle_type = std::coroutine_handle<CoroutinePromise>;
+    CoroutineTask() noexcept : h_(nullptr) {}
+    explicit CoroutineTask(handle_type h) noexcept : h_(h) {}
+    handle_type h() const noexcept { return h_; }
+    explicit operator bool() const noexcept { return h_ != nullptr; }
+    bool done() const { return !h_ || h_.done(); }
+    void resume() { if (h_ && !h_.done()) h_.resume(); }
+    ~CoroutineTask() { if (h_) h_.destroy(); }
+private:
+    handle_type h_;
+};
+inline CoroutineTask CoroutinePromise::get_return_object() { return CoroutineTask{handle_type::from_promise(*this)}; }
+template<> struct std::coroutine_traits<CoroutineTask> { using promise_type = CoroutinePromise; };
+CoroutineTask g() { co_return; }
+int main() { return 0; }
+")
+
+try_compile(HPACTOR_HAVE_CPP20_COROUTINES
+    ${CMAKE_CURRENT_BINARY_DIR}/coro_build
+    ${CMAKE_CURRENT_BINARY_DIR}/coro_test.cpp
+    COMPILE_DEFINITIONS "-std=c++20"
+    OUTPUT_VARIABLE HPACTOR_CORO_OUTPUT
+)
+file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/coro_test.cpp")
+
+if(HPACTOR_HAVE_CPP20_COROUTINES)
+    message(STATUS "C++20 coroutines detected - using coroutine-based scheduling")
+    set(CMAKE_CXX_STANDARD 20)
+    set(HPACTOR_USE_COROUTINES ON CACHE BOOL "Enable C++20 coroutines" FORCE)
+    add_compile_definitions(HPACTOR_USE_COROUTINES=1)
+else()
+    message(STATUS "C++17 mode - using callback-based scheduling")
+    set(CMAKE_CXX_STANDARD 17)
+    set(HPACTOR_USE_COROUTINES OFF CACHE BOOL "Enable C++20 coroutines" FORCE)
+    add_compile_definitions(HPACTOR_USE_COROUTINES=0)
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
