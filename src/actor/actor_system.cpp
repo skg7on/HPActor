@@ -52,7 +52,8 @@ ActorSystem::ActorSystem(const Config& config)
       node_id_(config.node_id),
       registry_(node_id_),
       scheduler_(std::make_unique<sched::HybridScheduler>(*this, config.scheduler_threads)),
-      actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
+      actor_type_registry_(std::make_unique<ActorTypeRegistry>()),
+      rpc_channel_(transport_.get(), scheduler_.get()) {
 
     scheduler_->start();
 

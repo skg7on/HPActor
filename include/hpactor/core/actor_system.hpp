@@ -23,6 +23,7 @@
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/rpc/rpc_channel.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -123,6 +124,9 @@ class ActorSystem {
     // Get scheduler for direct scheduling operations
     sched::IScheduler* scheduler() { return scheduler_.get(); }
 
+    // RPC channel for remote calls
+    RpcChannel& rpc_channel() { return rpc_channel_; }
+
     // Internal actor lookup (used by scheduler)
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
 
@@ -198,6 +202,9 @@ class ActorSystem {
 
     // Actor type registry for remote spawning (owned via pointer to avoid circular dep)
     std::unique_ptr<ActorTypeRegistry> actor_type_registry_;
+
+    // RPC channel for remote calls (must be after transport_ and scheduler_)
+    RpcChannel rpc_channel_;
 
     // Pending remote spawns awaiting response
     std::unordered_map<uint64_t, std::shared_ptr<AsyncActor>> pending_spawns_;
