@@ -60,8 +60,15 @@ public:
 
         // Sever the link from stub to the node we're about to return:
         // advance stub.mpsc_next to skip over `next` (point to next->next)
-        tail->mpsc_next.store(next->mpsc_next.load(std::memory_order_relaxed),
-                              std::memory_order_release);
+        T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
+        tail->mpsc_next.store(next_next, std::memory_order_release);
+
+        // If we're returning the last element (next_next == tail/stub),
+        // reset the queue to empty state to avoid cyclic pointer issues
+        if (next_next == tail) {
+            tail->mpsc_next.store(nullptr, std::memory_order_release);
+        }
+
         count_.fetch_sub(1, std::memory_order_release);
         return next;
     }
