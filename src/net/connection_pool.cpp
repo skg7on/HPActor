@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/net/connection_pool.hpp>
+#include <hpactor/net/frame.hpp>
 
 namespace hpactor {
 
@@ -109,6 +110,11 @@ void ConnectionPool::abort() {
     pending_messages_.clear();
 }
 
+void ConnectionPool::set_rpc_handler(rpc_response_handler handler) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    rpc_handler_ = std::move(handler);
+}
+
 void ConnectionPool::create_connection() {
     if (connecting_.load()) {
         return;
@@ -152,8 +158,16 @@ void ConnectionPool::on_connection_error(TlsConnectionPtr conn, const error& err
 }
 
 void ConnectionPool::on_frame_received(const bytes& frame_data) {
-    // Deliver to callback or ActorSystem
-    (void)frame_data;
+    Frame frame = Frame::decode(frame_data);
+
+    // Check for RPC response - call handler and return early
+    if ((frame.flags & Frame::RpcResponse) && rpc_handler_) {
+        rpc_handler_(MessageId(frame.message_id), frame.payload);
+        return;
+    }
+
+    // TODO: existing actor message handling
+    (void)frame;
 }
 
 void ConnectionPool::schedule_reconnect() {
