@@ -52,8 +52,7 @@ ActorSystem::ActorSystem(const Config& config)
       node_id_(config.node_id),
       registry_(node_id_),
       scheduler_(std::make_unique<sched::HybridScheduler>(*this, config.scheduler_threads)),
-      actor_type_registry_(std::make_unique<ActorTypeRegistry>()),
-      rpc_channel_(transport_.get(), scheduler_.get()) {
+      actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
 
     scheduler_->start();
 
@@ -74,6 +73,9 @@ ActorSystem::ActorSystem(const Config& config)
         // For now, pass nullptr and rely on UdpRegistrar for discovery.
         transport_ = std::make_unique<net::TcpTransport>(
             node_id_, config.tls, config.pool, nullptr);
+
+        // Initialize RPC channel after transport is created
+        rpc_channel_ = std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
 
         // Listen on TCP port if specified
         if (config.tcp_port > 0) {
