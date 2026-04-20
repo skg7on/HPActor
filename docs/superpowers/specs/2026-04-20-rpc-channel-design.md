@@ -89,6 +89,7 @@ struct PendingCall {
     int max_retries = 5;
     std::promise<bytes> promise;
     std::chrono::steady_clock::time_point enqueued_at;
+    std::atomic<bool> ready_{false};  // set before promise resolution to avoid race
 };
 ```
 
@@ -102,7 +103,7 @@ class RpcFuture {
 public:
     RpcFuture(std::future<T> inner, std::chrono::milliseconds timeout);
 
-    T get();  // throws error on timeout
+    T get();  // returns result<T>, error on timeout
 
 private:
     std::future<T> inner_;
@@ -121,7 +122,8 @@ struct Frame {
     // New RPC flag constants
     static constexpr uint32_t RpcRequest = 1 << 2;   // This frame is an RPC request
     static constexpr uint32_t RpcResponse = 1 << 3; // This frame is an RPC response
-    static constexpr uint32_t RpcNoRetry = 1 << 4;   // Don't retry this RPC (already sent)
+    // RpcNoRetry: client sends this flag on retries to indicate the server should NOT
+    // process again if the request is idempotent. Server-side deduplication uses MessageId.
 };
 ```
 
@@ -185,8 +187,8 @@ Implementation delegates to `ActorSystem::rpc_channel()`.
 
 | Error | Condition | Return |
 |-------|-----------|--------|
-| `errors::timeout` | No response after `max_retries` | `result<Response>::make(error(timeout, ...))` |
-| `errors::connection_failed` | Cannot connect to target node | `result<Response>::make(error(connection_failed, ...))` |
+| `errors::timeout` | No response after `max_retries` | `result<Response>::make(error(errors::timeout, "RPC call timed out"))` |
+| `errors::connection_failed` | Cannot connect to target node | `result<Response>::make(error(errors::connection_failed, "Connection failed"))` |
 | `errors::actor_not_found` | Target actor does not exist | From response deserialization |
 
 ---
