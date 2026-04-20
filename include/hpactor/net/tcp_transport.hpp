@@ -55,6 +55,9 @@ public:
 
     void close_connection(NodeId remote_node) override;
 
+    // Set RPC response handler - propagates to all connection pools
+    void set_rpc_handler(rpc_response_handler handler) override;
+
 private:
     void handle_accept(int client_fd);
 
@@ -69,6 +72,7 @@ private:
     NodeRegistry* registry_ = nullptr;  // Optional registry for node lookup
     HostResolver host_resolver_;
     std::unordered_map<NodeId, std::shared_ptr<ConnectionPool>> pools_;
+    std::function<void(MessageId, const bytes&)> rpc_handler_;
 };
 
 } // namespace net
