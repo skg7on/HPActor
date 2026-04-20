@@ -60,9 +60,9 @@ struct Config {
     std::chrono::milliseconds spawn_timeout{5000};
 
     // TLS and pool config (used if enable_network=true)
-    net::TlsConfig tls;
-    net::PoolConfig pool;
-    net::RegistrarConfig registrar;
+    net::TlsConfig tls = {};
+    net::PoolConfig pool = {};
+    net::RegistrarConfig registrar = {};
 };
 
 // -----------------------------------------------------------------------------

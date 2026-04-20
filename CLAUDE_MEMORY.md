@@ -134,8 +134,13 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 ## Build Commands
 
 ```bash
-# From project root
-cmake -S . -B build -GNinja && ninja -C build
+# From project root - using homebrew clang-20 toolchain (Debug build)
+cmake -S . -B build -GNinja \
+  -DCMAKE_C_COMPILER=/opt/homebrew/bin/clang \
+  -DCMAKE_CXX_COMPILER=/opt/homebrew/bin/clang++ \
+  -DCMAKE_BUILD_TYPE=Debug
+ninja -C build
+
 ctest --output-on-failure
 
 # With sanitizers
