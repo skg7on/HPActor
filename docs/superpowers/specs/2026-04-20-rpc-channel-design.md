@@ -101,12 +101,12 @@ Wrapper around `std::future` that enforces timeout on `get()`.
 template<typename T>
 class RpcFuture {
 public:
-    RpcFuture(std::future<T> inner, std::chrono::milliseconds timeout);
+    RpcFuture(std::future<result<T>> inner, std::chrono::milliseconds timeout);
 
-    T get();  // returns result<T>, error on timeout
+    result<T> get();  // returns result<T>, error on timeout
 
 private:
-    std::future<T> inner_;
+    std::future<result<T>> inner_;
     std::chrono::milliseconds timeout_;
 };
 ```
@@ -122,8 +122,10 @@ struct Frame {
     // New RPC flag constants
     static constexpr uint32_t RpcRequest = 1 << 2;   // This frame is an RPC request
     static constexpr uint32_t RpcResponse = 1 << 3; // This frame is an RPC response
-    // RpcNoRetry: client sends this flag on retries to indicate the server should NOT
-    // process again if the request is idempotent. Server-side deduplication uses MessageId.
+// RpcNoRetry: set by client on retries. Server MUST deduplicate by MessageId
+    // before processing — if a request with this MessageId was already processed, return
+    // the cached response instead of re-processing. This provides at-least-once delivery
+    // without server-side exactly-once guarantees (callers must still handle idempotency).
 };
 ```
 
@@ -236,7 +238,29 @@ tests/
 
 ---
 
+## Transport Integration
+
+`RpcChannel` registers with the `EventLoop` for timeout tracking using existing timer mechanisms (`IScheduler::schedule_after`). Each `PendingCall` schedules a timer on insertion. When the timer fires, `RpcChannel::on_timeout(msg_id)` is invoked.
+
+**Wiring to TlsConnection:** `TlsConnection` receives frames and dispatches to `ConnectionPool::on_frame_received()`. `ConnectionPool` exposes a `set_rpc_handler(rpc_response_handler)` callback. `RpcChannel` registers its `on_response` method when constructed. This callback receives `(MessageId, bytes)` for `RpcResponse` frames.
+
+```cpp
+// In RpcChannel constructor:
+transport_->connection_pool()->set_rpc_handler(
+    [this](MessageId id, const bytes& data) { on_response(id, data); });
+```
+
+## Non-Actor Thread Access
+
+`ActorSystem::rpc_channel()` provides direct access for non-actor threads:
+
+```cpp
+// In ActorSystem (existing class)
+RpcChannel& rpc_channel();
+```
+
+Non-actor threads (e.g., main thread) can initiate RPC calls directly via `actor_system.rpc_channel().call(target, request, timeout_ms)` and call `.get()` to block for the result.
+
 ## Open Issues
 
-1. Should `RpcChannel` register with the `EventLoop` for timer callbacks, or use a background thread for timeout tracking?
-2. How to handle RPC calls initiated from non-actor threads (e.g., main thread)? Provide `ActorSystem::rpc_channel()` access directly.
+All major design decisions resolved. No open issues remain.
