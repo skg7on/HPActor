@@ -21,6 +21,7 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <future>
 #include <mutex>
 #include <unordered_map>
 
@@ -66,7 +67,7 @@ private:
 // -----------------------------------------------------------------------------
 class RpcChannel {
 public:
-    explicit RpcChannel(Transport* transport, sched::IScheduler* scheduler);
+    explicit RpcChannel(net::Transport* transport, sched::IScheduler* scheduler);
 
     // Initiate RPC call
     template<typename Request, typename Response>
@@ -85,7 +86,7 @@ private:
     void schedule_retry(PendingCall* call);
     void send_request(PendingCall& call, bool is_retry);
 
-    Transport* transport_;
+    net::Transport* transport_;
     sched::IScheduler* scheduler_;
 
     std::unordered_map<MessageId, std::unique_ptr<PendingCall>> pending_;
