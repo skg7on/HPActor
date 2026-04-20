@@ -127,6 +127,10 @@ public:
 
     // Close connection to a specific node
     virtual void close_connection(NodeId remote_node) = 0;
+
+    // Set RPC response handler - called when RPC response frames are received
+    using rpc_response_handler = std::function<void(MessageId, const bytes&)>;
+    virtual void set_rpc_handler(rpc_response_handler handler) = 0;
 };
 
 } // namespace net

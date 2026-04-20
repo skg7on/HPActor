@@ -58,6 +58,10 @@ std::shared_ptr<ConnectionPool> TcpTransport::get_or_create_pool(NodeId remote_n
                                                   &tls_context_,
                                                   &loop_);
     pools_[remote_node] = pool;
+    // Set RPC handler if one has been registered
+    if (rpc_handler_) {
+        pool->set_rpc_handler(rpc_handler_);
+    }
     return pool;
 }
 
@@ -151,6 +155,14 @@ void TcpTransport::close_connection(NodeId remote_node) {
     if (it != pools_.end()) {
         it->second->abort();
         pools_.erase(it);
+    }
+}
+
+void TcpTransport::set_rpc_handler(rpc_response_handler handler) {
+    // Store handler and apply to all existing pools
+    rpc_handler_ = std::move(handler);
+    for (auto& [node, pool] : pools_) {
+        pool->set_rpc_handler(rpc_handler_);
     }
 }
 

@@ -96,6 +96,10 @@ public:
     // Get remote node ID
     NodeId remote_node_id() const { return remote_node_id_; }
 
+    // Set handler for RPC responses (called when RpcResponse frame is received)
+    using rpc_response_handler = std::function<void(MessageId, const bytes&)>;
+    void set_rpc_handler(rpc_response_handler handler);
+
 private:
     // Get connection via round-robin
     TlsConnectionPtr get_connection();
@@ -136,6 +140,8 @@ private:
     mutable std::mutex mutex_;
     std::atomic<bool> connecting_{false};
     std::atomic<bool> shutting_down_{false};
+
+    rpc_response_handler rpc_handler_;
 };
 
 } // namespace net

@@ -133,6 +133,13 @@ add_test(NAME test_registrar COMMAND test_registrar)
 add_subdirectory(spawn)
 
 # =============================================================================
+# RPC tests - RPC channel
+# =============================================================================
+add_executable(test_rpc_channel rpc/test_rpc_channel.cpp)
+target_link_libraries(test_rpc_channel hpactor)
+add_test(NAME test_rpc_channel COMMAND test_rpc_channel)
+
+# =============================================================================
 # Supervision tests
 # =============================================================================
 add_executable(test_supervision supervision/test_supervision.cpp)

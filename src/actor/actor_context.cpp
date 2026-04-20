@@ -92,4 +92,10 @@ void ActorContext::monitor(const ActorAddress& target) {
     monitored_.push_back(target);
 }
 
+RpcFuture<bytes> ActorContext::rpc(const ActorAddress& target,
+                                   const bytes& encoded_request,
+                                   std::chrono::milliseconds timeout_ms) {
+    return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms);
+}
+
 } // namespace hpactor
