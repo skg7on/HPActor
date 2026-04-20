@@ -652,7 +652,7 @@ TEST(RpcChannelTest, Response) {
 TEST(RpcChannelTest, Timeout) {
     MockTransport transport;
     MockScheduler scheduler;
-    hpactor::RpcChannel channel(&transport, std::chrono::milliseconds{100});
+    hpactor::RpcChannel channel(&transport, &scheduler);
 
     hpactor::ActorAddress target{hpactor::LocalNodeId, 1, hpactor::ActorId{1}, 0};
 
