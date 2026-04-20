@@ -7,7 +7,7 @@
 - Generate `compile_commands.json` database file during CMake config phase by default.
 
 # Implementation & Coding Rules:
-- Programming Language：C++20
+- Programming Language：C++17 / C++20 (if supported)
 - Head Comments: Default with head comments for each source files.
 - Coding Style: Strictly adhere to the LLVM Coding Standards.
 - Performance Constraints: Avoid RTTI, disable Exceptions, and prioritize stack allocation.
