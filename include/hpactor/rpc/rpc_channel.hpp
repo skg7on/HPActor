@@ -17,6 +17,7 @@
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
+#include <hpactor/sched/scheduler.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -26,9 +27,6 @@
 #include <unordered_map>
 
 namespace hpactor {
-
-// Forward declarations
-namespace sched { class IScheduler; }
 
 using RpcResponseHandler = std::function<void(MessageId, const bytes&)>;
 
