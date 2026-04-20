@@ -35,6 +35,14 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - RegistrarServer — TCP server for node registration, heartbeat, broadcasts
 - RegistrarClient — TCP client with failover, local IP detection, AcceptorInfo
 
+**Phase 7: Async RPC Channel** ✅ Complete (48 tests)
+- RpcChannel — async RPC with at-least-once delivery, retry on timeout
+- RpcFuture<bytes> — future wrapper with timeout-enforced get()
+- Frame flags: RpcRequest, RpcResponse, RpcIdempotent
+- ConnectionPool::set_rpc_handler() for RPC response routing
+- Transport::set_rpc_handler() interface propagated to TcpTransport
+- ActorContext::rpc() and ActorSystem::rpc_channel() for non-actor thread access
+
 **Phase 6: Remote Actor Spawn** ✅ Complete (34 tests passing)
 - AsyncActor handle for non-blocking spawn with get(), ready(), cancel()
 - SpawnRequest/SpawnResponse message types
@@ -68,7 +76,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue), includes cyclic queue fix when returning last element
 - `execute_actor()` dispatch layer for coroutine resumption with state transitions
 
-**Tests:** ✅ 47 tests passing
+**Tests:** ✅ 48 tests passing
 - Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 
 **Documentation:** ✅ Complete
@@ -81,6 +89,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Plan: `docs/superpowers/plans/2026-04-14-event-loop-backend-fallback-impl.md`
 - Spec: `docs/superpowers/specs/2026-04-15-coroutine-scheduling-design.md`
 - Plan: `docs/superpowers/plans/2026-04-15-coroutine-scheduling-impl.md`
+- Spec: `docs/superpowers/specs/2026-04-20-rpc-channel-design.md` (async RPC channel)
+- Plan: `docs/superpowers/plans/2026-04-20-rpc-channel-impl.md`
 
 ## Key Decisions
 
@@ -95,7 +105,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Phase 0-7 Complete** (47 tests passing)
+**Phase 0-7 Complete** (48 tests passing)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -105,13 +115,14 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Phase 6: Remote Actor Spawn — AsyncActor, ActorTypeRegistry, SpawnReceiver, spawn_remote()
 - Scheduling Subsystem: ChaseLev deque, MultiPriorityWorkQueue, EDFQueue, A2WS, TimingWheel, CoroutineFramePool, HybridScheduler, WorkerThread, ActorState, CoroutineTask/CoroutinePromise, awaiters, MPSCMailbox
 
-**Next Steps (Phase 7 completion)**
+**Next Steps (Phase 8 - integration and polish)**
 - Full serialization integration (SpawnRequest/SpawnResponse as MessageVariant)
 - Transport response routing (Transport calling AsyncActor::set_response)
 - Registrar node lookup (translating node names to NodeId)
 - Argument deserialization (passing constructor args through spawn)
 - Integration test (two-process remote spawn test)
 - WorkerThread integration into HybridScheduler (currently HybridScheduler uses inline WorkerState, WorkerThread is separate)
+- Typed RPC API (template call<Request, Response> with serialization)
 
 **Source Reorganization**
 - `include/hpactor/` — header-only library, organized by architectural group:
@@ -122,6 +133,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `core/` — Core runtime (actor_system, scheduler, mailbox, registry)
   - `sched/` — Scheduling subsystem (work_queue, edf_queue, a2ws, timing_wheel, coroutine_frame_pool)
   - `types/` — Type system (types, types_fwd, serialization)
+  - `rpc/` — RPC channel (rpc_channel.hpp)
 - `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, scheduler.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
@@ -129,7 +141,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `src/spawn.cpp` — AsyncActor implementation
 - `src/actor_type_registry.cpp` — ActorTypeRegistry implementation
 - `src/core/serialization.cpp` — DefaultSerializer implementation
-- Tests: `tests/{actor,core,mailbox,net,ref,supervision,spawn,sched}/`
+- `src/rpc/rpc_channel.cpp` — RpcChannel implementation
+- Tests: `tests/{actor,core,mailbox,net,ref,supervision,spawn,sched,rpc}/`
 
 ## Build Commands
 
