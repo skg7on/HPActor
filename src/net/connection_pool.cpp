@@ -14,6 +14,8 @@
 
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/frame.hpp>
+#include <hpactor/spawn.hpp>
+#include <hpactor/types/serialization.hpp>
 
 namespace hpactor {
 
@@ -115,6 +117,11 @@ void ConnectionPool::set_rpc_handler(rpc_response_handler handler) {
     rpc_handler_ = std::move(handler);
 }
 
+void ConnectionPool::set_spawn_handler(spawn_response_handler handler) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    spawn_handler_ = std::move(handler);
+}
+
 void ConnectionPool::create_connection() {
     if (connecting_.load()) {
         return;
@@ -160,9 +167,24 @@ void ConnectionPool::on_connection_error(TlsConnectionPtr conn, const error& err
 void ConnectionPool::on_frame_received(const bytes& frame_data) {
     Frame frame = Frame::decode(frame_data);
 
-    // Check for RPC response - call handler and return early
-    if ((frame.flags & Frame::RpcResponse) && rpc_handler_) {
-        rpc_handler_(MessageId(frame.message_id), frame.payload);
+    // Check for RPC response
+    if (frame.flags & Frame::RpcResponse) {
+        // Try to decode as spawn response first
+        DefaultSerializer serializer;
+        auto decoded = serializer.decode_spawn(TypeTag::SpawnResponseTag, frame.payload);
+        if (std::holds_alternative<SpawnResponse>(decoded)) {
+            // Route to spawn handler
+            if (spawn_handler_) {
+                SpawnResponse resp = std::get<SpawnResponse>(decoded);
+                spawn_handler_(frame.message_id, resp);
+                return;
+            }
+        }
+
+        // Fall through to RPC handler
+        if (rpc_handler_) {
+            rpc_handler_(MessageId(frame.message_id), frame.payload);
+        }
         return;
     }
 

@@ -19,6 +19,7 @@
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/spawn.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -100,6 +101,10 @@ public:
     using rpc_response_handler = std::function<void(MessageId, const bytes&)>;
     void set_rpc_handler(rpc_response_handler handler);
 
+    // Set handler for spawn responses (called when SpawnResponse frame is received)
+    using spawn_response_handler = std::function<void(uint64_t message_id, const SpawnResponse&)>;
+    void set_spawn_handler(spawn_response_handler handler);
+
 private:
     // Get connection via round-robin
     TlsConnectionPtr get_connection();
@@ -142,6 +147,7 @@ private:
     std::atomic<bool> shutting_down_{false};
 
     rpc_response_handler rpc_handler_;
+    spawn_response_handler spawn_handler_;
 };
 
 } // namespace net
