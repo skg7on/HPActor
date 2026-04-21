@@ -260,27 +260,60 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
             }
         }
     } else if (optype == OpType::Send || optype == OpType::SendTo) {
-        // Send pending
+        // Send pending - loop until EAGAIN to drain all buffered data
         if (int(events) & EPOLLOUT) {
-            if (!op.data.empty()) {
-                n = ::sendto(fd, op.data.data(), op.data.size(), 0,
-                             reinterpret_cast<const sockaddr*>(&op.addr), op.addrlen);
-            } else {
-                n = ::send(fd, nullptr, 0, 0);
+            while (true) {
+                if (optype == OpType::SendTo) {
+                    n = ::sendto(fd, op.data.data(), op.data.size(), 0,
+                                 reinterpret_cast<const sockaddr*>(&op.addr), op.addrlen);
+                } else {
+                    n = ::send(fd, op.data.data(), op.data.size(), 0);
+                }
+                if (n < 0) {
+                    if (errno == EAGAIN) {
+                        // Would block - keep pending op for next trigger
+                        return;  // Don't erase pending op
+                    }
+                    result_err = errno;
+                    break;
+                }
+                result_err += n;
+                if (n < static_cast<ssize_t>(op.data.size())) {
+                    // Partial send - keep remaining data in pending op
+                    op.data.erase(op.data.begin(), op.data.begin() + n);
+                    // Continue looping to drain more
+                } else {
+                    // All data sent
+                    break;
+                }
             }
-            result_err = (n < 0) ? errno : static_cast<int>(n);
         }
     } else if (optype == OpType::Recv || optype == OpType::RecvFrom) {
-        // Recv pending
+        // Recv pending - loop until EAGAIN to drain all available data
         if (int(events) & EPOLLIN) {
-            if (optype == OpType::RecvFrom) {
-                n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
-            } else {
-                n = ::readv(fd, op.saved_bufs, op.buf_count);
+            while (true) {
+                if (optype == OpType::RecvFrom) {
+                    n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
+                } else {
+                    n = ::readv(fd, op.saved_bufs, op.buf_count);
+                }
+                if (n < 0) {
+                    if (errno == EAGAIN) {
+                        // No more data - keep pending op for next trigger
+                        return;  // Don't erase pending op
+                    }
+                    result_err = errno;
+                    break;
+                }
+                result_err += n;
+                // For scatter-gather, check if all bufs were filled
+                if (optype == OpType::Recv) {
+                    // readv may return 0 on empty socket or partial on bufs full
+                    // If we got data, try to read more (EAGAIN will stop us)
+                }
+                // Continue looping to drain more data
             }
-            result_err = (n < 0) ? errno : static_cast<int>(n);
         }
-    } else {
         // Unknown op type, deliver with error
         result_err = EINVAL;
     }
@@ -376,7 +409,7 @@ void EpollBackend::cancel_timer(uint64_t handle) {
 
 void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
                               ActorId actor, uint32_t op_type) {
-    // Concatenate scatter-gather buffers for potential pending storage
+    // Concatenate scatter-gather buffers
     size_t total_len = 0;
     for (int i = 0; i < buf_count; ++i) {
         total_len += bufs[i].iov_len;
@@ -389,8 +422,27 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
         offset += bufs[i].iov_len;
     }
 
-    ssize_t n = ::send(fd, data.data(), data.size(), 0);
-    if (n < 0 && errno == EAGAIN) {
+    ssize_t total_n = 0;
+    int last_err = 0;
+
+    // Loop until EAGAIN to drain send buffer completely (edge-triggered requirement)
+    while (true) {
+        ssize_t n = ::send(fd, data.data() + total_n, data.size() - total_n, 0);
+        if (n < 0) {
+            if (errno == EAGAIN) {
+                break;  // Would block
+            }
+            last_err = errno;
+            break;
+        }
+        total_n += n;
+        if (static_cast<size_t>(total_n) >= data.size()) {
+            break;  // All data sent
+        }
+        // Continue looping to send more
+    }
+
+    if (total_n == 0 && last_err == 0) {
         // Would block - store pending operation for wait() to process
         PendingOp op;
         op.actor = actor;
@@ -401,7 +453,7 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
         return;
     }
 
-    int result = (n < 0) ? errno : static_cast<int>(n);
+    int result = (last_err != 0) ? last_err : static_cast<int>(total_n);
 
     OpCompletion completion{
         .actor = actor,
@@ -418,10 +470,28 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
 
 void EpollBackend::async_recv(int fd, const iovec* bufs, int buf_count,
                               ActorId actor, uint32_t op_type) {
-    // Try non-blocking recv
-    ssize_t n = ::readv(fd, bufs, buf_count);
-    if (n < 0 && errno == EAGAIN) {
-        // Would block - store pending operation for wait() to process
+    ssize_t total_n = 0;
+    int last_err = 0;
+
+    // Loop until EAGAIN to drain all available data (edge-triggered requirement)
+    while (true) {
+        ssize_t n = ::readv(fd, bufs, buf_count);
+        if (n < 0) {
+            if (errno == EAGAIN) {
+                break;  // No more data available right now
+            }
+            last_err = errno;
+            break;
+        }
+        total_n += n;
+        if (n == 0) {
+            break;  // EOF
+        }
+        // Continue looping to check for more data
+    }
+
+    if (total_n == 0 && last_err == 0) {
+        // Socket not ready - store pending operation for wait() to process
         PendingOp op;
         op.actor = actor;
         op.op_type = op_type;
@@ -433,7 +503,7 @@ void EpollBackend::async_recv(int fd, const iovec* bufs, int buf_count,
         return;
     }
 
-    int result = (n < 0) ? errno : static_cast<int>(n);
+    int result = (last_err != 0) ? last_err : static_cast<int>(total_n);
 
     OpCompletion completion{
         .actor = actor,
@@ -546,10 +616,28 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
                                   ActorId actor, uint32_t op_type) {
     struct sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
+    ssize_t total_n = 0;
+    int last_err = 0;
 
-    ssize_t n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
-    if (n < 0 && errno == EAGAIN) {
-        // Would block - store pending for wait() to process
+    // Loop until EAGAIN to drain all available data (edge-triggered requirement)
+    while (true) {
+        ssize_t n = ::recvmsg(fd, bufs, &addr, &addrlen);
+        if (n < 0) {
+            if (errno == EAGAIN) {
+                break;  // No more data available right now
+            }
+            last_err = errno;
+            break;
+        }
+        total_n += n;
+        if (n == 0) {
+            break;  // EOF
+        }
+        // Continue looping to check for more data
+    }
+
+    if (total_n == 0 && last_err == 0) {
+        // Socket not ready - store pending for wait() to process
         PendingOp op;
         op.actor = actor;
         op.op_type = op_type;
@@ -561,8 +649,7 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
         return;
     }
 
-    n = ::recvmsg(fd, &addr, &addrlen);
-    int result = (n < 0) ? errno : static_cast<int>(n);
+    int result = (last_err != 0) ? last_err : static_cast<int>(total_n);
 
     OpCompletion completion{
         .actor = actor,
@@ -592,8 +679,27 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
         offset += bufs[i].iov_len;
     }
 
-    ssize_t n = ::sendto(fd, data.data(), data.size(), 0, addr, addrlen);
-    if (n < 0 && errno == EAGAIN) {
+    ssize_t total_n = 0;
+    int last_err = 0;
+
+    // Loop until EAGAIN to drain send buffer completely (edge-triggered requirement)
+    while (true) {
+        ssize_t n = ::sendto(fd, data.data() + total_n, data.size() - total_n, 0, addr, addrlen);
+        if (n < 0) {
+            if (errno == EAGAIN) {
+                break;  // Would block
+            }
+            last_err = errno;
+            break;
+        }
+        total_n += n;
+        if (static_cast<size_t>(total_n) >= data.size()) {
+            break;  // All data sent
+        }
+        // Continue looping to send more
+    }
+
+    if (total_n == 0 && last_err == 0) {
         // Would block - store pending for wait() to process
         PendingOp op;
         op.actor = actor;
@@ -607,7 +713,7 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
         return;
     }
 
-    int result = (n < 0) ? errno : static_cast<int>(n);
+    int result = (last_err != 0) ? last_err : static_cast<int>(total_n);
 
     OpCompletion completion{
         .actor = actor,

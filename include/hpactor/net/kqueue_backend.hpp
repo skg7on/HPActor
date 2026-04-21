@@ -93,6 +93,17 @@ private:
         uint64_t handle;
     };
 
+    // Pending I/O operation tracked per fd
+    struct PendingOp {
+        ActorId actor;
+        uint32_t op_type;
+        std::vector<uint8_t> data;  // concatenated buffers for send
+        int buf_count = 0;
+        iovec saved_bufs[16];  // original buffers for recv
+        sockaddr_storage addr;
+        socklen_t addrlen = 0;
+    };
+
     // Encode fd+actor+op_type into user_data
     static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type);
     static void decode_user_data(uint64_t user_data, int& fd, ActorId& actor, uint32_t& op_type);
@@ -110,6 +121,9 @@ private:
 
     // fd -> registered events for update tracking
     std::unordered_map<int, uint32_t> fd_events_;
+
+    // fd -> pending I/O operation for edge-triggered async I/O
+    std::unordered_map<int, PendingOp> pending_ops_;
 
     // Registered buffers (not supported in kqueue - always empty)
     std::vector<std::pair<const void*, size_t>> registered_buffers_;

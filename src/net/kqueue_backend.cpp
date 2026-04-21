@@ -359,29 +359,79 @@ void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
     struct sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
 
-    ssize_t n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, reinterpret_cast<struct sockaddr*>(&addr), &addrlen);
-    int result;
-    OpCompletion completion;
-    if (n < 0 && errno == EAGAIN) {
-        completion = {
+    // Ensure fd is non-blocking for event-driven I/O
+    int flags = fcntl(fd, F_GETFL, 0);
+    bool was_blocking = !(flags & O_NONBLOCK);
+    if (was_blocking) {
+        fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    }
+
+    // First check if data is available with non-blocking peek
+    ssize_t peek_n = ::recvfrom(fd, nullptr, 0, MSG_PEEK,
+                                 reinterpret_cast<struct sockaddr*>(&addr), &addrlen);
+    if (peek_n < 0 && errno == EAGAIN) {
+        // No data available right now - restore blocking and deliver EAGAIN
+        if (was_blocking) {
+            fcntl(fd, F_SETFL, flags);
+        }
+        OpCompletion completion{
             .actor = actor,
             .type = static_cast<OpType>(op_type),
             .fd = fd,
             .result = -EAGAIN,
             .user_data = 0,
         };
-    } else {
-        // Actually read data into the provided buffers
-        n = ::readv(fd, bufs, buf_count);
-        result = (n < 0) ? -errno : static_cast<int>(n);
-        completion = {
-            .actor = actor,
-            .type = static_cast<OpType>(op_type),
-            .fd = fd,
-            .result = result,
-            .user_data = 0,
-        };
+        {
+            std::lock_guard<std::mutex> lock(completions_mutex_);
+            pending_completions_.push_back(completion);
+        }
+        return;
     }
+
+    // Data is available or EOF. Read it.
+    ssize_t total_n = 0;
+    int last_err = 0;
+
+    // Loop until EAGAIN to drain all available data (edge-triggered requirement)
+    while (true) {
+        struct msghdr msg;
+        msg.msg_name = &addr;
+        msg.msg_namelen = addrlen;
+        msg.msg_iov = const_cast<iovec*>(bufs);
+        msg.msg_iovlen = buf_count;
+        msg.msg_control = nullptr;
+        msg.msg_controllen = 0;
+        msg.msg_flags = 0;
+
+        ssize_t n = ::recvmsg(fd, &msg, 0);
+        if (n < 0) {
+            if (errno == EAGAIN) {
+                break;  // No more data available right now
+            }
+            last_err = errno;
+            break;
+        }
+        total_n += n;
+        if (n == 0) {
+            break;  // EOF
+        }
+        // Continue looping to check for more data
+    }
+
+    // Restore blocking mode if we changed it
+    if (was_blocking) {
+        fcntl(fd, F_SETFL, flags);
+    }
+
+    int result = (last_err != 0) ? -last_err : static_cast<int>(total_n);
+
+    OpCompletion completion{
+        .actor = actor,
+        .type = static_cast<OpType>(op_type),
+        .fd = fd,
+        .result = result,
+        .user_data = 0,
+    };
     {
         std::lock_guard<std::mutex> lock(completions_mutex_);
         pending_completions_.push_back(completion);
@@ -484,6 +534,109 @@ int KqueueBackend::wait(int timeout_ms) {
         timers_.end()
     );
 
+    // Process pending socket I/O operations
+    for (int i = 0; i < num_events; ++i) {
+        int fd = static_cast<int>(events[i].ident);
+
+        // Check if we have a pending operation for this fd
+        auto it = pending_ops_.find(fd);
+        if (it != pending_ops_.end()) {
+            PendingOp& op = it->second;
+            OpType optype = static_cast<OpType>(op.op_type);
+
+            if (events[i].filter == EVFILT_READ && (optype == OpType::Recv || optype == OpType::RecvFrom)) {
+                // Process pending recv
+                ssize_t total_n = 0;
+                int last_err = 0;
+
+                while (true) {
+                    struct msghdr msg;
+                    msg.msg_name = nullptr;
+                    msg.msg_namelen = 0;
+                    msg.msg_iov = op.saved_bufs;
+                    msg.msg_iovlen = op.buf_count;
+                    msg.msg_control = nullptr;
+                    msg.msg_controllen = 0;
+                    msg.msg_flags = 0;
+
+                    ssize_t n = ::recvmsg(fd, &msg, MSG_DONTWAIT);
+                    if (n < 0) {
+                        if (errno == EAGAIN) {
+                            // No more data, keep pending op for next trigger
+                            goto next_event;
+                        }
+                        last_err = errno;
+                        break;
+                    }
+                    total_n += n;
+                    if (n == 0) {
+                        break;  // EOF
+                    }
+                }
+
+                if (total_n > 0 || last_err != 0) {
+                    int result = (last_err != 0) ? -last_err : static_cast<int>(total_n);
+                    OpCompletion completion{
+                        .actor = op.actor,
+                        .type = optype,
+                        .fd = fd,
+                        .result = result,
+                        .user_data = 0,
+                    };
+                    {
+                        std::lock_guard<std::mutex> lock(completions_mutex_);
+                        pending_completions_.push_back(completion);
+                    }
+                    pending_ops_.erase(it);
+                }
+            } else if (events[i].filter == EVFILT_WRITE && (optype == OpType::Send || optype == OpType::SendTo)) {
+                // Process pending send
+                ssize_t total_n = 0;
+                int last_err = 0;
+
+                while (true) {
+                    ssize_t n;
+                    if (optype == OpType::SendTo) {
+                        n = ::sendto(fd, op.data.data() + total_n, op.data.size() - static_cast<size_t>(total_n), MSG_DONTWAIT,
+                                     reinterpret_cast<const sockaddr*>(&op.addr), op.addrlen);
+                    } else {
+                        n = ::send(fd, op.data.data() + total_n, op.data.size() - static_cast<size_t>(total_n), MSG_DONTWAIT);
+                    }
+                    if (n < 0) {
+                        if (errno == EAGAIN) {
+                            // Would block, keep pending op
+                            goto next_event;
+                        }
+                        last_err = errno;
+                        break;
+                    }
+                    total_n += n;
+                    if (static_cast<size_t>(total_n) >= op.data.size()) {
+                        break;  // All sent
+                    }
+                }
+
+                if (total_n > 0 || last_err != 0) {
+                    int result = (last_err != 0) ? -last_err : static_cast<int>(total_n);
+                    OpCompletion completion{
+                        .actor = op.actor,
+                        .type = optype,
+                        .fd = fd,
+                        .result = result,
+                        .user_data = 0,
+                    };
+                    {
+                        std::lock_guard<std::mutex> lock(completions_mutex_);
+                        pending_completions_.push_back(completion);
+                    }
+                    pending_ops_.erase(it);
+                }
+            }
+        }
+    next_event:
+        continue;
+    }
+
     return num_events;
 }
 
@@ -499,9 +652,6 @@ void KqueueBackend::process_completions() {
         deliver_completion(completion);
     }
 
-    // Note: Socket events from wait() are handled synchronously in async_* methods
-    // which already queue completions. The kevent array from wait() is not needed
-    // for process_completions since all async operations complete immediately.
     last_num_events_ = 0;
 }
 
