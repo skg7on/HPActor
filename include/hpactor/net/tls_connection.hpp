@@ -116,6 +116,9 @@ public:
     // Close connection
     void close();
 
+    // Handle send completion (called by TcpTransport on async_send completion)
+    void handle_send_completion(int result);
+
     // Get session state
     TlsSessionState session_state() const { return session_state_; }
 
@@ -163,9 +166,6 @@ private:
 
     // Flush write buffer (called after async_send completion)
     void flush_write_buffer();
-
-    // Handle send completion
-    void handle_send_completion(int result);
 
     // Event loop callbacks
     void on_fd_readable();
