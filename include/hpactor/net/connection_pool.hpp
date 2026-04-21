@@ -43,6 +43,7 @@ struct PoolConfig {
     size_t max_attempts = 5;
     std::chrono::milliseconds initial_backoff{1000};
     std::chrono::milliseconds max_backoff{16000};
+    bool use_tls = false;  // Default to plain text
 };
 
 // Pending message entry
