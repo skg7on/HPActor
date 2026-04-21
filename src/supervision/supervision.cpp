@@ -131,6 +131,37 @@ void SelfSupervisingActor::remove_child(Actor child) {
                     children_.end());
 }
 
+void SelfSupervisingActor::add_remote_child(ActorRef child) {
+    remote_children_.push_back(child);
+    remote_child_addresses_.push_back(child.address());
+}
+
+bool SelfSupervisingActor::has_remote_child(const ActorAddress& addr) const {
+    for (const auto& child_addr : remote_child_addresses_) {
+        if (child_addr == addr) return true;
+    }
+    return false;
+}
+
+ActorRef SelfSupervisingActor::get_remote_child(const ActorAddress& addr) const {
+    for (size_t i = 0; i < remote_child_addresses_.size(); ++i) {
+        if (remote_child_addresses_[i] == addr) {
+            return remote_children_[i];
+        }
+    }
+    return ActorRef{};
+}
+
+void SelfSupervisingActor::remove_remote_child(const ActorAddress& addr) {
+    for (size_t i = 0; i < remote_child_addresses_.size(); ++i) {
+        if (remote_child_addresses_[i] == addr) {
+            remote_children_.erase(remote_children_.begin() + static_cast<std::ptrdiff_t>(i));
+            remote_child_addresses_.erase(remote_child_addresses_.begin() + static_cast<std::ptrdiff_t>(i));
+            return;
+        }
+    }
+}
+
 SupervisionDirective
 SelfSupervisingActor::on_failure(ActorId child_id, const error& err) {
     return decide_restart(child_id, err);

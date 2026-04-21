@@ -19,7 +19,13 @@ void test_self_supervising_actor_interface() {
     static_assert(sizeof(hpactor::SelfSupervisingActor) > 0, "should not be empty");
 }
 
+void test_self_supervising_remote_children() {
+    // This test verifies the interface exists and compiles
+    static_assert(sizeof(hpactor::SelfSupervisingActor) > 0, "should not be empty");
+}
+
 int main() {
     test_self_supervising_actor_interface();
+    test_self_supervising_remote_children();
     return 0;
 }

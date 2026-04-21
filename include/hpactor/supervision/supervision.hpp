@@ -78,6 +78,13 @@ class SelfSupervisingActor : public EventBasedActor {
     void add_child(Actor child);
     void remove_child(Actor child);
 
+    // Remote child management
+    void add_remote_child(ActorRef child);
+    bool has_remote_child(const ActorAddress& addr) const;
+    ActorRef get_remote_child(const ActorAddress& addr) const;
+    void remove_remote_child(const ActorAddress& addr);
+    const std::vector<ActorRef>& remote_children() const { return remote_children_; }
+
   protected:
     virtual SupervisionDirective on_failure(ActorId child_id, const error& err);
 
@@ -88,6 +95,8 @@ class SelfSupervisingActor : public EventBasedActor {
     SupervisionPolicy policy_;
     std::unordered_map<ActorId, uint32_t> restart_counts_;
     std::chrono::steady_clock::time_point first_failure_time_;
+    std::vector<ActorRef> remote_children_;  // remote child references
+    std::vector<ActorAddress> remote_child_addresses_;  // for persistence
 };
 
 } // namespace hpactor
