@@ -115,13 +115,22 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Phase 6: Remote Actor Spawn — AsyncActor, ActorTypeRegistry, SpawnReceiver, spawn_remote()
 - Scheduling Subsystem: ChaseLev deque, MultiPriorityWorkQueue, EDFQueue, A2WS, TimingWheel, CoroutineFramePool, HybridScheduler, WorkerThread, ActorState, CoroutineTask/CoroutinePromise, awaiters, MPSCMailbox
 
-**Next Steps (Phase 8 - integration and polish)**
-- Full serialization integration (SpawnRequest/SpawnResponse as MessageVariant)
-- Transport response routing (Transport calling AsyncActor::set_response)
-- Registrar node lookup (translating node names to NodeId)
+**Phase 8: Spawn Serialization Integration** ✅ Complete (2026-04-21)
+- SpawnRequest/SpawnResponse integrated with TypeTag (SpawnRequestTag=5, SpawnResponseTag=6)
+- SpawnMessageVariant (separate from main MessageVariant to avoid circular includes via spawn.hpp → serialization.hpp → abstract_actor.hpp)
+- DefaultSerializer::encode_spawn()/decode_spawn() for spawn type serialization
+- ActorSystem::spawn_remote_async() uses DefaultSerializer for request encoding
+- ConnectionPool hybrid routing: SpawnResponse → spawn_handler, other RPC → rpc_handler
+- SpawnReceiver sends SpawnResponse via transport with Frame context for reply routing
+- AsyncActor gains message_id_ field for response correlation
+- ActorTypeRegistry::spawn() updated to accept args and args_type parameters
+- Remote child tracking added to SelfSupervisingActor (remote_children_, remote_child_addresses_, add_remote_child, etc.)
+- ActorContext gains add_remote_child(ActorRef) method
+- Integration test (test_spawn_integration) validates frame encoding and message correlation
+
+**Next Steps (Phase 9 - remaining items)**
 - Argument deserialization (passing constructor args through spawn)
-- Integration test (two-process remote spawn test)
-- WorkerThread integration into HybridScheduler (currently HybridScheduler uses inline WorkerState, WorkerThread is separate)
+- Full two-process integration test with TCP transport
 - Typed RPC API (template call<Request, Response> with serialization)
 
 **Source Reorganization**
