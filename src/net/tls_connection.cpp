@@ -504,6 +504,9 @@ void TlsConnection::flush_write_buffer() {
 }
 
 void TlsConnection::handle_send_completion(int result) {
+    if (send_completion_handler_) {
+        send_completion_handler_(result);
+    }
     is_sending_ = false;
 
     if (result < 0) {

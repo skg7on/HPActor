@@ -103,6 +103,7 @@ public:
     void set_ready_handler(connection_ready_handler handler);
     void set_frame_handler(frame_handler handler);
     void set_error_handler(connection_error_handler handler);
+    void set_send_completion_handler(std::function<void(int result)> handler);
 
     // Initiate client handshake (called after connection established)
     void start_client_handshake();
@@ -206,6 +207,7 @@ private:
     connection_ready_handler ready_handler_;
     frame_handler frame_handler_;
     connection_error_handler error_handler_;
+    std::function<void(int result)> send_completion_handler_;
 
     // Server-side flag
     bool is_server_ = false;
