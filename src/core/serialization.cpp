@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/types/serialization.hpp>
+#include <hpactor/spawn.hpp>
 
 #include <cstring>
 
@@ -196,6 +197,167 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     }
     default:
         return MessageVariant{};
+    }
+}
+
+bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnMessageVariant& msg) {
+    bytes result;
+
+    // SpawnRequest
+    if (std::holds_alternative<SpawnRequest>(msg)) {
+        const SpawnRequest& m = std::get<SpawnRequest>(msg);
+        // Encode actor_type_name length + string
+        size_t name_len = m.actor_type_name.size();
+        result.resize(sizeof(uint32_t) + name_len + sizeof(TypeTag) +
+                      sizeof(size_t) + m.serialized_args.size() +
+                      sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t));
+        size_t offset = 0;
+
+        // actor_type_name length
+        uint32_t name_len_u32 = static_cast<uint32_t>(name_len);
+        std::memcpy(result.data() + offset, &name_len_u32, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        // actor_type_name string
+        std::memcpy(result.data() + offset, m.actor_type_name.data(), name_len);
+        offset += name_len;
+
+        // args_type
+        uint32_t args_type = static_cast<uint32_t>(m.args_type);
+        std::memcpy(result.data() + offset, &args_type, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        // serialized_args length
+        uint32_t args_len = static_cast<uint32_t>(m.serialized_args.size());
+        std::memcpy(result.data() + offset, &args_len, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        // serialized_args data
+        if (!m.serialized_args.empty()) {
+            std::memcpy(result.data() + offset, m.serialized_args.data(), m.serialized_args.size());
+            offset += m.serialized_args.size();
+        }
+
+        // supervisor_addr fields
+        uint32_t sup_node_id = m.supervisor_addr.node_id;
+        uint32_t sup_type = m.supervisor_addr.type;
+        uint64_t sup_actor_id = m.supervisor_addr.id.value();
+        uint64_t sup_incarnation = m.supervisor_addr.incarnation;
+
+        std::memcpy(result.data() + offset, &sup_node_id, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(result.data() + offset, &sup_type, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(result.data() + offset, &sup_actor_id, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
+        std::memcpy(result.data() + offset, &sup_incarnation, sizeof(uint64_t));
+    }
+    // SpawnResponse
+    else if (std::holds_alternative<SpawnResponse>(msg)) {
+        const SpawnResponse& m = std::get<SpawnResponse>(msg);
+        result.resize(sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint32_t));
+        size_t offset = 0;
+
+        uint32_t actor_node_id = m.actor_addr.node_id;
+        uint32_t actor_type = m.actor_addr.type;
+        uint64_t actor_id = m.actor_addr.id.value();
+        uint64_t actor_incarnation = m.actor_addr.incarnation;
+        uint32_t error_code = m.error_code;
+
+        std::memcpy(result.data() + offset, &actor_node_id, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(result.data() + offset, &actor_type, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
+        std::memcpy(result.data() + offset, &actor_incarnation, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
+        std::memcpy(result.data() + offset, &error_code, sizeof(uint32_t));
+    }
+
+    return result;
+}
+
+SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& data) {
+    switch (tag) {
+    case TypeTag::SpawnRequestTag: {
+        SpawnRequest m;
+        size_t offset = 0;
+
+        // actor_type_name length
+        uint32_t name_len;
+        std::memcpy(&name_len, data.data() + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        // actor_type_name string
+        m.actor_type_name.resize(name_len);
+        std::memcpy(m.actor_type_name.data(), data.data() + offset, name_len);
+        offset += name_len;
+
+        // args_type
+        uint32_t args_type_val;
+        std::memcpy(&args_type_val, data.data() + offset, sizeof(uint32_t));
+        m.args_type = static_cast<TypeTag>(args_type_val);
+        offset += sizeof(uint32_t);
+
+        // serialized_args length
+        uint32_t args_len;
+        std::memcpy(&args_len, data.data() + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+
+        // serialized_args data
+        m.serialized_args.resize(args_len);
+        if (args_len > 0) {
+            std::memcpy(m.serialized_args.data(), data.data() + offset, args_len);
+            offset += args_len;
+        }
+
+        // supervisor_addr fields
+        uint32_t sup_node_id, sup_type;
+        uint64_t sup_actor_id, sup_incarnation;
+        std::memcpy(&sup_node_id, data.data() + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(&sup_type, data.data() + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(&sup_actor_id, data.data() + offset, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
+        std::memcpy(&sup_incarnation, data.data() + offset, sizeof(uint64_t));
+
+        m.supervisor_addr.node_id = sup_node_id;
+        m.supervisor_addr.type = sup_type;
+        m.supervisor_addr.id = ActorId(sup_actor_id);
+        m.supervisor_addr.incarnation = sup_incarnation;
+
+        return m;
+    }
+    case TypeTag::SpawnResponseTag: {
+        SpawnResponse m;
+        size_t offset = 0;
+
+        uint32_t actor_node_id, actor_type;
+        uint64_t actor_id, actor_incarnation;
+        uint32_t error_code;
+
+        std::memcpy(&actor_node_id, data.data() + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(&actor_type, data.data() + offset, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
+        std::memcpy(&actor_incarnation, data.data() + offset, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
+        std::memcpy(&error_code, data.data() + offset, sizeof(uint32_t));
+
+        m.actor_addr.node_id = actor_node_id;
+        m.actor_addr.type = actor_type;
+        m.actor_addr.id = ActorId(actor_id);
+        m.actor_addr.incarnation = actor_incarnation;
+        m.error_code = error_code;
+
+        return m;
+    }
+    default:
+        return SpawnMessageVariant{};
     }
 }
 

@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/spawn.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <cstring>
@@ -87,6 +88,10 @@ public:
 
     template <typename T>
     void register_user_type(TypeTag tag);
+
+    // Spawn-specific encode/decode (separate from MessageVariant path)
+    bytes encode_spawn(TypeTag tag, const SpawnMessageVariant& msg);
+    SpawnMessageVariant decode_spawn(TypeTag tag, const bytes& data);
 
 private:
     bytes encode_system(const MessageVariant& msg);
