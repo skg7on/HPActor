@@ -16,6 +16,7 @@
 
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/tls_connection.hpp>
+#include <hpactor/net/plain_connection.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_address.hpp>
