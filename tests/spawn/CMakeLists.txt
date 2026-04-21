@@ -9,3 +9,7 @@ add_test(NAME test_actor_type_registry COMMAND test_actor_type_registry)
 add_executable(test_spawn_receiver test_spawn_receiver.cpp)
 target_link_libraries(test_spawn_receiver hpactor)
 add_test(NAME test_spawn_receiver COMMAND test_spawn_receiver)
+
+add_executable(test_spawn_serialization test_spawn_serialization.cpp)
+target_link_libraries(test_spawn_serialization hpactor)
+add_test(NAME test_spawn_serialization COMMAND test_spawn_serialization)

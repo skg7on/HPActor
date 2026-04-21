@@ -267,6 +267,10 @@ enum class TypeTag : uint32_t {
     LinkMsg = 3,
     UnlinkMsg = 4,
 
+    // Spawn protocol (Phase 8)
+    SpawnRequestTag = 5,
+    SpawnResponseTag = 6,
+
     // First available user tag
     User = 100,
 };
