@@ -38,7 +38,18 @@ TcpTransport::TcpTransport(NodeId node_id,
       acceptor_(&loop_),
       tls_context_(TlsContext::from_config(tls_config)),
       pool_config_(pool_config),
-      registry_(registry) {}
+      registry_(registry) {
+    // Set up completion callback to route send completions to TlsConnection
+    completion_callback_ = [this](OpCompletion c) {
+        if (c.type == OpType::Send) {
+            auto it = connections_.find(c.fd);
+            if (it != connections_.end()) {
+                it->second->handle_send_completion(c.result);
+            }
+        }
+    };
+    loop_.set_completion_callback(completion_callback_);
+}
 
 TcpTransport::~TcpTransport() {
     stop_listening();
@@ -164,6 +175,14 @@ void TcpTransport::set_rpc_handler(rpc_response_handler handler) {
     for (auto& [node, pool] : pools_) {
         pool->set_rpc_handler(rpc_handler_);
     }
+}
+
+void TcpTransport::register_connection(TlsConnectionPtr conn, int fd) {
+    connections_[fd] = conn;
+}
+
+void TcpTransport::unregister_connection(int fd) {
+    connections_.erase(fd);
 }
 
 void TcpTransport::handle_accept(int client_fd) {
