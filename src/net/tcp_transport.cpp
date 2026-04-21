@@ -191,7 +191,7 @@ void TcpTransport::handle_accept(int client_fd) {
     // TODO: implement proper node ID exchange during handshake
     // Create server-side TLS connection
     auto conn = TlsConnection::create_server(client_fd, 0, &tls_context_, &loop_);
-    (void)conn;
+    register_connection(conn, client_fd);
 }
 
 } // namespace net
