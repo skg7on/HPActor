@@ -98,6 +98,12 @@ TlsConnectionPtr TlsConnection::create_server(int socket_fd,
     // Server waits for client hello
     conn->set_handshake_state(TlsHandshakeState::WaitingForServerHello);
     conn->set_session_state(TlsSessionState::Handshake);
+
+    // Register fd with event loop for read events (for receiving handshake messages)
+    if (loop && socket_fd >= 0) {
+        loop->add_fd(socket_fd, EventLoop::Event::Read);
+    }
+
     return conn;
 }
 
@@ -471,10 +477,52 @@ void TlsConnection::set_session_state(TlsSessionState new_state) {
 }
 
 void TlsConnection::send_raw(const bytes& data) {
-    if (fd_ < 0) return;
-    // In a real implementation, this would use EventLoop for async I/O
-    // For now, direct write (synchronous)
-    ::send(fd_, data.data(), data.size(), 0);
+    if (fd_ < 0 || !loop_) return;
+
+    // Append data to write buffer
+    write_buffer_.insert(write_buffer_.end(), data.begin(), data.end());
+
+    // If already sending, wait for completion
+    if (is_sending_) return;
+
+    flush_write_buffer();
+}
+
+void TlsConnection::flush_write_buffer() {
+    if (fd_ < 0 || loop_ == nullptr || write_buffer_.empty()) {
+        return;
+    }
+
+    is_sending_ = true;
+
+    struct iovec iov;
+    iov.iov_base = write_buffer_.data();
+    iov.iov_len = write_buffer_.size();
+
+    // Use async_send - completion will be delivered via loop's completion callback
+    loop_->backend()->async_send(fd_, &iov, 1, ActorId(0), static_cast<uint32_t>(OpType::Send));
+}
+
+void TlsConnection::handle_send_completion(int result) {
+    is_sending_ = false;
+
+    if (result < 0) {
+        // Send error - close connection
+        set_handshake_state(TlsHandshakeState::Error);
+        return;
+    }
+
+    // Remove sent bytes from write buffer
+    if (static_cast<size_t>(result) >= write_buffer_.size()) {
+        write_buffer_.clear();
+    } else {
+        write_buffer_.erase(write_buffer_.begin(), write_buffer_.begin() + result);
+    }
+
+    // If more data to send, continue flushing
+    if (!write_buffer_.empty()) {
+        flush_write_buffer();
+    }
 }
 
 void TlsConnection::on_fd_readable() {

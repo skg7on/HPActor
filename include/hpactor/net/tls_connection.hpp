@@ -161,6 +161,12 @@ private:
     // Send raw bytes on socket
     void send_raw(const bytes& data);
 
+    // Flush write buffer (called after async_send completion)
+    void flush_write_buffer();
+
+    // Handle send completion
+    void handle_send_completion(int result);
+
     // Event loop callbacks
     void on_fd_readable();
     void on_fd_writable();
@@ -189,6 +195,9 @@ private:
 
     // Write buffer
     bytes write_buffer_;
+
+    // True while async send is in progress
+    bool is_sending_ = false;
 
     // Handshake message buffer (for Finished verify_data)
     bytes handshake_messages_;
