@@ -119,6 +119,10 @@ void TlsConnection::set_error_handler(connection_error_handler handler) {
     error_handler_ = std::move(handler);
 }
 
+void TlsConnection::set_send_completion_handler(std::function<void(int result)> handler) {
+    send_completion_handler_ = std::move(handler);
+}
+
 void TlsConnection::start_client_handshake() {
     if (is_server_) return;
 
