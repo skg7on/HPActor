@@ -84,6 +84,14 @@ void ActorContext::remove_child(Actor child) {
     }
 }
 
+std::vector<ActorRef> ActorContext::remote_children() const {
+    return remote_children_;
+}
+
+void ActorContext::add_remote_child(ActorRef child) {
+    remote_children_.push_back(std::move(child));
+}
+
 std::vector<ActorAddress> ActorContext::linked_actors() const {
     return linked_;
 }

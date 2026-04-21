@@ -63,6 +63,10 @@ class ActorContext {
     void add_child(Actor child);
     void remove_child(Actor child);
 
+    // Remote child management
+    void add_remote_child(ActorRef child);
+    std::vector<ActorRef> remote_children() const;
+
     // Link management
     std::vector<ActorAddress> linked_actors() const;
 
@@ -79,6 +83,7 @@ class ActorContext {
     Actor owner_;
     ActorSystem* system_ = nullptr;
     std::vector<Actor> children_;
+    std::vector<ActorRef> remote_children_;
     std::vector<ActorAddress> linked_;
     std::vector<ActorAddress> monitored_;
 };

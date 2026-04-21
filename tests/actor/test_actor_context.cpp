@@ -57,10 +57,28 @@ void test_actor_context_monitor() {
     (void)monitored;
 }
 
+void test_actor_context_remote_children() {
+    Actor empty_actor;
+    ActorContext ctx(empty_actor);
+
+    // Remote children should be empty initially
+    assert(ctx.remote_children().empty());
+
+    // Create a mock remote actor address
+    ActorAddress remote_addr{NodeId{2}, ActorType{10}, ActorId{100}, 1};
+    ActorProxy proxy(remote_addr, nullptr);
+    ActorRef remote_child(std::move(proxy));
+
+    // Add remote child
+    ctx.add_remote_child(remote_child);
+    assert(ctx.remote_children().size() == 1);
+}
+
 int main() {
     test_actor_context_children();
     test_actor_context_linked_actors();
     test_actor_context_monitor();
+    test_actor_context_remote_children();
 
     return 0;
 }
