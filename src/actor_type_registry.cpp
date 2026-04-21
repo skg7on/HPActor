@@ -18,7 +18,9 @@
 namespace hpactor {
 
 result<ActorAddress> ActorTypeRegistry::spawn(ActorSystem& system,
-                                              const std::string& name) {
+                                              const std::string& name,
+                                              const bytes& /*args*/,
+                                              TypeTag /*args_type*/) {
     auto it = types_by_name_.find(name);
     if (it == types_by_name_.end()) {
         return result<ActorAddress>::make(error(spawn_errors::unknown_type,

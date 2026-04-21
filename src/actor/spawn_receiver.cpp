@@ -29,16 +29,18 @@ Behavior SpawnReceiver::make_behavior() {
         std::visit([this](auto&& m) {
             using T = std::decay_t<decltype(m)>;
             if constexpr (std::is_same_v<T, SpawnRequest>) {
-                handle_spawn_request(m);
+                handle_spawn_request(m, net::Frame{});  // Empty frame for now
             }
         }, std::move(msg));
     }};
 }
 
-void SpawnReceiver::handle_spawn_request(const SpawnRequest& req) {
+void SpawnReceiver::handle_spawn_request(const SpawnRequest& req, const net::Frame& frame) {
     SpawnResponse response;
 
-    auto result = registry_.spawn(system(), req.actor_type_name);
+    // Spawn the actor
+    auto result = registry_.spawn(system(), req.actor_type_name,
+                                   req.serialized_args, req.args_type);
     if (result.has_value()) {
         response.actor_addr = result.value();
         response.error_code = spawn_errors::success;
@@ -46,10 +48,20 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req) {
         response.error_code = result.error().code();
     }
 
-    // TODO: Send response back via transport using Frame.message_id to route
-    // This requires transport to support reply routing
-    (void)response;
-    (void)transport_;
+    // Send response back to caller via transport
+    if (transport_) {
+        net::Frame response_frame;
+        response_frame.sender = address();
+        response_frame.receiver = frame.sender;  // Reply to original sender
+        response_frame.message_id = frame.message_id;
+        response_frame.flags = net::Frame::RpcResponse;
+
+        DefaultSerializer serializer;
+        SpawnMessageVariant mv = response;
+        response_frame.payload = serializer.encode_spawn(TypeTag::SpawnResponseTag, mv);
+
+        transport_->send(response_frame.receiver, response_frame.encode());
+    }
 }
 
 } // namespace hpactor

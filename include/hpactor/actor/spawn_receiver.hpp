@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_type_registry.hpp>
+#include <hpactor/net/frame.hpp>
 #include <hpactor/spawn.hpp>
 
 namespace hpactor {
@@ -32,7 +33,7 @@ public:
     Behavior make_behavior() override;
 
 private:
-    void handle_spawn_request(const SpawnRequest& req);
+    void handle_spawn_request(const SpawnRequest& req, const net::Frame& frame);
 
     ActorTypeRegistry& registry_;
     net::Transport* transport_;  // non-owning
