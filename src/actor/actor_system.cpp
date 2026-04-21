@@ -16,6 +16,7 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/actor_type_registry.hpp>
 #include <hpactor/spawn.hpp>
+#include <hpactor/types/serialization.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
@@ -226,34 +227,38 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     // For now, assume node_name is a NodeId string
     NodeId remote_node_id = static_cast<NodeId>(std::stoul(node_name));
 
-    // Create spawn request
-    SpawnRequest request;
-    request.actor_type_name = actor_type;
-    request.args_type = TypeTag::User;
-    request.serialized_args = bytes{};
+    // Serialize request using DefaultSerializer::encode_spawn
+    DefaultSerializer serializer;
+    SpawnRequest req;
+    req.actor_type_name = actor_type;
+    req.args_type = TypeTag::User;
+    req.serialized_args = bytes{};
+    req.supervisor_addr = system_actor_.address();  // Supervisor is system actor for now
 
-    // Serialize request - for now, use simple manual encoding
-    // TODO: Integrate with DefaultSerializer when SpawnRequest is MessageVariant
-    bytes request_bytes;
-    // [4 bytes: name length][name bytes...]
+    SpawnMessageVariant mv = req;
+    bytes request_bytes = serializer.encode_spawn(TypeTag::SpawnRequestTag, mv);
 
     // Create frame for spawn request
     net::Frame frame;
     frame.sender = system_actor_.address();
     frame.receiver = ActorAddress{remote_node_id, SystemActorType, SpawnReceiverId, 0};
     frame.message_id = MessageId::generate().value();
+    frame.flags = net::Frame::RpcRequest;
     frame.payload = request_bytes;
 
-    // Store pending spawn for response routing
+    // Create pending actor for response routing
+    auto pending = std::make_shared<AsyncActor>(std::move(handle));
+    pending->set_message_id(frame.message_id);
+
     {
         std::lock_guard<std::mutex> lock(pending_spawns_mutex_);
-        pending_spawns_.emplace(frame.message_id, std::make_shared<AsyncActor>(std::move(handle)));
+        pending_spawns_.emplace(frame.message_id, pending);
     }
 
     // Send via transport
     transport_->send(frame.receiver, frame.encode());
 
-    return handle;
+    return std::move(*pending);
 }
 
 } // namespace hpactor

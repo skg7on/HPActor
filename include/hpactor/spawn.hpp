@@ -17,12 +17,12 @@
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/types/serialization.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <condition_variable>
 #include <memory>
 #include <mutex>
+#include <variant>
 
 namespace hpactor {
 
@@ -59,6 +59,12 @@ struct SpawnResponse {
 };
 
 // -----------------------------------------------------------------------------
+// SpawnMessageVariant - variant for spawn protocol messages only
+// This is separate from the main MessageVariant to avoid circular includes
+// -----------------------------------------------------------------------------
+using SpawnMessageVariant = std::variant<SpawnRequest, SpawnResponse>;
+
+// -----------------------------------------------------------------------------
 // AsyncActor - handle for asynchronous remote spawn
 // -----------------------------------------------------------------------------
 // Allows non-blocking spawn with result retrieval via get().
@@ -87,6 +93,10 @@ public:
     // Set response (called by transport layer when response received)
     void set_response(SpawnResponse response);
 
+    // Message ID for correlation with response
+    void set_message_id(uint64_t id) { message_id_ = id; }
+    uint64_t message_id() const { return message_id_; }
+
 private:
     NodeId node_id_ = 0;
     std::chrono::milliseconds timeout_{5000};
@@ -95,6 +105,7 @@ private:
     bool ready_ = false;
     bool cancelled_ = false;
     SpawnResponse response_{};
+    uint64_t message_id_ = 0;  // For correlation with response
 };
 
 } // namespace hpactor
