@@ -88,6 +88,9 @@ public:
                                           TlsContext* tls_context,
                                           EventLoop* loop);
 
+    // Set file descriptor (for connected client sockets after TCP handshake)
+    void set_fd(int fd);
+
     ~TlsConnection();
 
     // Non-copyable

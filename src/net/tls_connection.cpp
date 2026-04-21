@@ -124,6 +124,14 @@ void TlsConnection::set_send_completion_handler(std::function<void(int result)> 
     send_completion_handler_ = std::move(handler);
 }
 
+void TlsConnection::set_fd(int fd) {
+    fd_ = fd;
+    // Register fd with event loop for read events
+    if (loop_ && fd >= 0) {
+        loop_->add_fd(fd, EventLoop::Event::Read);
+    }
+}
+
 void TlsConnection::start_client_handshake() {
     if (is_server_) return;
 
