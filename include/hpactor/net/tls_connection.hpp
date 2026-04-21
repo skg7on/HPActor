@@ -75,7 +75,7 @@ using frame_handler = std::function<void(const bytes&)>;
 // Callback for connection errors
 using connection_error_handler = std::function<void(TlsConnectionPtr, const error&)>;
 
-class TlsConnection : public std::enable_shared_from_this<TlsConnection> {
+class TlsConnection : public Connection, public std::enable_shared_from_this<TlsConnection> {
 public:
     // Create client-side connection
     static TlsConnectionPtr create_client(NodeId remote_node_id,

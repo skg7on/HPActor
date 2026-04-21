@@ -65,7 +65,8 @@ TlsConnection::TlsConnection(NodeId remote_node_id,
                              TlsContext* tls_context,
                              EventLoop* loop,
                              int socket_fd)
-    : remote_node_id_(remote_node_id),
+    : Connection(remote_node_id),
+      remote_node_id_(remote_node_id),
       tls_context_(tls_context),
       loop_(loop),
       fd_(socket_fd) {
@@ -356,7 +357,7 @@ void TlsConnection::handle_finished(const bytes& data) {
 
     // Notify ready handler
     if (ready_handler_) {
-        TlsConnectionPtr self = shared_from_this();
+        TlsConnectionPtr self = std::enable_shared_from_this<TlsConnection>::shared_from_this();
         ready_handler_(self);
     }
 }
