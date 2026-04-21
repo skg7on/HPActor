@@ -46,6 +46,7 @@ struct SpawnRequest {
     std::string actor_type_name;    // e.g., "calculator"
     TypeTag args_type;            // type tag for deserializing args
     bytes serialized_args;         // type-erased constructor arguments
+    ActorAddress supervisor_addr;  // supervisor's address for link establishment
 };
 
 // -----------------------------------------------------------------------------

@@ -39,9 +39,30 @@ void test_spawn_response_construction() {
     assert(resp.error_code == hpactor::spawn_errors::success);
 }
 
+// Test that SpawnRequest supports supervisor_addr field
+void test_spawn_request_with_supervisor() {
+    hpactor::ActorAddress supervisor{
+        hpactor::NodeId{1},
+        hpactor::ActorType{10},
+        hpactor::ActorId{42},
+        1
+    };
+
+    hpactor::SpawnRequest req;
+    req.actor_type_name = "worker";
+    req.args_type = hpactor::TypeTag::User;
+    req.serialized_args = {1, 2, 3};
+    req.supervisor_addr = supervisor;
+
+    assert(req.actor_type_name == "worker");
+    assert(req.supervisor_addr.node_id == 1);
+    assert(req.supervisor_addr.id.value() == 42);
+}
+
 int main() {
     test_type_tag_enum_has_spawn_tags();
     test_spawn_request_construction();
     test_spawn_response_construction();
+    test_spawn_request_with_supervisor();
     return 0;
 }
