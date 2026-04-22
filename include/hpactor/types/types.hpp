@@ -14,9 +14,12 @@
 
 #pragma once
 
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
+#include <cstring>
+#include <netinet/in.h>
 #include <string>
 #include <variant>
 #include <vector>
@@ -57,7 +60,7 @@ using NodeId = std::string;
 inline const NodeId LocalNodeId = "";
 
 // -----------------------------------------------------------------------------
-// NodeId helper functions
+// NodeId helper functions (for backward compatibility during transition)
 // -----------------------------------------------------------------------------
 
 // Extract host from "host:port" format
@@ -97,6 +100,130 @@ inline NodeId make_node_id(const std::string& host, uint16_t port) {
 // Check if node ID represents local node
 inline bool is_local_node_id(const NodeId& id) {
     return id.empty();
+}
+
+// -----------------------------------------------------------------------------
+// Protocol - network protocol family
+// -----------------------------------------------------------------------------
+enum class Protocol { IPv4, IPv6 };
+
+// -----------------------------------------------------------------------------
+// Ipv4Endpoint - IPv4 address and port (network byte order)
+// -----------------------------------------------------------------------------
+struct Ipv4Endpoint {
+    uint32_t addr;   // Network byte order (big-endian)
+    uint16_t port_nw;   // Network byte order
+
+    constexpr Ipv4Endpoint() noexcept : addr(0), port_nw(0) {}
+    constexpr Ipv4Endpoint(uint32_t a, uint16_t p) noexcept : addr(a), port_nw(p) {}
+
+    [[nodiscard]] constexpr uint16_t port() const noexcept { return port_nw; }
+    [[nodiscard]] constexpr bool is_ipv4() const noexcept { return true; }
+    [[nodiscard]] constexpr bool is_ipv6() const noexcept { return false; }
+    [[nodiscard]] constexpr bool is_loopback() const noexcept;
+    [[nodiscard]] constexpr bool is_private_network() const noexcept;
+    [[nodiscard]] constexpr bool is_unspecified() const noexcept;
+
+    // For socket operations
+    constexpr socklen_t sockaddr_length() const noexcept { return sizeof(sockaddr_in); }
+    void to_sockaddr(sockaddr_in* out) const noexcept;
+};
+
+[[nodiscard]] constexpr bool Ipv4Endpoint::is_loopback() const noexcept {
+    return (addr & 0xFF000000) == 0x7F000000;
+}
+
+[[nodiscard]] constexpr bool Ipv4Endpoint::is_private_network() const noexcept {
+    uint8_t b1 = (addr >> 24) & 0xFF;
+    uint32_t rest = addr & 0xFFFF0000;
+    return b1 == 10 ||
+           (b1 == 172 && ((addr >> 16) & 0xFF & 0xF0) == 0x10) ||
+           (b1 == 192 && rest == 0xC0A80000);
+}
+
+[[nodiscard]] constexpr bool Ipv4Endpoint::is_unspecified() const noexcept {
+    return addr == 0;
+}
+
+inline void Ipv4Endpoint::to_sockaddr(sockaddr_in* out) const noexcept {
+    out->sin_family = AF_INET;
+    out->sin_port = port_nw;
+    out->sin_addr.s_addr = addr;
+    std::memset(out->sin_zero, 0, sizeof(out->sin_zero));
+}
+
+// -----------------------------------------------------------------------------
+// Ipv6Endpoint - IPv6 address and port (network byte order)
+// -----------------------------------------------------------------------------
+struct Ipv6Endpoint {
+    std::array<uint8_t, 16> addr;  // Network byte order
+    uint16_t port_nw;                 // Network byte order
+
+    constexpr Ipv6Endpoint() noexcept : addr{}, port_nw(0) {}
+    constexpr Ipv6Endpoint(std::array<uint8_t, 16> a, uint16_t p) noexcept
+        : addr(a), port_nw(p) {}
+
+    [[nodiscard]] constexpr uint16_t port() const noexcept { return port_nw; }
+    [[nodiscard]] constexpr bool is_ipv4() const noexcept { return false; }
+    [[nodiscard]] constexpr bool is_ipv6() const noexcept { return true; }
+    [[nodiscard]] bool is_loopback() const noexcept;
+    [[nodiscard]] bool is_private_network() const noexcept;
+    [[nodiscard]] bool is_unspecified() const noexcept;
+
+    // For socket operations
+    constexpr socklen_t sockaddr_length() const noexcept { return sizeof(sockaddr_in6); }
+    void to_sockaddr(sockaddr_in6* out) const noexcept;
+};
+
+inline bool Ipv6Endpoint::is_loopback() const noexcept {
+    for (std::size_t i = 0; i < 15; ++i) if (addr[i] != 0) return false;
+    return addr[15] == 1;
+}
+
+inline bool Ipv6Endpoint::is_private_network() const noexcept {
+    return (addr[0] & 0xFE) == 0xFC;
+}
+
+inline bool Ipv6Endpoint::is_unspecified() const noexcept {
+    for (std::size_t i = 0; i < 16; ++i) if (addr[i] != 0) return false;
+    return true;
+}
+
+inline void Ipv6Endpoint::to_sockaddr(sockaddr_in6* out) const noexcept {
+    out->sin6_family = AF_INET6;
+    out->sin6_port = port_nw;
+    std::memcpy(out->sin6_addr.s6_addr, addr.data(), 16);
+    out->sin6_flowinfo = 0;
+    out->sin6_scope_id = 0;
+}
+
+// -----------------------------------------------------------------------------
+// CommunicationEndpoint - variant over IPv4/IPv6
+// -----------------------------------------------------------------------------
+using CommunicationEndpoint = std::variant<Ipv4Endpoint, Ipv6Endpoint>;
+
+// to_sockaddr free function for variant
+inline void to_sockaddr(const CommunicationEndpoint& ep, sockaddr* out, socklen_t* len) {
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
+        if (*len >= sizeof(sockaddr_in)) {
+            ipv4->to_sockaddr(reinterpret_cast<sockaddr_in*>(out));
+            *len = sizeof(sockaddr_in);
+        }
+    } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
+        if (*len >= sizeof(sockaddr_in6)) {
+            ipv6->to_sockaddr(reinterpret_cast<sockaddr_in6*>(out));
+            *len = sizeof(sockaddr_in6);
+        }
+    }
+}
+
+// -----------------------------------------------------------------------------
+// CommunicationEndpoint operations (implemented in cpp)
+// -----------------------------------------------------------------------------
+namespace endpoint_ops {
+    [[nodiscard]] Protocol protocol(const CommunicationEndpoint& ep);
+    [[nodiscard]] int address_family(const CommunicationEndpoint& ep);
+    [[nodiscard]] std::string to_string(const CommunicationEndpoint& ep);
 }
 
 // -----------------------------------------------------------------------------
@@ -320,3 +447,34 @@ enum class TypeTag : uint32_t {
 };
 
 } // namespace hpactor
+
+// -----------------------------------------------------------------------------
+// std::hash specializations (must be in namespace std)
+// -----------------------------------------------------------------------------
+template <> struct std::hash<hpactor::Ipv4Endpoint> {
+    std::size_t operator()(const hpactor::Ipv4Endpoint& ep) const noexcept {
+        std::size_t h = std::hash<uint32_t>{}(ep.addr);
+        h ^= std::hash<uint16_t>{}(ep.port()) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+
+template <> struct std::hash<hpactor::Ipv6Endpoint> {
+    std::size_t operator()(const hpactor::Ipv6Endpoint& ep) const noexcept {
+        std::size_t h = 0;
+        for (uint8_t b : ep.addr) {
+            h ^= std::hash<uint8_t>{}(b) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        }
+        h ^= std::hash<uint16_t>{}(ep.port()) + 0x9e3779b9 + (h << 6) + (h >> 2);
+        return h;
+    }
+};
+
+template <> struct std::hash<hpactor::CommunicationEndpoint> {
+    std::size_t operator()(const hpactor::CommunicationEndpoint& ep) const noexcept {
+        if (auto* ipv4 = std::get_if<hpactor::Ipv4Endpoint>(&ep)) {
+            return std::hash<hpactor::Ipv4Endpoint>{}(*ipv4);
+        }
+        return std::hash<hpactor::Ipv6Endpoint>{}(std::get<hpactor::Ipv6Endpoint>(ep));
+    }
+};

@@ -95,6 +95,10 @@ add_executable(test_async_io_backend net/test_async_io_backend.cpp)
 target_link_libraries(test_async_io_backend hpactor)
 add_test(NAME test_async_io_backend COMMAND test_async_io_backend)
 
+add_executable(test_communication_endpoint net/test_communication_endpoint.cpp)
+target_link_libraries(test_communication_endpoint hpactor)
+add_test(NAME test_communication_endpoint COMMAND test_communication_endpoint)
+
 add_executable(test_event_loop net/test_event_loop.cpp)
 target_link_libraries(test_event_loop hpactor)
 add_test(NAME test_event_loop COMMAND test_event_loop)

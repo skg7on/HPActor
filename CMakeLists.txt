@@ -137,6 +137,7 @@ add_library(hpactor_lib STATIC
     src/net/tls_connection.cpp
     src/net/plain_connection.cpp
     src/net/connection_pool.cpp
+    src/net/endpoint.cpp
     src/net/registrar.cpp
     src/net/registrar_server.cpp
     src/net/registrar_client.cpp
