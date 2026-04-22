@@ -164,5 +164,56 @@ Frame Frame::decode(const bytes& data) {
     return frame;
 }
 
+// Endpoint serialization (network byte order)
+// Wire format: [protocol:1][addr:n][port:2]
+//   protocol: 0x04 = IPv4, 0x06 = IPv6
+bytes Frame::encode_endpoint(const CommunicationEndpoint& ep) {
+    bytes result;
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
+        result.resize(7);  // 1 + 4 + 2
+        result[0] = 0x04;
+        uint32_t addr = ipv4->addr;
+        uint16_t port = ipv4->port_nw;
+        std::memcpy(result.data() + 1, &addr, 4);
+        std::memcpy(result.data() + 5, &port, 2);
+    } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
+        result.resize(19);  // 1 + 16 + 2
+        result[0] = 0x06;
+        std::memcpy(result.data() + 1, ipv6->addr.data(), 16);
+        uint16_t port = ipv6->port_nw;
+        std::memcpy(result.data() + 17, &port, 2);
+    }
+    return result;
+}
+
+CommunicationEndpoint Frame::decode_endpoint(bytes data) {
+    if (data.empty()) {
+        return Ipv4Endpoint{};  // Return default/empty endpoint
+    }
+    uint8_t protocol = data[0];
+    if (protocol == 0x04) {
+        // IPv4: [0x04][addr: 4][port: 2]
+        if (data.size() < 7) {
+            return Ipv4Endpoint{};
+        }
+        uint32_t addr;
+        uint16_t port;
+        std::memcpy(&addr, data.data() + 1, 4);
+        std::memcpy(&port, data.data() + 5, 2);
+        return Ipv4Endpoint{addr, port};
+    } else if (protocol == 0x06) {
+        // IPv6: [0x06][addr: 16][port: 2]
+        if (data.size() < 19) {
+            return Ipv6Endpoint{};
+        }
+        std::array<uint8_t, 16> addr;
+        std::memcpy(addr.data(), data.data() + 1, 16);
+        uint16_t port;
+        std::memcpy(&port, data.data() + 17, 2);
+        return Ipv6Endpoint{addr, port};
+    }
+    return Ipv4Endpoint{};  // Unknown protocol, return default
+}
+
 } // namespace net
 } // namespace hpactor
