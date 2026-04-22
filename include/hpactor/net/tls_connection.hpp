@@ -168,7 +168,7 @@ private:
     void on_fd_readable();
     void on_fd_writable();
 
-    NodeId remote_node_id_ = 0;
+    NodeId remote_node_id_ = "";
     TlsContext* tls_context_ = nullptr;
     EventLoop* loop_ = nullptr;
     int fd_ = -1;

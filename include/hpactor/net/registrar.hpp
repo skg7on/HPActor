@@ -46,8 +46,8 @@ struct AcceptorInfo {
 // RegistrarConfig - configuration for registrar
 // -----------------------------------------------------------------------------
 struct StaticRouteConfig {
-    NodeId node_id = 0;
-    std::string address;     // IP or DNS hostname
+    NodeId node_id = "";    // "host:port" format for remote node
+    std::string address;     // IP or DNS hostname (used if node_id is empty)
     uint16_t port = 0;
 };
 
@@ -65,8 +65,8 @@ struct RegistrarConfig {
 // NodeEndpoint - information about a known node
 // -----------------------------------------------------------------------------
 struct NodeEndpoint {
-    NodeId node_id = 0;
-    std::string host;
+    NodeId node_id = "";     // "host:port" format
+    std::string host;        // Resolved IP or hostname
     uint16_t tcp_port = 0;
     bool is_static_route = false;
     std::vector<AcceptorInfo> acceptors;

@@ -98,7 +98,7 @@ public:
     uint64_t message_id() const { return message_id_; }
 
 private:
-    NodeId node_id_ = 0;
+    NodeId node_id_ = "";
     std::chrono::milliseconds timeout_{5000};
     mutable std::unique_ptr<std::mutex> mutex_;
     std::unique_ptr<std::condition_variable> cv_;

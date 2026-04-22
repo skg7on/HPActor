@@ -46,7 +46,7 @@ TlsContext::TlsContext(TlsContext&& other) noexcept
       rsa_key_(std::move(other.rsa_key_)),
       ca_certs_(std::move(other.ca_certs_)),
       peer_certs_(std::move(other.peer_certs_)) {
-    other.node_id_ = 0;
+    other.node_id_ = "";
 }
 
 TlsContext& TlsContext::operator=(TlsContext&& other) noexcept {
@@ -58,7 +58,7 @@ TlsContext& TlsContext::operator=(TlsContext&& other) noexcept {
         rsa_key_ = std::move(other.rsa_key_);
         ca_certs_ = std::move(other.ca_certs_);
         peer_certs_ = std::move(other.peer_certs_);
-        other.node_id_ = 0;
+        other.node_id_ = "";
     }
     return *this;
 }
@@ -68,11 +68,15 @@ TlsContext TlsContext::from_filesystem(NodeId node_id,
     TlsContext ctx;
     ctx.node_id_ = node_id;
 
+    // Sanitize node_id for use in filename (replace ':' with '_')
+    std::string safe_node_id = node_id;
+    std::replace(safe_node_id.begin(), safe_node_id.end(), ':', '_');
+
     // Load own certificate
-    std::string cert_path = cert_dir + "/node_" + std::to_string(node_id) + ".pem";
+    std::string cert_path = cert_dir + "/node_" + safe_node_id + ".pem";
     FILE* cert_file = fopen(cert_path.c_str(), "r");
     if (!cert_file) {
-        return ctx;  // Caller should check node_id() == 0 to detect init failure
+        return ctx;  // Caller should check node_id().empty() to detect init failure
     }
     X509* cert = PEM_read_X509(cert_file, nullptr, nullptr, nullptr);
     fclose(cert_file);
@@ -100,7 +104,7 @@ TlsContext TlsContext::from_filesystem(NodeId node_id,
     }
 
     // Load private key using EVP API
-    std::string key_path = cert_dir + "/node_" + std::to_string(node_id) + "_key.pem";
+    std::string key_path = cert_dir + "/node_" + safe_node_id + "_key.pem";
     FILE* key_file = fopen(key_path.c_str(), "r");
     if (key_file) {
         EVP_PKEY* evp_pkey = PEM_read_PrivateKey(key_file, nullptr, nullptr, nullptr);

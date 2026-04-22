@@ -50,10 +50,54 @@ struct ActorId {
 
 // -----------------------------------------------------------------------------
 // NodeId - identifier for a node in a distributed system
-// 0 = local node, > 0 = remote node
+// Format: "host:port" (e.g., "192.168.1.1:5353" or "node.example.com:5353")
+// Empty string = local node
 // -----------------------------------------------------------------------------
-using NodeId = uint32_t;
-constexpr NodeId LocalNodeId = 0;
+using NodeId = std::string;
+inline const NodeId LocalNodeId = "";
+
+// -----------------------------------------------------------------------------
+// NodeId helper functions
+// -----------------------------------------------------------------------------
+
+// Extract host from "host:port" format
+inline std::string node_id_host(const NodeId& id) {
+    size_t colon = id.find(':');
+    if (colon == std::string::npos) {
+        return id;
+    }
+    return id.substr(0, colon);
+}
+
+// Extract port from "host:port" format
+inline uint16_t node_id_port(const NodeId& id) {
+    size_t colon = id.find(':');
+    if (colon == std::string::npos) {
+        return 0;
+    }
+    std::string port_str = id.substr(colon + 1);
+    // Parse manually to avoid exceptions (exceptions disabled in this project)
+    uint32_t port = 0;
+    for (char c : port_str) {
+        if (c >= '0' && c <= '9') {
+            port = port * 10 + static_cast<uint32_t>(c - '0');
+            if (port > 65535) return 0;
+        } else {
+            return 0;
+        }
+    }
+    return static_cast<uint16_t>(port);
+}
+
+// Combine host and port into "host:port" format
+inline NodeId make_node_id(const std::string& host, uint16_t port) {
+    return host + ":" + std::to_string(port);
+}
+
+// Check if node ID represents local node
+inline bool is_local_node_id(const NodeId& id) {
+    return id.empty();
+}
 
 // -----------------------------------------------------------------------------
 // ActorType - type identifier for an actor

@@ -30,16 +30,16 @@ int main() {
 
     // Test TlsConfig structure
     TlsConfig config;
-    config.node_id = 42;
+    config.node_id = "localhost:12345";
     config.verify_peer = true;
-    assert(config.node_id == 42);
+    assert(config.node_id == "localhost:12345");
     assert(config.verify_peer == true);
 
     // Test from_config creates valid context
     // (In real test, use actual cert/key DER bytes)
     // For now, test with empty config to verify no crash
     TlsContext ctx = TlsContext::from_config(config);
-    assert(ctx.node_id() == 42);
+    assert(ctx.node_id() == "localhost:12345");
 
     // Test invalid cert returns proper result
     bytes invalid_cert = {0x30, 0x82, 0x01, 0x00};  // Fake DER

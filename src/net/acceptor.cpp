@@ -16,6 +16,7 @@
 
 #include <cstring>
 #include <fcntl.h>
+#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
@@ -120,7 +121,11 @@ void Acceptor::handle_read() {
     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
 
     if (accept_handler_) {
-        accept_handler_(client_fd, client_addr.sin_addr.s_addr);
+        // Convert IP to string (port unknown, use 0 as placeholder)
+        char ip_str[INET_ADDRSTRLEN];
+        inet_ntop(AF_INET, &client_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
+        NodeId node_hint = std::string(ip_str) + ":0";
+        accept_handler_(client_fd, node_hint);
     } else {
         ::close(client_fd);
     }

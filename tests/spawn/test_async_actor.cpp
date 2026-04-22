@@ -24,39 +24,39 @@ using namespace hpactor;
 void test_async_actor_default_constructor() {
     AsyncActor handle;
     assert(!handle.ready());
-    assert(handle.node_id() == 0);
+    assert(handle.node_id() == "");
 }
 
 void test_async_actor_constructor() {
-    AsyncActor handle(NodeId{42}, std::chrono::milliseconds{1000});
-    assert(handle.node_id() == 42);
+    AsyncActor handle("node42:12345", std::chrono::milliseconds{1000});
+    assert(handle.node_id() == "node42:12345");
     assert(!handle.ready());
 }
 
 void test_async_actor_get_timeout() {
-    AsyncActor handle(NodeId{1}, std::chrono::milliseconds{50});
+    AsyncActor handle("node1:12345", std::chrono::milliseconds{50});
     auto result = handle.get();
     assert(!result.has_value());  // should timeout
     assert(result.error().code() == errors::timeout);
 }
 
 void test_async_actor_response_set() {
-    AsyncActor handle(NodeId{1}, std::chrono::milliseconds{100});
+    AsyncActor handle("node1:12345", std::chrono::milliseconds{100});
 
     // Simulate response received
     SpawnResponse resp;
-    resp.actor_addr = ActorAddress{1, 100, ActorId{1}, 0};
+    resp.actor_addr = ActorAddress{"node1:12345", ActorType{100}, ActorId{1}, 0};
     resp.error_code = spawn_errors::success;
     handle.set_response(resp);
 
     assert(handle.ready());
     auto result = handle.get();
     assert(result.has_value());
-    assert(result.value().node_id() == 1);
+    assert(result.value().node_id() == "node1:12345");
 }
 
 void test_async_actor_cancel() {
-    AsyncActor handle(NodeId{1}, std::chrono::milliseconds{1000});
+    AsyncActor handle("node1:12345", std::chrono::milliseconds{1000});
     handle.cancel();
     assert(handle.ready());  // cancelled appears as ready
     auto result = handle.get();

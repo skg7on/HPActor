@@ -355,27 +355,38 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
 
     switch (type) {
         case RegistrarMessageType::ResolveQuery: {
-            // Query: [TargetNodeId: 4]
+            // Query: [TargetNodeIdLen: 4][TargetNodeId: N]
             if (payload.size() < 4) {
                 return;
             }
-            uint32_t target_id;
-            memcpy(&target_id, payload.data(), 4);
-            target_id = ntohl(target_id);
+            uint32_t target_id_len;
+            memcpy(&target_id_len, payload.data(), 4);
+            target_id_len = ntohl(target_id_len);
+
+            NodeId target_id;
+            if (target_id_len > 0 && payload.size() >= 4 + target_id_len) {
+                target_id = std::string(reinterpret_cast<const char*>(payload.data() + 4), target_id_len);
+            }
 
             // If we have a server, look up the endpoint
             if (server_) {
                 NodeEndpoint* ep = server_->registry()->get(target_id);
                 if (ep) {
                     // Send ResolveResponse back
-                    // Response format: [Magic: 4][Version: 1][Type: 1][Length: 4][NodeId: 4][HostLen: 1][Host: N][Port: 2]
+                    // Response format: [Magic: 4][Version: 1][Type: 1][Length: 4][NodeIdLen: 4][NodeId: N][HostLen: 1][Host: N][Port: 2]
+                    uint32_t node_id_len = static_cast<uint32_t>(ep->node_id.size());
                     bytes response_payload;
-                    response_payload.resize(4 + 1 + ep->host.size() + 2);
+                    response_payload.resize(4 + node_id_len + 1 + ep->host.size() + 2);
 
                     size_t offset = 0;
-                    uint32_t node_id_be = htonl(ep->node_id);
-                    memcpy(response_payload.data() + offset, &node_id_be, 4);
+                    uint32_t node_id_len_be = htonl(node_id_len);
+                    memcpy(response_payload.data() + offset, &node_id_len_be, 4);
                     offset += 4;
+
+                    if (node_id_len > 0) {
+                        memcpy(response_payload.data() + offset, ep->node_id.data(), node_id_len);
+                        offset += node_id_len;
+                    }
 
                     response_payload[offset++] = static_cast<uint8_t>(ep->host.size());
                     memcpy(response_payload.data() + offset, ep->host.data(), ep->host.size());
@@ -413,17 +424,26 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
         }
 
         case RegistrarMessageType::ResolveResponse: {
-            // Response: [NodeId: 4][HostLen: 1][Host: N][Port: 2]
+            // Response: [NodeIdLen: 4][NodeId: N][HostLen: 1][Host: N][Port: 2]
             if (payload.size() < 7) {
                 return;
             }
 
             size_t offset = 0;
-            uint32_t node_id;
-            memcpy(&node_id, payload.data() + offset, 4);
-            node_id = ntohl(node_id);
+            uint32_t node_id_len;
+            memcpy(&node_id_len, payload.data() + offset, 4);
+            node_id_len = ntohl(node_id_len);
             offset += 4;
 
+            NodeId node_id;
+            if (node_id_len > 0 && payload.size() >= offset + node_id_len) {
+                node_id = std::string(reinterpret_cast<const char*>(payload.data() + offset), node_id_len);
+                offset += node_id_len;
+            }
+
+            if (payload.size() < offset + 1) {
+                return;
+            }
             uint8_t host_len = payload[offset++];
             if (offset + host_len + 2 > payload.size()) {
                 return;

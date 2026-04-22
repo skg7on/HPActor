@@ -49,7 +49,7 @@ void test_actor_address_inequality() {
 
 void test_actor_address_remote() {
     hpactor::ActorId id(1);
-    hpactor::ActorAddress addr{1, 0, id, 0};
+    hpactor::ActorAddress addr{"remotehost:12345", 0, id, 0};
     assert(!addr.is_local());
 }
 

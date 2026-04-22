@@ -14,8 +14,8 @@
 void test_frame_encoding() {
     // Create a spawn request Frame
     hpactor::net::Frame frame;
-    frame.sender = hpactor::ActorAddress{1, 10, hpactor::ActorId{42}, 1};
-    frame.receiver = hpactor::ActorAddress{2, hpactor::SystemActorType, hpactor::SpawnReceiverId, 0};
+    frame.sender = hpactor::ActorAddress{"node1:12345", hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
+    frame.receiver = hpactor::ActorAddress{"node2:12345", hpactor::SystemActorType, hpactor::SpawnReceiverId, 0};
     frame.message_id = 12345;
     frame.flags = hpactor::net::Frame::RpcRequest;
 
@@ -44,16 +44,18 @@ void test_spawn_request_binary_format() {
     req.actor_type_name = "worker";
     req.args_type = hpactor::TypeTag::User;
     req.serialized_args = {1, 2, 3};
-    req.supervisor_addr = hpactor::ActorAddress{1, 10, hpactor::ActorId{42}, 1};
+    req.supervisor_addr = hpactor::ActorAddress{"node1:12345", hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
 
     // Manual encode (same format as DefaultSerializer would produce)
     // [4b: name len][name][4b: args_type][4b: args len][args]
-    // [4b: sup node][8b: sup actor_id][4b: sup inc][4b: sup type]
+    // [4b: sup node len][node len bytes][8b: sup actor_id][4b: sup inc][4b: sup type]
     size_t name_len = req.actor_type_name.size();
     size_t args_len = req.serialized_args.size();
+    std::string sup_node_id = req.supervisor_addr.node_id;
+    size_t sup_node_len = sup_node_id.size();
     size_t total = sizeof(uint32_t) + name_len +
                    sizeof(uint32_t) + sizeof(uint32_t) + args_len +
-                   sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+                   sizeof(uint32_t) + sup_node_len + sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
 
     hpactor::bytes encoded(total);
     size_t offset = 0;
@@ -74,9 +76,13 @@ void test_spawn_request_binary_format() {
     std::memcpy(encoded.data() + offset, req.serialized_args.data(), args_len);
     offset += args_len;
 
-    uint32_t sup_node = req.supervisor_addr.node_id;
-    std::memcpy(encoded.data() + offset, &sup_node, sizeof(uint32_t));
+    uint32_t sup_node_len_u32 = static_cast<uint32_t>(sup_node_len);
+    std::memcpy(encoded.data() + offset, &sup_node_len_u32, sizeof(uint32_t));
     offset += sizeof(uint32_t);
+    if (sup_node_len > 0) {
+        std::memcpy(encoded.data() + offset, sup_node_id.data(), sup_node_len);
+        offset += sup_node_len;
+    }
     uint64_t sup_actor_id = req.supervisor_addr.id.value();
     std::memcpy(encoded.data() + offset, &sup_actor_id, sizeof(uint64_t));
     offset += sizeof(uint64_t);
@@ -111,9 +117,15 @@ void test_spawn_request_binary_format() {
     std::memcpy(decoded_req.serialized_args.data(), encoded.data() + offset, decoded_args_len);
     offset += decoded_args_len;
 
-    uint32_t sup_node_dec;
-    std::memcpy(&sup_node_dec, encoded.data() + offset, sizeof(uint32_t));
+    uint32_t sup_node_len_dec;
+    std::memcpy(&sup_node_len_dec, encoded.data() + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
+    std::string sup_node_dec;
+    if (sup_node_len_dec > 0) {
+        sup_node_dec.resize(sup_node_len_dec);
+        std::memcpy(sup_node_dec.data(), encoded.data() + offset, sup_node_len_dec);
+        offset += sup_node_len_dec;
+    }
     uint64_t sup_actor_id_dec;
     std::memcpy(&sup_actor_id_dec, encoded.data() + offset, sizeof(uint64_t));
     offset += sizeof(uint64_t);
@@ -132,7 +144,7 @@ void test_spawn_request_binary_format() {
     assert(decoded_req.actor_type_name == "worker");
     assert(decoded_req.args_type == hpactor::TypeTag::User);
     assert(decoded_req.serialized_args.size() == 3);
-    assert(decoded_req.supervisor_addr.node_id == 1);
+    assert(decoded_req.supervisor_addr.node_id == "node1:12345");
     assert(decoded_req.supervisor_addr.id.value() == 42);
 }
 

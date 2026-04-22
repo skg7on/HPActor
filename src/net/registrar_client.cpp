@@ -245,16 +245,22 @@ void RegistrarClient::send_registration() {
     uint16_t tcp_port = config_.tcp_port;
 
     // Calculate payload size
-    size_t payload_size = 4 + 1 + host.size() + 2 + 1;  // NodeId + HostLen + Host + TcpPort + AcceptorCount
+    uint32_t node_id_len = static_cast<uint32_t>(local_node_id_.size());
+    size_t payload_size = 4 + node_id_len + 1 + host.size() + 2 + 1;  // NodeIdLen + NodeId + HostLen + Host + TcpPort + AcceptorCount
     payload_size += acceptors_.size() * 4;  // Each acceptor: Port(2) + HandshakeVer(1) + ProtocolVer(1) + TlsRequired(1)
 
     bytes payload;
     payload.resize(payload_size);
 
     size_t offset = 0;
-    uint32_t node_id_be = htonl(local_node_id_);
-    memcpy(payload.data() + offset, &node_id_be, 4);
+    uint32_t node_id_len_be = htonl(node_id_len);
+    memcpy(payload.data() + offset, &node_id_len_be, 4);
     offset += 4;
+
+    if (node_id_len > 0) {
+        memcpy(payload.data() + offset, local_node_id_.data(), node_id_len);
+        offset += node_id_len;
+    }
 
     payload[offset++] = static_cast<uint8_t>(host.size());
     memcpy(payload.data() + offset, host.data(), host.size());
@@ -329,12 +335,17 @@ NodeEndpoint* RegistrarClient::resolve_node(NodeId node_id) {
     }
 
     // Build resolve query message
-    // Payload format: [TargetNodeId: 4]
+    // Payload format: [TargetNodeIdLen: 4][TargetNodeId: N]
+    uint32_t node_id_len = static_cast<uint32_t>(node_id.size());
     bytes payload;
-    payload.resize(4);
+    payload.resize(4 + node_id_len);
 
-    uint32_t target_id_be = htonl(node_id);
-    memcpy(payload.data(), &target_id_be, 4);
+    uint32_t node_id_len_be = htonl(node_id_len);
+    memcpy(payload.data(), &node_id_len_be, 4);
+    size_t offset = 4;
+    if (node_id_len > 0) {
+        memcpy(payload.data() + offset, node_id.data(), node_id_len);
+    }
 
     // Build full message
     bytes message;
@@ -406,20 +417,33 @@ NodeEndpoint* RegistrarClient::resolve_node(NodeId node_id) {
             }
 
             // Parse endpoint info
-            size_t offset = RegistrarHeaderSize;
+            // Format: [NodeIdLen: 4][NodeId: N][HostLen: 1][Host: N][Port: 2]
+            size_t resp_offset = RegistrarHeaderSize;
 
-            uint32_t resp_node_id;
-            memcpy(&resp_node_id, response.data() + offset, 4);
-            resp_node_id = ntohl(resp_node_id);
-            offset += 4;
+            uint32_t resp_node_id_len;
+            memcpy(&resp_node_id_len, response.data() + resp_offset, 4);
+            resp_node_id_len = ntohl(resp_node_id_len);
+            resp_offset += 4;
 
-            uint8_t host_len = response[offset++];
+            NodeId resp_node_id;
+            if (resp_node_id_len > 0 && response.size() >= resp_offset + resp_node_id_len) {
+                resp_node_id = std::string(reinterpret_cast<const char*>(response.data() + resp_offset), resp_node_id_len);
+                resp_offset += resp_node_id_len;
+            }
 
-            std::string resp_host(reinterpret_cast<char*>(response.data() + offset), host_len);
-            offset += host_len;
+            if (response.size() < resp_offset + 1) {
+                return nullptr;
+            }
+            uint8_t host_len = response[resp_offset++];
+
+            if (response.size() < resp_offset + host_len + 2) {
+                return nullptr;
+            }
+            std::string resp_host(reinterpret_cast<const char*>(response.data() + resp_offset), host_len);
+            resp_offset += host_len;
 
             uint16_t resp_port;
-            memcpy(&resp_port, response.data() + offset, 2);
+            memcpy(&resp_port, response.data() + resp_offset, 2);
             resp_port = ntohs(resp_port);
 
             // Add to shared registry
@@ -603,8 +627,8 @@ void RegistrarClient::find_server_via_broadcast() {
     bytes payload;
     payload.resize(16);  // 8 bytes probe_id + 8 bytes timestamp
 
-    // Use node_id as probe_id and current time as timestamp
-    uint64_t probe_id = local_node_id_;
+    // Use hash of node_id as probe_id and current time as timestamp
+    uint64_t probe_id = std::hash<std::string>{}(local_node_id_);
     uint64_t timestamp = static_cast<uint64_t>(std::chrono::duration_cast<std::chrono::milliseconds>(
         std::chrono::steady_clock::now().time_since_epoch()).count());
 
@@ -679,34 +703,43 @@ void RegistrarClient::find_server_via_broadcast() {
 
                         if (resp_type == RegistrarMessageType::ResolveResponse) {
                             // Parse the endpoint info
+                            // Format: [NodeIdLen: 4][NodeId: N][HostLen: 1][Host: N][Port: 2]
                             size_t resp_offset = RegistrarHeaderSize;
 
-                            uint32_t resp_node_id;
-                            memcpy(&resp_node_id, response.data() + resp_offset, 4);
-                            resp_node_id = ntohl(resp_node_id);
+                            uint32_t resp_node_id_len;
+                            memcpy(&resp_node_id_len, response.data() + resp_offset, 4);
+                            resp_node_id_len = ntohl(resp_node_id_len);
                             resp_offset += 4;
 
-                            uint8_t host_len = response[resp_offset++];
-                            if (resp_offset + host_len + 2 <= static_cast<size_t>(received)) {
-                                std::string resp_host(reinterpret_cast<char*>(response.data() + resp_offset), host_len);
-                                resp_offset += host_len;
+                            NodeId resp_node_id;
+                            if (resp_node_id_len > 0 && static_cast<size_t>(received) >= resp_offset + resp_node_id_len) {
+                                resp_node_id = std::string(reinterpret_cast<const char*>(response.data() + resp_offset), resp_node_id_len);
+                                resp_offset += resp_node_id_len;
+                            }
 
-                                uint16_t resp_port;
-                                memcpy(&resp_port, response.data() + resp_offset, 2);
-                                resp_port = ntohs(resp_port);
+                            if (static_cast<size_t>(received) >= resp_offset + 1) {
+                                uint8_t host_len = response[resp_offset++];
+                                if (resp_offset + host_len + 2 <= static_cast<size_t>(received)) {
+                                    std::string resp_host(reinterpret_cast<const char*>(response.data() + resp_offset), host_len);
+                                    resp_offset += host_len;
 
-                                // Update registry with new server
-                                if (shared_registry_) {
-                                    NodeEndpoint server_ep;
-                                    server_ep.node_id = resp_node_id;
-                                    server_ep.host = resp_host;
-                                    server_ep.tcp_port = resp_port;
-                                    server_ep.last_seen = std::chrono::steady_clock::now();
-                                    shared_registry_->upsert_endpoint(server_ep);
+                                    uint16_t resp_port;
+                                    memcpy(&resp_port, response.data() + resp_offset, 2);
+                                    resp_port = ntohs(resp_port);
+
+                                    // Update registry with new server
+                                    if (shared_registry_) {
+                                        NodeEndpoint server_ep;
+                                        server_ep.node_id = resp_node_id;
+                                        server_ep.host = resp_host;
+                                        server_ep.tcp_port = resp_port;
+                                        server_ep.last_seen = std::chrono::steady_clock::now();
+                                        shared_registry_->upsert_endpoint(server_ep);
+                                    }
+
+                                    // Update server_node_id_ and reconnect
+                                    server_node_id_ = resp_node_id;
                                 }
-
-                                // Update server_node_id_ and reconnect
-                                server_node_id_ = resp_node_id;
                             }
                         }
                     }

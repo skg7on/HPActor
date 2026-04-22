@@ -223,9 +223,8 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
         return handle;
     }
 
-    // TODO: Look up node by name via registrar
-    // For now, assume node_name is a NodeId string
-    NodeId remote_node_id = static_cast<NodeId>(std::stoul(node_name));
+    // node_name is expected to be a NodeId in "host:port" format
+    NodeId remote_node_id = node_name;
 
     // Serialize request using DefaultSerializer::encode_spawn
     DefaultSerializer serializer;

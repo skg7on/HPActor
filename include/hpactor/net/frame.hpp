@@ -26,17 +26,19 @@ namespace net {
 // Frame - network message frame format
 // -----------------------------------------------------------------------------
 // Every message sent over the network is wrapped in a Frame.
-// Format:
+// Format (NodeId is now "host:port" string):
 //   [4 bytes: payload length]
 //   [4 bytes: type tag]
 //   [4 bytes: flags]
 //   [8 bytes: message id]
-//   [4 bytes: sender node_id]
-//   [4 bytes: sender actor_id]
-//   [4 bytes: sender incarnation]
-//   [4 bytes: receiver node_id]
-//   [4 bytes: receiver actor_id]
-//   [4 bytes: receiver incarnation]
+//   [4 bytes: sender node_id length]
+//   [N bytes: sender node_id string]
+//   [8 bytes: sender actor_id]
+//   [8 bytes: sender incarnation]
+//   [4 bytes: receiver node_id length]
+//   [M bytes: receiver node_id string]
+//   [8 bytes: receiver actor_id]
+//   [8 bytes: receiver incarnation]
 //   [payload...]
 // -----------------------------------------------------------------------------
 struct Frame {
@@ -52,6 +54,9 @@ struct Frame {
     // Decode frame from bytes
     static Frame decode(const bytes& data);
 
+    // Calculate header size for given sender and receiver node_ids
+    static size_t calculate_header_size(const ActorAddress& sender, const ActorAddress& receiver);
+
     // Flag constants
     static constexpr uint32_t Important = 1 << 0;  // Requires delivery confirmation
     static constexpr uint32_t NoDrop = 1 << 1;       // Don't drop on congestion
@@ -62,20 +67,13 @@ struct Frame {
 };
 
 // -----------------------------------------------------------------------------
-// Frame header constants
+// Frame header constants (fixed-size portion only)
 // -----------------------------------------------------------------------------
-constexpr size_t FrameHeaderSize = 60;  // Total size without payload
 constexpr size_t PayloadLengthOffset = 0;
 constexpr size_t TypeTagOffset = 4;
 constexpr size_t FlagsOffset = 8;
 constexpr size_t MessageIdOffset = 12;
-constexpr size_t SenderNodeOffset = 20;
-constexpr size_t SenderActorIdOffset = 24;
-constexpr size_t SenderIncarnationOffset = 32;
-constexpr size_t ReceiverNodeOffset = 40;
-constexpr size_t ReceiverActorIdOffset = 44;
-constexpr size_t ReceiverIncarnationOffset = 52;
-constexpr size_t PayloadOffset = 60;
+constexpr size_t FixedHeaderSize = 20;  // Size of fixed portion (before node_id strings)
 
 } // namespace net
 } // namespace hpactor

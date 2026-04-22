@@ -23,8 +23,8 @@ using namespace hpactor::net;
 int main() {
     // Test Frame default construction
     Frame f1;
-    assert(f1.sender.node_id == 0);
-    assert(f1.receiver.node_id == 0);
+    assert(f1.sender.node_id == "");
+    assert(f1.receiver.node_id == "");
     assert(f1.payload.empty());
     assert(f1.flags == 0);
     assert(f1.message_id == 0);
@@ -32,8 +32,8 @@ int main() {
     // Test Frame with values
     ActorId sender_id(100);
     ActorId receiver_id(200);
-    ActorAddress sender(1, 10, sender_id, 5);
-    ActorAddress receiver(2, 20, receiver_id, 6);
+    ActorAddress sender("node1:12345", 10, sender_id, 5);
+    ActorAddress receiver("node2:12345", 20, receiver_id, 6);
 
     Frame f2;
     f2.sender = sender;

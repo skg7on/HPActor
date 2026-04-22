@@ -79,7 +79,7 @@ private:
     // Flush write buffer
     void flush_write_buffer();
 
-    NodeId remote_node_id_ = 0;
+    NodeId remote_node_id_ = "";
     EventLoop* loop_ = nullptr;
     int fd_ = -1;
 

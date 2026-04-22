@@ -50,7 +50,7 @@ void test_actor_context_monitor() {
     Actor empty_actor;
     ActorContext ctx(empty_actor);
 
-    ActorAddress addr{1, 2, ActorId{3}, 4};
+    ActorAddress addr{"node1:12345", ActorType{2}, ActorId{3}, 4};
     ctx.monitor(addr);
 
     auto monitored = ctx.linked_actors(); // Note: linked_actors, not monitored
@@ -65,7 +65,7 @@ void test_actor_context_remote_children() {
     assert(ctx.remote_children().empty());
 
     // Create a mock remote actor address
-    ActorAddress remote_addr{NodeId{2}, ActorType{10}, ActorId{100}, 1};
+    ActorAddress remote_addr{"node2:12345", ActorType{10}, ActorId{100}, 1};
     ActorProxy proxy(remote_addr, nullptr);
     ActorRef remote_child(std::move(proxy));
 

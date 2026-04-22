@@ -86,13 +86,19 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // down_msg
     if (std::holds_alternative<down_msg>(msg)) {
         const down_msg& m = std::get<down_msg>(msg);
-        result.resize(sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint32_t));
+        // node_id (4 bytes len + string) + actor_id (8 bytes) + code (4 bytes)
+        size_t node_id_len = m.terminated_actor.node_id.size();
+        result.resize(sizeof(uint32_t) + node_id_len + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
-        uint32_t node_id = m.terminated_actor.node_id;
+        uint32_t node_id_len_u32 = static_cast<uint32_t>(node_id_len);
+        std::memcpy(result.data() + offset, &node_id_len_u32, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        if (node_id_len > 0) {
+            std::memcpy(result.data() + offset, m.terminated_actor.node_id.data(), node_id_len);
+            offset += node_id_len;
+        }
         uint64_t actor_id = m.terminated_actor.id.value();
         uint32_t code = m.reason.code();
-        std::memcpy(result.data() + offset, &node_id, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
         std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
         offset += sizeof(uint64_t);
         std::memcpy(result.data() + offset, &code, sizeof(uint32_t));
@@ -100,13 +106,18 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // exit_msg
     else if (std::holds_alternative<exit_msg>(msg)) {
         const exit_msg& m = std::get<exit_msg>(msg);
-        result.resize(sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint32_t));
+        size_t node_id_len = m.sender.node_id.size();
+        result.resize(sizeof(uint32_t) + node_id_len + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
-        uint32_t node_id = m.sender.node_id;
+        uint32_t node_id_len_u32 = static_cast<uint32_t>(node_id_len);
+        std::memcpy(result.data() + offset, &node_id_len_u32, sizeof(uint32_t));
+        offset += sizeof(uint32_t);
+        if (node_id_len > 0) {
+            std::memcpy(result.data() + offset, m.sender.node_id.data(), node_id_len);
+            offset += node_id_len;
+        }
         uint64_t actor_id = m.sender.id.value();
         uint32_t code = m.reason.code();
-        std::memcpy(result.data() + offset, &node_id, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
         std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
         offset += sizeof(uint64_t);
         std::memcpy(result.data() + offset, &code, sizeof(uint32_t));
@@ -114,24 +125,36 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // link_msg
     else if (std::holds_alternative<link_msg>(msg)) {
         const link_msg& m = std::get<link_msg>(msg);
-        result.resize(sizeof(uint32_t) + sizeof(uint64_t));
+        size_t node_id_len = m.target.node_id.size();
+        result.resize(sizeof(uint32_t) + node_id_len + sizeof(uint64_t));
         size_t offset = 0;
-        uint32_t node_id = m.target.node_id;
-        uint64_t actor_id = m.target.id.value();
-        std::memcpy(result.data() + offset, &node_id, sizeof(uint32_t));
+        uint32_t node_id_len_u32 = static_cast<uint32_t>(node_id_len);
+        std::memcpy(result.data() + offset, &node_id_len_u32, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (node_id_len > 0) {
+            std::memcpy(result.data() + offset, m.target.node_id.data(), node_id_len);
+            offset += node_id_len;
+        }
+        uint64_t actor_id = m.target.id.value();
         std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
     }
     // unlink_msg
     else if (std::holds_alternative<unlink_msg>(msg)) {
         const unlink_msg& m = std::get<unlink_msg>(msg);
-        result.resize(sizeof(uint32_t) + sizeof(uint64_t));
+        size_t node_id_len = m.target.node_id.size();
+        result.resize(sizeof(uint32_t) + node_id_len + sizeof(uint64_t));
         size_t offset = 0;
-        uint32_t node_id = m.target.node_id;
-        uint64_t actor_id = m.target.id.value();
-        std::memcpy(result.data() + offset, &node_id, sizeof(uint32_t));
+        uint32_t node_id_len_u32 = static_cast<uint32_t>(node_id_len);
+        std::memcpy(result.data() + offset, &node_id_len_u32, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (node_id_len > 0) {
+            std::memcpy(result.data() + offset, m.target.node_id.data(), node_id_len);
+            offset += node_id_len;
+        }
+        uint64_t actor_id = m.target.id.value();
         std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
+        offset += sizeof(uint64_t);
     }
 
     return result;
@@ -142,15 +165,20 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     case TypeTag::DownMsg: {
         down_msg m;
         size_t offset = 0;
-        uint32_t node_id;
-        uint64_t actor_id;
-        uint32_t code;
-        std::memcpy(&node_id, data.data() + offset, sizeof(uint32_t));
+        // node_id (length-prefixed string)
+        uint32_t node_id_len;
+        std::memcpy(&node_id_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (node_id_len > 0) {
+            m.terminated_actor.node_id.resize(node_id_len);
+            std::memcpy(m.terminated_actor.node_id.data(), data.data() + offset, node_id_len);
+            offset += node_id_len;
+        }
+        uint64_t actor_id;
         std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
         offset += sizeof(uint64_t);
+        uint32_t code;
         std::memcpy(&code, data.data() + offset, sizeof(uint32_t));
-        m.terminated_actor.node_id = node_id;
         m.terminated_actor.id = ActorId(actor_id);
         m.reason = error(code);
         return m;
@@ -158,15 +186,19 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     case TypeTag::ExitMsg: {
         exit_msg m;
         size_t offset = 0;
-        uint32_t node_id;
-        uint64_t actor_id;
-        uint32_t code;
-        std::memcpy(&node_id, data.data() + offset, sizeof(uint32_t));
+        uint32_t node_id_len;
+        std::memcpy(&node_id_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (node_id_len > 0) {
+            m.sender.node_id.resize(node_id_len);
+            std::memcpy(m.sender.node_id.data(), data.data() + offset, node_id_len);
+            offset += node_id_len;
+        }
+        uint64_t actor_id;
         std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
         offset += sizeof(uint64_t);
+        uint32_t code;
         std::memcpy(&code, data.data() + offset, sizeof(uint32_t));
-        m.sender.node_id = node_id;
         m.sender.id = ActorId(actor_id);
         m.reason = error(code);
         return m;
@@ -174,24 +206,32 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     case TypeTag::LinkMsg: {
         link_msg m;
         size_t offset = 0;
-        uint32_t node_id;
-        uint64_t actor_id;
-        std::memcpy(&node_id, data.data() + offset, sizeof(uint32_t));
+        uint32_t node_id_len;
+        std::memcpy(&node_id_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (node_id_len > 0) {
+            m.target.node_id.resize(node_id_len);
+            std::memcpy(m.target.node_id.data(), data.data() + offset, node_id_len);
+            offset += node_id_len;
+        }
+        uint64_t actor_id;
         std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
-        m.target.node_id = node_id;
         m.target.id = ActorId(actor_id);
         return m;
     }
     case TypeTag::UnlinkMsg: {
         unlink_msg m;
         size_t offset = 0;
-        uint32_t node_id;
-        uint64_t actor_id;
-        std::memcpy(&node_id, data.data() + offset, sizeof(uint32_t));
+        uint32_t node_id_len;
+        std::memcpy(&node_id_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (node_id_len > 0) {
+            m.target.node_id.resize(node_id_len);
+            std::memcpy(m.target.node_id.data(), data.data() + offset, node_id_len);
+            offset += node_id_len;
+        }
+        uint64_t actor_id;
         std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
-        m.target.node_id = node_id;
         m.target.id = ActorId(actor_id);
         return m;
     }
@@ -206,11 +246,17 @@ bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnM
     // SpawnRequest
     if (std::holds_alternative<SpawnRequest>(msg)) {
         const SpawnRequest& m = std::get<SpawnRequest>(msg);
-        // Encode actor_type_name length + string
+        // actor_type_name (4 bytes len + string) + args_type (4 bytes) +
+        // serialized_args (4 bytes len + data) +
+        // supervisor_node_id (4 bytes len + string) + supervisor_type (4 bytes) +
+        // supervisor_actor_id (8 bytes) + supervisor_incarnation (8 bytes)
         size_t name_len = m.actor_type_name.size();
+        size_t args_len = m.serialized_args.size();
+        size_t sup_node_id_len = m.supervisor_addr.node_id.size();
+
         result.resize(sizeof(uint32_t) + name_len + sizeof(TypeTag) +
-                      sizeof(size_t) + m.serialized_args.size() +
-                      sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t));
+                      sizeof(uint32_t) + args_len +
+                      sizeof(uint32_t) + sup_node_id_len + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t));
         size_t offset = 0;
 
         // actor_type_name length
@@ -228,50 +274,73 @@ bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnM
         offset += sizeof(uint32_t);
 
         // serialized_args length
-        uint32_t args_len = static_cast<uint32_t>(m.serialized_args.size());
-        std::memcpy(result.data() + offset, &args_len, sizeof(uint32_t));
+        uint32_t args_len_u32 = static_cast<uint32_t>(args_len);
+        std::memcpy(result.data() + offset, &args_len_u32, sizeof(uint32_t));
         offset += sizeof(uint32_t);
 
         // serialized_args data
-        if (!m.serialized_args.empty()) {
-            std::memcpy(result.data() + offset, m.serialized_args.data(), m.serialized_args.size());
-            offset += m.serialized_args.size();
+        if (args_len > 0) {
+            std::memcpy(result.data() + offset, m.serialized_args.data(), args_len);
+            offset += args_len;
         }
 
-        // supervisor_addr fields
-        uint32_t sup_node_id = m.supervisor_addr.node_id;
-        uint32_t sup_type = m.supervisor_addr.type;
-        uint64_t sup_actor_id = m.supervisor_addr.id.value();
-        uint64_t sup_incarnation = m.supervisor_addr.incarnation;
-
-        std::memcpy(result.data() + offset, &sup_node_id, sizeof(uint32_t));
+        // supervisor_node_id (length-prefixed string)
+        uint32_t sup_node_id_len_u32 = static_cast<uint32_t>(sup_node_id_len);
+        std::memcpy(result.data() + offset, &sup_node_id_len_u32, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (sup_node_id_len > 0) {
+            std::memcpy(result.data() + offset, m.supervisor_addr.node_id.data(), sup_node_id_len);
+            offset += sup_node_id_len;
+        }
+
+        // supervisor_type
+        uint32_t sup_type = m.supervisor_addr.type;
         std::memcpy(result.data() + offset, &sup_type, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+
+        // supervisor_actor_id
+        uint64_t sup_actor_id = m.supervisor_addr.id.value();
         std::memcpy(result.data() + offset, &sup_actor_id, sizeof(uint64_t));
         offset += sizeof(uint64_t);
+
+        // supervisor_incarnation
+        uint64_t sup_incarnation = m.supervisor_addr.incarnation;
         std::memcpy(result.data() + offset, &sup_incarnation, sizeof(uint64_t));
     }
     // SpawnResponse
     else if (std::holds_alternative<SpawnResponse>(msg)) {
         const SpawnResponse& m = std::get<SpawnResponse>(msg);
-        result.resize(sizeof(uint32_t) + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint32_t));
+        size_t actor_node_id_len = m.actor_addr.node_id.size();
+        result.resize(sizeof(uint32_t) + actor_node_id_len + sizeof(uint32_t) +
+                      sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
 
-        uint32_t actor_node_id = m.actor_addr.node_id;
-        uint32_t actor_type = m.actor_addr.type;
-        uint64_t actor_id = m.actor_addr.id.value();
-        uint64_t actor_incarnation = m.actor_addr.incarnation;
-        uint32_t error_code = m.error_code;
-
-        std::memcpy(result.data() + offset, &actor_node_id, sizeof(uint32_t));
+        // actor_node_id (length-prefixed string)
+        uint32_t actor_node_id_len_u32 = static_cast<uint32_t>(actor_node_id_len);
+        std::memcpy(result.data() + offset, &actor_node_id_len_u32, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (actor_node_id_len > 0) {
+            std::memcpy(result.data() + offset, m.actor_addr.node_id.data(), actor_node_id_len);
+            offset += actor_node_id_len;
+        }
+
+        // actor_type
+        uint32_t actor_type = m.actor_addr.type;
         std::memcpy(result.data() + offset, &actor_type, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+
+        // actor_id
+        uint64_t actor_id = m.actor_addr.id.value();
         std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
         offset += sizeof(uint64_t);
+
+        // actor_incarnation
+        uint64_t actor_incarnation = m.actor_addr.incarnation;
         std::memcpy(result.data() + offset, &actor_incarnation, sizeof(uint64_t));
         offset += sizeof(uint64_t);
+
+        // error_code
+        uint32_t error_code = m.error_code;
         std::memcpy(result.data() + offset, &error_code, sizeof(uint32_t));
     }
 
@@ -312,20 +381,31 @@ SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& da
             offset += args_len;
         }
 
-        // supervisor_addr fields
-        uint32_t sup_node_id, sup_type;
-        uint64_t sup_actor_id, sup_incarnation;
-        std::memcpy(&sup_node_id, data.data() + offset, sizeof(uint32_t));
+        // supervisor_node_id (length-prefixed string)
+        uint32_t sup_node_id_len;
+        std::memcpy(&sup_node_id_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        std::memcpy(&sup_type, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        std::memcpy(&sup_actor_id, data.data() + offset, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-        std::memcpy(&sup_incarnation, data.data() + offset, sizeof(uint64_t));
+        if (sup_node_id_len > 0) {
+            m.supervisor_addr.node_id.resize(sup_node_id_len);
+            std::memcpy(m.supervisor_addr.node_id.data(), data.data() + offset, sup_node_id_len);
+            offset += sup_node_id_len;
+        }
 
-        m.supervisor_addr.node_id = sup_node_id;
+        // supervisor_type
+        uint32_t sup_type;
+        std::memcpy(&sup_type, data.data() + offset, sizeof(uint32_t));
         m.supervisor_addr.type = sup_type;
+        offset += sizeof(uint32_t);
+
+        // supervisor_actor_id
+        uint64_t sup_actor_id;
+        std::memcpy(&sup_actor_id, data.data() + offset, sizeof(uint64_t));
         m.supervisor_addr.id = ActorId(sup_actor_id);
+        offset += sizeof(uint64_t);
+
+        // supervisor_incarnation
+        uint64_t sup_incarnation;
+        std::memcpy(&sup_incarnation, data.data() + offset, sizeof(uint64_t));
         m.supervisor_addr.incarnation = sup_incarnation;
 
         return m;
@@ -334,24 +414,37 @@ SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& da
         SpawnResponse m;
         size_t offset = 0;
 
-        uint32_t actor_node_id, actor_type;
-        uint64_t actor_id, actor_incarnation;
-        uint32_t error_code;
-
-        std::memcpy(&actor_node_id, data.data() + offset, sizeof(uint32_t));
+        // actor_node_id (length-prefixed string)
+        uint32_t actor_node_id_len;
+        std::memcpy(&actor_node_id_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
+        if (actor_node_id_len > 0) {
+            m.actor_addr.node_id.resize(actor_node_id_len);
+            std::memcpy(m.actor_addr.node_id.data(), data.data() + offset, actor_node_id_len);
+            offset += actor_node_id_len;
+        }
+
+        // actor_type
+        uint32_t actor_type;
         std::memcpy(&actor_type, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-        std::memcpy(&actor_incarnation, data.data() + offset, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-        std::memcpy(&error_code, data.data() + offset, sizeof(uint32_t));
-
-        m.actor_addr.node_id = actor_node_id;
         m.actor_addr.type = actor_type;
+        offset += sizeof(uint32_t);
+
+        // actor_id
+        uint64_t actor_id;
+        std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
         m.actor_addr.id = ActorId(actor_id);
+        offset += sizeof(uint64_t);
+
+        // actor_incarnation
+        uint64_t actor_incarnation;
+        std::memcpy(&actor_incarnation, data.data() + offset, sizeof(uint64_t));
         m.actor_addr.incarnation = actor_incarnation;
+        offset += sizeof(uint64_t);
+
+        // error_code
+        uint32_t error_code;
+        std::memcpy(&error_code, data.data() + offset, sizeof(uint32_t));
         m.error_code = error_code;
 
         return m;

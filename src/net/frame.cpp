@@ -20,9 +20,20 @@ namespace hpactor {
 
 namespace net {
 
+size_t Frame::calculate_header_size(const ActorAddress& sender, const ActorAddress& receiver) {
+    // Fixed header + sender node_id (4 bytes length + string) + sender actor_id + sender incarnation
+    // + receiver node_id (4 bytes length + string) + receiver actor_id + receiver incarnation
+    return FixedHeaderSize +
+           sizeof(uint32_t) + sender.node_id.size() +  // sender node_id length + string
+           sizeof(uint64_t) + sizeof(uint64_t) +        // sender actor_id + incarnation
+           sizeof(uint32_t) + receiver.node_id.size() + // receiver node_id length + string
+           sizeof(uint64_t) + sizeof(uint64_t);        // receiver actor_id + incarnation
+}
+
 bytes Frame::encode() const {
+    size_t header_size = calculate_header_size(sender, receiver);
     bytes result;
-    result.resize(FrameHeaderSize + payload.size());
+    result.resize(header_size + payload.size());
 
     uint32_t payload_len = static_cast<uint32_t>(payload.size());
     uint32_t type_tag = 0;  // TODO: extract type tag from payload
@@ -46,9 +57,14 @@ bytes Frame::encode() const {
     std::memcpy(result.data() + offset, &msg_id, sizeof(uint64_t));
     offset += sizeof(uint64_t);
 
-    // Sender node_id
-    std::memcpy(result.data() + offset, &sender.node_id, sizeof(uint32_t));
+    // Sender node_id (length-prefixed string)
+    uint32_t sender_node_len = static_cast<uint32_t>(sender.node_id.size());
+    std::memcpy(result.data() + offset, &sender_node_len, sizeof(uint32_t));
     offset += sizeof(uint32_t);
+    if (sender_node_len > 0) {
+        std::memcpy(result.data() + offset, sender.node_id.data(), sender_node_len);
+        offset += sender_node_len;
+    }
 
     // Sender actor_id
     uint64_t sender_id_val = sender.id.value();
@@ -59,9 +75,14 @@ bytes Frame::encode() const {
     std::memcpy(result.data() + offset, &sender.incarnation, sizeof(uint64_t));
     offset += sizeof(uint64_t);
 
-    // Receiver node_id
-    std::memcpy(result.data() + offset, &receiver.node_id, sizeof(uint32_t));
+    // Receiver node_id (length-prefixed string)
+    uint32_t receiver_node_len = static_cast<uint32_t>(receiver.node_id.size());
+    std::memcpy(result.data() + offset, &receiver_node_len, sizeof(uint32_t));
     offset += sizeof(uint32_t);
+    if (receiver_node_len > 0) {
+        std::memcpy(result.data() + offset, receiver.node_id.data(), receiver_node_len);
+        offset += receiver_node_len;
+    }
 
     // Receiver actor_id
     uint64_t receiver_id_val = receiver.id.value();
@@ -98,9 +119,15 @@ Frame Frame::decode(const bytes& data) {
     std::memcpy(&frame.message_id, data.data() + offset, sizeof(uint64_t));
     offset += sizeof(uint64_t);
 
-    // Sender
-    std::memcpy(&frame.sender.node_id, data.data() + offset, sizeof(uint32_t));
+    // Sender node_id (length-prefixed string)
+    uint32_t sender_node_len;
+    std::memcpy(&sender_node_len, data.data() + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
+    if (sender_node_len > 0) {
+        frame.sender.node_id.resize(sender_node_len);
+        std::memcpy(frame.sender.node_id.data(), data.data() + offset, sender_node_len);
+        offset += sender_node_len;
+    }
 
     uint64_t sender_id_val;
     std::memcpy(&sender_id_val, data.data() + offset, sizeof(uint64_t));
@@ -110,9 +137,15 @@ Frame Frame::decode(const bytes& data) {
     std::memcpy(&frame.sender.incarnation, data.data() + offset, sizeof(uint64_t));
     offset += sizeof(uint64_t);
 
-    // Receiver
-    std::memcpy(&frame.receiver.node_id, data.data() + offset, sizeof(uint32_t));
+    // Receiver node_id (length-prefixed string)
+    uint32_t receiver_node_len;
+    std::memcpy(&receiver_node_len, data.data() + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
+    if (receiver_node_len > 0) {
+        frame.receiver.node_id.resize(receiver_node_len);
+        std::memcpy(frame.receiver.node_id.data(), data.data() + offset, receiver_node_len);
+        offset += receiver_node_len;
+    }
 
     uint64_t receiver_id_val;
     std::memcpy(&receiver_id_val, data.data() + offset, sizeof(uint64_t));

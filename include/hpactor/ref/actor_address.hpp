@@ -23,14 +23,14 @@ namespace hpactor {
 // ActorAddress - unique identifier for an actor across the distributed system
 // -----------------------------------------------------------------------------
 struct ActorAddress {
-    NodeId node_id = 0;       // Network location (0 for local)
+    NodeId node_id;           // Network location ("host:port" or "" for local)
     ActorType type = 0;       // Actor type identifier
     ActorId id;               // Unique instance ID
-    uint64_t incarnation = 0; // Increments on restart
+    uint64_t incarnation = 0;  // Increments on restart
 
     ActorAddress() = default;
     ActorAddress(NodeId node, ActorType t, ActorId i, uint64_t inc)
-        : node_id(node), type(t), id(i), incarnation(inc) {}
+        : node_id(std::move(node)), type(t), id(i), incarnation(inc) {}
 
     bool operator==(const ActorAddress& other) const noexcept {
         return node_id == other.node_id && type == other.type &&
@@ -40,7 +40,7 @@ struct ActorAddress {
         return !(*this == other);
     }
     bool is_local() const noexcept {
-        return node_id == LocalNodeId;
+        return is_local_node_id(node_id);
     }
     explicit operator bool() const {
         return id.value() != 0;
@@ -53,7 +53,7 @@ struct ActorAddress {
 };
 
 using ActorAddr = ActorAddress;
-constexpr ActorAddr invalid_actor_addr{};
+inline const ActorAddr invalid_actor_addr{};
 
 } // namespace hpactor
 

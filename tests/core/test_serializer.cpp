@@ -32,7 +32,7 @@ int main() {
 
     // Test encoding/decoding down_msg
     ActorId id(42);
-    ActorAddress addr(1, 0, id, 0);
+    ActorAddress addr("localhost:12345", 0, id, 0);
     down_msg down{addr, error(123)};
     bytes encoded = ser.encode(TypeTag::DownMsg, down);
     assert(!encoded.empty());

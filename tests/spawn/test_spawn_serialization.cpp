@@ -43,7 +43,7 @@ void test_spawn_response_construction() {
 // Test that SpawnRequest supports supervisor_addr field
 void test_spawn_request_with_supervisor() {
     hpactor::ActorAddress supervisor{
-        hpactor::NodeId{1},
+        "node1:12345",
         hpactor::ActorType{10},
         hpactor::ActorId{42},
         1
@@ -56,7 +56,7 @@ void test_spawn_request_with_supervisor() {
     req.supervisor_addr = supervisor;
 
     assert(req.actor_type_name == "worker");
-    assert(req.supervisor_addr.node_id == 1);
+    assert(req.supervisor_addr.node_id == "node1:12345");
     assert(req.supervisor_addr.id.value() == 42);
 }
 
@@ -69,7 +69,7 @@ void test_spawn_encode_via_spawn_variant() {
     req.args_type = hpactor::TypeTag::User;
     req.serialized_args = {1, 2, 3};
     req.supervisor_addr = hpactor::ActorAddress{
-        hpactor::NodeId{1},
+        "node1:12345",
         hpactor::ActorType{10},
         hpactor::ActorId{42},
         1
@@ -84,7 +84,7 @@ void test_spawn_encode_via_spawn_variant() {
     assert(std::holds_alternative<hpactor::SpawnRequest>(decoded));
     auto& decoded_req = std::get<hpactor::SpawnRequest>(decoded);
     assert(decoded_req.actor_type_name == "worker");
-    assert(decoded_req.supervisor_addr.node_id == 1);
+    assert(decoded_req.supervisor_addr.node_id == "node1:12345");
     assert(decoded_req.supervisor_addr.id.value() == 42);
 }
 
@@ -94,7 +94,7 @@ void test_spawn_response_encode_via_spawn_variant() {
 
     hpactor::SpawnResponse resp;
     resp.actor_addr = hpactor::ActorAddress{
-        hpactor::NodeId{2},
+        "node2:12345",
         hpactor::ActorType{20},
         hpactor::ActorId{100},
         1
@@ -109,7 +109,7 @@ void test_spawn_response_encode_via_spawn_variant() {
 
     assert(std::holds_alternative<hpactor::SpawnResponse>(decoded));
     auto& decoded_resp = std::get<hpactor::SpawnResponse>(decoded);
-    assert(decoded_resp.actor_addr.node_id == 2);
+    assert(decoded_resp.actor_addr.node_id == "node2:12345");
     assert(decoded_resp.actor_addr.id.value() == 100);
     assert(decoded_resp.error_code == hpactor::spawn_errors::success);
 }

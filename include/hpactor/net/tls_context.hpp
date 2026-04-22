@@ -90,7 +90,7 @@ public:
 private:
     TlsContext();
 
-    NodeId node_id_ = 0;
+    NodeId node_id_ = "";
     bytes certificate_;
     bytes public_key_;
     bytes private_key_;
@@ -111,7 +111,7 @@ struct TlsConfig {
     bytes own_cert_der;
     bytes own_key_der;
     std::vector<bytes> ca_certs_der;
-    NodeId node_id = 0;
+    NodeId node_id = "";  // "host:port" format
     bool verify_peer = true;
 };
 
