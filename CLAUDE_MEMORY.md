@@ -22,11 +22,13 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - ActorMailbox integration
 - Supervision: OneForOne, AllForOne, supervisor_actor, self_supervising_actor
 
-**Network Layer:** ✅ Complete (Phase 4-5)
+**Network Layer:** ✅ Complete (Phase 4-5, optional TLS 2026-04-22)
 - TlsContext — certificate loading, RSA signing, pre-master secret decryption
-- TlsConnection — TLS state machine, AES-256-CBC encryption
-- ConnectionPool — dynamic pooling per node, round-robin, exponential backoff
-- TcpTransport — updated to use ConnectionPool + TLS
+- TlsConnection — TLS state machine, AES-256-CBC encryption, inherits from Connection
+- PlainConnection — raw TCP socket without TLS, 4-byte length-prefixed framing
+- ConnectionPool — dynamic pooling per node, round-robin, exponential backoff, uses ConnectionPtr
+- TcpTransport — uses ConnectionPtr, creates PlainConnection or TlsConnection based on pool_config_.use_tls
+- PoolConfig::use_tls defaults to false (plain text is default)
 - EventLoop timer support — EVFILT_TIMER/timerfd for reconnect backoff
 - EventLoop backend fallback — EpollBackend (Linux), KqueueBackend (macOS) with explicit run()/stop()
 - UdpRegistrar — UDP-based node discovery with server/client dual mode
@@ -91,6 +93,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Plan: `docs/superpowers/plans/2026-04-15-coroutine-scheduling-impl.md`
 - Spec: `docs/superpowers/specs/2026-04-20-rpc-channel-design.md` (async RPC channel)
 - Plan: `docs/superpowers/plans/2026-04-20-rpc-channel-impl.md`
+- Spec: `docs/superpowers/specs/2026-04-22-optional-tls-plaintext-design.md` (optional TLS, plain text default)
+- Plan: `docs/superpowers/plans/2026-04-22-optional-tls-plaintext-connection.md`
 
 ## Key Decisions
 
