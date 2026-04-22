@@ -35,7 +35,7 @@ ConnectionPool::~ConnectionPool() {
     abort();
 }
 
-TlsConnectionPtr ConnectionPool::get_connection() {
+ConnectionPtr ConnectionPool::get_connection() {
     std::lock_guard<std::mutex> lock(mutex_);
     if (active_connections_.empty()) {
         return nullptr;
@@ -49,7 +49,7 @@ void ConnectionPool::send(const ActorAddress& target, const bytes& encoded) {
         return;
     }
 
-    TlsConnectionPtr conn = get_connection();
+    ConnectionPtr conn = get_connection();
     if (conn) {
         conn->send(encoded);
         return;
@@ -130,10 +130,10 @@ void ConnectionPool::create_connection() {
         auto conn = TlsConnection::create_client(
             remote_node_id_, tls_context_, loop_);
 
-        conn->set_ready_handler([this](TlsConnectionPtr c) {
+        conn->set_ready_handler([this](ConnectionPtr c) {
             on_connection_ready(c);
         });
-        conn->set_error_handler([this](TlsConnectionPtr c, const error& e) {
+        conn->set_error_handler([this](ConnectionPtr c, const error& e) {
             on_connection_error(c, e);
         });
         conn->set_frame_handler([this](const bytes& data) {
@@ -144,7 +144,7 @@ void ConnectionPool::create_connection() {
     }
 }
 
-void ConnectionPool::on_connection_ready(TlsConnectionPtr conn) {
+void ConnectionPool::on_connection_ready(ConnectionPtr conn) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         active_connections_.push_back(conn);
@@ -153,7 +153,7 @@ void ConnectionPool::on_connection_ready(TlsConnectionPtr conn) {
     flush_pending();
 }
 
-void ConnectionPool::on_connection_error(TlsConnectionPtr conn, const error& err) {
+void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
     (void)err;
     {
         std::lock_guard<std::mutex> lock(mutex_);
@@ -244,6 +244,11 @@ bool ConnectionPool::add_pending(const ActorAddress& target, const bytes& data) 
     }
     pending_messages_.push_back({target, data, std::chrono::steady_clock::now()});
     return true;
+}
+
+void ConnectionPool::add_connection(ConnectionPtr conn) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    active_connections_.push_back(conn);
 }
 
 } // namespace net

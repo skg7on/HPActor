@@ -158,10 +158,10 @@ void test_full_handshake() {
     std::atomic<bool> client_ready(false);
     std::atomic<bool> server_ready(false);
 
-    server->set_ready_handler([&](TlsConnectionPtr) {
+    server->set_ready_handler([&](ConnectionPtr) {
         server_ready = true;
     });
-    client->set_ready_handler([&](TlsConnectionPtr) {
+    client->set_ready_handler([&](ConnectionPtr) {
         client_ready = true;
     });
 
@@ -313,7 +313,7 @@ void test_send_error_handling() {
     auto client = TlsConnection::create_client(1, &ctx, &loop);
 
     bool error_handler_called = false;
-    client->set_error_handler([&](TlsConnectionPtr, const error&) {
+    client->set_error_handler([&](ConnectionPtr, const error&) {
         error_handler_called = true;
     });
 
@@ -512,7 +512,7 @@ void test_error_handler_callback() {
     auto client = TlsConnection::create_client(1, &ctx, &loop);
 
     bool error_handler_called = false;
-    client->set_error_handler([&](TlsConnectionPtr, const error&) {
+    client->set_error_handler([&](ConnectionPtr, const error&) {
         error_handler_called = true;
     });
 
@@ -543,7 +543,7 @@ void test_ready_handler_callback() {
     auto client = TlsConnection::create_client(1, &ctx, &loop);
 
     bool ready_handler_called = false;
-    client->set_ready_handler([&](TlsConnectionPtr conn) {
+    client->set_ready_handler([&](ConnectionPtr conn) {
         ready_handler_called = true;
         assert(conn != nullptr);
     });

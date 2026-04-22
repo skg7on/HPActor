@@ -51,9 +51,9 @@ public:
     int fd() const { return fd_; }
 
     // Set callbacks
-    void set_ready_handler(connection_ready_handler handler);
+    void set_ready_handler(std::function<void(ConnectionPtr)> handler);
     void set_frame_handler(frame_handler handler);
-    void set_error_handler(connection_error_handler handler);
+    void set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
     void set_send_completion_handler(std::function<void(int result)> handler);
 
     // Send raw frame data
@@ -66,7 +66,7 @@ public:
     void handle_read(const bytes& data);
 
     // Handle send completion (called by EventLoop)
-    void handle_send_completion(int result);
+    void handle_send_completion(int result) override;
 
 private:
     PlainConnection(NodeId remote_node_id, EventLoop* loop, int fd);
@@ -95,9 +95,9 @@ private:
     bool is_sending_ = false;
 
     // Callbacks
-    connection_ready_handler ready_handler_;
+    std::function<void(ConnectionPtr)> ready_handler_;
     frame_handler frame_handler_;
-    connection_error_handler error_handler_;
+    std::function<void(ConnectionPtr, const error&)> error_handler_;
     std::function<void(int result)> send_completion_handler_;
 };
 

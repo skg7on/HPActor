@@ -107,21 +107,24 @@ public:
     using spawn_response_handler = std::function<void(uint64_t message_id, const SpawnResponse&)>;
     void set_spawn_handler(spawn_response_handler handler);
 
+    // Called by TcpTransport when connection becomes ready
+    void on_connection_ready(ConnectionPtr conn);
+
+    // Called by TcpTransport when connection has error
+    void on_connection_error(ConnectionPtr conn, const error& err);
+
+    // Handle incoming frame (called by connection's frame handler)
+    void on_frame_received(const bytes& frame_data);
+
+    // Add an externally-created connection to the pool
+    void add_connection(ConnectionPtr conn);
+
 private:
     // Get connection via round-robin
-    TlsConnectionPtr get_connection();
+    ConnectionPtr get_connection();
 
     // Create new connection
     void create_connection();
-
-    // Handle connection ready
-    void on_connection_ready(TlsConnectionPtr conn);
-
-    // Handle connection error
-    void on_connection_error(TlsConnectionPtr conn, const error& err);
-
-    // Handle incoming frame
-    void on_frame_received(const bytes& frame_data);
 
     // Schedule reconnect with backoff
     void schedule_reconnect();
@@ -137,7 +140,7 @@ private:
     TlsContext* tls_context_;
     EventLoop* loop_;
 
-    std::vector<TlsConnectionPtr> active_connections_;
+    std::vector<ConnectionPtr> active_connections_;
     std::deque<PendingMessage> pending_messages_;
 
     std::atomic<size_t> next_index_{0};

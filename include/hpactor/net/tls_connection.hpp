@@ -68,13 +68,6 @@ using Nonce = std::array<uint8_t, kNonceSize>;
 class TlsConnection;
 using TlsConnectionPtr = std::shared_ptr<TlsConnection>;
 
-// Callback for when connection becomes ready
-using connection_ready_handler = std::function<void(TlsConnectionPtr)>;
-// Callback for incoming decrypted frames
-using frame_handler = std::function<void(const bytes&)>;
-// Callback for connection errors
-using connection_error_handler = std::function<void(TlsConnectionPtr, const error&)>;
-
 class TlsConnection : public Connection, public std::enable_shared_from_this<TlsConnection> {
 public:
     // Create client-side connection
@@ -103,9 +96,9 @@ public:
     int fd() const { return fd_; }
 
     // Set callbacks
-    void set_ready_handler(connection_ready_handler handler);
+    void set_ready_handler(std::function<void(ConnectionPtr)> handler);
     void set_frame_handler(frame_handler handler);
-    void set_error_handler(connection_error_handler handler);
+    void set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
     void set_send_completion_handler(std::function<void(int result)> handler);
 
     // Initiate client handshake (called after connection established)
@@ -115,13 +108,13 @@ public:
     void handle_read(const bytes& data);
 
     // Send encrypted frame
-    void send(const bytes& frame_data);
+    void send(const bytes& frame_data) override;
 
     // Close connection
-    void close();
+    void close() override;
 
     // Handle send completion (called by TcpTransport on async_send completion)
-    void handle_send_completion(int result);
+    void handle_send_completion(int result) override;
 
     // Get session state
     TlsSessionState session_state() const { return session_state_; }
@@ -207,9 +200,9 @@ private:
     bytes handshake_messages_;
 
     // Callbacks
-    connection_ready_handler ready_handler_;
+    std::function<void(ConnectionPtr)> ready_handler_;
     frame_handler frame_handler_;
-    connection_error_handler error_handler_;
+    std::function<void(ConnectionPtr, const error&)> error_handler_;
     std::function<void(int result)> send_completion_handler_;
 
     // Server-side flag

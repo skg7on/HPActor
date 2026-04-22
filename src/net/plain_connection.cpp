@@ -62,7 +62,7 @@ PlainConnectionPtr PlainConnection::create_server(int fd,
     return conn;
 }
 
-void PlainConnection::set_ready_handler(connection_ready_handler handler) {
+void PlainConnection::set_ready_handler(std::function<void(ConnectionPtr)> handler) {
     ready_handler_ = std::move(handler);
 }
 
@@ -70,7 +70,7 @@ void PlainConnection::set_frame_handler(frame_handler handler) {
     frame_handler_ = std::move(handler);
 }
 
-void PlainConnection::set_error_handler(connection_error_handler handler) {
+void PlainConnection::set_error_handler(std::function<void(ConnectionPtr, const error&)> handler) {
     error_handler_ = std::move(handler);
 }
 
@@ -111,10 +111,10 @@ void PlainConnection::handle_read(const bytes& data) {
             break;  // Wait for more data
         }
 
-        bytes frame(read_buffer_.begin() + 4,
-                    read_buffer_.begin() + 4 + frame_len);
+        bytes frame(read_buffer_.begin() + static_cast<long>(4),
+                    read_buffer_.begin() + static_cast<long>(4 + frame_len));
         read_buffer_.erase(read_buffer_.begin(),
-                          read_buffer_.begin() + 4 + frame_len);
+                          read_buffer_.begin() + static_cast<long>(4 + frame_len));
 
         if (frame_handler_) {
             frame_handler_(frame);
@@ -159,7 +159,7 @@ void PlainConnection::handle_send_completion(int result) {
         // Send error - close connection
         set_state(ConnectionState::Error);
         if (error_handler_) {
-            error_handler_(shared_from_this(), error{});
+            error_handler_(std::enable_shared_from_this<PlainConnection>::shared_from_this(), error{});
         }
         return;
     }

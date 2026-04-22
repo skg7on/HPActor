@@ -17,6 +17,7 @@
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/plain_connection.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>
@@ -65,7 +66,7 @@ private:
     // Get or create a connection pool for a remote node
     std::shared_ptr<ConnectionPool> get_or_create_pool(NodeId remote_node);
 
-    void register_connection(TlsConnectionPtr conn, int fd);
+    void register_connection(ConnectionPtr conn, int fd);
     void unregister_connection(int fd);
 
     NodeId node_id_;
@@ -78,8 +79,8 @@ private:
     std::unordered_map<NodeId, std::shared_ptr<ConnectionPool>> pools_;
     std::function<void(MessageId, const bytes&)> rpc_handler_;
 
-    // Map of fd -> TlsConnection for completion routing
-    std::unordered_map<int, TlsConnectionPtr> connections_;
+    // Map of fd -> Connection for completion routing
+    std::unordered_map<int, ConnectionPtr> connections_;
 
     // Completion callback for async send routing
     std::function<void(OpCompletion)> completion_callback_;

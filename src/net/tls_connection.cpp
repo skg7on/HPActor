@@ -108,7 +108,7 @@ TlsConnectionPtr TlsConnection::create_server(int socket_fd,
     return conn;
 }
 
-void TlsConnection::set_ready_handler(connection_ready_handler handler) {
+void TlsConnection::set_ready_handler(std::function<void(ConnectionPtr)> handler) {
     ready_handler_ = std::move(handler);
 }
 
@@ -116,7 +116,7 @@ void TlsConnection::set_frame_handler(frame_handler handler) {
     frame_handler_ = std::move(handler);
 }
 
-void TlsConnection::set_error_handler(connection_error_handler handler) {
+void TlsConnection::set_error_handler(std::function<void(ConnectionPtr, const error&)> handler) {
     error_handler_ = std::move(handler);
 }
 

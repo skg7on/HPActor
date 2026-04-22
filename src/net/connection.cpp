@@ -57,5 +57,10 @@ void Connection::on_message(const bytes& data) {
     }
 }
 
+void Connection::handle_send_completion(int /*result*/) {
+    // Default no-op implementation. Derived classes override to handle
+    // send completions from the EventLoop.
+}
+
 } // namespace net
 } // namespace hpactor

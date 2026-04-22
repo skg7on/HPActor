@@ -47,6 +47,20 @@ enum class ConnectionState {
     Error = 4,
 };
 
+// Forward declarations
+class Connection;
+using ConnectionPtr = std::shared_ptr<Connection>;
+
+// -----------------------------------------------------------------------------
+// Connection callback types
+// -----------------------------------------------------------------------------
+// Callback for when connection becomes ready
+using connection_ready_handler = std::function<void(ConnectionPtr)>;
+// Callback for incoming frames
+using frame_handler = std::function<void(const bytes&)>;
+// Callback for connection errors
+using connection_error_handler = std::function<void(ConnectionPtr, const error&)>;
+
 // -----------------------------------------------------------------------------
 // Connection - represents a connection to a remote node
 // -----------------------------------------------------------------------------
@@ -71,6 +85,9 @@ public:
 
     // Handle incoming data (for framing)
     void handle_read(const bytes& data);
+
+    // Handle send completion (called by EventLoop on async_send completion)
+    virtual void handle_send_completion(int result);
 
     // Transition to a new state
     void set_state(ConnectionState new_state);

@@ -97,8 +97,6 @@ ConnectionPtr TcpTransport::connect(NodeId remote_node,
     std::memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
-
-    // TODO: use inet_pton for actual address resolution
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
     int result = ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
@@ -107,15 +105,44 @@ ConnectionPtr TcpTransport::connect(NodeId remote_node,
         return nullptr;
     }
 
-    // Create a TlsConnection as client and get the pool
+    // Get or create the pool
     auto pool = get_or_create_pool(remote_node);
 
-    // Create client-side TLS connection
-    auto conn = TlsConnection::create_client(remote_node, &tls_context_, &loop_);
-    conn->start_client_handshake();
+    ConnectionPtr conn;
+    if (pool_config_.use_tls) {
+        // Create TLS connection
+        auto tls_conn = TlsConnection::create_client(remote_node, &tls_context_, &loop_);
+        tls_conn->set_fd(fd);
+        tls_conn->set_ready_handler([pool](ConnectionPtr c) {
+            pool->on_connection_ready(c);
+        });
+        tls_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
+            pool->on_connection_error(c, e);
+        });
+        tls_conn->set_frame_handler([pool](const bytes& data) {
+            pool->on_frame_received(data);
+        });
+        conn = tls_conn;
+        tls_conn->start_client_handshake();
+    } else {
+        // Create plain connection with connected fd
+        auto plain_conn = PlainConnection::create_client(fd, remote_node, &loop_);
+        plain_conn->set_ready_handler([pool](ConnectionPtr c) {
+            pool->on_connection_ready(c);
+        });
+        plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
+            pool->on_connection_error(c, e);
+        });
+        plain_conn->set_frame_handler([pool](const bytes& data) {
+            pool->on_frame_received(data);
+        });
+        conn = plain_conn;
+    }
 
-    // For the return value, we return the pool as a Connection
-    // The pool itself manages the actual TlsConnection(s)
+    // Add to pool and track by fd for completion routing
+    pool->add_connection(conn);
+    register_connection(conn, fd);
+
     return pool;
 }
 
@@ -177,7 +204,7 @@ void TcpTransport::set_rpc_handler(rpc_response_handler handler) {
     }
 }
 
-void TcpTransport::register_connection(TlsConnectionPtr conn, int fd) {
+void TcpTransport::register_connection(ConnectionPtr conn, int fd) {
     connections_[fd] = conn;
 }
 
@@ -186,11 +213,12 @@ void TcpTransport::unregister_connection(int fd) {
 }
 
 void TcpTransport::handle_accept(int client_fd) {
-    // For accepted connections, we don't know the remote node ID yet
-    // The connection will be registered when we receive the handshake
-    // TODO: implement proper node ID exchange during handshake
-    // Create server-side TLS connection
-    auto conn = TlsConnection::create_server(client_fd, 0, &tls_context_, &loop_);
+    ConnectionPtr conn;
+    if (pool_config_.use_tls) {
+        conn = TlsConnection::create_server(client_fd, 0, &tls_context_, &loop_);
+    } else {
+        conn = PlainConnection::create_server(client_fd, 0, &loop_);
+    }
     register_connection(conn, client_fd);
 }
 
