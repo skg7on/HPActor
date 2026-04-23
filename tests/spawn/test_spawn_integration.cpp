@@ -9,13 +9,12 @@
 #include <cstring>
 
 // Test Frame encoding/decoding for spawn protocol
-// Note: Frame::encode/decode currently preserves node_id, id, incarnation, message_id, flags
-// but does NOT preserve ActorAddress.type (this is a known limitation in Frame implementation)
+// Note: Frame::encode/decode now uses binary endpoint encoding
 void test_frame_encoding() {
     // Create a spawn request Frame
     hpactor::net::Frame frame;
-    frame.sender = hpactor::ActorAddress{"node1:12345", hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
-    frame.receiver = hpactor::ActorAddress{"node2:12345", hpactor::SystemActorType, hpactor::SpawnReceiverId, 0};
+    frame.sender = hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node1:12345"), hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
+    frame.receiver = hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node2:12345"), hpactor::SystemActorType, hpactor::SpawnReceiverId, 0};
     frame.message_id = 12345;
     frame.flags = hpactor::net::Frame::RpcRequest;
 
@@ -26,125 +25,40 @@ void test_frame_encoding() {
     // Decode frame
     hpactor::net::Frame decoded = hpactor::net::Frame::decode(encoded);
 
-    // Verify fields that Frame encodes (node_id, id, incarnation, message_id, flags)
+    // Verify fields that Frame encodes (endpoint, id, incarnation, message_id, flags)
     // Note: ActorAddress.type is NOT preserved in current Frame implementation
-    assert(decoded.sender.node_id == frame.sender.node_id);
+    assert(decoded.sender.endpoint == frame.sender.endpoint);
     assert(decoded.sender.id == frame.sender.id);
     assert(decoded.sender.incarnation == frame.sender.incarnation);
-    assert(decoded.receiver.node_id == frame.receiver.node_id);
+    assert(decoded.receiver.endpoint == frame.receiver.endpoint);
     assert(decoded.receiver.id == frame.receiver.id);
     assert(decoded.receiver.incarnation == frame.receiver.incarnation);
     assert(decoded.message_id == frame.message_id);
     assert(decoded.flags == frame.flags);
 }
 
-// Test SpawnRequest binary serialization (manual, not via MessageVariant)
+// Test SpawnRequest binary serialization (via DefaultSerializer)
 void test_spawn_request_binary_format() {
+    hpactor::DefaultSerializer serializer;
+
     hpactor::SpawnRequest req;
     req.actor_type_name = "worker";
     req.args_type = hpactor::TypeTag::User;
     req.serialized_args = {1, 2, 3};
-    req.supervisor_addr = hpactor::ActorAddress{"node1:12345", hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
+    req.supervisor_addr = hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node1:12345"), hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
 
-    // Manual encode (same format as DefaultSerializer would produce)
-    // [4b: name len][name][4b: args_type][4b: args len][args]
-    // [4b: sup node len][node len bytes][8b: sup actor_id][4b: sup inc][4b: sup type]
-    size_t name_len = req.actor_type_name.size();
-    size_t args_len = req.serialized_args.size();
-    std::string sup_node_id = req.supervisor_addr.node_id;
-    size_t sup_node_len = sup_node_id.size();
-    size_t total = sizeof(uint32_t) + name_len +
-                   sizeof(uint32_t) + sizeof(uint32_t) + args_len +
-                   sizeof(uint32_t) + sup_node_len + sizeof(uint64_t) + sizeof(uint32_t) + sizeof(uint32_t);
+    hpactor::SpawnMessageVariant mv = req;
+    hpactor::bytes encoded = serializer.encode_spawn(hpactor::TypeTag::SpawnRequestTag, mv);
+    assert(encoded.size() > 0);
 
-    hpactor::bytes encoded(total);
-    size_t offset = 0;
+    hpactor::SpawnMessageVariant decoded = serializer.decode_spawn(hpactor::TypeTag::SpawnRequestTag, encoded);
+    assert(std::holds_alternative<hpactor::SpawnRequest>(decoded));
 
-    uint32_t name_len_u32 = static_cast<uint32_t>(name_len);
-    std::memcpy(encoded.data() + offset, &name_len_u32, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    std::memcpy(encoded.data() + offset, req.actor_type_name.data(), name_len);
-    offset += name_len;
-
-    uint32_t args_type = static_cast<uint32_t>(req.args_type);
-    std::memcpy(encoded.data() + offset, &args_type, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    uint32_t args_len_u32 = static_cast<uint32_t>(args_len);
-    std::memcpy(encoded.data() + offset, &args_len_u32, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    std::memcpy(encoded.data() + offset, req.serialized_args.data(), args_len);
-    offset += args_len;
-
-    uint32_t sup_node_len_u32 = static_cast<uint32_t>(sup_node_len);
-    std::memcpy(encoded.data() + offset, &sup_node_len_u32, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    if (sup_node_len > 0) {
-        std::memcpy(encoded.data() + offset, sup_node_id.data(), sup_node_len);
-        offset += sup_node_len;
-    }
-    uint64_t sup_actor_id = req.supervisor_addr.id.value();
-    std::memcpy(encoded.data() + offset, &sup_actor_id, sizeof(uint64_t));
-    offset += sizeof(uint64_t);
-    uint32_t sup_inc = static_cast<uint32_t>(req.supervisor_addr.incarnation);
-    std::memcpy(encoded.data() + offset, &sup_inc, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    uint32_t sup_type = req.supervisor_addr.type;
-    std::memcpy(encoded.data() + offset, &sup_type, sizeof(uint32_t));
-
-    // Manual decode
-    hpactor::SpawnRequest decoded_req;
-    offset = 0;
-
-    uint32_t decoded_name_len;
-    std::memcpy(&decoded_name_len, encoded.data() + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    decoded_req.actor_type_name.resize(decoded_name_len);
-    std::memcpy(decoded_req.actor_type_name.data(), encoded.data() + offset, decoded_name_len);
-    offset += decoded_name_len;
-
-    uint32_t decoded_args_type;
-    std::memcpy(&decoded_args_type, encoded.data() + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    decoded_req.args_type = static_cast<hpactor::TypeTag>(decoded_args_type);
-
-    uint32_t decoded_args_len;
-    std::memcpy(&decoded_args_len, encoded.data() + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-
-    decoded_req.serialized_args.resize(decoded_args_len);
-    std::memcpy(decoded_req.serialized_args.data(), encoded.data() + offset, decoded_args_len);
-    offset += decoded_args_len;
-
-    uint32_t sup_node_len_dec;
-    std::memcpy(&sup_node_len_dec, encoded.data() + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    std::string sup_node_dec;
-    if (sup_node_len_dec > 0) {
-        sup_node_dec.resize(sup_node_len_dec);
-        std::memcpy(sup_node_dec.data(), encoded.data() + offset, sup_node_len_dec);
-        offset += sup_node_len_dec;
-    }
-    uint64_t sup_actor_id_dec;
-    std::memcpy(&sup_actor_id_dec, encoded.data() + offset, sizeof(uint64_t));
-    offset += sizeof(uint64_t);
-    uint32_t sup_inc_dec;
-    std::memcpy(&sup_inc_dec, encoded.data() + offset, sizeof(uint32_t));
-    offset += sizeof(uint32_t);
-    uint32_t sup_type_dec;
-    std::memcpy(&sup_type_dec, encoded.data() + offset, sizeof(uint32_t));
-
-    decoded_req.supervisor_addr.node_id = sup_node_dec;
-    decoded_req.supervisor_addr.id = hpactor::ActorId(sup_actor_id_dec);
-    decoded_req.supervisor_addr.incarnation = sup_inc_dec;
-    decoded_req.supervisor_addr.type = sup_type_dec;
-
-    // Verify
+    auto& decoded_req = std::get<hpactor::SpawnRequest>(decoded);
     assert(decoded_req.actor_type_name == "worker");
     assert(decoded_req.args_type == hpactor::TypeTag::User);
     assert(decoded_req.serialized_args.size() == 3);
-    assert(decoded_req.supervisor_addr.node_id == "node1:12345");
+    assert(decoded_req.supervisor_addr.endpoint == hpactor::endpoint_ops::parse_endpoint("node1:12345"));
     assert(decoded_req.supervisor_addr.id.value() == 42);
 }
 

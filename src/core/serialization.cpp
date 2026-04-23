@@ -14,6 +14,7 @@
 
 #include <hpactor/types/serialization.hpp>
 #include <hpactor/spawn.hpp>
+#include <hpactor/net/frame.hpp>
 
 #include <cstring>
 
@@ -86,16 +87,16 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // down_msg
     if (std::holds_alternative<down_msg>(msg)) {
         const down_msg& m = std::get<down_msg>(msg);
-        // node_id (4 bytes len + string) + actor_id (8 bytes) + code (4 bytes)
-        size_t node_id_len = m.terminated_actor.node_id.size();
-        result.resize(sizeof(uint32_t) + node_id_len + sizeof(uint64_t) + sizeof(uint32_t));
+        // endpoint (binary) + actor_id (8 bytes) + code (4 bytes)
+        bytes ep_bytes = net::Frame::encode_endpoint(m.terminated_actor.endpoint);
+        result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
-        uint32_t node_id_len_u32 = static_cast<uint32_t>(node_id_len);
-        std::memcpy(result.data() + offset, &node_id_len_u32, sizeof(uint32_t));
+        uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
+        std::memcpy(result.data() + offset, &ep_len, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (node_id_len > 0) {
-            std::memcpy(result.data() + offset, m.terminated_actor.node_id.data(), node_id_len);
-            offset += node_id_len;
+        if (ep_len > 0) {
+            std::memcpy(result.data() + offset, ep_bytes.data(), ep_len);
+            offset += ep_len;
         }
         uint64_t actor_id = m.terminated_actor.id.value();
         uint32_t code = m.reason.code();
@@ -106,15 +107,15 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // exit_msg
     else if (std::holds_alternative<exit_msg>(msg)) {
         const exit_msg& m = std::get<exit_msg>(msg);
-        size_t node_id_len = m.sender.node_id.size();
-        result.resize(sizeof(uint32_t) + node_id_len + sizeof(uint64_t) + sizeof(uint32_t));
+        bytes ep_bytes = net::Frame::encode_endpoint(m.sender.endpoint);
+        result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
-        uint32_t node_id_len_u32 = static_cast<uint32_t>(node_id_len);
-        std::memcpy(result.data() + offset, &node_id_len_u32, sizeof(uint32_t));
+        uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
+        std::memcpy(result.data() + offset, &ep_len, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (node_id_len > 0) {
-            std::memcpy(result.data() + offset, m.sender.node_id.data(), node_id_len);
-            offset += node_id_len;
+        if (ep_len > 0) {
+            std::memcpy(result.data() + offset, ep_bytes.data(), ep_len);
+            offset += ep_len;
         }
         uint64_t actor_id = m.sender.id.value();
         uint32_t code = m.reason.code();
@@ -125,15 +126,15 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // link_msg
     else if (std::holds_alternative<link_msg>(msg)) {
         const link_msg& m = std::get<link_msg>(msg);
-        size_t node_id_len = m.target.node_id.size();
-        result.resize(sizeof(uint32_t) + node_id_len + sizeof(uint64_t));
+        bytes ep_bytes = net::Frame::encode_endpoint(m.target.endpoint);
+        result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t));
         size_t offset = 0;
-        uint32_t node_id_len_u32 = static_cast<uint32_t>(node_id_len);
-        std::memcpy(result.data() + offset, &node_id_len_u32, sizeof(uint32_t));
+        uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
+        std::memcpy(result.data() + offset, &ep_len, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (node_id_len > 0) {
-            std::memcpy(result.data() + offset, m.target.node_id.data(), node_id_len);
-            offset += node_id_len;
+        if (ep_len > 0) {
+            std::memcpy(result.data() + offset, ep_bytes.data(), ep_len);
+            offset += ep_len;
         }
         uint64_t actor_id = m.target.id.value();
         std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
@@ -142,15 +143,15 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // unlink_msg
     else if (std::holds_alternative<unlink_msg>(msg)) {
         const unlink_msg& m = std::get<unlink_msg>(msg);
-        size_t node_id_len = m.target.node_id.size();
-        result.resize(sizeof(uint32_t) + node_id_len + sizeof(uint64_t));
+        bytes ep_bytes = net::Frame::encode_endpoint(m.target.endpoint);
+        result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t));
         size_t offset = 0;
-        uint32_t node_id_len_u32 = static_cast<uint32_t>(node_id_len);
-        std::memcpy(result.data() + offset, &node_id_len_u32, sizeof(uint32_t));
+        uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
+        std::memcpy(result.data() + offset, &ep_len, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (node_id_len > 0) {
-            std::memcpy(result.data() + offset, m.target.node_id.data(), node_id_len);
-            offset += node_id_len;
+        if (ep_len > 0) {
+            std::memcpy(result.data() + offset, ep_bytes.data(), ep_len);
+            offset += ep_len;
         }
         uint64_t actor_id = m.target.id.value();
         std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
@@ -165,14 +166,15 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     case TypeTag::DownMsg: {
         down_msg m;
         size_t offset = 0;
-        // node_id (length-prefixed string)
-        uint32_t node_id_len;
-        std::memcpy(&node_id_len, data.data() + offset, sizeof(uint32_t));
+        // endpoint (binary)
+        uint32_t ep_len;
+        std::memcpy(&ep_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (node_id_len > 0) {
-            m.terminated_actor.node_id.resize(node_id_len);
-            std::memcpy(m.terminated_actor.node_id.data(), data.data() + offset, node_id_len);
-            offset += node_id_len;
+        if (ep_len > 0) {
+            bytes ep_data(data.begin() + static_cast<long>(offset),
+                         data.begin() + static_cast<long>(offset) + ep_len);
+            m.terminated_actor.endpoint = net::Frame::decode_endpoint(ep_data);
+            offset += ep_len;
         }
         uint64_t actor_id;
         std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
@@ -186,13 +188,14 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     case TypeTag::ExitMsg: {
         exit_msg m;
         size_t offset = 0;
-        uint32_t node_id_len;
-        std::memcpy(&node_id_len, data.data() + offset, sizeof(uint32_t));
+        uint32_t ep_len;
+        std::memcpy(&ep_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (node_id_len > 0) {
-            m.sender.node_id.resize(node_id_len);
-            std::memcpy(m.sender.node_id.data(), data.data() + offset, node_id_len);
-            offset += node_id_len;
+        if (ep_len > 0) {
+            bytes ep_data(data.begin() + static_cast<long>(offset),
+                         data.begin() + static_cast<long>(offset) + ep_len);
+            m.sender.endpoint = net::Frame::decode_endpoint(ep_data);
+            offset += ep_len;
         }
         uint64_t actor_id;
         std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
@@ -206,13 +209,14 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     case TypeTag::LinkMsg: {
         link_msg m;
         size_t offset = 0;
-        uint32_t node_id_len;
-        std::memcpy(&node_id_len, data.data() + offset, sizeof(uint32_t));
+        uint32_t ep_len;
+        std::memcpy(&ep_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (node_id_len > 0) {
-            m.target.node_id.resize(node_id_len);
-            std::memcpy(m.target.node_id.data(), data.data() + offset, node_id_len);
-            offset += node_id_len;
+        if (ep_len > 0) {
+            bytes ep_data(data.begin() + static_cast<long>(offset),
+                         data.begin() + static_cast<long>(offset) + ep_len);
+            m.target.endpoint = net::Frame::decode_endpoint(ep_data);
+            offset += ep_len;
         }
         uint64_t actor_id;
         std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
@@ -222,13 +226,14 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     case TypeTag::UnlinkMsg: {
         unlink_msg m;
         size_t offset = 0;
-        uint32_t node_id_len;
-        std::memcpy(&node_id_len, data.data() + offset, sizeof(uint32_t));
+        uint32_t ep_len;
+        std::memcpy(&ep_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (node_id_len > 0) {
-            m.target.node_id.resize(node_id_len);
-            std::memcpy(m.target.node_id.data(), data.data() + offset, node_id_len);
-            offset += node_id_len;
+        if (ep_len > 0) {
+            bytes ep_data(data.begin() + static_cast<long>(offset),
+                         data.begin() + static_cast<long>(offset) + ep_len);
+            m.target.endpoint = net::Frame::decode_endpoint(ep_data);
+            offset += ep_len;
         }
         uint64_t actor_id;
         std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
@@ -248,15 +253,15 @@ bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnM
         const SpawnRequest& m = std::get<SpawnRequest>(msg);
         // actor_type_name (4 bytes len + string) + args_type (4 bytes) +
         // serialized_args (4 bytes len + data) +
-        // supervisor_node_id (4 bytes len + string) + supervisor_type (4 bytes) +
+        // supervisor_endpoint (binary) + supervisor_type (4 bytes) +
         // supervisor_actor_id (8 bytes) + supervisor_incarnation (8 bytes)
         size_t name_len = m.actor_type_name.size();
         size_t args_len = m.serialized_args.size();
-        size_t sup_node_id_len = m.supervisor_addr.node_id.size();
+        bytes sup_ep_bytes = net::Frame::encode_endpoint(m.supervisor_addr.endpoint);
 
         result.resize(sizeof(uint32_t) + name_len + sizeof(TypeTag) +
                       sizeof(uint32_t) + args_len +
-                      sizeof(uint32_t) + sup_node_id_len + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t));
+                      sizeof(uint32_t) + sup_ep_bytes.size() + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t));
         size_t offset = 0;
 
         // actor_type_name length
@@ -284,13 +289,13 @@ bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnM
             offset += args_len;
         }
 
-        // supervisor_node_id (length-prefixed string)
-        uint32_t sup_node_id_len_u32 = static_cast<uint32_t>(sup_node_id_len);
-        std::memcpy(result.data() + offset, &sup_node_id_len_u32, sizeof(uint32_t));
+        // supervisor_endpoint (binary)
+        uint32_t sup_ep_len = static_cast<uint32_t>(sup_ep_bytes.size());
+        std::memcpy(result.data() + offset, &sup_ep_len, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (sup_node_id_len > 0) {
-            std::memcpy(result.data() + offset, m.supervisor_addr.node_id.data(), sup_node_id_len);
-            offset += sup_node_id_len;
+        if (sup_ep_len > 0) {
+            std::memcpy(result.data() + offset, sup_ep_bytes.data(), sup_ep_len);
+            offset += sup_ep_len;
         }
 
         // supervisor_type
@@ -310,18 +315,18 @@ bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnM
     // SpawnResponse
     else if (std::holds_alternative<SpawnResponse>(msg)) {
         const SpawnResponse& m = std::get<SpawnResponse>(msg);
-        size_t actor_node_id_len = m.actor_addr.node_id.size();
-        result.resize(sizeof(uint32_t) + actor_node_id_len + sizeof(uint32_t) +
+        bytes actor_ep_bytes = net::Frame::encode_endpoint(m.actor_addr.endpoint);
+        result.resize(sizeof(uint32_t) + actor_ep_bytes.size() + sizeof(uint32_t) +
                       sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
 
-        // actor_node_id (length-prefixed string)
-        uint32_t actor_node_id_len_u32 = static_cast<uint32_t>(actor_node_id_len);
-        std::memcpy(result.data() + offset, &actor_node_id_len_u32, sizeof(uint32_t));
+        // actor_endpoint (binary)
+        uint32_t actor_ep_len = static_cast<uint32_t>(actor_ep_bytes.size());
+        std::memcpy(result.data() + offset, &actor_ep_len, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (actor_node_id_len > 0) {
-            std::memcpy(result.data() + offset, m.actor_addr.node_id.data(), actor_node_id_len);
-            offset += actor_node_id_len;
+        if (actor_ep_len > 0) {
+            std::memcpy(result.data() + offset, actor_ep_bytes.data(), actor_ep_len);
+            offset += actor_ep_len;
         }
 
         // actor_type
@@ -381,14 +386,15 @@ SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& da
             offset += args_len;
         }
 
-        // supervisor_node_id (length-prefixed string)
-        uint32_t sup_node_id_len;
-        std::memcpy(&sup_node_id_len, data.data() + offset, sizeof(uint32_t));
+        // supervisor_endpoint (binary)
+        uint32_t sup_ep_len;
+        std::memcpy(&sup_ep_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (sup_node_id_len > 0) {
-            m.supervisor_addr.node_id.resize(sup_node_id_len);
-            std::memcpy(m.supervisor_addr.node_id.data(), data.data() + offset, sup_node_id_len);
-            offset += sup_node_id_len;
+        if (sup_ep_len > 0) {
+            bytes sup_ep_data(data.begin() + static_cast<long>(offset),
+                             data.begin() + static_cast<long>(offset) + sup_ep_len);
+            m.supervisor_addr.endpoint = net::Frame::decode_endpoint(sup_ep_data);
+            offset += sup_ep_len;
         }
 
         // supervisor_type
@@ -414,14 +420,15 @@ SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& da
         SpawnResponse m;
         size_t offset = 0;
 
-        // actor_node_id (length-prefixed string)
-        uint32_t actor_node_id_len;
-        std::memcpy(&actor_node_id_len, data.data() + offset, sizeof(uint32_t));
+        // actor_endpoint (binary)
+        uint32_t actor_ep_len;
+        std::memcpy(&actor_ep_len, data.data() + offset, sizeof(uint32_t));
         offset += sizeof(uint32_t);
-        if (actor_node_id_len > 0) {
-            m.actor_addr.node_id.resize(actor_node_id_len);
-            std::memcpy(m.actor_addr.node_id.data(), data.data() + offset, actor_node_id_len);
-            offset += actor_node_id_len;
+        if (actor_ep_len > 0) {
+            bytes actor_ep_data(data.begin() + static_cast<long>(offset),
+                               data.begin() + static_cast<long>(offset) + actor_ep_len);
+            m.actor_addr.endpoint = net::Frame::decode_endpoint(actor_ep_data);
+            offset += actor_ep_len;
         }
 
         // actor_type

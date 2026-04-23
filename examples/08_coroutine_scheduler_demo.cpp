@@ -80,7 +80,7 @@ class EchoActor : public hpactor::EventBasedActor {
             if (std::holds_alternative<ping_msg>(variant)) {
                 auto& ping = std::get<ping_msg>(variant);
                 std::cout << "[EchoActor] Got ping #" << ping.sequence
-                          << " from node " << ping.from.node_id
+                          << " from node " << hpactor::endpoint_ops::to_string(ping.from.endpoint)
                           << " -> thread " << std::this_thread::get_id() << "\n";
                 ++count;
                 ++g_context_switches;
@@ -110,7 +110,7 @@ void demo_single_actor() {
 
     // Spawn an echo actor
     auto echo_ref = system.spawn<EchoActor>();
-    std::cout << "Spawned EchoActor at node " << echo_ref.address().node_id << "\n";
+    std::cout << "Spawned EchoActor at node " << hpactor::endpoint_ops::to_string(echo_ref.address().endpoint) << "\n";
 
     // Send it a message
     system.deliver_local(echo_ref.address().id, ping_msg{echo_ref.address(), 0});
@@ -144,8 +144,8 @@ void demo_multi_actor() {
     auto echo1_ref = system.spawn<EchoActor>();
     auto echo2_ref = system.spawn<EchoActor>();
 
-    std::cout << "Spawned EchoActor1 at node " << echo1_ref.address().node_id << "\n";
-    std::cout << "Spawned EchoActor2 at node " << echo2_ref.address().node_id << "\n";
+    std::cout << "Spawned EchoActor1 at node " << hpactor::endpoint_ops::to_string(echo1_ref.address().endpoint) << "\n";
+    std::cout << "Spawned EchoActor2 at node " << hpactor::endpoint_ops::to_string(echo2_ref.address().endpoint) << "\n";
 
     // Send messages to both echo actors
     system.deliver_local(echo1_ref.address().id,

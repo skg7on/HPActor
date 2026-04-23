@@ -27,36 +27,36 @@ void test_actor_address_default() {
 
 void test_actor_address_local() {
     hpactor::ActorId id(1);
-    hpactor::ActorAddress addr{hpactor::LocalNodeId, 0, id, 0};
+    hpactor::ActorAddress addr{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id, 0};
     assert(addr.is_local());
 }
 
 void test_actor_address_equality() {
     hpactor::ActorId id1(1), id2(1), id3(2);
-    hpactor::ActorAddress a{hpactor::LocalNodeId, 0, id1, 0};
-    hpactor::ActorAddress b{hpactor::LocalNodeId, 0, id2, 0};
-    hpactor::ActorAddress c{hpactor::LocalNodeId, 0, id3, 0};
+    hpactor::ActorAddress a{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id1, 0};
+    hpactor::ActorAddress b{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id2, 0};
+    hpactor::ActorAddress c{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id3, 0};
     assert(a == b);
     assert(!(a == c));
 }
 
 void test_actor_address_inequality() {
     hpactor::ActorId id1(1), id2(2);
-    hpactor::ActorAddress a{hpactor::LocalNodeId, 0, id1, 0};
-    hpactor::ActorAddress b{hpactor::LocalNodeId, 0, id2, 0};
+    hpactor::ActorAddress a{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id1, 0};
+    hpactor::ActorAddress b{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id2, 0};
     assert(a != b);
 }
 
 void test_actor_address_remote() {
     hpactor::ActorId id(1);
-    hpactor::ActorAddress addr{"remotehost:12345", 0, id, 0};
+    hpactor::ActorAddress addr{hpactor::endpoint_ops::parse_endpoint("remotehost:12345"), 0, id, 0};
     assert(!addr.is_local());
 }
 
 void test_actor_address_incarnation() {
     hpactor::ActorId id(1);
-    hpactor::ActorAddress a{hpactor::LocalNodeId, 0, id, 0};
-    hpactor::ActorAddress b{hpactor::LocalNodeId, 0, id, 1};
+    hpactor::ActorAddress a{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id, 0};
+    hpactor::ActorAddress b{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id, 1};
     assert(a != b); // Same id but different incarnation
 }
 
@@ -68,9 +68,9 @@ void test_actor_address_invalid() {
 
 void test_actor_address_hash() {
     hpactor::ActorId id1(1), id2(2);
-    hpactor::ActorAddress a{hpactor::LocalNodeId, 0, id1, 0};
-    hpactor::ActorAddress b{hpactor::LocalNodeId, 0, id1, 0};
-    hpactor::ActorAddress c{hpactor::LocalNodeId, 0, id2, 0};
+    hpactor::ActorAddress a{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id1, 0};
+    hpactor::ActorAddress b{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id1, 0};
+    hpactor::ActorAddress c{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 0, id2, 0};
 
     std::hash<hpactor::ActorAddress> hasher;
     assert(hasher(a) == hasher(b));

@@ -116,9 +116,9 @@ public:
         }
     }
 
-    // Get the node ID where this actor resides
-    NodeId node_id() const {
-        return address().node_id;
+    // Get the endpoint where this actor resides
+    CommunicationEndpoint endpoint() const {
+        return address().endpoint;
     }
 
     // Send a message to this actor

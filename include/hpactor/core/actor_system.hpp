@@ -219,7 +219,7 @@ template <typename T, typename... Args>
 Actor ActorSystem::spawn(Args&&... args) {
     ActorId id(next_actor_id_.fetch_add(1));
     auto actor = std::make_shared<T>(nullptr, *this, std::forward<Args>(args)...);
-    actor->set_address(ActorAddress(node_id_, actor->type(), id, 0));
+    actor->set_address(ActorAddress(endpoint_ops::parse_endpoint(node_id_), actor->type(), id, 0));
 
     {
         std::lock_guard<std::mutex> lock(actors_mutex_);

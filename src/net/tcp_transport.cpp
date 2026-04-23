@@ -175,7 +175,7 @@ void TcpTransport::stop_listening() {
 }
 
 void TcpTransport::send(const ActorAddress& target, const bytes& encoded) {
-    NodeId remote_node = target.node_id;
+    NodeId remote_node = endpoint_ops::to_string(target.endpoint);
     auto pool = get_or_create_pool(remote_node);
     pool->send(target, encoded);
 }
