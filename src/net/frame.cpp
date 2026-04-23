@@ -21,13 +21,15 @@ namespace hpactor {
 namespace net {
 
 size_t Frame::calculate_header_size(const ActorAddress& sender, const ActorAddress& receiver) {
-    // Fixed header + sender node_id (4 bytes length + string) + sender actor_id + sender incarnation
-    // + receiver node_id (4 bytes length + string) + receiver actor_id + receiver incarnation
+    // Fixed header + sender endpoint (binary) + sender actor_id + sender incarnation
+    // + receiver endpoint (binary) + receiver actor_id + receiver incarnation
+    bytes sender_ep = encode_endpoint(sender.endpoint);
+    bytes receiver_ep = encode_endpoint(receiver.endpoint);
     return FixedHeaderSize +
-           sizeof(uint32_t) + sender.node_id.size() +  // sender node_id length + string
-           sizeof(uint64_t) + sizeof(uint64_t) +        // sender actor_id + incarnation
-           sizeof(uint32_t) + receiver.node_id.size() + // receiver node_id length + string
-           sizeof(uint64_t) + sizeof(uint64_t);        // receiver actor_id + incarnation
+           sizeof(uint32_t) + sender_ep.size() +  // sender endpoint length + binary
+           sizeof(uint64_t) + sizeof(uint64_t) +   // sender actor_id + incarnation
+           sizeof(uint32_t) + receiver_ep.size() + // receiver endpoint length + binary
+           sizeof(uint64_t) + sizeof(uint64_t);   // receiver actor_id + incarnation
 }
 
 bytes Frame::encode() const {
@@ -57,13 +59,14 @@ bytes Frame::encode() const {
     std::memcpy(result.data() + offset, &msg_id, sizeof(uint64_t));
     offset += sizeof(uint64_t);
 
-    // Sender node_id (length-prefixed string)
-    uint32_t sender_node_len = static_cast<uint32_t>(sender.node_id.size());
-    std::memcpy(result.data() + offset, &sender_node_len, sizeof(uint32_t));
+    // Sender endpoint (binary serialized)
+    bytes sender_ep = encode_endpoint(sender.endpoint);
+    uint32_t sender_ep_len = static_cast<uint32_t>(sender_ep.size());
+    std::memcpy(result.data() + offset, &sender_ep_len, sizeof(uint32_t));
     offset += sizeof(uint32_t);
-    if (sender_node_len > 0) {
-        std::memcpy(result.data() + offset, sender.node_id.data(), sender_node_len);
-        offset += sender_node_len;
+    if (sender_ep_len > 0) {
+        std::memcpy(result.data() + offset, sender_ep.data(), sender_ep_len);
+        offset += sender_ep_len;
     }
 
     // Sender actor_id
@@ -75,13 +78,14 @@ bytes Frame::encode() const {
     std::memcpy(result.data() + offset, &sender.incarnation, sizeof(uint64_t));
     offset += sizeof(uint64_t);
 
-    // Receiver node_id (length-prefixed string)
-    uint32_t receiver_node_len = static_cast<uint32_t>(receiver.node_id.size());
-    std::memcpy(result.data() + offset, &receiver_node_len, sizeof(uint32_t));
+    // Receiver endpoint (binary serialized)
+    bytes receiver_ep = encode_endpoint(receiver.endpoint);
+    uint32_t receiver_ep_len = static_cast<uint32_t>(receiver_ep.size());
+    std::memcpy(result.data() + offset, &receiver_ep_len, sizeof(uint32_t));
     offset += sizeof(uint32_t);
-    if (receiver_node_len > 0) {
-        std::memcpy(result.data() + offset, receiver.node_id.data(), receiver_node_len);
-        offset += receiver_node_len;
+    if (receiver_ep_len > 0) {
+        std::memcpy(result.data() + offset, receiver_ep.data(), receiver_ep_len);
+        offset += receiver_ep_len;
     }
 
     // Receiver actor_id
@@ -119,14 +123,15 @@ Frame Frame::decode(const bytes& data) {
     std::memcpy(&frame.message_id, data.data() + offset, sizeof(uint64_t));
     offset += sizeof(uint64_t);
 
-    // Sender node_id (length-prefixed string)
-    uint32_t sender_node_len;
-    std::memcpy(&sender_node_len, data.data() + offset, sizeof(uint32_t));
+    // Sender endpoint (binary serialized)
+    uint32_t sender_ep_len;
+    std::memcpy(&sender_ep_len, data.data() + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
-    if (sender_node_len > 0) {
-        frame.sender.node_id.resize(sender_node_len);
-        std::memcpy(frame.sender.node_id.data(), data.data() + offset, sender_node_len);
-        offset += sender_node_len;
+    if (sender_ep_len > 0) {
+        bytes sender_ep_data(data.begin() + static_cast<long>(offset),
+                            data.begin() + static_cast<long>(offset) + sender_ep_len);
+        frame.sender.endpoint = decode_endpoint(sender_ep_data);
+        offset += sender_ep_len;
     }
 
     uint64_t sender_id_val;
@@ -137,14 +142,15 @@ Frame Frame::decode(const bytes& data) {
     std::memcpy(&frame.sender.incarnation, data.data() + offset, sizeof(uint64_t));
     offset += sizeof(uint64_t);
 
-    // Receiver node_id (length-prefixed string)
-    uint32_t receiver_node_len;
-    std::memcpy(&receiver_node_len, data.data() + offset, sizeof(uint32_t));
+    // Receiver endpoint (binary serialized)
+    uint32_t receiver_ep_len;
+    std::memcpy(&receiver_ep_len, data.data() + offset, sizeof(uint32_t));
     offset += sizeof(uint32_t);
-    if (receiver_node_len > 0) {
-        frame.receiver.node_id.resize(receiver_node_len);
-        std::memcpy(frame.receiver.node_id.data(), data.data() + offset, receiver_node_len);
-        offset += receiver_node_len;
+    if (receiver_ep_len > 0) {
+        bytes receiver_ep_data(data.begin() + static_cast<long>(offset),
+                               data.begin() + static_cast<long>(offset) + receiver_ep_len);
+        frame.receiver.endpoint = decode_endpoint(receiver_ep_data);
+        offset += receiver_ep_len;
     }
 
     uint64_t receiver_id_val;
@@ -162,6 +168,57 @@ Frame Frame::decode(const bytes& data) {
     }
 
     return frame;
+}
+
+// Endpoint serialization (network byte order)
+// Wire format: [protocol:1][addr:n][port:2]
+//   protocol: 0x04 = IPv4, 0x06 = IPv6
+bytes Frame::encode_endpoint(const CommunicationEndpoint& ep) {
+    bytes result;
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
+        result.resize(7);  // 1 + 4 + 2
+        result[0] = 0x04;
+        uint32_t addr = ipv4->addr;
+        uint16_t port = ipv4->port_nw;
+        std::memcpy(result.data() + 1, &addr, 4);
+        std::memcpy(result.data() + 5, &port, 2);
+    } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
+        result.resize(19);  // 1 + 16 + 2
+        result[0] = 0x06;
+        std::memcpy(result.data() + 1, ipv6->addr.data(), 16);
+        uint16_t port = ipv6->port_nw;
+        std::memcpy(result.data() + 17, &port, 2);
+    }
+    return result;
+}
+
+CommunicationEndpoint Frame::decode_endpoint(bytes data) {
+    if (data.empty()) {
+        return Ipv4Endpoint{};  // Return default/empty endpoint
+    }
+    uint8_t protocol = data[0];
+    if (protocol == 0x04) {
+        // IPv4: [0x04][addr: 4][port: 2]
+        if (data.size() < 7) {
+            return Ipv4Endpoint{};
+        }
+        uint32_t addr;
+        uint16_t port;
+        std::memcpy(&addr, data.data() + 1, 4);
+        std::memcpy(&port, data.data() + 5, 2);
+        return Ipv4Endpoint{addr, port};
+    } else if (protocol == 0x06) {
+        // IPv6: [0x06][addr: 16][port: 2]
+        if (data.size() < 19) {
+            return Ipv6Endpoint{};
+        }
+        std::array<uint8_t, 16> addr;
+        std::memcpy(addr.data(), data.data() + 1, 16);
+        uint16_t port;
+        std::memcpy(&port, data.data() + 17, 2);
+        return Ipv6Endpoint{addr, port};
+    }
+    return Ipv4Endpoint{};  // Unknown protocol, return default
 }
 
 } // namespace net

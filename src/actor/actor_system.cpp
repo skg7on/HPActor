@@ -102,7 +102,7 @@ ActorSystem::ActorSystem(const Config& config)
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
             *this, *actor_type_registry_, transport_.get());
         spawn_receiver->set_address(
-            ActorAddress{node_id_, SystemActorType, SpawnReceiverId, 0});
+            ActorAddress{endpoint_ops::parse_endpoint(node_id_), SystemActorType, SpawnReceiverId, 0});
 
         {
             std::lock_guard<std::mutex> lock(actors_mutex_);
@@ -240,7 +240,7 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     // Create frame for spawn request
     net::Frame frame;
     frame.sender = system_actor_.address();
-    frame.receiver = ActorAddress{remote_node_id, SystemActorType, SpawnReceiverId, 0};
+    frame.receiver = ActorAddress{endpoint_ops::parse_endpoint(remote_node_id), SystemActorType, SpawnReceiverId, 0};
     frame.message_id = MessageId::generate().value();
     frame.flags = net::Frame::RpcRequest;
     frame.payload = request_bytes;

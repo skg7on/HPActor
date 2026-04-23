@@ -45,14 +45,14 @@ void test_async_actor_response_set() {
 
     // Simulate response received
     SpawnResponse resp;
-    resp.actor_addr = ActorAddress{"node1:12345", ActorType{100}, ActorId{1}, 0};
+    resp.actor_addr = ActorAddress{endpoint_ops::parse_endpoint("node1:12345"), ActorType{100}, ActorId{1}, 0};
     resp.error_code = spawn_errors::success;
     handle.set_response(resp);
 
     assert(handle.ready());
     auto result = handle.get();
     assert(result.has_value());
-    assert(result.value().node_id() == "node1:12345");
+    assert(result.value().endpoint() == endpoint_ops::parse_endpoint("node1:12345"));
 }
 
 void test_async_actor_cancel() {

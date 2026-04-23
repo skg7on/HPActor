@@ -70,7 +70,7 @@ void test_response() {
     MockScheduler scheduler;
     hpactor::RpcChannel channel(&transport, &scheduler);
 
-    hpactor::ActorAddress target{hpactor::LocalNodeId, 1, hpactor::ActorId{1}, 0};
+    hpactor::ActorAddress target{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 1, hpactor::ActorId{1}, 0};
 
     hpactor::bytes request_data = {1, 2, 3};
     auto future = channel.call_raw(target, request_data, std::chrono::milliseconds{1000});
@@ -95,7 +95,7 @@ void test_timeout() {
     MockScheduler scheduler;
     hpactor::RpcChannel channel(&transport, &scheduler);
 
-    hpactor::ActorAddress target{hpactor::LocalNodeId, 1, hpactor::ActorId{1}, 0};
+    hpactor::ActorAddress target{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 1, hpactor::ActorId{1}, 0};
 
     auto future = channel.call_raw(target, hpactor::bytes{1, 2, 3}, std::chrono::milliseconds{50});
 
@@ -111,7 +111,7 @@ void test_concurrent() {
 
     std::vector<hpactor::RpcFuture<hpactor::bytes>> futures;
     for (int i = 0; i < 10; i++) {
-        hpactor::ActorAddress target{hpactor::LocalNodeId, 1, hpactor::ActorId{static_cast<uint64_t>(i)}, 0};
+        hpactor::ActorAddress target{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 1, hpactor::ActorId{static_cast<uint64_t>(i)}, 0};
         futures.push_back(channel.call_raw(target, hpactor::bytes{static_cast<uint8_t>(i)}, std::chrono::milliseconds{1000}));
     }
 
@@ -123,7 +123,7 @@ void test_retry() {
     MockScheduler scheduler;
     hpactor::RpcChannel channel(&transport, &scheduler);
 
-    hpactor::ActorAddress target{hpactor::LocalNodeId, 1, hpactor::ActorId{1}, 0};
+    hpactor::ActorAddress target{hpactor::endpoint_ops::parse_endpoint(hpactor::LocalNodeId), 1, hpactor::ActorId{1}, 0};
 
     auto future = channel.call_raw(target, hpactor::bytes{1, 2, 3}, std::chrono::milliseconds{100});
 

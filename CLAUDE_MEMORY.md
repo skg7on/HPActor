@@ -22,7 +22,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - ActorMailbox integration
 - Supervision: OneForOne, AllForOne, supervisor_actor, self_supervising_actor
 
-**Network Layer:** ✅ Complete (Phase 4-5, optional TLS 2026-04-22)
+**Network Layer:** ✅ Complete (Phase 4-5, optional TLS 2026-04-22, comm-endpoint refactor 2026-04-23)
 - TlsContext — certificate loading, RSA signing, pre-master secret decryption
 - TlsConnection — TLS state machine, AES-256-CBC encryption, inherits from Connection
 - PlainConnection — raw TCP socket without TLS, 4-byte length-prefixed framing
@@ -36,6 +36,17 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - NodeRegistry — registry of known nodes with static routes
 - RegistrarServer — TCP server for node registration, heartbeat, broadcasts
 - RegistrarClient — TCP client with failover, local IP detection, AcceptorInfo
+
+**CommunicationEndpoint Refactor** ✅ Complete (2026-04-23, 50 tests passing)
+- NodeId (string "host:port") replaced with CommunicationEndpoint (std::variant<Ipv4Endpoint, Ipv6Endpoint>)
+- Ipv4Endpoint stores uint32_t addr, uint16_t port in **network byte order** for efficient socket operations
+- Ipv6Endpoint stores std::array<uint8_t, 16> addr, uint16_t port in network byte order
+- ActorAddress now holds CommunicationEndpoint directly (replaced NodeId node_id field)
+- endpoint_ops::parse_endpoint(NodeId) converts string to endpoint, endpoint_ops::to_string() converts back
+- Binary serialization: 0x04 prefix + 7 bytes for IPv4, 0x06 prefix + 19 bytes for IPv6
+- is_local() uses loopback detection (127.0.0.1 in network byte order = 0x7F000001)
+- Fixed ARM Mac bug: inet_pton returns host byte order, required htonl() conversion
+- ActorAddress{} default initializes to loopback (127.0.0.1:0) to match parse_endpoint("")
 
 **Phase 7: Async RPC Channel** ✅ Complete (48 tests)
 - RpcChannel — async RPC with at-least-once delivery, retry on timeout
@@ -78,7 +89,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue), includes cyclic queue fix when returning last element
 - `execute_actor()` dispatch layer for coroutine resumption with state transitions
 
-**Tests:** ✅ 48 tests passing
+**Tests:** ✅ 50 tests passing
 - Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 
 **Documentation:** ✅ Complete

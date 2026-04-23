@@ -32,7 +32,7 @@ int main() {
 
     // Test encoding/decoding down_msg
     ActorId id(42);
-    ActorAddress addr("localhost:12345", 0, id, 0);
+    ActorAddress addr(endpoint_ops::parse_endpoint("localhost:12345"), 0, id, 0);
     down_msg down{addr, error(123)};
     bytes encoded = ser.encode(TypeTag::DownMsg, down);
     assert(!encoded.empty());
@@ -40,7 +40,7 @@ int main() {
     MessageVariant decoded = ser.decode(TypeTag::DownMsg, encoded);
     assert(std::holds_alternative<down_msg>(decoded));
     down_msg down2 = std::get<down_msg>(decoded);
-    assert(down2.terminated_actor.node_id == addr.node_id);
+    assert(down2.terminated_actor.endpoint == addr.endpoint);
     assert(down2.terminated_actor.id.value() == addr.id.value());
     assert(down2.reason.code() == 123);
 
@@ -50,7 +50,7 @@ int main() {
     decoded = ser.decode(TypeTag::ExitMsg, encoded);
     assert(std::holds_alternative<exit_msg>(decoded));
     exit_msg exit2 = std::get<exit_msg>(decoded);
-    assert(exit2.sender.node_id == addr.node_id);
+    assert(exit2.sender.endpoint == addr.endpoint);
     assert(exit2.reason.code() == 456);
 
     // Test encoding/decoding link_msg
@@ -59,7 +59,7 @@ int main() {
     decoded = ser.decode(TypeTag::LinkMsg, encoded);
     assert(std::holds_alternative<link_msg>(decoded));
     link_msg link2 = std::get<link_msg>(decoded);
-    assert(link2.target.node_id == addr.node_id);
+    assert(link2.target.endpoint == addr.endpoint);
 
     // Test encoding/decoding unlink_msg
     unlink_msg unlink{addr};
@@ -67,7 +67,7 @@ int main() {
     decoded = ser.decode(TypeTag::UnlinkMsg, encoded);
     assert(std::holds_alternative<unlink_msg>(decoded));
     unlink_msg unlink2 = std::get<unlink_msg>(decoded);
-    assert(unlink2.target.node_id == addr.node_id);
+    assert(unlink2.target.endpoint == addr.endpoint);
 
     return 0;
 }

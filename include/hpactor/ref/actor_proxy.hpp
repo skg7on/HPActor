@@ -41,8 +41,8 @@ public:
     // Get the actor's address
     ActorAddress address() const { return address_; }
 
-    // Get the node ID where this actor resides
-    NodeId node_id() const { return address_.node_id; }
+    // Get the endpoint where this actor resides
+    CommunicationEndpoint endpoint() const { return address_.endpoint; }
 
     // Check if this is a local actor (always false for proxy)
     bool is_local() const { return false; }

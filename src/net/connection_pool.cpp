@@ -67,7 +67,7 @@ void ConnectionPool::send(const ActorAddress& target, const bytes& encoded) {
 void ConnectionPool::send(const bytes& data) {
     // Create a minimal actor address using the remote node ID
     ActorAddress target;
-    target.node_id = remote_node();
+    target.endpoint = endpoint_ops::parse_endpoint(remote_node_id());
     send(target, data);
 }
 
