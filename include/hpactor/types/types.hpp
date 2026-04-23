@@ -20,6 +20,7 @@
 #include <cstdint>
 #include <cstring>
 #include <netinet/in.h>
+#include <arpa/inet.h>
 #include <string>
 #include <variant>
 #include <vector>
@@ -127,10 +128,22 @@ struct Ipv4Endpoint {
     // For socket operations
     constexpr socklen_t sockaddr_length() const noexcept { return sizeof(sockaddr_in); }
     void to_sockaddr(sockaddr_in* out) const noexcept;
+
+    constexpr bool operator==(const Ipv4Endpoint& other) const noexcept {
+        return addr == other.addr && port_nw == other.port_nw;
+    }
+    constexpr bool operator!=(const Ipv4Endpoint& other) const noexcept {
+        return !(*this == other);
+    }
 };
 
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_loopback() const noexcept {
-    return (addr & 0xFF000000) == 0x7F000000;
+    // Network byte order: 127.0.0.1 = 0x7F000001
+    // MSB (byte 0 in network order) = 0x7F
+    // On little-endian, addr value is still 0x7F000001, so MSB = (addr >> 24)
+    // On big-endian, MSB = (addr >> 24) = 0x7F
+    // Both give same result
+    return (addr >> 24) == 0x7F;
 }
 
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_private_network() const noexcept {
@@ -173,6 +186,13 @@ struct Ipv6Endpoint {
     // For socket operations
     constexpr socklen_t sockaddr_length() const noexcept { return sizeof(sockaddr_in6); }
     void to_sockaddr(sockaddr_in6* out) const noexcept;
+
+    bool operator==(const Ipv6Endpoint& other) const noexcept {
+        return addr == other.addr && port_nw == other.port_nw;
+    }
+    bool operator!=(const Ipv6Endpoint& other) const noexcept {
+        return !(*this == other);
+    }
 };
 
 inline bool Ipv6Endpoint::is_loopback() const noexcept {
@@ -224,6 +244,7 @@ namespace endpoint_ops {
     [[nodiscard]] Protocol protocol(const CommunicationEndpoint& ep);
     [[nodiscard]] int address_family(const CommunicationEndpoint& ep);
     [[nodiscard]] std::string to_string(const CommunicationEndpoint& ep);
+    [[nodiscard]] CommunicationEndpoint parse_endpoint(const NodeId& node_id);
 }
 
 // -----------------------------------------------------------------------------

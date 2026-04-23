@@ -47,5 +47,32 @@ std::string to_string(const CommunicationEndpoint& ep) {
     return "<invalid>";
 }
 
+CommunicationEndpoint parse_endpoint(const NodeId& node_id) {
+    // Empty node_id means local node - return loopback endpoint
+    if (node_id.empty()) {
+        struct in_addr loopback_addr;
+        inet_pton(AF_INET, "127.0.0.1", &loopback_addr);
+        // inet_pton returns host byte order in s_addr, convert to network byte order
+        return Ipv4Endpoint{htonl(loopback_addr.s_addr), 0};
+    }
+
+    // Parse "host:port" format
+    std::string host = node_id_host(node_id);
+    uint16_t port = node_id_port(node_id);
+
+    // Convert host to IPv4 address
+    struct in_addr addr;
+    if (inet_pton(AF_INET, host.c_str(), &addr) != 1) {
+        // Failed to parse - return unspecified address (not loopback)
+        // This ensures is_local() returns false for unparseable addresses
+        return Ipv4Endpoint{0, 0};
+    }
+
+    // Convert port to network byte order
+    uint16_t port_nw = htons(port);
+    // inet_pton returns host byte order in s_addr, convert to network byte order
+    return Ipv4Endpoint{htonl(addr.s_addr), port_nw};
+}
+
 } // namespace endpoint_ops
 } // namespace hpactor
