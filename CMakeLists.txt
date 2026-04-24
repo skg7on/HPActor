@@ -152,7 +152,8 @@ add_library(hpactor_lib STATIC
 target_include_directories(hpactor_lib PUBLIC include)
 
 find_package(OpenSSL REQUIRED)
-target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto)
+find_package(Protobuf REQUIRED)
+target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf)
 
 # Async I/O backends
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
