@@ -151,9 +151,17 @@ add_library(hpactor_lib STATIC
 )
 target_include_directories(hpactor_lib PUBLIC include)
 
+# Generate protobuf C++ headers/sources
+include(${CMAKE_SOURCE_DIR}/cmake/protobuf.cmake)
+PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/protos/hpactor/frame.proto)
+add_library(hpactor_proto STATIC ${PROTO_SRCS} ${PROTO_HDRS})
+target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf)
+target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
+add_dependencies(hpactor_proto hpactor_lib)
+
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
-target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf)
+target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf hpactor_proto)
 
 # Async I/O backends
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
