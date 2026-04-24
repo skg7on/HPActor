@@ -78,7 +78,7 @@ bytes frame_to_proto(const WireFrame& frame) {
     pb_frame.set_message_id(frame.message_id);
     pb_frame.set_flags(frame.flags);
     pb_frame.set_payload(frame.payload.data(), frame.payload.size());
-    pb_frame.set_type_tag(0);  // TODO: extract from payload
+    pb_frame.set_type_tag(frame.type_tag);
 
     std::string serialized = pb_frame.SerializeAsString();
     return bytes(serialized.begin(), serialized.end());
