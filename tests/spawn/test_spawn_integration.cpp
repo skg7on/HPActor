@@ -12,18 +12,18 @@
 // Note: Frame::encode/decode now uses binary endpoint encoding
 void test_frame_encoding() {
     // Create a spawn request Frame
-    hpactor::net::Frame frame;
+    hpactor::net::WireFrame frame;
     frame.sender = hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node1:12345"), hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
     frame.receiver = hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node2:12345"), hpactor::SystemActorType, hpactor::SpawnReceiverId, 0};
     frame.message_id = 12345;
-    frame.flags = hpactor::net::Frame::RpcRequest;
+    frame.flags = hpactor::net::WireFrame::RpcRequest;
 
     // Encode frame
     hpactor::bytes encoded = frame.encode();
     assert(encoded.size() > 0);
 
     // Decode frame
-    hpactor::net::Frame decoded = hpactor::net::Frame::decode(encoded);
+    hpactor::net::WireFrame decoded = hpactor::net::WireFrame::decode(encoded);
 
     // Verify fields that Frame encodes (endpoint, id, incarnation, message_id, flags)
     // Note: ActorAddress.type is NOT preserved in current Frame implementation
@@ -67,13 +67,13 @@ void test_message_id_correlation() {
     uint64_t request_message_id = hpactor::MessageId::generate().value();
 
     // Simulate response with same message_id
-    hpactor::net::Frame request_frame;
+    hpactor::net::WireFrame request_frame;
     request_frame.message_id = request_message_id;
-    request_frame.flags = hpactor::net::Frame::RpcRequest;
+    request_frame.flags = hpactor::net::WireFrame::RpcRequest;
 
-    hpactor::net::Frame response_frame;
+    hpactor::net::WireFrame response_frame;
     response_frame.message_id = request_message_id;  // Same ID for correlation
-    response_frame.flags = hpactor::net::Frame::RpcResponse;
+    response_frame.flags = hpactor::net::WireFrame::RpcResponse;
 
     assert(response_frame.message_id == request_frame.message_id);
 
