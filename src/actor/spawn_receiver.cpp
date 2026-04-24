@@ -29,13 +29,13 @@ Behavior SpawnReceiver::make_behavior() {
         std::visit([this](auto&& m) {
             using T = std::decay_t<decltype(m)>;
             if constexpr (std::is_same_v<T, SpawnRequest>) {
-                handle_spawn_request(m, net::Frame{});  // Empty frame for now
+                handle_spawn_request(m, net::WireFrame{});  // Empty frame for now
             }
         }, std::move(msg));
     }};
 }
 
-void SpawnReceiver::handle_spawn_request(const SpawnRequest& req, const net::Frame& frame) {
+void SpawnReceiver::handle_spawn_request(const SpawnRequest& req, const net::WireFrame& frame) {
     SpawnResponse response;
 
     // Spawn the actor
@@ -50,11 +50,11 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req, const net::Fra
 
     // Send response back to caller via transport
     if (transport_) {
-        net::Frame response_frame;
+        net::WireFrame response_frame;
         response_frame.sender = address();
         response_frame.receiver = frame.sender;  // Reply to original sender
         response_frame.message_id = frame.message_id;
-        response_frame.flags = net::Frame::RpcResponse;
+        response_frame.flags = net::WireFrame::RpcResponse;
 
         DefaultSerializer serializer;
         SpawnMessageVariant mv = response;

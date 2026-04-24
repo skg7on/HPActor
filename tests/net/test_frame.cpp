@@ -22,7 +22,7 @@ using namespace hpactor::net;
 
 int main() {
     // Test Frame default construction
-    Frame f1;
+    WireFrame f1;
     assert(f1.sender.endpoint == endpoint_ops::parse_endpoint(""));
     assert(f1.receiver.endpoint == endpoint_ops::parse_endpoint(""));
     assert(f1.payload.empty());
@@ -35,18 +35,18 @@ int main() {
     ActorAddress sender(endpoint_ops::parse_endpoint("node1:12345"), 10, sender_id, 5);
     ActorAddress receiver(endpoint_ops::parse_endpoint("node2:12345"), 20, receiver_id, 6);
 
-    Frame f2;
+    WireFrame f2;
     f2.sender = sender;
     f2.receiver = receiver;
     f2.payload = {1, 2, 3, 4, 5};
-    f2.flags = Frame::Important;
+    f2.flags = WireFrame::Important;
     f2.message_id = 12345;
 
     // Test encode/decode roundtrip
     bytes encoded = f2.encode();
     assert(!encoded.empty());
 
-    Frame f3 = Frame::decode(encoded);
+    WireFrame f3 = WireFrame::decode(encoded);
     assert(f3.sender.endpoint == sender.endpoint);
     assert(f3.sender.id.value() == sender.id.value());
     assert(f3.sender.incarnation == sender.incarnation);

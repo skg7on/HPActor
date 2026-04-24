@@ -33,7 +33,7 @@ public:
     Behavior make_behavior() override;
 
 private:
-    void handle_spawn_request(const SpawnRequest& req, const net::Frame& frame);
+    void handle_spawn_request(const SpawnRequest& req, const net::WireFrame& frame);
 
     ActorTypeRegistry& registry_;
     net::Transport* transport_;  // non-owning

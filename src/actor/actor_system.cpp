@@ -238,11 +238,11 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     bytes request_bytes = serializer.encode_spawn(TypeTag::SpawnRequestTag, mv);
 
     // Create frame for spawn request
-    net::Frame frame;
+    net::WireFrame frame;
     frame.sender = system_actor_.address();
     frame.receiver = ActorAddress{remote_endpoint, SystemActorType, SpawnReceiverId, 0};
     frame.message_id = MessageId::generate().value();
-    frame.flags = net::Frame::RpcRequest;
+    frame.flags = net::WireFrame::RpcRequest;
     frame.payload = request_bytes;
 
     // Create pending actor for response routing

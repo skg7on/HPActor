@@ -133,6 +133,7 @@ add_library(hpactor_lib STATIC
     src/net/connection.cpp
     src/net/tcp_transport.cpp
     src/net/frame.cpp
+    src/net/frame_protobuf.cpp
     src/net/tls_context.cpp
     src/net/tls_connection.cpp
     src/net/plain_connection.cpp
@@ -157,7 +158,6 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS ${CMAKE_SOURCE_DIR}/protos/hpactor/f
 add_library(hpactor_proto STATIC ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf)
 target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
-add_dependencies(hpactor_proto hpactor_lib)
 
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)

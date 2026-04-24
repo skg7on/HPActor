@@ -20,7 +20,7 @@ namespace hpactor {
 
 namespace net {
 
-size_t Frame::calculate_header_size(const ActorAddress& sender, const ActorAddress& receiver) {
+size_t WireFrame::calculate_header_size(const ActorAddress& sender, const ActorAddress& receiver) {
     // Fixed header + sender endpoint (binary) + sender actor_id + sender incarnation
     // + receiver endpoint (binary) + receiver actor_id + receiver incarnation
     bytes sender_ep = encode_endpoint(sender.endpoint);
@@ -32,13 +32,13 @@ size_t Frame::calculate_header_size(const ActorAddress& sender, const ActorAddre
            sizeof(uint64_t) + sizeof(uint64_t);   // receiver actor_id + incarnation
 }
 
-bytes Frame::encode() const {
+bytes WireFrame::encode() const {
     size_t header_size = calculate_header_size(sender, receiver);
     bytes result;
     result.resize(header_size + payload.size());
 
     uint32_t payload_len = static_cast<uint32_t>(payload.size());
-    uint32_t type_tag = 0;  // TODO: extract type tag from payload
+    uint32_t enc_type_tag = 0;  // TODO: extract type tag from payload
     uint64_t msg_id = message_id;
 
     size_t offset = 0;
@@ -48,7 +48,7 @@ bytes Frame::encode() const {
     offset += sizeof(uint32_t);
 
     // Type tag
-    std::memcpy(result.data() + offset, &type_tag, sizeof(uint32_t));
+    std::memcpy(result.data() + offset, &enc_type_tag, sizeof(uint32_t));
     offset += sizeof(uint32_t);
 
     // Flags
@@ -105,8 +105,8 @@ bytes Frame::encode() const {
     return result;
 }
 
-Frame Frame::decode(const bytes& data) {
-    Frame frame;
+WireFrame WireFrame::decode(const bytes& data) {
+    WireFrame frame;
     size_t offset = 0;
 
     // Skip payload length (not needed for parsing)
@@ -173,7 +173,7 @@ Frame Frame::decode(const bytes& data) {
 // Endpoint serialization (network byte order)
 // Wire format: [protocol:1][addr:n][port:2]
 //   protocol: 0x04 = IPv4, 0x06 = IPv6
-bytes Frame::encode_endpoint(const CommunicationEndpoint& ep) {
+bytes WireFrame::encode_endpoint(const CommunicationEndpoint& ep) {
     bytes result;
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
         result.resize(7);  // 1 + 4 + 2
@@ -192,7 +192,7 @@ bytes Frame::encode_endpoint(const CommunicationEndpoint& ep) {
     return result;
 }
 
-CommunicationEndpoint Frame::decode_endpoint(bytes data) {
+CommunicationEndpoint WireFrame::decode_endpoint(bytes data) {
     if (data.empty()) {
         return Ipv4Endpoint{};  // Return default/empty endpoint
     }

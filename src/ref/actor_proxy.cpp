@@ -46,7 +46,7 @@ void ActorProxy::send(const ActorAddress& target, MessageVariant msg) {
     bytes payload = serializer.encode(tag, msg);
 
     // Create frame
-    net::Frame frame;
+    net::WireFrame frame;
     frame.sender = address_;       // This proxy's address (sender side)
     frame.receiver = target;      // Target actor address
     frame.message_id = MessageId::generate().value();

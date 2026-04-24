@@ -165,10 +165,10 @@ void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
 }
 
 void ConnectionPool::on_frame_received(const bytes& frame_data) {
-    Frame frame = Frame::decode(frame_data);
+    WireFrame frame = WireFrame::decode(frame_data);
 
     // Check for RPC response
-    if (frame.flags & Frame::RpcResponse) {
+    if (frame.flags & WireFrame::RpcResponse) {
         // Try to decode as spawn response first
         DefaultSerializer serializer;
         auto decoded = serializer.decode_spawn(TypeTag::SpawnResponseTag, frame.payload);

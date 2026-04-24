@@ -23,9 +23,9 @@ namespace hpactor {
 namespace net {
 
 // -----------------------------------------------------------------------------
-// Frame - network message frame format
+// WireFrame - network message frame format (wire format for serialization)
 // -----------------------------------------------------------------------------
-// Every message sent over the network is wrapped in a Frame.
+// Every message sent over the network is wrapped in a WireFrame.
 // Format (NodeId is now "host:port" string):
 //   [4 bytes: payload length]
 //   [4 bytes: type tag]
@@ -41,7 +41,7 @@ namespace net {
 //   [8 bytes: receiver incarnation]
 //   [payload...]
 // -----------------------------------------------------------------------------
-struct Frame {
+struct WireFrame {
     ActorAddress sender;
     ActorAddress receiver;
     bytes payload;
@@ -52,7 +52,7 @@ struct Frame {
     bytes encode() const;
 
     // Decode frame from bytes
-    static Frame decode(const bytes& data);
+    static WireFrame decode(const bytes& data);
 
     // Calculate header size for given sender and receiver node_ids
     static size_t calculate_header_size(const ActorAddress& sender, const ActorAddress& receiver);
@@ -72,7 +72,16 @@ struct Frame {
     static constexpr uint32_t RpcResponse = 1 << 3;  // This frame is an RPC response
     static constexpr uint32_t RpcIdempotent = 1 << 4; // Set by client on retries; server MUST
                                                       // deduplicate by MessageId before processing
+
+    // Type tag for message payload (set during protobuf serialization)
+    uint32_t type_tag = 0;
 };
+
+// Protobuf interop - convert between HPActor types and protobuf bytes
+namespace hpactor { namespace net {
+bytes frame_to_proto(const WireFrame& frame);
+WireFrame frame_from_proto(const bytes& data);
+}} // namespace hpactor::net
 
 // -----------------------------------------------------------------------------
 // Frame header constants (fixed-size portion only)
