@@ -28,5 +28,5 @@ WireFrame WireFrame::decode(const bytes& data) {
     return frame_from_proto(data);
 }
 
- } // namespace net
+} // namespace net
 } // namespace hpactor
