@@ -61,12 +61,12 @@ bytes parse_tls_payload(const bytes& data, size_t& consumed) {
 
 } // anonymous namespace
 
-TlsConnection::TlsConnection(NodeId remote_node_id,
+TlsConnection::TlsConnection(CommunicationEndpoint remote_endpoint,
                              TlsContext* tls_context,
                              EventLoop* loop,
                              int socket_fd)
-    : Connection(remote_node_id),
-      remote_node_id_(remote_node_id),
+    : Connection(remote_endpoint),
+      remote_endpoint_(remote_endpoint),
       tls_context_(tls_context),
       loop_(loop),
       fd_(socket_fd) {
@@ -78,22 +78,22 @@ TlsConnection::~TlsConnection() {
     close();
 }
 
-TlsConnectionPtr TlsConnection::create_client(NodeId remote_node_id,
+TlsConnectionPtr TlsConnection::create_client(CommunicationEndpoint remote_endpoint,
                                                  TlsContext* tls_context,
                                                  EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(
-        new TlsConnection(remote_node_id, tls_context, loop, -1));
+        new TlsConnection(remote_endpoint, tls_context, loop, -1));
     conn->set_state(ConnectionState::Connecting);
     conn->is_server_ = false;
     return conn;
 }
 
 TlsConnectionPtr TlsConnection::create_server(int socket_fd,
-                                                NodeId remote_node_id,
+                                                CommunicationEndpoint remote_endpoint,
                                                 TlsContext* tls_context,
                                                 EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(
-        new TlsConnection(remote_node_id, tls_context, loop, socket_fd));
+        new TlsConnection(remote_endpoint, tls_context, loop, socket_fd));
     conn->set_state(ConnectionState::Connected);
     conn->is_server_ = true;
     // Server waits for client hello

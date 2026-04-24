@@ -30,9 +30,9 @@ namespace net {
 // RegistrarServer Implementation
 // -----------------------------------------------------------------------------
 
-RegistrarServer::RegistrarServer(const RegistrarConfig& config, NodeId local_node_id, EventLoop* loop)
+RegistrarServer::RegistrarServer(const RegistrarConfig& config, CommunicationEndpoint local_endpoint, EventLoop* loop)
     : config_(config),
-      local_node_id_(local_node_id),
+      local_endpoint_(local_endpoint),
       registry_(config),
       loop_(loop) {}
 
@@ -105,8 +105,8 @@ void RegistrarServer::stop() {
     // Close all client connections
     {
         std::lock_guard<std::mutex> lock(clients_mutex_);
-        for (auto& [node_id, fd] : clients_) {
-            (void)node_id;
+        for (auto& [endpoint, fd] : clients_) {
+            (void)endpoint;
             if (fd >= 0) {
                 close(fd);
             }
@@ -177,7 +177,7 @@ void RegistrarServer::handle_accept(int client_fd) {
 
     // First, read and process the Register message to get the NodeId
     // This is a blocking read with timeout
-    NodeId node_id = 0;
+    CommunicationEndpoint node_endpoint;
     std::string client_host;
     uint16_t client_port = 0;
     std::vector<AcceptorInfo> client_acceptors;
@@ -258,12 +258,16 @@ void RegistrarServer::handle_accept(int client_fd) {
                 close(client_fd);
                 return;
             }
+            std::string endpoint_str;
             if (node_id_len > 0) {
-                node_id = std::string(reinterpret_cast<const char*>(payload.data() + offset), node_id_len);
+                endpoint_str = std::string(reinterpret_cast<const char*>(payload.data() + offset), node_id_len);
                 offset += node_id_len;
             }
 
-            if (node_id.empty()) {
+            node_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
+
+            if (std::holds_alternative<Ipv4Endpoint>(node_endpoint) &&
+                std::get<Ipv4Endpoint>(node_endpoint).is_unspecified()) {
                 close(client_fd);
                 return;
             }
@@ -314,12 +318,12 @@ void RegistrarServer::handle_accept(int client_fd) {
     // Add client to clients map
     {
         std::lock_guard<std::mutex> lock(clients_mutex_);
-        clients_[node_id] = client_fd;
+        clients_[node_endpoint] = client_fd;
     }
 
     // Create and upsert endpoint
     NodeEndpoint ep;
-    ep.node_id = node_id;
+    ep.endpoint = node_endpoint;
     ep.host = client_host;
     ep.tcp_port = client_port;
     ep.acceptors = std::move(client_acceptors);
@@ -333,7 +337,7 @@ void RegistrarServer::handle_accept(int client_fd) {
     }
 
     // Broadcast node joined to other clients
-    broadcast_node_joined(node_id, ep);
+    broadcast_node_joined(node_endpoint, ep);
 
     // Now enter the normal message loop (remove timeout)
     {
@@ -423,10 +427,10 @@ void RegistrarServer::handle_accept(int client_fd) {
     close(client_fd);
 
     // Broadcast node left
-    broadcast_node_left(node_id);
+    broadcast_node_left(node_endpoint);
 
     // Remove endpoint from registry
-    registry_.remove_endpoint(node_id);
+    registry_.remove_endpoint(node_endpoint);
 }
 
 void RegistrarServer::handle_tcp_message(int client_fd, TcpMessageType type, const bytes& data) {
@@ -438,32 +442,33 @@ void RegistrarServer::handle_tcp_message(int client_fd, TcpMessageType type, con
             if (data.size() < 4) {
                 return;
             }
-            // Parse NodeId (length-prefixed string)
+            // Parse Endpoint (length-prefixed string)
             uint32_t node_id_len;
             memcpy(&node_id_len, data.data() + offset, 4);
             node_id_len = ntohl(node_id_len);
             offset += 4;
 
-            NodeId node_id;
+            CommunicationEndpoint endpoint;
             if (node_id_len > 0 && data.size() >= offset + node_id_len) {
-                node_id = std::string(reinterpret_cast<const char*>(data.data() + offset), node_id_len);
+                std::string endpoint_str(reinterpret_cast<const char*>(data.data() + offset), node_id_len);
+                endpoint = endpoint_ops::parse_endpoint(endpoint_str);
                 offset += node_id_len;
             }
 
-            // Find this client's node_id in our map
-            NodeId existing_node_id;
+            // Find this client's endpoint in our map
+            CommunicationEndpoint existing_endpoint;
             {
                 std::lock_guard<std::mutex> lock(clients_mutex_);
-                for (const auto& [nid, fd] : clients_) {
+                for (const auto& [ep_id, fd] : clients_) {
                     if (fd == client_fd) {
-                        existing_node_id = nid;
+                        existing_endpoint = ep_id;
                         break;
                     }
                 }
             }
 
-            if (existing_node_id != node_id) {
-                // NodeId mismatch - security concern, disconnect
+            if (existing_endpoint != endpoint) {
+                // Endpoint mismatch - security concern, disconnect
                 return;
             }
 
@@ -478,7 +483,7 @@ void RegistrarServer::handle_tcp_message(int client_fd, TcpMessageType type, con
                     memcpy(&port, data.data() + offset, 2);
                     port = ntohs(port);
 
-                    NodeEndpoint* ep = registry_.get(node_id);
+                    NodeEndpoint* ep = registry_.get(endpoint);
                     if (ep) {
                         ep->host = host;
                         ep->tcp_port = port;
@@ -491,19 +496,22 @@ void RegistrarServer::handle_tcp_message(int client_fd, TcpMessageType type, con
 
         case TcpMessageType::Heartbeat: {
             // Find client by fd and update last_seen
-            NodeId node_id;
+            CommunicationEndpoint endpoint;
             {
                 std::lock_guard<std::mutex> lock(clients_mutex_);
-                for (const auto& [nid, fd] : clients_) {
+                for (const auto& [ep_id, fd] : clients_) {
                     if (fd == client_fd) {
-                        node_id = nid;
+                        endpoint = ep_id;
                         break;
                     }
                 }
             }
 
-            if (!node_id.empty()) {
-                NodeEndpoint* ep = registry_.get(node_id);
+            // Check if endpoint is valid (not unspecified)
+            bool is_valid = std::holds_alternative<Ipv4Endpoint>(endpoint) ?
+                !std::get<Ipv4Endpoint>(endpoint).is_unspecified() : true;
+            if (is_valid) {
+                NodeEndpoint* ep = registry_.get(endpoint);
                 if (ep) {
                     ep->last_seen = std::chrono::steady_clock::now();
                 }
@@ -520,12 +528,13 @@ void RegistrarServer::handle_tcp_message(int client_fd, TcpMessageType type, con
     }
 }
 
-void RegistrarServer::broadcast_node_joined(NodeId node_id, const NodeEndpoint& ep) {
+void RegistrarServer::broadcast_node_joined(CommunicationEndpoint endpoint, const NodeEndpoint& ep) {
     std::lock_guard<std::mutex> lock(clients_mutex_);
     // Build NodeJoin message
-    // Format: [Magic: 4][Version: 1][Type: 1][Length: 4][NodeIdLen: 4][NodeId: N][HostLen: 1][Host: N][Port: 2]
+    // Format: [Magic: 4][Version: 1][Type: 1][Length: 4][EndpointLen: 4][Endpoint: N][HostLen: 1][Host: N][Port: 2]
+    std::string endpoint_str = endpoint_ops::to_string(endpoint);
+    uint32_t node_id_len = static_cast<uint32_t>(endpoint_str.size());
     bytes payload;
-    uint32_t node_id_len = static_cast<uint32_t>(node_id.size());
     payload.resize(4 + node_id_len + 1 + ep.host.size() + 2);
 
     size_t offset = 0;
@@ -534,7 +543,7 @@ void RegistrarServer::broadcast_node_joined(NodeId node_id, const NodeEndpoint& 
     offset += 4;
 
     if (node_id_len > 0) {
-        memcpy(payload.data() + offset, node_id.data(), node_id_len);
+        memcpy(payload.data() + offset, endpoint_str.data(), node_id_len);
         offset += node_id_len;
     }
 
@@ -560,17 +569,18 @@ void RegistrarServer::broadcast_node_joined(NodeId node_id, const NodeEndpoint& 
 
     // Send to all clients except the sender
     for (const auto& [id, fd] : clients_) {
-        if (id != node_id && fd >= 0) {
+        if (id != endpoint && fd >= 0) {
             send(fd, message.data(), message.size(), 0);
         }
     }
 }
 
-void RegistrarServer::broadcast_node_left(NodeId node_id) {
+void RegistrarServer::broadcast_node_left(CommunicationEndpoint endpoint) {
     std::lock_guard<std::mutex> lock(clients_mutex_);
     // Build NodeLeave message
-    // Format: [Magic: 4][Version: 1][Type: 1][Length: 4][NodeIdLen: 4][NodeId: N]
-    uint32_t node_id_len = static_cast<uint32_t>(node_id.size());
+    // Format: [Magic: 4][Version: 1][Type: 1][Length: 4][EndpointLen: 4][Endpoint: N]
+    std::string endpoint_str = endpoint_ops::to_string(endpoint);
+    uint32_t node_id_len = static_cast<uint32_t>(endpoint_str.size());
     bytes payload;
     payload.resize(4 + node_id_len);
 
@@ -578,7 +588,7 @@ void RegistrarServer::broadcast_node_left(NodeId node_id) {
     memcpy(payload.data(), &node_id_len_be, 4);
     size_t offset = 4;
     if (node_id_len > 0) {
-        memcpy(payload.data() + offset, node_id.data(), node_id_len);
+        memcpy(payload.data() + offset, endpoint_str.data(), node_id_len);
     }
 
     // Build full message with header

@@ -46,8 +46,8 @@ struct AcceptorInfo {
 // RegistrarConfig - configuration for registrar
 // -----------------------------------------------------------------------------
 struct StaticRouteConfig {
-    NodeId node_id = "";    // "host:port" format for remote node
-    std::string address;     // IP or DNS hostname (used if node_id is empty)
+    CommunicationEndpoint endpoint;
+    std::string address;     // IP or DNS hostname (used if endpoint is empty)
     uint16_t port = 0;
 };
 
@@ -65,7 +65,7 @@ struct RegistrarConfig {
 // NodeEndpoint - information about a known node
 // -----------------------------------------------------------------------------
 struct NodeEndpoint {
-    NodeId node_id = "";     // "host:port" format
+    CommunicationEndpoint endpoint;
     std::string host;        // Resolved IP or hostname
     uint16_t tcp_port = 0;
     bool is_static_route = false;
@@ -118,13 +118,13 @@ public:
     void upsert_endpoint(NodeEndpoint endpoint);
 
     // Remove an endpoint
-    bool remove_endpoint(NodeId node_id);
+    bool remove_endpoint(CommunicationEndpoint endpoint);
 
     // Get endpoint (nullptr if not found)
-    NodeEndpoint* get(NodeId node_id);
+    NodeEndpoint* get(CommunicationEndpoint endpoint);
 
     // Check if endpoint exists
-    bool has(NodeId node_id) const;
+    bool has(CommunicationEndpoint endpoint) const;
 
     // Get all endpoints
     std::vector<NodeEndpoint> all() const;
@@ -134,7 +134,7 @@ public:
 
 private:
     RegistrarConfig config_;
-    std::unordered_map<NodeId, NodeEndpoint> endpoints_;
+    std::unordered_map<CommunicationEndpoint, NodeEndpoint> endpoints_;
     mutable std::mutex mutex_;
 };
 
@@ -166,7 +166,7 @@ struct NodeAnnouncePayload {
 };
 
 struct NodeQueryPayload {
-    NodeId target_node_id;
+    CommunicationEndpoint target_endpoint;
 };
 
 struct NodeResponsePayload {
@@ -214,7 +214,7 @@ class NodeRegistry;
 // -----------------------------------------------------------------------------
 class RegistrarServer {
 public:
-    RegistrarServer(const RegistrarConfig& config, NodeId local_node_id,
+    RegistrarServer(const RegistrarConfig& config, CommunicationEndpoint local_endpoint,
                    EventLoop* loop = nullptr);
     ~RegistrarServer();
 
@@ -236,8 +236,8 @@ public:
     void handle_accept(int client_fd);
 
     // Broadcast event to all connected clients
-    void broadcast_node_joined(NodeId node_id, const NodeEndpoint& ep);
-    void broadcast_node_left(NodeId node_id);
+    void broadcast_node_joined(CommunicationEndpoint endpoint, const NodeEndpoint& ep);
+    void broadcast_node_left(CommunicationEndpoint endpoint);
 
 private:
     void accept_loop();
@@ -247,7 +247,7 @@ private:
     void send_tcp_response(int client_fd, TcpMessageType type, const bytes& payload);
 
     RegistrarConfig config_;
-    [[maybe_unused]] NodeId local_node_id_;
+    [[maybe_unused]] CommunicationEndpoint local_endpoint_;
     NodeRegistry registry_;
     EventLoop* loop_ = nullptr;
 
@@ -255,8 +255,8 @@ private:
     int udp_socket_ = -1;
     std::atomic<bool> running_{false};
 
-    // Connected clients (node_id -> fd)
-    std::unordered_map<NodeId, int> clients_;
+    // Connected clients (endpoint -> fd)
+    std::unordered_map<CommunicationEndpoint, int> clients_;
     std::mutex clients_mutex_;
 
     std::thread accept_thread_;
@@ -267,7 +267,7 @@ private:
 // -----------------------------------------------------------------------------
 class UdpRegistrar {
 public:
-    UdpRegistrar(const RegistrarConfig& config, NodeId local_node_id,
+    UdpRegistrar(const RegistrarConfig& config, CommunicationEndpoint local_endpoint,
                 EventLoop* loop = nullptr);
     ~UdpRegistrar();
 
@@ -283,13 +283,13 @@ public:
     void stop();
 
     // Query endpoint
-    NodeEndpoint* get_endpoint(NodeId node_id);
+    NodeEndpoint* get_endpoint(CommunicationEndpoint endpoint);
 
     // Get all known endpoints
     std::vector<NodeEndpoint> get_all_endpoints() const;
 
     // Set callback for node online/offline events
-    using node_callback = std::function<void(NodeId, bool online)>;
+    using node_callback = std::function<void(CommunicationEndpoint, bool online)>;
     void set_node_callback(node_callback cb);
 
     // Handle incoming UDP packet (for resolution)
@@ -301,7 +301,7 @@ private:
     void failover();
 
     RegistrarConfig config_;
-    NodeId local_node_id_;
+    CommunicationEndpoint local_endpoint_;
     EventLoop* loop_ = nullptr;
 
     // Either server or client (not both)
@@ -322,8 +322,8 @@ private:
 // -----------------------------------------------------------------------------
 class RegistrarClient {
 public:
-    RegistrarClient(const RegistrarConfig& config, NodeId local_node_id,
-                   NodeId server_node_id, NodeRegistry* shared_registry,
+    RegistrarClient(const RegistrarConfig& config, CommunicationEndpoint local_endpoint,
+                   CommunicationEndpoint server_endpoint, NodeRegistry* shared_registry,
                    EventLoop* loop = nullptr);
     ~RegistrarClient();
 
@@ -357,7 +357,7 @@ private:
     void disconnect_from_server();
 
     // Resolve node via UDP query to server
-    NodeEndpoint* resolve_node(NodeId node_id);
+    NodeEndpoint* resolve_node(CommunicationEndpoint endpoint);
 
     // Failover: try to become server or find new server
     void failover();
@@ -369,8 +369,8 @@ private:
     void find_server_via_broadcast();
 
     RegistrarConfig config_;
-    NodeId local_node_id_;
-    NodeId server_node_id_;
+    CommunicationEndpoint local_endpoint_;
+    CommunicationEndpoint server_endpoint_;
     NodeRegistry* shared_registry_;  // Not owned
     EventLoop* loop_ = nullptr;
 

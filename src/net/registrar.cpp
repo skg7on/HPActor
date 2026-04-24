@@ -131,26 +131,26 @@ NodeRegistry::NodeRegistry(const RegistrarConfig& config)
 void NodeRegistry::upsert_endpoint(NodeEndpoint endpoint) {
     std::lock_guard<std::mutex> lock(mutex_);
     endpoint.last_seen = std::chrono::steady_clock::now();
-    endpoints_[endpoint.node_id] = endpoint;
+    endpoints_[endpoint.endpoint] = endpoint;
 }
 
-bool NodeRegistry::remove_endpoint(NodeId node_id) {
+bool NodeRegistry::remove_endpoint(CommunicationEndpoint endpoint) {
     std::lock_guard<std::mutex> lock(mutex_);
-    return endpoints_.erase(node_id) > 0;
+    return endpoints_.erase(endpoint) > 0;
 }
 
-NodeEndpoint* NodeRegistry::get(NodeId node_id) {
+NodeEndpoint* NodeRegistry::get(CommunicationEndpoint endpoint) {
     std::lock_guard<std::mutex> lock(mutex_);
-    auto it = endpoints_.find(node_id);
+    auto it = endpoints_.find(endpoint);
     if (it != endpoints_.end()) {
         return &it->second;
     }
     return nullptr;
 }
 
-bool NodeRegistry::has(NodeId node_id) const {
+bool NodeRegistry::has(CommunicationEndpoint endpoint) const {
     std::lock_guard<std::mutex> lock(mutex_);
-    return endpoints_.find(node_id) != endpoints_.end();
+    return endpoints_.find(endpoint) != endpoints_.end();
 }
 
 std::vector<NodeEndpoint> NodeRegistry::all() const {
@@ -186,9 +186,9 @@ size_t NodeRegistry::remove_expired() {
 // UdpRegistrar Implementation
 // -----------------------------------------------------------------------------
 
-UdpRegistrar::UdpRegistrar(const RegistrarConfig& config, NodeId local_node_id, EventLoop* loop)
+UdpRegistrar::UdpRegistrar(const RegistrarConfig& config, CommunicationEndpoint local_endpoint, EventLoop* loop)
     : config_(config),
-      local_node_id_(local_node_id),
+      local_endpoint_(local_endpoint),
       loop_(loop) {}
 
 UdpRegistrar::~UdpRegistrar() {
@@ -236,7 +236,7 @@ void UdpRegistrar::stop() {
 }
 
 void UdpRegistrar::start_server_mode() {
-    server_ = std::make_unique<RegistrarServer>(config_, local_node_id_, loop_);
+    server_ = std::make_unique<RegistrarServer>(config_, local_endpoint_, loop_);
     server_->start();
 
     // Create UDP socket for sending resolution responses
@@ -250,7 +250,7 @@ void UdpRegistrar::start_client_mode() {
     // Populate with static routes
     for (const auto& route : config_.static_routes) {
         NodeEndpoint ep;
-        ep.node_id = route.node_id;
+        ep.endpoint = route.endpoint;
         ep.host = route.address;
         ep.tcp_port = route.port;
         ep.is_static_route = true;
@@ -258,15 +258,15 @@ void UdpRegistrar::start_client_mode() {
     }
 
     // Use first static route as server if available
-    NodeId server_node_id = 0;
+    CommunicationEndpoint server_endpoint;
     if (!config_.static_routes.empty()) {
-        server_node_id = config_.static_routes[0].node_id;
+        server_endpoint = config_.static_routes[0].endpoint;
     }
 
     // Create UDP socket for resolution queries
     udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
 
-    client_ = std::make_unique<RegistrarClient>(config_, local_node_id_, server_node_id, client_registry_.get(), loop_);
+    client_ = std::make_unique<RegistrarClient>(config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
     client_->start();
 }
 
@@ -300,9 +300,9 @@ void UdpRegistrar::failover() {
     }
 }
 
-NodeEndpoint* UdpRegistrar::get_endpoint(NodeId node_id) {
+NodeEndpoint* UdpRegistrar::get_endpoint(CommunicationEndpoint endpoint) {
     if (server_) {
-        return server_->registry()->get(node_id);
+        return server_->registry()->get(endpoint);
     }
     // In client mode, could query via client
     return nullptr;
@@ -363,18 +363,20 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
             memcpy(&target_id_len, payload.data(), 4);
             target_id_len = ntohl(target_id_len);
 
-            NodeId target_id;
+            CommunicationEndpoint target_endpoint;
             if (target_id_len > 0 && payload.size() >= 4 + target_id_len) {
-                target_id = std::string(reinterpret_cast<const char*>(payload.data() + 4), target_id_len);
+                std::string endpoint_str(reinterpret_cast<const char*>(payload.data() + 4), target_id_len);
+                target_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
             }
 
             // If we have a server, look up the endpoint
             if (server_) {
-                NodeEndpoint* ep = server_->registry()->get(target_id);
+                NodeEndpoint* ep = server_->registry()->get(target_endpoint);
                 if (ep) {
                     // Send ResolveResponse back
-                    // Response format: [Magic: 4][Version: 1][Type: 1][Length: 4][NodeIdLen: 4][NodeId: N][HostLen: 1][Host: N][Port: 2]
-                    uint32_t node_id_len = static_cast<uint32_t>(ep->node_id.size());
+                    // Response format: [Magic: 4][Version: 1][Type: 1][Length: 4][EndpointLen: 4][Endpoint: N][HostLen: 1][Host: N][Port: 2]
+                    std::string endpoint_str = endpoint_ops::to_string(ep->endpoint);
+                    uint32_t node_id_len = static_cast<uint32_t>(endpoint_str.size());
                     bytes response_payload;
                     response_payload.resize(4 + node_id_len + 1 + ep->host.size() + 2);
 
@@ -384,7 +386,7 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                     offset += 4;
 
                     if (node_id_len > 0) {
-                        memcpy(response_payload.data() + offset, ep->node_id.data(), node_id_len);
+                        memcpy(response_payload.data() + offset, endpoint_str.data(), node_id_len);
                         offset += node_id_len;
                     }
 
@@ -435,9 +437,10 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
             node_id_len = ntohl(node_id_len);
             offset += 4;
 
-            NodeId node_id;
+            CommunicationEndpoint resp_endpoint;
             if (node_id_len > 0 && payload.size() >= offset + node_id_len) {
-                node_id = std::string(reinterpret_cast<const char*>(payload.data() + offset), node_id_len);
+                std::string endpoint_str(reinterpret_cast<const char*>(payload.data() + offset), node_id_len);
+                resp_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
                 offset += node_id_len;
             }
 
@@ -459,7 +462,7 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
             // Add to server registry if we have one
             if (server_) {
                 NodeEndpoint ep;
-                ep.node_id = node_id;
+                ep.endpoint = resp_endpoint;
                 ep.host = host;
                 ep.tcp_port = port;
                 ep.last_seen = std::chrono::steady_clock::now();
@@ -467,7 +470,7 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
 
                 // Notify callback
                 if (node_callback_) {
-                    node_callback_(node_id, true);
+                    node_callback_(resp_endpoint, true);
                 }
             }
             break;

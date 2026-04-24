@@ -31,12 +31,12 @@ class PlainConnection : public Connection, public std::enable_shared_from_this<P
 public:
     // Create client-side connection with existing connected fd
     static PlainConnectionPtr create_client(int fd,
-                                           NodeId remote_node_id,
+                                           CommunicationEndpoint remote_endpoint,
                                            EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
     static PlainConnectionPtr create_server(int fd,
-                                           NodeId remote_node_id,
+                                           CommunicationEndpoint remote_endpoint,
                                            EventLoop* loop);
 
     ~PlainConnection();
@@ -46,7 +46,7 @@ public:
     PlainConnection& operator=(const PlainConnection&) = delete;
 
     // Getters
-    NodeId remote_node_id() const { return remote_node_id_; }
+    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
     ConnectionState state() const { return state_; }
     int fd() const { return fd_; }
 
@@ -69,7 +69,7 @@ public:
     void handle_send_completion(int result) override;
 
 private:
-    PlainConnection(NodeId remote_node_id, EventLoop* loop, int fd);
+    PlainConnection(CommunicationEndpoint remote_endpoint, EventLoop* loop, int fd);
 
     void set_state(ConnectionState new_state);
 
@@ -79,7 +79,7 @@ private:
     // Flush write buffer
     void flush_write_buffer();
 
-    NodeId remote_node_id_ = "";
+    CommunicationEndpoint remote_endpoint_ = LocalEndpoint;
     EventLoop* loop_ = nullptr;
     int fd_ = -1;
 

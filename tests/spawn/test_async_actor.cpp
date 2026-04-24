@@ -24,24 +24,24 @@ using namespace hpactor;
 void test_async_actor_default_constructor() {
     AsyncActor handle;
     assert(!handle.ready());
-    assert(handle.node_id() == "");
+    assert(handle.endpoint() == CommunicationEndpoint{LocalEndpoint});
 }
 
 void test_async_actor_constructor() {
-    AsyncActor handle("node42:12345", std::chrono::milliseconds{1000});
-    assert(handle.node_id() == "node42:12345");
+    AsyncActor handle(endpoint_ops::parse_endpoint("node42:12345"), std::chrono::milliseconds{1000});
+    assert(handle.endpoint() == endpoint_ops::parse_endpoint("node42:12345"));
     assert(!handle.ready());
 }
 
 void test_async_actor_get_timeout() {
-    AsyncActor handle("node1:12345", std::chrono::milliseconds{50});
+    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"), std::chrono::milliseconds{50});
     auto result = handle.get();
     assert(!result.has_value());  // should timeout
     assert(result.error().code() == errors::timeout);
 }
 
 void test_async_actor_response_set() {
-    AsyncActor handle("node1:12345", std::chrono::milliseconds{100});
+    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"), std::chrono::milliseconds{100});
 
     // Simulate response received
     SpawnResponse resp;
@@ -56,7 +56,7 @@ void test_async_actor_response_set() {
 }
 
 void test_async_actor_cancel() {
-    AsyncActor handle("node1:12345", std::chrono::milliseconds{1000});
+    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"), std::chrono::milliseconds{1000});
     handle.cancel();
     assert(handle.ready());  // cancelled appears as ready
     auto result = handle.get();

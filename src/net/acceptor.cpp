@@ -124,8 +124,8 @@ void Acceptor::handle_read() {
         // Convert IP to string (port unknown, use 0 as placeholder)
         char ip_str[INET_ADDRSTRLEN];
         inet_ntop(AF_INET, &client_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
-        NodeId node_hint = std::string(ip_str) + ":0";
-        accept_handler_(client_fd, node_hint);
+        Ipv4Endpoint endpoint_hint{client_addr.sin_addr.s_addr, 0};
+        accept_handler_(client_fd, endpoint_hint);
     } else {
         ::close(client_fd);
     }

@@ -50,7 +50,7 @@ class HybridScheduler;
 struct Config {
     size_t scheduler_threads = 4;
     size_t max_queue_depth = 1024;
-    NodeId node_id = LocalNodeId;
+    CommunicationEndpoint endpoint = LocalEndpoint;
 
     // Network configuration
     bool enable_network = false;
@@ -116,7 +116,7 @@ class ActorSystem {
     }
 
     // Node ID
-    NodeId node_id() const { return node_id_; }
+    CommunicationEndpoint endpoint() const { return endpoint_; }
 
     // Check if actor system is running
     bool is_running() const { return running_.load(std::memory_order_acquire); }
@@ -167,7 +167,7 @@ class ActorSystem {
     friend class Scheduler;
 
     Config config_;
-    NodeId node_id_;
+    CommunicationEndpoint endpoint_;
     Clock clock_;
     actor_registry registry_;
     std::unordered_map<ActorType, ActorTypeDef> actor_types_;
@@ -219,7 +219,7 @@ template <typename T, typename... Args>
 Actor ActorSystem::spawn(Args&&... args) {
     ActorId id(next_actor_id_.fetch_add(1));
     auto actor = std::make_shared<T>(nullptr, *this, std::forward<Args>(args)...);
-    actor->set_address(ActorAddress(endpoint_ops::parse_endpoint(node_id_), actor->type(), id, 0));
+    actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
 
     {
         std::lock_guard<std::mutex> lock(actors_mutex_);

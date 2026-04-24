@@ -25,9 +25,9 @@ using namespace hpactor::net;
 int main() {
     // Test 1: TlsConfig and PoolConfig can be created
     TlsConfig tls_config;
-    tls_config.node_id = "node1:12345";
+    tls_config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     tls_config.verify_peer = true;
-    assert(tls_config.node_id == "node1:12345");
+    assert(hpactor::endpoint_ops::to_string(tls_config.endpoint) == "127.0.0.1:12345");
     assert(tls_config.verify_peer == true);
 
     // Test 2: PoolConfig defaults
@@ -41,7 +41,7 @@ int main() {
 
     // Test 3: TlsContext can be created from empty config
     TlsContext ctx = TlsContext::from_config(tls_config);
-    assert(ctx.node_id() == "node1:12345");
+    assert(hpactor::endpoint_ops::to_string(ctx.endpoint()) == "127.0.0.1:12345");
 
     // Test 4: TcpTransport can be constructed (requires valid config)
     // Note: This will fail if certs aren't available, but the API should be testable

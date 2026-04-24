@@ -53,57 +53,6 @@ struct ActorId {
 };
 
 // -----------------------------------------------------------------------------
-// NodeId - identifier for a node in a distributed system
-// Format: "host:port" (e.g., "192.168.1.1:5353" or "node.example.com:5353")
-// Empty string = local node
-// -----------------------------------------------------------------------------
-using NodeId = std::string;
-inline const NodeId LocalNodeId = "";
-
-// -----------------------------------------------------------------------------
-// NodeId helper functions (for backward compatibility during transition)
-// -----------------------------------------------------------------------------
-
-// Extract host from "host:port" format
-inline std::string node_id_host(const NodeId& id) {
-    size_t colon = id.find(':');
-    if (colon == std::string::npos) {
-        return id;
-    }
-    return id.substr(0, colon);
-}
-
-// Extract port from "host:port" format
-inline uint16_t node_id_port(const NodeId& id) {
-    size_t colon = id.find(':');
-    if (colon == std::string::npos) {
-        return 0;
-    }
-    std::string port_str = id.substr(colon + 1);
-    // Parse manually to avoid exceptions (exceptions disabled in this project)
-    uint32_t port = 0;
-    for (char c : port_str) {
-        if (c >= '0' && c <= '9') {
-            port = port * 10 + static_cast<uint32_t>(c - '0');
-            if (port > 65535) return 0;
-        } else {
-            return 0;
-        }
-    }
-    return static_cast<uint16_t>(port);
-}
-
-// Combine host and port into "host:port" format
-inline NodeId make_node_id(const std::string& host, uint16_t port) {
-    return host + ":" + std::to_string(port);
-}
-
-// Check if node ID represents local node
-inline bool is_local_node_id(const NodeId& id) {
-    return id.empty();
-}
-
-// -----------------------------------------------------------------------------
 // Protocol - network protocol family
 // -----------------------------------------------------------------------------
 enum class Protocol { IPv4, IPv6 };
@@ -118,7 +67,7 @@ struct Ipv4Endpoint {
     constexpr Ipv4Endpoint() noexcept : addr(0), port_nw(0) {}
     constexpr Ipv4Endpoint(uint32_t a, uint16_t p) noexcept : addr(a), port_nw(p) {}
 
-    [[nodiscard]] constexpr uint16_t port() const noexcept { return port_nw; }
+    [[nodiscard]] constexpr uint16_t port() const noexcept { return ntohs(port_nw); }
     [[nodiscard]] constexpr bool is_ipv4() const noexcept { return true; }
     [[nodiscard]] constexpr bool is_ipv6() const noexcept { return false; }
     [[nodiscard]] constexpr bool is_loopback() const noexcept;
@@ -176,7 +125,7 @@ struct Ipv6Endpoint {
     constexpr Ipv6Endpoint(std::array<uint8_t, 16> a, uint16_t p) noexcept
         : addr(a), port_nw(p) {}
 
-    [[nodiscard]] constexpr uint16_t port() const noexcept { return port_nw; }
+    [[nodiscard]] constexpr uint16_t port() const noexcept { return ntohs(port_nw); }
     [[nodiscard]] constexpr bool is_ipv4() const noexcept { return false; }
     [[nodiscard]] constexpr bool is_ipv6() const noexcept { return true; }
     [[nodiscard]] bool is_loopback() const noexcept;
@@ -222,6 +171,11 @@ inline void Ipv6Endpoint::to_sockaddr(sockaddr_in6* out) const noexcept {
 // -----------------------------------------------------------------------------
 using CommunicationEndpoint = std::variant<Ipv4Endpoint, Ipv6Endpoint>;
 
+// -----------------------------------------------------------------------------
+// LocalEndpoint - loopback endpoint for local actor communication
+// -----------------------------------------------------------------------------
+inline constexpr Ipv4Endpoint LocalEndpoint{0x7F000001, 0};  // 127.0.0.1:0 in network byte order
+
 // to_sockaddr free function for variant
 inline void to_sockaddr(const CommunicationEndpoint& ep, sockaddr* out, socklen_t* len) {
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
@@ -244,7 +198,7 @@ namespace endpoint_ops {
     [[nodiscard]] Protocol protocol(const CommunicationEndpoint& ep);
     [[nodiscard]] int address_family(const CommunicationEndpoint& ep);
     [[nodiscard]] std::string to_string(const CommunicationEndpoint& ep);
-    [[nodiscard]] CommunicationEndpoint parse_endpoint(const NodeId& node_id);
+    [[nodiscard]] CommunicationEndpoint parse_endpoint(std::string_view node_id);
 }
 
 // -----------------------------------------------------------------------------

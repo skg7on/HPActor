@@ -20,7 +20,7 @@ int main() {
     using namespace hpactor;
 
     // Test IPv4Endpoint construction
-    Ipv4Endpoint ipv4{0x01010101, 5353};  // 1.1.1.1 in network order
+    Ipv4Endpoint ipv4{0x01010101, htons(5353)};  // 1.1.1.1 in network order
     assert(ipv4.port() == 5353);
     assert(ipv4.is_ipv4() == true);
     assert(ipv4.is_ipv6() == false);
@@ -28,7 +28,7 @@ int main() {
     // Test IPv6Endpoint construction
     std::array<uint8_t, 16> loopback_arr{};
     loopback_arr[15] = 1;  // ::1
-    Ipv6Endpoint ipv6{loopback_arr, 8080};
+    Ipv6Endpoint ipv6{loopback_arr, htons(8080)};
     assert(ipv6.port() == 8080);
     assert(ipv6.is_ipv6() == true);
     assert(ipv6.is_ipv4() == false);
@@ -57,16 +57,16 @@ int main() {
     sockaddr_in addr4;
     ipv4.to_sockaddr(&addr4);
     assert(addr4.sin_family == AF_INET);
-    assert(addr4.sin_port == 5353);
+    assert(addr4.sin_port == htons(5353));
     assert(addr4.sin_addr.s_addr == 0x01010101);
 
     sockaddr_in6 addr6;
     ipv6.to_sockaddr(&addr6);
     assert(addr6.sin6_family == AF_INET6);
-    assert(addr6.sin6_port == 8080);
+    assert(addr6.sin6_port == htons(8080));
 
     // Test hash equality
-    Ipv4Endpoint ipv4_copy{0x01010101, 5353};
+    Ipv4Endpoint ipv4_copy{0x01010101, htons(5353)};
     assert(std::hash<Ipv4Endpoint>{}(ipv4) == std::hash<Ipv4Endpoint>{}(ipv4_copy));
 
     // Test endpoint_ops::protocol

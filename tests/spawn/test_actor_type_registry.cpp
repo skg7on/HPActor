@@ -60,7 +60,7 @@ void test_spawn_valid_type() {
     registry.register_type<TestActor>("test-actor");
     auto result = registry.spawn(system, "test-actor", bytes{}, TypeTag::Invalid);
     assert(result.has_value());
-    assert(result.value().endpoint == endpoint_ops::parse_endpoint(LocalNodeId));
+    assert(result.value().endpoint == CommunicationEndpoint{LocalEndpoint});
 }
 
 int main() {

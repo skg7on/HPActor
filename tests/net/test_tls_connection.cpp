@@ -48,23 +48,23 @@ void test_tls_connection_creation() {
     std::cout << "Test: TlsConnection creation and basic properties" << std::endl;
 
         TlsConfig config;
-    config.node_id = "node42:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
 
     // Create client connection
-    auto client = TlsConnection::create_client("node100:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
     assert(client != nullptr);
-    assert(client->remote_node_id() == "node100:12345");
+    assert(hpactor::endpoint_ops::to_string(client->remote_endpoint()) == "127.0.0.1:12345");
     assert(client->state() == ConnectionState::Connecting);
     assert(client->session_state() == TlsSessionState::Handshake);
     assert(client->fd() == -1);  // Client doesn't have fd yet
 
     // Create server connection (with dummy fd)
-    auto server = TlsConnection::create_server(5, "node200:12345", &ctx, &loop);
+    auto server = TlsConnection::create_server(5, hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
     assert(server != nullptr);
-    assert(server->remote_node_id() == "node200:12345");
+    assert(hpactor::endpoint_ops::to_string(server->remote_endpoint()) == "127.0.0.1:12345");
     assert(server->state() == ConnectionState::Connected);
     assert(server->fd() == 5);
     assert(server->state() == ConnectionState::Connected);
@@ -80,12 +80,12 @@ void test_client_handshake_initiation() {
     std::cout << "Test: Client-side handshake initiation" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
 
-    auto client = TlsConnection::create_client("node10:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
     assert(client->state() == ConnectionState::Connecting);
 
     // Start handshake - should transition to Handshake state
@@ -102,16 +102,16 @@ void test_server_receives_client_hello() {
     std::cout << "Test: Server receives ClientHello" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
 
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto server = TlsConnection::create_server(server_fd, "node99:12345", &ctx, &loop);
+    auto server = TlsConnection::create_server(server_fd, hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
     client->start_client_handshake();
 
     // Simulate: read from client, deliver to server
@@ -145,7 +145,7 @@ void test_full_handshake() {
     std::cout << "Test: Full handshake - both sides complete" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext client_ctx = TlsContext::from_config(config);
     TlsContext server_ctx = TlsContext::from_config(config);
 
@@ -153,8 +153,8 @@ void test_full_handshake() {
 
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto server = TlsConnection::create_server(server_fd, "node1:12345", &server_ctx, &loop);
-    auto client = TlsConnection::create_client("node2:12345", &client_ctx, &loop);
+    auto server = TlsConnection::create_server(server_fd, hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &server_ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &client_ctx, &loop);
 
     // Track states for completion
     std::atomic<bool> client_ready(false);
@@ -207,13 +207,13 @@ void test_send_in_handshake_state() {
     std::cout << "Test: Send in Handshake state" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     bytes test_data = {'h', 'e', 'l', 'l', 'o'};
 
@@ -239,13 +239,13 @@ void test_send_completion_handler() {
     std::cout << "Test: Send completion handler" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     std::atomic<int> completion_count(0);
 
@@ -270,13 +270,13 @@ void test_write_buffer_behavior() {
     std::cout << "Test: Write buffer behavior" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     // start_client_handshake sends ClientHello via send_raw
     // send_raw appends to write_buffer_
@@ -306,13 +306,13 @@ void test_send_error_handling() {
     std::cout << "Test: Send error handling" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     bool error_handler_called = false;
     client->set_error_handler([&](ConnectionPtr, const error&) {
@@ -339,13 +339,13 @@ void test_premature_message_in_wrong_state() {
     std::cout << "Test: Premature message handling" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto server = TlsConnection::create_server(server_fd, "node1:12345", &ctx, &loop);
+    auto server = TlsConnection::create_server(server_fd, hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     // Server is in WaitingForServerHello state (after create_server)
     // Send a Certificate message (which should come after ServerHello)
@@ -379,14 +379,14 @@ void test_close_during_handshake() {
     std::cout << "Test: Close during handshake" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto server = TlsConnection::create_server(server_fd, "node1:12345", &ctx, &loop);
-    auto client = TlsConnection::create_client("node2:12345", &ctx, &loop);
+    auto server = TlsConnection::create_server(server_fd, hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     client->start_client_handshake();
     assert(client->state() == ConnectionState::Handshake);
@@ -408,13 +408,13 @@ void test_frame_handler_callback() {
     std::cout << "Test: Frame handler callback" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto server = TlsConnection::create_server(server_fd, "node1:12345", &ctx, &loop);
+    auto server = TlsConnection::create_server(server_fd, hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     bytes received_frame;
     server->set_frame_handler([&](const bytes& data) {
@@ -436,14 +436,14 @@ void test_state_transitions() {
     std::cout << "Test: State transitions" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
-    auto server = TlsConnection::create_server(server_fd, "node2:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
+    auto server = TlsConnection::create_server(server_fd, hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     // Initial states
     assert(client->state() == ConnectionState::Connecting);
@@ -471,13 +471,13 @@ void test_multiple_send_completions() {
     std::cout << "Test: Multiple send completions" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     std::atomic<int> handler_call_count(0);
     client->set_send_completion_handler([&](int /*result*/) {
@@ -505,13 +505,13 @@ void test_error_handler_callback() {
     std::cout << "Test: Error handler callback" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     bool error_handler_called = false;
     client->set_error_handler([&](ConnectionPtr, const error&) {
@@ -536,13 +536,13 @@ void test_ready_handler_callback() {
     std::cout << "Test: Ready handler callback" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     bool ready_handler_called = false;
     client->set_ready_handler([&](ConnectionPtr conn) {
@@ -565,7 +565,7 @@ void test_tls_context_rsa_operations() {
     std::cout << "Test: TlsContext RSA operations" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node42:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     // Test signing - may be empty if no private key available
@@ -581,8 +581,8 @@ void test_tls_context_rsa_operations() {
     const bytes& cert = ctx.certificate();
     (void)cert;  // May be empty but accessor should work
 
-    // Test node_id
-    assert(ctx.node_id() == "node42:12345");
+    // Test endpoint
+    assert(hpactor::endpoint_ops::to_string(ctx.endpoint()) == "127.0.0.1:12345");
 
     std::cout << "  PASSED" << std::endl;
 }
@@ -594,16 +594,16 @@ void test_different_node_ids() {
     std::cout << "Test: Different node IDs" << std::endl;
 
     TlsConfig client_config;
-    client_config.node_id = "node100:12345";
+    client_config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext client_ctx = TlsContext::from_config(client_config);
 
     TlsConfig server_config;
-    server_config.node_id = "node200:12345";
+    server_config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:54321");
     TlsContext server_ctx = TlsContext::from_config(server_config);
 
-    assert(client_ctx.node_id() == "node100:12345");
-    assert(server_ctx.node_id() == "node200:12345");
-    assert(client_ctx.node_id() != server_ctx.node_id());
+    assert(hpactor::endpoint_ops::to_string(client_ctx.endpoint()) == "127.0.0.1:12345");
+    assert(hpactor::endpoint_ops::to_string(server_ctx.endpoint()) == "127.0.0.1:54321");
+    assert(client_ctx.endpoint() != server_ctx.endpoint());
 
     std::cout << "  PASSED" << std::endl;
 }
@@ -615,13 +615,13 @@ void test_async_send_mechanism() {
     std::cout << "Test: Async send mechanism" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     // start_client_handshake sends ClientHello via send_raw -> flush_write_buffer
     // which calls loop_->backend()->async_send()
@@ -643,13 +643,13 @@ void test_message_parse_partial_data() {
     std::cout << "Test: Message parse with partial data" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto server = TlsConnection::create_server(server_fd, "node1:12345", &ctx, &loop);
+    auto server = TlsConnection::create_server(server_fd, hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     // Build a proper ClientHello message
     bytes payload;
@@ -689,13 +689,13 @@ void test_session_state_machine() {
     std::cout << "Test: Session state machine" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     EventLoop loop;
     auto [client_fd, server_fd] = create_socket_pair();
 
-    auto client = TlsConnection::create_client("node1:12345", &ctx, &loop);
+    auto client = TlsConnection::create_client(hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     // Initial state
     assert(client->session_state() == TlsSessionState::Handshake);
@@ -721,11 +721,11 @@ void test_verify_peer_config() {
     std::cout << "Test: Verify peer config" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     config.verify_peer = true;
     TlsContext ctx = TlsContext::from_config(config);
 
-    assert(ctx.node_id() == "node1:12345");
+    assert(hpactor::endpoint_ops::to_string(ctx.endpoint()) == "127.0.0.1:12345");
 
     std::cout << "  PASSED" << std::endl;
 }
@@ -737,7 +737,7 @@ void test_invalid_certificate_verification() {
     std::cout << "Test: Invalid certificate verification" << std::endl;
 
     TlsConfig config;
-    config.node_id = "node1:12345";
+    config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     TlsContext ctx = TlsContext::from_config(config);
 
     // Try to verify invalid certificate data

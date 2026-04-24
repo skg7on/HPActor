@@ -29,7 +29,7 @@ namespace net {
 // -----------------------------------------------------------------------------
 class Acceptor {
 public:
-    using accept_handler = std::function<void(int client_fd, NodeId /*remote_node_hint*/)>;
+    using accept_handler = std::function<void(int client_fd, CommunicationEndpoint /*remote_endpoint_hint*/)>;
 
     Acceptor(EventLoop* loop);
     ~Acceptor();

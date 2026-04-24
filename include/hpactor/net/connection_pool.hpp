@@ -64,7 +64,7 @@ struct PoolStats {
 
 class ConnectionPool : public Connection, public std::enable_shared_from_this<ConnectionPool> {
 public:
-    ConnectionPool(NodeId remote_node_id,
+    ConnectionPool(CommunicationEndpoint remote_endpoint,
                    const PoolConfig& config,
                    TlsContext* tls_context,
                    EventLoop* loop);
@@ -97,7 +97,7 @@ public:
     void abort();
 
     // Get remote node ID
-    NodeId remote_node_id() const { return remote_node_id_; }
+    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
 
     // Set handler for RPC responses (called when RpcResponse frame is received)
     using rpc_response_handler = std::function<void(MessageId, const bytes&)>;
@@ -135,7 +135,7 @@ private:
     // Add pending message
     bool add_pending(const ActorAddress& target, const bytes& data);
 
-    NodeId remote_node_id_;
+    CommunicationEndpoint remote_endpoint_;
     PoolConfig config_;
     TlsContext* tls_context_;
     EventLoop* loop_;

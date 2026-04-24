@@ -29,11 +29,11 @@ namespace net {
 // TcpTransport implementation
 // -----------------------------------------------------------------------------
 
-TcpTransport::TcpTransport(NodeId node_id,
+TcpTransport::TcpTransport(CommunicationEndpoint endpoint,
                            const TlsConfig& tls_config,
                            const PoolConfig& pool_config,
                            NodeRegistry* registry)
-    : node_id_(node_id),
+    : endpoint_(endpoint),
       loop_(),
       acceptor_(&loop_),
       tls_context_(TlsContext::from_config(tls_config)),
@@ -54,21 +54,21 @@ TcpTransport::TcpTransport(NodeId node_id,
 TcpTransport::~TcpTransport() {
     stop_listening();
     // Abort all connection pools
-    for (auto& [node, pool] : pools_) {
+    for (auto& [ep, pool] : pools_) {
         pool->abort();
     }
 }
 
-std::shared_ptr<ConnectionPool> TcpTransport::get_or_create_pool(NodeId remote_node) {
-    auto it = pools_.find(remote_node);
+std::shared_ptr<ConnectionPool> TcpTransport::get_or_create_pool(CommunicationEndpoint remote_endpoint) {
+    auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
         return it->second;
     }
-    auto pool = std::make_shared<ConnectionPool>(remote_node,
+    auto pool = std::make_shared<ConnectionPool>(remote_endpoint,
                                                   pool_config_,
                                                   &tls_context_,
                                                   &loop_);
-    pools_[remote_node] = pool;
+    pools_[remote_endpoint] = pool;
     // Set RPC handler if one has been registered
     if (rpc_handler_) {
         pool->set_rpc_handler(rpc_handler_);
@@ -76,7 +76,7 @@ std::shared_ptr<ConnectionPool> TcpTransport::get_or_create_pool(NodeId remote_n
     return pool;
 }
 
-ConnectionPtr TcpTransport::connect(NodeId remote_node,
+ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
                                   const std::string& /*host*/,
                                   uint16_t port) {
     int fd = ::socket(AF_INET, SOCK_STREAM, 0);
@@ -106,12 +106,12 @@ ConnectionPtr TcpTransport::connect(NodeId remote_node,
     }
 
     // Get or create the pool
-    auto pool = get_or_create_pool(remote_node);
+    auto pool = get_or_create_pool(remote_endpoint);
 
     ConnectionPtr conn;
     if (pool_config_.use_tls) {
         // Create TLS connection
-        auto tls_conn = TlsConnection::create_client(remote_node, &tls_context_, &loop_);
+        auto tls_conn = TlsConnection::create_client(remote_endpoint, &tls_context_, &loop_);
         tls_conn->set_fd(fd);
         tls_conn->set_ready_handler([pool](ConnectionPtr c) {
             pool->on_connection_ready(c);
@@ -126,7 +126,7 @@ ConnectionPtr TcpTransport::connect(NodeId remote_node,
         tls_conn->start_client_handshake();
     } else {
         // Create plain connection with connected fd
-        auto plain_conn = PlainConnection::create_client(fd, remote_node, &loop_);
+        auto plain_conn = PlainConnection::create_client(fd, remote_endpoint, &loop_);
         plain_conn->set_ready_handler([pool](ConnectionPtr c) {
             pool->on_connection_ready(c);
         });
@@ -146,12 +146,12 @@ ConnectionPtr TcpTransport::connect(NodeId remote_node,
     return pool;
 }
 
-ConnectionPtr TcpTransport::connect(NodeId remote_node_id) {
+ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint) {
     if (!registry_) {
         return nullptr;  // No registry configured
     }
 
-    NodeEndpoint* ep = registry_->get(remote_node_id);
+    NodeEndpoint* ep = registry_->get(remote_endpoint);
     if (!ep) {
         return nullptr;  // Unknown node
     }
@@ -160,12 +160,12 @@ ConnectionPtr TcpTransport::connect(NodeId remote_node_id) {
     std::string ip = host_resolver_.resolve(ep->host);
 
     // Connect to resolved IP:port
-    return connect(remote_node_id, ip, ep->tcp_port);
+    return connect(remote_endpoint, ip, ep->tcp_port);
 }
 
 void TcpTransport::listen(uint16_t port) {
-    acceptor_.set_accept_handler([this](int client_fd, NodeId /*remote_node_hint*/) {
-        handle_accept(client_fd);
+    acceptor_.set_accept_handler([this](int client_fd, CommunicationEndpoint ep) {
+        handle_accept(client_fd, ep);
     });
     acceptor_.listen(port);
 }
@@ -175,21 +175,20 @@ void TcpTransport::stop_listening() {
 }
 
 void TcpTransport::send(const ActorAddress& target, const bytes& encoded) {
-    NodeId remote_node = endpoint_ops::to_string(target.endpoint);
-    auto pool = get_or_create_pool(remote_node);
+    auto pool = get_or_create_pool(target.endpoint);
     pool->send(target, encoded);
 }
 
-bool TcpTransport::is_connected(NodeId remote_node) const {
-    auto it = pools_.find(remote_node);
+bool TcpTransport::is_connected(CommunicationEndpoint remote_endpoint) const {
+    auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
         return it->second->is_connected();
     }
     return false;
 }
 
-void TcpTransport::close_connection(NodeId remote_node) {
-    auto it = pools_.find(remote_node);
+void TcpTransport::close_connection(CommunicationEndpoint remote_endpoint) {
+    auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
         it->second->abort();
         pools_.erase(it);
@@ -199,7 +198,7 @@ void TcpTransport::close_connection(NodeId remote_node) {
 void TcpTransport::set_rpc_handler(rpc_response_handler handler) {
     // Store handler and apply to all existing pools
     rpc_handler_ = std::move(handler);
-    for (auto& [node, pool] : pools_) {
+    for (auto& [ep, pool] : pools_) {
         pool->set_rpc_handler(rpc_handler_);
     }
 }
@@ -212,12 +211,12 @@ void TcpTransport::unregister_connection(int fd) {
     connections_.erase(fd);
 }
 
-void TcpTransport::handle_accept(int client_fd) {
+void TcpTransport::handle_accept(int client_fd, CommunicationEndpoint remote_endpoint) {
     ConnectionPtr conn;
     if (pool_config_.use_tls) {
-        conn = TlsConnection::create_server(client_fd, 0, &tls_context_, &loop_);
+        conn = TlsConnection::create_server(client_fd, remote_endpoint, &tls_context_, &loop_);
     } else {
-        conn = PlainConnection::create_server(client_fd, 0, &loop_);
+        conn = PlainConnection::create_server(client_fd, remote_endpoint, &loop_);
     }
     register_connection(conn, client_fd);
 }

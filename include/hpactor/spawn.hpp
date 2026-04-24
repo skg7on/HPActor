@@ -76,7 +76,7 @@ public:
     AsyncActor& operator=(AsyncActor&& other) noexcept;
 
     // Construct with node_id and timeout
-    AsyncActor(NodeId node_id, std::chrono::milliseconds timeout);
+    AsyncActor(CommunicationEndpoint endpoint, std::chrono::milliseconds timeout);
 
     // Wait for response and return result (blocks until response or timeout)
     result<ActorRef> get();
@@ -88,7 +88,7 @@ public:
     void cancel();
 
     // Get associated node ID
-    NodeId node_id() const { return node_id_; }
+    CommunicationEndpoint endpoint() const { return endpoint_; }
 
     // Set response (called by transport layer when response received)
     void set_response(SpawnResponse response);
@@ -98,7 +98,7 @@ public:
     uint64_t message_id() const { return message_id_; }
 
 private:
-    NodeId node_id_ = "";
+    CommunicationEndpoint endpoint_ = LocalEndpoint;
     std::chrono::milliseconds timeout_{5000};
     mutable std::unique_ptr<std::mutex> mutex_;
     std::unique_ptr<std::condition_variable> cv_;

@@ -34,49 +34,49 @@ namespace net {
 // -----------------------------------------------------------------------------
 class TcpTransport : public Transport {
 public:
-    TcpTransport(NodeId node_id,
+    TcpTransport(CommunicationEndpoint endpoint,
                  const TlsConfig& tls_config,
                  const PoolConfig& pool_config,
                  NodeRegistry* registry = nullptr);
     ~TcpTransport() override;
 
     // Transport interface
-    ConnectionPtr connect(NodeId remote_node,
+    ConnectionPtr connect(CommunicationEndpoint remote_endpoint,
                         const std::string& host,
                         uint16_t port) override;
 
-    ConnectionPtr connect(NodeId remote_node) override;
+    ConnectionPtr connect(CommunicationEndpoint remote_endpoint) override;
 
     void listen(uint16_t port) override;
     void stop_listening() override;
 
     void send(const ActorAddress& target, const bytes& encoded) override;
 
-    bool is_connected(NodeId remote_node) const override;
-    NodeId node_id() const override { return node_id_; }
+    bool is_connected(CommunicationEndpoint remote_endpoint) const override;
+    CommunicationEndpoint endpoint() const override { return endpoint_; }
 
-    void close_connection(NodeId remote_node) override;
+    void close_connection(CommunicationEndpoint remote_endpoint) override;
 
     // Set RPC response handler - propagates to all connection pools
     void set_rpc_handler(rpc_response_handler handler) override;
 
 private:
-    void handle_accept(int client_fd);
+    void handle_accept(int client_fd, CommunicationEndpoint remote_endpoint);
 
     // Get or create a connection pool for a remote node
-    std::shared_ptr<ConnectionPool> get_or_create_pool(NodeId remote_node);
+    std::shared_ptr<ConnectionPool> get_or_create_pool(CommunicationEndpoint remote_endpoint);
 
     void register_connection(ConnectionPtr conn, int fd);
     void unregister_connection(int fd);
 
-    NodeId node_id_;
+    CommunicationEndpoint endpoint_;
     EventLoop loop_;
     Acceptor acceptor_;
     TlsContext tls_context_;
     PoolConfig pool_config_;
     NodeRegistry* registry_ = nullptr;  // Optional registry for node lookup
     HostResolver host_resolver_;
-    std::unordered_map<NodeId, std::shared_ptr<ConnectionPool>> pools_;
+    std::unordered_map<CommunicationEndpoint, std::shared_ptr<ConnectionPool>> pools_;
     std::function<void(MessageId, const bytes&)> rpc_handler_;
 
     // Map of fd -> Connection for completion routing

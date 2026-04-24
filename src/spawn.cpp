@@ -21,14 +21,14 @@ AsyncActor::AsyncActor()
     : mutex_(std::make_unique<std::mutex>())
     , cv_(std::make_unique<std::condition_variable>()) {}
 
-AsyncActor::AsyncActor(NodeId node_id, std::chrono::milliseconds timeout)
-    : node_id_(node_id)
+AsyncActor::AsyncActor(CommunicationEndpoint endpoint, std::chrono::milliseconds timeout)
+    : endpoint_(endpoint)
     , timeout_(timeout)
     , mutex_(std::make_unique<std::mutex>())
     , cv_(std::make_unique<std::condition_variable>()) {}
 
 AsyncActor::AsyncActor(AsyncActor&& other) noexcept
-    : node_id_(other.node_id_)
+    : endpoint_(other.endpoint_)
     , timeout_(other.timeout_)
     , mutex_(std::move(other.mutex_))
     , cv_(std::move(other.cv_))
@@ -38,7 +38,7 @@ AsyncActor::AsyncActor(AsyncActor&& other) noexcept
 
 AsyncActor& AsyncActor::operator=(AsyncActor&& other) noexcept {
     if (this != &other) {
-        node_id_ = other.node_id_;
+        endpoint_ = other.endpoint_;
         timeout_ = other.timeout_;
         mutex_ = std::move(other.mutex_);
         cv_ = std::move(other.cv_);

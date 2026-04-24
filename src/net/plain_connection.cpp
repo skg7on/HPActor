@@ -24,11 +24,11 @@ namespace hpactor {
 
 namespace net {
 
-PlainConnection::PlainConnection(NodeId remote_node_id,
+PlainConnection::PlainConnection(CommunicationEndpoint remote_endpoint,
                                 EventLoop* loop,
                                 int socket_fd)
-    : Connection(remote_node_id),
-      remote_node_id_(remote_node_id),
+    : Connection(remote_endpoint),
+      remote_endpoint_(remote_endpoint),
       loop_(loop),
       fd_(socket_fd) {}
 
@@ -37,20 +37,20 @@ PlainConnection::~PlainConnection() {
 }
 
 PlainConnectionPtr PlainConnection::create_client(int fd,
-                                                   NodeId remote_node_id,
+                                                   CommunicationEndpoint remote_endpoint,
                                                    EventLoop* loop) {
     auto conn = std::shared_ptr<PlainConnection>(
-        new PlainConnection(remote_node_id, loop, fd));
+        new PlainConnection(remote_endpoint, loop, fd));
     conn->set_state(ConnectionState::Connected);
     conn->is_sending_ = false;
     return conn;
 }
 
 PlainConnectionPtr PlainConnection::create_server(int fd,
-                                                    NodeId remote_node_id,
+                                                    CommunicationEndpoint remote_endpoint,
                                                     EventLoop* loop) {
     auto conn = std::shared_ptr<PlainConnection>(
-        new PlainConnection(remote_node_id, loop, fd));
+        new PlainConnection(remote_endpoint, loop, fd));
     conn->set_state(ConnectionState::Connected);
     conn->is_sending_ = false;
 

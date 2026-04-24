@@ -15,6 +15,8 @@
 #include <hpactor/types/types.hpp>
 #include <arpa/inet.h>
 #include <cstdio>
+#include <netdb.h>
+#include <sys/socket.h>
 
 namespace hpactor {
 namespace endpoint_ops {
@@ -31,8 +33,9 @@ int address_family(const CommunicationEndpoint& ep) {
 std::string to_string(const CommunicationEndpoint& ep) {
     char buf[64];
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
+        // Convert network byte order addr to host byte order for inet_ntop
         struct in_addr addr;
-        addr.s_addr = ipv4->addr;
+        addr.s_addr = ntohl(ipv4->addr);
         snprintf(buf, sizeof(buf), "%s:%u", inet_ntoa(addr), ipv4->port());
         return std::string(buf);
     }
@@ -47,31 +50,99 @@ std::string to_string(const CommunicationEndpoint& ep) {
     return "<invalid>";
 }
 
-CommunicationEndpoint parse_endpoint(const NodeId& node_id) {
+CommunicationEndpoint parse_endpoint(std::string_view node_id) {
     // Empty node_id means local node - return loopback endpoint
     if (node_id.empty()) {
-        struct in_addr loopback_addr;
-        inet_pton(AF_INET, "127.0.0.1", &loopback_addr);
-        // inet_pton returns host byte order in s_addr, convert to network byte order
-        return Ipv4Endpoint{htonl(loopback_addr.s_addr), 0};
+        return LocalEndpoint;
     }
 
     // Parse "host:port" format
-    std::string host = node_id_host(node_id);
-    uint16_t port = node_id_port(node_id);
+    auto colon_pos = node_id.find(':');
+    if (colon_pos == std::string_view::npos) {
+        return Ipv4Endpoint{0, 0};  // Unspecified on failure
+    }
+    std::string_view host = node_id.substr(0, colon_pos);
+    std::string_view port_str = node_id.substr(colon_pos + 1);
 
-    // Convert host to IPv4 address
-    struct in_addr addr;
-    if (inet_pton(AF_INET, host.c_str(), &addr) != 1) {
-        // Failed to parse - return unspecified address (not loopback)
-        // This ensures is_local() returns false for unparseable addresses
-        return Ipv4Endpoint{0, 0};
+    // Parse port manually (no exceptions)
+    uint32_t port = 0;
+    for (char c : port_str) {
+        if (c >= '0' && c <= '9') {
+            port = port * 10 + static_cast<uint32_t>(c - '0');
+            if (port > 65535) {
+                return Ipv4Endpoint{0, 0};
+            }
+        } else {
+            return Ipv4Endpoint{0, 0};
+        }
     }
 
-    // Convert port to network byte order
-    uint16_t port_nw = htons(port);
-    // inet_pton returns host byte order in s_addr, convert to network byte order
-    return Ipv4Endpoint{htonl(addr.s_addr), port_nw};
+    // Try numeric IPv4 address first
+    struct in_addr addr;
+    if (inet_pton(AF_INET, std::string(host).c_str(), &addr) == 1) {
+        // inet_pton returns network byte order in s_addr, convert to stored network byte order
+        return Ipv4Endpoint{htonl(addr.s_addr), htons(static_cast<uint16_t>(port))};
+    }
+
+    // Try numeric IPv6 address
+    struct in6_addr addr6;
+    if (inet_pton(AF_INET6, std::string(host).c_str(), &addr6) == 1) {
+        std::array<uint8_t, 16> bytes;
+        std::memcpy(bytes.data(), addr6.s6_addr, 16);
+        return Ipv6Endpoint{bytes, htons(static_cast<uint16_t>(port))};
+    }
+
+    // Fallback: try DNS resolution via getaddrinfo for IPv4
+    struct addrinfo hints {};
+    hints.ai_family = AF_INET;
+    hints.ai_socktype = 0;
+    struct addrinfo* result = nullptr;
+    int ret = getaddrinfo(std::string(host).c_str(), nullptr, &hints, &result);
+    if (ret == 0 && result != nullptr) {
+        auto* ai = reinterpret_cast<struct sockaddr_in*>(result->ai_addr);
+        // sin_addr.s_addr is in network byte order; htonl converts to stored network byte order
+        uint32_t addr_bytes = htonl(ai->sin_addr.s_addr);
+        freeaddrinfo(result);
+        return Ipv4Endpoint{addr_bytes, htons(static_cast<uint16_t>(port))};
+    }
+
+    // Try IPv6 via DNS
+    if (result) {
+        freeaddrinfo(result);
+        result = nullptr;
+    }
+    hints.ai_family = AF_INET6;
+    ret = getaddrinfo(std::string(host).c_str(), nullptr, &hints, &result);
+    if (ret == 0 && result != nullptr) {
+        auto* ai = reinterpret_cast<struct sockaddr_in6*>(result->ai_addr);
+        std::array<uint8_t, 16> bytes;
+        std::memcpy(bytes.data(), ai->sin6_addr.s6_addr, 16);
+        freeaddrinfo(result);
+        return Ipv6Endpoint{bytes, htons(static_cast<uint16_t>(port))};
+    }
+    if (result) {
+        freeaddrinfo(result);
+    }
+
+    return Ipv4Endpoint{0, 0};  // Unspecified on failure
+    if (result) {
+        freeaddrinfo(result);
+        result = nullptr;
+    }
+    hints.ai_family = AF_INET6;
+    ret = getaddrinfo(std::string(host).c_str(), nullptr, &hints, &result);
+    if (ret == 0 && result != nullptr) {
+        auto* ai = reinterpret_cast<struct sockaddr_in6*>(result->ai_addr);
+        std::array<uint8_t, 16> bytes;
+        std::memcpy(bytes.data(), ai->sin6_addr.s6_addr, 16);
+        freeaddrinfo(result);
+        return Ipv6Endpoint{bytes, htons(static_cast<uint16_t>(port))};
+    }
+    if (result) {
+        freeaddrinfo(result);
+    }
+
+    return Ipv4Endpoint{0, 0};  // Unspecified on failure
 }
 
 } // namespace endpoint_ops

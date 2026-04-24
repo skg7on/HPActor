@@ -21,12 +21,12 @@ namespace hpactor {
 
 namespace net {
 
-ConnectionPool::ConnectionPool(NodeId remote_node_id,
+ConnectionPool::ConnectionPool(CommunicationEndpoint remote_endpoint,
                               const PoolConfig& config,
                               TlsContext* tls_context,
                               EventLoop* loop)
-    : Connection(remote_node_id),
-      remote_node_id_(remote_node_id),
+    : Connection(remote_endpoint),
+      remote_endpoint_(remote_endpoint),
       config_(config),
       tls_context_(tls_context),
       loop_(loop) {}
@@ -65,9 +65,9 @@ void ConnectionPool::send(const ActorAddress& target, const bytes& encoded) {
 }
 
 void ConnectionPool::send(const bytes& data) {
-    // Create a minimal actor address using the remote node ID
+    // Create a minimal actor address using the remote endpoint
     ActorAddress target;
-    target.endpoint = endpoint_ops::parse_endpoint(remote_node_id());
+    target.endpoint = endpoint_ops::parse_endpoint(endpoint_ops::to_string(remote_endpoint()));
     send(target, data);
 }
 
@@ -128,7 +128,7 @@ void ConnectionPool::create_connection() {
     }
     if (!connecting_.exchange(true)) {
         auto conn = TlsConnection::create_client(
-            remote_node_id_, tls_context_, loop_);
+            remote_endpoint(), tls_context_, loop_);
 
         conn->set_ready_handler([this](ConnectionPtr c) {
             on_connection_ready(c);

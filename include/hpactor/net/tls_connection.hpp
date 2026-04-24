@@ -71,13 +71,13 @@ using TlsConnectionPtr = std::shared_ptr<TlsConnection>;
 class TlsConnection : public Connection, public std::enable_shared_from_this<TlsConnection> {
 public:
     // Create client-side connection
-    static TlsConnectionPtr create_client(NodeId remote_node_id,
+    static TlsConnectionPtr create_client(CommunicationEndpoint remote_endpoint,
                                            TlsContext* tls_context,
                                            EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
     static TlsConnectionPtr create_server(int fd,
-                                          NodeId remote_node_id,
+                                          CommunicationEndpoint remote_endpoint,
                                           TlsContext* tls_context,
                                           EventLoop* loop);
 
@@ -91,7 +91,7 @@ public:
     TlsConnection& operator=(const TlsConnection&) = delete;
 
     // Getters
-    NodeId remote_node_id() const { return remote_node_id_; }
+    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
     ConnectionState state() const { return state_; }
     int fd() const { return fd_; }
 
@@ -120,7 +120,7 @@ public:
     TlsSessionState session_state() const { return session_state_; }
 
 private:
-    TlsConnection(NodeId remote_node_id,
+    TlsConnection(CommunicationEndpoint remote_endpoint,
                  TlsContext* tls_context,
                  EventLoop* loop,
                  int fd = -1);
@@ -168,7 +168,7 @@ private:
     void on_fd_readable();
     void on_fd_writable();
 
-    NodeId remote_node_id_ = "";
+    CommunicationEndpoint remote_endpoint_ = LocalEndpoint;
     TlsContext* tls_context_ = nullptr;
     EventLoop* loop_ = nullptr;
     int fd_ = -1;

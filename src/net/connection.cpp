@@ -18,8 +18,8 @@ namespace hpactor {
 
 namespace net {
 
-Connection::Connection(NodeId remote_node)
-    : remote_node_(remote_node) {}
+Connection::Connection(CommunicationEndpoint remote_endpoint)
+    : remote_endpoint_(remote_endpoint) {}
 
 Connection::~Connection() = default;
 

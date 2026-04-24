@@ -39,37 +39,37 @@ TlsContext::TlsContext() = default;
 TlsContext::~TlsContext() = default;
 
 TlsContext::TlsContext(TlsContext&& other) noexcept
-    : node_id_(other.node_id_),
+    : endpoint_(other.endpoint_),
       certificate_(std::move(other.certificate_)),
       public_key_(std::move(other.public_key_)),
       private_key_(std::move(other.private_key_)),
       rsa_key_(std::move(other.rsa_key_)),
       ca_certs_(std::move(other.ca_certs_)),
       peer_certs_(std::move(other.peer_certs_)) {
-    other.node_id_ = "";
+    other.endpoint_ = LocalEndpoint;
 }
 
 TlsContext& TlsContext::operator=(TlsContext&& other) noexcept {
     if (this != &other) {
-        node_id_ = other.node_id_;
+        endpoint_ = other.endpoint_;
         certificate_ = std::move(other.certificate_);
         public_key_ = std::move(other.public_key_);
         private_key_ = std::move(other.private_key_);
         rsa_key_ = std::move(other.rsa_key_);
         ca_certs_ = std::move(other.ca_certs_);
         peer_certs_ = std::move(other.peer_certs_);
-        other.node_id_ = "";
+        other.endpoint_ = LocalEndpoint;
     }
     return *this;
 }
 
-TlsContext TlsContext::from_filesystem(NodeId node_id,
+TlsContext TlsContext::from_filesystem(CommunicationEndpoint endpoint,
                                        const std::string& cert_dir) {
     TlsContext ctx;
-    ctx.node_id_ = node_id;
+    ctx.endpoint_ = endpoint;
 
-    // Sanitize node_id for use in filename (replace ':' with '_')
-    std::string safe_node_id = node_id;
+    // Sanitize endpoint string for use in filename (replace ':' with '_')
+    std::string safe_node_id = endpoint_ops::to_string(endpoint);
     std::replace(safe_node_id.begin(), safe_node_id.end(), ':', '_');
 
     // Load own certificate
@@ -121,7 +121,7 @@ TlsContext TlsContext::from_filesystem(NodeId node_id,
 
 TlsContext TlsContext::from_config(const TlsConfig& config) {
     TlsContext ctx;
-    ctx.node_id_ = config.node_id;
+    ctx.endpoint_ = config.endpoint;
     ctx.certificate_ = config.own_cert_der;
     ctx.ca_certs_ = config.ca_certs_der;
 
