@@ -98,6 +98,9 @@ add_compile_options(
     -Wold-style-cast
 )
 
+# Suppress abseil logging dependency in protobuf
+add_compile_definitions(GOOGLE_PROTOBUF_SUPPRESS_ABSL_LOG)
+
 # =============================================================================
 # Sanitizers
 # =============================================================================
@@ -161,7 +164,8 @@ target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(OpenSSL REQUIRED)
 find_package(Protobuf REQUIRED)
-target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf hpactor_proto)
+find_package(absl REQUIRED)
+target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf absl::log absl::log_internal_check_op hpactor_proto)
 
 # Async I/O backends
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")

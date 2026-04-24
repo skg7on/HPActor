@@ -14,8 +14,6 @@
 
 #include <hpactor/net/frame.hpp>
 
-#include <cstring>
-
 namespace hpactor {
 
 namespace net {
