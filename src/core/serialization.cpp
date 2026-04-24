@@ -20,6 +20,61 @@
 
 namespace hpactor {
 
+namespace {
+
+// Endpoint serialization (network byte order)
+// Wire format: [protocol:1][addr:n][port:2]
+//   protocol: 0x04 = IPv4, 0x06 = IPv6
+bytes encode_endpoint(const CommunicationEndpoint& ep) {
+    bytes result;
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
+        result.resize(7);  // 1 + 4 + 2
+        result[0] = 0x04;
+        uint32_t addr = ipv4->addr;
+        uint16_t port = ipv4->port_nw;
+        std::memcpy(result.data() + 1, &addr, 4);
+        std::memcpy(result.data() + 5, &port, 2);
+    } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
+        result.resize(19);  // 1 + 16 + 2
+        result[0] = 0x06;
+        std::memcpy(result.data() + 1, ipv6->addr.data(), 16);
+        uint16_t port = ipv6->port_nw;
+        std::memcpy(result.data() + 17, &port, 2);
+    }
+    return result;
+}
+
+CommunicationEndpoint decode_endpoint(bytes data) {
+    if (data.empty()) {
+        return Ipv4Endpoint{};  // Return default/empty endpoint
+    }
+    uint8_t protocol = data[0];
+    if (protocol == 0x04) {
+        // IPv4: [0x04][addr: 4][port: 2]
+        if (data.size() < 7) {
+            return Ipv4Endpoint{};
+        }
+        uint32_t addr;
+        uint16_t port;
+        std::memcpy(&addr, data.data() + 1, 4);
+        std::memcpy(&port, data.data() + 5, 2);
+        return Ipv4Endpoint{addr, port};
+    } else if (protocol == 0x06) {
+        // IPv6: [0x06][addr: 16][port: 2]
+        if (data.size() < 19) {
+            return Ipv6Endpoint{};
+        }
+        std::array<uint8_t, 16> addr;
+        std::memcpy(addr.data(), data.data() + 1, 16);
+        uint16_t port;
+        std::memcpy(&port, data.data() + 17, 2);
+        return Ipv6Endpoint{addr, port};
+    }
+    return Ipv4Endpoint{};  // Unknown protocol, return default
+}
+
+} // anonymous namespace
+
 // -----------------------------------------------------------------------------
 // DefaultSerializer implementation
 // -----------------------------------------------------------------------------
@@ -88,7 +143,7 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     if (std::holds_alternative<down_msg>(msg)) {
         const down_msg& m = std::get<down_msg>(msg);
         // endpoint (binary) + actor_id (8 bytes) + code (4 bytes)
-        bytes ep_bytes = net::WireFrame::encode_endpoint(m.terminated_actor.endpoint);
+        bytes ep_bytes = encode_endpoint(m.terminated_actor.endpoint);
         result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
         uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
@@ -107,7 +162,7 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // exit_msg
     else if (std::holds_alternative<exit_msg>(msg)) {
         const exit_msg& m = std::get<exit_msg>(msg);
-        bytes ep_bytes = net::WireFrame::encode_endpoint(m.sender.endpoint);
+        bytes ep_bytes = encode_endpoint(m.sender.endpoint);
         result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
         uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
@@ -126,7 +181,7 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // link_msg
     else if (std::holds_alternative<link_msg>(msg)) {
         const link_msg& m = std::get<link_msg>(msg);
-        bytes ep_bytes = net::WireFrame::encode_endpoint(m.target.endpoint);
+        bytes ep_bytes = encode_endpoint(m.target.endpoint);
         result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t));
         size_t offset = 0;
         uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
@@ -143,7 +198,7 @@ bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
     // unlink_msg
     else if (std::holds_alternative<unlink_msg>(msg)) {
         const unlink_msg& m = std::get<unlink_msg>(msg);
-        bytes ep_bytes = net::WireFrame::encode_endpoint(m.target.endpoint);
+        bytes ep_bytes = encode_endpoint(m.target.endpoint);
         result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t));
         size_t offset = 0;
         uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
@@ -173,7 +228,7 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
         if (ep_len > 0) {
             bytes ep_data(data.begin() + static_cast<long>(offset),
                          data.begin() + static_cast<long>(offset) + ep_len);
-            m.terminated_actor.endpoint = net::WireFrame::decode_endpoint(ep_data);
+            m.terminated_actor.endpoint = decode_endpoint(ep_data);
             offset += ep_len;
         }
         uint64_t actor_id;
@@ -194,7 +249,7 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
         if (ep_len > 0) {
             bytes ep_data(data.begin() + static_cast<long>(offset),
                          data.begin() + static_cast<long>(offset) + ep_len);
-            m.sender.endpoint = net::WireFrame::decode_endpoint(ep_data);
+            m.sender.endpoint = decode_endpoint(ep_data);
             offset += ep_len;
         }
         uint64_t actor_id;
@@ -215,7 +270,7 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
         if (ep_len > 0) {
             bytes ep_data(data.begin() + static_cast<long>(offset),
                          data.begin() + static_cast<long>(offset) + ep_len);
-            m.target.endpoint = net::WireFrame::decode_endpoint(ep_data);
+            m.target.endpoint = decode_endpoint(ep_data);
             offset += ep_len;
         }
         uint64_t actor_id;
@@ -232,7 +287,7 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
         if (ep_len > 0) {
             bytes ep_data(data.begin() + static_cast<long>(offset),
                          data.begin() + static_cast<long>(offset) + ep_len);
-            m.target.endpoint = net::WireFrame::decode_endpoint(ep_data);
+            m.target.endpoint = decode_endpoint(ep_data);
             offset += ep_len;
         }
         uint64_t actor_id;
@@ -257,7 +312,7 @@ bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnM
         // supervisor_actor_id (8 bytes) + supervisor_incarnation (8 bytes)
         size_t name_len = m.actor_type_name.size();
         size_t args_len = m.serialized_args.size();
-        bytes sup_ep_bytes = net::WireFrame::encode_endpoint(m.supervisor_addr.endpoint);
+        bytes sup_ep_bytes = encode_endpoint(m.supervisor_addr.endpoint);
 
         result.resize(sizeof(uint32_t) + name_len + sizeof(TypeTag) +
                       sizeof(uint32_t) + args_len +
@@ -315,7 +370,7 @@ bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnM
     // SpawnResponse
     else if (std::holds_alternative<SpawnResponse>(msg)) {
         const SpawnResponse& m = std::get<SpawnResponse>(msg);
-        bytes actor_ep_bytes = net::WireFrame::encode_endpoint(m.actor_addr.endpoint);
+        bytes actor_ep_bytes = encode_endpoint(m.actor_addr.endpoint);
         result.resize(sizeof(uint32_t) + actor_ep_bytes.size() + sizeof(uint32_t) +
                       sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint32_t));
         size_t offset = 0;
@@ -393,7 +448,7 @@ SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& da
         if (sup_ep_len > 0) {
             bytes sup_ep_data(data.begin() + static_cast<long>(offset),
                              data.begin() + static_cast<long>(offset) + sup_ep_len);
-            m.supervisor_addr.endpoint = net::WireFrame::decode_endpoint(sup_ep_data);
+            m.supervisor_addr.endpoint = decode_endpoint(sup_ep_data);
             offset += sup_ep_len;
         }
 
@@ -427,7 +482,7 @@ SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& da
         if (actor_ep_len > 0) {
             bytes actor_ep_data(data.begin() + static_cast<long>(offset),
                                data.begin() + static_cast<long>(offset) + actor_ep_len);
-            m.actor_addr.endpoint = net::WireFrame::decode_endpoint(actor_ep_data);
+            m.actor_addr.endpoint = decode_endpoint(actor_ep_data);
             offset += actor_ep_len;
         }
 

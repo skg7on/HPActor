@@ -54,17 +54,6 @@ struct WireFrame {
     // Decode frame from bytes
     static WireFrame decode(const bytes& data);
 
-    // Calculate header size for given sender and receiver node_ids
-    static size_t calculate_header_size(const ActorAddress& sender, const ActorAddress& receiver);
-
-    // Endpoint serialization (network byte order)
-    // Wire format: [protocol:1][addr:n][port:2]
-    //   protocol: 0x04 = IPv4, 0x06 = IPv6
-    //   IPv4: 7 bytes total (1 + 4 + 2)
-    //   IPv6: 19 bytes total (1 + 16 + 2)
-    static bytes encode_endpoint(const CommunicationEndpoint& ep);
-    static CommunicationEndpoint decode_endpoint(bytes data);
-
     // Flag constants
     static constexpr uint32_t Important = 1 << 0;  // Requires delivery confirmation
     static constexpr uint32_t NoDrop = 1 << 1;       // Don't drop on congestion
@@ -78,19 +67,8 @@ struct WireFrame {
 };
 
 // Protobuf interop - convert between HPActor types and protobuf bytes
-namespace hpactor { namespace net {
 bytes frame_to_proto(const WireFrame& frame);
 WireFrame frame_from_proto(const bytes& data);
-}} // namespace hpactor::net
-
-// -----------------------------------------------------------------------------
-// Frame header constants (fixed-size portion only)
-// -----------------------------------------------------------------------------
-constexpr size_t PayloadLengthOffset = 0;
-constexpr size_t TypeTagOffset = 4;
-constexpr size_t FlagsOffset = 8;
-constexpr size_t MessageIdOffset = 12;
-constexpr size_t FixedHeaderSize = 20;  // Size of fixed portion (before node_id strings)
 
 } // namespace net
 } // namespace hpactor
