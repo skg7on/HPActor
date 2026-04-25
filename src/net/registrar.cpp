@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/net/registrar.hpp>
+#include <hpactor/net/registrar_serialization.hpp>
 
 #include <algorithm>
 #include <arpa/inet.h>
@@ -504,6 +505,135 @@ void UdpRegistrar::start_client_mode() {
     client_->start();
 }
 
+void UdpRegistrar::start_server_mode_async() {
+    server_ = std::make_unique<RegistrarServer>(config_, local_endpoint_, loop_);
+    server_->start();
+
+    // Create UDP socket
+    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udp_socket_ < 0) return;
+
+    // Bind to UDP port
+    struct sockaddr_in udp_addr;
+    memset(&udp_addr, 0, sizeof(udp_addr));
+    udp_addr.sin_family = AF_INET;
+    udp_addr.sin_addr.s_addr = INADDR_ANY;
+    udp_addr.sin_port = htons(config_.udp_port);
+    bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr), sizeof(udp_addr));
+
+    // Register with EventLoop for read events
+    if (loop_) {
+        loop_->add_fd(udp_socket_, EventLoop::Event::Read);
+    }
+
+    // Allocate receive buffer
+    udp_recv_buffer_.resize(kUdpRecvBufferSize);
+
+    // Issue first async recvfrom
+    issue_async_recvfrom();
+}
+
+void UdpRegistrar::start_client_mode_async() {
+    // Create registry populated with static routes
+    client_registry_ = std::make_unique<NodeRegistry>(config_);
+
+    // Populate with static routes
+    for (const auto& route : config_.static_routes) {
+        NodeEndpoint ep;
+        ep.endpoint = route.endpoint;
+        ep.host = route.address;
+        ep.tcp_port = route.port;
+        ep.is_static_route = true;
+        client_registry_->upsert_endpoint(ep);
+    }
+
+    // Use first static route as server if available
+    CommunicationEndpoint server_endpoint;
+    if (!config_.static_routes.empty()) {
+        server_endpoint = config_.static_routes[0].endpoint;
+    }
+
+    // Create UDP socket
+    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
+    if (udp_socket_ >= 0 && loop_) {
+        loop_->add_fd(udp_socket_, EventLoop::Event::Read);
+        udp_recv_buffer_.resize(kUdpRecvBufferSize);
+        issue_async_recvfrom();
+    }
+
+    client_ = std::make_unique<RegistrarClient>(config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
+    client_->start();
+}
+
+void UdpRegistrar::issue_async_recvfrom() {
+    if (udp_socket_ < 0 || !loop_) return;
+
+    // Clear address storage for next recvfrom
+    memset(&udp_src_addr_, 0, sizeof(udp_src_addr_));
+    udp_src_addr_len_ = sizeof(udp_src_addr_);
+}
+
+void UdpRegistrar::handle_udp_read_ready() {
+    if (udp_socket_ < 0 || !loop_) return;
+
+    // Check if UDP socket is readable (edge-triggered)
+    if (!loop_->has_event(udp_socket_, EventLoop::Event::Read)) {
+        return;
+    }
+
+    // Do non-blocking recvfrom
+    char buffer[kUdpRecvBufferSize];
+    struct sockaddr_in src_addr;
+    socklen_t src_addr_len = sizeof(src_addr);
+
+    ssize_t bytes_read = recvfrom(udp_socket_, buffer, sizeof(buffer), 0,
+                                  reinterpret_cast<struct sockaddr*>(&src_addr),
+                                  &src_addr_len);
+
+    if (bytes_read > 0) {
+        bytes data(buffer, buffer + bytes_read);
+        char ip_str[INET_ADDRSTRLEN];
+        std::string from_host;
+        uint16_t from_port = 0;
+
+        if (inet_ntop(AF_INET, &src_addr.sin_addr, ip_str, sizeof(ip_str))) {
+            from_host = ip_str;
+        }
+        from_port = ntohs(src_addr.sin_port);
+
+        handle_udp_recv_completion(data, from_host, from_port);
+    }
+}
+
+void UdpRegistrar::handle_udp_recv_completion(const bytes& data, const std::string& from_host, uint16_t from_port) {
+    // Call the existing handler
+    handle_udp_packet(data, from_host, from_port);
+}
+
+void UdpRegistrar::send_udp_response(const bytes& data, const struct sockaddr_in& dest) {
+    if (udp_socket_ < 0) return;
+
+    if (loop_) {
+        // Use async_sendto for async UDP send
+        struct iovec iov;
+        iov.iov_base = const_cast<uint8_t*>(data.data());
+        iov.iov_len = data.size();
+
+        loop_->backend()->async_sendto(
+            udp_socket_,
+            &iov,
+            1,
+            reinterpret_cast<const sockaddr*>(&dest),
+            sizeof(dest),
+            ActorId(0),
+            static_cast<uint32_t>(OpType::SendTo));
+    } else {
+        // Fallback to blocking sendto
+        sendto(udp_socket_, data.data(), data.size(), 0,
+               reinterpret_cast<const struct sockaddr*>(&dest), sizeof(dest));
+    }
+}
+
 void UdpRegistrar::failover() {
     // Stop current mode
     server_.reset();
@@ -589,48 +719,26 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
 
     switch (type) {
         case RegistrarMessageType::ResolveQuery: {
-            // Query: [TargetNodeIdLen: 4][TargetNodeId: N]
-            if (payload.size() < 4) {
+            // Parse protobuf payload
+            PbResolveQueryPayload msg;
+            if (!parse_resolve_query_payload(payload, msg)) {
                 return;
             }
-            uint32_t target_id_len;
-            memcpy(&target_id_len, payload.data(), 4);
-            target_id_len = ntohl(target_id_len);
 
-            CommunicationEndpoint target_endpoint;
-            if (target_id_len > 0 && payload.size() >= 4 + target_id_len) {
-                std::string endpoint_str(reinterpret_cast<const char*>(payload.data() + 4), target_id_len);
-                target_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
-            }
+            CommunicationEndpoint target_endpoint = endpoint_ops::parse_endpoint(msg.target_endpoint());
 
             // If we have a server, look up the endpoint
             if (server_) {
                 NodeEndpoint* ep = server_->registry()->get(target_endpoint);
                 if (ep) {
-                    // Send ResolveResponse back
-                    // Response format: [Magic: 4][Version: 1][Type: 1][Length: 4][EndpointLen: 4][Endpoint: N][HostLen: 1][Host: N][Port: 2]
-                    std::string endpoint_str = endpoint_ops::to_string(ep->endpoint);
-                    uint32_t node_id_len = static_cast<uint32_t>(endpoint_str.size());
-                    bytes response_payload;
-                    response_payload.resize(4 + node_id_len + 1 + ep->host.size() + 2);
+                    // Send ResolveResponse back using protobuf
+                    PbResolveResponsePayload resp_msg;
+                    resp_msg.mutable_endpoint_info()->set_endpoint(endpoint_ops::to_string(ep->endpoint));
+                    resp_msg.mutable_endpoint_info()->set_host(ep->host);
+                    resp_msg.mutable_endpoint_info()->set_tcp_port(ep->tcp_port);
 
-                    size_t offset = 0;
-                    uint32_t node_id_len_be = htonl(node_id_len);
-                    memcpy(response_payload.data() + offset, &node_id_len_be, 4);
-                    offset += 4;
-
-                    if (node_id_len > 0) {
-                        memcpy(response_payload.data() + offset, endpoint_str.data(), node_id_len);
-                        offset += node_id_len;
-                    }
-
-                    response_payload[offset++] = static_cast<uint8_t>(ep->host.size());
-                    memcpy(response_payload.data() + offset, ep->host.data(), ep->host.size());
-                    offset += ep->host.size();
-
-                    uint16_t port_be = htons(ep->tcp_port);
-                    memcpy(response_payload.data() + offset, &port_be, 2);
-                    offset += 2;
+                    std::string serialized_resp = resp_msg.SerializeAsString();
+                    bytes response_payload(serialized_resp.begin(), serialized_resp.end());
 
                     bytes response;
                     response.resize(RegistrarHeaderSize + response_payload.size());
@@ -660,38 +768,16 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
         }
 
         case RegistrarMessageType::ResolveResponse: {
-            // Response: [NodeIdLen: 4][NodeId: N][HostLen: 1][Host: N][Port: 2]
-            if (payload.size() < 7) {
+            // Parse protobuf payload
+            PbResolveResponsePayload msg;
+            if (!parse_resolve_response_payload(payload, msg)) {
                 return;
             }
 
-            size_t offset = 0;
-            uint32_t node_id_len;
-            memcpy(&node_id_len, payload.data() + offset, 4);
-            node_id_len = ntohl(node_id_len);
-            offset += 4;
-
-            CommunicationEndpoint resp_endpoint;
-            if (node_id_len > 0 && payload.size() >= offset + node_id_len) {
-                std::string endpoint_str(reinterpret_cast<const char*>(payload.data() + offset), node_id_len);
-                resp_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
-                offset += node_id_len;
-            }
-
-            if (payload.size() < offset + 1) {
-                return;
-            }
-            uint8_t host_len = payload[offset++];
-            if (offset + host_len + 2 > payload.size()) {
-                return;
-            }
-
-            std::string host(reinterpret_cast<const char*>(payload.data() + offset), host_len);
-            offset += host_len;
-
-            uint16_t port;
-            memcpy(&port, payload.data() + offset, 2);
-            port = ntohs(port);
+            auto& info = msg.endpoint_info();
+            CommunicationEndpoint resp_endpoint = endpoint_ops::parse_endpoint(info.endpoint());
+            std::string host = info.host();
+            uint16_t port = static_cast<uint16_t>(info.tcp_port());
 
             // Add to server registry if we have one
             if (server_) {

@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/net/registrar.hpp>
+#include <hpactor/net/registrar_serialization.hpp>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -167,69 +168,35 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
                                          const bytes& data) {
     switch (type) {
         case TcpMessageType::Register: {
-            // Parse registration payload
-            size_t offset = 0;
-
-            // Parse endpoint (length-prefixed string)
-            if (data.size() < offset + 4) {
+            PbRegisterPayload msg;
+            if (!msg.ParseFromArray(data.data(), static_cast<int>(data.size()))) {
                 return;
             }
-            uint32_t endpoint_len;
-            memcpy(&endpoint_len, data.data() + offset, 4);
-            endpoint_len = ntohl(endpoint_len);
-            offset += 4;
 
-            CommunicationEndpoint node_endpoint;
-            if (endpoint_len > 0 && data.size() >= offset + endpoint_len) {
-                std::string endpoint_str(reinterpret_cast<const char*>(data.data() + offset),
-                                         endpoint_len);
-                node_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
-                offset += endpoint_len;
-            }
+            const auto& ep_info = msg.endpoint_info();
+            std::string endpoint_str = ep_info.endpoint();
+            CommunicationEndpoint node_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
 
             if (std::holds_alternative<Ipv4Endpoint>(node_endpoint) &&
                 std::get<Ipv4Endpoint>(node_endpoint).is_unspecified()) {
                 return;
             }
 
-            // Parse host
-            if (data.size() < offset + 1) {
-                return;
-            }
-            uint8_t host_len = data[offset++];
-            if (data.size() < offset + host_len) {
-                return;
-            }
-            std::string client_host(reinterpret_cast<const char*>(data.data() + offset),
-                                   host_len);
-            offset += host_len;
+            std::string client_host = ep_info.host();
+            uint16_t client_port = static_cast<uint16_t>(ep_info.tcp_port());
 
-            // Parse tcp_port
-            if (data.size() < offset + 2) {
-                return;
-            }
-            uint16_t client_port;
-            memcpy(&client_port, data.data() + offset, 2);
-            client_port = ntohs(client_port);
-            offset += 2;
-
-            // Parse acceptors (optional)
+            // Acceptors are at top level of PbRegisterPayload (per spec)
             std::vector<AcceptorInfo> client_acceptors;
-            if (data.size() >= offset + 1) {
-                uint8_t acceptor_count = data[offset++];
-                for (uint8_t i = 0; i < acceptor_count && data.size() >= offset + 4; ++i) {
-                    AcceptorInfo acceptor;
-                    memcpy(&acceptor.port, data.data() + offset, 2);
-                    acceptor.port = ntohs(acceptor.port);
-                    offset += 2;
-                    acceptor.handshake_version = data[offset++];
-                    acceptor.protocol_version = data[offset++];
-                    acceptor.tls_required = data[offset++] != 0;
-                    client_acceptors.push_back(acceptor);
-                }
+            for (const auto& a : msg.acceptors()) {
+                AcceptorInfo acceptor;
+                acceptor.port = static_cast<uint16_t>(a.port());
+                acceptor.handshake_version = static_cast<uint8_t>(a.handshake_version());
+                acceptor.protocol_version = static_cast<uint8_t>(a.protocol_version());
+                acceptor.tls_required = a.tls_required();
+                client_acceptors.push_back(acceptor);
             }
 
-            // Update clients map with actual endpoint
+            // Update clients map
             {
                 std::lock_guard<std::mutex> lock(clients_mutex_);
                 clients_.erase(conn->remote_endpoint());
@@ -245,11 +212,11 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
             ep.last_seen = std::chrono::steady_clock::now();
             registry_.upsert_endpoint(ep);
 
-            // Send Accept response
-            bytes accept_payload(1, 0);  // Error code 0 = success
+            // Send Accept response using protobuf
+            bytes accept_payload = serialize_accept_payload(0);
             conn->send_message(TcpMessageType::Accept, accept_payload);
 
-            // Broadcast node joined to other clients
+            // Broadcast node joined
             broadcast_node_joined(node_endpoint, ep);
             break;
         }
@@ -296,31 +263,8 @@ void RegistrarServer::handle_disconnect(RegistrarConnectionPtr conn) {
 
 void RegistrarServer::broadcast_node_joined(CommunicationEndpoint endpoint,
                                             const NodeEndpoint& ep) {
-    // Encode broadcast payload
-    std::string endpoint_str = endpoint_ops::to_string(endpoint);
-    uint32_t endpoint_len = static_cast<uint32_t>(endpoint_str.size());
+    bytes payload = serialize_node_join_payload(ep);
 
-    bytes payload;
-    payload.resize(4 + endpoint_len + 1 + ep.host.size() + 2);
-
-    size_t offset = 0;
-    uint32_t len_be = htonl(endpoint_len);
-    memcpy(payload.data() + offset, &len_be, 4);
-    offset += 4;
-
-    if (endpoint_len > 0) {
-        memcpy(payload.data() + offset, endpoint_str.data(), endpoint_len);
-        offset += endpoint_len;
-    }
-
-    payload[offset++] = static_cast<uint8_t>(ep.host.size());
-    memcpy(payload.data() + offset, ep.host.data(), ep.host.size());
-    offset += ep.host.size();
-
-    uint16_t port_be = htons(ep.tcp_port);
-    memcpy(payload.data() + offset, &port_be, 2);
-
-    // Send to all clients except the joining node
     std::lock_guard<std::mutex> lock(clients_mutex_);
     for (const auto& [id, conn] : clients_) {
         if (id != endpoint) {
@@ -330,21 +274,8 @@ void RegistrarServer::broadcast_node_joined(CommunicationEndpoint endpoint,
 }
 
 void RegistrarServer::broadcast_node_left(CommunicationEndpoint endpoint) {
-    // Encode broadcast payload
-    std::string endpoint_str = endpoint_ops::to_string(endpoint);
-    uint32_t endpoint_len = static_cast<uint32_t>(endpoint_str.size());
+    bytes payload = serialize_node_leave_payload(endpoint);
 
-    bytes payload;
-    payload.resize(4 + endpoint_len);
-
-    uint32_t len_be = htonl(endpoint_len);
-    memcpy(payload.data(), &len_be, 4);
-    size_t offset = 4;
-    if (endpoint_len > 0) {
-        memcpy(payload.data() + offset, endpoint_str.data(), endpoint_len);
-    }
-
-    // Send to all remaining clients
     std::lock_guard<std::mutex> lock(clients_mutex_);
     for (const auto& [id, conn] : clients_) {
         (void)id;

@@ -376,7 +376,19 @@ public:
 private:
     void start_server_mode();
     void start_client_mode();
+    void start_server_mode_async();
+    void start_client_mode_async();
+    void issue_async_recvfrom();
+    void handle_udp_read_ready();
+    void handle_udp_recv_completion(const bytes& data, const std::string& from_host, uint16_t from_port);
+    void send_udp_response(const bytes& data, const struct sockaddr_in& dest);
     void failover();
+
+    // UDP receive state
+    static constexpr size_t kUdpRecvBufferSize = 65536;
+    bytes udp_recv_buffer_;
+    struct sockaddr_in udp_src_addr_;
+    socklen_t udp_src_addr_len_ = sizeof(udp_src_addr_);
 
     RegistrarConfig config_;
     CommunicationEndpoint local_endpoint_;
