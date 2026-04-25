@@ -42,8 +42,15 @@ public:
     // Returns true on success, false on failure
     bool listen(uint16_t port, uint16_t port_range = 0);
 
+    // Start listening on a UNIX domain socket
+    // Returns true on success, false on failure
+    bool listen_unix_domain(const std::string& path);
+
     // Stop listening and close the socket
     void close();
+
+    // Stop listening on UDS socket
+    void close_unix_domain();
 
     // Set handler for accepted connections
     void set_accept_handler(accept_handler handler);
@@ -54,12 +61,16 @@ public:
     // Get the bound port
     uint16_t port() const { return bound_port_; }
 
+    // Get UDS socket path if listening on UDS
+    std::string uds_path() const { return uds_path_; }
+
 private:
     void handle_read();
 
     EventLoop* loop_;
     int listening_fd_ = -1;
     uint16_t bound_port_ = 0;
+    std::string uds_path_;
     accept_handler accept_handler_;
 };
 

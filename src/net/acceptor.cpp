@@ -14,6 +14,7 @@
 
 #include <hpactor/net/acceptor.hpp>
 
+#include <sys/un.h>
 #include <cstring>
 #include <fcntl.h>
 #include <arpa/inet.h>
@@ -84,6 +85,53 @@ bool Acceptor::listen(uint16_t port, uint16_t port_range) {
     }
 
     return true;
+}
+
+bool Acceptor::listen_unix_domain(const std::string& path) {
+    // Remove stale socket file if it exists
+    ::unlink(path.c_str());
+
+    int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        return false;
+    }
+
+    // Set non-blocking
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+    struct sockaddr_un addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    std::strncpy(addr.sun_path, path.c_str(), sizeof(addr.sun_path) - 1);
+
+    if (::bind(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+        ::close(fd);
+        return false;
+    }
+
+    if (::listen(fd, SOMAXCONN) < 0) {
+        ::close(fd);
+        return false;
+    }
+
+    listening_fd_ = fd;
+    bound_port_ = 0;  // UDS has no port
+    uds_path_ = path;
+
+    if (loop_) {
+        loop_->add_fd(fd, EventLoop::Event::Read);
+    }
+
+    return true;
+}
+
+void Acceptor::close_unix_domain() {
+    if (!uds_path_.empty()) {
+        ::unlink(uds_path_.c_str());
+        uds_path_.clear();  // Reset so uds_path() returns empty after close
+    }
+    close();  // Closes the fd and sets listening_fd_ = -1
 }
 
 void Acceptor::close() {
