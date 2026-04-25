@@ -145,7 +145,6 @@ add_library(hpactor_lib STATIC
     src/net/registrar.cpp
     src/net/registrar_server.cpp
     src/net/registrar_client.cpp
-    src/net/registrar_serialization.cpp
     src/sched/scheduler.cpp
     src/sched/worker_thread.cpp
     src/sched/edf_queue.cpp
