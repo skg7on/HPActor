@@ -737,7 +737,8 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                     resp_msg.mutable_endpoint_info()->set_host(ep->host);
                     resp_msg.mutable_endpoint_info()->set_tcp_port(ep->tcp_port);
 
-                    bytes response_payload(resp_msg.SerializeAsString().begin(), resp_msg.SerializeAsString().end());
+                    std::string serialized_resp = resp_msg.SerializeAsString();
+                    bytes response_payload(serialized_resp.begin(), serialized_resp.end());
 
                     bytes response;
                     response.resize(RegistrarHeaderSize + response_payload.size());
