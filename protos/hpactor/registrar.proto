@@ -1,0 +1,72 @@
+// protos/hpactor/registrar.proto
+syntax = "proto3";
+
+package hpactor;
+
+option optimize_for = SPEED;
+
+// -----------------------------------------------------------------------------
+// Common Types
+// -----------------------------------------------------------------------------
+
+message PbEndpointInfo {
+    string endpoint = 1;  // Serialized CommunicationEndpoint (e.g., "127.0.0.1:5353")
+    string host = 2;
+    uint32 tcp_port = 3;
+}
+
+message PbAcceptorInfo {
+    uint32 port = 1;
+    uint32 handshake_version = 2;
+    uint32 protocol_version = 3;
+    bool tls_required = 4;
+}
+
+// -----------------------------------------------------------------------------
+// TCP Messages (RegistrarConnection protocol)
+// -----------------------------------------------------------------------------
+
+// TCP Register message payload
+message PbRegisterPayload {
+    PbEndpointInfo endpoint_info = 1;
+    repeated PbAcceptorInfo acceptors = 2;
+}
+
+// TCP Accept response payload
+message PbAcceptPayload {
+    uint32 error_code = 1;  // 0 = success
+}
+
+// TCP Heartbeat has no payload (empty message)
+message PbHeartbeatPayload {
+}
+
+// TCP NodeJoin broadcast payload
+message PbNodeJoinPayload {
+    PbEndpointInfo endpoint_info = 1;
+}
+
+// TCP NodeLeave broadcast payload
+message PbNodeLeavePayload {
+    string endpoint = 1;  // Serialized CommunicationEndpoint
+}
+
+// TCP Error response payload
+message PbErrorPayload {
+    uint32 error_code = 1;
+    string message = 2;
+}
+
+// -----------------------------------------------------------------------------
+// UDP Messages (UdpRegistrar protocol)
+// -----------------------------------------------------------------------------
+
+// UDP ResolveQuery message payload
+message PbResolveQueryPayload {
+    string target_endpoint = 1;  // Serialized CommunicationEndpoint
+}
+
+// UDP ResolveResponse message payload
+message PbResolveResponsePayload {
+    PbEndpointInfo endpoint_info = 1;
+}
