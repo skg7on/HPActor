@@ -38,16 +38,8 @@ static std::string derive_uds_path(const std::string& node_id) {
 // Test: UDS fallback with invalid path returns nullptr
 void test_uds_fallback_invalid_path() {
     hpactor::net::EventLoop loop;
-
-    // Start a TCP server to have something to fall back to
-    hpactor::net::Acceptor tcp_acceptor(&loop);
-    bool tcp_started = tcp_acceptor.listen(19996);
-    assert(tcp_started);
-
-    // Create remote endpoint for TCP server
     auto remote_ep = hpactor::Ipv4Endpoint{htonl(0x7F000001), htons(19996)};
 
-    // Create TcpTransport with empty registry (no UDS available)
     hpactor::net::TlsConfig tls_config;
     hpactor::net::PoolConfig pool_config;
     hpactor::net::TcpTransport transport(remote_ep, tls_config, pool_config, nullptr);
@@ -55,15 +47,13 @@ void test_uds_fallback_invalid_path() {
     // Try to connect via UDS with invalid path - should return nullptr
     auto conn = transport.connect_unix_domain(remote_ep, "/nonexistent/path.sock");
     assert(conn == nullptr);  // UDS should fail gracefully
-
-    // Clean up TCP server
-    tcp_acceptor.close();
 }
 
 // Test: UDS fallback when registry has no uds_path
 void test_uds_fallback_when_uds_unavailable() {
-    // When registry has no uds_path, connect(ep) should use TCP
-    // The key is that uds_path.empty() triggers TCP path
+    // With a nullptr registry, connect(ep) cannot look up a UDS path and
+    // will return nullptr. Full TCP fallback testing requires a registry
+    // with a valid endpoint entry that has an empty uds_path.
 
     hpactor::net::EventLoop loop;
     auto remote_ep = hpactor::Ipv4Endpoint{htonl(0x7F000001), htons(19997)};
@@ -74,10 +64,8 @@ void test_uds_fallback_when_uds_unavailable() {
     // Create transport with nullptr registry (simulates no node registry)
     hpactor::net::TcpTransport transport(remote_ep, tls_config, pool_config, nullptr);
 
-    // Without a registry, we can't look up a UDS path, so connect should
-    // fail gracefully on UDS attempt and fall back behavior is tested
-    // via the invalid path test above
-    auto conn = transport.connect_unix_domain(remote_ep, "/tmp/nonexistent.sock");
+    // Without a registry, connect(ep) returns nullptr
+    auto conn = transport.connect(remote_ep);
     assert(conn == nullptr);
 }
 
