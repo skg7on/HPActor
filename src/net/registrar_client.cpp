@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/net/registrar.hpp>
+#include <hpactor/net/registrar_serialization.hpp>
 
 #include <arpa/inet.h>
 #include <sys/socket.h>
@@ -234,51 +235,18 @@ void RegistrarClient::send_registration() {
         return;
     }
 
-    // Build registration message
-    // Payload format: [Endpoint: 4][HostLen: 1][Host: N][TcpPort: 2][AcceptorCount: 1][Acceptors: ...]
+    // Build registration message using protobuf
     std::string host = get_local_ip();
     uint16_t tcp_port = config_.tcp_port;
 
-    // Calculate payload size
-    std::string endpoint_str = endpoint_ops::to_string(local_endpoint_);
-    uint32_t node_id_len = static_cast<uint32_t>(endpoint_str.size());
-    // Each acceptor: Port(2) + HandshakeVer(1) + ProtocolVer(1) + TlsRequired(1) = 5 bytes
-    size_t payload_size = 4 + node_id_len + 1 + host.size() + 2 + 1;  // EndpointLen + Endpoint + HostLen + Host + TcpPort + AcceptorCount
-    payload_size += acceptors_.size() * 5;  // Each acceptor: 5 bytes
+    // Create NodeEndpoint for serialization
+    NodeEndpoint ep;
+    ep.endpoint = local_endpoint_;
+    ep.host = host;
+    ep.tcp_port = tcp_port;
+    ep.acceptors = acceptors_;
 
-    bytes payload;
-    payload.resize(payload_size);
-
-    size_t offset = 0;
-    uint32_t node_id_len_be = htonl(node_id_len);
-    memcpy(payload.data() + offset, &node_id_len_be, 4);
-    offset += 4;
-
-    if (node_id_len > 0) {
-        memcpy(payload.data() + offset, endpoint_str.data(), node_id_len);
-        offset += node_id_len;
-    }
-
-    payload[offset++] = static_cast<uint8_t>(host.size());
-    memcpy(payload.data() + offset, host.data(), host.size());
-    offset += host.size();
-
-    uint16_t port_be = htons(tcp_port);
-    memcpy(payload.data() + offset, &port_be, 2);
-    offset += 2;
-
-    // Serialize acceptors
-    payload[offset++] = static_cast<uint8_t>(acceptors_.size());
-    for (const auto& acceptor : acceptors_) {
-        uint16_t acc_port_be = htons(acceptor.port);
-        memcpy(payload.data() + offset, &acc_port_be, 2);
-        offset += 2;
-
-        payload[offset++] = acceptor.handshake_version;
-        payload[offset++] = acceptor.protocol_version;
-        payload[offset++] = acceptor.tls_required ? 1 : 0;
-    }
-
+    bytes payload = serialize_register_payload(ep);
     server_connection_->send_message(TcpMessageType::Register, payload);
 }
 
@@ -298,85 +266,36 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const bytes& da
         }
 
         case TcpMessageType::NodeJoin: {
-            // Another node joined - update registry
-            // Payload format: [EndpointLen: 4][Endpoint: N][HostLen: 1][Host: N][Port: 2][AcceptorCount: 1][Acceptors...]
-            size_t offset = 0;
-
-            if (data.size() < 5) break;  // Need at least endpoint len + host len + port
-
-            uint32_t endpoint_len;
-            memcpy(&endpoint_len, data.data() + offset, 4);
-            endpoint_len = ntohl(endpoint_len);
-            offset += 4;
-
-            if (data.size() < offset + endpoint_len + 1 + 2) break;
-
-            CommunicationEndpoint endpoint;
-            if (endpoint_len > 0) {
-                std::string endpoint_str(reinterpret_cast<const char*>(data.data() + offset), endpoint_len);
-                endpoint = endpoint_ops::parse_endpoint(endpoint_str);
-                offset += endpoint_len;
+            PbNodeJoinPayload msg;
+            if (!msg.ParseFromArray(data.data(), static_cast<int>(data.size()))) {
+                break;
             }
 
-            uint8_t host_len = data[offset++];
+            const auto& ep_info = msg.endpoint_info();
+            std::string endpoint_str = ep_info.endpoint();
+            CommunicationEndpoint endpoint = endpoint_ops::parse_endpoint(endpoint_str);
 
-            if (data.size() < offset + host_len + 2) break;
+            std::string host = ep_info.host();
+            uint16_t tcp_port = static_cast<uint16_t>(ep_info.tcp_port());
 
-            std::string host(reinterpret_cast<const char*>(data.data() + offset), host_len);
-            offset += host_len;
-
-            uint16_t tcp_port;
-            memcpy(&tcp_port, data.data() + offset, 2);
-            tcp_port = ntohs(tcp_port);
-            offset += 2;
-
-            // Parse acceptors
-            if (data.size() < offset + 1) break;
-            uint8_t acceptor_count = data[offset++];
-
-            std::vector<AcceptorInfo> acceptors;
-            for (uint8_t i = 0; i < acceptor_count && offset + 5 <= data.size(); ++i) {
-                AcceptorInfo info;
-                memcpy(&info.port, data.data() + offset, 2);
-                info.port = ntohs(info.port);
-                offset += 2;
-
-                info.handshake_version = data[offset++];
-                info.protocol_version = data[offset++];
-                info.tls_required = data[offset++] != 0;
-                acceptors.push_back(info);
-            }
-
-            // Add to shared registry
             NodeEndpoint node_ep;
             node_ep.endpoint = endpoint;
             node_ep.host = host;
             node_ep.tcp_port = tcp_port;
-            node_ep.acceptors = std::move(acceptors);
             node_ep.last_seen = std::chrono::steady_clock::now();
             shared_registry_->upsert_endpoint(node_ep);
             break;
         }
 
         case TcpMessageType::NodeLeave: {
-            // Node left - remove from registry
-            // Payload format: [EndpointLen: 4][Endpoint: N]
-            size_t offset = 0;
-
-            if (data.size() < 4) break;
-
-            uint32_t endpoint_len;
-            memcpy(&endpoint_len, data.data() + offset, 4);
-            endpoint_len = ntohl(endpoint_len);
-            offset += 4;
-
-            if (data.size() < offset + endpoint_len) break;
-
-            if (endpoint_len > 0) {
-                std::string endpoint_str(reinterpret_cast<const char*>(data.data() + offset), endpoint_len);
-                CommunicationEndpoint endpoint = endpoint_ops::parse_endpoint(endpoint_str);
-                shared_registry_->remove_endpoint(endpoint);
+            PbNodeLeavePayload msg;
+            if (!msg.ParseFromArray(data.data(), static_cast<int>(data.size()))) {
+                break;
             }
+
+            std::string endpoint_str = msg.endpoint();
+            CommunicationEndpoint endpoint = endpoint_ops::parse_endpoint(endpoint_str);
+            shared_registry_->remove_endpoint(endpoint);
             break;
         }
 
