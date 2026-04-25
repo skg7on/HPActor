@@ -424,26 +424,12 @@ public:
     bool is_connected() const { return connected_.load(); }
 
 private:
-    void connection_loop();
-    void heartbeat_loop();
+    void attempt_connection();
     void send_registration();
-    void send_heartbeat();
 
-    // TCP connection to server
-    bool connect_to_server();
-    void disconnect_from_server();
-
-    // Resolve node via UDP query to server
-    NodeEndpoint* resolve_node(CommunicationEndpoint endpoint);
-
-    // Failover: try to become server or find new server
-    void failover();
-
-    // Handle connection loss (called on disconnect detection)
-    void handle_connection_lost();
-
-    // Find server via UDP broadcast
-    void find_server_via_broadcast();
+    // Handle server messages
+    void handle_server_message(TcpMessageType type, const bytes& data);
+    void handle_disconnect();
 
     RegistrarConfig config_;
     CommunicationEndpoint local_endpoint_;
@@ -451,16 +437,11 @@ private:
     NodeRegistry* shared_registry_;  // Not owned
     EventLoop* loop_ = nullptr;
 
-    int tcp_socket_ = -1;
-    int udp_socket_ = -1;
+    RegistrarConnectionPtr server_connection_;
     std::atomic<bool> running_{false};
     std::atomic<bool> connected_{false};
 
-    std::thread connection_thread_;
-    std::thread heartbeat_thread_;
-
-    // Timer handles for EventLoop-based timers
-    uint64_t connection_timer_ = 0;
+    // Timer handles
     uint64_t heartbeat_timer_ = 0;
 
     // For heartbeat tracking
