@@ -333,6 +333,12 @@ private:
     std::unordered_map<CommunicationEndpoint, int> clients_;
     std::mutex clients_mutex_;
 
+    // Static map for completion routing (set once, used by all connections)
+    static std::unordered_map<int, RegistrarConnectionPtr>& connection_map() {
+        static std::unordered_map<int, RegistrarConnectionPtr> map;
+        return map;
+    }
+
     std::thread accept_thread_;
 };
 
