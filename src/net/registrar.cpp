@@ -14,6 +14,7 @@
 
 #include <hpactor/net/registrar.hpp>
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
