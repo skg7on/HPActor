@@ -49,6 +49,17 @@ AbstractActor (interface base)
 | `ConnectionPool` | Dynamic pooling with exponential backoff |
 | `Registrar` | UDP discovery + TCP registration with heartbeat |
 | `HostResolver` | DNS resolution with caching |
+| `RpcChannel` | Async RPC with at-least-once delivery and retry |
+| `WireFrame` | Protobuf-serialized network frame (IPv4/IPv6) |
+
+### Protobuf Serialization
+
+| Component | Purpose |
+|-----------|---------|
+| `common.proto` | Shared endpoint types (ActorEndpoint, ActorAddress) |
+| `frame.proto` | WireFrame transport format |
+| `messages.proto` | System message types (Down, Exit, Link, Unlink, Spawn) |
+| `DefaultSerializer` | Protobuf-based encode/decode for all message types |
 
 ### Key Components
 
@@ -86,7 +97,7 @@ co_await mailbox_awaiter;     // suspend until message arrives
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (44 tests)
+# Run tests (51 tests)
 ctest --output-on-failure
 
 # Run a single test
@@ -103,9 +114,31 @@ ctest --output-on-failure
 
 ## Design Constraints
 
-- C++20 only (no exceptions, no RTTI)
-- LLVM coding standards
-- No external dependencies (except OpenSSL for TLS)
+These constraints are not arbitrary — each enables a specific architectural property:
+
+### No exceptions in hot path
+Actor message handling is on the critical path. Throwing exceptions would impose try/catch overhead on every message dispatch. Instead, errors use `error` codes (returned via `result<T>`) and are handled through the supervision hierarchy. This keeps message dispatch predictable and allocation-free.
+
+### No RTTI — TypeTag replaces it
+Distributed actors cannot rely on C++ RTTI since actor instances cross process boundaries. A `TypeTag` enum (0-99 for system messages, 100+ for user types) identifies message types for serialization dispatch. This is also faster than `dynamic_cast` and works across the network.
+
+### C++20 coroutines for actor suspend/resume
+Actors spend most of their time waiting for messages or I/O. C++20 stackless coroutines allow actors to suspend without a full thread stack — thousands of actors can be multiplexed onto a small thread pool. This is the foundation of million-level concurrency.
+
+### Header-only types, linked runtime
+Actor types, behaviors, and message definitions are header-only templates — zero overhead, inlined by the compiler. The actor runtime (scheduler, event loop, connection pool) is compiled into a shared library. This separation means actors pay no abstraction cost while the runtime can evolve independently.
+
+### constexpr ActorId initialization
+`ActorId` has a `constexpr` constructor enabling constant initialization of well-known actor IDs (e.g., `SpawnReceiverId`). This avoids static initialization order problems and makes test fixtures simpler.
+
+### Lock-free mailbox earned through testing
+The mailbox uses a Vyukov MPSC queue with an edge-trigger `CAS` wakeup mechanism. This was designed through iterative testing rather than upfront theory — the "swap-in mailbox interface" means the implementation can be replaced if the lock-free approach proves problematic on new hardware.
+
+### No external dependencies except OpenSSL
+TLS is the only external dependency. All other functionality (event loops, schedulers, actors, serialization) is self-contained. This reduces attack surface, simplifies distribution, and eliminates dependency version conflicts.
+
+### LLVM coding standards
+The codebase uses LLVM style (`clang-format`) with strict warnings (`-Wall -Wextra -Wpedantic`). This ensures the code is clean, portable, and compatible with the clang toolchain used for development.
 
 ## Project Structure
 
@@ -119,16 +152,22 @@ include/hpactor/
 ├── sched/        — HybridScheduler, work queues, timing wheel, coroutines
 ├── spawn/        — AsyncActor for non-blocking spawn
 ├── supervision/  — OneForOne, AllForOne supervisors
-└── types/        — Type system, serialization
+└── types/        — Type system, protobuf serialization
 
 src/
 ├── actor/        — ActorSystem, EventBasedActor, spawn receiver
+├── core/         — serialization.cpp (protobuf-based)
 ├── net/          — EventLoop, TcpTransport, TLS, connection pool
 ├── ref/          — ActorRef, ActorProxy implementations
 └── sched/        — HybridScheduler, timing wheel, EDF queue
 
-tests/            — 44 unit tests (actor, core, mailbox, net, sched, spawn)
-examples/         — 6 API usage examples
+protos/hpactor/
+├── common.proto  — Shared endpoint types
+├── frame.proto   — WireFrame transport format
+└── messages.proto — System message types
+
+tests/            — 51 unit tests (actor, core, mailbox, net, sched, spawn)
+examples/         — 5 API usage examples
 ```
 
 ## Status
@@ -141,3 +180,4 @@ examples/         — 6 API usage examples
 - Mailbox: MPSCMailbox (Vyukov), MPSCActorMailbox (edge-trigger)
 - Network: TLS 1.3, connection pooling, registrar-based service discovery
 - Remote spawn: AsyncActor with spawn_remote()
+- Serialization: Protobuf-based for all system messages (WireFrame, Down, Exit, Link, Unlink, Spawn)
