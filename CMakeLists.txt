@@ -160,6 +160,7 @@ include(${CMAKE_SOURCE_DIR}/cmake/protobuf.cmake)
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/frame.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/common.proto
+    ${CMAKE_SOURCE_DIR}/protos/hpactor/messages.proto
 )
 add_library(hpactor_proto STATIC ${PROTO_SRCS} ${PROTO_HDRS})
 target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf)
