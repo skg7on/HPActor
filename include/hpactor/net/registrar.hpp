@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/types/types.hpp>
 #include <hpactor/ref/actor_address.hpp>
@@ -215,6 +216,8 @@ using RegistrarConnectionPtr = std::shared_ptr<RegistrarConnection>;
 
 // RegistrarConnection - async TCP connection for registrar protocol
 class RegistrarConnection : public std::enable_shared_from_this<RegistrarConnection> {
+    friend class RegistrarServer;
+
 public:
     using message_handler = std::function<void(TcpMessageType, const bytes&)>;
     using disconnect_handler = std::function<void()>;
@@ -307,39 +310,33 @@ public:
     void set_event_loop(EventLoop* loop) { loop_ = loop; }
 
     // Handle incoming TCP connection
-    void handle_accept(int client_fd);
+    void handle_accept(int client_fd, CommunicationEndpoint remote_endpoint);
 
     // Broadcast event to all connected clients
     void broadcast_node_joined(CommunicationEndpoint endpoint, const NodeEndpoint& ep);
     void broadcast_node_left(CommunicationEndpoint endpoint);
 
 private:
-    void accept_loop();
-    void handle_tcp_message(int client_fd, TcpMessageType type, const bytes& data);
-
-    // Send TCP response to client
-    void send_tcp_response(int client_fd, TcpMessageType type, const bytes& payload);
+    void handle_tcp_message(RegistrarConnectionPtr conn, TcpMessageType type, const bytes& data);
+    void handle_disconnect(RegistrarConnectionPtr conn);
 
     RegistrarConfig config_;
     [[maybe_unused]] CommunicationEndpoint local_endpoint_;
     NodeRegistry registry_;
     EventLoop* loop_ = nullptr;
+    Acceptor acceptor_;
 
-    int tcp_socket_ = -1;
     int udp_socket_ = -1;
     std::atomic<bool> running_{false};
 
-    // Connected clients (endpoint -> fd)
-    std::unordered_map<CommunicationEndpoint, int> clients_;
+    // Connected clients (endpoint -> connection)
+    std::unordered_map<CommunicationEndpoint, RegistrarConnectionPtr> clients_;
+    // fd -> connection map for completion routing
+    std::unordered_map<int, RegistrarConnectionPtr> fd_to_connection_;
     std::mutex clients_mutex_;
 
-    // Static map for completion routing (set once, used by all connections)
-    static std::unordered_map<int, RegistrarConnectionPtr>& connection_map() {
-        static std::unordered_map<int, RegistrarConnectionPtr> map;
-        return map;
-    }
-
-    std::thread accept_thread_;
+    // Event processing thread
+    std::thread event_thread_;
 };
 
 // -----------------------------------------------------------------------------
