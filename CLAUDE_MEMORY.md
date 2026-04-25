@@ -22,7 +22,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - ActorMailbox integration
 - Supervision: OneForOne, AllForOne, supervisor_actor, self_supervising_actor
 
-**Network Layer:** ✅ Complete (Phase 4-5, optional TLS 2026-04-22, comm-endpoint refactor 2026-04-23)
+**Network Layer:** ✅ Complete (Phase 4-5, optional TLS 2026-04-22, comm-endpoint refactor 2026-04-23, registrar protobuf 2026-04-25)
 - TlsContext — certificate loading, RSA signing, pre-master secret decryption
 - TlsConnection — TLS state machine, AES-256-CBC encryption, inherits from Connection
 - PlainConnection — raw TCP socket without TLS, 4-byte length-prefixed framing
@@ -37,6 +37,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - RegistrarServer — TCP server for node registration, heartbeat, broadcasts
 - RegistrarClient — TCP client with failover, local IP detection, AcceptorInfo
 - **UNIX Domain Socket Support (2026-04-25)** — `listen_unix_domain()` in Acceptor, `connect_unix_domain()` in TcpTransport, registry-driven UDS path lookup with TCP fallback, UDS path derivation utility with `/tmp/hpactor/<node_id>.sock` convention
+- **Registrar Protobuf Serialization (2026-04-25)** — `registrar.proto` with PbRegisterPayload, PbAcceptPayload, PbNodeJoinPayload, PbNodeLeavePayload, PbErrorPayload, PbResolveQueryPayload, PbResolveResponsePayload; `registrar_serialization.hpp` with to_proto/parse helpers; RegistrarServer/RegistrarClient updated to use protobuf instead of manual byte serialization
+- **Async UDP (2026-04-25)** — OpCompletion extended with src_addr/src_addr_len for UDP recvfrom; UdpRegistrar async UDP via EventLoop edge-triggered polling and async_sendto
 
 **CommunicationEndpoint Refactor** ✅ Complete (2026-04-23, 50 tests passing)
 - NodeId (string "host:port") replaced with CommunicationEndpoint (std::variant<Ipv4Endpoint, Ipv6Endpoint>)
@@ -90,7 +92,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue), includes cyclic queue fix when returning last element
 - `execute_actor()` dispatch layer for coroutine resumption with state transitions
 
-**Tests:** ✅ 54 tests passing
+**Tests:** ✅ 55 tests passing
 - Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 - UDS: test_unix_domain_socket (path derivation, acceptor, fallback), test_uds_integration (connect and data flow)
 
@@ -110,6 +112,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Plan: `docs/superpowers/plans/2026-04-22-optional-tls-plaintext-connection.md`
 - Spec: `docs/superpowers/specs/2026-04-25-unix-domain-socket-support-design.md`
 - Plan: `docs/superpowers/plans/2026-04-25-unix-domain-socket-support-impl.md`
+- Spec: `docs/superpowers/specs/2026-04-25-registrar-protobuf-async-udp-design.md` (registrar protobuf + async UDP)
+- Plan: `docs/superpowers/plans/2026-04-25-registrar-protobuf-async-udp-plan.md`
 
 ## Key Decisions
 
