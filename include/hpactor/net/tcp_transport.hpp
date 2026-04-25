@@ -74,6 +74,10 @@ private:
     void register_connection(ConnectionPtr conn, int fd);
     void unregister_connection(int fd);
 
+    // Derive UDS socket path from node identifier string
+    // /tmp/hpactor/<sanitized_node_id>.sock
+    std::string derive_uds_path(const std::string& node_id) const;
+
     CommunicationEndpoint endpoint_;
     EventLoop loop_;
     Acceptor acceptor_;

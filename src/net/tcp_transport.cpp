@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -40,6 +41,10 @@ TcpTransport::TcpTransport(CommunicationEndpoint endpoint,
       tls_context_(TlsContext::from_config(tls_config)),
       pool_config_(pool_config),
       registry_(registry) {
+    // Ensure UDS directory exists
+    std::string uds_dir = "/tmp/hpactor";
+    ::mkdir(uds_dir.c_str(), 0755);  // Ignore error if exists
+
     // Set up completion callback to route send completions to TlsConnection
     completion_callback_ = [this](OpCompletion c) {
         if (c.type == OpType::Send) {
@@ -270,6 +275,15 @@ void TcpTransport::handle_accept(int client_fd, CommunicationEndpoint remote_end
         conn = PlainConnection::create_server(client_fd, remote_endpoint, &loop_);
     }
     register_connection(conn, client_fd);
+}
+
+std::string TcpTransport::derive_uds_path(const std::string& node_id) const {
+    // Sanitize node_id: replace colons with underscores
+    std::string sanitized = node_id;
+    for (char& c : sanitized) {
+        if (c == ':') c = '_';
+    }
+    return "/tmp/hpactor/" + sanitized + ".sock";
 }
 
 } // namespace net
