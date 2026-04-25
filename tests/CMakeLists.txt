@@ -135,6 +135,10 @@ add_executable(test_registrar_connection net/test_registrar_connection.cpp)
 target_link_libraries(test_registrar_connection hpactor)
 add_test(NAME test_registrar_connection COMMAND test_registrar_connection)
 
+add_executable(test_registrar_serialization net/test_registrar_serialization.cpp)
+target_link_libraries(test_registrar_serialization hpactor_lib hpactor_proto pthread)
+add_test(NAME test_registrar_serialization COMMAND test_registrar_serialization)
+
 add_executable(test_unix_domain_socket net/test_unix_domain_socket.cpp)
 target_link_libraries(test_unix_domain_socket hpactor)
 add_test(NAME test_unix_domain_socket COMMAND test_unix_domain_socket)

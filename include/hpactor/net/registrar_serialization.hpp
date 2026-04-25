@@ -33,7 +33,8 @@ inline PbRegisterPayload to_proto_register(const NodeEndpoint& ep) {
 
 inline bytes serialize_register_payload(const NodeEndpoint& ep) {
     PbRegisterPayload msg = to_proto_register(ep);
-    return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
+    std::string serialized = msg.SerializeAsString();
+    return bytes(serialized.begin(), serialized.end());
 }
 
 inline bool parse_register_payload(const bytes& data, PbRegisterPayload& msg) {
@@ -49,7 +50,8 @@ inline PbAcceptPayload to_proto_accept(uint8_t error_code) {
 
 inline bytes serialize_accept_payload(uint8_t error_code) {
     PbAcceptPayload msg = to_proto_accept(error_code);
-    return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
+    std::string serialized = msg.SerializeAsString();
+    return bytes(serialized.begin(), serialized.end());
 }
 
 inline bool parse_accept_payload(const bytes& data, PbAcceptPayload& msg) {
@@ -67,7 +69,8 @@ inline PbNodeJoinPayload to_proto_node_join(const NodeEndpoint& ep) {
 
 inline bytes serialize_node_join_payload(const NodeEndpoint& ep) {
     PbNodeJoinPayload msg = to_proto_node_join(ep);
-    return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
+    std::string serialized = msg.SerializeAsString();
+    return bytes(serialized.begin(), serialized.end());
 }
 
 inline bool parse_node_join_payload(const bytes& data, PbNodeJoinPayload& msg) {
@@ -83,7 +86,8 @@ inline PbNodeLeavePayload to_proto_node_leave(const CommunicationEndpoint& ep) {
 
 inline bytes serialize_node_leave_payload(const CommunicationEndpoint& ep) {
     PbNodeLeavePayload msg = to_proto_node_leave(ep);
-    return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
+    std::string serialized = msg.SerializeAsString();
+    return bytes(serialized.begin(), serialized.end());
 }
 
 inline bool parse_node_leave_payload(const bytes& data, PbNodeLeavePayload& msg) {
@@ -100,7 +104,8 @@ inline PbErrorPayload to_proto_error(uint8_t code, const std::string& msg) {
 
 inline bytes serialize_error_payload(uint8_t code, const std::string& msg) {
     PbErrorPayload pb = to_proto_error(code, msg);
-    return bytes(pb.SerializeAsString().begin(), pb.SerializeAsString().end());
+    std::string serialized = pb.SerializeAsString();
+    return bytes(serialized.begin(), serialized.end());
 }
 
 // -----------------------------------------------------------------------------
@@ -116,7 +121,8 @@ inline PbResolveQueryPayload to_proto_resolve_query(const CommunicationEndpoint&
 
 inline bytes serialize_resolve_query_payload(const CommunicationEndpoint& ep) {
     PbResolveQueryPayload msg = to_proto_resolve_query(ep);
-    return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
+    std::string serialized = msg.SerializeAsString();
+    return bytes(serialized.begin(), serialized.end());
 }
 
 inline bool parse_resolve_query_payload(const bytes& data, PbResolveQueryPayload& msg) {
@@ -134,7 +140,8 @@ inline PbResolveResponsePayload to_proto_resolve_response(const NodeEndpoint& ep
 
 inline bytes serialize_resolve_response_payload(const NodeEndpoint& ep) {
     PbResolveResponsePayload msg = to_proto_resolve_response(ep);
-    return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
+    std::string serialized = msg.SerializeAsString();
+    return bytes(serialized.begin(), serialized.end());
 }
 
 inline bool parse_resolve_response_payload(const bytes& data, PbResolveResponsePayload& msg) {
