@@ -209,6 +209,80 @@ class RegistrarServer;
 class RegistrarClient;
 class NodeRegistry;
 
+// Forward declaration
+class RegistrarConnection;
+using RegistrarConnectionPtr = std::shared_ptr<RegistrarConnection>;
+
+// RegistrarConnection - async TCP connection for registrar protocol
+class RegistrarConnection : public std::enable_shared_from_this<RegistrarConnection> {
+public:
+    using message_handler = std::function<void(TcpMessageType, const bytes&)>;
+    using disconnect_handler = std::function<void()>;
+    using send_complete_handler = std::function<void(int result)>;
+
+    // Create from accepted server socket
+    static RegistrarConnectionPtr accepted(int fd,
+                                          CommunicationEndpoint remote_endpoint,
+                                          EventLoop* loop);
+
+    // Create as client connection
+    static RegistrarConnectionPtr connecting(int fd,
+                                           CommunicationEndpoint remote_endpoint,
+                                           EventLoop* loop);
+
+    ~RegistrarConnection();
+
+    // Set handlers
+    void set_message_handler(message_handler h);
+    void set_disconnect_handler(disconnect_handler h);
+    void set_send_complete_handler(send_complete_handler h);
+
+    // Send registrar message
+    void send_message(TcpMessageType type, const bytes& payload);
+
+    // Close connection
+    void close();
+
+    // Get remote endpoint
+    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
+
+    // Get fd
+    int fd() const { return fd_; }
+
+private:
+    enum class ReadState {
+        ReadingHeader,
+        ReadingPayload
+    };
+
+    RegistrarConnection(CommunicationEndpoint remote_endpoint, EventLoop* loop, int fd);
+
+    void register_with_loop();
+    void handle_read_event();
+    void handle_payload_read();
+    void flush_write_buffer();
+    void handle_send_completion(int result);
+
+    CommunicationEndpoint remote_endpoint_;
+    EventLoop* loop_ = nullptr;
+    int fd_ = -1;
+
+    ReadState read_state_ = ReadState::ReadingHeader;
+    size_t header_bytes_read_ = 0;
+    bytes header_buffer_;
+
+    TcpMessageType current_type_ = TcpMessageType::Register;
+    size_t payload_bytes_read_ = 0;
+    bytes payload_buffer_;
+
+    bytes write_buffer_;
+    bool is_sending_ = false;
+
+    message_handler message_handler_;
+    disconnect_handler disconnect_handler_;
+    send_complete_handler send_complete_handler_;
+};
+
 // -----------------------------------------------------------------------------
 // RegistrarServer - TCP-based authoritative registrar
 // -----------------------------------------------------------------------------
