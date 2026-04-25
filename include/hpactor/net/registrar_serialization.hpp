@@ -1,9 +1,9 @@
-// src/net/registrar_serialization.hpp
+// include/hpactor/net/registrar_serialization.hpp
 #pragma once
 
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/types/types.hpp>
-#include <hpactor/net/registrar.pb.h>
+#include <hpactor/registrar.pb.h>
 
 #include <string>
 #include <vector>
@@ -36,10 +36,8 @@ inline bytes serialize_register_payload(const NodeEndpoint& ep) {
     return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
 }
 
-inline PbRegisterPayload parse_register_payload(const bytes& data) {
-    PbRegisterPayload msg;
-    msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
-    return msg;
+inline bool parse_register_payload(const bytes& data, PbRegisterPayload& msg) {
+    return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
 // PbAcceptPayload
@@ -54,10 +52,8 @@ inline bytes serialize_accept_payload(uint8_t error_code) {
     return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
 }
 
-inline PbAcceptPayload parse_accept_payload(const bytes& data) {
-    PbAcceptPayload msg;
-    msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
-    return msg;
+inline bool parse_accept_payload(const bytes& data, PbAcceptPayload& msg) {
+    return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
 // PbNodeJoinPayload
@@ -74,10 +70,8 @@ inline bytes serialize_node_join_payload(const NodeEndpoint& ep) {
     return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
 }
 
-inline PbNodeJoinPayload parse_node_join_payload(const bytes& data) {
-    PbNodeJoinPayload msg;
-    msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
-    return msg;
+inline bool parse_node_join_payload(const bytes& data, PbNodeJoinPayload& msg) {
+    return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
 // PbNodeLeavePayload
@@ -92,10 +86,8 @@ inline bytes serialize_node_leave_payload(const CommunicationEndpoint& ep) {
     return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
 }
 
-inline PbNodeLeavePayload parse_node_leave_payload(const bytes& data) {
-    PbNodeLeavePayload msg;
-    msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
-    return msg;
+inline bool parse_node_leave_payload(const bytes& data, PbNodeLeavePayload& msg) {
+    return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
 // PbErrorPayload
@@ -127,10 +119,8 @@ inline bytes serialize_resolve_query_payload(const CommunicationEndpoint& ep) {
     return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
 }
 
-inline PbResolveQueryPayload parse_resolve_query_payload(const bytes& data) {
-    PbResolveQueryPayload msg;
-    msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
-    return msg;
+inline bool parse_resolve_query_payload(const bytes& data, PbResolveQueryPayload& msg) {
+    return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
 // PbResolveResponsePayload
@@ -147,10 +137,8 @@ inline bytes serialize_resolve_response_payload(const NodeEndpoint& ep) {
     return bytes(msg.SerializeAsString().begin(), msg.SerializeAsString().end());
 }
 
-inline PbResolveResponsePayload parse_resolve_response_payload(const bytes& data) {
-    PbResolveResponsePayload msg;
-    msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
-    return msg;
+inline bool parse_resolve_response_payload(const bytes& data, PbResolveResponsePayload& msg) {
+    return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
 } // namespace net
