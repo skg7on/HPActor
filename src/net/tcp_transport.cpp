@@ -157,6 +157,11 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint) {
         return nullptr;  // Unknown node
     }
 
+    // Check if UDS path is available for this endpoint
+    if (!ep->uds_path.empty()) {
+        return connect_unix_domain(remote_endpoint, ep->uds_path);
+    }
+
     // Resolve hostname to IP if needed
     std::string ip = host_resolver_.resolve(ep->host);
 
