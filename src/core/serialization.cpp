@@ -128,19 +128,11 @@ bytes DefaultSerializer::encode(TypeTag tag, const MessageVariant& msg) {
     auto it = encoders_.find(tag);
     if (it != encoders_.end()) {
         bytes result;
-        std::visit([&result, tag, this, &msg](const auto& m) {
-            using T = std::decay_t<decltype(m)>;
-            if constexpr (std::is_same_v<T, down_msg> ||
-                        std::is_same_v<T, exit_msg> ||
-                        std::is_same_v<T, link_msg> ||
-                        std::is_same_v<T, unlink_msg>) {
-                result = encode_system(msg);
-            } else {
-                // User type - use encoder if registered
-                auto encoder_it = encoders_.find(tag);
-                if (encoder_it != encoders_.end()) {
-                    result = encoder_it->second(&m);
-                }
+        std::visit([&result, tag, this](const auto& m) {
+            // User type - use encoder if registered
+            auto encoder_it = encoders_.find(tag);
+            if (encoder_it != encoders_.end()) {
+                result = encoder_it->second(&m);
             }
         }, msg);
         return result;
@@ -155,13 +147,9 @@ MessageVariant DefaultSerializer::decode(TypeTag tag, const bytes& data) {
         return decode_system(tag, data);
     }
 
-    // User type - use registered decoder
-    auto it = decoders_.find(tag);
-    if (it != decoders_.end()) {
-        // For now, return empty - actual decode requires knowing the type
-        // This will be implemented when we have proper type erasure
-    }
-
+    // User type decoding requires proper type erasure (not yet implemented)
+    // The decoder lookup below is intentionally unused - type reconstruction
+    // from bytes requires knowing the concrete type at compile time
     return MessageVariant{};
 }
 
