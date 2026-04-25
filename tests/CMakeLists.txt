@@ -139,6 +139,10 @@ add_executable(test_unix_domain_socket net/test_unix_domain_socket.cpp)
 target_link_libraries(test_unix_domain_socket hpactor)
 add_test(NAME test_unix_domain_socket COMMAND test_unix_domain_socket)
 
+add_executable(test_uds_integration net/test_uds_integration.cpp)
+target_link_libraries(test_uds_integration hpactor)
+add_test(NAME test_uds_integration COMMAND test_uds_integration)
+
 # =============================================================================
 # Spawn tests - remote actor spawn
 # =============================================================================
