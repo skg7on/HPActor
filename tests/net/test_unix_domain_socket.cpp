@@ -101,10 +101,16 @@ int main() {
         addr.sun_family = AF_UNIX;
         std::strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
 
-        ::connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+        // Non-blocking connect: may return 0 (immediate success) or -1 with
+        // EINPROGRESS (connection in progress). Either way, the socket is
+        // valid for the test - the accept will be handled by the event loop.
+        int ret = ::connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+        (void)ret;
 
-        // Give event loop a chance to process
-        loop.run_after([]() {}, 10);  // 10ms delay
+        // Note: The accept handler is invoked when the event loop processes
+        // the readable event on the listening socket. Since running the
+        // loop is blocking, this test verifies socket creation and
+        // connection initiation rather than the full accept flow.
 
         // Client socket exists and is valid
         assert(client_fd >= 0);
