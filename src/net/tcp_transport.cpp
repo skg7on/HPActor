@@ -19,6 +19,7 @@
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 namespace hpactor {
@@ -161,6 +162,51 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint) {
 
     // Connect to resolved IP:port
     return connect(remote_endpoint, ip, ep->tcp_port);
+}
+
+ConnectionPtr TcpTransport::connect_unix_domain(CommunicationEndpoint remote_endpoint,
+                                               const std::string& socket_path) {
+    int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
+    if (fd < 0) {
+        return nullptr;
+    }
+
+    // Set non-blocking
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+
+    struct sockaddr_un addr;
+    std::memset(&addr, 0, sizeof(addr));
+    addr.sun_family = AF_UNIX;
+    std::strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
+
+    int result = ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    if (result < 0 && errno != EINPROGRESS) {
+        ::close(fd);
+        return nullptr;
+    }
+
+    // Note: TLS over UDS is not supported per design decision.
+    // use_tls config only applies to TCP connections.
+    // UDS connections always use PlainConnection.
+    auto pool = get_or_create_pool(remote_endpoint);
+    ConnectionPtr conn;
+    auto plain_conn = PlainConnection::create_client(fd, remote_endpoint, &loop_);
+    plain_conn->set_ready_handler([pool](ConnectionPtr c) {
+        pool->on_connection_ready(c);
+    });
+    plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
+        pool->on_connection_error(c, e);
+    });
+    plain_conn->set_frame_handler([pool](const bytes& data) {
+        pool->on_frame_received(data);
+    });
+    conn = plain_conn;
+
+    pool->add_connection(conn);
+    register_connection(conn, fd);
+
+    return conn;
 }
 
 void TcpTransport::listen(uint16_t port) {

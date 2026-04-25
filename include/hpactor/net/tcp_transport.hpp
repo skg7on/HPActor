@@ -47,6 +47,11 @@ public:
 
     ConnectionPtr connect(CommunicationEndpoint remote_endpoint) override;
 
+    // Connect via UNIX domain socket
+    // Returns ConnectionPtr on success, nullptr on failure
+    ConnectionPtr connect_unix_domain(CommunicationEndpoint remote_endpoint,
+                                      const std::string& socket_path);
+
     void listen(uint16_t port) override;
     void stop_listening() override;
 
