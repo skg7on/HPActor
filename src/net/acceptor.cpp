@@ -115,12 +115,13 @@ bool Acceptor::listen_unix_domain(const std::string& path) {
         return false;
     }
 
+    // Only set after successful listen to avoid fd leak on failure
     listening_fd_ = fd;
     bound_port_ = 0;  // UDS has no port
     uds_path_ = path;
 
     if (loop_) {
-        loop_->add_fd(fd, EventLoop::Event::Read);
+        loop_->add_fd(listening_fd_, EventLoop::Event::Read);
     }
 
     return true;
@@ -142,6 +143,7 @@ void Acceptor::close() {
         ::close(listening_fd_);
         listening_fd_ = -1;
     }
+    uds_path_.clear();
 }
 
 void Acceptor::set_accept_handler(accept_handler handler) {
