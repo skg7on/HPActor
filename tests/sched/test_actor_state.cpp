@@ -35,7 +35,7 @@ int main() {
 
     // Test 3: invalid transition (no change)
     bool ok = state.cas(hpactor::ActorState::kRunning, hpactor::ActorState::kIdle);
-    assert(!ok);  // was Idle, not Running
+    assert(!ok); // was Idle, not Running
     assert(state.is_idle());
 
     // Test 4: set overrides regardless of current state

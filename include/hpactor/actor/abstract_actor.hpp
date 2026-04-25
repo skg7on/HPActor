@@ -14,9 +14,9 @@
 
 #pragma once
 
+#include <hpactor/actor/message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
-#include <hpactor/actor/message.hpp>
 
 #include <memory>
 #include <string>
@@ -28,14 +28,13 @@ namespace hpactor {
 class ActorSystem;
 namespace net {
 enum class OpType : uint32_t;
-}  // namespace net
+} // namespace net
 namespace sched {
 class IScheduler;
-}  // namespace sched
+} // namespace sched
 namespace mailbox {
-template<typename T>
-class MPSCActorMailbox;
-}  // namespace mailbox
+template <typename T> class MPSCActorMailbox;
+} // namespace mailbox
 
 // -----------------------------------------------------------------------------
 // System message types - framework internal messages
@@ -62,11 +61,12 @@ struct unlink_msg {
 
 // completion_msg carries I/O completion data from EventLoop to actors
 struct completion_msg {
-    ActorId actor;       // target actor that initiated the operation
-    net::OpType type;    // Send, Recv, Accept, Connect, TimerFired, RecvFrom, SendTo
-    int fd;              // file descriptor
-    int result;          // bytes transferred (>= 0) or -errno on failure
-    uint64_t user_data;  // original user data from the async operation
+    ActorId actor;      // target actor that initiated the operation
+    net::OpType type;   // Send, Recv, Accept, Connect, TimerFired, RecvFrom,
+                        // SendTo
+    int fd;             // file descriptor
+    int result;         // bytes transferred (>= 0) or -errno on failure
+    uint64_t user_data; // original user data from the async operation
 };
 
 // -----------------------------------------------------------------------------
@@ -74,13 +74,8 @@ struct completion_msg {
 // Applications define their own message types and compose them with
 // system messages using their own ApplicationMessageVariant type.
 // -----------------------------------------------------------------------------
-using SystemMessageVariant = std::variant<
-    completion_msg,
-    down_msg,
-    exit_msg,
-    link_msg,
-    unlink_msg
->;
+using SystemMessageVariant =
+    std::variant<completion_msg, down_msg, exit_msg, link_msg, unlink_msg>;
 
 // -----------------------------------------------------------------------------
 // User message types for examples and testing
@@ -120,42 +115,44 @@ struct status_msg {
 // For new applications, prefer defining your own ApplicationMessageVariant
 // that extends SystemMessageVariant with your user-defined types.
 // -----------------------------------------------------------------------------
-using MessageVariant = std::variant<
-    completion_msg,
-    down_msg,
-    exit_msg,
-    link_msg,
-    unlink_msg,
-    // Example/user message types
-    ping_msg,
-    pong_msg,
-    stop_msg,
-    start_msg,
-    work_msg,
-    result_msg,
-    status_msg
->;
+using MessageVariant =
+    std::variant<completion_msg, down_msg, exit_msg, link_msg, unlink_msg,
+                 // Example/user message types
+                 ping_msg, pong_msg, stop_msg, start_msg, work_msg, result_msg, status_msg>;
 
 // -----------------------------------------------------------------------------
 // AbstractActor - base class for all actors
 // -----------------------------------------------------------------------------
 class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
-public:
+  public:
     virtual ~AbstractActor() = default;
 
-    ActorId id() const { return id_; }
-    ActorType type() const { return type_; }
-    ActorAddress address() const { return address_; }
-    ActorSystem& system() { return system_; }
-    const ActorSystem& system() const { return system_; }
+    ActorId id() const {
+        return id_;
+    }
+    ActorType type() const {
+        return type_;
+    }
+    ActorAddress address() const {
+        return address_;
+    }
+    ActorSystem& system() {
+        return system_;
+    }
+    const ActorSystem& system() const {
+        return system_;
+    }
 
     // Set actor address (called by ActorSystem during spawn)
-    void set_address(ActorAddress addr) { address_ = addr; }
+    void set_address(ActorAddress addr) {
+        address_ = addr;
+    }
 
     // Set scheduler and mailbox (called by ActorSystem during spawn)
     // Default implementations in .cpp; EventBasedActor overrides these
     virtual void set_scheduler(sched::IScheduler* scheduler);
-    virtual void set_mailbox(mailbox::MPSCActorMailbox<Message<MessageVariant>>* mailbox);
+    virtual void
+    set_mailbox(mailbox::MPSCActorMailbox<Message<MessageVariant>>* mailbox);
 
     // Linking - death sharing
     void link_to(const ActorAddr& other);
@@ -169,12 +166,14 @@ public:
     virtual void receive(MessageVariant&& msg) = 0;
 
     // Type query for safe downcasting without RTTI
-    virtual bool is_event_based_actor() const { return false; }
+    virtual bool is_event_based_actor() const {
+        return false;
+    }
 
-protected:
+  protected:
     AbstractActor(ActorId id, ActorType type, ActorSystem& sys);
 
-private:
+  private:
     ActorId id_;
     ActorType type_;
     ActorSystem& system_;

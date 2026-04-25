@@ -65,14 +65,18 @@ using connection_error_handler = std::function<void(ConnectionPtr, const error&)
 // Connection - represents a connection to a remote node
 // -----------------------------------------------------------------------------
 class Connection : public std::enable_shared_from_this<Connection> {
-public:
+  public:
     using message_handler = std::function<void(const bytes&)>;
 
     Connection(CommunicationEndpoint remote_endpoint);
     virtual ~Connection();
 
-    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
-    ConnectionState state() const { return state_; }
+    CommunicationEndpoint remote_endpoint() const {
+        return remote_endpoint_;
+    }
+    ConnectionState state() const {
+        return state_;
+    }
 
     // Set handler for incoming messages
     void set_message_handler(message_handler handler);
@@ -92,14 +96,14 @@ public:
     // Transition to a new state
     void set_state(ConnectionState new_state);
 
-protected:
+  protected:
     virtual void on_message(const bytes& data);
 
-private:
+  private:
     CommunicationEndpoint remote_endpoint_;
     ConnectionState state_ = ConnectionState::Disconnected;
     message_handler message_handler_;
-    bytes read_buffer_;  // For partial frame reads
+    bytes read_buffer_; // For partial frame reads
 };
 
 // Connection pointer type
@@ -113,14 +117,13 @@ using ConnectionPtr = std::shared_ptr<Connection>;
 // a specific node and handles all outgoing connections to remote nodes.
 // -----------------------------------------------------------------------------
 class Transport {
-public:
+  public:
     virtual ~Transport() = default;
 
     // Connect to a remote node using explicit host/port (blocking)
     // Returns a Connection pointer on success, nullptr on failure
-virtual ConnectionPtr connect(CommunicationEndpoint remote_endpoint,
-                                const std::string& host,
-                                uint16_t port) = 0;
+    virtual ConnectionPtr connect(CommunicationEndpoint remote_endpoint,
+                                  const std::string& host, uint16_t port) = 0;
 
     // Connect to a remote node using registry lookup (DNS resolution if needed)
     // Returns ConnectionPtr on success, nullptr on failure
@@ -137,7 +140,7 @@ virtual ConnectionPtr connect(CommunicationEndpoint remote_endpoint,
     virtual void send(const ActorAddress& target, const bytes& encoded) = 0;
 
     // Check if connected to a specific node
-virtual bool is_connected(CommunicationEndpoint remote_endpoint) const = 0;
+    virtual bool is_connected(CommunicationEndpoint remote_endpoint) const = 0;
 
     // Get this transport's node ID
     virtual CommunicationEndpoint endpoint() const = 0;

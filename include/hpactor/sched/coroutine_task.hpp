@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <hpactor/hpactor_config.hpp>
 #include <hpactor/actor/actor_state.hpp>
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -23,7 +23,7 @@
 #include <thread>
 
 #if HPACTOR_USE_COROUTINES
-#include <coroutine>
+#    include <coroutine>
 #endif
 
 namespace hpactor::sched {
@@ -45,7 +45,7 @@ struct CoroutinePromise {
     WorkerThread* owner{nullptr};
 
     // Mailbox integration
-    void* mailbox{nullptr};  // MPSCMailbox<MessageNode>*
+    void* mailbox{nullptr}; // MPSCMailbox<MessageNode>*
     std::atomic<bool> mailbox_was_empty{true};
 
     // Continuation for chained awaiters
@@ -55,11 +55,15 @@ struct CoroutinePromise {
     ~CoroutinePromise() = default;
 
     // Start suspended — scheduler decides when to resume
-    std::suspend_always initial_suspend() noexcept { return {}; }
+    std::suspend_always initial_suspend() noexcept {
+        return {};
+    }
 
     // Final suspend — keep coroutine frame alive for restart.
     // Actor runtime calls resume() again to re-enter act().
-    std::suspend_always final_suspend() noexcept { return {}; }
+    std::suspend_always final_suspend() noexcept {
+        return {};
+    }
 
     // Called on co_return
     void return_void() noexcept {
@@ -74,15 +78,31 @@ struct CoroutinePromise {
     CoroutineTask get_return_object();
 
     // State access
-    void set_running() { state.set(ActorState::kRunning); }
-    void set_idle() { state.set(ActorState::kIdle); }
-    void set_ready() { state.set(ActorState::kReady); }
-    void set_io_waiting() { state.set(ActorState::kIOWaiting); }
-    void set_terminated() { state.set(ActorState::kTerminated); }
+    void set_running() {
+        state.set(ActorState::kRunning);
+    }
+    void set_idle() {
+        state.set(ActorState::kIdle);
+    }
+    void set_ready() {
+        state.set(ActorState::kReady);
+    }
+    void set_io_waiting() {
+        state.set(ActorState::kIOWaiting);
+    }
+    void set_terminated() {
+        state.set(ActorState::kTerminated);
+    }
 
-    bool is_idle() const { return state.is_idle(); }
-    bool is_running() const { return state.is_running(); }
-    bool is_terminated() const { return state.is_terminated(); }
+    bool is_idle() const {
+        return state.is_idle();
+    }
+    bool is_running() const {
+        return state.is_running();
+    }
+    bool is_terminated() const {
+        return state.is_terminated();
+    }
 
     // Called by MPSCActorMailbox when a message arrives while actor is idle.
     // If actor is suspended (waiting in MailboxAwaiter), resume it.
@@ -96,7 +116,7 @@ struct CoroutinePromise {
 // CoroutineTask: return type of actor coroutines
 // Wraps std::coroutine_handle<CoroutinePromise> and manages actor lifecycle
 class CoroutineTask {
-public:
+  public:
     using handle_type = std::coroutine_handle<CoroutinePromise>;
 
     CoroutineTask() noexcept : handle_(nullptr) {}
@@ -111,7 +131,8 @@ public:
 
     CoroutineTask& operator=(CoroutineTask&& other) noexcept {
         if (this != &other) {
-            if (handle_) handle_.destroy();
+            if (handle_)
+                handle_.destroy();
             handle_ = other.handle_;
             other.handle_ = nullptr;
         }
@@ -119,12 +140,17 @@ public:
     }
 
     ~CoroutineTask() {
-        if (handle_) handle_.destroy();
+        if (handle_)
+            handle_.destroy();
     }
 
-    explicit operator bool() const noexcept { return handle_ != nullptr; }
+    explicit operator bool() const noexcept {
+        return handle_ != nullptr;
+    }
 
-    handle_type handle() const noexcept { return handle_; }
+    handle_type handle() const noexcept {
+        return handle_;
+    }
 
     // Resume the coroutine
     void resume() {
@@ -134,9 +160,11 @@ public:
     }
 
     // Check if done
-    bool done() const { return !handle_ || handle_.done(); }
+    bool done() const {
+        return !handle_ || handle_.done();
+    }
 
-private:
+  private:
     handle_type handle_;
 };
 
@@ -144,17 +172,16 @@ private:
 
 // Specialize std::coroutine_traits so CoroutineTask can be used as a
 // coroutine return type.
-template<>
-struct std::coroutine_traits<hpactor::sched::CoroutineTask> {
+template <> struct std::coroutine_traits<hpactor::sched::CoroutineTask> {
     using promise_type = hpactor::sched::CoroutinePromise;
 };
 
-template<typename T>
+template <typename T>
 struct std::coroutine_traits<hpactor::sched::CoroutineTask, T&> {
     using promise_type = hpactor::sched::CoroutinePromise;
 };
 
-template<typename T>
+template <typename T>
 struct std::coroutine_traits<hpactor::sched::CoroutineTask, const T&> {
     using promise_type = hpactor::sched::CoroutinePromise;
 };
@@ -166,7 +193,7 @@ inline CoroutineTask CoroutinePromise::get_return_object() {
     return CoroutineTask{handle_type::from_promise(*this)};
 }
 
-#else  // !HPACTOR_USE_COROUTINES
+#else // !HPACTOR_USE_COROUTINES
 
 // C++17 fallback: stub CoroutinePromise and CoroutineTask so that
 // the rest of the type system (ActorState, ActorId, etc.) still compiles.
@@ -180,35 +207,57 @@ struct CoroutinePromise {
     CoroutinePromise() = default;
     ~CoroutinePromise() = default;
 
-    void set_running() { state.set(ActorState::kRunning); }
-    void set_idle() { state.set(ActorState::kIdle); }
-    void set_ready() { state.set(ActorState::kReady); }
-    void set_io_waiting() { state.set(ActorState::kIOWaiting); }
-    void set_terminated() { state.set(ActorState::kTerminated); }
-    bool is_idle() const { return state.is_idle(); }
-    bool is_running() const { return state.is_running(); }
-    bool is_terminated() const { return state.is_terminated(); }
+    void set_running() {
+        state.set(ActorState::kRunning);
+    }
+    void set_idle() {
+        state.set(ActorState::kIdle);
+    }
+    void set_ready() {
+        state.set(ActorState::kReady);
+    }
+    void set_io_waiting() {
+        state.set(ActorState::kIOWaiting);
+    }
+    void set_terminated() {
+        state.set(ActorState::kTerminated);
+    }
+    bool is_idle() const {
+        return state.is_idle();
+    }
+    bool is_running() const {
+        return state.is_running();
+    }
+    bool is_terminated() const {
+        return state.is_terminated();
+    }
     void notify_mailbox_nonempty() {}
 };
 
 class CoroutineTask {
-public:
+  public:
     CoroutineTask() noexcept {}
     explicit CoroutineTask(std::nullptr_t) noexcept {}
 
     CoroutineTask(CoroutineTask&& /*other*/) noexcept {}
-    CoroutineTask& operator=(CoroutineTask&& /*other*/) noexcept { return *this; }
+    CoroutineTask& operator=(CoroutineTask&& /*other*/) noexcept {
+        return *this;
+    }
 
     CoroutineTask(const CoroutineTask&) = delete;
     CoroutineTask& operator=(const CoroutineTask&) = delete;
 
     ~CoroutineTask() = default;
 
-    explicit operator bool() const noexcept { return false; }
-    bool done() const noexcept { return true; }
+    explicit operator bool() const noexcept {
+        return false;
+    }
+    bool done() const noexcept {
+        return true;
+    }
     void resume() {}
 };
 
-#endif  // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_USE_COROUTINES
 
 } // namespace hpactor::sched

@@ -25,11 +25,16 @@ using namespace hpactor;
 void test_abstract_actor_interface() {
     // Abstract actor cannot be instantiated directly
     // Test that it has the required virtual interface
-    static_assert(sizeof(hpactor::AbstractActor) > 0, "AbstractActor should not be empty");
+    static_assert(sizeof(hpactor::AbstractActor) > 0, "AbstractActor should "
+                                                      "not be empty");
 
     // Check that AbstractActor is abstract (has pure virtual methods)
-    static_assert(!std::is_default_constructible_v<AbstractActor>,
-                  "AbstractActor should not be default constructible");
+    static_assert(!std::is_default_constructible_v<AbstractActor>, "AbstractAct"
+                                                                   "or should "
+                                                                   "not be "
+                                                                   "default "
+                                                                   "constructib"
+                                                                   "le");
 
     // Check that it inherits from enable_shared_from_this
     static_assert(

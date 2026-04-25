@@ -30,10 +30,10 @@
 //
 // =============================================================================
 
+#include <hpactor/actor/message.hpp>
 #include <hpactor/actor/typed_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/actor/message.hpp>
 #include <hpactor/typed_behavior.hpp>
 #include <iostream>
 #include <string>
@@ -112,8 +112,7 @@ using CalculatorActor = hpactor::typed_actor<
     hpactor::result<int>(PowerMessage),
 
     // Shutdown: takes ShutdownMessage, returns result<void>
-    hpactor::result<void>(ShutdownMessage)
->;
+    hpactor::result<void>(ShutdownMessage)>;
 
 // -----------------------------------------------------------------------------
 // Typed Behavior Handler Extraction
@@ -138,8 +137,8 @@ void demonstrate_handler_type() {
     using AddHandler = hpactor::handler_type<hpactor::result<int>(AddMessage)>;
 
     // Type aliases for extracted types
-    using AddResult = typename AddHandler::result;    // int
-    using AddMsg = typename AddHandler::message;       // AddMessage
+    using AddResult = typename AddHandler::result; // int
+    using AddMsg = typename AddHandler::message;   // AddMessage
 
     // These assertions verify the type extraction works correctly
     static_assert(std::is_same_v<AddResult, int>);
@@ -187,13 +186,9 @@ void demonstrate_handler_type() {
 class Calculator
     : public hpactor::TypedEventBasedActor<
           // Forward our signatures to TypedEventBasedActor
-          hpactor::result<int>(AddMessage),
-          hpactor::result<int>(SubtractMessage),
-          hpactor::result<int>(MultiplyMessage),
-          hpactor::result<int>(DivideMessage),
-          hpactor::result<int>(PowerMessage),
-          hpactor::result<void>(ShutdownMessage)> {
-
+          hpactor::result<int>(AddMessage), hpactor::result<int>(SubtractMessage),
+          hpactor::result<int>(MultiplyMessage), hpactor::result<int>(DivideMessage),
+          hpactor::result<int>(PowerMessage), hpactor::result<void>(ShutdownMessage)> {
   protected:
     // TypedBehavior with handlers for each signature
     behavior_type make_behavior() override {
@@ -217,8 +212,8 @@ class Calculator
         // Register handler for DivideMessage
         bh([](DivideMessage msg) -> hpactor::result<int> {
             if (msg.b == 0) {
-                return hpactor::result<int>::make(
-                    hpactor::error{1, "divide by zero"});
+                return hpactor::result<int>::make(hpactor::error{1, "divide by "
+                                                                    "zero"});
             }
             return hpactor::result<int>::make(msg.a / msg.b);
         });
@@ -254,22 +249,24 @@ int main() {
 
     demonstrate_handler_type();
 
-    hpactor::Config config{
-        .scheduler_threads = 4,
-        .max_queue_depth = 1024
-    };
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
-    std::cout << "\nNOTE: Actor spawning and typed handler invocation are not yet "
+    std::cout << "\nNOTE: Actor spawning and typed handler invocation are not "
+                 "yet "
                  "fully implemented.\n"
               << "This example demonstrates the intended API usage patterns.\n"
               << std::endl;
 
     std::cout << "\nTyped actor pattern:" << std::endl;
-    std::cout << "  1. Define signatures: typed_actor<result<R>(Msg), ...>" << std::endl;
-    std::cout << "  2. Inherit from TypedEventBasedActor<Signatures...>" << std::endl;
-    std::cout << "  3. Register handlers in make_behavior() via bh([](Msg){})" << std::endl;
-    std::cout << "  4. Use typed_actor<...> as a type-safe reference handle" << std::endl;
+    std::cout << "  1. Define signatures: typed_actor<result<R>(Msg), ...>"
+              << std::endl;
+    std::cout << "  2. Inherit from TypedEventBasedActor<Signatures...>"
+              << std::endl;
+    std::cout << "  3. Register handlers in make_behavior() via bh([](Msg){})"
+              << std::endl;
+    std::cout << "  4. Use typed_actor<...> as a type-safe reference handle"
+              << std::endl;
     std::cout << std::endl;
 
     // -----------------------------------------------------------------
@@ -287,15 +284,19 @@ int main() {
     //   calc(DivideMessage{10, 0});        // Returns error
     //
     //   // Wrong message type - compiler error:
-    //   calc("hello");                     // Error: no overload for const char*
+    //   calc("hello");                     // Error: no overload for const
+    //   char*
 
     std::cout << "Signature format:" << std::endl;
     std::cout << "  hpactor::result<ReturnType>(MessageType)" << std::endl;
     std::cout << std::endl;
     std::cout << "Examples:" << std::endl;
-    std::cout << "  hpactor::result<int>(AddMessage)     // returns int" << std::endl;
-    std::cout << "  hpactor::result<void>(Shutdown)       // returns void" << std::endl;
-    std::cout << "  hpactor::result<std::string>(NameMsg) // returns string" << std::endl;
+    std::cout << "  hpactor::result<int>(AddMessage)     // returns int"
+              << std::endl;
+    std::cout << "  hpactor::result<void>(Shutdown)       // returns void"
+              << std::endl;
+    std::cout << "  hpactor::result<std::string>(NameMsg) // returns string"
+              << std::endl;
 
     return 0;
 }

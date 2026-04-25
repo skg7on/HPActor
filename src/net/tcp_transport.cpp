@@ -33,17 +33,13 @@ namespace net {
 
 TcpTransport::TcpTransport(CommunicationEndpoint endpoint,
                            const TlsConfig& tls_config,
-                           const PoolConfig& pool_config,
-                           NodeRegistry* registry)
-    : endpoint_(endpoint),
-      loop_(),
-      acceptor_(&loop_),
+                           const PoolConfig& pool_config, NodeRegistry* registry)
+    : endpoint_(endpoint), loop_(), acceptor_(&loop_),
       tls_context_(TlsContext::from_config(tls_config)),
-      pool_config_(pool_config),
-      registry_(registry) {
+      pool_config_(pool_config), registry_(registry) {
     // Ensure UDS directory exists
     std::string uds_dir = "/tmp/hpactor";
-    ::mkdir(uds_dir.c_str(), 0755);  // Ignore error if exists
+    ::mkdir(uds_dir.c_str(), 0755); // Ignore error if exists
 
     // Set up completion callback to route send completions to TlsConnection
     completion_callback_ = [this](OpCompletion c) {
@@ -65,15 +61,14 @@ TcpTransport::~TcpTransport() {
     }
 }
 
-std::shared_ptr<ConnectionPool> TcpTransport::get_or_create_pool(CommunicationEndpoint remote_endpoint) {
+std::shared_ptr<ConnectionPool>
+TcpTransport::get_or_create_pool(CommunicationEndpoint remote_endpoint) {
     auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
         return it->second;
     }
-    auto pool = std::make_shared<ConnectionPool>(remote_endpoint,
-                                                  pool_config_,
-                                                  &tls_context_,
-                                                  &loop_);
+    auto pool = std::make_shared<ConnectionPool>(remote_endpoint, pool_config_,
+                                                 &tls_context_, &loop_);
     pools_[remote_endpoint] = pool;
     // Set RPC handler if one has been registered
     if (rpc_handler_) {
@@ -83,8 +78,7 @@ std::shared_ptr<ConnectionPool> TcpTransport::get_or_create_pool(CommunicationEn
 }
 
 ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
-                                  const std::string& /*host*/,
-                                  uint16_t port) {
+                                    const std::string& /*host*/, uint16_t port) {
     int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         return nullptr;
@@ -105,7 +99,8 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
-    int result = ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    int result =
+        ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
     if (result < 0 && errno != EINPROGRESS) {
         ::close(fd);
         return nullptr;
@@ -117,31 +112,29 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
     ConnectionPtr conn;
     if (pool_config_.use_tls) {
         // Create TLS connection
-        auto tls_conn = TlsConnection::create_client(remote_endpoint, &tls_context_, &loop_);
+        auto tls_conn =
+            TlsConnection::create_client(remote_endpoint, &tls_context_, &loop_);
         tls_conn->set_fd(fd);
-        tls_conn->set_ready_handler([pool](ConnectionPtr c) {
-            pool->on_connection_ready(c);
-        });
+        tls_conn->set_ready_handler(
+            [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
         tls_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
-        tls_conn->set_frame_handler([pool](const bytes& data) {
-            pool->on_frame_received(data);
-        });
+        tls_conn->set_frame_handler(
+            [pool](const bytes& data) { pool->on_frame_received(data); });
         conn = tls_conn;
         tls_conn->start_client_handshake();
     } else {
         // Create plain connection with connected fd
-        auto plain_conn = PlainConnection::create_client(fd, remote_endpoint, &loop_);
-        plain_conn->set_ready_handler([pool](ConnectionPtr c) {
-            pool->on_connection_ready(c);
-        });
+        auto plain_conn =
+            PlainConnection::create_client(fd, remote_endpoint, &loop_);
+        plain_conn->set_ready_handler(
+            [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
-        plain_conn->set_frame_handler([pool](const bytes& data) {
-            pool->on_frame_received(data);
-        });
+        plain_conn->set_frame_handler(
+            [pool](const bytes& data) { pool->on_frame_received(data); });
         conn = plain_conn;
     }
 
@@ -154,12 +147,12 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
 
 ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint) {
     if (!registry_) {
-        return nullptr;  // No registry configured
+        return nullptr; // No registry configured
     }
 
     NodeEndpoint* ep = registry_->get(remote_endpoint);
     if (!ep) {
-        return nullptr;  // Unknown node
+        return nullptr; // Unknown node
     }
 
     // Check if UDS path is available for this endpoint
@@ -174,8 +167,9 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint) {
     return connect(remote_endpoint, ip, ep->tcp_port);
 }
 
-ConnectionPtr TcpTransport::connect_unix_domain(CommunicationEndpoint remote_endpoint,
-                                               const std::string& socket_path) {
+ConnectionPtr
+TcpTransport::connect_unix_domain(CommunicationEndpoint remote_endpoint,
+                                  const std::string& socket_path) {
     int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
         return nullptr;
@@ -190,7 +184,8 @@ ConnectionPtr TcpTransport::connect_unix_domain(CommunicationEndpoint remote_end
     addr.sun_family = AF_UNIX;
     std::strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
 
-    int result = ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    int result =
+        ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
     if (result < 0 && errno != EINPROGRESS) {
         ::close(fd);
         return nullptr;
@@ -202,15 +197,13 @@ ConnectionPtr TcpTransport::connect_unix_domain(CommunicationEndpoint remote_end
     auto pool = get_or_create_pool(remote_endpoint);
     ConnectionPtr conn;
     auto plain_conn = PlainConnection::create_client(fd, remote_endpoint, &loop_);
-    plain_conn->set_ready_handler([pool](ConnectionPtr c) {
-        pool->on_connection_ready(c);
-    });
+    plain_conn->set_ready_handler(
+        [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
     plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
         pool->on_connection_error(c, e);
     });
-    plain_conn->set_frame_handler([pool](const bytes& data) {
-        pool->on_frame_received(data);
-    });
+    plain_conn->set_frame_handler(
+        [pool](const bytes& data) { pool->on_frame_received(data); });
     conn = plain_conn;
 
     pool->add_connection(conn);
@@ -267,10 +260,12 @@ void TcpTransport::unregister_connection(int fd) {
     connections_.erase(fd);
 }
 
-void TcpTransport::handle_accept(int client_fd, CommunicationEndpoint remote_endpoint) {
+void TcpTransport::handle_accept(int client_fd,
+                                 CommunicationEndpoint remote_endpoint) {
     ConnectionPtr conn;
     if (pool_config_.use_tls) {
-        conn = TlsConnection::create_server(client_fd, remote_endpoint, &tls_context_, &loop_);
+        conn = TlsConnection::create_server(client_fd, remote_endpoint,
+                                            &tls_context_, &loop_);
     } else {
         conn = PlainConnection::create_server(client_fd, remote_endpoint, &loop_);
     }
@@ -281,7 +276,8 @@ std::string TcpTransport::derive_uds_path(const std::string& node_id) const {
     // Sanitize node_id: replace colons with underscores
     std::string sanitized = node_id;
     for (char& c : sanitized) {
-        if (c == ':') c = '_';
+        if (c == ':')
+            c = '_';
     }
     return "/tmp/hpactor/" + sanitized + ".sock";
 }

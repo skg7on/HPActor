@@ -23,20 +23,28 @@
 #include <vector>
 
 #if defined(__linux__)
-#include <liburing.h>
+#    include <liburing.h>
 #else
 // Stub definition for macOS compilation safety
-struct io_uring { int unused; };
-struct io_uring_sqe { int unused; };
-struct io_uring_cqe { int unused; };
-struct io_uring_params { int unused; };
+struct io_uring {
+    int unused;
+};
+struct io_uring_sqe {
+    int unused;
+};
+struct io_uring_cqe {
+    int unused;
+};
+struct io_uring_params {
+    int unused;
+};
 #endif
 
 namespace hpactor {
 namespace net {
 
 class IoUringBackend : public AsyncIoBackend {
-public:
+  public:
     IoUringBackend();
     ~IoUringBackend() override;
 
@@ -50,10 +58,10 @@ public:
     int register_buffer(const void* addr, size_t len) override;
     bool unregister_buffer(int buffer_id) override;
 
-    void async_send(int fd, const iovec* bufs, int buf_count,
-                    ActorId actor, uint32_t op_type) override;
-    void async_recv(int fd, const iovec* bufs, int buf_count,
-                    ActorId actor, uint32_t op_type) override;
+    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
 
     void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
                           ActorId actor, uint32_t op_type) override;
@@ -62,13 +70,13 @@ public:
 
     void async_accept(int fd, ActorId actor) override;
     void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                        ActorId actor) override;
+                       ActorId actor) override;
 
-    void async_recvfrom(int fd, const iovec* bufs, int buf_count,
-                         ActorId actor, uint32_t op_type) override;
-    void async_sendto(int fd, const iovec* bufs, int buf_count,
-                        const sockaddr* addr, socklen_t addrlen,
-                        ActorId actor, uint32_t op_type) override;
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                        uint32_t op_type) override;
+    void
+    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
+                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
 
     uint64_t run_after(ActorId actor, int delay_ms) override;
     uint64_t run_every(ActorId actor, int interval_ms) override;
@@ -77,10 +85,11 @@ public:
     int wait(int timeout_ms) override;
     void process_completions() override;
 
-private:
+  private:
     // Encode fd+actor+op_type into user_data
     static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type);
-    static void decode_user_data(uint64_t user_data, int& fd, ActorId& actor, uint32_t& op_type);
+    static void decode_user_data(uint64_t user_data, int& fd, ActorId& actor,
+                                 uint32_t& op_type);
 
     // Submit pending SQEs to kernel
     int submit();

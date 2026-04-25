@@ -16,10 +16,10 @@
 #include <hpactor/net/registrar_serialization.hpp>
 
 #include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <cstring>
 #include <thread>
@@ -32,13 +32,11 @@ namespace net {
 // RegistrarServer Implementation
 // -----------------------------------------------------------------------------
 
-RegistrarServer::RegistrarServer(const RegistrarConfig& config, CommunicationEndpoint local_endpoint,
+RegistrarServer::RegistrarServer(const RegistrarConfig& config,
+                                 CommunicationEndpoint local_endpoint,
                                  EventLoop* loop)
-    : config_(config),
-      local_endpoint_(local_endpoint),
-      registry_(config),
-      loop_(loop),
-      acceptor_(loop) {}
+    : config_(config), local_endpoint_(local_endpoint), registry_(config),
+      loop_(loop), acceptor_(loop) {}
 
 RegistrarServer::~RegistrarServer() {
     stop();
@@ -77,14 +75,15 @@ void RegistrarServer::start() {
         udp_addr.sin_family = AF_INET;
         udp_addr.sin_addr.s_addr = INADDR_ANY;
         udp_addr.sin_port = htons(config_.udp_port);
-        bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr), sizeof(udp_addr));
+        bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr),
+             sizeof(udp_addr));
     }
 
     // Start event processing loop in background thread
     event_thread_ = std::thread([this]() {
         while (running_.load()) {
             if (loop_) {
-                int n = loop_->wait(100);  // 100ms timeout
+                int n = loop_->wait(100); // 100ms timeout
                 if (n > 0) {
                     // Process client connections for read events
                     std::lock_guard<std::mutex> lock(clients_mutex_);
@@ -135,7 +134,8 @@ void RegistrarServer::stop() {
     }
 }
 
-void RegistrarServer::handle_accept(int client_fd, CommunicationEndpoint remote_endpoint) {
+void RegistrarServer::handle_accept(int client_fd,
+                                    CommunicationEndpoint remote_endpoint) {
     // Set TCP_NODELAY for lower latency
     int nodelay = 1;
     setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
@@ -148,9 +148,7 @@ void RegistrarServer::handle_accept(int client_fd, CommunicationEndpoint remote_
     });
 
     // Set disconnect handler
-    conn->set_disconnect_handler([this, conn]() {
-        handle_disconnect(conn);
-    });
+    conn->set_disconnect_handler([this, conn]() { handle_disconnect(conn); });
 
     // Store connection in both maps
     {
@@ -164,8 +162,7 @@ void RegistrarServer::handle_accept(int client_fd, CommunicationEndpoint remote_
 }
 
 void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
-                                         TcpMessageType type,
-                                         const bytes& data) {
+                                         TcpMessageType type, const bytes& data) {
     switch (type) {
         case TcpMessageType::Register: {
             PbRegisterPayload msg;
@@ -175,7 +172,8 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
 
             const auto& ep_info = msg.endpoint_info();
             std::string endpoint_str = ep_info.endpoint();
-            CommunicationEndpoint node_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
+            CommunicationEndpoint node_endpoint =
+                endpoint_ops::parse_endpoint(endpoint_str);
 
             if (std::holds_alternative<Ipv4Endpoint>(node_endpoint) &&
                 std::get<Ipv4Endpoint>(node_endpoint).is_unspecified()) {
@@ -190,8 +188,10 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
             for (const auto& a : msg.acceptors()) {
                 AcceptorInfo acceptor;
                 acceptor.port = static_cast<uint16_t>(a.port());
-                acceptor.handshake_version = static_cast<uint8_t>(a.handshake_version());
-                acceptor.protocol_version = static_cast<uint8_t>(a.protocol_version());
+                acceptor.handshake_version =
+                    static_cast<uint8_t>(a.handshake_version());
+                acceptor.protocol_version =
+                    static_cast<uint8_t>(a.protocol_version());
                 acceptor.tls_required = a.tls_required();
                 client_acceptors.push_back(acceptor);
             }
@@ -223,8 +223,9 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
 
         case TcpMessageType::Heartbeat: {
             CommunicationEndpoint endpoint = conn->remote_endpoint();
-            bool is_valid = std::holds_alternative<Ipv4Endpoint>(endpoint) ?
-                !std::get<Ipv4Endpoint>(endpoint).is_unspecified() : true;
+            bool is_valid = std::holds_alternative<Ipv4Endpoint>(endpoint)
+                                ? !std::get<Ipv4Endpoint>(endpoint).is_unspecified()
+                                : true;
             if (is_valid) {
                 NodeEndpoint* ep = registry_.get(endpoint);
                 if (ep) {

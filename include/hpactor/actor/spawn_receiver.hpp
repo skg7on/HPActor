@@ -27,16 +27,17 @@ namespace hpactor {
 // Receives SpawnRequest messages, creates actors via ActorTypeRegistry,
 // and sends SpawnResponse back to the caller via Transport.
 class SpawnReceiver : public EventBasedActor {
-public:
-    SpawnReceiver(ActorSystem& sys, ActorTypeRegistry& registry, net::Transport* transport);
+  public:
+    SpawnReceiver(ActorSystem& sys, ActorTypeRegistry& registry,
+                  net::Transport* transport);
 
     Behavior make_behavior() override;
 
-private:
+  private:
     void handle_spawn_request(const SpawnRequest& req, const net::WireFrame& frame);
 
     ActorTypeRegistry& registry_;
-    net::Transport* transport_;  // non-owning
+    net::Transport* transport_; // non-owning
 };
 
 } // namespace hpactor

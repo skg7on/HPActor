@@ -12,25 +12,27 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/kqueue_backend.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/kqueue_backend.hpp>
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-#include <sys/event.h>
-#include <sys/time.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <cstring>
-#include <cstdlib>
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) ||      \
+    defined(__NetBSD__)
+#    include <cstdlib>
+#    include <cstring>
+#    include <errno.h>
+#    include <fcntl.h>
+#    include <sys/event.h>
+#    include <sys/socket.h>
+#    include <sys/time.h>
+#    include <sys/uio.h>
+#    include <unistd.h>
 #endif
 
 namespace hpactor {
 namespace net {
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) ||      \
+    defined(__NetBSD__)
 
 KqueueBackend::KqueueBackend() = default;
 
@@ -158,7 +160,8 @@ uint64_t KqueueBackend::encode_user_data(int fd, ActorId actor, uint32_t op_type
            ((static_cast<uint64_t>(op_type) & 0xFFULL) << 56);
 }
 
-void KqueueBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor, uint32_t& op_type) {
+void KqueueBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor,
+                                     uint32_t& op_type) {
     fd = static_cast<int>(ud & 0xFFFFFFFFULL);
     actor = ActorId(static_cast<uint32_t>((ud >> 32) & 0xFFFFULL));
     op_type = static_cast<uint32_t>((ud >> 56) & 0xFFULL);
@@ -172,14 +175,15 @@ uint64_t KqueueBackend::run_after(ActorId actor, int delay_ms) {
     // Register timer with kqueue using EVFILT_TIMER
     // On macOS: fflags = NOTE_USECONDS means data is in microseconds
     struct kevent ev;
-    EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS, delay_ms * 1000, 0);
+    EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS,
+           delay_ms * 1000, 0);
     if (kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr) < 0) {
-        return 0;  // Failed to register
+        return 0; // Failed to register
     }
 
     // Store timer info for lookup when it fires
     TimerEntry entry;
-    entry.expires_at_ms = 0;  // Not used when using EVFILT_TIMER
+    entry.expires_at_ms = 0; // Not used when using EVFILT_TIMER
     entry.actor = actor;
     entry.interval_ms = 0;
     entry.handle = handle;
@@ -204,9 +208,10 @@ uint64_t KqueueBackend::run_every(ActorId actor, int interval_ms) {
 
     // Register first occurrence with kqueue
     struct kevent ev;
-    EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS, interval_ms * 1000, 0);
+    EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS,
+           interval_ms * 1000, 0);
     if (kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr) < 0) {
-        return 0;  // Failed to register
+        return 0; // Failed to register
     }
 
     timers_.push_back(entry);
@@ -225,7 +230,7 @@ void KqueueBackend::cancel_timer(uint64_t handle) {
 }
 
 void KqueueBackend::async_send(int fd, const iovec* bufs, int buf_count,
-                              ActorId actor, uint32_t op_type) {
+                               ActorId actor, uint32_t op_type) {
     size_t total_len = 0;
     for (int i = 0; i < buf_count; ++i) {
         total_len += bufs[i].iov_len;
@@ -255,7 +260,7 @@ void KqueueBackend::async_send(int fd, const iovec* bufs, int buf_count,
 }
 
 void KqueueBackend::async_recv(int fd, const iovec* bufs, int buf_count,
-                              ActorId actor, uint32_t op_type) {
+                               ActorId actor, uint32_t op_type) {
     ssize_t n = ::readv(fd, bufs, buf_count);
     int result = (n < 0) ? -errno : static_cast<int>(n);
 
@@ -272,8 +277,8 @@ void KqueueBackend::async_recv(int fd, const iovec* bufs, int buf_count,
     }
 }
 
-void KqueueBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                    ActorId actor, uint32_t op_type) {
+void KqueueBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
+                                     size_t len, ActorId actor, uint32_t op_type) {
     (void)fd;
     (void)buffer_id;
     (void)offset;
@@ -292,8 +297,8 @@ void KqueueBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_
     }
 }
 
-void KqueueBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                    ActorId actor, uint32_t op_type) {
+void KqueueBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
+                                     size_t len, ActorId actor, uint32_t op_type) {
     (void)fd;
     (void)buffer_id;
     (void)offset;
@@ -327,8 +332,8 @@ void KqueueBackend::async_accept(int fd, ActorId actor) {
     }
 }
 
-void KqueueBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                                 ActorId actor) {
+void KqueueBackend::async_connect(int fd, const sockaddr* addr,
+                                  socklen_t addrlen, ActorId actor) {
     int ret = ::connect(fd, addr, addrlen);
     int result;
     if (ret < 0) {
@@ -355,7 +360,7 @@ void KqueueBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrle
 }
 
 void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
-                                  ActorId actor, uint32_t op_type) {
+                                   ActorId actor, uint32_t op_type) {
     struct sockaddr_storage addr;
     socklen_t addrlen = sizeof(addr);
 
@@ -367,8 +372,9 @@ void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
     }
 
     // First check if data is available with non-blocking peek
-    ssize_t peek_n = ::recvfrom(fd, nullptr, 0, MSG_PEEK,
-                                 reinterpret_cast<struct sockaddr*>(&addr), &addrlen);
+    ssize_t peek_n =
+        ::recvfrom(fd, nullptr, 0, MSG_PEEK,
+                   reinterpret_cast<struct sockaddr*>(&addr), &addrlen);
     if (peek_n < 0 && errno == EAGAIN) {
         // No data available right now - restore blocking and deliver EAGAIN
         if (was_blocking) {
@@ -392,7 +398,8 @@ void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
     ssize_t total_n = 0;
     int last_err = 0;
 
-    // Loop until EAGAIN to drain all available data (edge-triggered requirement)
+    // Loop until EAGAIN to drain all available data (edge-triggered
+    // requirement)
     while (true) {
         struct msghdr msg;
         msg.msg_name = &addr;
@@ -406,14 +413,14 @@ void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
         ssize_t n = ::recvmsg(fd, &msg, 0);
         if (n < 0) {
             if (errno == EAGAIN) {
-                break;  // No more data available right now
+                break; // No more data available right now
             }
             last_err = errno;
             break;
         }
         total_n += n;
         if (n == 0) {
-            break;  // EOF
+            break; // EOF
         }
         // Continue looping to check for more data
     }
@@ -511,10 +518,12 @@ int KqueueBackend::wait(int timeout_ms) {
                         };
                         deliver_completion(completion);
 
-                        // Reschedule repeating timers by re-registering with kqueue
+                        // Reschedule repeating timers by re-registering with
+                        // kqueue
                         if (timer.interval_ms > 0) {
                             struct kevent ev;
-                            EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT, NOTE_USECONDS, timer.interval_ms * 1000, 0);
+                            EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT,
+                                   NOTE_USECONDS, timer.interval_ms * 1000, 0);
                             kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr);
                         }
                         break;
@@ -526,13 +535,12 @@ int KqueueBackend::wait(int timeout_ms) {
     }
 
     // Clean up cancelled one-shot timers
-    timers_.erase(
-        std::remove_if(timers_.begin(), timers_.end(),
-                       [this](const TimerEntry& t) {
-                           return cancelled_timers_.count(t.handle) > 0 && t.interval_ms == 0;
-                       }),
-        timers_.end()
-    );
+    timers_.erase(std::remove_if(timers_.begin(), timers_.end(),
+                                 [this](const TimerEntry& t) {
+                                     return cancelled_timers_.count(t.handle) > 0 &&
+                                            t.interval_ms == 0;
+                                 }),
+                  timers_.end());
 
     // Process pending socket I/O operations
     for (int i = 0; i < num_events; ++i) {
@@ -544,7 +552,8 @@ int KqueueBackend::wait(int timeout_ms) {
             PendingOp& op = it->second;
             OpType optype = static_cast<OpType>(op.op_type);
 
-            if (events[i].filter == EVFILT_READ && (optype == OpType::Recv || optype == OpType::RecvFrom)) {
+            if (events[i].filter == EVFILT_READ &&
+                (optype == OpType::Recv || optype == OpType::RecvFrom)) {
                 // Process pending recv
                 ssize_t total_n = 0;
                 int last_err = 0;
@@ -570,12 +579,13 @@ int KqueueBackend::wait(int timeout_ms) {
                     }
                     total_n += n;
                     if (n == 0) {
-                        break;  // EOF
+                        break; // EOF
                     }
                 }
 
                 if (total_n > 0 || last_err != 0) {
-                    int result = (last_err != 0) ? -last_err : static_cast<int>(total_n);
+                    int result =
+                        (last_err != 0) ? -last_err : static_cast<int>(total_n);
                     OpCompletion completion{
                         .actor = op.actor,
                         .type = optype,
@@ -589,7 +599,8 @@ int KqueueBackend::wait(int timeout_ms) {
                     }
                     pending_ops_.erase(it);
                 }
-            } else if (events[i].filter == EVFILT_WRITE && (optype == OpType::Send || optype == OpType::SendTo)) {
+            } else if (events[i].filter == EVFILT_WRITE &&
+                       (optype == OpType::Send || optype == OpType::SendTo)) {
                 // Process pending send
                 ssize_t total_n = 0;
                 int last_err = 0;
@@ -597,10 +608,15 @@ int KqueueBackend::wait(int timeout_ms) {
                 while (true) {
                     ssize_t n;
                     if (optype == OpType::SendTo) {
-                        n = ::sendto(fd, op.data.data() + total_n, op.data.size() - static_cast<size_t>(total_n), MSG_DONTWAIT,
-                                     reinterpret_cast<const sockaddr*>(&op.addr), op.addrlen);
+                        n = ::sendto(fd, op.data.data() + total_n,
+                                     op.data.size() - static_cast<size_t>(total_n),
+                                     MSG_DONTWAIT,
+                                     reinterpret_cast<const sockaddr*>(&op.addr),
+                                     op.addrlen);
                     } else {
-                        n = ::send(fd, op.data.data() + total_n, op.data.size() - static_cast<size_t>(total_n), MSG_DONTWAIT);
+                        n = ::send(fd, op.data.data() + total_n,
+                                   op.data.size() - static_cast<size_t>(total_n),
+                                   MSG_DONTWAIT);
                     }
                     if (n < 0) {
                         if (errno == EAGAIN) {
@@ -612,12 +628,13 @@ int KqueueBackend::wait(int timeout_ms) {
                     }
                     total_n += n;
                     if (static_cast<size_t>(total_n) >= op.data.size()) {
-                        break;  // All sent
+                        break; // All sent
                     }
                 }
 
                 if (total_n > 0 || last_err != 0) {
-                    int result = (last_err != 0) ? -last_err : static_cast<int>(total_n);
+                    int result =
+                        (last_err != 0) ? -last_err : static_cast<int>(total_n);
                     OpCompletion completion{
                         .actor = op.actor,
                         .type = optype,
@@ -668,15 +685,19 @@ void KqueueBackend::deliver_completion(OpCompletion completion) {
 KqueueBackend::KqueueBackend() = default;
 KqueueBackend::~KqueueBackend() = default;
 
-bool KqueueBackend::start() { return false; }
+bool KqueueBackend::start() {
+    return false;
+}
 void KqueueBackend::stop() {}
 
 bool KqueueBackend::add_fd(int fd, IoEvent events) {
-    (void)fd; (void)events;
+    (void)fd;
+    (void)events;
     return false;
 }
 bool KqueueBackend::update_fd(int fd, IoEvent events) {
-    (void)fd; (void)events;
+    (void)fd;
+    (void)events;
     return false;
 }
 bool KqueueBackend::remove_fd(int fd) {
@@ -685,7 +706,8 @@ bool KqueueBackend::remove_fd(int fd) {
 }
 
 int KqueueBackend::register_buffer(const void* addr, size_t len) {
-    (void)addr; (void)len;
+    (void)addr;
+    (void)len;
     return -1;
 }
 bool KqueueBackend::unregister_buffer(int buffer_id) {
@@ -695,46 +717,80 @@ bool KqueueBackend::unregister_buffer(int buffer_id) {
 
 void KqueueBackend::async_send(int fd, const iovec* bufs, int buf_count,
                                ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 void KqueueBackend::async_recv(int fd, const iovec* bufs, int buf_count,
                                ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 
-void KqueueBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                     ActorId actor, uint32_t op_type) {
-    (void)fd; (void)buffer_id; (void)offset; (void)len; (void)actor; (void)op_type;
+void KqueueBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
+                                     size_t len, ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)buffer_id;
+    (void)offset;
+    (void)len;
+    (void)actor;
+    (void)op_type;
 }
-void KqueueBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                     ActorId actor, uint32_t op_type) {
-    (void)fd; (void)buffer_id; (void)offset; (void)len; (void)actor; (void)op_type;
+void KqueueBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
+                                     size_t len, ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)buffer_id;
+    (void)offset;
+    (void)len;
+    (void)actor;
+    (void)op_type;
 }
 
 void KqueueBackend::async_accept(int fd, ActorId actor) {
-    (void)fd; (void)actor;
+    (void)fd;
+    (void)actor;
 }
-void KqueueBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                                  ActorId actor) {
-    (void)fd; (void)addr; (void)addrlen; (void)actor;
+void KqueueBackend::async_connect(int fd, const sockaddr* addr,
+                                  socklen_t addrlen, ActorId actor) {
+    (void)fd;
+    (void)addr;
+    (void)addrlen;
+    (void)actor;
 }
 
 void KqueueBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
                                    ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 void KqueueBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
                                  const sockaddr* addr, socklen_t addrlen,
                                  ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)addr; (void)addrlen; (void)actor; (void)op_type;
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)addr;
+    (void)addrlen;
+    (void)actor;
+    (void)op_type;
 }
 
 uint64_t KqueueBackend::run_after(ActorId actor, int delay_ms) {
-    (void)actor; (void)delay_ms;
+    (void)actor;
+    (void)delay_ms;
     return 0;
 }
 uint64_t KqueueBackend::run_every(ActorId actor, int interval_ms) {
-    (void)actor; (void)interval_ms;
+    (void)actor;
+    (void)interval_ms;
     return 0;
 }
 void KqueueBackend::cancel_timer(uint64_t handle) {

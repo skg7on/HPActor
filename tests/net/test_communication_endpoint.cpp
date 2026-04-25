@@ -12,22 +12,22 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/types/types.hpp>
-#include <cassert>
 #include <array>
+#include <cassert>
+#include <hpactor/types/types.hpp>
 
 int main() {
     using namespace hpactor;
 
     // Test IPv4Endpoint construction
-    Ipv4Endpoint ipv4{0x01010101, htons(5353)};  // 1.1.1.1 in network order
+    Ipv4Endpoint ipv4{0x01010101, htons(5353)}; // 1.1.1.1 in network order
     assert(ipv4.port() == 5353);
     assert(ipv4.is_ipv4() == true);
     assert(ipv4.is_ipv6() == false);
 
     // Test IPv6Endpoint construction
     std::array<uint8_t, 16> loopback_arr{};
-    loopback_arr[15] = 1;  // ::1
+    loopback_arr[15] = 1; // ::1
     Ipv6Endpoint ipv6{loopback_arr, htons(8080)};
     assert(ipv6.port() == 8080);
     assert(ipv6.is_ipv6() == true);
@@ -39,18 +39,18 @@ int main() {
     assert(!std::holds_alternative<Ipv6Endpoint>(ep));
 
     // Test is_loopback
-    Ipv4Endpoint loopback4{0x7F000001, 1234};  // 127.0.0.1
+    Ipv4Endpoint loopback4{0x7F000001, 1234}; // 127.0.0.1
     assert(loopback4.is_loopback() == true);
-    assert((Ipv4Endpoint{0xC0A80001, 1234}.is_loopback() == false));  // 192.168.0.1
+    assert((Ipv4Endpoint{0xC0A80001, 1234}.is_loopback() == false)); // 192.168.0.1
 
     std::array<uint8_t, 16> loopback6_arr{};
     loopback6_arr[15] = 1;
     assert((Ipv6Endpoint{loopback6_arr, 1234}.is_loopback() == true));
 
     // Test is_private_network
-    assert((Ipv4Endpoint{0x0A000001, 1234}.is_private_network() == true));   // 10.0.0.1
-    assert((Ipv4Endpoint{0xAC100001, 1234}.is_private_network() == true));   // 172.16.0.1
-    assert((Ipv4Endpoint{0xC0A80001, 1234}.is_private_network() == true));  // 192.168.0.1
+    assert((Ipv4Endpoint{0x0A000001, 1234}.is_private_network() == true)); // 10.0.0.1
+    assert((Ipv4Endpoint{0xAC100001, 1234}.is_private_network() == true)); // 172.16.0.1
+    assert((Ipv4Endpoint{0xC0A80001, 1234}.is_private_network() == true)); // 192.168.0.1
     assert((Ipv4Endpoint{0x08080808, 1234}.is_private_network() == false)); // 8.8.8.8
 
     // Test sockaddr conversion

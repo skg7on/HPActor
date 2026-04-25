@@ -14,10 +14,10 @@
 
 // ActorProxy implementation - see actor_proxy.hpp
 
-#include <hpactor/ref/actor_proxy.hpp>
-#include <hpactor/types/serialization.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/transport.hpp>
+#include <hpactor/ref/actor_proxy.hpp>
+#include <hpactor/types/serialization.hpp>
 
 namespace hpactor {
 
@@ -26,20 +26,22 @@ ActorProxy::ActorProxy(ActorAddress address, net::Transport* transport)
 
 void ActorProxy::send(const ActorAddress& target, MessageVariant msg) {
     // Determine TypeTag using std::visit
-    TypeTag tag = std::visit([](const auto& m) -> TypeTag {
-        using T = std::decay_t<decltype(m)>;
-        if constexpr (std::is_same_v<T, down_msg>) {
-            return TypeTag::DownMsg;
-        } else if constexpr (std::is_same_v<T, exit_msg>) {
-            return TypeTag::ExitMsg;
-        } else if constexpr (std::is_same_v<T, link_msg>) {
-            return TypeTag::LinkMsg;
-        } else if constexpr (std::is_same_v<T, unlink_msg>) {
-            return TypeTag::UnlinkMsg;
-        } else {
-            return TypeTag::User;
-        }
-    }, msg);
+    TypeTag tag = std::visit(
+        [](const auto& m) -> TypeTag {
+            using T = std::decay_t<decltype(m)>;
+            if constexpr (std::is_same_v<T, down_msg>) {
+                return TypeTag::DownMsg;
+            } else if constexpr (std::is_same_v<T, exit_msg>) {
+                return TypeTag::ExitMsg;
+            } else if constexpr (std::is_same_v<T, link_msg>) {
+                return TypeTag::LinkMsg;
+            } else if constexpr (std::is_same_v<T, unlink_msg>) {
+                return TypeTag::UnlinkMsg;
+            } else {
+                return TypeTag::User;
+            }
+        },
+        msg);
 
     // Serialize message
     DefaultSerializer serializer;
@@ -47,8 +49,8 @@ void ActorProxy::send(const ActorAddress& target, MessageVariant msg) {
 
     // Create frame
     net::WireFrame frame;
-    frame.sender = address_;       // This proxy's address (sender side)
-    frame.receiver = target;      // Target actor address
+    frame.sender = address_; // This proxy's address (sender side)
+    frame.receiver = target; // Target actor address
     frame.message_id = MessageId::generate().value();
     frame.payload = std::move(payload);
 

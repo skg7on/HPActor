@@ -38,13 +38,14 @@ void ActorContext::send(const ActorAddress& target, MessageVariant msg) {
 }
 
 void ActorContext::send_with_priority(const ActorAddress& target, MessageVariant msg,
-                                    uint8_t priority, int64_t deadline_ns) {
+                                      uint8_t priority, int64_t deadline_ns) {
     if (target.is_local()) {
         auto actor_ptr = owner_.get();
         if (!actor_ptr) {
             return;
         }
-        actor_ptr->system().deliver_local(target.id, std::move(msg), priority, deadline_ns);
+        actor_ptr->system().deliver_local(target.id, std::move(msg), priority,
+                                          deadline_ns);
     } else {
         // Remote delivery - will be implemented in Phase 1
         // For now, ignore remote sends
@@ -100,9 +101,9 @@ void ActorContext::monitor(const ActorAddress& target) {
     monitored_.push_back(target);
 }
 
-RpcFuture<bytes> ActorContext::rpc(const ActorAddress& target,
-                                   const bytes& encoded_request,
-                                   std::chrono::milliseconds timeout_ms) {
+RpcFuture<bytes>
+ActorContext::rpc(const ActorAddress& target, const bytes& encoded_request,
+                  std::chrono::milliseconds timeout_ms) {
     return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms);
 }
 

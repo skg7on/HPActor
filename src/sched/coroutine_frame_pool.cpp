@@ -49,21 +49,21 @@ CoroutineFramePool::Frame* CoroutineFramePool::acquire() {
     FreeNode* node = free_stack_.load(std::memory_order_acquire);
     while (node != nullptr) {
         FreeNode* next = node->next;
-        if (free_stack_.compare_exchange_weak(node, next,
-                                             std::memory_order_acq_rel,
-                                             std::memory_order_acquire)) {
+        if (free_stack_.compare_exchange_weak(node, next, std::memory_order_acq_rel,
+                                              std::memory_order_acquire)) {
             free_count_.fetch_sub(1, std::memory_order_release);
 
             // Calculate frame index from stack pointer
             std::byte* stack_ptr = reinterpret_cast<std::byte*>(node);
-            size_t index = static_cast<size_t>(stack_ptr - stacks_[0].get()) / stack_size_;
+            size_t index =
+                static_cast<size_t>(stack_ptr - stacks_[0].get()) / stack_size_;
             Frame* frame = &frames_[index];
             frame->in_use = true;
             return frame;
         }
         // CAS failed, node was updated, retry
     }
-    return nullptr;  // Pool exhausted
+    return nullptr; // Pool exhausted
 }
 
 void CoroutineFramePool::release(Frame* frame) {
@@ -78,9 +78,8 @@ void CoroutineFramePool::release(Frame* frame) {
     FreeNode* current = free_stack_.load(std::memory_order_acquire);
     do {
         node->next = current;
-    } while (!free_stack_.compare_exchange_weak(current, node,
-                                                std::memory_order_acq_rel,
-                                                std::memory_order_acquire));
+    } while (!free_stack_.compare_exchange_weak(
+        current, node, std::memory_order_acq_rel, std::memory_order_acquire));
 
     free_count_.fetch_add(1, std::memory_order_release);
 }

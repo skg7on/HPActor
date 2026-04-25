@@ -43,10 +43,10 @@ constexpr uint32_t spawn_receiver_not_running = 5;
 // Note: This becomes part of MessageVariant via serialization.hpp
 // -----------------------------------------------------------------------------
 struct SpawnRequest {
-    std::string actor_type_name;    // e.g., "calculator"
+    std::string actor_type_name;  // e.g., "calculator"
     TypeTag args_type;            // type tag for deserializing args
-    bytes serialized_args;         // type-erased constructor arguments
-    ActorAddress supervisor_addr;  // supervisor's address for link establishment
+    bytes serialized_args;        // type-erased constructor arguments
+    ActorAddress supervisor_addr; // supervisor's address for link establishment
 };
 
 // -----------------------------------------------------------------------------
@@ -54,8 +54,9 @@ struct SpawnRequest {
 // Note: This becomes part of MessageVariant via serialization.hpp
 // -----------------------------------------------------------------------------
 struct SpawnResponse {
-    ActorAddress actor_addr;    // new actor's address (node_id, type, id, incarnation)
-    uint32_t error_code;       // spawn_errors::code
+    ActorAddress actor_addr; // new actor's address (node_id, type, id,
+                             // incarnation)
+    uint32_t error_code;     // spawn_errors::code
 };
 
 // -----------------------------------------------------------------------------
@@ -70,7 +71,7 @@ using SpawnMessageVariant = std::variant<SpawnRequest, SpawnResponse>;
 // Allows non-blocking spawn with result retrieval via get().
 // WARNING: get() blocks the calling thread.
 class AsyncActor {
-public:
+  public:
     AsyncActor();
     AsyncActor(AsyncActor&& other) noexcept;
     AsyncActor& operator=(AsyncActor&& other) noexcept;
@@ -88,16 +89,22 @@ public:
     void cancel();
 
     // Get associated node ID
-    CommunicationEndpoint endpoint() const { return endpoint_; }
+    CommunicationEndpoint endpoint() const {
+        return endpoint_;
+    }
 
     // Set response (called by transport layer when response received)
     void set_response(SpawnResponse response);
 
     // Message ID for correlation with response
-    void set_message_id(uint64_t id) { message_id_ = id; }
-    uint64_t message_id() const { return message_id_; }
+    void set_message_id(uint64_t id) {
+        message_id_ = id;
+    }
+    uint64_t message_id() const {
+        return message_id_;
+    }
 
-private:
+  private:
     CommunicationEndpoint endpoint_ = LocalEndpoint;
     std::chrono::milliseconds timeout_{5000};
     mutable std::unique_ptr<std::mutex> mutex_;
@@ -105,7 +112,7 @@ private:
     bool ready_ = false;
     bool cancelled_ = false;
     SpawnResponse response_{};
-    uint64_t message_id_ = 0;  // For correlation with response
+    uint64_t message_id_ = 0; // For correlation with response
 };
 
 } // namespace hpactor

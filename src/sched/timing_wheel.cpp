@@ -41,14 +41,15 @@ TimingWheel::~TimingWheel() {
 
 uint64_t TimingWheel::schedule(int64_t delay_ns, TimerCallback callback) {
     return schedule_at(current_time_.load(std::memory_order_relaxed) + delay_ns,
-                      std::move(callback));
+                       std::move(callback));
 }
 
 uint64_t TimingWheel::schedule_at(int64_t expire_ns, TimerCallback callback) {
     return add_timer_internal(expire_ns, std::move(callback));
 }
 
-uint64_t TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {
+uint64_t
+TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {
     auto* timer = new Timer;
     timer->expire_ns = expire_ns;
     timer->id = next_timer_id_.fetch_add(1);
@@ -101,13 +102,14 @@ void TimingWheel::insert_timer(Timer* timer) {
     }
     uint32_t bucket = static_cast<uint32_t>(level_offset) & levels_[level].mask;
 
-    timer->id |= (static_cast<uint64_t>(level) << 48);  // Store level in high bits
+    timer->id |= (static_cast<uint64_t>(level) << 48); // Store level in high
+                                                       // bits
     levels_[level].buckets[bucket].push_back(timer);
 }
 
 TimingWheel::Timer* TimingWheel::remove_timer(uint64_t timer_id) {
     uint32_t level = static_cast<uint32_t>(timer_id >> 48);
-    timer_id &= 0xFFFFFFFFFFFFULL;  // Mask to get actual ID
+    timer_id &= 0xFFFFFFFFFFFFULL; // Mask to get actual ID
 
     if (level >= num_levels_) {
         return nullptr;
@@ -143,23 +145,26 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
         for (uint32_t l = 0; l < level; ++l) {
             level_offset /= 256;
         }
-        uint32_t start_bucket = static_cast<uint32_t>(level_offset) & levels_[level].mask;
+        uint32_t start_bucket =
+            static_cast<uint32_t>(level_offset) & levels_[level].mask;
 
         uint64_t end_offset = static_cast<uint64_t>(now_ns / tick_ns_);
         for (uint32_t l = 0; l < level; ++l) {
             end_offset /= 256;
         }
-        uint32_t end_bucket = static_cast<uint32_t>(end_offset) & levels_[level].mask;
+        uint32_t end_bucket =
+            static_cast<uint32_t>(end_offset) & levels_[level].mask;
 
         // Process buckets from start to end (wrapping around)
         uint32_t num_buckets = levels_[level].num_buckets;
-        uint32_t count = (end_bucket - start_bucket + num_buckets) % num_buckets + 1;
+        uint32_t count =
+            (end_bucket - start_bucket + num_buckets) % num_buckets + 1;
 
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t bucket_idx = (start_bucket + i) % num_buckets;
             auto& bucket = levels_[level].buckets[bucket_idx];
 
-            for (auto it = bucket.begin(); it != bucket.end(); ) {
+            for (auto it = bucket.begin(); it != bucket.end();) {
                 Timer* timer = *it;
                 if (timer->cancelled) {
                     it = bucket.erase(it);
@@ -174,7 +179,8 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
                     delete timer;
                     ++fired;
                 } else {
-                    // Timer not yet expired, might need to cascade to lower level
+                    // Timer not yet expired, might need to cascade to lower
+                    // level
                     if (level > 0) {
                         // Recalculate which bucket this timer should be in
                         // at this (lower) level
@@ -183,14 +189,15 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
                         for (uint32_t l = 0; l <= lower_level; ++l) {
                             lower_offset /= 256;
                         }
-                        uint32_t lower_bucket = static_cast<uint32_t>(lower_offset) &
-                                               levels_[lower_level].mask;
+                        uint32_t lower_bucket =
+                            static_cast<uint32_t>(lower_offset) &
+                            levels_[lower_level].mask;
 
                         timer->id &= 0xFFFFFFFFFFFFULL;
                         timer->id |= (static_cast<uint64_t>(lower_level) << 48);
                         bucket.erase(it);
                         levels_[lower_level].buckets[lower_bucket].push_back(timer);
-                        it = bucket.begin();  // Reset since we erased
+                        it = bucket.begin(); // Reset since we erased
                         continue;
                     }
                     ++it;

@@ -14,9 +14,9 @@
 
 #pragma once
 
+#include <hpactor/actor/message.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
 #include <hpactor/sched/scheduler.hpp>
-#include <hpactor/actor/message.hpp>
 
 #include <atomic>
 #include <functional>
@@ -26,9 +26,8 @@ namespace hpactor::mailbox {
 // Continuation callback type - called when actor should be resumed
 using ActorContinuationCallback = std::function<void()>;
 
-template<typename T>
-class MPSCActorMailbox {
-public:
+template <typename T> class MPSCActorMailbox {
+  public:
     MPSCActorMailbox(ActorId actor_id, sched::IScheduler* scheduler) noexcept
         : actor_id_(actor_id), scheduler_(scheduler) {}
 
@@ -44,8 +43,7 @@ public:
         if (was_empty) {
             bool expected = true;
             if (mailbox_was_empty_.compare_exchange_strong(
-                    expected, false,
-                    std::memory_order_acq_rel,
+                    expected, false, std::memory_order_acq_rel,
                     std::memory_order_acquire)) {
                 // Directly resume the actor's continuation if available
                 // This avoids the latency of queuing and later pickup
@@ -76,13 +74,16 @@ public:
     // Non-blocking pop matching ActorMailbox interface
     bool try_pop(T& out) noexcept {
         T* node = dequeue();
-        if (!node) return false;
+        if (!node)
+            return false;
         out = std::move(*node);
         delete node;
         return true;
     }
 
-    bool empty() const noexcept { return mailbox_.empty(); }
+    bool empty() const noexcept {
+        return mailbox_.empty();
+    }
 
     // For MailboxAwaiter: was_empty before suspension?
     bool was_empty() const noexcept {
@@ -100,7 +101,7 @@ public:
         mailbox_was_empty_.store(false, std::memory_order_release);
     }
 
-private:
+  private:
     ActorId actor_id_;
     sched::IScheduler* scheduler_;
     MPSCMailbox<T> mailbox_;

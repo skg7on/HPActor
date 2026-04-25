@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/gcd_backend.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/gcd_backend.hpp>
 
 #if defined(__APPLE__)
-#include <dispatch/dispatch.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#include <sys/select.h>
-#include <unistd.h>
-#include <cstring>
-#include <cerrno>
-#include <cstdlib>
-#include <fcntl.h>
+#    include <cerrno>
+#    include <cstdlib>
+#    include <cstring>
+#    include <dispatch/dispatch.h>
+#    include <fcntl.h>
+#    include <sys/select.h>
+#    include <sys/socket.h>
+#    include <sys/uio.h>
+#    include <unistd.h>
 #endif
 
 namespace hpactor {
@@ -165,7 +165,8 @@ void connect_trampoline(void* ctx) {
 
 } // anonymous namespace
 
-// Helper function for run_after dispatch (must be static to convert to function pointer)
+// Helper function for run_after dispatch (must be static to convert to function
+// pointer)
 static void run_after_dispatch(void* ctx) {
     auto* c = static_cast<RunAfterContext*>(ctx);
     if (c->self->is_timer_cancelled(c->handle)) {
@@ -189,8 +190,8 @@ static void run_after_dispatch(void* ctx) {
 }
 
 bool GcdBackend::start() {
-    dispatch_queue_ = dispatch_queue_create("com.hpactor.gcdbackend",
-                                            DISPATCH_QUEUE_SERIAL);
+    dispatch_queue_ =
+        dispatch_queue_create("com.hpactor.gcdbackend", DISPATCH_QUEUE_SERIAL);
 
     // Create wakeup pipe for signaling wait()
     if (pipe(wakeup_pipe_) < 0) {
@@ -287,7 +288,8 @@ bool GcdBackend::unregister_buffer(int buffer_id) {
 void GcdBackend::async_send(int fd, const iovec* bufs, int buf_count,
                             ActorId actor, uint32_t op_type) {
     size_t total_len = 0;
-    for (int i = 0; i < buf_count; ++i) total_len += bufs[i].iov_len;
+    for (int i = 0; i < buf_count; ++i)
+        total_len += bufs[i].iov_len;
     auto* c = new AsyncSendContext{
         .self = this,
         .fd = fd,
@@ -306,7 +308,8 @@ void GcdBackend::async_send(int fd, const iovec* bufs, int buf_count,
 void GcdBackend::async_recv(int fd, const iovec* bufs, int buf_count,
                             ActorId actor, uint32_t op_type) {
     size_t recv_capacity = 0;
-    for (int i = 0; i < buf_count; ++i) recv_capacity += bufs[i].iov_len;
+    for (int i = 0; i < buf_count; ++i)
+        recv_capacity += bufs[i].iov_len;
     auto* c = new AsyncRecvContext{
         .self = this,
         .fd = fd,
@@ -318,15 +321,15 @@ void GcdBackend::async_recv(int fd, const iovec* bufs, int buf_count,
     dispatch_async_f(dispatch_queue_, c, async_recv_trampoline);
 }
 
-void GcdBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                  ActorId actor, uint32_t op_type) {
+void GcdBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
+                                  size_t len, ActorId actor, uint32_t op_type) {
     auto [buf_addr, buf_len] = registered_buffers_[static_cast<size_t>(buffer_id)];
     iovec single_buf{static_cast<char*>(const_cast<void*>(buf_addr)) + offset, len};
     async_send(fd, &single_buf, 1, actor, op_type);
 }
 
-void GcdBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                  ActorId actor, uint32_t op_type) {
+void GcdBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
+                                  size_t len, ActorId actor, uint32_t op_type) {
     auto [buf_addr, buf_len] = registered_buffers_[static_cast<size_t>(buffer_id)];
     iovec single_buf{static_cast<char*>(const_cast<void*>(buf_addr)) + offset, len};
     async_recv(fd, &single_buf, 1, actor, op_type);
@@ -334,12 +337,12 @@ void GcdBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t l
 
 void GcdBackend::async_accept(int fd, ActorId actor) {
     auto* ctx = new AcceptContext{this, fd, actor};
-    dispatch_source_t source = dispatch_source_create(
-        DISPATCH_SOURCE_TYPE_READ, static_cast<uintptr_t>(fd), 0, dispatch_queue_);
+    dispatch_source_t source =
+        dispatch_source_create(DISPATCH_SOURCE_TYPE_READ,
+                               static_cast<uintptr_t>(fd), 0, dispatch_queue_);
     dispatch_set_context(source, ctx);
-    dispatch_set_finalizer_f(source, [](void* ctx) {
-        delete static_cast<AcceptContext*>(ctx);
-    });
+    dispatch_set_finalizer_f(
+        source, [](void* ctx) { delete static_cast<AcceptContext*>(ctx); });
     dispatch_source_set_event_handler_f(source, accept_trampoline);
     dispatch_resume(source);
     accept_sources_[fd] = source;
@@ -352,8 +355,9 @@ void GcdBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
     int ret = ::connect(fd, addr, addrlen);
     if (ret < 0 && errno == EINPROGRESS) {
         auto* ctx = new ConnectContext{this, fd, actor};
-        dispatch_source_t source = dispatch_source_create(
-            DISPATCH_SOURCE_TYPE_WRITE, static_cast<uintptr_t>(fd), 0, dispatch_queue_);
+        dispatch_source_t source =
+            dispatch_source_create(DISPATCH_SOURCE_TYPE_WRITE,
+                                   static_cast<uintptr_t>(fd), 0, dispatch_queue_);
         dispatch_set_context(source, ctx);
         dispatch_set_finalizer_f(source, [](void* ctx) {
             delete static_cast<ConnectContext*>(ctx);
@@ -389,8 +393,9 @@ void GcdBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
 uint64_t GcdBackend::run_after(ActorId actor, int delay_ms) {
     uint64_t handle = next_timer_handle_++;
     auto* ctx = new RunAfterContext{this, handle, actor};
-    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(delay_ms) * 1000000LL),
-                    dispatch_queue_, ctx, run_after_dispatch);
+    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW,
+                                   static_cast<int64_t>(delay_ms) * 1000000LL),
+                     dispatch_queue_, ctx, run_after_dispatch);
     return handle;
 }
 
@@ -416,16 +421,18 @@ void timer_trampoline(void* ctx) {
     };
     c->self->deliver_completion(completion);
     // Reschedule for next interval (context stays alive)
-    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(c->interval_ms) * 1000000LL),
-                    c->self->get_dispatch_queue(), c, timer_trampoline);
+    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW,
+                                   static_cast<int64_t>(c->interval_ms) * 1000000LL),
+                     c->self->get_dispatch_queue(), c, timer_trampoline);
 }
 
 uint64_t GcdBackend::run_every(ActorId actor, int interval_ms) {
     uint64_t handle = next_timer_handle_++;
     auto* ctx = new TimerContext{this, handle, actor, interval_ms};
     // Start the repeating cycle with first fire after interval
-    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW, static_cast<int64_t>(interval_ms) * 1000000LL),
-                    dispatch_queue_, ctx, timer_trampoline);
+    dispatch_after_f(dispatch_time(DISPATCH_TIME_NOW,
+                                   static_cast<int64_t>(interval_ms) * 1000000LL),
+                     dispatch_queue_, ctx, timer_trampoline);
     return handle;
 }
 
@@ -458,7 +465,8 @@ int GcdBackend::wait(int timeout_ms) {
     if (result > 0 && FD_ISSET(wakeup_pipe_[0], &read_fds)) {
         // Drain the wakeup pipe
         uint8_t buf[64];
-        while (read(wakeup_pipe_[0], buf, sizeof(buf)) > 0) {}
+        while (read(wakeup_pipe_[0], buf, sizeof(buf)) > 0) {
+        }
         return 1;
     }
     return result;
@@ -495,15 +503,19 @@ void GcdBackend::deliver_completion(OpCompletion completion) {
 GcdBackend::GcdBackend() = default;
 GcdBackend::~GcdBackend() = default;
 
-bool GcdBackend::start() { return false; }
+bool GcdBackend::start() {
+    return false;
+}
 void GcdBackend::stop() {}
 
 bool GcdBackend::add_fd(int fd, IoEvent events) {
-    (void)fd; (void)events;
+    (void)fd;
+    (void)events;
     return false;
 }
 bool GcdBackend::update_fd(int fd, IoEvent events) {
-    (void)fd; (void)events;
+    (void)fd;
+    (void)events;
     return false;
 }
 bool GcdBackend::remove_fd(int fd) {
@@ -512,7 +524,8 @@ bool GcdBackend::remove_fd(int fd) {
 }
 
 int GcdBackend::register_buffer(const void* addr, size_t len) {
-    (void)addr; (void)len;
+    (void)addr;
+    (void)len;
     return -1;
 }
 bool GcdBackend::unregister_buffer(int buffer_id) {
@@ -522,46 +535,80 @@ bool GcdBackend::unregister_buffer(int buffer_id) {
 
 void GcdBackend::async_send(int fd, const iovec* bufs, int buf_count,
                             ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 void GcdBackend::async_recv(int fd, const iovec* bufs, int buf_count,
                             ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 
-void GcdBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                  ActorId actor, uint32_t op_type) {
-    (void)fd; (void)buffer_id; (void)offset; (void)len; (void)actor; (void)op_type;
+void GcdBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
+                                  size_t len, ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)buffer_id;
+    (void)offset;
+    (void)len;
+    (void)actor;
+    (void)op_type;
 }
-void GcdBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                  ActorId actor, uint32_t op_type) {
-    (void)fd; (void)buffer_id; (void)offset; (void)len; (void)actor; (void)op_type;
+void GcdBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
+                                  size_t len, ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)buffer_id;
+    (void)offset;
+    (void)len;
+    (void)actor;
+    (void)op_type;
 }
 
 void GcdBackend::async_accept(int fd, ActorId actor) {
-    (void)fd; (void)actor;
+    (void)fd;
+    (void)actor;
 }
 void GcdBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
                                ActorId actor) {
-    (void)fd; (void)addr; (void)addrlen; (void)actor;
+    (void)fd;
+    (void)addr;
+    (void)addrlen;
+    (void)actor;
 }
 
 void GcdBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
                                 ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 void GcdBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
                               const sockaddr* addr, socklen_t addrlen,
                               ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)addr; (void)addrlen; (void)actor; (void)op_type;
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)addr;
+    (void)addrlen;
+    (void)actor;
+    (void)op_type;
 }
 
 uint64_t GcdBackend::run_after(ActorId actor, int delay_ms) {
-    (void)actor; (void)delay_ms;
+    (void)actor;
+    (void)delay_ms;
     return 0;
 }
 uint64_t GcdBackend::run_every(ActorId actor, int interval_ms) {
-    (void)actor; (void)interval_ms;
+    (void)actor;
+    (void)interval_ms;
     return 0;
 }
 void GcdBackend::cancel_timer(uint64_t handle) {

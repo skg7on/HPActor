@@ -28,7 +28,8 @@
 static std::string derive_uds_path(const std::string& node_id) {
     std::string sanitized = node_id;
     for (char& c : sanitized) {
-        if (c == ':') c = '_';
+        if (c == ':')
+            c = '_';
     }
     return "/tmp/hpactor/" + sanitized + ".sock";
 }
@@ -42,11 +43,13 @@ void test_uds_fallback_invalid_path() {
 
     hpactor::net::TlsConfig tls_config;
     hpactor::net::PoolConfig pool_config;
-    hpactor::net::TcpTransport transport(remote_ep, tls_config, pool_config, nullptr);
+    hpactor::net::TcpTransport transport(remote_ep, tls_config, pool_config,
+                                         nullptr);
 
     // Try to connect via UDS with invalid path - should return nullptr
-    auto conn = transport.connect_unix_domain(remote_ep, "/nonexistent/path.sock");
-    assert(conn == nullptr);  // UDS should fail gracefully
+    auto conn = transport.connect_unix_domain(remote_ep, "/nonexistent/"
+                                                         "path.sock");
+    assert(conn == nullptr); // UDS should fail gracefully
 }
 
 // Test: UDS fallback when registry has no uds_path
@@ -62,7 +65,8 @@ void test_uds_fallback_when_uds_unavailable() {
     hpactor::net::PoolConfig pool_config;
 
     // Create transport with nullptr registry (simulates no node registry)
-    hpactor::net::TcpTransport transport(remote_ep, tls_config, pool_config, nullptr);
+    hpactor::net::TcpTransport transport(remote_ep, tls_config, pool_config,
+                                         nullptr);
 
     // Without a registry, connect(ep) returns nullptr
     auto conn = transport.connect(remote_ep);
@@ -88,7 +92,8 @@ int main() {
         assert(path == "/tmp/hpactor/node1.sock");
     }
 
-    // Test MultipleColons: "192.168.1.1:5000" -> "/tmp/hpactor/192.168.1.1_5000.sock"
+    // Test MultipleColons: "192.168.1.1:5000" ->
+    // "/tmp/hpactor/192.168.1.1_5000.sock"
     {
         auto path = derive_uds_path("192.168.1.1:5000");
         assert(path == "/tmp/hpactor/192.168.1.1_5000.sock");
@@ -142,7 +147,8 @@ int main() {
         // Non-blocking connect: may return 0 (immediate success) or -1 with
         // EINPROGRESS (connection in progress). Either way, the socket is
         // valid for the test - the accept will be handled by the event loop.
-        int ret = ::connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+        int ret = ::connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr),
+                            sizeof(addr));
         (void)ret;
 
         // Note: The accept handler is invoked when the event loop processes
@@ -167,7 +173,7 @@ int main() {
         assert(started);
 
         // close_unix_domain() should be safe even though not listening on UDS
-        acceptor.close_unix_domain();  // Should not crash
+        acceptor.close_unix_domain(); // Should not crash
         assert(!acceptor.is_listening());
     }
 

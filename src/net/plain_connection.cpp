@@ -25,20 +25,17 @@ namespace hpactor {
 namespace net {
 
 PlainConnection::PlainConnection(CommunicationEndpoint remote_endpoint,
-                                EventLoop* loop,
-                                int socket_fd)
-    : Connection(remote_endpoint),
-      remote_endpoint_(remote_endpoint),
-      loop_(loop),
-      fd_(socket_fd) {}
+                                 EventLoop* loop, int socket_fd)
+    : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
+      loop_(loop), fd_(socket_fd) {}
 
 PlainConnection::~PlainConnection() {
     close();
 }
 
-PlainConnectionPtr PlainConnection::create_client(int fd,
-                                                   CommunicationEndpoint remote_endpoint,
-                                                   EventLoop* loop) {
+PlainConnectionPtr
+PlainConnection::create_client(int fd, CommunicationEndpoint remote_endpoint,
+                               EventLoop* loop) {
     auto conn = std::shared_ptr<PlainConnection>(
         new PlainConnection(remote_endpoint, loop, fd));
     conn->set_state(ConnectionState::Connected);
@@ -46,9 +43,9 @@ PlainConnectionPtr PlainConnection::create_client(int fd,
     return conn;
 }
 
-PlainConnectionPtr PlainConnection::create_server(int fd,
-                                                    CommunicationEndpoint remote_endpoint,
-                                                    EventLoop* loop) {
+PlainConnectionPtr
+PlainConnection::create_server(int fd, CommunicationEndpoint remote_endpoint,
+                               EventLoop* loop) {
     auto conn = std::shared_ptr<PlainConnection>(
         new PlainConnection(remote_endpoint, loop, fd));
     conn->set_state(ConnectionState::Connected);
@@ -70,7 +67,8 @@ void PlainConnection::set_frame_handler(frame_handler handler) {
     frame_handler_ = std::move(handler);
 }
 
-void PlainConnection::set_error_handler(std::function<void(ConnectionPtr, const error&)> handler) {
+void PlainConnection::set_error_handler(
+    std::function<void(ConnectionPtr, const error&)> handler) {
     error_handler_ = std::move(handler);
 }
 
@@ -103,18 +101,18 @@ void PlainConnection::handle_read(const bytes& data) {
     // Simple framing: 4-byte length header
     while (read_buffer_.size() >= 4) {
         size_t frame_len = (static_cast<size_t>(read_buffer_[0]) << 24) |
-                          (static_cast<size_t>(read_buffer_[1]) << 16) |
-                          (static_cast<size_t>(read_buffer_[2]) << 8) |
-                          static_cast<size_t>(read_buffer_[3]);
+                           (static_cast<size_t>(read_buffer_[1]) << 16) |
+                           (static_cast<size_t>(read_buffer_[2]) << 8) |
+                           static_cast<size_t>(read_buffer_[3]);
 
         if (read_buffer_.size() < 4 + frame_len) {
-            break;  // Wait for more data
+            break; // Wait for more data
         }
 
         bytes frame(read_buffer_.begin() + static_cast<long>(4),
                     read_buffer_.begin() + static_cast<long>(4 + frame_len));
         read_buffer_.erase(read_buffer_.begin(),
-                          read_buffer_.begin() + static_cast<long>(4 + frame_len));
+                           read_buffer_.begin() + static_cast<long>(4 + frame_len));
 
         if (frame_handler_) {
             frame_handler_(frame);
@@ -123,13 +121,15 @@ void PlainConnection::handle_read(const bytes& data) {
 }
 
 void PlainConnection::send_raw(const bytes& data) {
-    if (fd_ < 0 || !loop_) return;
+    if (fd_ < 0 || !loop_)
+        return;
 
     // Append data to write buffer
     write_buffer_.insert(write_buffer_.end(), data.begin(), data.end());
 
     // If already sending, wait for completion
-    if (is_sending_) return;
+    if (is_sending_)
+        return;
 
     flush_write_buffer();
 }
@@ -145,8 +145,10 @@ void PlainConnection::flush_write_buffer() {
     iov.iov_base = write_buffer_.data();
     iov.iov_len = write_buffer_.size();
 
-    // Use async_send - completion will be delivered via loop's completion callback
-    loop_->backend()->async_send(fd_, &iov, 1, ActorId(0), static_cast<uint32_t>(OpType::Send));
+    // Use async_send - completion will be delivered via loop's completion
+    // callback
+    loop_->backend()->async_send(fd_, &iov, 1, ActorId(0),
+                                 static_cast<uint32_t>(OpType::Send));
 }
 
 void PlainConnection::handle_send_completion(int result) {
@@ -159,7 +161,9 @@ void PlainConnection::handle_send_completion(int result) {
         // Send error - close connection
         set_state(ConnectionState::Error);
         if (error_handler_) {
-            error_handler_(std::enable_shared_from_this<PlainConnection>::shared_from_this(), error{});
+            error_handler_(
+                std::enable_shared_from_this<PlainConnection>::shared_from_this(),
+                error{});
         }
         return;
     }

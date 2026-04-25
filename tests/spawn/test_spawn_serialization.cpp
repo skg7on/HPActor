@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <cassert>
 #include <hpactor/spawn.hpp>
 #include <hpactor/types/serialization.hpp>
 #include <hpactor/types/types.hpp>
-#include <cassert>
 
 // Test that TypeTag enum includes spawn protocol tags
 void test_type_tag_enum_has_spawn_tags() {
@@ -42,12 +42,13 @@ void test_spawn_response_construction() {
 
 // Test that SpawnRequest supports supervisor_addr field
 void test_spawn_request_with_supervisor() {
-    hpactor::ActorAddress supervisor{
-        hpactor::endpoint_ops::parse_endpoint("node1:12345"),
-        hpactor::ActorType{10},
-        hpactor::ActorId{42},
-        1
-    };
+    hpactor::ActorAddress supervisor{hpactor::endpoint_ops::parse_endpoint("nod"
+                                                                           "e1:"
+                                                                           "123"
+                                                                           "4"
+                                                                           "5"),
+                                     hpactor::ActorType{10},
+                                     hpactor::ActorId{42}, 1};
 
     hpactor::SpawnRequest req;
     req.actor_type_name = "worker";
@@ -56,7 +57,8 @@ void test_spawn_request_with_supervisor() {
     req.supervisor_addr = supervisor;
 
     assert(req.actor_type_name == "worker");
-    assert(req.supervisor_addr.endpoint == hpactor::endpoint_ops::parse_endpoint("node1:12345"));
+    assert(req.supervisor_addr.endpoint ==
+           hpactor::endpoint_ops::parse_endpoint("node1:12345"));
     assert(req.supervisor_addr.id.value() == 42);
 }
 
@@ -68,23 +70,24 @@ void test_spawn_encode_via_spawn_variant() {
     req.actor_type_name = "worker";
     req.args_type = hpactor::TypeTag::User;
     req.serialized_args = {1, 2, 3};
-    req.supervisor_addr = hpactor::ActorAddress{
-        hpactor::endpoint_ops::parse_endpoint("node1:12345"),
-        hpactor::ActorType{10},
-        hpactor::ActorId{42},
-        1
-    };
+    req.supervisor_addr =
+        hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node1:"
+                                                                    "12345"),
+                              hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
 
     hpactor::SpawnMessageVariant mv = req;
-    hpactor::bytes encoded = serializer.encode_spawn(hpactor::TypeTag::SpawnRequestTag, mv);
+    hpactor::bytes encoded =
+        serializer.encode_spawn(hpactor::TypeTag::SpawnRequestTag, mv);
 
     // Decode back
-    hpactor::SpawnMessageVariant decoded = serializer.decode_spawn(hpactor::TypeTag::SpawnRequestTag, encoded);
+    hpactor::SpawnMessageVariant decoded =
+        serializer.decode_spawn(hpactor::TypeTag::SpawnRequestTag, encoded);
 
     assert(std::holds_alternative<hpactor::SpawnRequest>(decoded));
     auto& decoded_req = std::get<hpactor::SpawnRequest>(decoded);
     assert(decoded_req.actor_type_name == "worker");
-    assert(decoded_req.supervisor_addr.endpoint == hpactor::endpoint_ops::parse_endpoint("node1:12345"));
+    assert(decoded_req.supervisor_addr.endpoint ==
+           hpactor::endpoint_ops::parse_endpoint("node1:12345"));
     assert(decoded_req.supervisor_addr.id.value() == 42);
 }
 
@@ -93,23 +96,24 @@ void test_spawn_response_encode_via_spawn_variant() {
     hpactor::DefaultSerializer serializer;
 
     hpactor::SpawnResponse resp;
-    resp.actor_addr = hpactor::ActorAddress{
-        hpactor::endpoint_ops::parse_endpoint("node2:12345"),
-        hpactor::ActorType{20},
-        hpactor::ActorId{100},
-        1
-    };
+    resp.actor_addr =
+        hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node2:"
+                                                                    "12345"),
+                              hpactor::ActorType{20}, hpactor::ActorId{100}, 1};
     resp.error_code = hpactor::spawn_errors::success;
 
     hpactor::SpawnMessageVariant mv = resp;
-    hpactor::bytes encoded = serializer.encode_spawn(hpactor::TypeTag::SpawnResponseTag, mv);
+    hpactor::bytes encoded =
+        serializer.encode_spawn(hpactor::TypeTag::SpawnResponseTag, mv);
 
     // Decode back
-    hpactor::SpawnMessageVariant decoded = serializer.decode_spawn(hpactor::TypeTag::SpawnResponseTag, encoded);
+    hpactor::SpawnMessageVariant decoded =
+        serializer.decode_spawn(hpactor::TypeTag::SpawnResponseTag, encoded);
 
     assert(std::holds_alternative<hpactor::SpawnResponse>(decoded));
     auto& decoded_resp = std::get<hpactor::SpawnResponse>(decoded);
-    assert(decoded_resp.actor_addr.endpoint == hpactor::endpoint_ops::parse_endpoint("node2:12345"));
+    assert(decoded_resp.actor_addr.endpoint ==
+           hpactor::endpoint_ops::parse_endpoint("node2:12345"));
     assert(decoded_resp.actor_addr.id.value() == 100);
     assert(decoded_resp.error_code == hpactor::spawn_errors::success);
 }

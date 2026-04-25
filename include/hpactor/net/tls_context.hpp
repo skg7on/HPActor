@@ -32,10 +32,11 @@ class TlsContext;
 // TlsContext - TLS configuration and crypto operations
 // -----------------------------------------------------------------------------
 // Manages certificates, private keys, and provides crypto operations for
-// the TLS handshake. Supports both filesystem-based and in-memory configuration.
+// the TLS handshake. Supports both filesystem-based and in-memory
+// configuration.
 // -----------------------------------------------------------------------------
 class TlsContext {
-public:
+  public:
     // Certificate verification result
     enum class CertVerifyResult {
         Ok,
@@ -62,7 +63,8 @@ public:
     //     node_<node_id>_key.pem   - own private key
     //     ca.pem                   - trusted CA certificate
     //     remote/                  - trusted peer certificates
-    static TlsContext from_filesystem(CommunicationEndpoint endpoint, const std::string& cert_dir);
+    static TlsContext
+    from_filesystem(CommunicationEndpoint endpoint, const std::string& cert_dir);
 
     // Create from in-memory configuration
     static TlsContext from_config(const TlsConfig& config);
@@ -76,18 +78,24 @@ public:
     // Decrypt pre_master_secret using own private key (RSA decryption)
     // Returns true on success, false on failure
     bool decrypt_pre_master_secret(const bytes& encrypted,
-                                  bytes& pre_master_secret) const;
+                                   bytes& pre_master_secret) const;
 
     // Get public key bytes from own certificate (for sending to peer)
-    const bytes& public_key() const { return public_key_; }
+    const bytes& public_key() const {
+        return public_key_;
+    }
 
     // Get own node ID
-    CommunicationEndpoint endpoint() const { return endpoint_; }
+    CommunicationEndpoint endpoint() const {
+        return endpoint_;
+    }
 
     // Get own certificate in DER format
-    const bytes& certificate() const { return certificate_; }
+    const bytes& certificate() const {
+        return certificate_;
+    }
 
-private:
+  private:
     TlsContext();
 
     CommunicationEndpoint endpoint_;
@@ -111,7 +119,7 @@ struct TlsConfig {
     bytes own_cert_der;
     bytes own_key_der;
     std::vector<bytes> ca_certs_der;
-    CommunicationEndpoint endpoint;  // local endpoint for this node
+    CommunicationEndpoint endpoint; // local endpoint for this node
     bool verify_peer = true;
 };
 

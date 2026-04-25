@@ -15,14 +15,16 @@
 // tests/sched/test_coroutine_scheduling.cpp
 // Integration test: spawn → deliver message → actor wakes → processes
 #include <cassert>
-#include <thread>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/sched/coroutine_awaiters.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/sched/coroutine_awaiters.hpp>
+#include <thread>
 
 // Simple message types
-struct Ping { hpactor::ActorId from; };
+struct Ping {
+    hpactor::ActorId from;
+};
 struct Pong {};
 struct Stop {};
 

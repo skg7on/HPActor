@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/types/types.hpp>
 #include <arpa/inet.h>
 #include <cstdio>
+#include <hpactor/types/types.hpp>
 #include <netdb.h>
 #include <sys/socket.h>
 
@@ -22,7 +22,8 @@ namespace hpactor {
 namespace endpoint_ops {
 
 Protocol protocol(const CommunicationEndpoint& ep) {
-    if (std::holds_alternative<Ipv4Endpoint>(ep)) return Protocol::IPv4;
+    if (std::holds_alternative<Ipv4Endpoint>(ep))
+        return Protocol::IPv4;
     return Protocol::IPv6;
 }
 
@@ -59,7 +60,7 @@ CommunicationEndpoint parse_endpoint(std::string_view node_id) {
     // Parse "host:port" format
     auto colon_pos = node_id.find(':');
     if (colon_pos == std::string_view::npos) {
-        return Ipv4Endpoint{0, 0};  // Unspecified on failure
+        return Ipv4Endpoint{0, 0}; // Unspecified on failure
     }
     std::string_view host = node_id.substr(0, colon_pos);
     std::string_view port_str = node_id.substr(colon_pos + 1);
@@ -80,7 +81,8 @@ CommunicationEndpoint parse_endpoint(std::string_view node_id) {
     // Try numeric IPv4 address first
     struct in_addr addr;
     if (inet_pton(AF_INET, std::string(host).c_str(), &addr) == 1) {
-        // inet_pton returns network byte order in s_addr, convert to stored network byte order
+        // inet_pton returns network byte order in s_addr, convert to stored
+        // network byte order
         return Ipv4Endpoint{htonl(addr.s_addr), htons(static_cast<uint16_t>(port))};
     }
 
@@ -93,14 +95,15 @@ CommunicationEndpoint parse_endpoint(std::string_view node_id) {
     }
 
     // Fallback: try DNS resolution via getaddrinfo for IPv4
-    struct addrinfo hints {};
+    struct addrinfo hints{};
     hints.ai_family = AF_INET;
     hints.ai_socktype = 0;
     struct addrinfo* result = nullptr;
     int ret = getaddrinfo(std::string(host).c_str(), nullptr, &hints, &result);
     if (ret == 0 && result != nullptr) {
         auto* ai = reinterpret_cast<struct sockaddr_in*>(result->ai_addr);
-        // sin_addr.s_addr is in network byte order; htonl converts to stored network byte order
+        // sin_addr.s_addr is in network byte order; htonl converts to stored
+        // network byte order
         uint32_t addr_bytes = htonl(ai->sin_addr.s_addr);
         freeaddrinfo(result);
         return Ipv4Endpoint{addr_bytes, htons(static_cast<uint16_t>(port))};
@@ -124,7 +127,7 @@ CommunicationEndpoint parse_endpoint(std::string_view node_id) {
         freeaddrinfo(result);
     }
 
-    return Ipv4Endpoint{0, 0};  // Unspecified on failure
+    return Ipv4Endpoint{0, 0}; // Unspecified on failure
     if (result) {
         freeaddrinfo(result);
         result = nullptr;
@@ -142,7 +145,7 @@ CommunicationEndpoint parse_endpoint(std::string_view node_id) {
         freeaddrinfo(result);
     }
 
-    return Ipv4Endpoint{0, 0};  // Unspecified on failure
+    return Ipv4Endpoint{0, 0}; // Unspecified on failure
 }
 
 } // namespace endpoint_ops

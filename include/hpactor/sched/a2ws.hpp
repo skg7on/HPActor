@@ -36,12 +36,12 @@ namespace hpactor::sched {
 // the thief will switch victims. Success rate determines victim selection.
 // -----------------------------------------------------------------------------
 class A2WS {
-public:
+  public:
     struct WorkerStats {
         std::atomic<uint64_t> steal_attempts{0};
         std::atomic<uint64_t> steal_successes{0};
-        std::atomic<uint64_t> local_steals{0};    // stolen from local pool
-        std::atomic<uint64_t> remote_steals{0};  // stolen from remote pool
+        std::atomic<uint64_t> local_steals{0};  // stolen from local pool
+        std::atomic<uint64_t> remote_steals{0}; // stolen from remote pool
     };
 
     A2WS() = default;
@@ -63,19 +63,24 @@ public:
     void get_victim_pool(uint32_t worker, uint32_t& start, uint32_t& end) const;
 
     // Number of workers
-    uint32_t num_workers() const { return num_workers_; }
+    uint32_t num_workers() const {
+        return num_workers_;
+    }
 
     // Check if two workers are in the same local pool
     bool same_pool(uint32_t a, uint32_t b) const;
 
     // Stats access
-    const WorkerStats& stats(uint32_t worker) const { return workers_[worker]; }
+    const WorkerStats& stats(uint32_t worker) const {
+        return workers_[worker];
+    }
 
-private:
+  private:
     uint32_t num_workers_;
-    uint32_t pool_size_;  // workers per local pool
+    uint32_t pool_size_; // workers per local pool
     std::vector<WorkerStats> workers_;
-    std::vector<std::atomic<uint32_t>> victim_hints_;  // per-thief victim suggestion
+    std::vector<std::atomic<uint32_t>> victim_hints_; // per-thief victim
+                                                      // suggestion
 };
 
 } // namespace hpactor::sched

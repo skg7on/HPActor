@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/supervision/supervision.hpp>
 #include <cassert>
+#include <hpactor/supervision/supervision.hpp>
 
 void test_supervisor_actor_interface() {
     static_assert(sizeof(hpactor::SupervisorActor) > 0, "should not be empty");

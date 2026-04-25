@@ -54,7 +54,7 @@ class Supervisor {
 class SupervisorActor : public EventBasedActor {
   public:
     SupervisorActor(ActorContext* ctx, ActorSystem& sys, Supervisor& strategy,
-                     std::vector<Actor> children);
+                    std::vector<Actor> children);
 
   protected:
     Behavior make_behavior() override;
@@ -73,7 +73,7 @@ class SupervisorActor : public EventBasedActor {
 class SelfSupervisingActor : public EventBasedActor {
   public:
     SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
-                           SupervisionPolicy policy = SupervisionPolicy{});
+                         SupervisionPolicy policy = SupervisionPolicy{});
 
     void add_child(Actor child);
     void remove_child(Actor child);
@@ -83,7 +83,9 @@ class SelfSupervisingActor : public EventBasedActor {
     bool has_remote_child(const ActorAddress& addr) const;
     ActorRef get_remote_child(const ActorAddress& addr) const;
     void remove_remote_child(const ActorAddress& addr);
-    const std::vector<ActorRef>& remote_children() const { return remote_children_; }
+    const std::vector<ActorRef>& remote_children() const {
+        return remote_children_;
+    }
 
   protected:
     virtual SupervisionDirective on_failure(ActorId child_id, const error& err);
@@ -95,8 +97,8 @@ class SelfSupervisingActor : public EventBasedActor {
     SupervisionPolicy policy_;
     std::unordered_map<ActorId, uint32_t> restart_counts_;
     std::chrono::steady_clock::time_point first_failure_time_;
-    std::vector<ActorRef> remote_children_;  // remote child references
-    std::vector<ActorAddress> remote_child_addresses_;  // for persistence
+    std::vector<ActorRef> remote_children_; // remote child references
+    std::vector<ActorAddress> remote_child_addresses_; // for persistence
 };
 
 } // namespace hpactor

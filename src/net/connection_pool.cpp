@@ -22,14 +22,10 @@ namespace hpactor {
 namespace net {
 
 ConnectionPool::ConnectionPool(CommunicationEndpoint remote_endpoint,
-                              const PoolConfig& config,
-                              TlsContext* tls_context,
-                              EventLoop* loop)
-    : Connection(remote_endpoint),
-      remote_endpoint_(remote_endpoint),
-      config_(config),
-      tls_context_(tls_context),
-      loop_(loop) {}
+                               const PoolConfig& config,
+                               TlsContext* tls_context, EventLoop* loop)
+    : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
+      config_(config), tls_context_(tls_context), loop_(loop) {}
 
 ConnectionPool::~ConnectionPool() {
     abort();
@@ -57,7 +53,7 @@ void ConnectionPool::send(const ActorAddress& target, const bytes& encoded) {
 
     // No connection available, queue pending
     if (!add_pending(target, encoded)) {
-        return;  // Queue full
+        return; // Queue full
     }
 
     // Create connection
@@ -67,7 +63,8 @@ void ConnectionPool::send(const ActorAddress& target, const bytes& encoded) {
 void ConnectionPool::send(const bytes& data) {
     // Create a minimal actor address using the remote endpoint
     ActorAddress target;
-    target.endpoint = endpoint_ops::parse_endpoint(endpoint_ops::to_string(remote_endpoint()));
+    target.endpoint =
+        endpoint_ops::parse_endpoint(endpoint_ops::to_string(remote_endpoint()));
     send(target, data);
 }
 
@@ -127,18 +124,16 @@ void ConnectionPool::create_connection() {
         return;
     }
     if (!connecting_.exchange(true)) {
-        auto conn = TlsConnection::create_client(
-            remote_endpoint(), tls_context_, loop_);
+        auto conn =
+            TlsConnection::create_client(remote_endpoint(), tls_context_, loop_);
 
-        conn->set_ready_handler([this](ConnectionPtr c) {
-            on_connection_ready(c);
-        });
+        conn->set_ready_handler(
+            [this](ConnectionPtr c) { on_connection_ready(c); });
         conn->set_error_handler([this](ConnectionPtr c, const error& e) {
             on_connection_error(c, e);
         });
-        conn->set_frame_handler([this](const bytes& data) {
-            on_frame_received(data);
-        });
+        conn->set_frame_handler(
+            [this](const bytes& data) { on_frame_received(data); });
 
         conn->start_client_handshake();
     }
@@ -157,9 +152,9 @@ void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
     (void)err;
     {
         std::lock_guard<std::mutex> lock(mutex_);
-        active_connections_.erase(
-            std::remove(active_connections_.begin(), active_connections_.end(), conn),
-            active_connections_.end());
+        active_connections_.erase(std::remove(active_connections_.begin(),
+                                              active_connections_.end(), conn),
+                                  active_connections_.end());
     }
     schedule_reconnect();
 }
@@ -171,7 +166,8 @@ void ConnectionPool::on_frame_received(const bytes& frame_data) {
     if (frame.flags & WireFrame::RpcResponse) {
         // Try to decode as spawn response first
         DefaultSerializer serializer;
-        auto decoded = serializer.decode_spawn(TypeTag::SpawnResponseTag, frame.payload);
+        auto decoded =
+            serializer.decode_spawn(TypeTag::SpawnResponseTag, frame.payload);
         if (std::holds_alternative<SpawnResponse>(decoded)) {
             // Route to spawn handler
             if (spawn_handler_) {
@@ -197,7 +193,7 @@ void ConnectionPool::schedule_reconnect() {
         return;
     }
     if (reconnect_attempts_.load() >= config_.max_attempts) {
-        return;  // Exhausted retries
+        return; // Exhausted retries
     }
     if (reconnect_scheduled_.load()) {
         return;
@@ -214,13 +210,15 @@ void ConnectionPool::schedule_reconnect() {
     }
 
     reconnect_attempts_.fetch_add(1);
-    loop_->run_after([this]() {
-        reconnect_scheduled_.store(false);
-        connecting_.store(false);
-        if (!shutting_down_.load()) {
-            create_connection();
-        }
-    }, static_cast<int>(backoff.count()));
+    loop_->run_after(
+        [this]() {
+            reconnect_scheduled_.store(false);
+            connecting_.store(false);
+            if (!shutting_down_.load()) {
+                create_connection();
+            }
+        },
+        static_cast<int>(backoff.count()));
 }
 
 void ConnectionPool::flush_pending() {

@@ -16,16 +16,16 @@
 #include <hpactor/net/event_loop.hpp>
 
 #if defined(__linux__)
-#include <sys/epoll.h>
-#include <sys/timerfd.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#include <unistd.h>
-#include <fcntl.h>
-#include <errno.h>
-#include <cstring>
-#include <cstdlib>
-#include <ctime>
+#    include <cstdlib>
+#    include <cstring>
+#    include <ctime>
+#    include <errno.h>
+#    include <fcntl.h>
+#    include <sys/epoll.h>
+#    include <sys/socket.h>
+#    include <sys/timerfd.h>
+#    include <sys/uio.h>
+#    include <unistd.h>
 #endif
 
 namespace hpactor {
@@ -115,7 +115,7 @@ bool EpollBackend::add_fd(int fd, IoEvent events) {
 }
 
 bool EpollBackend::update_fd(int fd, IoEvent events) {
-    return add_fd(fd, events);  // Same operation
+    return add_fd(fd, events); // Same operation
 }
 
 bool EpollBackend::remove_fd(int fd) {
@@ -145,7 +145,8 @@ uint64_t EpollBackend::encode_user_data(int fd, ActorId actor, uint32_t op_type)
            ((static_cast<uint64_t>(op_type) & 0xFFULL) << 56);
 }
 
-void EpollBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor, uint32_t& op_type) {
+void EpollBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor,
+                                    uint32_t& op_type) {
     fd = static_cast<int>(ud & 0xFFFFFFFFULL);
     actor = ActorId(static_cast<uint32_t>((ud >> 32) & 0xFFFFULL));
     op_type = static_cast<uint32_t>((ud >> 56) & 0xFFULL);
@@ -183,7 +184,7 @@ int EpollBackend::process_timers() {
                 if (timer.interval_ms > 0) {
                     timer.expires_at_ms = now_ms + timer.interval_ms;
                 } else {
-                    timer.expires_at_ms = -1;  // Mark for removal
+                    timer.expires_at_ms = -1; // Mark for removal
                 }
             }
         }
@@ -193,8 +194,7 @@ int EpollBackend::process_timers() {
     timers_.erase(
         std::remove_if(timers_.begin(), timers_.end(),
                        [](const TimerEntry& t) { return t.expires_at_ms < 0; }),
-        timers_.end()
-    );
+        timers_.end());
 
     // Sort remaining timers by expiry
     std::sort(timers_.begin(), timers_.end(),
@@ -254,7 +254,7 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
             socklen_t errlen = sizeof(err);
             getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
             if (err == 0) {
-                result_err = 0;  // Connected successfully
+                result_err = 0; // Connected successfully
             } else {
                 result_err = err;
             }
@@ -265,14 +265,15 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
             while (true) {
                 if (optype == OpType::SendTo) {
                     n = ::sendto(fd, op.data.data(), op.data.size(), 0,
-                                 reinterpret_cast<const sockaddr*>(&op.addr), op.addrlen);
+                                 reinterpret_cast<const sockaddr*>(&op.addr),
+                                 op.addrlen);
                 } else {
                     n = ::send(fd, op.data.data(), op.data.size(), 0);
                 }
                 if (n < 0) {
                     if (errno == EAGAIN) {
                         // Would block - keep pending op for next trigger
-                        return;  // Don't erase pending op
+                        return; // Don't erase pending op
                     }
                     result_err = errno;
                     break;
@@ -300,7 +301,7 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
                 if (n < 0) {
                     if (errno == EAGAIN) {
                         // No more data - keep pending op for next trigger
-                        return;  // Don't erase pending op
+                        return; // Don't erase pending op
                     }
                     result_err = errno;
                     break;
@@ -308,8 +309,9 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
                 result_err += n;
                 // For scatter-gather, check if all bufs were filled
                 if (optype == OpType::Recv) {
-                    // readv may return 0 on empty socket or partial on bufs full
-                    // If we got data, try to read more (EAGAIN will stop us)
+                    // readv may return 0 on empty socket or partial on bufs
+                    // full If we got data, try to read more (EAGAIN will stop
+                    // us)
                 }
                 // Continue looping to drain more data
             }
@@ -425,19 +427,20 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
     ssize_t total_n = 0;
     int last_err = 0;
 
-    // Loop until EAGAIN to drain send buffer completely (edge-triggered requirement)
+    // Loop until EAGAIN to drain send buffer completely (edge-triggered
+    // requirement)
     while (true) {
         ssize_t n = ::send(fd, data.data() + total_n, data.size() - total_n, 0);
         if (n < 0) {
             if (errno == EAGAIN) {
-                break;  // Would block
+                break; // Would block
             }
             last_err = errno;
             break;
         }
         total_n += n;
         if (static_cast<size_t>(total_n) >= data.size()) {
-            break;  // All data sent
+            break; // All data sent
         }
         // Continue looping to send more
     }
@@ -473,19 +476,20 @@ void EpollBackend::async_recv(int fd, const iovec* bufs, int buf_count,
     ssize_t total_n = 0;
     int last_err = 0;
 
-    // Loop until EAGAIN to drain all available data (edge-triggered requirement)
+    // Loop until EAGAIN to drain all available data (edge-triggered
+    // requirement)
     while (true) {
         ssize_t n = ::readv(fd, bufs, buf_count);
         if (n < 0) {
             if (errno == EAGAIN) {
-                break;  // No more data available right now
+                break; // No more data available right now
             }
             last_err = errno;
             break;
         }
         total_n += n;
         if (n == 0) {
-            break;  // EOF
+            break; // EOF
         }
         // Continue looping to check for more data
     }
@@ -518,8 +522,8 @@ void EpollBackend::async_recv(int fd, const iovec* bufs, int buf_count,
     }
 }
 
-void EpollBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                    ActorId actor, uint32_t op_type) {
+void EpollBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
+                                    size_t len, ActorId actor, uint32_t op_type) {
     (void)fd;
     (void)buffer_id;
     (void)offset;
@@ -538,8 +542,8 @@ void EpollBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t
     }
 }
 
-void EpollBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                    ActorId actor, uint32_t op_type) {
+void EpollBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
+                                    size_t len, ActorId actor, uint32_t op_type) {
     (void)fd;
     (void)buffer_id;
     (void)offset;
@@ -581,8 +585,8 @@ void EpollBackend::async_accept(int fd, ActorId actor) {
     }
 }
 
-void EpollBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                                 ActorId actor) {
+void EpollBackend::async_connect(int fd, const sockaddr* addr,
+                                 socklen_t addrlen, ActorId actor) {
     int ret = ::connect(fd, addr, addrlen);
     if (ret < 0 && errno == EINPROGRESS) {
         // Connection in progress - store for wait() to complete
@@ -619,19 +623,20 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
     ssize_t total_n = 0;
     int last_err = 0;
 
-    // Loop until EAGAIN to drain all available data (edge-triggered requirement)
+    // Loop until EAGAIN to drain all available data (edge-triggered
+    // requirement)
     while (true) {
         ssize_t n = ::recvmsg(fd, bufs, &addr, &addrlen);
         if (n < 0) {
             if (errno == EAGAIN) {
-                break;  // No more data available right now
+                break; // No more data available right now
             }
             last_err = errno;
             break;
         }
         total_n += n;
         if (n == 0) {
-            break;  // EOF
+            break; // EOF
         }
         // Continue looping to check for more data
     }
@@ -665,8 +670,8 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
 }
 
 void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
-                                 const sockaddr* addr, socklen_t addrlen,
-                                 ActorId actor, uint32_t op_type) {
+                                const sockaddr* addr, socklen_t addrlen,
+                                ActorId actor, uint32_t op_type) {
     // Concatenate scatter-gather buffers
     size_t total_len = 0;
     for (int i = 0; i < buf_count; ++i) {
@@ -682,19 +687,21 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
     ssize_t total_n = 0;
     int last_err = 0;
 
-    // Loop until EAGAIN to drain send buffer completely (edge-triggered requirement)
+    // Loop until EAGAIN to drain send buffer completely (edge-triggered
+    // requirement)
     while (true) {
-        ssize_t n = ::sendto(fd, data.data() + total_n, data.size() - total_n, 0, addr, addrlen);
+        ssize_t n = ::sendto(fd, data.data() + total_n, data.size() - total_n,
+                             0, addr, addrlen);
         if (n < 0) {
             if (errno == EAGAIN) {
-                break;  // Would block
+                break; // Would block
             }
             last_err = errno;
             break;
         }
         total_n += n;
         if (static_cast<size_t>(total_n) >= data.size()) {
-            break;  // All data sent
+            break; // All data sent
         }
         // Continue looping to send more
     }
@@ -734,7 +741,7 @@ int EpollBackend::wait(int timeout_ms) {
 
     if (num_events < 0) {
         if (errno == EINTR) {
-            return 0;  // Interrupted, not an error
+            return 0; // Interrupted, not an error
         }
         return -1;
     }
@@ -780,15 +787,19 @@ void EpollBackend::deliver_completion(OpCompletion completion) {
 EpollBackend::EpollBackend() = default;
 EpollBackend::~EpollBackend() = default;
 
-bool EpollBackend::start() { return false; }
+bool EpollBackend::start() {
+    return false;
+}
 void EpollBackend::stop() {}
 
 bool EpollBackend::add_fd(int fd, IoEvent events) {
-    (void)fd; (void)events;
+    (void)fd;
+    (void)events;
     return false;
 }
 bool EpollBackend::update_fd(int fd, IoEvent events) {
-    (void)fd; (void)events;
+    (void)fd;
+    (void)events;
     return false;
 }
 bool EpollBackend::remove_fd(int fd) {
@@ -797,7 +808,8 @@ bool EpollBackend::remove_fd(int fd) {
 }
 
 int EpollBackend::register_buffer(const void* addr, size_t len) {
-    (void)addr; (void)len;
+    (void)addr;
+    (void)len;
     return -1;
 }
 bool EpollBackend::unregister_buffer(int buffer_id) {
@@ -806,47 +818,81 @@ bool EpollBackend::unregister_buffer(int buffer_id) {
 }
 
 void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
-                               ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+                              ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 void EpollBackend::async_recv(int fd, const iovec* bufs, int buf_count,
-                               ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+                              ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 
-void EpollBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                     ActorId actor, uint32_t op_type) {
-    (void)fd; (void)buffer_id; (void)offset; (void)len; (void)actor; (void)op_type;
+void EpollBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
+                                    size_t len, ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)buffer_id;
+    (void)offset;
+    (void)len;
+    (void)actor;
+    (void)op_type;
 }
-void EpollBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                     ActorId actor, uint32_t op_type) {
-    (void)fd; (void)buffer_id; (void)offset; (void)len; (void)actor; (void)op_type;
+void EpollBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
+                                    size_t len, ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)buffer_id;
+    (void)offset;
+    (void)len;
+    (void)actor;
+    (void)op_type;
 }
 
 void EpollBackend::async_accept(int fd, ActorId actor) {
-    (void)fd; (void)actor;
+    (void)fd;
+    (void)actor;
 }
-void EpollBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                                  ActorId actor) {
-    (void)fd; (void)addr; (void)addrlen; (void)actor;
+void EpollBackend::async_connect(int fd, const sockaddr* addr,
+                                 socklen_t addrlen, ActorId actor) {
+    (void)fd;
+    (void)addr;
+    (void)addrlen;
+    (void)actor;
 }
 
 void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
-                                   ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)actor; (void)op_type;
+                                  ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)actor;
+    (void)op_type;
 }
 void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
-                                 const sockaddr* addr, socklen_t addrlen,
-                                 ActorId actor, uint32_t op_type) {
-    (void)fd; (void)bufs; (void)buf_count; (void)addr; (void)addrlen; (void)actor; (void)op_type;
+                                const sockaddr* addr, socklen_t addrlen,
+                                ActorId actor, uint32_t op_type) {
+    (void)fd;
+    (void)bufs;
+    (void)buf_count;
+    (void)addr;
+    (void)addrlen;
+    (void)actor;
+    (void)op_type;
 }
 
 uint64_t EpollBackend::run_after(ActorId actor, int delay_ms) {
-    (void)actor; (void)delay_ms;
+    (void)actor;
+    (void)delay_ms;
     return 0;
 }
 uint64_t EpollBackend::run_every(ActorId actor, int interval_ms) {
-    (void)actor; (void)interval_ms;
+    (void)actor;
+    (void)interval_ms;
     return 0;
 }
 void EpollBackend::cancel_timer(uint64_t handle) {

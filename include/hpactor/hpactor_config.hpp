@@ -29,16 +29,16 @@
 
 // Detect if CMake set up coroutine support
 #if defined(HPACTOR_USE_COROUTINES) && HPACTOR_USE_COROUTINES
-    #define HPACTOR_USE_COROUTINES 1
+#    define HPACTOR_USE_COROUTINES 1
 #else
-    #define HPACTOR_USE_COROUTINES 0
+#    define HPACTOR_USE_COROUTINES 0
 #endif
 
 // Convenience macro for guarding coroutine-specific code
 #if HPACTOR_USE_COROUTINES
-    #define HPACTOR_IF_COROUTINES(...) __VA_ARGS__
-    #define HPACTOR_IF_NO_COROUTINES(...)
+#    define HPACTOR_IF_COROUTINES(...) __VA_ARGS__
+#    define HPACTOR_IF_NO_COROUTINES(...)
 #else
-    #define HPACTOR_IF_COROUTINES(...)
-    #define HPACTOR_IF_NO_COROUTINES(...) __VA_ARGS__
+#    define HPACTOR_IF_COROUTINES(...)
+#    define HPACTOR_IF_NO_COROUTINES(...) __VA_ARGS__
 #endif

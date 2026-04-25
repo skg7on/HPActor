@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <hpactor/sched/work_queue.hpp>
-#include <hpactor/sched/coroutine_frame_pool.hpp>
 #include <hpactor/actor/actor_fwd.hpp>
+#include <hpactor/sched/coroutine_frame_pool.hpp>
+#include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
 #include <cstdint>
@@ -42,12 +42,12 @@ class HybridScheduler;
 // - Victims selected via per-worker round-robin pointer
 // -----------------------------------------------------------------------------
 class WorkerThread {
-public:
+  public:
     struct Config {
         uint32_t worker_index = 0;
         uint32_t priority_levels = 4;
-        uint32_t steal_threshold = 10;    // attempts before becoming active thief
-        uint32_t victim_scan_limit = 4;   // max victims to scan per steal attempt
+        uint32_t steal_threshold = 10;  // attempts before becoming active thief
+        uint32_t victim_scan_limit = 4; // max victims to scan per steal attempt
     };
 
     explicit WorkerThread(const Config& config);
@@ -77,17 +77,25 @@ public:
     void process(const WorkItem& item);
 
     // Worker index
-    uint32_t index() const { return config_.worker_index; }
+    uint32_t index() const {
+        return config_.worker_index;
+    }
 
     // Approximate queue depth
     size_t depth() const;
 
     // Check if running
-    bool is_running() const { return running_.load(std::memory_order_acquire); }
+    bool is_running() const {
+        return running_.load(std::memory_order_acquire);
+    }
 
     // For scheduling coordination: donation count for work-stealing decisions
-    uint64_t donation_count() const { return donation_count_.load(std::memory_order_relaxed); }
-    void increment_donations() { donation_count_.fetch_add(1, std::memory_order_relaxed); }
+    uint64_t donation_count() const {
+        return donation_count_.load(std::memory_order_relaxed);
+    }
+    void increment_donations() {
+        donation_count_.fetch_add(1, std::memory_order_relaxed);
+    }
 
     // Coroutine frame pool integration
     // Acquire a coroutine frame from the pool (for blocking operations)
@@ -95,15 +103,19 @@ public:
     void release_frame(CoroutineFramePool::Frame* frame);
 
     // Set the frame pool (called by scheduler)
-    void set_frame_pool(CoroutineFramePool* pool) { frame_pool_ = pool; }
+    void set_frame_pool(CoroutineFramePool* pool) {
+        frame_pool_ = pool;
+    }
 
     // Set the owner scheduler (for A2WS-based stealing)
-    void set_owner(HybridScheduler* owner) { owner_ = owner; }
+    void set_owner(HybridScheduler* owner) {
+        owner_ = owner;
+    }
 
     // Try to steal work using A2WS victim selection
     bool try_steal(WorkItem& out);
 
-private:
+  private:
     void thread_loop();
 
     Config config_;

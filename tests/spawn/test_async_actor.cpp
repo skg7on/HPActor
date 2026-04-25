@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/spawn.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/ref/actor_ref.hpp>
+#include <hpactor/spawn.hpp>
 
-#include <thread>
 #include <cassert>
+#include <thread>
 
 using namespace hpactor;
 
@@ -28,37 +28,43 @@ void test_async_actor_default_constructor() {
 }
 
 void test_async_actor_constructor() {
-    AsyncActor handle(endpoint_ops::parse_endpoint("node42:12345"), std::chrono::milliseconds{1000});
+    AsyncActor handle(endpoint_ops::parse_endpoint("node42:12345"),
+                      std::chrono::milliseconds{1000});
     assert(handle.endpoint() == endpoint_ops::parse_endpoint("node42:12345"));
     assert(!handle.ready());
 }
 
 void test_async_actor_get_timeout() {
-    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"), std::chrono::milliseconds{50});
+    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"),
+                      std::chrono::milliseconds{50});
     auto result = handle.get();
-    assert(!result.has_value());  // should timeout
+    assert(!result.has_value()); // should timeout
     assert(result.error().code() == errors::timeout);
 }
 
 void test_async_actor_response_set() {
-    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"), std::chrono::milliseconds{100});
+    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"),
+                      std::chrono::milliseconds{100});
 
     // Simulate response received
     SpawnResponse resp;
-    resp.actor_addr = ActorAddress{endpoint_ops::parse_endpoint("node1:12345"), ActorType{100}, ActorId{1}, 0};
+    resp.actor_addr = ActorAddress{endpoint_ops::parse_endpoint("node1:12345"),
+                                   ActorType{100}, ActorId{1}, 0};
     resp.error_code = spawn_errors::success;
     handle.set_response(resp);
 
     assert(handle.ready());
     auto result = handle.get();
     assert(result.has_value());
-    assert(result.value().endpoint() == endpoint_ops::parse_endpoint("node1:12345"));
+    assert(result.value().endpoint() == endpoint_ops::parse_endpoint("node1:"
+                                                                     "12345"));
 }
 
 void test_async_actor_cancel() {
-    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"), std::chrono::milliseconds{1000});
+    AsyncActor handle(endpoint_ops::parse_endpoint("node1:12345"),
+                      std::chrono::milliseconds{1000});
     handle.cancel();
-    assert(handle.ready());  // cancelled appears as ready
+    assert(handle.ready()); // cancelled appears as ready
     auto result = handle.get();
     assert(!result.has_value());
 }

@@ -33,13 +33,13 @@
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor_context.hpp>
-#include <hpactor/core/actor_system.hpp>
-#include <hpactor/sched/scheduler.hpp>
-#include <hpactor/sched/coroutine_awaiters.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/actor/message.hpp>
+#include <hpactor/actor_context.hpp>
+#include <hpactor/behavior.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/sched/coroutine_awaiters.hpp>
+#include <hpactor/sched/scheduler.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -70,7 +70,8 @@ class EchoActor : public hpactor::EventBasedActor {
         : hpactor::EventBasedActor(ctx, sys) {}
 
     hpactor::sched::CoroutineTask act() override {
-        std::cout << "[EchoActor] Started on thread " << std::this_thread::get_id() << "\n";
+        std::cout << "[EchoActor] Started on thread "
+                  << std::this_thread::get_id() << "\n";
 
         int count = 0;
         while (count < 3 && !g_done.load()) {
@@ -79,9 +80,10 @@ class EchoActor : public hpactor::EventBasedActor {
 
             if (std::holds_alternative<ping_msg>(variant)) {
                 auto& ping = std::get<ping_msg>(variant);
-                std::cout << "[EchoActor] Got ping #" << ping.sequence
-                          << " from node " << hpactor::endpoint_ops::to_string(ping.from.endpoint)
-                          << " -> thread " << std::this_thread::get_id() << "\n";
+                std::cout
+                    << "[EchoActor] Got ping #" << ping.sequence << " from node "
+                    << hpactor::endpoint_ops::to_string(ping.from.endpoint)
+                    << " -> thread " << std::this_thread::get_id() << "\n";
                 ++count;
                 ++g_context_switches;
             }
@@ -98,19 +100,19 @@ class EchoActor : public hpactor::EventBasedActor {
 void demo_single_actor() {
     std::cout << "\n=== Demo 1: Single Actor Spawn ===" << std::endl;
 
-    hpactor::Config config{
-        .scheduler_threads = 4,
-        .max_queue_depth = 1024
-    };
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
     std::cout << "Scheduler state:\n";
     std::cout << "  Worker threads: " << system.scheduler()->worker_count() << "\n";
-    std::cout << "  Running: " << (system.scheduler()->is_running() ? "yes" : "no") << "\n";
+    std::cout << "  Running: " << (system.scheduler()->is_running() ? "yes" : "no")
+              << "\n";
 
     // Spawn an echo actor
     auto echo_ref = system.spawn<EchoActor>();
-    std::cout << "Spawned EchoActor at node " << hpactor::endpoint_ops::to_string(echo_ref.address().endpoint) << "\n";
+    std::cout << "Spawned EchoActor at node "
+              << hpactor::endpoint_ops::to_string(echo_ref.address().endpoint)
+              << "\n";
 
     // Send it a message
     system.deliver_local(echo_ref.address().id, ping_msg{echo_ref.address(), 0});
@@ -129,31 +131,30 @@ void demo_single_actor() {
 // Demo: Multiple actors with message exchange
 // -----------------------------------------------------------------------------
 void demo_multi_actor() {
-    std::cout << "\n=== Demo 2: Multiple Actors with Message Exchange ===" << std::endl;
+    std::cout << "\n=== Demo 2: Multiple Actors with Message Exchange ==="
+              << std::endl;
 
     g_context_switches = 0;
     g_done = false;
 
-    hpactor::Config config{
-        .scheduler_threads = 4,
-        .max_queue_depth = 1024
-    };
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
     // Spawn actors
     auto echo1_ref = system.spawn<EchoActor>();
     auto echo2_ref = system.spawn<EchoActor>();
 
-    std::cout << "Spawned EchoActor1 at node " << hpactor::endpoint_ops::to_string(echo1_ref.address().endpoint) << "\n";
-    std::cout << "Spawned EchoActor2 at node " << hpactor::endpoint_ops::to_string(echo2_ref.address().endpoint) << "\n";
+    std::cout << "Spawned EchoActor1 at node "
+              << hpactor::endpoint_ops::to_string(echo1_ref.address().endpoint)
+              << "\n";
+    std::cout << "Spawned EchoActor2 at node "
+              << hpactor::endpoint_ops::to_string(echo2_ref.address().endpoint)
+              << "\n";
 
     // Send messages to both echo actors
-    system.deliver_local(echo1_ref.address().id,
-        ping_msg{echo1_ref.address(), 1});
-    system.deliver_local(echo2_ref.address().id,
-        ping_msg{echo2_ref.address(), 2});
-    system.deliver_local(echo1_ref.address().id,
-        ping_msg{echo1_ref.address(), 3});
+    system.deliver_local(echo1_ref.address().id, ping_msg{echo1_ref.address(), 1});
+    system.deliver_local(echo2_ref.address().id, ping_msg{echo2_ref.address(), 2});
+    system.deliver_local(echo1_ref.address().id, ping_msg{echo1_ref.address(), 3});
 
     // Let the actors exchange messages
     std::cout << "\nLetting actors exchange messages...\n";
@@ -263,9 +264,15 @@ Key Points:
 // Main
 // -----------------------------------------------------------------------------
 int main() {
-    std::cout << "================================================================" << std::endl;
-    std::cout << " HPActor Example 08: Coroutine Scheduling and Context Switching" << std::endl;
-    std::cout << "================================================================" << std::endl;
+    std::cout << "============================================================="
+                 "==="
+              << std::endl;
+    std::cout << " HPActor Example 08: Coroutine Scheduling and Context "
+                 "Switching"
+              << std::endl;
+    std::cout << "============================================================="
+                 "==="
+              << std::endl;
 
     // Run demos
     demo_scheduler_architecture();
@@ -273,9 +280,13 @@ int main() {
     demo_single_actor();
     demo_multi_actor();
 
-    std::cout << "\n================================================================" << std::endl;
+    std::cout << "\n==========================================================="
+                 "====="
+              << std::endl;
     std::cout << " Example 08 Complete" << std::endl;
-    std::cout << "================================================================" << std::endl;
+    std::cout << "============================================================="
+                 "==="
+              << std::endl;
 
     return 0;
 }

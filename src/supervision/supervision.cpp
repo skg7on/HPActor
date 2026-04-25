@@ -42,7 +42,7 @@ AllForOneSupervisor::on_child_failure(const ChildFailure& /*failure*/) {
 
 // SupervisorActor implementation
 SupervisorActor::SupervisorActor(ActorContext* ctx, ActorSystem& sys,
-                                   Supervisor& strategy, std::vector<Actor> children)
+                                 Supervisor& strategy, std::vector<Actor> children)
     : EventBasedActor(ctx, sys), strategy_(strategy),
       children_(std::move(children)),
       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
@@ -115,7 +115,7 @@ void SupervisorActor::restart_all_children() {
 
 // SelfSupervisingActor implementation
 SelfSupervisingActor::SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
-                                               SupervisionPolicy policy)
+                                           SupervisionPolicy policy)
     : EventBasedActor(ctx, sys), policy_(std::move(policy)),
       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
 
@@ -138,7 +138,8 @@ void SelfSupervisingActor::add_remote_child(ActorRef child) {
 
 bool SelfSupervisingActor::has_remote_child(const ActorAddress& addr) const {
     for (const auto& child_addr : remote_child_addresses_) {
-        if (child_addr == addr) return true;
+        if (child_addr == addr)
+            return true;
     }
     return false;
 }
@@ -155,8 +156,10 @@ ActorRef SelfSupervisingActor::get_remote_child(const ActorAddress& addr) const 
 void SelfSupervisingActor::remove_remote_child(const ActorAddress& addr) {
     for (size_t i = 0; i < remote_child_addresses_.size(); ++i) {
         if (remote_child_addresses_[i] == addr) {
-            remote_children_.erase(remote_children_.begin() + static_cast<std::ptrdiff_t>(i));
-            remote_child_addresses_.erase(remote_child_addresses_.begin() + static_cast<std::ptrdiff_t>(i));
+            remote_children_.erase(remote_children_.begin() +
+                                   static_cast<std::ptrdiff_t>(i));
+            remote_child_addresses_.erase(remote_child_addresses_.begin() +
+                                          static_cast<std::ptrdiff_t>(i));
             return;
         }
     }

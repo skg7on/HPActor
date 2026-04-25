@@ -19,28 +19,31 @@
 
 namespace hpactor {
 
-SpawnReceiver::SpawnReceiver(ActorSystem& sys,
-                            ActorTypeRegistry& registry,
-                            net::Transport* transport)
+SpawnReceiver::SpawnReceiver(ActorSystem& sys, ActorTypeRegistry& registry,
+                             net::Transport* transport)
     : EventBasedActor(nullptr, sys), registry_(registry), transport_(transport) {}
 
 Behavior SpawnReceiver::make_behavior() {
     return Behavior{[this](MessageVariant&& msg) {
-        std::visit([this](auto&& m) {
-            using T = std::decay_t<decltype(m)>;
-            if constexpr (std::is_same_v<T, SpawnRequest>) {
-                handle_spawn_request(m, net::WireFrame{});  // Empty frame for now
-            }
-        }, std::move(msg));
+        std::visit(
+            [this](auto&& m) {
+                using T = std::decay_t<decltype(m)>;
+                if constexpr (std::is_same_v<T, SpawnRequest>) {
+                    handle_spawn_request(m, net::WireFrame{}); // Empty frame
+                                                               // for now
+                }
+            },
+            std::move(msg));
     }};
 }
 
-void SpawnReceiver::handle_spawn_request(const SpawnRequest& req, const net::WireFrame& frame) {
+void SpawnReceiver::handle_spawn_request(const SpawnRequest& req,
+                                         const net::WireFrame& frame) {
     SpawnResponse response;
 
     // Spawn the actor
     auto result = registry_.spawn(system(), req.actor_type_name,
-                                   req.serialized_args, req.args_type);
+                                  req.serialized_args, req.args_type);
     if (result.has_value()) {
         response.actor_addr = result.value();
         response.error_code = spawn_errors::success;
@@ -52,13 +55,14 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req, const net::Wir
     if (transport_) {
         net::WireFrame response_frame;
         response_frame.sender = address();
-        response_frame.receiver = frame.sender;  // Reply to original sender
+        response_frame.receiver = frame.sender; // Reply to original sender
         response_frame.message_id = frame.message_id;
         response_frame.flags = net::WireFrame::RpcResponse;
 
         DefaultSerializer serializer;
         SpawnMessageVariant mv = response;
-        response_frame.payload = serializer.encode_spawn(TypeTag::SpawnResponseTag, mv);
+        response_frame.payload =
+            serializer.encode_spawn(TypeTag::SpawnResponseTag, mv);
 
         transport_->send(response_frame.receiver, response_frame.encode());
     }

@@ -18,13 +18,14 @@
 
 int main() {
     // Test: HybridScheduler interface methods
-    // We can't easily test with real ActorSystem without the full infrastructure,
-    // so we just test that HybridScheduler can be instantiated and controlled.
+    // We can't easily test with real ActorSystem without the full
+    // infrastructure, so we just test that HybridScheduler can be instantiated
+    // and controlled.
 
     // Note: Full integration test would require a minimal ActorSystem mock
     // For now, just verify the header is parseable and interface is correct
     hpactor::sched::IScheduler* scheduler_ptr = nullptr;
-    (void)scheduler_ptr;  // Verify IScheduler is a complete type
+    (void)scheduler_ptr; // Verify IScheduler is a complete type
 
     return 0;
 }

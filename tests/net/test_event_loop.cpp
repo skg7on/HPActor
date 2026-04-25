@@ -150,27 +150,34 @@ int main() {
         printf("PASS\n");
     }
 
-    // Test 8: Timer firing order (verify all fire, order is FIFO based on scheduling)
+    // Test 8: Timer firing order (verify all fire, order is FIFO based on
+    // scheduling)
     {
         printf("Test 8: Timer firing order... ");
         hpactor::net::EventLoop loop;
         std::vector<int> order;
         std::mutex order_mutex;
 
-        loop.run_after([&order, &order_mutex]() {
-            std::lock_guard<std::mutex> lock(order_mutex);
-            order.push_back(1);
-        }, 50);
+        loop.run_after(
+            [&order, &order_mutex]() {
+                std::lock_guard<std::mutex> lock(order_mutex);
+                order.push_back(1);
+            },
+            50);
 
-        loop.run_after([&order, &order_mutex]() {
-            std::lock_guard<std::mutex> lock(order_mutex);
-            order.push_back(2);
-        }, 30);
+        loop.run_after(
+            [&order, &order_mutex]() {
+                std::lock_guard<std::mutex> lock(order_mutex);
+                order.push_back(2);
+            },
+            30);
 
-        loop.run_after([&order, &order_mutex]() {
-            std::lock_guard<std::mutex> lock(order_mutex);
-            order.push_back(3);
-        }, 10);
+        loop.run_after(
+            [&order, &order_mutex]() {
+                std::lock_guard<std::mutex> lock(order_mutex);
+                order.push_back(3);
+            },
+            10);
 
         // Wait for all using a loop
         int waited = 0;
@@ -183,8 +190,8 @@ int main() {
         {
             std::lock_guard<std::mutex> lock(order_mutex);
             assert(order.size() == 3 && "All timers should fire");
-            // With dispatch_after_f on serial queue, order is FIFO (scheduling order)
-            // Not deadline-based ordering
+            // With dispatch_after_f on serial queue, order is FIFO (scheduling
+            // order) Not deadline-based ordering
         }
         printf("PASS (order={%d,%d,%d})\n", order[0], order[1], order[2]);
     }
@@ -221,7 +228,9 @@ int main() {
         }
 
         count_after_cancel = count.load();
-        assert(count_after_cancel == count_before_cancel && "Cancelled timer should stop firing");
+        assert(count_after_cancel == count_before_cancel && "Cancelled timer "
+                                                            "should stop "
+                                                            "firing");
         printf("PASS\n");
     }
 
@@ -301,7 +310,7 @@ int main() {
         printf("PASS\n");
     }
 
-#if 0  // DISABLED - concurrency tests have issues
+#if 0 // DISABLED - concurrency tests have issues
     // ========================================================================
     // Test 14: Backend Verification
     // ========================================================================
@@ -319,15 +328,15 @@ int main() {
         assert(name != nullptr && "backend_name() should not return nullptr");
         assert(strlen(name) > 0 && "backend_name() should not be empty string");
 
-#if defined(__APPLE__)
+#    if defined(__APPLE__)
         // On macOS, backend must be either gcd (preferred) or kqueue (fallback)
         assert((strcmp(name, "gcd") == 0 || strcmp(name, "kqueue") == 0) &&
                "macOS backend must be 'gcd' or 'kqueue'");
-#elif defined(__linux__)
+#    elif defined(__linux__)
         // On Linux, backend must be either iouring (preferred) or epoll (fallback)
         assert((strcmp(name, "iouring") == 0 || strcmp(name, "epoll") == 0) &&
                "Linux backend must be 'iouring' or 'epoll'");
-#endif
+#    endif
         printf("PASS (backend=%s)\n", name);
     }
 
@@ -860,7 +869,7 @@ int main() {
                "Timer latency should be within tolerance");
         printf("PASS (max_latency=%ldms)\n", static_cast<long>(max_latency));
     }
-#endif  // TEMPORARILY DISABLED - DEBUG
+#endif // TEMPORARILY DISABLED - DEBUG
 
     // Test 26: async_send on socketpair
     {
@@ -872,9 +881,8 @@ int main() {
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0 && "socketpair should succeed");
 
-        loop.set_completion_callback([&captured](OpCompletion c) {
-            captured = c;
-        });
+        loop.set_completion_callback(
+            [&captured](OpCompletion c) { captured = c; });
 
         auto* backend = loop.backend();
         assert(backend != nullptr && "backend should exist");
@@ -884,12 +892,14 @@ int main() {
         iov.iov_base = send_buf;
         iov.iov_len = 5;
 
-        backend->async_send(fds[0], &iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Send));
+        backend->async_send(fds[0], &iov, 1, ActorId(1),
+                            static_cast<uint32_t>(OpType::Send));
         loop.process_completions();
 
         assert(captured.has_value() && "completion should be captured");
         assert(captured->result == 5 && "async_send should send 5 bytes");
-        assert(captured->type == OpType::Send && "completion type should be Send");
+        assert(captured->type == OpType::Send && "completion type should be "
+                                                 "Send");
         assert(captured->fd == fds[0] && "completion fd should match");
 
         ::close(fds[0]);
@@ -907,9 +917,8 @@ int main() {
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
 
-        loop.set_completion_callback([&captured](OpCompletion c) {
-            captured = c;
-        });
+        loop.set_completion_callback(
+            [&captured](OpCompletion c) { captured = c; });
 
         auto* backend = loop.backend();
 
@@ -923,20 +932,24 @@ int main() {
         iov.iov_base = recv_buf;
         iov.iov_len = 64;
 
-        backend->async_recv(fds[0], &iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Recv));
+        backend->async_recv(fds[0], &iov, 1, ActorId(1),
+                            static_cast<uint32_t>(OpType::Recv));
         loop.process_completions();
 
         assert(captured.has_value() && "completion should be captured");
         assert(captured->result == 5 && "async_recv should receive 5 bytes");
-        assert(captured->type == OpType::Recv && "completion type should be Recv");
-        assert(memcmp(recv_buf, "hello", 5) == 0 && "received data should match");
+        assert(captured->type == OpType::Recv && "completion type should be "
+                                                 "Recv");
+        assert(memcmp(recv_buf, "hello", 5) == 0 && "received data should "
+                                                    "match");
 
         ::close(fds[0]);
         ::close(fds[1]);
         printf("PASS\n");
     }
 
-    // Test 28: async_sendto on socketpair (address ignored for connected sockets)
+    // Test 28: async_sendto on socketpair (address ignored for connected
+    // sockets)
     {
         printf("Test 28: async_sendto... ");
         hpactor::net::EventLoop loop;
@@ -946,9 +959,8 @@ int main() {
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
 
-        loop.set_completion_callback([&captured](OpCompletion c) {
-            captured = c;
-        });
+        loop.set_completion_callback(
+            [&captured](OpCompletion c) { captured = c; });
 
         auto* backend = loop.backend();
 
@@ -963,13 +975,15 @@ int main() {
         addr.sun_family = AF_UNIX;
         strncpy(addr.sun_path, "/tmp/test", sizeof(addr.sun_path) - 1);
 
-        backend->async_sendto(fds[0], &iov, 1, reinterpret_cast<sockaddr*>(&addr),
-                             sizeof(addr), ActorId(1), static_cast<uint32_t>(OpType::SendTo));
+        backend->async_sendto(fds[0], &iov, 1,
+                              reinterpret_cast<sockaddr*>(&addr), sizeof(addr),
+                              ActorId(1), static_cast<uint32_t>(OpType::SendTo));
         loop.process_completions();
 
         assert(captured.has_value() && "completion should be captured");
         assert(captured->result == 4 && "async_sendto should send 4 bytes");
-        assert(captured->type == OpType::SendTo && "completion type should be SendTo");
+        assert(captured->type == OpType::SendTo && "completion type should be "
+                                                   "SendTo");
 
         ::close(fds[0]);
         ::close(fds[1]);
@@ -1006,7 +1020,8 @@ int main() {
         send_iov.iov_base = send_buf;
         send_iov.iov_len = 5;
 
-        backend->async_send(fds[0], &send_iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Send));
+        backend->async_send(fds[0], &send_iov, 1, ActorId(1),
+                            static_cast<uint32_t>(OpType::Send));
 
         // Receiver: async_recvfrom on fd[1]
         char recv_buf[64];
@@ -1014,21 +1029,28 @@ int main() {
         recv_iov.iov_base = recv_buf;
         recv_iov.iov_len = 64;
 
-        backend->async_recvfrom(fds[1], &recv_iov, 1, ActorId(1), static_cast<uint32_t>(OpType::RecvFrom));
+        backend->async_recvfrom(fds[1], &recv_iov, 1, ActorId(1),
+                                static_cast<uint32_t>(OpType::RecvFrom));
 
         // Process completions - both send and receive should complete
         loop.process_completions();
 
         // Verify send completion
-        assert(captured_send.has_value() && "send completion should be captured");
+        assert(captured_send.has_value() && "send completion should be "
+                                            "captured");
         assert(captured_send->result == 5 && "async_send should send 5 bytes");
-        assert(captured_send->type == OpType::Send && "completion type should be Send");
+        assert(captured_send->type == OpType::Send && "completion type should "
+                                                      "be Send");
 
         // Verify receive completion
-        assert(captured_recv.has_value() && "recv completion should be captured");
-        assert(captured_recv->result == 5 && "async_recvfrom should receive 5 bytes");
-        assert(captured_recv->type == OpType::RecvFrom && "completion type should be RecvFrom");
-        assert(memcmp(recv_buf, "world", 5) == 0 && "received data should match");
+        assert(captured_recv.has_value() && "recv completion should be "
+                                            "captured");
+        assert(captured_recv->result == 5 && "async_recvfrom should receive 5 "
+                                             "bytes");
+        assert(captured_recv->type == OpType::RecvFrom && "completion type "
+                                                          "should be RecvFrom");
+        assert(memcmp(recv_buf, "world", 5) == 0 && "received data should "
+                                                    "match");
 
         ::close(fds[0]);
         ::close(fds[1]);
@@ -1045,9 +1067,8 @@ int main() {
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
 
-        loop.set_completion_callback([&captured](OpCompletion c) {
-            captured = c;
-        });
+        loop.set_completion_callback(
+            [&captured](OpCompletion c) { captured = c; });
 
         auto* backend = loop.backend();
 
@@ -1060,11 +1081,13 @@ int main() {
         iov.iov_base = send_buf;
         iov.iov_len = 5;
 
-        backend->async_send(fds[0], &iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Send));
+        backend->async_send(fds[0], &iov, 1, ActorId(1),
+                            static_cast<uint32_t>(OpType::Send));
         loop.process_completions();
 
         assert(captured.has_value() && "completion should be captured");
-        assert(captured->result < 0 && "async_send on closed fd should return error");
+        assert(captured->result < 0 && "async_send on closed fd should return "
+                                       "error");
         // EBADF = 9
 
         ::close(fds[1]);
@@ -1081,25 +1104,26 @@ int main() {
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
 
-        loop.set_completion_callback([&captured](OpCompletion c) {
-            captured = c;
-        });
+        loop.set_completion_callback(
+            [&captured](OpCompletion c) { captured = c; });
 
         auto* backend = loop.backend();
 
         // Call async_recv with zero-length read (just to trigger completion)
         // On connected sockets, read with iov_len=0 still triggers notification
         struct iovec iov;
-        char buf[1];  // not used since iov_len = 0
+        char buf[1]; // not used since iov_len = 0
         iov.iov_base = buf;
-        iov.iov_len = 0;  // zero-length read
+        iov.iov_len = 0; // zero-length read
 
-        backend->async_recv(fds[0], &iov, 1, ActorId(1), static_cast<uint32_t>(OpType::Recv));
+        backend->async_recv(fds[0], &iov, 1, ActorId(1),
+                            static_cast<uint32_t>(OpType::Recv));
         loop.process_completions();
 
         assert(captured.has_value() && "completion should be captured");
         // With iov_len=0, should return 0 (EOF or immediate completion)
-        assert(captured->result == 0 && "async_recv with empty buffer should return 0");
+        assert(captured->result == 0 && "async_recv with empty buffer should "
+                                        "return 0");
 
         ::close(fds[0]);
         ::close(fds[1]);
@@ -1116,9 +1140,8 @@ int main() {
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
 
-        loop.set_completion_callback([&captured](OpCompletion c) {
-            captured = c;
-        });
+        loop.set_completion_callback(
+            [&captured](OpCompletion c) { captured = c; });
 
         auto* backend = loop.backend();
 
@@ -1128,13 +1151,15 @@ int main() {
         iov[0].iov_base = buf1;
         iov[0].iov_len = 5;
         iov[1].iov_base = buf2;
-        iov[1].iov_len = 6;  // " world" = 6 chars
+        iov[1].iov_len = 6; // " world" = 6 chars
 
-        backend->async_send(fds[0], iov, 2, ActorId(1), static_cast<uint32_t>(OpType::Send));
+        backend->async_send(fds[0], iov, 2, ActorId(1),
+                            static_cast<uint32_t>(OpType::Send));
         loop.process_completions();
 
         assert(captured.has_value() && "completion should be captured");
-        assert(captured->result == 11 && "async_send multi-iovec should send 11 bytes");
+        assert(captured->result == 11 && "async_send multi-iovec should send "
+                                         "11 bytes");
 
         ::close(fds[0]);
         ::close(fds[1]);
@@ -1151,9 +1176,8 @@ int main() {
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
 
-        loop.set_completion_callback([&captured](OpCompletion c) {
-            captured = c;
-        });
+        loop.set_completion_callback(
+            [&captured](OpCompletion c) { captured = c; });
 
         auto* backend = loop.backend();
 
@@ -1170,13 +1194,17 @@ int main() {
         iov[1].iov_base = buf2;
         iov[1].iov_len = 5;
 
-        backend->async_recv(fds[0], iov, 2, ActorId(1), static_cast<uint32_t>(OpType::Recv));
+        backend->async_recv(fds[0], iov, 2, ActorId(1),
+                            static_cast<uint32_t>(OpType::Recv));
         loop.process_completions();
 
         assert(captured.has_value() && "completion should be captured");
-        assert(captured->result == 10 && "async_recv multi-iovec should receive 10 bytes");
-        assert(memcmp(buf1, "hello", 5) == 0 && "first buffer should be 'hello'");
-        assert(memcmp(buf2, "world", 5) == 0 && "second buffer should be 'world'");
+        assert(captured->result == 10 && "async_recv multi-iovec should "
+                                         "receive 10 bytes");
+        assert(memcmp(buf1, "hello", 5) == 0 && "first buffer should be "
+                                                "'hello'");
+        assert(memcmp(buf2, "world", 5) == 0 && "second buffer should be "
+                                                "'world'");
 
         ::close(fds[0]);
         ::close(fds[1]);

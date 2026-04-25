@@ -16,12 +16,12 @@
 #include <hpactor/net/registrar_serialization.hpp>
 
 #include <arpa/inet.h>
-#include <sys/socket.h>
-#include <unistd.h>
-#include <netinet/in.h>
-#include <netinet/tcp.h>
 #include <ifaddrs.h>
 #include <net/if.h>
+#include <netinet/in.h>
+#include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <cstring>
 
@@ -36,23 +36,29 @@ namespace net {
 static std::string get_local_ip() {
     struct ifaddrs* ifaddr = nullptr;
     if (getifaddrs(&ifaddr) == -1) {
-        return "127.0.0.1";  // Fallback
+        return "127.0.0.1"; // Fallback
     }
 
     // Prefer non-loopback, up, running interfaces
     std::string result;
     for (struct ifaddrs* ifa = ifaddr; ifa != nullptr; ifa = ifa->ifa_next) {
-        if (ifa->ifa_addr == nullptr) continue;
-        if (!(ifa->ifa_flags & IFF_UP)) continue;
-        if (!(ifa->ifa_flags & IFF_RUNNING)) continue;
-        if (ifa->ifa_flags & IFF_LOOPBACK) continue;
-        if (ifa->ifa_addr->sa_family != AF_INET) continue;
+        if (ifa->ifa_addr == nullptr)
+            continue;
+        if (!(ifa->ifa_flags & IFF_UP))
+            continue;
+        if (!(ifa->ifa_flags & IFF_RUNNING))
+            continue;
+        if (ifa->ifa_flags & IFF_LOOPBACK)
+            continue;
+        if (ifa->ifa_addr->sa_family != AF_INET)
+            continue;
 
-        struct sockaddr_in* addr = reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr);
+        struct sockaddr_in* addr =
+            reinterpret_cast<struct sockaddr_in*>(ifa->ifa_addr);
         char ip[INET_ADDRSTRLEN];
         if (inet_ntop(AF_INET, &addr->sin_addr, ip, sizeof(ip)) != nullptr) {
             result = ip;
-            break;  // Take first valid non-loopback
+            break; // Take first valid non-loopback
         }
     }
 
@@ -68,15 +74,13 @@ void RegistrarClient::set_acceptors(std::vector<AcceptorInfo> acceptors) {
     acceptors_ = std::move(acceptors);
 }
 
-RegistrarClient::RegistrarClient(const RegistrarConfig& config, CommunicationEndpoint local_endpoint,
-                                 CommunicationEndpoint server_endpoint, NodeRegistry* shared_registry,
-                                 EventLoop* loop)
-    : config_(config),
-      local_endpoint_(local_endpoint),
-      server_endpoint_(server_endpoint),
-      shared_registry_(shared_registry),
-      loop_(loop),
-      last_heartbeat_sent_(std::chrono::steady_clock::now()) {}
+RegistrarClient::RegistrarClient(const RegistrarConfig& config,
+                                 CommunicationEndpoint local_endpoint,
+                                 CommunicationEndpoint server_endpoint,
+                                 NodeRegistry* shared_registry, EventLoop* loop)
+    : config_(config), local_endpoint_(local_endpoint),
+      server_endpoint_(server_endpoint), shared_registry_(shared_registry),
+      loop_(loop), last_heartbeat_sent_(std::chrono::steady_clock::now()) {}
 
 RegistrarClient::~RegistrarClient() {
     stop();
@@ -92,22 +96,25 @@ void RegistrarClient::start() {
 
     if (loop_) {
         // Schedule heartbeat using EventLoop
-        heartbeat_timer_ = loop_->run_every([this]() {
-            if (connected_.load() && server_connection_) {
-                // Build heartbeat message (no payload, just header)
-                bytes message;
-                message.resize(TcpHeaderSize);
+        heartbeat_timer_ = loop_->run_every(
+            [this]() {
+                if (connected_.load() && server_connection_) {
+                    // Build heartbeat message (no payload, just header)
+                    bytes message;
+                    message.resize(TcpHeaderSize);
 
-                uint32_t magic_be = htonl(TcpRegistrarMagic);
-                memcpy(message.data(), &magic_be, 4);
-                message[4] = TcpRegistrarVersion;
-                message[5] = static_cast<uint8_t>(TcpMessageType::Heartbeat);
-                uint32_t len_be = htonl(0);
-                memcpy(message.data() + 6, &len_be, 4);
+                    uint32_t magic_be = htonl(TcpRegistrarMagic);
+                    memcpy(message.data(), &magic_be, 4);
+                    message[4] = TcpRegistrarVersion;
+                    message[5] = static_cast<uint8_t>(TcpMessageType::Heartbeat);
+                    uint32_t len_be = htonl(0);
+                    memcpy(message.data() + 6, &len_be, 4);
 
-                server_connection_->send_message(TcpMessageType::Heartbeat, bytes{});
-            }
-        }, static_cast<int>(config_.heartbeat_interval.count()));
+                    server_connection_->send_message(TcpMessageType::Heartbeat,
+                                                     bytes{});
+                }
+            },
+            static_cast<int>(config_.heartbeat_interval.count()));
     }
 
     // Start connection attempts
@@ -147,11 +154,13 @@ void RegistrarClient::attempt_connection() {
     if (!server_ep) {
         // Schedule retry if we have an event loop
         if (loop_) {
-            loop_->run_after([this]() {
-                if (running_.load()) {
-                    attempt_connection();
-                }
-            }, 1000);
+            loop_->run_after(
+                [this]() {
+                    if (running_.load()) {
+                        attempt_connection();
+                    }
+                },
+                1000);
         }
         return;
     }
@@ -166,11 +175,13 @@ void RegistrarClient::attempt_connection() {
         if (server_ip.empty()) {
             // Schedule retry
             if (loop_) {
-                loop_->run_after([this]() {
-                    if (running_.load()) {
-                        attempt_connection();
-                    }
-                }, 1000);
+                loop_->run_after(
+                    [this]() {
+                        if (running_.load()) {
+                            attempt_connection();
+                        }
+                    },
+                    1000);
             }
             return;
         }
@@ -197,33 +208,37 @@ void RegistrarClient::attempt_connection() {
         return;
     }
 
-    if (::connect(sock, reinterpret_cast<struct sockaddr*>(&server_addr), sizeof(server_addr)) < 0) {
+    if (::connect(sock, reinterpret_cast<struct sockaddr*>(&server_addr),
+                  sizeof(server_addr)) < 0) {
         close(sock);
         // Schedule retry
         if (loop_) {
-            loop_->run_after([this]() {
-                if (running_.load()) {
-                    attempt_connection();
-                }
-            }, 1000);
+            loop_->run_after(
+                [this]() {
+                    if (running_.load()) {
+                        attempt_connection();
+                    }
+                },
+                1000);
         }
         return;
     }
 
     // Create RegistrarConnection wrapper
-    server_connection_ = RegistrarConnection::connecting(sock, server_endpoint_, loop_);
+    server_connection_ =
+        RegistrarConnection::connecting(sock, server_endpoint_, loop_);
 
     // Set up message handler
-    server_connection_->set_message_handler([this](TcpMessageType type, const bytes& data) {
-        handle_server_message(type, data);
-    });
+    server_connection_->set_message_handler(
+        [this](TcpMessageType type, const bytes& data) {
+            handle_server_message(type, data);
+        });
 
     // Set up disconnect handler
-    server_connection_->set_disconnect_handler([this]() {
-        handle_disconnect();
-    });
+    server_connection_->set_disconnect_handler([this]() { handle_disconnect(); });
 
-    // Connection successful - will send registration after receiving connection ready
+    // Connection successful - will send registration after receiving connection
+    // ready
     connected_.store(true);
 
     // Send registration
@@ -273,7 +288,8 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const bytes& da
 
             const auto& ep_info = msg.endpoint_info();
             std::string endpoint_str = ep_info.endpoint();
-            CommunicationEndpoint endpoint = endpoint_ops::parse_endpoint(endpoint_str);
+            CommunicationEndpoint endpoint =
+                endpoint_ops::parse_endpoint(endpoint_str);
 
             std::string host = ep_info.host();
             uint16_t tcp_port = static_cast<uint16_t>(ep_info.tcp_port());
@@ -294,7 +310,8 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const bytes& da
             }
 
             std::string endpoint_str = msg.endpoint();
-            CommunicationEndpoint endpoint = endpoint_ops::parse_endpoint(endpoint_str);
+            CommunicationEndpoint endpoint =
+                endpoint_ops::parse_endpoint(endpoint_str);
             shared_registry_->remove_endpoint(endpoint);
             break;
         }
@@ -302,9 +319,10 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const bytes& da
         case TcpMessageType::Error: {
             // Error response
             // Payload: [ErrorCode: 1][MessageLen: 4][Message: N]
-            if (data.size() < 1) break;
+            if (data.size() < 1)
+                break;
             uint8_t error_code = data[0];
-            (void)error_code;  // Could log this
+            (void)error_code; // Could log this
             break;
         }
 
@@ -326,11 +344,13 @@ void RegistrarClient::handle_disconnect() {
 
     // Schedule reconnect if still running
     if (running_.load() && loop_) {
-        loop_->run_after([this]() {
-            if (running_.load()) {
-                reconnect();
-            }
-        }, 1000);
+        loop_->run_after(
+            [this]() {
+                if (running_.load()) {
+                    reconnect();
+                }
+            },
+            1000);
     }
 }
 

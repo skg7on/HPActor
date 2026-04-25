@@ -39,14 +39,14 @@ namespace hpactor::sched {
 // of timers from 1ms to hours.
 // -----------------------------------------------------------------------------
 class TimingWheel {
-public:
+  public:
     using TimerCallback = std::function<void()>;
 
     struct Timer {
-        int64_t  expire_ns;    // absolute expiration time
-        uint64_t id;           // unique timer id
+        int64_t expire_ns;      // absolute expiration time
+        uint64_t id;            // unique timer id
         TimerCallback callback; // called when timer fires
-        bool cancelled{false}; // set to true to cancel
+        bool cancelled{false};  // set to true to cancel
     };
 
     // Configure wheel with tick duration and levels
@@ -79,7 +79,9 @@ public:
     uint32_t advance(int64_t now_ns);
 
     // Get current time according to the wheel
-    int64_t current_time() const { return current_time_.load(std::memory_order_relaxed); }
+    int64_t current_time() const {
+        return current_time_.load(std::memory_order_relaxed);
+    }
 
     // Check if there are pending timers
     bool empty() const;
@@ -87,7 +89,7 @@ public:
     // Number of pending timers (approximate)
     size_t size() const;
 
-private:
+  private:
     struct WheelLevel {
         std::vector<std::vector<Timer*>> buckets;
         uint32_t num_buckets;

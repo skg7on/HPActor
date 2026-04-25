@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <cassert>
+#include <hpactor/actor/message.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/sched/scheduler.hpp>
-#include <hpactor/actor/message.hpp>
 
 // Mock scheduler that records notify_ready calls
 struct MockScheduler : public hpactor::sched::IScheduler {
@@ -31,11 +31,21 @@ struct MockScheduler : public hpactor::sched::IScheduler {
     void yield(hpactor::ActorId actor, uint8_t priority) override {
         notify_ready(actor, priority, INT64_MAX);
     }
-    hpactor::sched::TimerHandle schedule_after(hpactor::sched::timer_callback, int64_t) override { return {}; }
-    hpactor::sched::TimerHandle schedule_every(hpactor::sched::timer_callback, int64_t) override { return {}; }
+    hpactor::sched::TimerHandle
+    schedule_after(hpactor::sched::timer_callback, int64_t) override {
+        return {};
+    }
+    hpactor::sched::TimerHandle
+    schedule_every(hpactor::sched::timer_callback, int64_t) override {
+        return {};
+    }
     void cancel_timer(hpactor::sched::TimerHandle) override {}
-    size_t worker_count() const override { return 1; }
-    bool is_running() const override { return true; }
+    size_t worker_count() const override {
+        return 1;
+    }
+    bool is_running() const override {
+        return true;
+    }
 
     std::atomic<int> notify_ready_count;
     hpactor::ActorId last_actor;
@@ -64,7 +74,7 @@ int main() {
         mb.enqueue(msg1);
         assert(scheduler.notify_ready_count.load() == 1);
         mb.enqueue(msg2);
-        assert(scheduler.notify_ready_count.load() == 1);  // still 1
+        assert(scheduler.notify_ready_count.load() == 1); // still 1
     }
 
     // Test 3: dequeue drains mailbox, next enqueue calls notify_ready again

@@ -37,9 +37,8 @@ void test_connect_and_frame() {
     assert(server_started);
 
     int accepted_fd = -1;
-    acceptor.set_accept_handler([&accepted_fd](int fd, CommunicationEndpoint) {
-        accepted_fd = fd;
-    });
+    acceptor.set_accept_handler(
+        [&accepted_fd](int fd, CommunicationEndpoint) { accepted_fd = fd; });
 
     // Client: connect to the server
     int client_fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
@@ -53,7 +52,8 @@ void test_connect_and_frame() {
     // Non-blocking connect: may return 0 (immediate success) or -1 with
     // EINPROGRESS (connection in progress). Either way, the socket is
     // valid for the test - the accept will be handled by the event loop.
-    int result = ::connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    int result = ::connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr),
+                           sizeof(addr));
     (void)result;
 
     // Client socket is valid and connected (or connection in progress)
@@ -73,7 +73,9 @@ void test_connect_and_frame() {
 void test_path_derivation() {
     auto derive = [](const std::string& node_id) -> std::string {
         std::string s = node_id;
-        for (char& c : s) if (c == ':') c = '_';
+        for (char& c : s)
+            if (c == ':')
+                c = '_';
         return "/tmp/hpactor/" + s + ".sock";
     };
 
@@ -83,8 +85,8 @@ void test_path_derivation() {
 }
 
 } // namespace
-} // net
-} // hpactor
+} // namespace net
+} // namespace hpactor
 
 int main() {
     hpactor::net::test_path_derivation();

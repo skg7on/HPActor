@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/net/frame.hpp>
+#include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 namespace hpactor {
@@ -21,12 +21,12 @@ namespace hpactor {
 // -----------------------------------------------------------------------------
 // RpcFuture implementation
 // -----------------------------------------------------------------------------
-template<typename T>
-RpcFuture<T>::RpcFuture(std::future<result<T>> inner, std::chrono::milliseconds timeout)
+template <typename T>
+RpcFuture<T>::RpcFuture(std::future<result<T>> inner,
+                        std::chrono::milliseconds timeout)
     : inner_(std::move(inner)), timeout_(timeout) {}
 
-template<typename T>
-result<T> RpcFuture<T>::get() {
+template <typename T> result<T> RpcFuture<T>::get() {
     if (!inner_.valid()) {
         return result<T>::make(error(errors::unknown, "future not valid"));
     }
@@ -52,7 +52,9 @@ void RpcChannel::abort() {
     std::lock_guard<std::mutex> lock(mutex_);
     for (auto& [id, call] : pending_) {
         if (!call->ready_.load(std::memory_order_acquire)) {
-            call->promise.set_value(result<bytes>::make(error(errors::unknown, "RPC channel aborted")));
+            call->promise.set_value(
+                result<bytes>::make(error(errors::unknown, "RPC channel "
+                                                           "aborted")));
             call->ready_.store(true, std::memory_order_release);
         }
     }
@@ -93,7 +95,8 @@ void RpcChannel::on_timeout(MessageId msg_id) {
         schedule_retry(call_ptr);
     } else {
         call_ptr->ready_.store(true, std::memory_order_release);
-        call_ptr->promise.set_value(result<bytes>::make(error(errors::timeout, "RPC call timed out")));
+        call_ptr->promise.set_value(
+            result<bytes>::make(error(errors::timeout, "RPC call timed out")));
         std::lock_guard<std::mutex> lock(mutex_);
         pending_.erase(key);
     }
@@ -102,8 +105,7 @@ void RpcChannel::on_timeout(MessageId msg_id) {
 void RpcChannel::schedule_retry(PendingCall* call) {
     int64_t delay_ns = call->timeout.count() * 1000000;
     scheduler_->schedule_after(
-        [this, msg_id = call->msg_id]() { on_timeout(msg_id); },
-        delay_ns);
+        [this, msg_id = call->msg_id]() { on_timeout(msg_id); }, delay_ns);
     send_request(*call, true);
 }
 
@@ -122,25 +124,24 @@ void RpcChannel::send_request(PendingCall& call, bool is_retry) {
     transport_->send(call.target, encoded);
 }
 
-RpcFuture<bytes> RpcChannel::call_raw(const ActorAddress& target,
-                                      const bytes& encoded_request,
-                                      std::chrono::milliseconds timeout_ms) {
+RpcFuture<bytes>
+RpcChannel::call_raw(const ActorAddress& target, const bytes& encoded_request,
+                     std::chrono::milliseconds timeout_ms) {
     MessageId msg_id = MessageId::generate();
 
     auto promise_ptr = std::make_shared<std::promise<result<bytes>>>();
     auto future = promise_ptr->get_future();
 
-    auto* call_ptr = new PendingCall{
-        .msg_id = msg_id,
-        .target = target,
-        .encoded_request = encoded_request,
-        .timeout = timeout_ms,
-        .retry_count = 0,
-        .max_retries = 5,
-        .promise = std::move(*promise_ptr),
-        .enqueued_at = std::chrono::steady_clock::now(),
-        .ready_ = false
-    };
+    auto* call_ptr =
+        new PendingCall{.msg_id = msg_id,
+                        .target = target,
+                        .encoded_request = encoded_request,
+                        .timeout = timeout_ms,
+                        .retry_count = 0,
+                        .max_retries = 5,
+                        .promise = std::move(*promise_ptr),
+                        .enqueued_at = std::chrono::steady_clock::now(),
+                        .ready_ = false};
 
     uint64_t key = msg_id.value();
     {
@@ -151,9 +152,7 @@ RpcFuture<bytes> RpcChannel::call_raw(const ActorAddress& target,
     send_request(*call_ptr, false);
 
     int64_t delay_ns = timeout_ms.count() * 1000000;
-    scheduler_->schedule_after(
-        [this, msg_id]() { on_timeout(msg_id); },
-        delay_ns);
+    scheduler_->schedule_after([this, msg_id]() { on_timeout(msg_id); }, delay_ns);
 
     return RpcFuture<bytes>(std::move(future), timeout_ms);
 }

@@ -2,8 +2,8 @@
 #pragma once
 
 #include <hpactor/net/registrar.hpp>
-#include <hpactor/types/types.hpp>
 #include <hpactor/registrar.pb.h>
+#include <hpactor/types/types.hpp>
 
 #include <string>
 #include <vector>
@@ -113,7 +113,8 @@ inline bytes serialize_error_payload(uint8_t code, const std::string& msg) {
 // -----------------------------------------------------------------------------
 
 // PbResolveQueryPayload
-inline PbResolveQueryPayload to_proto_resolve_query(const CommunicationEndpoint& ep) {
+inline PbResolveQueryPayload
+to_proto_resolve_query(const CommunicationEndpoint& ep) {
     PbResolveQueryPayload msg;
     msg.set_target_endpoint(endpoint_ops::to_string(ep));
     return msg;
@@ -125,7 +126,8 @@ inline bytes serialize_resolve_query_payload(const CommunicationEndpoint& ep) {
     return bytes(serialized.begin(), serialized.end());
 }
 
-inline bool parse_resolve_query_payload(const bytes& data, PbResolveQueryPayload& msg) {
+inline bool
+parse_resolve_query_payload(const bytes& data, PbResolveQueryPayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -144,7 +146,8 @@ inline bytes serialize_resolve_response_payload(const NodeEndpoint& ep) {
     return bytes(serialized.begin(), serialized.end());
 }
 
-inline bool parse_resolve_response_payload(const bytes& data, PbResolveResponsePayload& msg) {
+inline bool
+parse_resolve_response_payload(const bytes& data, PbResolveResponsePayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 

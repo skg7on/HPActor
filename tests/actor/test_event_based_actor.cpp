@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_fwd.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/actor/actor_fwd.hpp>
 
 #include <type_traits>
 

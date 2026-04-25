@@ -34,7 +34,9 @@ class ActorContext {
     ~ActorContext();
 
     // Set the system reference (used when owner is not set)
-    void set_system(ActorSystem* system) { system_ = system; }
+    void set_system(ActorSystem* system) {
+        system_ = system;
+    }
 
     // Spawn child actors
     template <typename Fn, typename... Args>
@@ -49,7 +51,7 @@ class ActorContext {
     // priority: 0-3 (0 = highest)
     // deadline_ns: absolute deadline in nanoseconds (INT64_MAX = no deadline)
     void send_with_priority(const ActorAddress& target, MessageVariant msg,
-                          uint8_t priority, int64_t deadline_ns);
+                            uint8_t priority, int64_t deadline_ns);
 
     // Replies
     void reply(MessageVariant msg);
@@ -75,9 +77,9 @@ class ActorContext {
 
     // RPC calls (for non-actor threads only)
     // Note: caller serializes request and deserializes response
-    RpcFuture<bytes> rpc(const ActorAddress& target,
-                         const bytes& encoded_request,
-                         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));
+    RpcFuture<bytes>
+    rpc(const ActorAddress& target, const bytes& encoded_request,
+        std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));
 
   private:
     Actor owner_;

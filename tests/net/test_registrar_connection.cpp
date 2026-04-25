@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/registrar.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/registrar.hpp>
 
+#include <arpa/inet.h>
 #include <cassert>
 #include <cstring>
 #include <iostream>
 #include <sys/socket.h>
-#include <arpa/inet.h>
 #include <unistd.h>
 
 using namespace hpactor;
@@ -30,13 +30,13 @@ int main() {
     // Build a test message: Register type with empty payload
     bytes payload;
     bytes message;
-    message.resize(10);  // TcpHeaderSize = 10
+    message.resize(10); // TcpHeaderSize = 10
 
     uint32_t magic_be = htonl(TcpRegistrarMagic);
     memcpy(message.data(), &magic_be, 4);
     message[4] = TcpRegistrarVersion;
     message[5] = static_cast<uint8_t>(TcpMessageType::Register);
-    uint32_t len_be = htonl(0);  // empty payload
+    uint32_t len_be = htonl(0); // empty payload
     memcpy(message.data() + 6, &len_be, 4);
 
     // Verify header parsing

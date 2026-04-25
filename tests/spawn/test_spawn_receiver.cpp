@@ -16,8 +16,8 @@
 #include <hpactor/actor_type_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 
-#include <iostream>
 #include <cassert>
+#include <iostream>
 
 using namespace hpactor;
 

@@ -12,22 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/core/actor_system.hpp>
-#include <hpactor/sched/scheduler.hpp>
+#include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
-#include <hpactor/spawn.hpp>
-#include <hpactor/types/serialization.hpp>
+#include <hpactor/core/actor_system.hpp>
+#include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/tcp_transport.hpp>
-#include <hpactor/actor/spawn_receiver.hpp>
-#include <hpactor/core/actor_system_ids.hpp>
+#include <hpactor/sched/scheduler.hpp>
+#include <hpactor/spawn.hpp>
+#include <hpactor/types/serialization.hpp>
 
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
 // actor_registry implementation
 // -----------------------------------------------------------------------------
-actor_registry::actor_registry(CommunicationEndpoint endpoint) : endpoint_(endpoint) {}
+actor_registry::actor_registry(CommunicationEndpoint endpoint)
+    : endpoint_(endpoint) {}
 
 void actor_registry::put(const std::string& name, ActorAddress addr) {
     actors_[name] = addr;
@@ -49,12 +50,10 @@ void actor_registry::erase(const std::string& name) {
 // ActorSystem implementation
 // -----------------------------------------------------------------------------
 ActorSystem::ActorSystem(const Config& config)
-    : config_(config),
-      endpoint_(config.endpoint),
-      registry_(endpoint_),
-      scheduler_(std::make_unique<sched::HybridScheduler>(*this, config.scheduler_threads)),
+    : config_(config), endpoint_(config.endpoint), registry_(endpoint_),
+      scheduler_(std::make_unique<sched::HybridScheduler>(
+          *this, config.scheduler_threads)),
       actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
-
     scheduler_->start();
 
     if (config.enable_network) {
@@ -64,21 +63,24 @@ ActorSystem::ActorSystem(const Config& config)
 
         // Create registrar first (before transport)
         if (config.udp_port > 0) {
-            registrar_ = std::make_unique<net::UdpRegistrar>(
-                config.registrar, endpoint_);
+            registrar_ =
+                std::make_unique<net::UdpRegistrar>(config.registrar, endpoint_);
             registrar_->start();
         }
 
         // Create transport with registry
-        // Note: TcpTransport expects NodeRegistry*, but UdpRegistrar owns one internally.
-        // For now, pass nullptr and rely on UdpRegistrar for discovery.
-        transport_ = std::make_unique<net::TcpTransport>(
-            endpoint_, config.tls, config.pool, nullptr);
+        // Note: TcpTransport expects NodeRegistry*, but UdpRegistrar owns one
+        // internally. For now, pass nullptr and rely on UdpRegistrar for
+        // discovery.
+        transport_ = std::make_unique<net::TcpTransport>(endpoint_, config.tls,
+                                                         config.pool, nullptr);
 
         // Initialize RPC channel after transport is created
-        rpc_channel_ = std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
+        rpc_channel_ =
+            std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
 
-        // Set RPC response handler on transport to route responses to RPC channel
+        // Set RPC response handler on transport to route responses to RPC
+        // channel
         transport_->set_rpc_handler(
             [this](hpactor::MessageId id, const hpactor::bytes& data) {
                 rpc_channel_->on_response(id, data);
@@ -93,7 +95,8 @@ ActorSystem::ActorSystem(const Config& config)
         network_thread_ = std::thread([this]() {
             while (network_loop_->wait(100) >= 0) {
                 network_loop_->process_completions();
-                if (!is_running()) break;
+                if (!is_running())
+                    break;
             }
         });
 
@@ -112,7 +115,8 @@ ActorSystem::ActorSystem(const Config& config)
         // Create mailbox for spawn receiver
         {
             std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-            mailboxes_.emplace(SpawnReceiverId,
+            mailboxes_.emplace(
+                SpawnReceiverId,
                 std::make_unique<mailbox::MPSCActorMailbox<Message<MessageVariant>>>(
                     SpawnReceiverId, scheduler_.get()));
         }
@@ -173,7 +177,8 @@ std::shared_ptr<AbstractActor> ActorSystem::get_actor(ActorId id) {
     return nullptr;
 }
 
-mailbox::MPSCActorMailbox<Message<MessageVariant>>* ActorSystem::get_mailbox(ActorId id) {
+mailbox::MPSCActorMailbox<Message<MessageVariant>>*
+ActorSystem::get_mailbox(ActorId id) {
     std::lock_guard<std::mutex> lock(mailboxes_mutex_);
     auto it = mailboxes_.find(id);
     if (it != mailboxes_.end()) {
@@ -189,7 +194,8 @@ void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
 void ActorSystem::deliver_local(ActorId target, MessageVariant msg,
                                 uint8_t /*priority*/, int64_t /*deadline_ns*/) {
     auto* mailbox = get_mailbox(target);
-    if (!mailbox) return;
+    if (!mailbox)
+        return;
     mailbox->push(Message<MessageVariant>(std::move(msg)));
 }
 
@@ -204,9 +210,9 @@ void ActorSystem::enqueue_completion(net::OpCompletion completion) {
     deliver_local(completion.actor, std::move(msg));
 }
 
-result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
-                                           const std::string& actor_type,
-                                           const bytes& /*args*/) {
+result<ActorRef>
+ActorSystem::spawn_remote(const std::string& node_name,
+                          const std::string& actor_type, const bytes& /*args*/) {
     return spawn_remote_async(node_name, actor_type, bytes{}).get();
 }
 
@@ -232,7 +238,8 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     req.actor_type_name = actor_type;
     req.args_type = TypeTag::User;
     req.serialized_args = bytes{};
-    req.supervisor_addr = system_actor_.address();  // Supervisor is system actor for now
+    req.supervisor_addr = system_actor_.address(); // Supervisor is system actor
+                                                   // for now
 
     SpawnMessageVariant mv = req;
     bytes request_bytes = serializer.encode_spawn(TypeTag::SpawnRequestTag, mv);
@@ -240,7 +247,8 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     // Create frame for spawn request
     net::WireFrame frame;
     frame.sender = system_actor_.address();
-    frame.receiver = ActorAddress{remote_endpoint, SystemActorType, SpawnReceiverId, 0};
+    frame.receiver =
+        ActorAddress{remote_endpoint, SystemActorType, SpawnReceiverId, 0};
     frame.message_id = MessageId::generate().value();
     frame.flags = net::WireFrame::RpcRequest;
     frame.payload = request_bytes;

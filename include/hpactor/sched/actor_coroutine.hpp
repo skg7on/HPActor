@@ -25,9 +25,10 @@ namespace hpactor::sched {
 #if HPACTOR_USE_COROUTINES
 
 // ActorCoroutine: owns a coroutine handle for an actor.
-// Produced by EventBasedActor::act() and consumed by HybridScheduler::execute_actor().
+// Produced by EventBasedActor::act() and consumed by
+// HybridScheduler::execute_actor().
 class ActorCoroutine {
-public:
+  public:
     ActorCoroutine() noexcept = default;
 
     explicit ActorCoroutine(CoroutineTask&& task, ActorId actor_id) noexcept
@@ -42,7 +43,8 @@ public:
 
     ActorCoroutine& operator=(ActorCoroutine&& other) noexcept {
         if (this != &other) {
-            // Use swap to transfer ownership; old task destroyed via temp's destructor
+            // Use swap to transfer ownership; old task destroyed via temp's
+            // destructor
             CoroutineTask old_task(std::move(task_));
             task_ = std::move(other.task_);
             actor_id_ = other.actor_id_;
@@ -56,12 +58,20 @@ public:
 
     ~ActorCoroutine() = default;
 
-    explicit operator bool() const noexcept { return static_cast<bool>(task_); }
+    explicit operator bool() const noexcept {
+        return static_cast<bool>(task_);
+    }
 
-    CoroutineTask& task() { return task_; }
-    const CoroutineTask& task() const { return task_; }
+    CoroutineTask& task() {
+        return task_;
+    }
+    const CoroutineTask& task() const {
+        return task_;
+    }
 
-    ActorId actor_id() const { return actor_id_; }
+    ActorId actor_id() const {
+        return actor_id_;
+    }
 
     // Resume the coroutine. Must be called on the owning worker thread.
     void resume() {
@@ -70,17 +80,23 @@ public:
         }
     }
 
-    bool done() const { return !task_ || task_.done(); }
+    bool done() const {
+        return !task_ || task_.done();
+    }
 
     // Access the promise for state inspection
-    CoroutinePromise& promise() { return task_.handle().promise(); }
-    const CoroutinePromise& promise() const { return task_.handle().promise(); }
+    CoroutinePromise& promise() {
+        return task_.handle().promise();
+    }
+    const CoroutinePromise& promise() const {
+        return task_.handle().promise();
+    }
 
-private:
+  private:
     CoroutineTask task_;
     ActorId actor_id_;
 };
 
-#endif  // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_USE_COROUTINES
 
 } // namespace hpactor::sched

@@ -28,8 +28,9 @@ namespace net {
 // Acceptor - server socket listener for incoming connections
 // -----------------------------------------------------------------------------
 class Acceptor {
-public:
-    using accept_handler = std::function<void(int client_fd, CommunicationEndpoint /*remote_endpoint_hint*/)>;
+  public:
+    using accept_handler =
+        std::function<void(int client_fd, CommunicationEndpoint /*remote_endpoint_hint*/)>;
 
     Acceptor(EventLoop* loop);
     ~Acceptor();
@@ -56,15 +57,21 @@ public:
     void set_accept_handler(accept_handler handler);
 
     // Check if listening
-    bool is_listening() const { return listening_fd_ >= 0; }
+    bool is_listening() const {
+        return listening_fd_ >= 0;
+    }
 
     // Get the bound port
-    uint16_t port() const { return bound_port_; }
+    uint16_t port() const {
+        return bound_port_;
+    }
 
     // Get UDS socket path if listening on UDS
-    std::string uds_path() const { return uds_path_; }
+    std::string uds_path() const {
+        return uds_path_;
+    }
 
-private:
+  private:
     void handle_read();
 
     EventLoop* loop_;

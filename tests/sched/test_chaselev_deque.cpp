@@ -14,10 +14,10 @@
 
 // tests/sched/test_chaselev_deque.cpp
 #include <cassert>
+#include <hpactor/sched/work_queue.hpp>
+#include <random>
 #include <thread>
 #include <vector>
-#include <random>
-#include <hpactor/sched/work_queue.hpp>
 
 struct Item {
     int value;
@@ -41,7 +41,7 @@ int main() {
     assert(!stolen);
 
     // Test 3: fill beyond initial capacity and drain
-    hpactor::sched::ChaselevDeque<Item> deque2(4);  // small initial capacity
+    hpactor::sched::ChaselevDeque<Item> deque2(4); // small initial capacity
     for (int i = 0; i < 128; ++i) {
         deque2.push_bottom(Item{i});
     }
@@ -60,7 +60,8 @@ int main() {
     std::atomic<int> push_count{0};
 
     std::thread thief([&]() {
-        while (!start.load(std::memory_order_acquire)) { /* spin */ }
+        while (!start.load(std::memory_order_acquire)) { /* spin */
+        }
         for (int i = 0; i < 1000; ++i) {
             if (deque3.steal_top(out)) {
                 steal_count.fetch_add(1, std::memory_order_relaxed);
@@ -79,7 +80,9 @@ int main() {
 
     // All 1000 items either popped by owner or stolen
     int owner_drained = 0;
-    while (deque3.pop_bottom(out)) { ++owner_drained; }
+    while (deque3.pop_bottom(out)) {
+        ++owner_drained;
+    }
     int total = steal_count.load() + owner_drained;
     assert(total == push_count.load());
 

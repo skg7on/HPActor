@@ -27,7 +27,7 @@ namespace hpactor {
 // Scheduler - thread pool that processes actor mailboxes
 // -----------------------------------------------------------------------------
 class Scheduler {
-public:
+  public:
     explicit Scheduler(ActorSystem& system, size_t num_threads);
     ~Scheduler();
 
@@ -47,9 +47,11 @@ public:
     void enqueue(ActorId target, MessageVariant msg);
 
     // Check if scheduler is running
-    bool is_running() const { return running_.load(std::memory_order_acquire); }
+    bool is_running() const {
+        return running_.load(std::memory_order_acquire);
+    }
 
-private:
+  private:
     void worker_loop(size_t thread_index);
     void process_actor(ActorId actor_id);
 
@@ -61,7 +63,7 @@ private:
     // Each actor with a non-empty mailbox gets enqueued here
     struct WorkItem {
         ActorId actor_id;
-        uint64_t sequence;  // For FIFO ordering
+        uint64_t sequence; // For FIFO ordering
     };
 
     std::atomic<uint64_t> next_sequence_{0};

@@ -16,12 +16,20 @@
 
 #include <hpactor/net/async_io_backend.hpp>
 
-#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) || defined(__NetBSD__)
-#include <sys/event.h>
-#include <sys/time.h>
+#if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) ||      \
+    defined(__NetBSD__)
+#    include <sys/event.h>
+#    include <sys/time.h>
 #else
 // Stub definitions for non-BSD compilation
-struct kevent { int ident; int filter; int flags; int fflags; int64_t data; void* udata; };
+struct kevent {
+    int ident;
+    int filter;
+    int flags;
+    int fflags;
+    int64_t data;
+    void* udata;
+};
 #endif
 
 #include <atomic>
@@ -37,7 +45,7 @@ namespace net {
 class EventLoop;
 
 class KqueueBackend : public AsyncIoBackend {
-public:
+  public:
     KqueueBackend();
     ~KqueueBackend() override;
 
@@ -51,10 +59,10 @@ public:
     int register_buffer(const void* addr, size_t len) override;
     bool unregister_buffer(int buffer_id) override;
 
-    void async_send(int fd, const iovec* bufs, int buf_count,
-                    ActorId actor, uint32_t op_type) override;
-    void async_recv(int fd, const iovec* bufs, int buf_count,
-                    ActorId actor, uint32_t op_type) override;
+    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
 
     void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
                           ActorId actor, uint32_t op_type) override;
@@ -63,13 +71,13 @@ public:
 
     void async_accept(int fd, ActorId actor) override;
     void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                        ActorId actor) override;
+                       ActorId actor) override;
 
-    void async_recvfrom(int fd, const iovec* bufs, int buf_count,
-                         ActorId actor, uint32_t op_type) override;
-    void async_sendto(int fd, const iovec* bufs, int buf_count,
-                        const sockaddr* addr, socklen_t addrlen,
-                        ActorId actor, uint32_t op_type) override;
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                        uint32_t op_type) override;
+    void
+    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
+                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
 
     uint64_t run_after(ActorId actor, int delay_ms) override;
     uint64_t run_every(ActorId actor, int interval_ms) override;
@@ -82,14 +90,16 @@ public:
     void deliver_completion(OpCompletion completion) override;
 
     // Set the EventLoop pointer for routing completions
-    void set_loop(net::EventLoop* loop) { loop_ = loop; }
+    void set_loop(net::EventLoop* loop) {
+        loop_ = loop;
+    }
 
-private:
+  private:
     // Timer entry
     struct TimerEntry {
-        int64_t expires_at_ms;  // absolute time in ms
+        int64_t expires_at_ms; // absolute time in ms
         ActorId actor;
-        int interval_ms;  // 0 for one-shot, >0 for repeating
+        int interval_ms; // 0 for one-shot, >0 for repeating
         uint64_t handle;
     };
 
@@ -97,16 +107,17 @@ private:
     struct PendingOp {
         ActorId actor;
         uint32_t op_type;
-        std::vector<uint8_t> data;  // concatenated buffers for send
+        std::vector<uint8_t> data; // concatenated buffers for send
         int buf_count = 0;
-        iovec saved_bufs[16];  // original buffers for recv
+        iovec saved_bufs[16]; // original buffers for recv
         sockaddr_storage addr;
         socklen_t addrlen = 0;
     };
 
     // Encode fd+actor+op_type into user_data
     static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type);
-    static void decode_user_data(uint64_t user_data, int& fd, ActorId& actor, uint32_t& op_type);
+    static void decode_user_data(uint64_t user_data, int& fd, ActorId& actor,
+                                 uint32_t& op_type);
 
     int kqueue_fd_ = -1;
 
@@ -114,9 +125,11 @@ private:
     net::EventLoop* loop_ = nullptr;
 
     // Timer management
-    std::vector<TimerEntry> timers_;  // sorted by expires_at_ms
+    std::vector<TimerEntry> timers_; // sorted by expires_at_ms
     std::unordered_set<uint64_t> cancelled_timers_;
-    std::unordered_map<uint64_t, size_t> handle_to_timer_index_;  // for cancellation lookup
+    std::unordered_map<uint64_t, size_t> handle_to_timer_index_; // for
+                                                                 // cancellation
+                                                                 // lookup
     std::atomic<uint64_t> next_timer_handle_{1};
 
     // fd -> registered events for update tracking

@@ -31,9 +31,8 @@ namespace hpactor::mailbox {
 //
 // The dummy node is a T (inherited) so &stub_ is a valid T*.
 //
-template<typename T>
-class MPSCMailbox {
-public:
+template <typename T> class MPSCMailbox {
+  public:
     MPSCMailbox() {
         stub_.mpsc_next.store(nullptr, std::memory_order_relaxed);
         head_.store(&stub_, std::memory_order_relaxed);
@@ -51,12 +50,14 @@ public:
     }
 
     // Consumer: dequeue oldest node, or nullptr if empty
-    // The stub (tail_) is always a dummy; stub.mpsc_next → oldest element (or nullptr if empty).
-    // To return the oldest element, we advance stub.mpsc_next to skip over it (sever the link).
+    // The stub (tail_) is always a dummy; stub.mpsc_next → oldest element (or
+    // nullptr if empty). To return the oldest element, we advance
+    // stub.mpsc_next to skip over it (sever the link).
     T* dequeue() noexcept {
         T* tail = tail_.load(std::memory_order_acquire);
         T* next = tail->mpsc_next.load(std::memory_order_acquire);
-        if (next == nullptr) return nullptr;
+        if (next == nullptr)
+            return nullptr;
 
         // Sever the link from stub to the node we're about to return:
         // advance stub.mpsc_next to skip over `next` (point to next->next)
@@ -74,21 +75,23 @@ public:
     }
 
     // Consumer: try dequeue once (non-blocking) — same as dequeue
-    T* try_dequeue() noexcept { return dequeue(); }
+    T* try_dequeue() noexcept {
+        return dequeue();
+    }
 
     bool empty() const noexcept {
         return count_.load(std::memory_order_acquire) == 0;
     }
 
-private:
+  private:
     struct Stub : public T {
         Stub() : T() {}
     };
 
-    alignas(64) std::atomic<T*> head_;   // newest element
-    alignas(64) std::atomic<T*> tail_;   // always stub (dummy)
-    alignas(64) Stub stub_;             // dummy anchor
-    std::atomic<int64_t> count_;        // element count
+    alignas(64) std::atomic<T*> head_; // newest element
+    alignas(64) std::atomic<T*> tail_; // always stub (dummy)
+    alignas(64) Stub stub_;            // dummy anchor
+    std::atomic<int64_t> count_;       // element count
 };
 
 } // namespace hpactor::mailbox

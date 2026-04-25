@@ -17,8 +17,8 @@
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
-#include <vector>
 #include <memory>
+#include <vector>
 
 namespace hpactor::sched {
 
@@ -32,7 +32,7 @@ namespace hpactor::sched {
 // Instead of allocating stacks dynamically, frames are acquired from this pool.
 // -----------------------------------------------------------------------------
 class CoroutineFramePool {
-public:
+  public:
     struct Frame {
         std::byte* stack_ptr;
         size_t stack_size;
@@ -58,18 +58,26 @@ public:
     void release(Frame* frame);
 
     // Check if pool is exhausted
-    bool empty() const { return free_count_.load(std::memory_order_acquire) == 0; }
+    bool empty() const {
+        return free_count_.load(std::memory_order_acquire) == 0;
+    }
 
     // Number of available frames
-    size_t available() const { return free_count_.load(std::memory_order_acquire); }
+    size_t available() const {
+        return free_count_.load(std::memory_order_acquire);
+    }
 
     // Total number of frames
-    size_t total() const { return frames_.size(); }
+    size_t total() const {
+        return frames_.size();
+    }
 
     // Maximum stack size
-    size_t stack_size() const { return stack_size_; }
+    size_t stack_size() const {
+        return stack_size_;
+    }
 
-private:
+  private:
     struct alignas(64) FreeNode {
         FreeNode* next;
     };

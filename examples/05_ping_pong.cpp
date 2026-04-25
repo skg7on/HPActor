@@ -30,11 +30,11 @@
 
 #include <hpactor/actor/blocking_actor.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/message.hpp>
 #include <hpactor/actor/scoped_actor.hpp>
 #include <hpactor/actor_context.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/behavior.hpp>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <iostream>
 #include <variant>
@@ -71,11 +71,11 @@
 // -----------------------------------------------------------------------------
 
 struct PingMessage {
-    int count;  // Number of remaining pings
+    int count; // Number of remaining pings
 };
 
 struct PongMessage {
-    int count;  // Number of remaining pongs
+    int count; // Number of remaining pongs
 };
 
 struct StartMessage {
@@ -255,10 +255,7 @@ int main() {
     demonstrate_linking();
     demonstrate_monitoring();
 
-    hpactor::Config config{
-        .scheduler_threads = 4,
-        .max_queue_depth = 1024
-    };
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
     std::cout << "\nNOTE: Actor spawning and message passing are not yet "
@@ -300,7 +297,8 @@ int main() {
     std::cout << "  context()->reply(message)       // Reply to sender" << std::endl;
     std::cout << "  actor->link_to(addr)            // Death sharing" << std::endl;
     std::cout << "  context()->monitor(addr)         // One-way watch" << std::endl;
-    std::cout << "  scope.receive<T>()               // Blocking receive" << std::endl;
+    std::cout << "  scope.receive<T>()               // Blocking receive"
+              << std::endl;
 
     return 0;
 }

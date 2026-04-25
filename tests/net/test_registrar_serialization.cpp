@@ -1,12 +1,12 @@
 // tests/net/test_registrar_serialization.cpp
 // Copyright 2026 HPActor Contributors
 
-#include <hpactor/net/registrar_serialization.hpp>
 #include <hpactor/net/registrar.hpp>
+#include <hpactor/net/registrar_serialization.hpp>
 
 #include <cassert>
-#include <iostream>
 #include <cstring>
+#include <iostream>
 
 using namespace hpactor;
 using namespace hpactor::net;
@@ -76,7 +76,8 @@ int main() {
         assert(parsed.target_endpoint() == "192.168.1.50:5353");
     }
 
-    // Test 6: PbResolveResponsePayload round-trip (endpoint_info only, no acceptors per spec)
+    // Test 6: PbResolveResponsePayload round-trip (endpoint_info only, no
+    // acceptors per spec)
     {
         NodeEndpoint ep;
         ep.endpoint = endpoint_ops::parse_endpoint("192.168.1.50:5353");
@@ -94,10 +95,10 @@ int main() {
 
     // Test 7: Malformed data handling
     {
-        bytes malformed = {0x00, 0x01, 0x02};  // Too short
+        bytes malformed = {0x00, 0x01, 0x02}; // Too short
         PbRegisterPayload parsed;
         bool ok = parse_register_payload(malformed, parsed);
-        assert(!ok);  // ParseFromArray returns false on error
+        assert(!ok); // ParseFromArray returns false on error
         // Message should be empty/default on parse failure
         assert(parsed.endpoint_info().endpoint().empty());
     }

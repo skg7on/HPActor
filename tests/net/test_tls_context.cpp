@@ -32,17 +32,19 @@ int main() {
     TlsConfig config;
     config.endpoint = hpactor::endpoint_ops::parse_endpoint("localhost:12345");
     config.verify_peer = true;
-    assert(hpactor::endpoint_ops::to_string(config.endpoint) == "127.0.0.1:12345");
+    assert(hpactor::endpoint_ops::to_string(config.endpoint) == "127.0.0.1:"
+                                                                "12345");
     assert(config.verify_peer == true);
 
     // Test from_config creates valid context
     // (In real test, use actual cert/key DER bytes)
     // For now, test with empty config to verify no crash
     TlsContext ctx = TlsContext::from_config(config);
-    assert(hpactor::endpoint_ops::to_string(ctx.endpoint()) == "127.0.0.1:12345");
+    assert(hpactor::endpoint_ops::to_string(ctx.endpoint()) == "127.0.0.1:"
+                                                               "12345");
 
     // Test invalid cert returns proper result
-    bytes invalid_cert = {0x30, 0x82, 0x01, 0x00};  // Fake DER
+    bytes invalid_cert = {0x30, 0x82, 0x01, 0x00}; // Fake DER
     auto result = ctx.verify_certificate(invalid_cert);
     // Empty ctx has no CA certs, so expect appropriate result
     (void)result;

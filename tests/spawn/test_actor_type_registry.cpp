@@ -12,19 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor_type_registry.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor_type_registry.hpp>
 #include <hpactor/behavior.hpp>
+#include <hpactor/core/actor_system.hpp>
 
-#include <iostream>
 #include <cassert>
+#include <iostream>
 
 using namespace hpactor;
 
 // Test actor for registration - must be default constructible for spawn
 class TestActor : public EventBasedActor {
-public:
+  public:
     TestActor(ActorContext* ctx, ActorSystem& sys)
         : EventBasedActor(ctx, sys) {}
 

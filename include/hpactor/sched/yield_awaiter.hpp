@@ -15,26 +15,28 @@
 #pragma once
 
 #include <hpactor/hpactor_config.hpp>
-#include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
+#include <hpactor/sched/scheduler.hpp>
 #include <hpactor/types/types.hpp>
 
 #if HPACTOR_USE_COROUTINES
 
-#include <coroutine>
-#include <cstdint>
+#    include <coroutine>
+#    include <cstdint>
 
 namespace hpactor::sched {
 
 // YieldAwaiter: co_await scheduler.yield(actor_id, priority)
-// Voluntarily suspends and immediately re-enqueues the actor at the same priority.
-// Used for cooperative multitasking after processing a message.
+// Voluntarily suspends and immediately re-enqueues the actor at the same
+// priority. Used for cooperative multitasking after processing a message.
 class YieldAwaiter {
-public:
+  public:
     YieldAwaiter(IScheduler* scheduler, ActorId actor_id, uint8_t priority = 0) noexcept
         : scheduler_(scheduler), actor_id_(actor_id), priority_(priority) {}
 
-    bool await_ready() const noexcept { return false; }
+    bool await_ready() const noexcept {
+        return false;
+    }
 
     void await_suspend(std::coroutine_handle<> continuation) noexcept {
         continuation_ = continuation;
@@ -45,7 +47,7 @@ public:
 
     void await_resume() noexcept {}
 
-private:
+  private:
     IScheduler* scheduler_;
     ActorId actor_id_;
     uint8_t priority_;
@@ -55,22 +57,25 @@ private:
 // SchedulerYield: convenience helper used inside an actor's act() method
 // Extracts actor_id from the coroutine's promise.
 class SchedulerYield {
-public:
+  public:
     explicit SchedulerYield(IScheduler* scheduler, uint8_t priority = 0) noexcept
         : scheduler_(scheduler), priority_(priority) {}
 
-    bool await_ready() const noexcept { return false; }
+    bool await_ready() const noexcept {
+        return false;
+    }
 
     void await_suspend(std::coroutine_handle<> continuation) noexcept {
         continuation_ = continuation;
         auto& promise = std::coroutine_handle<CoroutinePromise>::from_address(
-                            continuation.address()).promise();
+                            continuation.address())
+                            .promise();
         scheduler_->yield(promise.actor_id, priority_);
     }
 
     void await_resume() noexcept {}
 
-private:
+  private:
     IScheduler* scheduler_;
     uint8_t priority_;
     std::coroutine_handle<> continuation_;
@@ -78,4 +83,4 @@ private:
 
 } // namespace hpactor::sched
 
-#endif  // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_USE_COROUTINES

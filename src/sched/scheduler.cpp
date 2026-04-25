@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/sched/scheduler.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/sched/scheduler.hpp>
 
 #if HPACTOR_USE_COROUTINES
-#include <hpactor/sched/coroutine_task.hpp>
+#    include <hpactor/sched/coroutine_task.hpp>
 #endif
 
 namespace hpactor::sched {
@@ -26,11 +26,13 @@ namespace hpactor::sched {
 // Thread-local pointer to the current worker executing on this thread
 thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 
-HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers, uint32_t num_priorities)
+HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
+                                 uint32_t num_priorities)
     : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
       workers_(num_workers), a2ws_(num_workers), timer_wheel_(1'000'000, 4) {
     for (uint32_t i = 0; i < num_workers; ++i) {
-        workers_[i].queues = std::make_unique<ChaselevDeque<WorkItem>[]>(num_priorities);
+        workers_[i].queues =
+            std::make_unique<ChaselevDeque<WorkItem>[]>(num_priorities);
         workers_[i].index = i;
     }
 }
@@ -43,7 +45,8 @@ void HybridScheduler::start() {
 
     worker_threads_.reserve(workers_.size());
     for (size_t i = 0; i < workers_.size(); ++i) {
-        worker_threads_.emplace_back([this, i] { worker_loop(static_cast<uint32_t>(i)); });
+        worker_threads_.emplace_back(
+            [this, i] { worker_loop(static_cast<uint32_t>(i)); });
     }
 
     // Start timer advancement thread
@@ -63,7 +66,8 @@ HybridScheduler::~HybridScheduler() {
 void HybridScheduler::stop() {
     running_.store(false, std::memory_order_release);
     for (auto& t : worker_threads_) {
-        if (t.joinable()) t.join();
+        if (t.joinable())
+            t.join();
     }
     worker_threads_.clear();
 
@@ -73,13 +77,14 @@ void HybridScheduler::stop() {
     }
 }
 
-void HybridScheduler::notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) {
+void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
+                                   int64_t deadline_ns) {
     if (!running_.load(std::memory_order_acquire)) {
         return;
     }
 
-    uint32_t victim = a2ws_.get_victim(0);  // Use A2WS for initial placement
-    (void)victim;  // TODO: Use affinity hint
+    uint32_t victim = a2ws_.get_victim(0); // Use A2WS for initial placement
+    (void)victim;                          // TODO: Use affinity hint
     WorkItem item{actor, deadline_ns, 0};
 
     // If deadline is INT64_MAX, use priority queue; otherwise use EDF queue
@@ -196,7 +201,8 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     actor->ensure_coroutine_started();
 
     auto& coroutine = actor->get_actor_coroutine();
-    if (!coroutine) return;
+    if (!coroutine)
+        return;
 
     auto& promise = coroutine.task().handle().promise();
 
@@ -221,9 +227,9 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     coroutine.resume();
 
     // Post-resume: coroutine suspended (Idle/IOWaiting) or terminated.
-    // Note: cannot access promise after resume() returns if coroutine terminated —
-    // the promise is destroyed with the coroutine frame.
-    // Use coroutine.done() which checks internal handle state (not the promise).
+    // Note: cannot access promise after resume() returns if coroutine
+    // terminated — the promise is destroyed with the coroutine frame. Use
+    // coroutine.done() which checks internal handle state (not the promise).
     if (coroutine.done()) {
         actor->on_exit();
     }
@@ -253,11 +259,11 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     if (!mailbox->empty()) {
         notify_ready(item.actor, 0, INT64_MAX);
     }
-#endif  // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_USE_COROUTINES
 }
 
 void HybridScheduler::worker_loop(uint32_t worker_id) {
-    tl_current_worker_id = worker_id;  // set thread-local
+    tl_current_worker_id = worker_id; // set thread-local
 
     while (running_.load(std::memory_order_acquire)) {
         WorkItem item;
@@ -303,7 +309,8 @@ void HybridScheduler::backoff() {
     }
 }
 
-uint64_t HybridScheduler::schedule_timer(int64_t delay_ns, TimingWheel::TimerCallback callback) {
+uint64_t HybridScheduler::schedule_timer(int64_t delay_ns,
+                                         TimingWheel::TimerCallback callback) {
     return timer_wheel_.schedule(delay_ns, std::move(callback));
 }
 
@@ -316,7 +323,8 @@ TimerHandle HybridScheduler::schedule_after(timer_callback cb, int64_t delay_ns)
     return TimerHandle{id};
 }
 
-TimerHandle HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
+TimerHandle
+HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
     // For recurring timers, we wrap the callback to reschedule itself
     // We need to use a shared_ptr to hold the interval value and the callback
     // to avoid lifecycle issues with the lambda. We also use a cancellation
@@ -327,7 +335,8 @@ TimerHandle HybridScheduler::schedule_every(timer_callback cb, int64_t interval_
 
     std::function<void()> recurring;
     recurring = [this, cancelled, interval, callback, recurring]() {
-        if (cancelled->load(std::memory_order_acquire)) return;
+        if (cancelled->load(std::memory_order_acquire))
+            return;
         if (running_.load(std::memory_order_acquire)) {
             (*callback)();
             if (!cancelled->load(std::memory_order_acquire)) {
@@ -345,7 +354,8 @@ TimerHandle HybridScheduler::schedule_every(timer_callback cb, int64_t interval_
 }
 
 void HybridScheduler::cancel_timer(TimerHandle handle) {
-    if (!handle.valid()) return;
+    if (!handle.valid())
+        return;
 
     std::lock_guard<std::mutex> lock(cancellation_mutex_);
     auto it = recurring_cancellations_.find(handle.id);

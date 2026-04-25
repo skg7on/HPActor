@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <hpactor/net/transport.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/transport.hpp>
 
 #include <functional>
 
@@ -27,17 +27,16 @@ namespace net {
 class PlainConnection;
 using PlainConnectionPtr = std::shared_ptr<PlainConnection>;
 
-class PlainConnection : public Connection, public std::enable_shared_from_this<PlainConnection> {
-public:
+class PlainConnection : public Connection,
+                        public std::enable_shared_from_this<PlainConnection> {
+  public:
     // Create client-side connection with existing connected fd
-    static PlainConnectionPtr create_client(int fd,
-                                           CommunicationEndpoint remote_endpoint,
-                                           EventLoop* loop);
+    static PlainConnectionPtr
+    create_client(int fd, CommunicationEndpoint remote_endpoint, EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
-    static PlainConnectionPtr create_server(int fd,
-                                           CommunicationEndpoint remote_endpoint,
-                                           EventLoop* loop);
+    static PlainConnectionPtr
+    create_server(int fd, CommunicationEndpoint remote_endpoint, EventLoop* loop);
 
     ~PlainConnection();
 
@@ -46,14 +45,21 @@ public:
     PlainConnection& operator=(const PlainConnection&) = delete;
 
     // Getters
-    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
-    ConnectionState state() const { return state_; }
-    int fd() const { return fd_; }
+    CommunicationEndpoint remote_endpoint() const {
+        return remote_endpoint_;
+    }
+    ConnectionState state() const {
+        return state_;
+    }
+    int fd() const {
+        return fd_;
+    }
 
     // Set callbacks
     void set_ready_handler(std::function<void(ConnectionPtr)> handler);
     void set_frame_handler(frame_handler handler);
-    void set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
+    void
+    set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
     void set_send_completion_handler(std::function<void(int result)> handler);
 
     // Send raw frame data
@@ -68,7 +74,7 @@ public:
     // Handle send completion (called by EventLoop)
     void handle_send_completion(int result) override;
 
-private:
+  private:
     PlainConnection(CommunicationEndpoint remote_endpoint, EventLoop* loop, int fd);
 
     void set_state(ConnectionState new_state);

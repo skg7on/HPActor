@@ -22,7 +22,9 @@
 #include <unistd.h>
 
 #if !defined(__linux__)
-int main() { return 0; }
+int main() {
+    return 0;
+}
 #else
 int main() {
     // Test 1: Constructor/destructor
@@ -45,7 +47,8 @@ int main() {
         backend.start();
         char buffer[64];
         int buffer_id = backend.register_buffer(buffer, sizeof(buffer));
-        assert(buffer_id >= 0 && "register_buffer should return valid buffer_id >= 0");
+        assert(buffer_id >= 0 && "register_buffer should return valid "
+                                 "buffer_id >= 0");
     }
 
     // Test 4: unregister_buffer()
@@ -56,7 +59,8 @@ int main() {
         int buffer_id = backend.register_buffer(buffer, sizeof(buffer));
         assert(buffer_id >= 0);
         bool result = backend.unregister_buffer(buffer_id);
-        assert(!result && "unregister_buffer should return false (liburing doesn't support individual buffer unregistration)");
+        assert(!result && "unregister_buffer should return false (liburing "
+                          "doesn't support individual buffer unregistration)");
     }
 
     // Test 5: add_fd() / update_fd() / remove_fd()
@@ -102,7 +106,7 @@ int main() {
         memset(&addr, 0, sizeof(addr));
         addr.sin_family = AF_INET;
         addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-        addr.sin_port = 0;  // let kernel assign port
+        addr.sin_port = 0; // let kernel assign port
 
         int r = ::bind(listen_fd, (struct sockaddr*)&addr, sizeof(addr));
         assert(r == 0 && "bind should succeed");

@@ -16,9 +16,9 @@
 
 #include <hpactor/sched/work_queue.hpp>
 
-#include <vector>
-#include <cstdint>
 #include <algorithm>
+#include <cstdint>
+#include <vector>
 
 namespace hpactor::sched {
 
@@ -31,7 +31,7 @@ namespace hpactor::sched {
 // Uses a min-heap for O(log n) insert and extract.
 // -----------------------------------------------------------------------------
 class EDFQueue {
-public:
+  public:
     EDFQueue() = default;
 
     EDFQueue(const EDFQueue&) = delete;
@@ -51,29 +51,41 @@ public:
     bool peek(int64_t& deadline_ns_out) const;
 
     // Check if queue is empty
-    bool empty() const { return items_.empty(); }
+    bool empty() const {
+        return items_.empty();
+    }
 
     // Number of items in queue
-    size_t size() const { return items_.size(); }
+    size_t size() const {
+        return items_.size();
+    }
 
     // Clear the queue
-    void clear() { items_.clear(); }
+    void clear() {
+        items_.clear();
+    }
 
-private:
+  private:
     // Min-heap: parent has earlier deadline than children
     // Stored as vector of (deadline, sequence, WorkItem)
     struct HeapItem {
-        int64_t  deadline;
-        uint64_t sequence;  // FIFO tiebreaker for same deadline
+        int64_t deadline;
+        uint64_t sequence; // FIFO tiebreaker for same deadline
         WorkItem item;
     };
 
     std::vector<HeapItem> items_;
 
     // Heap helper functions
-    size_t parent(size_t i) const { return (i - 1) / 2; }
-    size_t left(size_t i) const { return 2 * i + 1; }
-    size_t right(size_t i) const { return 2 * i + 2; }
+    size_t parent(size_t i) const {
+        return (i - 1) / 2;
+    }
+    size_t left(size_t i) const {
+        return 2 * i + 1;
+    }
+    size_t right(size_t i) const {
+        return 2 * i + 2;
+    }
 
     void sift_up(size_t i);
     void sift_down(size_t i);

@@ -35,10 +35,10 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
+#include <cassert>
+#include <chrono>
 #include <iostream>
 #include <thread>
-#include <chrono>
-#include <cassert>
 
 using namespace hpactor;
 
@@ -84,7 +84,8 @@ void demonstrate_priority_scheduling(ActorSystem& system) {
     std::cout << "  ActorId(4) at priority 2" << std::endl;
     scheduler->notify_ready(actors[3], 2, INT64_MAX);
 
-    std::cout << "\nExpected processing order: 0, 1, 2, 3 (by priority)" << std::endl;
+    std::cout << "\nExpected processing order: 0, 1, 2, 3 (by priority)"
+              << std::endl;
     std::cout << "Workers check priority queues in order: 0, 1, 2, 3" << std::endl;
 
     // Give time for processing
@@ -95,7 +96,8 @@ void demonstrate_priority_scheduling(ActorSystem& system) {
 // Demonstration: EDF (Earliest Deadline First) Scheduling
 // -----------------------------------------------------------------------------
 //
-// When notify_ready(actor, priority, deadline_ns) is called with a real deadline:
+// When notify_ready(actor, priority, deadline_ns) is called with a real
+// deadline:
 //   - Message goes to EDF queue instead of priority queue
 //   - EDF queue is a min-heap ordered by deadline
 //   - Messages with earliest deadline are processed first
@@ -131,8 +133,10 @@ void demonstrate_edf_scheduling(ActorSystem& system) {
     std::cout << "  ActorId(100) deadline: 5ms from now" << std::endl;
     scheduler->notify_ready(actor, 2, now + 5'000'000);
 
-    std::cout << "\nExpected processing order: 1ms, 5ms, 10ms (by deadline)" << std::endl;
-    std::cout << "EDF queue ensures earliest deadline is processed first" << std::endl;
+    std::cout << "\nExpected processing order: 1ms, 5ms, 10ms (by deadline)"
+              << std::endl;
+    std::cout << "EDF queue ensures earliest deadline is processed first"
+              << std::endl;
 
     // Give time for processing
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -162,12 +166,14 @@ void demonstrate_edf_scheduling(ActorSystem& system) {
 
 void demonstrate_work_stealing(ActorSystem& system) {
     std::cout << "\n=== Work-Stealing Demo ===" << std::endl;
-    std::cout << "Scheduler threads: " << system.scheduler()->worker_count() << std::endl;
+    std::cout << "Scheduler threads: " << system.scheduler()->worker_count()
+              << std::endl;
     std::cout << std::endl;
 
     std::cout << "A2WS (Adaptive Two-Level Work Stealing):" << std::endl;
     std::cout << "  Level 1 - Local:" << std::endl;
-    std::cout << "    - Each worker has priority queues (0-3) + EDF queue" << std::endl;
+    std::cout << "    - Each worker has priority queues (0-3) + EDF queue"
+              << std::endl;
     std::cout << "    - Local pop is wait-free (owner only)" << std::endl;
     std::cout << std::endl;
     std::cout << "  Level 2 - Steal:" << std::endl;
@@ -187,13 +193,15 @@ void demonstrate_work_stealing(ActorSystem& system) {
         uint8_t priority = static_cast<uint8_t>(i % 4);
         scheduler->notify_ready(id, priority, INT64_MAX);
         if (i < 4 || i % 4 == 0) {
-            std::cout << "  ActorId(" << (200 + i) << ") priority " << static_cast<int>(priority) << std::endl;
+            std::cout << "  ActorId(" << (200 + i) << ") priority "
+                      << static_cast<int>(priority) << std::endl;
         }
     }
     std::cout << "  ... (12 more)" << std::endl;
 
     std::cout << "\nMultiple workers will steal work from each other" << std::endl;
-    std::cout << "EDF items have priority over priority items during steal" << std::endl;
+    std::cout << "EDF items have priority over priority items during steal"
+              << std::endl;
 
     // Give time for work distribution
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -213,28 +221,42 @@ void demonstrate_work_stealing(ActorSystem& system) {
 // to implement priority-aware message delivery.
 //
 // API:
-//   system.deliver_local(actor_id, msg);                    // default priority 0
-//   system.deliver_local(actor_id, msg, priority, deadline); // with priority
+//   system.deliver_local(actor_id, msg);                    // default priority
+//   0 system.deliver_local(actor_id, msg, priority, deadline); // with priority
 // -----------------------------------------------------------------------------
 
 void demonstrate_actor_messaging_api(ActorSystem& system) {
     std::cout << "\n=== Actor Messaging API with Priority ===" << std::endl;
-    std::cout << "\nThe scheduling infrastructure supports priority-aware delivery:" << std::endl;
+    std::cout << "\nThe scheduling infrastructure supports priority-aware "
+                 "delivery:"
+              << std::endl;
     std::cout << std::endl;
     std::cout << "1. deliver_local overload with priority/deadline:" << std::endl;
-    std::cout << "   system.deliver_local(actor_id, msg, priority, deadline);" << std::endl;
+    std::cout << "   system.deliver_local(actor_id, msg, priority, deadline);"
+              << std::endl;
     std::cout << "   - priority: 0-3 (0 = highest)" << std::endl;
-    std::cout << "   - deadline_ns: absolute deadline (INT64_MAX = no deadline)" << std::endl;
+    std::cout << "   - deadline_ns: absolute deadline (INT64_MAX = no deadline)"
+              << std::endl;
     std::cout << std::endl;
-    std::cout << "2. ActorContext::send_with_priority (for actor-to-actor messaging):" << std::endl;
-    std::cout << "   context()->send_with_priority(target_addr, msg, priority, deadline);" << std::endl;
+    std::cout << "2. ActorContext::send_with_priority (for actor-to-actor "
+                 "messaging):"
+              << std::endl;
+    std::cout << "   context()->send_with_priority(target_addr, msg, priority, "
+                 "deadline);"
+              << std::endl;
     std::cout << std::endl;
 
     // Demonstrate the API with actual calls
     std::cout << "Example API calls for ActorId(300):" << std::endl;
-    std::cout << "  deliver_local(300, msg, 0, INT64_MAX)  // priority=0 (highest), no deadline" << std::endl;
-    std::cout << "  deliver_local(300, msg, 3, INT64_MAX)  // priority=3 (lowest), no deadline" << std::endl;
-    std::cout << "  deliver_local(300, msg, 1, now+5ms)   // priority=1, deadline=5ms" << std::endl;
+    std::cout << "  deliver_local(300, msg, 0, INT64_MAX)  // priority=0 "
+                 "(highest), no deadline"
+              << std::endl;
+    std::cout << "  deliver_local(300, msg, 3, INT64_MAX)  // priority=3 "
+                 "(lowest), no deadline"
+              << std::endl;
+    std::cout << "  deliver_local(300, msg, 1, now+5ms)   // priority=1, "
+                 "deadline=5ms"
+              << std::endl;
 
     // Actually call them
     auto now = std::chrono::steady_clock::now().time_since_epoch().count();
@@ -242,8 +264,10 @@ void demonstrate_actor_messaging_api(ActorSystem& system) {
     system.scheduler()->notify_ready(ActorId{301}, 3, INT64_MAX);
     system.scheduler()->notify_ready(ActorId{302}, 1, now + 5'000'000);
 
-    std::cout << "\nActors enqueued at different priorities - workers will" << std::endl;
-    std::cout << "process them in priority order when they become available." << std::endl;
+    std::cout << "\nActors enqueued at different priorities - workers will"
+              << std::endl;
+    std::cout << "process them in priority order when they become available."
+              << std::endl;
 }
 
 // -----------------------------------------------------------------------------
@@ -252,17 +276,16 @@ void demonstrate_actor_messaging_api(ActorSystem& system) {
 
 int main() {
     std::cout << "=== HPActor Example 07: Priority Scheduler Demo ===" << std::endl;
-    std::cout << "\nThis example demonstrates the scheduling infrastructure:" << std::endl;
+    std::cout << "\nThis example demonstrates the scheduling infrastructure:"
+              << std::endl;
     std::cout << "  - Multi-priority queues (0-3)" << std::endl;
     std::cout << "  - EDF (Earliest Deadline First) queue" << std::endl;
     std::cout << "  - A2WS work-stealing across threads" << std::endl;
-    std::cout << "  - deliver_local with priority and deadline parameters" << std::endl;
+    std::cout << "  - deliver_local with priority and deadline parameters"
+              << std::endl;
 
     // Create actor system with 4 scheduler threads
-    hpactor::Config config{
-        .scheduler_threads = 4,
-        .max_queue_depth = 1024
-    };
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
 
     hpactor::ActorSystem system(config);
 

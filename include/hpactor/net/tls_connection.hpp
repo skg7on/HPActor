@@ -14,9 +14,9 @@
 
 #pragma once
 
-#include <hpactor/net/transport.hpp>
-#include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/tls_context.hpp>
+#include <hpactor/net/transport.hpp>
 
 #include <array>
 #include <deque>
@@ -68,18 +68,17 @@ using Nonce = std::array<uint8_t, kNonceSize>;
 class TlsConnection;
 using TlsConnectionPtr = std::shared_ptr<TlsConnection>;
 
-class TlsConnection : public Connection, public std::enable_shared_from_this<TlsConnection> {
-public:
+class TlsConnection : public Connection,
+                      public std::enable_shared_from_this<TlsConnection> {
+  public:
     // Create client-side connection
     static TlsConnectionPtr create_client(CommunicationEndpoint remote_endpoint,
-                                           TlsContext* tls_context,
-                                           EventLoop* loop);
+                                          TlsContext* tls_context, EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
-    static TlsConnectionPtr create_server(int fd,
-                                          CommunicationEndpoint remote_endpoint,
-                                          TlsContext* tls_context,
-                                          EventLoop* loop);
+    static TlsConnectionPtr
+    create_server(int fd, CommunicationEndpoint remote_endpoint,
+                  TlsContext* tls_context, EventLoop* loop);
 
     // Set file descriptor (for connected client sockets after TCP handshake)
     void set_fd(int fd);
@@ -91,14 +90,21 @@ public:
     TlsConnection& operator=(const TlsConnection&) = delete;
 
     // Getters
-    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
-    ConnectionState state() const { return state_; }
-    int fd() const { return fd_; }
+    CommunicationEndpoint remote_endpoint() const {
+        return remote_endpoint_;
+    }
+    ConnectionState state() const {
+        return state_;
+    }
+    int fd() const {
+        return fd_;
+    }
 
     // Set callbacks
     void set_ready_handler(std::function<void(ConnectionPtr)> handler);
     void set_frame_handler(frame_handler handler);
-    void set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
+    void
+    set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
     void set_send_completion_handler(std::function<void(int result)> handler);
 
     // Initiate client handshake (called after connection established)
@@ -117,13 +123,13 @@ public:
     void handle_send_completion(int result) override;
 
     // Get session state
-    TlsSessionState session_state() const { return session_state_; }
+    TlsSessionState session_state() const {
+        return session_state_;
+    }
 
-private:
+  private:
     TlsConnection(CommunicationEndpoint remote_endpoint,
-                 TlsContext* tls_context,
-                 EventLoop* loop,
-                 int fd = -1);
+                  TlsContext* tls_context, EventLoop* loop, int fd = -1);
 
     // Handshake message builders
     bytes build_client_hello();
@@ -139,8 +145,7 @@ private:
 
     // Helper: derive session key from pre_master_secret
     void derive_session_keys(const bytes& pre_master_secret,
-                            const Nonce& client_nonce,
-                            const Nonce& server_nonce);
+                             const Nonce& client_nonce, const Nonce& server_nonce);
 
     // Helper: encrypt data with session key (AES-256-CBC)
     bytes encrypt_aes(const bytes& plaintext);
@@ -149,9 +154,7 @@ private:
     bytes decrypt_aes(const bytes& ciphertext);
 
     // Helper: compute TLS PRF (SHA-256 based)
-    bytes prf_sha256(const bytes& secret,
-                     const char* label,
-                     const bytes& data);
+    bytes prf_sha256(const bytes& secret, const char* label, const bytes& data);
 
     // Transition state
     void set_state(ConnectionState new_state);
@@ -184,8 +187,8 @@ private:
 
     // Session keys
     bytes master_secret_;
-    bytes session_key_;   // AES-256 key
-    bytes session_iv_;    // AES IV
+    bytes session_key_; // AES-256 key
+    bytes session_iv_;  // AES IV
 
     // Read buffer
     bytes read_buffer_;

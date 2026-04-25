@@ -17,11 +17,11 @@
 #include <hpactor/net/platform.hpp>
 
 #include <cstring>
+#include <openssl/err.h>
+#include <openssl/evp.h>
 #include <openssl/pem.h>
 #include <openssl/rsa.h>
 #include <openssl/x509.h>
-#include <openssl/evp.h>
-#include <openssl/err.h>
 
 namespace hpactor {
 
@@ -30,7 +30,8 @@ namespace net {
 struct TlsContext::RSAKey {
     EVP_PKEY* pkey = nullptr;
     ~RSAKey() {
-        if (pkey) EVP_PKEY_free(pkey);
+        if (pkey)
+            EVP_PKEY_free(pkey);
     }
 };
 
@@ -39,12 +40,10 @@ TlsContext::TlsContext() = default;
 TlsContext::~TlsContext() = default;
 
 TlsContext::TlsContext(TlsContext&& other) noexcept
-    : endpoint_(other.endpoint_),
-      certificate_(std::move(other.certificate_)),
+    : endpoint_(other.endpoint_), certificate_(std::move(other.certificate_)),
       public_key_(std::move(other.public_key_)),
       private_key_(std::move(other.private_key_)),
-      rsa_key_(std::move(other.rsa_key_)),
-      ca_certs_(std::move(other.ca_certs_)),
+      rsa_key_(std::move(other.rsa_key_)), ca_certs_(std::move(other.ca_certs_)),
       peer_certs_(std::move(other.peer_certs_)) {
     other.endpoint_ = LocalEndpoint;
 }
@@ -76,7 +75,8 @@ TlsContext TlsContext::from_filesystem(CommunicationEndpoint endpoint,
     std::string cert_path = cert_dir + "/node_" + safe_node_id + ".pem";
     FILE* cert_file = fopen(cert_path.c_str(), "r");
     if (!cert_file) {
-        return ctx;  // Caller should check node_id().empty() to detect init failure
+        return ctx; // Caller should check node_id().empty() to detect init
+                    // failure
     }
     X509* cert = PEM_read_X509(cert_file, nullptr, nullptr, nullptr);
     fclose(cert_file);
@@ -88,7 +88,8 @@ TlsContext TlsContext::from_filesystem(CommunicationEndpoint endpoint,
     unsigned char* cert_der = nullptr;
     int cert_len = i2d_X509(cert, &cert_der);
     if (cert_len > 0 && cert_der) {
-        ctx.certificate_.insert(ctx.certificate_.end(), cert_der, cert_der + cert_len);
+        ctx.certificate_.insert(ctx.certificate_.end(), cert_der,
+                                cert_der + cert_len);
         OPENSSL_free(cert_der);
     }
 
@@ -98,7 +99,8 @@ TlsContext TlsContext::from_filesystem(CommunicationEndpoint endpoint,
         unsigned char* pkey_der = nullptr;
         int pkey_len = i2d_PUBKEY(pkey, &pkey_der);
         if (pkey_len > 0 && pkey_der) {
-            ctx.public_key_.insert(ctx.public_key_.end(), pkey_der, pkey_der + pkey_len);
+            ctx.public_key_.insert(ctx.public_key_.end(), pkey_der,
+                                   pkey_der + pkey_len);
             OPENSSL_free(pkey_der);
         }
     }
@@ -107,7 +109,8 @@ TlsContext TlsContext::from_filesystem(CommunicationEndpoint endpoint,
     std::string key_path = cert_dir + "/node_" + safe_node_id + "_key.pem";
     FILE* key_file = fopen(key_path.c_str(), "r");
     if (key_file) {
-        EVP_PKEY* evp_pkey = PEM_read_PrivateKey(key_file, nullptr, nullptr, nullptr);
+        EVP_PKEY* evp_pkey =
+            PEM_read_PrivateKey(key_file, nullptr, nullptr, nullptr);
         fclose(key_file);
         if (evp_pkey) {
             ctx.rsa_key_ = std::make_unique<RSAKey>();
@@ -127,8 +130,9 @@ TlsContext TlsContext::from_config(const TlsConfig& config) {
 
     // Parse private key using EVP API
     const unsigned char* key_data = config.own_key_der.data();
-    EVP_PKEY* evp_pkey = d2i_PrivateKey(EVP_PKEY_RSA, nullptr, &key_data,
-                                         static_cast<long>(config.own_key_der.size()));
+    EVP_PKEY* evp_pkey =
+        d2i_PrivateKey(EVP_PKEY_RSA, nullptr, &key_data,
+                       static_cast<long>(config.own_key_der.size()));
     if (evp_pkey) {
         ctx.rsa_key_ = std::make_unique<RSAKey>();
         ctx.rsa_key_->pkey = evp_pkey;
@@ -136,14 +140,16 @@ TlsContext TlsContext::from_config(const TlsConfig& config) {
 
     // Extract public key from certificate
     const unsigned char* cert_data = config.own_cert_der.data();
-    X509* cert = d2i_X509(nullptr, &cert_data, static_cast<long>(config.own_cert_der.size()));
+    X509* cert = d2i_X509(nullptr, &cert_data,
+                          static_cast<long>(config.own_cert_der.size()));
     if (cert) {
         EVP_PKEY* pkey = X509_get0_pubkey(cert);
         if (pkey) {
             unsigned char* pkey_der = nullptr;
             int pkey_len = i2d_PUBKEY(pkey, &pkey_der);
             if (pkey_len > 0 && pkey_der) {
-                ctx.public_key_.insert(ctx.public_key_.end(), pkey_der, pkey_der + pkey_len);
+                ctx.public_key_.insert(ctx.public_key_.end(), pkey_der,
+                                       pkey_der + pkey_len);
                 OPENSSL_free(pkey_der);
             }
         }
@@ -153,15 +159,16 @@ TlsContext TlsContext::from_config(const TlsConfig& config) {
     return ctx;
 }
 
-TlsContext::CertVerifyResult TlsContext::verify_certificate(
-    const bytes& cert_der) const {
+TlsContext::CertVerifyResult
+TlsContext::verify_certificate(const bytes& cert_der) const {
     const unsigned char* data = cert_der.data();
     X509* cert = d2i_X509(nullptr, &data, static_cast<long>(cert_der.size()));
     if (!cert) {
         return CertVerifyResult::Invalid;
     }
 
-    // Check validity period - X509_get0_notBefore/notAfter return const pointers
+    // Check validity period - X509_get0_notBefore/notAfter return const
+    // pointers
     const ASN1_TIME* not_before = X509_get0_notBefore(cert);
     const ASN1_TIME* not_after = X509_get0_notAfter(cert);
     if (!not_before || !not_after) {
@@ -208,7 +215,8 @@ bytes TlsContext::sign_data(const bytes& data) const {
     }
 
     signature.resize(sig_len);
-    if (EVP_DigestSign(ctx, signature.data(), &sig_len, data.data(), data.size()) != 1) {
+    if (EVP_DigestSign(ctx, signature.data(), &sig_len, data.data(),
+                       data.size()) != 1) {
         signature.clear();
     } else {
         signature.resize(sig_len);
@@ -218,9 +226,8 @@ bytes TlsContext::sign_data(const bytes& data) const {
     return signature;
 }
 
-bool TlsContext::decrypt_pre_master_secret(
-    const bytes& encrypted,
-    bytes& pre_master_secret) const {
+bool TlsContext::decrypt_pre_master_secret(const bytes& encrypted,
+                                           bytes& pre_master_secret) const {
     if (!rsa_key_ || !rsa_key_->pkey) {
         return false;
     }
@@ -237,13 +244,15 @@ bool TlsContext::decrypt_pre_master_secret(
     }
 
     size_t out_len = 0;
-    if (EVP_PKEY_decrypt(ctx, nullptr, &out_len, encrypted.data(), encrypted.size()) != 1) {
+    if (EVP_PKEY_decrypt(ctx, nullptr, &out_len, encrypted.data(),
+                         encrypted.size()) != 1) {
         EVP_PKEY_CTX_free(ctx);
         return false;
     }
 
     pre_master_secret.resize(out_len);
-    if (EVP_PKEY_decrypt(ctx, pre_master_secret.data(), &out_len, encrypted.data(), encrypted.size()) != 1) {
+    if (EVP_PKEY_decrypt(ctx, pre_master_secret.data(), &out_len,
+                         encrypted.data(), encrypted.size()) != 1) {
         pre_master_secret.clear();
         EVP_PKEY_CTX_free(ctx);
         return false;

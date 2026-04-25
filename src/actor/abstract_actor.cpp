@@ -39,7 +39,8 @@ void AbstractActor::set_scheduler(sched::IScheduler* /*scheduler*/) {
     // Default no-op; EventBasedActor overrides this
 }
 
-void AbstractActor::set_mailbox(mailbox::MPSCActorMailbox<Message<MessageVariant>>* /*mailbox*/) {
+void AbstractActor::set_mailbox(
+    mailbox::MPSCActorMailbox<Message<MessageVariant>>* /*mailbox*/) {
     // Default no-op; EventBasedActor overrides this
 }
 

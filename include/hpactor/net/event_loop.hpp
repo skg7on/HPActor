@@ -42,7 +42,7 @@ namespace net {
 //   loop.stop();      // Stop when done
 // -----------------------------------------------------------------------------
 class EventLoop {
-public:
+  public:
     EventLoop();
     ~EventLoop();
 
@@ -60,7 +60,9 @@ public:
     void stop();
 
     // Check if the backend is running
-    bool is_running() const { return running_.load(); }
+    bool is_running() const {
+        return running_.load();
+    }
 
     // Get the backend name for debugging
     const char* backend_name() const;
@@ -119,9 +121,11 @@ public:
     }
 
     // Get the underlying backend for direct async operations
-    AsyncIoBackend* backend() { return backend_.get(); }
+    AsyncIoBackend* backend() {
+        return backend_.get();
+    }
 
-private:
+  private:
     // Deliver a timer completion to the stored callback
     void deliver_timer_completion(OpCompletion completion);
 
@@ -129,7 +133,8 @@ private:
     std::atomic<bool> running_{false};
     const char* backend_name_ = "unknown";
 
-    // Map timer handles to callbacks (for bridging backend completions to callbacks)
+    // Map timer handles to callbacks (for bridging backend completions to
+    // callbacks)
     std::unordered_map<uint64_t, timer_callback> timer_callbacks_;
     std::atomic<uint64_t> next_timer_handle_{1};
 

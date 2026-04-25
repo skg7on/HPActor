@@ -17,12 +17,18 @@
 #include <hpactor/net/async_io_backend.hpp>
 
 #if defined(__APPLE__)
-#include <dispatch/dispatch.h>
+#    include <dispatch/dispatch.h>
 #else
 // Stub for Linux compilation safety
-struct dispatch_queue_s { int unused; };
-struct dispatch_source_s { int unused; };
-struct dispatch_data_s { int unused; };
+struct dispatch_queue_s {
+    int unused;
+};
+struct dispatch_source_s {
+    int unused;
+};
+struct dispatch_data_s {
+    int unused;
+};
 using dispatch_queue_t = struct dispatch_queue_s*;
 using dispatch_source_t = struct dispatch_source_s*;
 using dispatch_data_t = struct dispatch_data_s*;
@@ -43,10 +49,8 @@ namespace net {
 // Forward declaration to avoid circular include
 class EventLoop;
 
-
-
 class GcdBackend : public AsyncIoBackend {
-public:
+  public:
     GcdBackend();
     ~GcdBackend() override;
 
@@ -60,10 +64,10 @@ public:
     int register_buffer(const void* addr, size_t len) override;
     bool unregister_buffer(int buffer_id) override;
 
-    void async_send(int fd, const iovec* bufs, int buf_count,
-                    ActorId actor, uint32_t op_type) override;
-    void async_recv(int fd, const iovec* bufs, int buf_count,
-                    ActorId actor, uint32_t op_type) override;
+    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
 
     void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
                           ActorId actor, uint32_t op_type) override;
@@ -72,13 +76,13 @@ public:
 
     void async_accept(int fd, ActorId actor) override;
     void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                        ActorId actor) override;
+                       ActorId actor) override;
 
-    void async_recvfrom(int fd, const iovec* bufs, int buf_count,
-                         ActorId actor, uint32_t op_type) override;
-    void async_sendto(int fd, const iovec* bufs, int buf_count,
-                        const sockaddr* addr, socklen_t addrlen,
-                        ActorId actor, uint32_t op_type) override;
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                        uint32_t op_type) override;
+    void
+    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
+                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
 
     uint64_t run_after(ActorId actor, int delay_ms) override;
     uint64_t run_every(ActorId actor, int interval_ms) override;
@@ -96,16 +100,21 @@ public:
     }
 
     // Set the EventLoop pointer for routing completions
-    void set_loop(net::EventLoop* loop) { loop_ = loop; }
+    void set_loop(net::EventLoop* loop) {
+        loop_ = loop;
+    }
 
     // Get the dispatch queue for timer rescheduling
-    dispatch_queue_t get_dispatch_queue() const { return dispatch_queue_; }
+    dispatch_queue_t get_dispatch_queue() const {
+        return dispatch_queue_;
+    }
 
     // Check if backend is still running (for timer trampoline safety)
-    bool is_running() const { return running_; }
+    bool is_running() const {
+        return running_;
+    }
 
-private:
-
+  private:
     // Active timer handles for cancellation
     std::unordered_set<uint64_t> cancelled_timers_;
 

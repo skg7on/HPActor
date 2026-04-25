@@ -12,29 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/spawn.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
+#include <hpactor/spawn.hpp>
 
 namespace hpactor {
 
 AsyncActor::AsyncActor()
-    : mutex_(std::make_unique<std::mutex>())
-    , cv_(std::make_unique<std::condition_variable>()) {}
+    : mutex_(std::make_unique<std::mutex>()),
+      cv_(std::make_unique<std::condition_variable>()) {}
 
-AsyncActor::AsyncActor(CommunicationEndpoint endpoint, std::chrono::milliseconds timeout)
-    : endpoint_(endpoint)
-    , timeout_(timeout)
-    , mutex_(std::make_unique<std::mutex>())
-    , cv_(std::make_unique<std::condition_variable>()) {}
+AsyncActor::AsyncActor(CommunicationEndpoint endpoint,
+                       std::chrono::milliseconds timeout)
+    : endpoint_(endpoint), timeout_(timeout),
+      mutex_(std::make_unique<std::mutex>()),
+      cv_(std::make_unique<std::condition_variable>()) {}
 
 AsyncActor::AsyncActor(AsyncActor&& other) noexcept
-    : endpoint_(other.endpoint_)
-    , timeout_(other.timeout_)
-    , mutex_(std::move(other.mutex_))
-    , cv_(std::move(other.cv_))
-    , ready_(other.ready_)
-    , cancelled_(other.cancelled_)
-    , response_(other.response_) {}
+    : endpoint_(other.endpoint_), timeout_(other.timeout_),
+      mutex_(std::move(other.mutex_)), cv_(std::move(other.cv_)),
+      ready_(other.ready_), cancelled_(other.cancelled_),
+      response_(other.response_) {}
 
 AsyncActor& AsyncActor::operator=(AsyncActor&& other) noexcept {
     if (this != &other) {
@@ -52,16 +49,19 @@ AsyncActor& AsyncActor::operator=(AsyncActor&& other) noexcept {
 result<ActorRef> AsyncActor::get() {
     std::unique_lock<std::mutex> lock(*mutex_);
     if (cancelled_) {
-        return result<ActorRef>::make(error(errors::unknown, "spawn cancelled"));
+        return result<ActorRef>::make(error(errors::unknown, "spawn "
+                                                             "cancelled"));
     }
 
     bool timed_out = !cv_->wait_for(lock, timeout_, [this] { return ready_; });
     if (timed_out) {
-        return result<ActorRef>::make(error(errors::timeout, "spawn request timed out"));
+        return result<ActorRef>::make(error(errors::timeout, "spawn request "
+                                                             "timed out"));
     }
 
     if (response_.error_code != spawn_errors::success) {
-        return result<ActorRef>::make(error(response_.error_code, "spawn failed"));
+        return result<ActorRef>::make(error(response_.error_code, "spawn "
+                                                                  "failed"));
     }
 
     // Create ActorProxy for the remote actor using stack allocation

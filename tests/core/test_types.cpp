@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <cassert>
-#include <hpactor/types/types.hpp>
 #include <cstdint>
+#include <hpactor/types/types.hpp>
 
 int main() {
     // Test 1: ActorId default construction (value == 0)

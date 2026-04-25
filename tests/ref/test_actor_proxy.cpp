@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/ref/actor_proxy.hpp>
 #include <hpactor/net/transport.hpp>
+#include <hpactor/ref/actor_proxy.hpp>
 
 #include <cassert>
 
@@ -29,11 +29,13 @@ int main() {
 
     // Test ActorProxy with valid address
     ActorId id(42);
-    ActorAddress addr(endpoint_ops::parse_endpoint("remotehost:12345"), 0, id, 0);  // remote node
+    ActorAddress addr(endpoint_ops::parse_endpoint("remotehost:12345"), 0, id,
+                      0); // remote node
     ActorProxy proxy2(addr, nullptr);
     assert(proxy2);
     assert(proxy2.address() == addr);
-    assert(proxy2.endpoint() == endpoint_ops::parse_endpoint("remotehost:12345"));
+    assert(proxy2.endpoint() == endpoint_ops::parse_endpoint("remotehost:"
+                                                             "12345"));
     assert(!proxy2.is_local());
 
     return 0;

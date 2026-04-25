@@ -57,14 +57,14 @@ int main() {
     late.deadline_ns = 200;
     late.sequence = 2;
 
-    q.push(200, late);   // later deadline
-    q.push(100, early);  // earlier deadline
+    q.push(200, late);  // later deadline
+    q.push(100, early); // earlier deadline
 
     assert(q.pop(out));
-    assert(out.actor.value() == 1);  // early deadline first
+    assert(out.actor.value() == 1); // early deadline first
 
     assert(q.pop(out));
-    assert(out.actor.value() == 2);  // late deadline second
+    assert(out.actor.value() == 2); // late deadline second
 
     // Test: FIFO ordering for same deadline
     hpactor::sched::WorkItem first, second;
@@ -80,10 +80,10 @@ int main() {
     q.push(500, first);
 
     assert(q.pop(out));
-    assert(out.actor.value() == 10);  // first by sequence
+    assert(out.actor.value() == 10); // first by sequence
 
     assert(q.pop(out));
-    assert(out.actor.value() == 20);  // second by sequence
+    assert(out.actor.value() == 20); // second by sequence
 
     // Test: peek
     q.clear();

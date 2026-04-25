@@ -33,19 +33,25 @@ class Transport;
 // Messages sent to a remote actor go through the transport layer.
 // -----------------------------------------------------------------------------
 class ActorProxy {
-public:
+  public:
     // Create an actor proxy for a remote actor
     // The transport pointer must outlive this proxy
     ActorProxy(ActorAddress address, net::Transport* transport);
 
     // Get the actor's address
-    ActorAddress address() const { return address_; }
+    ActorAddress address() const {
+        return address_;
+    }
 
     // Get the endpoint where this actor resides
-    CommunicationEndpoint endpoint() const { return address_.endpoint; }
+    CommunicationEndpoint endpoint() const {
+        return address_.endpoint;
+    }
 
     // Check if this is a local actor (always false for proxy)
-    bool is_local() const { return false; }
+    bool is_local() const {
+        return false;
+    }
 
     // Check if this actor is valid (has a valid address)
     explicit operator bool() const {
@@ -57,11 +63,13 @@ public:
     void send(const ActorAddress& target, MessageVariant msg);
 
     // Access the underlying transport (for internal use)
-    net::Transport* transport() const { return transport_; }
+    net::Transport* transport() const {
+        return transport_;
+    }
 
-private:
+  private:
     ActorAddress address_;
-    net::Transport* transport_;  // Non-owning pointer to the transport
+    net::Transport* transport_; // Non-owning pointer to the transport
 };
 
 } // namespace hpactor

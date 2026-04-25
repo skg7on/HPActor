@@ -30,10 +30,14 @@ int main() {
     assert(static_cast<uint32_t>(OpType::SendTo) == 7);
 
     // Test IoEvent flags can be combined with | and tested with &
-    IoEvent combined = static_cast<IoEvent>(static_cast<uint32_t>(IoEvent::Read) | static_cast<uint32_t>(IoEvent::Write));
-    assert((static_cast<uint32_t>(combined) & static_cast<uint32_t>(IoEvent::Read)) != 0);
-    assert((static_cast<uint32_t>(combined) & static_cast<uint32_t>(IoEvent::Write)) != 0);
-    assert((static_cast<uint32_t>(combined) & static_cast<uint32_t>(static_cast<IoEvent>(0))) == 0);
+    IoEvent combined = static_cast<IoEvent>(static_cast<uint32_t>(IoEvent::Read) |
+                                            static_cast<uint32_t>(IoEvent::Write));
+    assert((static_cast<uint32_t>(combined) &
+            static_cast<uint32_t>(IoEvent::Read)) != 0);
+    assert((static_cast<uint32_t>(combined) &
+            static_cast<uint32_t>(IoEvent::Write)) != 0);
+    assert((static_cast<uint32_t>(combined) &
+            static_cast<uint32_t>(static_cast<IoEvent>(0))) == 0);
 
     // Test OpCompletion struct fields
     OpCompletion op;

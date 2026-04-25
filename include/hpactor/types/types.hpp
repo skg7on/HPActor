@@ -14,13 +14,13 @@
 
 #pragma once
 
+#include <arpa/inet.h>
 #include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
 #include <cstring>
 #include <netinet/in.h>
-#include <arpa/inet.h>
 #include <string>
 #include <variant>
 #include <vector>
@@ -61,21 +61,30 @@ enum class Protocol { IPv4, IPv6 };
 // Ipv4Endpoint - IPv4 address and port (network byte order)
 // -----------------------------------------------------------------------------
 struct Ipv4Endpoint {
-    uint32_t addr;   // Network byte order (big-endian)
-    uint16_t port_nw;   // Network byte order
+    uint32_t addr;    // Network byte order (big-endian)
+    uint16_t port_nw; // Network byte order
 
     constexpr Ipv4Endpoint() noexcept : addr(0), port_nw(0) {}
-    constexpr Ipv4Endpoint(uint32_t a, uint16_t p) noexcept : addr(a), port_nw(p) {}
+    constexpr Ipv4Endpoint(uint32_t a, uint16_t p) noexcept
+        : addr(a), port_nw(p) {}
 
-    [[nodiscard]] constexpr uint16_t port() const noexcept { return ntohs(port_nw); }
-    [[nodiscard]] constexpr bool is_ipv4() const noexcept { return true; }
-    [[nodiscard]] constexpr bool is_ipv6() const noexcept { return false; }
+    [[nodiscard]] constexpr uint16_t port() const noexcept {
+        return ntohs(port_nw);
+    }
+    [[nodiscard]] constexpr bool is_ipv4() const noexcept {
+        return true;
+    }
+    [[nodiscard]] constexpr bool is_ipv6() const noexcept {
+        return false;
+    }
     [[nodiscard]] constexpr bool is_loopback() const noexcept;
     [[nodiscard]] constexpr bool is_private_network() const noexcept;
     [[nodiscard]] constexpr bool is_unspecified() const noexcept;
 
     // For socket operations
-    constexpr socklen_t sockaddr_length() const noexcept { return sizeof(sockaddr_in); }
+    constexpr socklen_t sockaddr_length() const noexcept {
+        return sizeof(sockaddr_in);
+    }
     void to_sockaddr(sockaddr_in* out) const noexcept;
 
     constexpr bool operator==(const Ipv4Endpoint& other) const noexcept {
@@ -98,8 +107,7 @@ struct Ipv4Endpoint {
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_private_network() const noexcept {
     uint8_t b1 = (addr >> 24) & 0xFF;
     uint32_t rest = addr & 0xFFFF0000;
-    return b1 == 10 ||
-           (b1 == 172 && ((addr >> 16) & 0xFF & 0xF0) == 0x10) ||
+    return b1 == 10 || (b1 == 172 && ((addr >> 16) & 0xFF & 0xF0) == 0x10) ||
            (b1 == 192 && rest == 0xC0A80000);
 }
 
@@ -118,22 +126,30 @@ inline void Ipv4Endpoint::to_sockaddr(sockaddr_in* out) const noexcept {
 // Ipv6Endpoint - IPv6 address and port (network byte order)
 // -----------------------------------------------------------------------------
 struct Ipv6Endpoint {
-    std::array<uint8_t, 16> addr;  // Network byte order
-    uint16_t port_nw;                 // Network byte order
+    std::array<uint8_t, 16> addr; // Network byte order
+    uint16_t port_nw;             // Network byte order
 
     constexpr Ipv6Endpoint() noexcept : addr{}, port_nw(0) {}
     constexpr Ipv6Endpoint(std::array<uint8_t, 16> a, uint16_t p) noexcept
         : addr(a), port_nw(p) {}
 
-    [[nodiscard]] constexpr uint16_t port() const noexcept { return ntohs(port_nw); }
-    [[nodiscard]] constexpr bool is_ipv4() const noexcept { return false; }
-    [[nodiscard]] constexpr bool is_ipv6() const noexcept { return true; }
+    [[nodiscard]] constexpr uint16_t port() const noexcept {
+        return ntohs(port_nw);
+    }
+    [[nodiscard]] constexpr bool is_ipv4() const noexcept {
+        return false;
+    }
+    [[nodiscard]] constexpr bool is_ipv6() const noexcept {
+        return true;
+    }
     [[nodiscard]] bool is_loopback() const noexcept;
     [[nodiscard]] bool is_private_network() const noexcept;
     [[nodiscard]] bool is_unspecified() const noexcept;
 
     // For socket operations
-    constexpr socklen_t sockaddr_length() const noexcept { return sizeof(sockaddr_in6); }
+    constexpr socklen_t sockaddr_length() const noexcept {
+        return sizeof(sockaddr_in6);
+    }
     void to_sockaddr(sockaddr_in6* out) const noexcept;
 
     bool operator==(const Ipv6Endpoint& other) const noexcept {
@@ -145,7 +161,9 @@ struct Ipv6Endpoint {
 };
 
 inline bool Ipv6Endpoint::is_loopback() const noexcept {
-    for (std::size_t i = 0; i < 15; ++i) if (addr[i] != 0) return false;
+    for (std::size_t i = 0; i < 15; ++i)
+        if (addr[i] != 0)
+            return false;
     return addr[15] == 1;
 }
 
@@ -154,7 +172,9 @@ inline bool Ipv6Endpoint::is_private_network() const noexcept {
 }
 
 inline bool Ipv6Endpoint::is_unspecified() const noexcept {
-    for (std::size_t i = 0; i < 16; ++i) if (addr[i] != 0) return false;
+    for (std::size_t i = 0; i < 16; ++i)
+        if (addr[i] != 0)
+            return false;
     return true;
 }
 
@@ -174,10 +194,13 @@ using CommunicationEndpoint = std::variant<Ipv4Endpoint, Ipv6Endpoint>;
 // -----------------------------------------------------------------------------
 // LocalEndpoint - loopback endpoint for local actor communication
 // -----------------------------------------------------------------------------
-inline constexpr Ipv4Endpoint LocalEndpoint{0x7F000001, 0};  // 127.0.0.1:0 in network byte order
+inline constexpr Ipv4Endpoint LocalEndpoint{0x7F000001, 0}; // 127.0.0.1:0 in
+                                                            // network byte
+                                                            // order
 
 // to_sockaddr free function for variant
-inline void to_sockaddr(const CommunicationEndpoint& ep, sockaddr* out, socklen_t* len) {
+inline void
+to_sockaddr(const CommunicationEndpoint& ep, sockaddr* out, socklen_t* len) {
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
         if (*len >= sizeof(sockaddr_in)) {
             ipv4->to_sockaddr(reinterpret_cast<sockaddr_in*>(out));
@@ -195,11 +218,11 @@ inline void to_sockaddr(const CommunicationEndpoint& ep, sockaddr* out, socklen_
 // CommunicationEndpoint operations (implemented in cpp)
 // -----------------------------------------------------------------------------
 namespace endpoint_ops {
-    [[nodiscard]] Protocol protocol(const CommunicationEndpoint& ep);
-    [[nodiscard]] int address_family(const CommunicationEndpoint& ep);
-    [[nodiscard]] std::string to_string(const CommunicationEndpoint& ep);
-    [[nodiscard]] CommunicationEndpoint parse_endpoint(std::string_view node_id);
-}
+[[nodiscard]] Protocol protocol(const CommunicationEndpoint& ep);
+[[nodiscard]] int address_family(const CommunicationEndpoint& ep);
+[[nodiscard]] std::string to_string(const CommunicationEndpoint& ep);
+[[nodiscard]] CommunicationEndpoint parse_endpoint(std::string_view node_id);
+} // namespace endpoint_ops
 
 // -----------------------------------------------------------------------------
 // ActorType - type identifier for an actor
@@ -450,6 +473,7 @@ template <> struct std::hash<hpactor::CommunicationEndpoint> {
         if (auto* ipv4 = std::get_if<hpactor::Ipv4Endpoint>(&ep)) {
             return std::hash<hpactor::Ipv4Endpoint>{}(*ipv4);
         }
-        return std::hash<hpactor::Ipv6Endpoint>{}(std::get<hpactor::Ipv6Endpoint>(ep));
+        return std::hash<hpactor::Ipv6Endpoint>{}(
+            std::get<hpactor::Ipv6Endpoint>(ep));
     }
 };

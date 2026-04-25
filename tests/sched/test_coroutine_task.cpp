@@ -14,13 +14,13 @@
 
 // tests/sched/test_coroutine_task.cpp
 #include <cassert>
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
 #include <hpactor/types/types.hpp>
-#include <hpactor/hpactor_config.hpp>
 
 #if HPACTOR_USE_COROUTINES
 
-#include <coroutine>
+#    include <coroutine>
 
 // Simple test coroutine that suspends and resumes
 hpactor::sched::CoroutineTask simple_coro() {
@@ -36,9 +36,9 @@ int main() {
     // Test 2: move construction
     auto t2 = simple_coro();
     hpactor::sched::CoroutineTask t3(std::move(t2));
-    assert(!t2);  // moved-from is nullptr
+    assert(!t2); // moved-from is nullptr
     assert(t3);
-    assert(!t3.done());  // not done until resumed and finishes
+    assert(!t3.done()); // not done until resumed and finishes
 
     // Test 3: move assignment
     hpactor::sched::CoroutineTask t4;
@@ -52,7 +52,7 @@ int main() {
     hpactor::sched::CoroutineTask t6 = simple_coro();
     assert(!t6.done());
     t6.resume();
-    assert(t6.done());  // co_return makes it done
+    assert(t6.done()); // co_return makes it done
 
     // Test 5: destroy without resuming
     {
@@ -64,7 +64,7 @@ int main() {
     return 0;
 }
 
-#else  // !HPACTOR_USE_COROUTINES
+#else // !HPACTOR_USE_COROUTINES
 
 // C++17 fallback: test the stub CoroutineTask
 int main() {
@@ -92,4 +92,4 @@ int main() {
     return 0;
 }
 
-#endif  // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_USE_COROUTINES

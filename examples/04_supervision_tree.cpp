@@ -31,10 +31,10 @@
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor_context.hpp>
-#include <hpactor/core/actor_system.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/actor/message.hpp>
+#include <hpactor/actor_context.hpp>
+#include <hpactor/behavior.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/supervision.hpp>
@@ -97,8 +97,9 @@ void demonstrate_supervision_policy() {
     // OneForOne - only the failed child is restarted
     // hpactor::SupervisionPolicy one_for_one{
     //     .strategy = hpactor::SupervisionPolicy::Strategy::OneForOne,
-    //     .max_restarts = 3,                           // Max restarts within interval
-    //     .restart_interval = std::chrono::seconds(5)  // Sliding window
+    //     .max_restarts = 3,                           // Max restarts within
+    //     interval .restart_interval = std::chrono::seconds(5)  // Sliding
+    //     window
     // };
 
     // AllForOne - all children are restarted when one fails
@@ -123,7 +124,8 @@ void demonstrate_supervision_policy() {
 // Pattern:
 //   hpactor::OneForOneSupervisor strategy(policy);
 //   std::vector<hpactor::Actor> children = { child1, child2 };
-//   hpactor::SupervisorActor supervisor(ctx, sys, strategy, std::move(children));
+//   hpactor::SupervisorActor supervisor(ctx, sys, strategy,
+//   std::move(children));
 //
 // NOTE: The actual restart logic in SupervisorActor::restart_child is a stub
 // (marked TODO). This example shows the intended API design.
@@ -152,7 +154,8 @@ class DatabaseSupervisor : public hpactor::SupervisorActor {
 // Pattern:
 //   class MyActor : public hpactor::SelfSupervisingActor {
 //     protected:
-//       SupervisionDirective on_failure(ActorId child_id, const error& err) override {
+//       SupervisionDirective on_failure(ActorId child_id, const error& err)
+//       override {
 //         // Custom restart logic
 //         return SupervisionDirective::Restart;
 //       }
@@ -164,13 +167,12 @@ class SessionManager : public hpactor::SelfSupervisingActor {
   public:
     SessionManager(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
                    hpactor::SupervisionPolicy policy)
-        : hpactor::SelfSupervisingActor(ctx, sys, policy),
-          policy_(policy) {}
+        : hpactor::SelfSupervisingActor(ctx, sys, policy), policy_(policy) {}
 
   protected:
     // Override to implement custom restart behavior
-    hpactor::SupervisionDirective on_failure(hpactor::ActorId child_id,
-                                             const hpactor::error& err) override {
+    hpactor::SupervisionDirective
+    on_failure(hpactor::ActorId child_id, const hpactor::error& err) override {
         std::cout << "SessionManager: child " << child_id.value()
                   << " failed with: " << err.message() << std::endl;
 
@@ -221,10 +223,7 @@ int main() {
 
     demonstrate_supervision_policy();
 
-    hpactor::Config config{
-        .scheduler_threads = 4,
-        .max_queue_depth = 1024
-    };
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
     demonstrate_failure_flow();
@@ -261,7 +260,8 @@ int main() {
     //   // If one connection fails, all are restarted (AllForOne)
 
     std::cout << "Supervision patterns:" << std::endl;
-    std::cout << "  1. SupervisorActor + Supervisor strategy (OneForOne/AllForOne)"
+    std::cout << "  1. SupervisorActor + Supervisor strategy "
+                 "(OneForOne/AllForOne)"
               << std::endl;
     std::cout << "  2. SelfSupervisingActor with custom on_failure()" << std::endl;
     std::cout << std::endl;
@@ -271,7 +271,8 @@ int main() {
     std::cout << "  OneForOneSupervisor(policy)" << std::endl;
     std::cout << "  SupervisorActor(ctx, sys, strategy, children)" << std::endl;
     std::cout << "  SelfSupervisingActor(ctx, sys, policy)" << std::endl;
-    std::cout << "  on_failure(child_id, error) -> SupervisionDirective" << std::endl;
+    std::cout << "  on_failure(child_id, error) -> SupervisionDirective"
+              << std::endl;
 
     return 0;
 }

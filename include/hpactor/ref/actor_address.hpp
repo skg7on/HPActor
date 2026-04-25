@@ -23,10 +23,10 @@ namespace hpactor {
 // ActorAddress - unique identifier for an actor across the distributed system
 // -----------------------------------------------------------------------------
 struct ActorAddress {
-    CommunicationEndpoint endpoint;  // Network location
-    ActorType type = 0;               // Actor type identifier
-    ActorId id;                       // Unique instance ID
-    uint64_t incarnation = 0;         // Increments on restart
+    CommunicationEndpoint endpoint; // Network location
+    ActorType type = 0;             // Actor type identifier
+    ActorId id;                     // Unique instance ID
+    uint64_t incarnation = 0;       // Increments on restart
 
     ActorAddress() : endpoint(Ipv4Endpoint{0x7F000001, 0}) {}
     ActorAddress(CommunicationEndpoint ep, ActorType t, ActorId i, uint64_t inc)
@@ -58,7 +58,7 @@ inline bool ActorAddress::is_local() const noexcept {
     if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&endpoint)) {
         return ipv6->is_loopback();
     }
-    return true;  // Empty variant is considered local
+    return true; // Empty variant is considered local
 }
 
 inline std::string ActorAddress::to_string() const {
@@ -86,7 +86,8 @@ template <> struct std::hash<hpactor::ActorId> {
 // -----------------------------------------------------------------------------
 template <> struct std::hash<hpactor::ActorAddress> {
     std::size_t operator()(const hpactor::ActorAddress& addr) const noexcept {
-        std::size_t seed = std::hash<hpactor::CommunicationEndpoint>{}(addr.endpoint);
+        std::size_t seed =
+            std::hash<hpactor::CommunicationEndpoint>{}(addr.endpoint);
         hpactor::ActorAddress::hash_combine(
             seed, std::hash<hpactor::ActorType>{}(addr.type));
         hpactor::ActorAddress::hash_combine(

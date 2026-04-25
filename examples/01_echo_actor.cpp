@@ -16,8 +16,8 @@
 // HPActor Example 01: Echo Actor
 // =============================================================================
 //
-// This example demonstrates the foundational pattern for creating an event-based
-// actor in HPActor.
+// This example demonstrates the foundational pattern for creating an
+// event-based actor in HPActor.
 //
 // Key concepts demonstrated:
 //   - Subclassing hpactor::EventBasedActor
@@ -31,10 +31,10 @@
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor_context.hpp>
-#include <hpactor/core/actor_system.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/actor/message.hpp>
+#include <hpactor/actor_context.hpp>
+#include <hpactor/behavior.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <iostream>
 #include <string>
 #include <variant>
@@ -178,10 +178,7 @@ int main() {
     std::cout << "=== HPActor Example 01: Echo Actor ===" << std::endl;
 
     // Create actor system with configuration
-    hpactor::Config config{
-        .scheduler_threads = 4,
-        .max_queue_depth = 1024
-    };
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
     std::cout << "\nNOTE: Actor spawning and message passing are not yet "
@@ -214,7 +211,8 @@ int main() {
 
     std::cout << "API patterns demonstrated:" << std::endl;
     std::cout << "  1. Subclass EventBasedActor" << std::endl;
-    std::cout << "  2. Override make_behavior() to define initial behavior" << std::endl;
+    std::cout << "  2. Override make_behavior() to define initial behavior"
+              << std::endl;
     std::cout << "  3. Use become() to switch behaviors at runtime" << std::endl;
     std::cout << "  4. std::visit for type-safe message handling" << std::endl;
 

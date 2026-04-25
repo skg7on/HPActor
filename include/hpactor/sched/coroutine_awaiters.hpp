@@ -14,27 +14,26 @@
 
 #pragma once
 
+#include <hpactor/actor/message.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
 #include <hpactor/sched/scheduler.hpp>
-#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
-#include <hpactor/actor/message.hpp>
 
 #include <atomic>
 #include <cstdint>
 
 #if HPACTOR_USE_COROUTINES
 
-#include <coroutine>
+#    include <coroutine>
 
 namespace hpactor::sched {
 
 // MailboxAwaiter: awaitable for co_await actor.receive()
 // Suspends when mailbox is empty, resumes when message arrives
 // T is the message type (e.g., Message<MessageVariant>)
-template<typename T>
-class MailboxAwaiter {
-public:
+template <typename T> class MailboxAwaiter {
+  public:
     explicit MailboxAwaiter(CoroutinePromise& promise,
                             mailbox::MPSCActorMailbox<T>* mailbox) noexcept
         : promise_(promise), mailbox_(mailbox) {}
@@ -47,26 +46,27 @@ public:
 
     // Called when suspending
     bool await_suspend(std::coroutine_handle<> continuation) noexcept {
-        // Check emptiness at this moment — a message may have arrived since await_ready().
-        // If a message arrived while we were deciding, the sender already claimed
-        // the wakeup via CAS(true, false) on was_empty — don't suspend.
+        // Check emptiness at this moment — a message may have arrived since
+        // await_ready(). If a message arrived while we were deciding, the
+        // sender already claimed the wakeup via CAS(true, false) on was_empty —
+        // don't suspend.
         bool was_empty = mailbox_->was_empty();
         if (!was_empty) {
             return false;
         }
 
-        // Mailbox is still empty — safely reset edge-trigger so the next enqueue
-        // (after we suspend) can claim the wakeup.
+        // Mailbox is still empty — safely reset edge-trigger so the next
+        // enqueue (after we suspend) can claim the wakeup.
         mailbox_->set_was_empty(true);
 
         // Transition: Running → Idle
         uint32_t expected = ActorState::kRunning;
         if (promise_.state.cas(expected, ActorState::kIdle)) {
             promise_.continuation = continuation;
-            return true;  // successfully suspended
+            return true; // successfully suspended
         }
         // State was not Running — actor may have already terminated
-        return false;  // don't suspend
+        return false; // don't suspend
     }
 
     // Called when resuming (message arrived)
@@ -81,7 +81,7 @@ public:
         return T{};
     }
 
-private:
+  private:
     CoroutinePromise& promise_;
     mailbox::MPSCActorMailbox<T>* mailbox_;
 };
@@ -89,33 +89,29 @@ private:
 // TimerAwaiter: awaitable for co_await scheduler.schedule_after(delay)
 // Wires to HybridScheduler::schedule_timer() for real timer integration
 class TimerAwaiter {
-public:
-    TimerAwaiter(int64_t delay_ns,
-                 HybridScheduler& scheduler,
-                 ActorId actor_id,
+  public:
+    TimerAwaiter(int64_t delay_ns, HybridScheduler& scheduler, ActorId actor_id,
                  uint8_t priority = 0) noexcept
-        : scheduler_(scheduler),
-          actor_id_(actor_id),
-          delay_ns_(delay_ns),
+        : scheduler_(scheduler), actor_id_(actor_id), delay_ns_(delay_ns),
           priority_(priority) {}
 
-    bool await_ready() const noexcept { return false; }
+    bool await_ready() const noexcept {
+        return false;
+    }
 
     bool await_suspend(std::coroutine_handle<> continuation) noexcept {
         continuation_ = continuation;
 
         // Set promise to IOWaiting
         auto& promise = std::coroutine_handle<CoroutinePromise>::from_address(
-                            continuation.address()).promise();
+                            continuation.address())
+                            .promise();
         promise.set_io_waiting();
 
         // Schedule timer — on expiry, actor is re-woken via notify_ready
-        timer_id_ = scheduler_.schedule_timer(
-            delay_ns_,
-            [this] {
-                scheduler_.notify_ready(actor_id_, priority_, INT64_MAX);
-            }
-        );
+        timer_id_ = scheduler_.schedule_timer(delay_ns_, [this] {
+            scheduler_.notify_ready(actor_id_, priority_, INT64_MAX);
+        });
 
         return true;
     }
@@ -128,7 +124,7 @@ public:
         scheduler_.cancel_timer(TimerHandle{timer_id_});
     }
 
-private:
+  private:
     HybridScheduler& scheduler_;
     ActorId actor_id_;
     int64_t delay_ns_;
@@ -139,9 +135,8 @@ private:
 
 // BlockingMailboxAwaiter: for blocking receive with stackful coroutines
 // T is the message type (e.g., Message<MessageVariant>)
-template<typename T>
-class BlockingMailboxAwaiter {
-public:
+template <typename T> class BlockingMailboxAwaiter {
+  public:
     BlockingMailboxAwaiter(CoroutinePromise& promise,
                            mailbox::MPSCActorMailbox<T>* mailbox,
                            std::coroutine_handle<> continuation) noexcept
@@ -152,9 +147,11 @@ public:
     }
 
     bool await_suspend(std::coroutine_handle<> continuation) noexcept {
-        // Check emptiness at this moment — a message may have arrived since await_ready()
+        // Check emptiness at this moment — a message may have arrived since
+        // await_ready()
         bool was_empty = mailbox_->was_empty();
-        if (!was_empty) return false;  // message arrived between await_ready() and here
+        if (!was_empty)
+            return false; // message arrived between await_ready() and here
 
         // Only reset edge-trigger if mailbox was empty at entry.
         // If a message arrived while we were deciding, the sender already
@@ -172,7 +169,7 @@ public:
         // Returns the message
     }
 
-private:
+  private:
     CoroutinePromise& promise_;
     mailbox::MPSCActorMailbox<T>* mailbox_;
     std::coroutine_handle<> continuation_;
@@ -180,4 +177,4 @@ private:
 
 } // namespace hpactor::sched
 
-#endif  // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_USE_COROUTINES

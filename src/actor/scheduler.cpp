@@ -58,8 +58,10 @@ void Scheduler::worker_loop(size_t /*thread_index*/) {
 
         {
             std::unique_lock<std::mutex> lock(work_mutex_);
-            work_cv_.wait_for(lock, std::chrono::milliseconds(100),
-                              [this] { return !work_queue_.empty() || !running_.load(std::memory_order_acquire); });
+            work_cv_.wait_for(lock, std::chrono::milliseconds(100), [this] {
+                return !work_queue_.empty() ||
+                       !running_.load(std::memory_order_acquire);
+            });
 
             if (!running_.load(std::memory_order_acquire)) {
                 break;

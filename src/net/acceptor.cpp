@@ -14,21 +14,20 @@
 
 #include <hpactor/net/acceptor.hpp>
 
-#include <sys/un.h>
+#include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
-#include <arpa/inet.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/un.h>
 #include <unistd.h>
 
 namespace hpactor {
 
 namespace net {
 
-Acceptor::Acceptor(EventLoop* loop)
-    : loop_(loop), listening_fd_(-1) {}
+Acceptor::Acceptor(EventLoop* loop) : loop_(loop), listening_fd_(-1) {}
 
 Acceptor::~Acceptor() {
     close();
@@ -117,7 +116,7 @@ bool Acceptor::listen_unix_domain(const std::string& path) {
 
     // Only set after successful listen to avoid fd leak on failure
     listening_fd_ = fd;
-    bound_port_ = 0;  // UDS has no port
+    bound_port_ = 0; // UDS has no port
     uds_path_ = path;
 
     if (loop_) {
@@ -130,9 +129,9 @@ bool Acceptor::listen_unix_domain(const std::string& path) {
 void Acceptor::close_unix_domain() {
     if (!uds_path_.empty()) {
         ::unlink(uds_path_.c_str());
-        uds_path_.clear();  // Reset so uds_path() returns empty after close
+        uds_path_.clear(); // Reset so uds_path() returns empty after close
     }
-    close();  // Closes the fd and sets listening_fd_ = -1
+    close(); // Closes the fd and sets listening_fd_ = -1
 }
 
 void Acceptor::close() {
@@ -154,9 +153,9 @@ void Acceptor::handle_read() {
     struct sockaddr_in client_addr;
     socklen_t client_len = sizeof(client_addr);
 
-    int client_fd = accept(listening_fd_,
-                          reinterpret_cast<struct sockaddr*>(&client_addr),
-                          &client_len);
+    int client_fd =
+        accept(listening_fd_, reinterpret_cast<struct sockaddr*>(&client_addr),
+               &client_len);
 
     if (client_fd < 0) {
         return;

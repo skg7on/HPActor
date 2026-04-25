@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #pragma once
-#include <hpactor/core/mailbox.hpp>
 #include <hpactor/actor/message.hpp>
+#include <hpactor/core/mailbox.hpp>
 #include <memory>
 #include <mutex>
 #include <queue>

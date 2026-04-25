@@ -32,8 +32,10 @@ int main() {
     // Test Frame with values
     ActorId sender_id(100);
     ActorId receiver_id(200);
-    ActorAddress sender(endpoint_ops::parse_endpoint("node1:12345"), 10, sender_id, 5);
-    ActorAddress receiver(endpoint_ops::parse_endpoint("node2:12345"), 20, receiver_id, 6);
+    ActorAddress sender(endpoint_ops::parse_endpoint("node1:12345"), 10,
+                        sender_id, 5);
+    ActorAddress receiver(endpoint_ops::parse_endpoint("node2:12345"), 20,
+                          receiver_id, 6);
 
     WireFrame f2;
     f2.sender = sender;
@@ -58,15 +60,18 @@ int main() {
     assert(f3.message_id == f2.message_id);
 
     // Test malformed data handling
-    bytes malformed = {0xFF, 0xFF, 0xFF, 0xFF};  // Invalid protobuf
+    bytes malformed = {0xFF, 0xFF, 0xFF, 0xFF}; // Invalid protobuf
     WireFrame f_bad = WireFrame::decode(malformed);
     // Should return default frame, not crash
     assert(f_bad.sender.id.value() == 0);
 
     // Test IPv6 endpoint
-    std::array<uint8_t, 16> ipv6_addr = {0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 0, 1};
-    ActorAddress ipv6_sender{Ipv6Endpoint{ipv6_addr, htons(8080)}, 1, ActorId(300), 1};
-    ActorAddress ipv6_receiver{Ipv6Endpoint{ipv6_addr, htons(9090)}, 2, ActorId(400), 2};
+    std::array<uint8_t, 16> ipv6_addr = {0, 0, 0, 0, 0, 0, 0, 0,
+                                         0, 0, 0, 0, 0, 0, 0, 1};
+    ActorAddress ipv6_sender{Ipv6Endpoint{ipv6_addr, htons(8080)}, 1,
+                             ActorId(300), 1};
+    ActorAddress ipv6_receiver{Ipv6Endpoint{ipv6_addr, htons(9090)}, 2,
+                               ActorId(400), 2};
 
     WireFrame f_ipv6;
     f_ipv6.sender = ipv6_sender;
@@ -77,7 +82,8 @@ int main() {
     bytes encoded_ipv6 = f_ipv6.encode();
     WireFrame decoded_ipv6 = WireFrame::decode(encoded_ipv6);
 
-    assert(std::get<Ipv6Endpoint>(decoded_ipv6.sender.endpoint).port_nw == htons(8080));
+    assert(std::get<Ipv6Endpoint>(decoded_ipv6.sender.endpoint).port_nw ==
+           htons(8080));
     assert(decoded_ipv6.message_id == 99999);
 
     return 0;

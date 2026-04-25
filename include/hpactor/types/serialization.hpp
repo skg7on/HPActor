@@ -32,7 +32,7 @@ namespace hpactor {
 // registered with an encode/decode function.
 // -----------------------------------------------------------------------------
 class Serializer {
-public:
+  public:
     virtual ~Serializer() = default;
 
     // Encode a message to bytes
@@ -42,8 +42,7 @@ public:
     virtual MessageVariant decode(TypeTag tag, const bytes& data) = 0;
 
     // Register a user message type
-    template <typename T>
-    void register_type(TypeTag tag);
+    template <typename T> void register_type(TypeTag tag);
 };
 
 // -----------------------------------------------------------------------------
@@ -53,16 +52,22 @@ public:
 // template proliferation.
 // -----------------------------------------------------------------------------
 class TypedMessage {
-public:
+  public:
     TypedMessage() = default;
     TypedMessage(TypeTag tag, bytes payload)
         : type_id_(tag), payload_(std::move(payload)) {}
 
-    TypeTag type_id() const { return type_id_; }
-    const bytes& payload() const { return payload_; }
-    bytes& payload() { return payload_; }
+    TypeTag type_id() const {
+        return type_id_;
+    }
+    const bytes& payload() const {
+        return payload_;
+    }
+    bytes& payload() {
+        return payload_;
+    }
 
-private:
+  private:
     TypeTag type_id_ = TypeTag::Invalid;
     bytes payload_;
 };
@@ -73,7 +78,7 @@ private:
 // Format: [4 bytes: payload length][4 bytes: type tag][payload...]
 // -----------------------------------------------------------------------------
 class DefaultSerializer : public Serializer {
-public:
+  public:
     DefaultSerializer();
 
     // Serializer interface
@@ -86,14 +91,13 @@ public:
 
     void register_type(TypeTag tag, encode_func encode, decode_func decode);
 
-    template <typename T>
-    void register_user_type(TypeTag tag);
+    template <typename T> void register_user_type(TypeTag tag);
 
     // Spawn-specific encode/decode (separate from MessageVariant path)
     bytes encode_spawn(TypeTag tag, const SpawnMessageVariant& msg);
     SpawnMessageVariant decode_spawn(TypeTag tag, const bytes& data);
 
-private:
+  private:
     bytes encode_system(const MessageVariant& msg);
     MessageVariant decode_system(TypeTag tag, const bytes& data);
 
@@ -102,13 +106,11 @@ private:
 };
 
 // Template implementation
-template <typename T>
-void Serializer::register_type(TypeTag /*tag*/) {
+template <typename T> void Serializer::register_type(TypeTag /*tag*/) {
     // Default implementation does nothing - specialize in DefaultSerializer
 }
 
-template <typename T>
-void DefaultSerializer::register_user_type(TypeTag tag) {
+template <typename T> void DefaultSerializer::register_user_type(TypeTag tag) {
     encoders_[tag] = [](const void* ptr) -> bytes {
         const T* msg = static_cast<const T*>(ptr);
         bytes result;

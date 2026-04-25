@@ -18,10 +18,10 @@
 #include <algorithm>
 #include <arpa/inet.h>
 #include <netdb.h>
-#include <sys/socket.h>
-#include <unistd.h>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #include <cstring>
 
@@ -34,29 +34,26 @@ namespace net {
 // -----------------------------------------------------------------------------
 
 RegistrarConnection::RegistrarConnection(CommunicationEndpoint remote_endpoint,
-                                        EventLoop* loop,
-                                        int fd)
-    : remote_endpoint_(remote_endpoint),
-      loop_(loop),
-      fd_(fd),
+                                         EventLoop* loop, int fd)
+    : remote_endpoint_(remote_endpoint), loop_(loop), fd_(fd),
       header_buffer_(TcpHeaderSize) {}
 
 RegistrarConnection::~RegistrarConnection() {
     close();
 }
 
-RegistrarConnectionPtr RegistrarConnection::accepted(int fd,
-                                                     CommunicationEndpoint remote_endpoint,
-                                                     EventLoop* loop) {
+RegistrarConnectionPtr
+RegistrarConnection::accepted(int fd, CommunicationEndpoint remote_endpoint,
+                              EventLoop* loop) {
     auto conn = std::shared_ptr<RegistrarConnection>(
         new RegistrarConnection(remote_endpoint, loop, fd));
     conn->register_with_loop();
     return conn;
 }
 
-RegistrarConnectionPtr RegistrarConnection::connecting(int fd,
-                                                     CommunicationEndpoint remote_endpoint,
-                                                     EventLoop* loop) {
+RegistrarConnectionPtr
+RegistrarConnection::connecting(int fd, CommunicationEndpoint remote_endpoint,
+                                EventLoop* loop) {
     return std::shared_ptr<RegistrarConnection>(
         new RegistrarConnection(remote_endpoint, loop, fd));
 }
@@ -85,7 +82,8 @@ void RegistrarConnection::set_send_complete_handler(send_complete_handler h) {
 }
 
 void RegistrarConnection::send_message(TcpMessageType type, const bytes& payload) {
-    if (fd_ < 0 || !loop_) return;
+    if (fd_ < 0 || !loop_)
+        return;
 
     // Build message: [Magic: 4][Version: 1][Type: 1][Length: 4][Payload: N]
     bytes message;
@@ -117,22 +115,22 @@ void RegistrarConnection::close() {
 }
 
 void RegistrarConnection::handle_read_event() {
-    if (fd_ < 0 || !loop_) return;
+    if (fd_ < 0 || !loop_)
+        return;
 
-    // Non-blocking read loop (fd is known to be readable via EventLoop notification)
-    // This pattern follows PlainConnection: poll has_event() to know when to read
+    // Non-blocking read loop (fd is known to be readable via EventLoop
+    // notification) This pattern follows PlainConnection: poll has_event() to
+    // know when to read
 
     // Read into header buffer first
     while (header_bytes_read_ < TcpHeaderSize) {
         // Check if still readable (edge-triggered)
         if (!loop_->has_event(fd_, EventLoop::Event::Read)) {
-            return;  // Would block, wait for next notification
+            return; // Would block, wait for next notification
         }
 
-        ssize_t bytes_read = recv(fd_,
-                                  header_buffer_.data() + header_bytes_read_,
-                                  TcpHeaderSize - header_bytes_read_,
-                                  0);
+        ssize_t bytes_read = recv(fd_, header_buffer_.data() + header_bytes_read_,
+                                  TcpHeaderSize - header_bytes_read_, 0);
         if (bytes_read <= 0) {
             // Connection closed or error
             if (disconnect_handler_) {
@@ -181,19 +179,19 @@ void RegistrarConnection::handle_read_event() {
 }
 
 void RegistrarConnection::handle_payload_read() {
-    if (fd_ < 0) return;
+    if (fd_ < 0)
+        return;
 
     // Continue reading payload
     while (payload_bytes_read_ < payload_buffer_.size()) {
         // Check if still readable
         if (!loop_->has_event(fd_, EventLoop::Event::Read)) {
-            return;  // Would block, wait for next notification
+            return; // Would block, wait for next notification
         }
 
-        ssize_t bytes_read = recv(fd_,
-                                  payload_buffer_.data() + payload_bytes_read_,
-                                  payload_buffer_.size() - payload_bytes_read_,
-                                  0);
+        ssize_t bytes_read =
+            recv(fd_, payload_buffer_.data() + payload_bytes_read_,
+                 payload_buffer_.size() - payload_bytes_read_, 0);
         if (bytes_read <= 0) {
             // Connection closed or error
             if (disconnect_handler_) {
@@ -230,7 +228,7 @@ void RegistrarConnection::flush_write_buffer() {
 
     // Use async_send - completion routed via EventLoop completion_callback_
     loop_->backend()->async_send(fd_, &iov, 1, ActorId(0),
-                                  static_cast<uint32_t>(OpType::Send));
+                                 static_cast<uint32_t>(OpType::Send));
 }
 
 void RegistrarConnection::handle_send_completion(int result) {
@@ -252,8 +250,7 @@ void RegistrarConnection::handle_send_completion(int result) {
     if (static_cast<size_t>(result) >= write_buffer_.size()) {
         write_buffer_.clear();
     } else {
-        write_buffer_.erase(write_buffer_.begin(),
-                            write_buffer_.begin() + result);
+        write_buffer_.erase(write_buffer_.begin(), write_buffer_.begin() + result);
     }
 
     // Continue flushing if more data
@@ -302,7 +299,8 @@ std::string HostResolver::resolve(const std::string& hostname) {
     std::string ip;
     if (result != nullptr) {
         char ipstr[INET_ADDRSTRLEN];
-        struct sockaddr_in* addr_in = reinterpret_cast<struct sockaddr_in*>(result->ai_addr);
+        struct sockaddr_in* addr_in =
+            reinterpret_cast<struct sockaddr_in*>(result->ai_addr);
         if (inet_ntop(AF_INET, &addr_in->sin_addr, ipstr, sizeof(ipstr)) != nullptr) {
             ip = ipstr;
         }
@@ -317,7 +315,7 @@ std::string HostResolver::resolve(const std::string& hostname) {
 }
 
 void HostResolver::resolve_async(const std::string& hostname,
-                                  std::function<void(std::string ip)> callback) {
+                                 std::function<void(std::string ip)> callback) {
     // For now, do blocking resolution in a background context
     // In production, this would use a thread pool
     std::string result = resolve(hostname);
@@ -336,7 +334,7 @@ std::string HostResolver::get_cached(const std::string& hostname) const {
 }
 
 void HostResolver::cache(const std::string& hostname, const std::string& ip,
-                          std::chrono::seconds ttl) {
+                         std::chrono::seconds ttl) {
     std::lock_guard<std::mutex> lock(mutex_);
     CacheEntry entry;
     entry.ip = ip;
@@ -347,7 +345,7 @@ void HostResolver::cache(const std::string& hostname, const std::string& ip,
 void HostResolver::clear_expired() {
     std::lock_guard<std::mutex> lock(mutex_);
     auto now = std::chrono::steady_clock::now();
-    for (auto it = cache_.begin(); it != cache_.end(); ) {
+    for (auto it = cache_.begin(); it != cache_.end();) {
         if (it->second.expires_at <= now) {
             it = cache_.erase(it);
         } else {
@@ -360,8 +358,7 @@ void HostResolver::clear_expired() {
 // NodeRegistry Implementation
 // -----------------------------------------------------------------------------
 
-NodeRegistry::NodeRegistry(const RegistrarConfig& config)
-    : config_(config) {}
+NodeRegistry::NodeRegistry(const RegistrarConfig& config) : config_(config) {}
 
 void NodeRegistry::upsert_endpoint(NodeEndpoint endpoint) {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -402,7 +399,7 @@ size_t NodeRegistry::remove_expired() {
     std::lock_guard<std::mutex> lock(mutex_);
     auto now = std::chrono::steady_clock::now();
     size_t removed = 0;
-    for (auto it = endpoints_.begin(); it != endpoints_.end(); ) {
+    for (auto it = endpoints_.begin(); it != endpoints_.end();) {
         // Static routes don't expire
         if (!it->second.is_static_route) {
             auto age = now - it->second.last_seen;
@@ -421,10 +418,9 @@ size_t NodeRegistry::remove_expired() {
 // UdpRegistrar Implementation
 // -----------------------------------------------------------------------------
 
-UdpRegistrar::UdpRegistrar(const RegistrarConfig& config, CommunicationEndpoint local_endpoint, EventLoop* loop)
-    : config_(config),
-      local_endpoint_(local_endpoint),
-      loop_(loop) {}
+UdpRegistrar::UdpRegistrar(const RegistrarConfig& config,
+                           CommunicationEndpoint local_endpoint, EventLoop* loop)
+    : config_(config), local_endpoint_(local_endpoint), loop_(loop) {}
 
 UdpRegistrar::~UdpRegistrar() {
     stop();
@@ -448,7 +444,8 @@ void UdpRegistrar::start() {
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(config_.tcp_port);
 
-    if (bind(test_sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == 0) {
+    if (bind(test_sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) ==
+        0) {
         // Success - we can be server
         close(test_sock);
         start_server_mode();
@@ -501,7 +498,8 @@ void UdpRegistrar::start_client_mode() {
     // Create UDP socket for resolution queries
     udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
 
-    client_ = std::make_unique<RegistrarClient>(config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
+    client_ = std::make_unique<RegistrarClient>(
+        config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
     client_->start();
 }
 
@@ -511,7 +509,8 @@ void UdpRegistrar::start_server_mode_async() {
 
     // Create UDP socket
     udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udp_socket_ < 0) return;
+    if (udp_socket_ < 0)
+        return;
 
     // Bind to UDP port
     struct sockaddr_in udp_addr;
@@ -519,7 +518,8 @@ void UdpRegistrar::start_server_mode_async() {
     udp_addr.sin_family = AF_INET;
     udp_addr.sin_addr.s_addr = INADDR_ANY;
     udp_addr.sin_port = htons(config_.udp_port);
-    bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr), sizeof(udp_addr));
+    bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr),
+         sizeof(udp_addr));
 
     // Register with EventLoop for read events
     if (loop_) {
@@ -561,12 +561,14 @@ void UdpRegistrar::start_client_mode_async() {
         issue_async_recvfrom();
     }
 
-    client_ = std::make_unique<RegistrarClient>(config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
+    client_ = std::make_unique<RegistrarClient>(
+        config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
     client_->start();
 }
 
 void UdpRegistrar::issue_async_recvfrom() {
-    if (udp_socket_ < 0 || !loop_) return;
+    if (udp_socket_ < 0 || !loop_)
+        return;
 
     // Clear address storage for next recvfrom
     memset(&udp_src_addr_, 0, sizeof(udp_src_addr_));
@@ -574,7 +576,8 @@ void UdpRegistrar::issue_async_recvfrom() {
 }
 
 void UdpRegistrar::handle_udp_read_ready() {
-    if (udp_socket_ < 0 || !loop_) return;
+    if (udp_socket_ < 0 || !loop_)
+        return;
 
     // Check if UDP socket is readable (edge-triggered)
     if (!loop_->has_event(udp_socket_, EventLoop::Event::Read)) {
@@ -586,9 +589,9 @@ void UdpRegistrar::handle_udp_read_ready() {
     struct sockaddr_in src_addr;
     socklen_t src_addr_len = sizeof(src_addr);
 
-    ssize_t bytes_read = recvfrom(udp_socket_, buffer, sizeof(buffer), 0,
-                                  reinterpret_cast<struct sockaddr*>(&src_addr),
-                                  &src_addr_len);
+    ssize_t bytes_read =
+        recvfrom(udp_socket_, buffer, sizeof(buffer), 0,
+                 reinterpret_cast<struct sockaddr*>(&src_addr), &src_addr_len);
 
     if (bytes_read > 0) {
         bytes data(buffer, buffer + bytes_read);
@@ -605,13 +608,17 @@ void UdpRegistrar::handle_udp_read_ready() {
     }
 }
 
-void UdpRegistrar::handle_udp_recv_completion(const bytes& data, const std::string& from_host, uint16_t from_port) {
+void UdpRegistrar::handle_udp_recv_completion(const bytes& data,
+                                              const std::string& from_host,
+                                              uint16_t from_port) {
     // Call the existing handler
     handle_udp_packet(data, from_host, from_port);
 }
 
-void UdpRegistrar::send_udp_response(const bytes& data, const struct sockaddr_in& dest) {
-    if (udp_socket_ < 0) return;
+void UdpRegistrar::send_udp_response(const bytes& data,
+                                     const struct sockaddr_in& dest) {
+    if (udp_socket_ < 0)
+        return;
 
     if (loop_) {
         // Use async_sendto for async UDP send
@@ -620,13 +627,8 @@ void UdpRegistrar::send_udp_response(const bytes& data, const struct sockaddr_in
         iov.iov_len = data.size();
 
         loop_->backend()->async_sendto(
-            udp_socket_,
-            &iov,
-            1,
-            reinterpret_cast<const sockaddr*>(&dest),
-            sizeof(dest),
-            ActorId(0),
-            static_cast<uint32_t>(OpType::SendTo));
+            udp_socket_, &iov, 1, reinterpret_cast<const sockaddr*>(&dest),
+            sizeof(dest), ActorId(0), static_cast<uint32_t>(OpType::SendTo));
     } else {
         // Fallback to blocking sendto
         sendto(udp_socket_, data.data(), data.size(), 0,
@@ -655,7 +657,8 @@ void UdpRegistrar::failover() {
     addr.sin_addr.s_addr = INADDR_ANY;
     addr.sin_port = htons(config_.tcp_port);
 
-    if (bind(test_sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) == 0) {
+    if (bind(test_sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) ==
+        0) {
         close(test_sock);
         start_server_mode();
     } else {
@@ -683,7 +686,8 @@ void UdpRegistrar::set_node_callback(node_callback cb) {
     node_callback_ = std::move(cb);
 }
 
-void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_host, uint16_t from_port) {
+void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_host,
+                                     uint16_t from_port) {
     // Handle incoming UDP packet for resolution
     // Packet format: [Magic: 4][Version: 1][Type: 1][Length: 4][Payload...]
 
@@ -715,7 +719,8 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
         return;
     }
 
-    const bytes payload(data.begin() + RegistrarHeaderSize, data.begin() + RegistrarHeaderSize + payload_len);
+    const bytes payload(data.begin() + RegistrarHeaderSize,
+                        data.begin() + RegistrarHeaderSize + payload_len);
 
     switch (type) {
         case RegistrarMessageType::ResolveQuery: {
@@ -725,7 +730,8 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                 return;
             }
 
-            CommunicationEndpoint target_endpoint = endpoint_ops::parse_endpoint(msg.target_endpoint());
+            CommunicationEndpoint target_endpoint =
+                endpoint_ops::parse_endpoint(msg.target_endpoint());
 
             // If we have a server, look up the endpoint
             if (server_) {
@@ -733,12 +739,14 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                 if (ep) {
                     // Send ResolveResponse back using protobuf
                     PbResolveResponsePayload resp_msg;
-                    resp_msg.mutable_endpoint_info()->set_endpoint(endpoint_ops::to_string(ep->endpoint));
+                    resp_msg.mutable_endpoint_info()->set_endpoint(
+                        endpoint_ops::to_string(ep->endpoint));
                     resp_msg.mutable_endpoint_info()->set_host(ep->host);
                     resp_msg.mutable_endpoint_info()->set_tcp_port(ep->tcp_port);
 
                     std::string serialized_resp = resp_msg.SerializeAsString();
-                    bytes response_payload(serialized_resp.begin(), serialized_resp.end());
+                    bytes response_payload(serialized_resp.begin(),
+                                           serialized_resp.end());
 
                     bytes response;
                     response.resize(RegistrarHeaderSize + response_payload.size());
@@ -746,10 +754,13 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                     uint32_t magic_be = htonl(RegistrarMagic);
                     memcpy(response.data(), &magic_be, 4);
                     response[4] = RegistrarVersion;
-                    response[5] = static_cast<uint8_t>(RegistrarMessageType::ResolveResponse);
-                    uint32_t len_be = htonl(static_cast<uint32_t>(response_payload.size()));
+                    response[5] =
+                        static_cast<uint8_t>(RegistrarMessageType::ResolveResponse);
+                    uint32_t len_be =
+                        htonl(static_cast<uint32_t>(response_payload.size()));
                     memcpy(response.data() + 6, &len_be, 4);
-                    memcpy(response.data() + RegistrarHeaderSize, response_payload.data(), response_payload.size());
+                    memcpy(response.data() + RegistrarHeaderSize,
+                           response_payload.data(), response_payload.size());
 
                     // Send response back to from_host:from_port via UDP
                     if (udp_socket_ >= 0) {
@@ -760,7 +771,8 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                         inet_pton(AF_INET, from_host.c_str(), &dest_addr.sin_addr);
 
                         sendto(udp_socket_, response.data(), response.size(), 0,
-                               reinterpret_cast<struct sockaddr*>(&dest_addr), sizeof(dest_addr));
+                               reinterpret_cast<struct sockaddr*>(&dest_addr),
+                               sizeof(dest_addr));
                     }
                 }
             }
@@ -775,7 +787,8 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
             }
 
             auto& info = msg.endpoint_info();
-            CommunicationEndpoint resp_endpoint = endpoint_ops::parse_endpoint(info.endpoint());
+            CommunicationEndpoint resp_endpoint =
+                endpoint_ops::parse_endpoint(info.endpoint());
             std::string host = info.host();
             uint16_t port = static_cast<uint16_t>(info.tcp_port());
 

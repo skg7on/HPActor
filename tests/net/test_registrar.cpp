@@ -91,7 +91,8 @@ int main() {
     registry.upsert_endpoint(ep2);
 
     assert(registry.has(hpactor::endpoint_ops::parse_endpoint("node42:12345")));
-    assert(registry.get(hpactor::endpoint_ops::parse_endpoint("node42:12345"))->tcp_port == 9001);
+    assert(registry.get(hpactor::endpoint_ops::parse_endpoint("node42:12345"))->tcp_port ==
+           9001);
     assert(registry.all().size() == 1);
 
     std::cout << "All registrar tests passed" << std::endl;

@@ -14,10 +14,10 @@
 
 #pragma once
 
-#include <hpactor/net/tls_context.hpp>
-#include <hpactor/net/tls_connection.hpp>
-#include <hpactor/net/plain_connection.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/plain_connection.hpp>
+#include <hpactor/net/tls_connection.hpp>
+#include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/spawn.hpp>
@@ -44,7 +44,7 @@ struct PoolConfig {
     size_t max_attempts = 5;
     std::chrono::milliseconds initial_backoff{1000};
     std::chrono::milliseconds max_backoff{16000};
-    bool use_tls = false;  // Default to plain text
+    bool use_tls = false; // Default to plain text
 };
 
 // Pending message entry
@@ -62,12 +62,11 @@ struct PoolStats {
     bool is_connected = false;
 };
 
-class ConnectionPool : public Connection, public std::enable_shared_from_this<ConnectionPool> {
-public:
-    ConnectionPool(CommunicationEndpoint remote_endpoint,
-                   const PoolConfig& config,
-                   TlsContext* tls_context,
-                   EventLoop* loop);
+class ConnectionPool : public Connection,
+                       public std::enable_shared_from_this<ConnectionPool> {
+  public:
+    ConnectionPool(CommunicationEndpoint remote_endpoint, const PoolConfig& config,
+                   TlsContext* tls_context, EventLoop* loop);
     ~ConnectionPool();
 
     // Non-copyable
@@ -97,14 +96,18 @@ public:
     void abort();
 
     // Get remote node ID
-    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
+    CommunicationEndpoint remote_endpoint() const {
+        return remote_endpoint_;
+    }
 
     // Set handler for RPC responses (called when RpcResponse frame is received)
     using rpc_response_handler = std::function<void(MessageId, const bytes&)>;
     void set_rpc_handler(rpc_response_handler handler);
 
-    // Set handler for spawn responses (called when SpawnResponse frame is received)
-    using spawn_response_handler = std::function<void(uint64_t message_id, const SpawnResponse&)>;
+    // Set handler for spawn responses (called when SpawnResponse frame is
+    // received)
+    using spawn_response_handler =
+        std::function<void(uint64_t message_id, const SpawnResponse&)>;
     void set_spawn_handler(spawn_response_handler handler);
 
     // Called by TcpTransport when connection becomes ready
@@ -119,7 +122,7 @@ public:
     // Add an externally-created connection to the pool
     void add_connection(ConnectionPtr conn);
 
-private:
+  private:
     // Get connection via round-robin
     ConnectionPtr get_connection();
 

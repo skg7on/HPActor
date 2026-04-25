@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/event_loop.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/net/event_loop.hpp>
 
 #if defined(__APPLE__)
-#include <hpactor/net/gcd_backend.hpp>
-#include <hpactor/net/kqueue_backend.hpp>
+#    include <hpactor/net/gcd_backend.hpp>
+#    include <hpactor/net/kqueue_backend.hpp>
 #elif defined(__linux__)
-#include <hpactor/net/iouring_backend.hpp>
-#include <hpactor/net/epoll_backend.hpp>
+#    include <hpactor/net/epoll_backend.hpp>
+#    include <hpactor/net/iouring_backend.hpp>
 #endif
 
 namespace hpactor {
@@ -29,8 +29,9 @@ namespace net {
 
 namespace {
 
-// Backend factory helper - tries to create a backend, returns nullptr on failure
-template<typename Backend, typename... Args>
+// Backend factory helper - tries to create a backend, returns nullptr on
+// failure
+template <typename Backend, typename... Args>
 std::unique_ptr<Backend> try_create_backend(Args&&... args) {
     auto backend = std::make_unique<Backend>(std::forward<Args>(args)...);
     return backend;
@@ -41,12 +42,16 @@ std::unique_ptr<Backend> try_create_backend(Args&&... args) {
 // BackendAdapter wraps the real AsyncIoBackend and intercepts
 // deliver_completion to route to EventLoop
 class BackendAdapter : public AsyncIoBackend {
-public:
+  public:
     BackendAdapter(EventLoop* loop, std::unique_ptr<AsyncIoBackend> backend)
         : loop_(loop), backend_(std::move(backend)) {}
 
-    bool start() override { return backend_->start(); }
-    void stop() override { backend_->stop(); }
+    bool start() override {
+        return backend_->start();
+    }
+    void stop() override {
+        backend_->stop();
+    }
 
     bool add_fd(int fd, IoEvent events) override {
         return backend_->add_fd(fd, events);
@@ -65,12 +70,12 @@ public:
         return backend_->unregister_buffer(buffer_id);
     }
 
-    void async_send(int fd, const iovec* bufs, int buf_count,
-                    ActorId actor, uint32_t op_type) override {
+    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override {
         backend_->async_send(fd, bufs, buf_count, actor, op_type);
     }
-    void async_recv(int fd, const iovec* bufs, int buf_count,
-                    ActorId actor, uint32_t op_type) override {
+    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override {
         backend_->async_recv(fd, bufs, buf_count, actor, op_type);
     }
 
@@ -91,13 +96,13 @@ public:
         backend_->async_connect(fd, addr, addrlen, actor);
     }
 
-    void async_recvfrom(int fd, const iovec* bufs, int buf_count,
-                        ActorId actor, uint32_t op_type) override {
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                        uint32_t op_type) override {
         backend_->async_recvfrom(fd, bufs, buf_count, actor, op_type);
     }
-    void async_sendto(int fd, const iovec* bufs, int buf_count,
-                      const sockaddr* addr, socklen_t addrlen,
-                      ActorId actor, uint32_t op_type) override {
+    void
+    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
+                 socklen_t addrlen, ActorId actor, uint32_t op_type) override {
         backend_->async_sendto(fd, bufs, buf_count, addr, addrlen, actor, op_type);
     }
 
@@ -123,7 +128,7 @@ public:
         loop_->enqueue_completion(completion);
     }
 
-private:
+  private:
     EventLoop* loop_;
     std::unique_ptr<AsyncIoBackend> backend_;
 };
@@ -135,14 +140,16 @@ EventLoop::EventLoop() {
     if (kqueue_backend->start()) {
         backend_name_ = "kqueue";
         static_cast<KqueueBackend*>(kqueue_backend.get())->set_loop(this);
-        backend_ = std::make_unique<BackendAdapter>(this, std::move(kqueue_backend));
+        backend_ =
+            std::make_unique<BackendAdapter>(this, std::move(kqueue_backend));
     } else {
         // Fall back to GCD
         auto gcd_backend = try_create_backend<GcdBackend>();
         if (gcd_backend->start()) {
             backend_name_ = "gcd";
             static_cast<GcdBackend*>(gcd_backend.get())->set_loop(this);
-            backend_ = std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
+            backend_ =
+                std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
         }
     }
 #elif defined(__linux__)
@@ -150,14 +157,16 @@ EventLoop::EventLoop() {
     auto iouring_backend = try_create_backend<IoUringBackend>();
     if (iouring_backend->start()) {
         backend_name_ = "iouring";
-        backend_ = std::make_unique<BackendAdapter>(this, std::move(iouring_backend));
+        backend_ =
+            std::make_unique<BackendAdapter>(this, std::move(iouring_backend));
     } else {
         // Fall back to epoll
         auto epoll_backend = try_create_backend<EpollBackend>();
         if (epoll_backend->start()) {
             backend_name_ = "epoll";
             static_cast<EpollBackend*>(epoll_backend.get())->set_loop(this);
-            backend_ = std::make_unique<BackendAdapter>(this, std::move(epoll_backend));
+            backend_ =
+                std::make_unique<BackendAdapter>(this, std::move(epoll_backend));
         }
     }
 #endif
@@ -252,7 +261,7 @@ uint64_t EventLoop::run_every(timer_callback callback, int interval_ms) {
         return 0;
     }
     backend_handle_to_handle_[backend_handle] = handle;
-    repeating_timers_.insert(handle);  // Mark as repeating timer
+    repeating_timers_.insert(handle); // Mark as repeating timer
     return handle;
 }
 

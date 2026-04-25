@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/sched/worker_thread.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/sched/worker_thread.hpp>
 
 namespace hpactor::sched {
 
@@ -127,7 +127,8 @@ bool WorkerThread::try_steal(WorkItem& out) {
 }
 
 void WorkerThread::thread_loop() {
-    while (!stop_requested_.load(std::memory_order_acquire) && running_.load(std::memory_order_acquire)) {
+    while (!stop_requested_.load(std::memory_order_acquire) &&
+           running_.load(std::memory_order_acquire)) {
         WorkItem item;
 
         // Try to pop from local queue first (owner pop - fast path)

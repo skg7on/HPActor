@@ -41,7 +41,8 @@ int main() {
     // Test down_msg round-trip with explicit Ipv4Endpoint fields
     {
         down_msg original;
-        original.terminated_actor.endpoint = Ipv4Endpoint{htonl(0x7F000001), htons(8080)};
+        original.terminated_actor.endpoint =
+            Ipv4Endpoint{htonl(0x7F000001), htons(8080)};
         original.terminated_actor.id = ActorId(42);
         original.terminated_actor.type = ActorType{1};
         original.terminated_actor.incarnation = 0;
@@ -65,7 +66,8 @@ int main() {
     // Test exit_msg round-trip
     {
         exit_msg original;
-        original.sender.endpoint = Ipv4Endpoint{htonl(0xC0000203), htons(9090)};  // 192.0.2.3
+        original.sender.endpoint =
+            Ipv4Endpoint{htonl(0xC0000203), htons(9090)}; // 192.0.2.3
         original.sender.id = ActorId(99);
         original.sender.type = ActorType{2};
         original.sender.incarnation = 5;
@@ -88,7 +90,8 @@ int main() {
     // Test link_msg round-trip
     {
         link_msg original;
-        original.target.endpoint = Ipv4Endpoint{htonl(0x0A000001), htons(5555)};  // 10.0.0.1
+        original.target.endpoint =
+            Ipv4Endpoint{htonl(0x0A000001), htons(5555)}; // 10.0.0.1
         original.target.id = ActorId(77);
         original.target.type = ActorType{3};
         original.target.incarnation = 10;
@@ -109,7 +112,8 @@ int main() {
     // Test unlink_msg round-trip
     {
         unlink_msg original;
-        original.target.endpoint = Ipv4Endpoint{htonl(0xC0A80101), htons(7777)};  // 192.168.1.1
+        original.target.endpoint =
+            Ipv4Endpoint{htonl(0xC0A80101), htons(7777)}; // 192.168.1.1
         original.target.id = ActorId(55);
         original.target.type = ActorType{4};
         original.target.incarnation = 20;
@@ -137,12 +141,9 @@ int main() {
         original.actor_type_name = "worker";
         original.args_type = TypeTag::User;
         original.serialized_args = {1, 2, 3, 4, 5};
-        original.supervisor_addr = ActorAddress{
-            Ipv4Endpoint{htonl(0x7F000001), htons(8080)},
-            ActorType{10},
-            ActorId{42},
-            1
-        };
+        original.supervisor_addr =
+            ActorAddress{Ipv4Endpoint{htonl(0x7F000001), htons(8080)},
+                         ActorType{10}, ActorId{42}, 1};
 
         SpawnMessageVariant mv = original;
         bytes encoded = serializer.encode_spawn(TypeTag::SpawnRequestTag, mv);
@@ -166,12 +167,9 @@ int main() {
     // Test SpawnResponse round-trip
     {
         SpawnResponse original;
-        original.actor_addr = ActorAddress{
-            Ipv4Endpoint{htonl(0xC0A801FF), htons(9999)},
-            ActorType{20},
-            ActorId{100},
-            3
-        };
+        original.actor_addr =
+            ActorAddress{Ipv4Endpoint{htonl(0xC0A801FF), htons(9999)},
+                         ActorType{20}, ActorId{100}, 3};
         original.error_code = spawn_errors::success;
 
         SpawnMessageVariant mv = original;
@@ -194,14 +192,15 @@ int main() {
     // -------------------------------------------------------------------------
     // When protobuf parse fails, decode_system returns MessageVariant{} which
     // default-constructs the first alternative (completion_msg). We verify
-    // no crash occurred and the variant is in a valid state (has a valid index).
+    // no crash occurred and the variant is in a valid state (has a valid
+    // index).
 
     // Corrupt down_msg data
     {
         bytes corrupted = {0xFF, 0xFE, 0xFD, 0xFC, 0x00};
         auto decoded = serializer.decode(TypeTag::DownMsg, corrupted);
         // Returns default-constructed MessageVariant (holds completion_msg)
-        assert(decoded.index() < 5);  // Valid system message index
+        assert(decoded.index() < 5); // Valid system message index
         // Verify fields are zero-initialized (default constructed)
         const auto* d = std::get_if<down_msg>(&decoded);
         if (d) {
@@ -210,14 +209,14 @@ int main() {
         }
         // Also check completion_msg (the default-constructed type)
         const auto* c = std::get_if<completion_msg>(&decoded);
-        assert(c != nullptr);  // Should be completion_msg
+        assert(c != nullptr); // Should be completion_msg
     }
 
     // Corrupt exit_msg data
     {
         bytes corrupted = {0x00, 0x01, 0x02, 0x03, 0x04, 0x05};
         auto decoded = serializer.decode(TypeTag::ExitMsg, corrupted);
-        assert(decoded.index() < 5);  // Valid system message index
+        assert(decoded.index() < 5); // Valid system message index
         const auto* c = std::get_if<completion_msg>(&decoded);
         assert(c != nullptr);
     }
@@ -226,7 +225,7 @@ int main() {
     {
         bytes corrupted(20, 0xAB);
         auto decoded = serializer.decode(TypeTag::LinkMsg, corrupted);
-        assert(decoded.index() < 5);  // Valid system message index
+        assert(decoded.index() < 5); // Valid system message index
         const auto* c = std::get_if<completion_msg>(&decoded);
         assert(c != nullptr);
     }
@@ -235,7 +234,7 @@ int main() {
     {
         bytes corrupted(50, 0x42);
         auto decoded = serializer.decode(TypeTag::UnlinkMsg, corrupted);
-        assert(decoded.index() < 5);  // Valid system message index
+        assert(decoded.index() < 5); // Valid system message index
         const auto* c = std::get_if<completion_msg>(&decoded);
         assert(c != nullptr);
     }
@@ -246,21 +245,23 @@ int main() {
         auto decoded = serializer.decode_spawn(TypeTag::SpawnRequestTag, corrupted);
         // Returns default-constructed SpawnMessageVariant (holds SpawnRequest)
         const auto* req = std::get_if<SpawnRequest>(&decoded);
-        assert(req != nullptr);  // Should be SpawnRequest
+        assert(req != nullptr); // Should be SpawnRequest
         assert(req->actor_type_name.empty());
     }
 
     // Corrupt spawn response data
     {
         bytes corrupted = {0x01, 0x02, 0x03};
-        auto decoded = serializer.decode_spawn(TypeTag::SpawnResponseTag, corrupted);
-        // decode_spawn returns default-constructed SpawnMessageVariant on parse failure
-        // SpawnMessageVariant = std::variant<SpawnRequest, SpawnResponse>
-        // Default construction yields index 0 (SpawnRequest), not SpawnResponse
-        // So we check both possibilities - parse failure can return either type
+        auto decoded =
+            serializer.decode_spawn(TypeTag::SpawnResponseTag, corrupted);
+        // decode_spawn returns default-constructed SpawnMessageVariant on parse
+        // failure SpawnMessageVariant = std::variant<SpawnRequest,
+        // SpawnResponse> Default construction yields index 0 (SpawnRequest),
+        // not SpawnResponse So we check both possibilities - parse failure can
+        // return either type
         bool is_request = std::holds_alternative<SpawnRequest>(decoded);
         bool is_response = std::holds_alternative<SpawnResponse>(decoded);
-        assert(is_request || is_response);  // Must be one of them
+        assert(is_request || is_response); // Must be one of them
         if (is_response) {
             const auto& resp = std::get<SpawnResponse>(decoded);
             assert(resp.actor_addr.id.value() == 0u);
@@ -274,7 +275,7 @@ int main() {
     {
         bytes data = {0x00, 0x01, 0x02};
         auto decoded = serializer.decode(TypeTag::Invalid, data);
-        assert(decoded.index() < 5);  // Valid system message index
+        assert(decoded.index() < 5); // Valid system message index
         const auto* c = std::get_if<completion_msg>(&decoded);
         assert(c != nullptr);
     }

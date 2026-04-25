@@ -69,7 +69,9 @@ class Actor {
     }
 
     // Access the underlying actor (for internal use)
-    std::shared_ptr<AbstractActor> get() const { return actor_; }
+    std::shared_ptr<AbstractActor> get() const {
+        return actor_;
+    }
 
   private:
     std::shared_ptr<AbstractActor> actor_;
@@ -83,7 +85,7 @@ class Actor {
 // appropriately based on the underlying reference type.
 // -----------------------------------------------------------------------------
 class ActorRef {
-public:
+  public:
     // Default constructor creates an invalid reference
     ActorRef() = default;
 
@@ -122,8 +124,8 @@ public:
     }
 
     // Send a message to this actor
-    // Note: For user-defined message types, use system().deliver_local() directly
-    // until serialization is implemented in Phase 3
+    // Note: For user-defined message types, use system().deliver_local()
+    // directly until serialization is implemented in Phase 3
     void send(const ActorAddress& target, MessageVariant msg);
 
     // Access underlying Actor (for internal use)
@@ -142,7 +144,7 @@ public:
         return nullptr;
     }
 
-private:
+  private:
     std::variant<Actor, ActorProxy> ref_;
 };
 

@@ -16,8 +16,8 @@
 
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/types/types.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -48,7 +48,7 @@ struct AcceptorInfo {
 // -----------------------------------------------------------------------------
 struct StaticRouteConfig {
     CommunicationEndpoint endpoint;
-    std::string address;     // IP or DNS hostname (used if endpoint is empty)
+    std::string address; // IP or DNS hostname (used if endpoint is empty)
     uint16_t port = 0;
 };
 
@@ -67,19 +67,19 @@ struct RegistrarConfig {
 // -----------------------------------------------------------------------------
 struct NodeEndpoint {
     CommunicationEndpoint endpoint;
-    std::string host;        // Resolved IP or hostname
+    std::string host; // Resolved IP or hostname
     uint16_t tcp_port = 0;
     bool is_static_route = false;
     std::vector<AcceptorInfo> acceptors;
     std::chrono::steady_clock::time_point last_seen;
-    std::string uds_path;     // NEW: path to UDS socket, empty if not available
+    std::string uds_path; // NEW: path to UDS socket, empty if not available
 };
 
 // -----------------------------------------------------------------------------
 // HostResolver - hostname to IP resolution with caching
 // -----------------------------------------------------------------------------
 class HostResolver {
-public:
+  public:
     HostResolver() = default;
 
     // Resolve hostname to IP address (blocking)
@@ -99,7 +99,7 @@ public:
     // Clear expired entries
     void clear_expired();
 
-private:
+  private:
     struct CacheEntry {
         std::string ip;
         std::chrono::steady_clock::time_point expires_at;
@@ -113,7 +113,7 @@ private:
 // NodeRegistry - registry of known nodes
 // -----------------------------------------------------------------------------
 class NodeRegistry {
-public:
+  public:
     explicit NodeRegistry(const RegistrarConfig& config);
 
     // Add or update an endpoint
@@ -134,7 +134,7 @@ public:
     // Remove expired entries
     size_t remove_expired();
 
-private:
+  private:
     RegistrarConfig config_;
     std::unordered_map<CommunicationEndpoint, NodeEndpoint> endpoints_;
     mutable std::mutex mutex_;
@@ -157,7 +157,7 @@ enum class RegistrarMessageType : uint8_t {
 };
 
 // Protocol constants
-constexpr uint32_t RegistrarMagic = 0x48504143;  // "HPAC"
+constexpr uint32_t RegistrarMagic = 0x48504143; // "HPAC"
 constexpr uint8_t RegistrarVersion = 0x01;
 constexpr size_t RegistrarHeaderSize = 12;
 
@@ -183,7 +183,7 @@ struct NodeProbePayload {
 // -----------------------------------------------------------------------------
 // TCP Message Framing for RegistrarServer
 // -----------------------------------------------------------------------------
-constexpr uint32_t TcpRegistrarMagic = 0x48505243;  // "HPRC"
+constexpr uint32_t TcpRegistrarMagic = 0x48505243; // "HPRC"
 constexpr uint8_t TcpRegistrarVersion = 0x01;
 constexpr size_t TcpHeaderSize = 10;
 
@@ -216,23 +216,22 @@ class RegistrarConnection;
 using RegistrarConnectionPtr = std::shared_ptr<RegistrarConnection>;
 
 // RegistrarConnection - async TCP connection for registrar protocol
-class RegistrarConnection : public std::enable_shared_from_this<RegistrarConnection> {
+class RegistrarConnection
+    : public std::enable_shared_from_this<RegistrarConnection> {
     friend class RegistrarServer;
 
-public:
+  public:
     using message_handler = std::function<void(TcpMessageType, const bytes&)>;
     using disconnect_handler = std::function<void()>;
     using send_complete_handler = std::function<void(int result)>;
 
     // Create from accepted server socket
-    static RegistrarConnectionPtr accepted(int fd,
-                                          CommunicationEndpoint remote_endpoint,
-                                          EventLoop* loop);
+    static RegistrarConnectionPtr
+    accepted(int fd, CommunicationEndpoint remote_endpoint, EventLoop* loop);
 
     // Create as client connection
-    static RegistrarConnectionPtr connecting(int fd,
-                                           CommunicationEndpoint remote_endpoint,
-                                           EventLoop* loop);
+    static RegistrarConnectionPtr
+    connecting(int fd, CommunicationEndpoint remote_endpoint, EventLoop* loop);
 
     ~RegistrarConnection();
 
@@ -248,18 +247,20 @@ public:
     void close();
 
     // Get remote endpoint
-    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
+    CommunicationEndpoint remote_endpoint() const {
+        return remote_endpoint_;
+    }
 
     // Get fd
-    int fd() const { return fd_; }
+    int fd() const {
+        return fd_;
+    }
 
-private:
-    enum class ReadState {
-        ReadingHeader,
-        ReadingPayload
-    };
+  private:
+    enum class ReadState { ReadingHeader, ReadingPayload };
 
-    RegistrarConnection(CommunicationEndpoint remote_endpoint, EventLoop* loop, int fd);
+    RegistrarConnection(CommunicationEndpoint remote_endpoint, EventLoop* loop,
+                        int fd);
 
     void register_with_loop();
     void handle_read_event();
@@ -291,9 +292,10 @@ private:
 // RegistrarServer - TCP-based authoritative registrar
 // -----------------------------------------------------------------------------
 class RegistrarServer {
-public:
-    RegistrarServer(const RegistrarConfig& config, CommunicationEndpoint local_endpoint,
-                   EventLoop* loop = nullptr);
+  public:
+    RegistrarServer(const RegistrarConfig& config,
+                    CommunicationEndpoint local_endpoint,
+                    EventLoop* loop = nullptr);
     ~RegistrarServer();
 
     // Non-copyable
@@ -305,20 +307,26 @@ public:
     void stop();
 
     // Get registry for reading
-    NodeRegistry* registry() { return &registry_; }
+    NodeRegistry* registry() {
+        return &registry_;
+    }
 
     // Set event loop for async I/O (can be changed before start())
-    void set_event_loop(EventLoop* loop) { loop_ = loop; }
+    void set_event_loop(EventLoop* loop) {
+        loop_ = loop;
+    }
 
     // Handle incoming TCP connection
     void handle_accept(int client_fd, CommunicationEndpoint remote_endpoint);
 
     // Broadcast event to all connected clients
-    void broadcast_node_joined(CommunicationEndpoint endpoint, const NodeEndpoint& ep);
+    void
+    broadcast_node_joined(CommunicationEndpoint endpoint, const NodeEndpoint& ep);
     void broadcast_node_left(CommunicationEndpoint endpoint);
 
-private:
-    void handle_tcp_message(RegistrarConnectionPtr conn, TcpMessageType type, const bytes& data);
+  private:
+    void handle_tcp_message(RegistrarConnectionPtr conn, TcpMessageType type,
+                            const bytes& data);
     void handle_disconnect(RegistrarConnectionPtr conn);
 
     RegistrarConfig config_;
@@ -344,9 +352,9 @@ private:
 // UdpRegistrar - Dual-mode registrar (server or client)
 // -----------------------------------------------------------------------------
 class UdpRegistrar {
-public:
-    UdpRegistrar(const RegistrarConfig& config, CommunicationEndpoint local_endpoint,
-                EventLoop* loop = nullptr);
+  public:
+    UdpRegistrar(const RegistrarConfig& config,
+                 CommunicationEndpoint local_endpoint, EventLoop* loop = nullptr);
     ~UdpRegistrar();
 
     // Non-copyable
@@ -354,7 +362,9 @@ public:
     UdpRegistrar& operator=(const UdpRegistrar&) = delete;
 
     // Set event loop for async I/O (can be changed before start())
-    void set_event_loop(EventLoop* loop) { loop_ = loop; }
+    void set_event_loop(EventLoop* loop) {
+        loop_ = loop;
+    }
 
     // Start listening - determines server vs client mode based on bind result
     void start();
@@ -371,16 +381,18 @@ public:
     void set_node_callback(node_callback cb);
 
     // Handle incoming UDP packet (for resolution)
-    void handle_udp_packet(const bytes& data, const std::string& from_host, uint16_t from_port);
+    void handle_udp_packet(const bytes& data, const std::string& from_host,
+                           uint16_t from_port);
 
-private:
+  private:
     void start_server_mode();
     void start_client_mode();
     void start_server_mode_async();
     void start_client_mode_async();
     void issue_async_recvfrom();
     void handle_udp_read_ready();
-    void handle_udp_recv_completion(const bytes& data, const std::string& from_host, uint16_t from_port);
+    void handle_udp_recv_completion(const bytes& data, const std::string& from_host,
+                                    uint16_t from_port);
     void send_udp_response(const bytes& data, const struct sockaddr_in& dest);
     void failover();
 
@@ -411,10 +423,11 @@ private:
 // RegistrarClient - TCP client for connecting to RegistrarServer
 // -----------------------------------------------------------------------------
 class RegistrarClient {
-public:
-    RegistrarClient(const RegistrarConfig& config, CommunicationEndpoint local_endpoint,
-                   CommunicationEndpoint server_endpoint, NodeRegistry* shared_registry,
-                   EventLoop* loop = nullptr);
+  public:
+    RegistrarClient(const RegistrarConfig& config,
+                    CommunicationEndpoint local_endpoint,
+                    CommunicationEndpoint server_endpoint,
+                    NodeRegistry* shared_registry, EventLoop* loop = nullptr);
     ~RegistrarClient();
 
     // Non-copyable
@@ -425,7 +438,9 @@ public:
     void stop();
 
     // Set event loop for async I/O (can be changed before start())
-    void set_event_loop(EventLoop* loop) { loop_ = loop; }
+    void set_event_loop(EventLoop* loop) {
+        loop_ = loop;
+    }
 
     // Set acceptors for registration announcement
     void set_acceptors(std::vector<AcceptorInfo> acceptors);
@@ -434,9 +449,11 @@ public:
     void reconnect();
 
     // Check if connected
-    bool is_connected() const { return connected_.load(); }
+    bool is_connected() const {
+        return connected_.load();
+    }
 
-private:
+  private:
     void attempt_connection();
     void send_registration();
 
@@ -447,7 +464,7 @@ private:
     RegistrarConfig config_;
     CommunicationEndpoint local_endpoint_;
     CommunicationEndpoint server_endpoint_;
-    NodeRegistry* shared_registry_;  // Not owned
+    NodeRegistry* shared_registry_; // Not owned
     EventLoop* loop_ = nullptr;
 
     RegistrarConnectionPtr server_connection_;

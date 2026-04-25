@@ -16,8 +16,8 @@
 
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/types/types.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -48,14 +48,13 @@ struct PendingCall {
 // -----------------------------------------------------------------------------
 // RpcFuture - wrapper around std::future with timeout
 // -----------------------------------------------------------------------------
-template<typename T>
-class RpcFuture {
-public:
+template <typename T> class RpcFuture {
+  public:
     RpcFuture(std::future<result<T>> inner, std::chrono::milliseconds timeout);
 
-    result<T> get();  // blocks until result available or timeout
+    result<T> get(); // blocks until result available or timeout
 
-private:
+  private:
     std::future<result<T>> inner_;
     std::chrono::milliseconds timeout_;
 };
@@ -64,14 +63,14 @@ private:
 // RpcChannel - manages RPC calls with retry and timeout
 // -----------------------------------------------------------------------------
 class RpcChannel {
-public:
+  public:
     explicit RpcChannel(net::Transport* transport, sched::IScheduler* scheduler);
 
     // Raw call - takes pre-encoded bytes, returns raw bytes response
     // Callers handle their own serialization/deserialization
-    RpcFuture<bytes> call_raw(const ActorAddress& target,
-                             const bytes& encoded_request,
-                             std::chrono::milliseconds timeout_ms);
+    RpcFuture<bytes>
+    call_raw(const ActorAddress& target, const bytes& encoded_request,
+             std::chrono::milliseconds timeout_ms);
 
     // Cancel all pending calls
     void abort();
@@ -79,7 +78,7 @@ public:
     // Handle response from transport layer
     void on_response(MessageId msg_id, const bytes& encoded_response);
 
-private:
+  private:
     void on_timeout(MessageId msg_id);
     void schedule_retry(PendingCall* call);
     void send_request(PendingCall& call, bool is_retry);

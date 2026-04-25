@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/supervision/supervision.hpp>
 #include <cassert>
+#include <hpactor/supervision/supervision.hpp>
 
 void test_supervision_directive_values() {
     assert(static_cast<int>(hpactor::SupervisionDirective::Restart) == 0);
@@ -23,11 +23,8 @@ void test_supervision_directive_values() {
 
 void test_child_failure_struct() {
     hpactor::ActorId id(42);
-    hpactor::ChildFailure failure{
-        id,
-        hpactor::error{1, "test error"},
-        hpactor::SupervisionDirective::Restart
-    };
+    hpactor::ChildFailure failure{id, hpactor::error{1, "test error"},
+                                  hpactor::SupervisionDirective::Restart};
     assert(failure.child_id.value() == 42);
     assert(failure.reason.code() == 1);
     assert(failure.directive == hpactor::SupervisionDirective::Restart);

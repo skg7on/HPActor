@@ -49,7 +49,8 @@ template <typename T> class Message {
         return *this;
     }
 
-    // Perfect forwarding constructor - handles payload types that are not Message
+    // Perfect forwarding constructor - handles payload types that are not
+    // Message
     template <typename U>
     explicit Message(U&& payload) : payload_(std::forward<U>(payload)) {}
 

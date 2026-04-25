@@ -30,11 +30,11 @@
 //
 // =============================================================================
 
+#include <hpactor/actor/message.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
 #include <hpactor/actor_context.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/behavior.hpp>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <iostream>
 #include <string>
 
@@ -60,10 +60,10 @@
 // -----------------------------------------------------------------------------
 
 struct CounterState {
-    int value = 0;         // Current counter value
-    int max_value = 100;   // Upper bound (prevent overflow)
-    int min_value = 0;     // Lower bound
-    std::string name;      // Optional name for debugging
+    int value = 0;       // Current counter value
+    int max_value = 100; // Upper bound (prevent overflow)
+    int min_value = 0;   // Lower bound
+    std::string name;    // Optional name for debugging
 };
 
 // -----------------------------------------------------------------------------
@@ -71,11 +71,11 @@ struct CounterState {
 // -----------------------------------------------------------------------------
 
 struct IncrementMessage {
-    int delta = 1;  // Amount to increment (default: 1)
+    int delta = 1; // Amount to increment (default: 1)
 };
 
 struct DecrementMessage {
-    int delta = 1;  // Amount to decrement (default: 1)
+    int delta = 1; // Amount to decrement (default: 1)
 };
 
 struct ResetMessage {};
@@ -112,8 +112,9 @@ struct SetBoundsMessage {
 //
 // -----------------------------------------------------------------------------
 
-// Note: StatefulActor doesn't properly inherit constructors from EventBasedActor.
-// This is a known issue in the framework. Once fixed, the constructor would be:
+// Note: StatefulActor doesn't properly inherit constructors from
+// EventBasedActor. This is a known issue in the framework. Once fixed, the
+// constructor would be:
 //
 //   CounterActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
 //       : hpactor::StatefulActor<CounterState>(ctx, sys) {
@@ -127,15 +128,18 @@ struct SetBoundsMessage {
 // For now, the pattern is demonstrated without direct instantiation.
 
 class CounterActor /*: public hpactor::StatefulActor<CounterState>*/ {
-  // protected:
-  //   hpactor::Behavior make_behavior() override {
-  //       return hpactor::Behavior{[this](hpactor::MessageVariant&& /*msg*/) {
-  //           // In a real implementation, would use std::visit to handle messages
-  //           // and modify state via state().member = value
-  //           std::cout << "CounterActor [" << state().name << "] handling message"
-  //                     << std::endl;
-  //       }};
-  //   }
+    // protected:
+    //   hpactor::Behavior make_behavior() override {
+    //       return hpactor::Behavior{[this](hpactor::MessageVariant&& /*msg*/)
+    //       {
+    //           // In a real implementation, would use std::visit to handle
+    //           messages
+    //           // and modify state via state().member = value
+    //           std::cout << "CounterActor [" << state().name << "] handling
+    //           message"
+    //                     << std::endl;
+    //       }};
+    //   }
 
   public:
     CounterActor(/*hpactor::ActorContext* ctx, hpactor::ActorSystem& sys*/) {
@@ -149,15 +153,31 @@ class CounterActor /*: public hpactor::StatefulActor<CounterState>*/ {
     }
 
     // Demo state accessors (would be state() in real implementation)
-    int value() const { return value_; }
-    int max_value() const { return max_value_; }
-    int min_value() const { return min_value_; }
-    const std::string& name() const { return name_; }
+    int value() const {
+        return value_;
+    }
+    int max_value() const {
+        return max_value_;
+    }
+    int min_value() const {
+        return min_value_;
+    }
+    const std::string& name() const {
+        return name_;
+    }
 
-    void set_value(int v) { value_ = v; }
-    void increment(int delta) { value_ += delta; }
-    void decrement(int delta) { value_ -= delta; }
-    void reset() { value_ = 0; }
+    void set_value(int v) {
+        value_ = v;
+    }
+    void increment(int delta) {
+        value_ += delta;
+    }
+    void decrement(int delta) {
+        value_ -= delta;
+    }
+    void reset() {
+        value_ = 0;
+    }
 
   private:
     // These would be part of CounterState in real StatefulActor
@@ -198,20 +218,32 @@ class GaugeActor {
         max_value_ = 100.0;
     }
 
-    double value() const { return value_; }
-    double max_value() const { return max_value_; }
-    const std::string& unit() const { return unit_; }
+    double value() const {
+        return value_;
+    }
+    double max_value() const {
+        return max_value_;
+    }
+    const std::string& unit() const {
+        return unit_;
+    }
 
-    void set_value(double v) { value_ = v; }
+    void set_value(double v) {
+        value_ = v;
+    }
     void increment(double delta) {
         value_ += delta;
-        if (value_ > max_value_) value_ = max_value_;
+        if (value_ > max_value_)
+            value_ = max_value_;
     }
     void decrement(double delta) {
         value_ -= delta;
-        if (value_ < 0) value_ = 0;
+        if (value_ < 0)
+            value_ = 0;
     }
-    void reset() { value_ = 0.0; }
+    void reset() {
+        value_ = 0.0;
+    }
 
   private:
     std::string unit_;
@@ -226,10 +258,7 @@ class GaugeActor {
 int main() {
     std::cout << "=== HPActor Example 02: Stateful Actor ===" << std::endl;
 
-    hpactor::Config config{
-        .scheduler_threads = 4,
-        .max_queue_depth = 1024
-    };
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
     std::cout << "\nNOTE: Actor spawning and message passing are not yet "
@@ -238,7 +267,8 @@ int main() {
               << std::endl;
 
     std::cout << "StatefulActor pattern:" << std::endl;
-    std::cout << "  1. Define a state struct (CounterState, GaugeState)" << std::endl;
+    std::cout << "  1. Define a state struct (CounterState, GaugeState)"
+              << std::endl;
     std::cout << "  2. Subclass StatefulActor<YourStateStruct>" << std::endl;
     std::cout << "  3. Access state via state() and state() const" << std::endl;
     std::cout << "  4. State persists across message handlers" << std::endl;
@@ -260,11 +290,13 @@ int main() {
     //
     //   // With bounds
     //   system.send(counter.address(), SetBoundsMessage{0, 100});
-    //   system.send(counter.address(), IncrementMessage{200}); // clamped to 100
+    //   system.send(counter.address(), IncrementMessage{200}); // clamped to
+    //   100
 
     std::cout << "Key API:" << std::endl;
     std::cout << "  StatefulActor<StateStruct>::state() -> T&" << std::endl;
-    std::cout << "  StatefulActor<StateStruct>::state() const -> const T&" << std::endl;
+    std::cout << "  StatefulActor<StateStruct>::state() const -> const T&"
+              << std::endl;
     std::cout << "  state().member  // Direct access to state fields" << std::endl;
 
     return 0;

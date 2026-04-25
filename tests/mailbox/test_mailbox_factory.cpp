@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <cassert>
-#include <hpactor/core/mailbox.hpp>
 #include <hpactor/actor/message.hpp>
+#include <hpactor/core/mailbox.hpp>
 #include <hpactor/core/mutex_mailbox.hpp>
 
 struct SimpleMsg {};

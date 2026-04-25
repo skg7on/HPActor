@@ -15,10 +15,10 @@
 #include <hpactor/net/iouring_backend.hpp>
 
 #if defined(__linux__)
-#include <liburing.h>
-#include <sys/socket.h>
-#include <sys/uio.h>
-#include <unistd.h>
+#    include <liburing.h>
+#    include <sys/socket.h>
+#    include <sys/uio.h>
+#    include <unistd.h>
 #endif
 
 namespace hpactor {
@@ -96,24 +96,23 @@ bool IoUringBackend::unregister_buffer(int buffer_id) {
     return false;
 }
 
-void IoUringBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                      ActorId actor, uint32_t op_type) {
+void IoUringBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
+                                      size_t len, ActorId actor, uint32_t op_type) {
     auto [buf_addr, buf_len] = registered_buffers_[buffer_id];
     struct io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
-    io_uring_prep_write_fixed(sqe, fd,
-                              static_cast<const char*>(buf_addr) + offset,
+    io_uring_prep_write_fixed(sqe, fd, static_cast<const char*>(buf_addr) + offset,
                               len, 0, buffer_id);
     sqe->user_data = encode_user_data(fd, actor, op_type);
     pending_sqes_.push_back(sqe);
 }
 
-void IoUringBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                      ActorId actor, uint32_t op_type) {
+void IoUringBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
+                                      size_t len, ActorId actor, uint32_t op_type) {
     auto [buf_addr, buf_len] = registered_buffers_[buffer_id];
     struct io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
-    io_uring_prep_read_fixed(sqe, fd,
-                             static_cast<char*>(const_cast<void*>(buf_addr)) + offset,
-                             len, 0, buffer_id);
+    io_uring_prep_read_fixed(
+        sqe, fd, static_cast<char*>(const_cast<void*>(buf_addr)) + offset, len,
+        0, buffer_id);
     sqe->user_data = encode_user_data(fd, actor, op_type);
     pending_sqes_.push_back(sqe);
 }
@@ -121,15 +120,17 @@ void IoUringBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size
 void IoUringBackend::async_accept(int fd, ActorId actor) {
     struct io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
     io_uring_prep_accept(sqe, fd, nullptr, nullptr, 0);
-    sqe->user_data = encode_user_data(fd, actor, static_cast<uint32_t>(OpType::Accept));
+    sqe->user_data =
+        encode_user_data(fd, actor, static_cast<uint32_t>(OpType::Accept));
     pending_sqes_.push_back(sqe);
 }
 
-void IoUringBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                                   ActorId actor) {
+void IoUringBackend::async_connect(int fd, const sockaddr* addr,
+                                   socklen_t addrlen, ActorId actor) {
     struct io_uring_sqe* sqe = io_uring_get_sqe(&ring_);
     io_uring_prep_connect(sqe, fd, addr, addrlen);
-    sqe->user_data = encode_user_data(fd, actor, static_cast<uint32_t>(OpType::Connect));
+    sqe->user_data =
+        encode_user_data(fd, actor, static_cast<uint32_t>(OpType::Connect));
     pending_sqes_.push_back(sqe);
 }
 
@@ -150,7 +151,7 @@ void IoUringBackend::async_recv(int fd, const iovec* bufs, int buf_count,
 }
 
 void IoUringBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
-                                     ActorId actor, uint32_t op_type) {
+                                    ActorId actor, uint32_t op_type) {
     // Build msghdr from iovec array
     struct msghdr msg{};
     msg.msg_iov = const_cast<struct iovec*>(bufs);
@@ -185,15 +186,16 @@ uint64_t IoUringBackend::run_after(ActorId actor, int delay_ms) {
     ts.tv_sec = delay_ms / 1000;
     ts.tv_nsec = (delay_ms % 1000) * 1000000;
     io_uring_prep_timeout(sqe, &ts, 0, 0);
-    sqe->user_data = encode_user_data(-1, actor, static_cast<uint32_t>(OpType::TimerFired));
+    sqe->user_data =
+        encode_user_data(-1, actor, static_cast<uint32_t>(OpType::TimerFired));
     pending_sqes_.push_back(sqe);
     timer_actors_[handle] = actor;
     return handle;
 }
 
 uint64_t IoUringBackend::run_every(ActorId actor, int interval_ms) {
-    // io_uring doesn't have native repeating timers, so treat as repeated run_after
-    // For simplicity, just treat as a one-shot timer
+    // io_uring doesn't have native repeating timers, so treat as repeated
+    // run_after For simplicity, just treat as a one-shot timer
     (void)interval_ms;
     return run_after(actor, interval_ms);
 }
@@ -266,7 +268,8 @@ uint64_t IoUringBackend::encode_user_data(int fd, ActorId actor, uint32_t op_typ
            ((static_cast<uint64_t>(op_type) & 0xFFULL) << 56);
 }
 
-void IoUringBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor, uint32_t& op_type) {
+void IoUringBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor,
+                                      uint32_t& op_type) {
     fd = static_cast<int>(ud & 0xFFFFFFFFULL);
     actor = ActorId(static_cast<uint32_t>((ud >> 32) & 0xFFFFULL));
     op_type = static_cast<uint32_t>((ud >> 56) & 0xFFULL);
@@ -319,8 +322,8 @@ bool IoUringBackend::unregister_buffer(int buffer_id) {
     return false;
 }
 
-void IoUringBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                      ActorId actor, uint32_t op_type) {
+void IoUringBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
+                                      size_t len, ActorId actor, uint32_t op_type) {
     (void)fd;
     (void)buffer_id;
     (void)offset;
@@ -329,8 +332,8 @@ void IoUringBackend::async_send_fixed(int fd, int buffer_id, size_t offset, size
     (void)op_type;
 }
 
-void IoUringBackend::async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                                      ActorId actor, uint32_t op_type) {
+void IoUringBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
+                                      size_t len, ActorId actor, uint32_t op_type) {
     (void)fd;
     (void)buffer_id;
     (void)offset;
@@ -344,8 +347,8 @@ void IoUringBackend::async_accept(int fd, ActorId actor) {
     (void)actor;
 }
 
-void IoUringBackend::async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                                   ActorId actor) {
+void IoUringBackend::async_connect(int fd, const sockaddr* addr,
+                                   socklen_t addrlen, ActorId actor) {
     (void)fd;
     (void)addr;
     (void)addrlen;
@@ -371,7 +374,7 @@ void IoUringBackend::async_recv(int fd, const iovec* bufs, int buf_count,
 }
 
 void IoUringBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
-                                     ActorId actor, uint32_t op_type) {
+                                    ActorId actor, uint32_t op_type) {
     (void)fd;
     (void)bufs;
     (void)buf_count;
@@ -412,8 +415,7 @@ int IoUringBackend::wait(int timeout_ms) {
     return 0;
 }
 
-void IoUringBackend::process_completions() {
-}
+void IoUringBackend::process_completions() {}
 
 void IoUringBackend::deliver_completion(OpCompletion completion) {
     (void)completion;
@@ -425,7 +427,8 @@ uint64_t IoUringBackend::encode_user_data(int fd, ActorId actor, uint32_t op_typ
            ((static_cast<uint64_t>(op_type) & 0xFFULL) << 56);
 }
 
-void IoUringBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor, uint32_t& op_type) {
+void IoUringBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor,
+                                      uint32_t& op_type) {
     fd = static_cast<int>(ud & 0xFFFFFFFFULL);
     actor = ActorId(static_cast<uint32_t>((ud >> 32) & 0xFFFFULL));
     op_type = static_cast<uint32_t>((ud >> 56) & 0xFFULL);

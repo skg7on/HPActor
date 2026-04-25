@@ -17,11 +17,11 @@
 #include <hpactor/net/event_loop.hpp>
 
 #include <cstring>
+#include <openssl/aes.h>
+#include <openssl/evp.h>
+#include <openssl/rand.h>
 #include <sys/socket.h>
 #include <unistd.h>
-#include <openssl/evp.h>
-#include <openssl/aes.h>
-#include <openssl/rand.h>
 
 namespace hpactor {
 
@@ -54,7 +54,8 @@ bytes parse_tls_payload(const bytes& data, size_t& consumed) {
     if (data.size() < total_len) {
         return bytes{};
     }
-    bytes payload(data.begin() + static_cast<long>(4), data.begin() + static_cast<long>(total_len));
+    bytes payload(data.begin() + static_cast<long>(4),
+                  data.begin() + static_cast<long>(total_len));
     consumed = total_len;
     return payload;
 }
@@ -62,14 +63,9 @@ bytes parse_tls_payload(const bytes& data, size_t& consumed) {
 } // anonymous namespace
 
 TlsConnection::TlsConnection(CommunicationEndpoint remote_endpoint,
-                             TlsContext* tls_context,
-                             EventLoop* loop,
-                             int socket_fd)
-    : Connection(remote_endpoint),
-      remote_endpoint_(remote_endpoint),
-      tls_context_(tls_context),
-      loop_(loop),
-      fd_(socket_fd) {
+                             TlsContext* tls_context, EventLoop* loop, int socket_fd)
+    : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
+      tls_context_(tls_context), loop_(loop), fd_(socket_fd) {
     // Generate random client nonce
     RAND_bytes(client_nonce_.data(), static_cast<int>(kNonceSize));
 }
@@ -78,9 +74,9 @@ TlsConnection::~TlsConnection() {
     close();
 }
 
-TlsConnectionPtr TlsConnection::create_client(CommunicationEndpoint remote_endpoint,
-                                                 TlsContext* tls_context,
-                                                 EventLoop* loop) {
+TlsConnectionPtr
+TlsConnection::create_client(CommunicationEndpoint remote_endpoint,
+                             TlsContext* tls_context, EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(
         new TlsConnection(remote_endpoint, tls_context, loop, -1));
     conn->set_state(ConnectionState::Connecting);
@@ -88,10 +84,9 @@ TlsConnectionPtr TlsConnection::create_client(CommunicationEndpoint remote_endpo
     return conn;
 }
 
-TlsConnectionPtr TlsConnection::create_server(int socket_fd,
-                                                CommunicationEndpoint remote_endpoint,
-                                                TlsContext* tls_context,
-                                                EventLoop* loop) {
+TlsConnectionPtr
+TlsConnection::create_server(int socket_fd, CommunicationEndpoint remote_endpoint,
+                             TlsContext* tls_context, EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(
         new TlsConnection(remote_endpoint, tls_context, loop, socket_fd));
     conn->set_state(ConnectionState::Connected);
@@ -100,7 +95,8 @@ TlsConnectionPtr TlsConnection::create_server(int socket_fd,
     conn->set_handshake_state(TlsHandshakeState::WaitingForServerHello);
     conn->set_session_state(TlsSessionState::Handshake);
 
-    // Register fd with event loop for read events (for receiving handshake messages)
+    // Register fd with event loop for read events (for receiving handshake
+    // messages)
     if (loop && socket_fd >= 0) {
         loop->add_fd(socket_fd, EventLoop::Event::Read);
     }
@@ -116,7 +112,8 @@ void TlsConnection::set_frame_handler(frame_handler handler) {
     frame_handler_ = std::move(handler);
 }
 
-void TlsConnection::set_error_handler(std::function<void(ConnectionPtr, const error&)> handler) {
+void TlsConnection::set_error_handler(
+    std::function<void(ConnectionPtr, const error&)> handler) {
     error_handler_ = std::move(handler);
 }
 
@@ -133,7 +130,8 @@ void TlsConnection::set_fd(int fd) {
 }
 
 void TlsConnection::start_client_handshake() {
-    if (is_server_) return;
+    if (is_server_)
+        return;
 
     // Generate client nonce if not already done
     bool all_zero = true;
@@ -162,9 +160,10 @@ void TlsConnection::handle_read(const bytes& data) {
         size_t consumed = 0;
         bytes payload = parse_tls_payload(read_buffer_, consumed);
         if (consumed == 0) {
-            break;  // Wait for more data
+            break; // Wait for more data
         }
-        read_buffer_.erase(read_buffer_.begin(), read_buffer_.begin() + static_cast<long>(consumed));
+        read_buffer_.erase(read_buffer_.begin(),
+                           read_buffer_.begin() + static_cast<long>(consumed));
 
         if (session_state_ == TlsSessionState::Encrypted) {
             // Decrypt and deliver to frame handler
@@ -275,8 +274,7 @@ bytes TlsConnection::build_certificate_verify(const Nonce& challenge) {
 bytes TlsConnection::build_finished() {
     bytes payload;
     // Compute verify_data using PRF
-    bytes verify_data = prf_sha256(master_secret_, "finished",
-                                   handshake_messages_);
+    bytes verify_data = prf_sha256(master_secret_, "finished", handshake_messages_);
     payload.insert(payload.end(), verify_data.begin(), verify_data.end());
 
     return format_tls_message(TlsMessageType::Finished, payload);
@@ -365,7 +363,8 @@ void TlsConnection::handle_finished(const bytes& data) {
 
     // Notify ready handler
     if (ready_handler_) {
-        TlsConnectionPtr self = std::enable_shared_from_this<TlsConnection>::shared_from_this();
+        TlsConnectionPtr self =
+            std::enable_shared_from_this<TlsConnection>::shared_from_this();
         ready_handler_(self);
     }
 }
@@ -391,15 +390,13 @@ namespace {
 
 // HMAC-SHA256 using EVP_Q_mac (OpenSSL 3.0 compatible)
 bytes hmac_sha256(const bytes& key, const bytes& data) {
-    constexpr size_t hash_size = 32;  // SHA256 output size
+    constexpr size_t hash_size = 32; // SHA256 output size
     bytes out(hash_size, 0);
     size_t out_len = hash_size;
 
     // Use EVP_Q_mac with HMAC algorithm and SHA256 digest
-    EVP_Q_mac(nullptr, "HMAC", nullptr, "SHA256", nullptr,
-               key.data(), key.size(),
-               data.data(), data.size(),
-               out.data(), out.size(), &out_len);
+    EVP_Q_mac(nullptr, "HMAC", nullptr, "SHA256", nullptr, key.data(), key.size(),
+              data.data(), data.size(), out.data(), out.size(), &out_len);
 
     out.resize(out_len);
     return out;
@@ -407,8 +404,7 @@ bytes hmac_sha256(const bytes& key, const bytes& data) {
 
 } // anonymous namespace
 
-bytes TlsConnection::prf_sha256(const bytes& secret,
-                                const char* label,
+bytes TlsConnection::prf_sha256(const bytes& secret, const char* label,
                                 const bytes& data) {
     bytes result;
     bytes label_seed;
@@ -417,13 +413,15 @@ bytes TlsConnection::prf_sha256(const bytes& secret,
 
     bytes a = label_seed;
 
-    while (result.size() < 48) {  // Generate enough for master_secret + key expansion
+    while (result.size() < 48) { // Generate enough for master_secret + key
+                                 // expansion
         // A(i) = HMAC(secret, A(i-1))
         a = hmac_sha256(secret, a);
 
         // HMAC(secret, A(i) + label_seed)
         bytes a_label_seed = a;
-        a_label_seed.insert(a_label_seed.end(), label_seed.begin(), label_seed.end());
+        a_label_seed.insert(a_label_seed.end(), label_seed.begin(),
+                            label_seed.end());
         bytes h = hmac_sha256(secret, a_label_seed);
 
         result.insert(result.end(), h.begin(), h.end());
@@ -434,7 +432,8 @@ bytes TlsConnection::prf_sha256(const bytes& secret,
 bytes TlsConnection::encrypt_aes(const bytes& plaintext) {
     bytes ciphertext;
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) return ciphertext;
+    if (!ctx)
+        return ciphertext;
 
     unsigned char iv[16];
     std::memcpy(iv, session_iv_.data(), 16);
@@ -442,7 +441,8 @@ bytes TlsConnection::encrypt_aes(const bytes& plaintext) {
     EVP_EncryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, session_key_.data(), iv);
     int len = 0;
     ciphertext.resize(plaintext.size() + AES_BLOCK_SIZE);
-    EVP_EncryptUpdate(ctx, ciphertext.data(), &len, plaintext.data(), static_cast<int>(plaintext.size()));
+    EVP_EncryptUpdate(ctx, ciphertext.data(), &len, plaintext.data(),
+                      static_cast<int>(plaintext.size()));
     int ciphertext_len = len;
     EVP_EncryptFinal_ex(ctx, ciphertext.data() + len, &len);
     ciphertext_len += len;
@@ -455,7 +455,8 @@ bytes TlsConnection::encrypt_aes(const bytes& plaintext) {
 bytes TlsConnection::decrypt_aes(const bytes& ciphertext) {
     bytes plaintext;
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
-    if (!ctx) return plaintext;
+    if (!ctx)
+        return plaintext;
 
     unsigned char iv[16];
     std::memcpy(iv, session_iv_.data(), 16);
@@ -463,7 +464,8 @@ bytes TlsConnection::decrypt_aes(const bytes& ciphertext) {
     EVP_DecryptInit_ex(ctx, EVP_aes_256_cbc(), nullptr, session_key_.data(), iv);
     int len = 0;
     plaintext.resize(ciphertext.size());
-    EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(), static_cast<int>(ciphertext.size()));
+    EVP_DecryptUpdate(ctx, plaintext.data(), &len, ciphertext.data(),
+                      static_cast<int>(ciphertext.size()));
     int plaintext_len = len;
     EVP_DecryptFinal_ex(ctx, plaintext.data() + len, &len);
     plaintext_len += len;
@@ -490,13 +492,15 @@ void TlsConnection::set_session_state(TlsSessionState new_state) {
 }
 
 void TlsConnection::send_raw(const bytes& data) {
-    if (fd_ < 0 || !loop_) return;
+    if (fd_ < 0 || !loop_)
+        return;
 
     // Append data to write buffer
     write_buffer_.insert(write_buffer_.end(), data.begin(), data.end());
 
     // If already sending, wait for completion
-    if (is_sending_) return;
+    if (is_sending_)
+        return;
 
     flush_write_buffer();
 }
@@ -512,8 +516,10 @@ void TlsConnection::flush_write_buffer() {
     iov.iov_base = write_buffer_.data();
     iov.iov_len = write_buffer_.size();
 
-    // Use async_send - completion will be delivered via loop's completion callback
-    loop_->backend()->async_send(fd_, &iov, 1, ActorId(0), static_cast<uint32_t>(OpType::Send));
+    // Use async_send - completion will be delivered via loop's completion
+    // callback
+    loop_->backend()->async_send(fd_, &iov, 1, ActorId(0),
+                                 static_cast<uint32_t>(OpType::Send));
 }
 
 void TlsConnection::handle_send_completion(int result) {

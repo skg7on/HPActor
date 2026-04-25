@@ -17,7 +17,7 @@
 #include <hpactor/sched/a2ws.hpp>
 
 int main() {
-    hpactor::sched::A2WS a2ws(8, 4);  // 8 workers, pool size 4
+    hpactor::sched::A2WS a2ws(8, 4); // 8 workers, pool size 4
 
     // Test: basic victim selection
     assert(a2ws.num_workers() == 8);
@@ -59,7 +59,7 @@ int main() {
     a2ws.record_steal(0, 1);
     assert(a2ws.stats(0).local_steals.load() == 1);
 
-    a2ws.record_steal(0, 5);  // different pool
+    a2ws.record_steal(0, 5); // different pool
     assert(a2ws.stats(0).local_steals.load() == 1);
     assert(a2ws.stats(0).remote_steals.load() == 1);
 

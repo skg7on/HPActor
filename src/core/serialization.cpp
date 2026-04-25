@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/types/serialization.hpp>
-#include <hpactor/spawn.hpp>
 #include <hpactor/net/frame.hpp>
+#include <hpactor/spawn.hpp>
+#include <hpactor/types/serialization.hpp>
 
 // Include the generated protobuf headers
 #include <hpactor/common.pb.h>
@@ -29,19 +29,22 @@ namespace {
 // -----------------------------------------------------------------------------
 
 // Helper: convert HPActor Ipv4Endpoint to protobuf PbIpv4Endpoint
-static void to_proto(::hpactor::PbIpv4Endpoint* pb_ep, const ::hpactor::Ipv4Endpoint& ep) {
-    pb_ep->set_addr(ep.addr);  // Network byte order
+static void
+to_proto(::hpactor::PbIpv4Endpoint* pb_ep, const ::hpactor::Ipv4Endpoint& ep) {
+    pb_ep->set_addr(ep.addr); // Network byte order
     pb_ep->set_port(ep.port_nw);
 }
 
 // Helper: convert HPActor Ipv6Endpoint to protobuf PbIpv6Endpoint
-static void to_proto(::hpactor::PbIpv6Endpoint* pb_ep, const ::hpactor::Ipv6Endpoint& ep) {
+static void
+to_proto(::hpactor::PbIpv6Endpoint* pb_ep, const ::hpactor::Ipv6Endpoint& ep) {
     pb_ep->set_addr(ep.addr.data(), 16);
     pb_ep->set_port(ep.port_nw);
 }
 
 // Helper: convert HPActor CommunicationEndpoint to protobuf PbActorEndpoint
-static void to_proto(::hpactor::PbActorEndpoint* pb_endpoint, const ::hpactor::CommunicationEndpoint& ep) {
+static void to_proto(::hpactor::PbActorEndpoint* pb_endpoint,
+                     const ::hpactor::CommunicationEndpoint& ep) {
     if (auto* ipv4 = std::get_if<::hpactor::Ipv4Endpoint>(&ep)) {
         to_proto(pb_endpoint->mutable_ipv4(), *ipv4);
     } else if (auto* ipv6 = std::get_if<::hpactor::Ipv6Endpoint>(&ep)) {
@@ -51,7 +54,8 @@ static void to_proto(::hpactor::PbActorEndpoint* pb_endpoint, const ::hpactor::C
 
 // Helper: convert protobuf PbIpv4Endpoint to HPActor Ipv4Endpoint
 static ::hpactor::Ipv4Endpoint from_proto(const ::hpactor::PbIpv4Endpoint& pb_ep) {
-    return ::hpactor::Ipv4Endpoint{pb_ep.addr(), static_cast<uint16_t>(pb_ep.port())};
+    return ::hpactor::Ipv4Endpoint{pb_ep.addr(),
+                                   static_cast<uint16_t>(pb_ep.port())};
 }
 
 // Helper: convert protobuf PbIpv6Endpoint to HPActor Ipv6Endpoint
@@ -62,7 +66,8 @@ static ::hpactor::Ipv6Endpoint from_proto(const ::hpactor::PbIpv6Endpoint& pb_ep
 }
 
 // Helper: convert protobuf PbActorEndpoint to HPActor CommunicationEndpoint
-static ::hpactor::CommunicationEndpoint from_proto(const ::hpactor::PbActorEndpoint& pb_endpoint) {
+static ::hpactor::CommunicationEndpoint
+from_proto(const ::hpactor::PbActorEndpoint& pb_endpoint) {
     if (pb_endpoint.has_ipv4()) {
         return from_proto(pb_endpoint.ipv4());
     } else if (pb_endpoint.has_ipv6()) {
@@ -72,7 +77,8 @@ static ::hpactor::CommunicationEndpoint from_proto(const ::hpactor::PbActorEndpo
 }
 
 // Helper: convert HPActor ActorAddress to protobuf PbActorAddress
-static void to_proto(::hpactor::PbActorAddress* pb_addr, const ::hpactor::ActorAddress& addr) {
+static void
+to_proto(::hpactor::PbActorAddress* pb_addr, const ::hpactor::ActorAddress& addr) {
     to_proto(pb_addr->mutable_endpoint(), addr.endpoint);
     pb_addr->set_type(addr.type);
     pb_addr->set_actor_id(addr.id.value());
@@ -80,17 +86,17 @@ static void to_proto(::hpactor::PbActorAddress* pb_addr, const ::hpactor::ActorA
 }
 
 // Helper: convert protobuf PbActorAddress to HPActor ActorAddress
-static ::hpactor::ActorAddress from_proto(const ::hpactor::PbActorAddress& pb_addr) {
+static ::hpactor::ActorAddress
+from_proto(const ::hpactor::PbActorAddress& pb_addr) {
     return ::hpactor::ActorAddress{
         from_proto(pb_addr.endpoint()),
         static_cast<::hpactor::ActorType>(pb_addr.type()),
-        ::hpactor::ActorId{pb_addr.actor_id()},
-        pb_addr.incarnation()
-    };
+        ::hpactor::ActorId{pb_addr.actor_id()}, pb_addr.incarnation()};
 }
 
 // Helper: convert HPActor ActorAddress to protobuf PbActorRef
-static void to_proto(::hpactor::PbActorRef* pb_ref, const ::hpactor::ActorAddress& addr) {
+static void
+to_proto(::hpactor::PbActorRef* pb_ref, const ::hpactor::ActorAddress& addr) {
     to_proto(pb_ref->mutable_endpoint(), addr.endpoint);
     pb_ref->set_type(addr.type);
     pb_ref->set_actor_id(addr.id.value());
@@ -102,9 +108,7 @@ static ::hpactor::ActorAddress from_proto(const ::hpactor::PbActorRef& pb_ref) {
     return ::hpactor::ActorAddress{
         from_proto(pb_ref.endpoint()),
         static_cast<::hpactor::ActorType>(pb_ref.type()),
-        ::hpactor::ActorId{pb_ref.actor_id()},
-        pb_ref.incarnation()
-    };
+        ::hpactor::ActorId{pb_ref.actor_id()}, pb_ref.incarnation()};
 }
 
 } // anonymous namespace
@@ -128,13 +132,15 @@ bytes DefaultSerializer::encode(TypeTag tag, const MessageVariant& msg) {
     auto it = encoders_.find(tag);
     if (it != encoders_.end()) {
         bytes result;
-        std::visit([&result, tag, this](const auto& m) {
-            // User type - use encoder if registered
-            auto encoder_it = encoders_.find(tag);
-            if (encoder_it != encoders_.end()) {
-                result = encoder_it->second(&m);
-            }
-        }, msg);
+        std::visit(
+            [&result, tag, this](const auto& m) {
+                // User type - use encoder if registered
+                auto encoder_it = encoders_.find(tag);
+                if (encoder_it != encoders_.end()) {
+                    result = encoder_it->second(&m);
+                }
+            },
+            msg);
         return result;
     }
 
@@ -153,7 +159,8 @@ MessageVariant DefaultSerializer::decode(TypeTag tag, const bytes& data) {
     return MessageVariant{};
 }
 
-void DefaultSerializer::register_type(TypeTag tag, encode_func encode, decode_func decode) {
+void DefaultSerializer::register_type(TypeTag tag, encode_func encode,
+                                      decode_func decode) {
     encoders_[tag] = std::move(encode);
     decoders_[tag] = std::move(decode);
 }
@@ -205,69 +212,72 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
     std::string serialized(data.begin(), data.end());
 
     switch (tag) {
-    case TypeTag::DownMsg: {
-        ::hpactor::DownMessage pb_msg;
-        if (!pb_msg.ParseFromString(serialized)) {
-            return MessageVariant{};
+        case TypeTag::DownMsg: {
+            ::hpactor::DownMessage pb_msg;
+            if (!pb_msg.ParseFromString(serialized)) {
+                return MessageVariant{};
+            }
+            down_msg m;
+            m.terminated_actor.endpoint = from_proto(pb_msg.endpoint());
+            m.terminated_actor.id = ActorId(pb_msg.actor_id());
+            m.terminated_actor.type = 0;        // Type not stored in protobuf
+            m.terminated_actor.incarnation = 0; // Incarnation not stored in
+                                                // protobuf
+            m.reason = error(pb_msg.reason_code());
+            return m;
         }
-        down_msg m;
-        m.terminated_actor.endpoint = from_proto(pb_msg.endpoint());
-        m.terminated_actor.id = ActorId(pb_msg.actor_id());
-        m.terminated_actor.type = 0;  // Type not stored in protobuf
-        m.terminated_actor.incarnation = 0;  // Incarnation not stored in protobuf
-        m.reason = error(pb_msg.reason_code());
-        return m;
-    }
-    case TypeTag::ExitMsg: {
-        ::hpactor::ExitMessage pb_msg;
-        if (!pb_msg.ParseFromString(serialized)) {
-            return MessageVariant{};
+        case TypeTag::ExitMsg: {
+            ::hpactor::ExitMessage pb_msg;
+            if (!pb_msg.ParseFromString(serialized)) {
+                return MessageVariant{};
+            }
+            exit_msg m;
+            m.sender.endpoint = from_proto(pb_msg.sender());
+            m.sender.id = ActorId(pb_msg.actor_id());
+            m.sender.type = 0;        // Type not stored in protobuf
+            m.sender.incarnation = 0; // Incarnation not stored in protobuf
+            m.reason = error(pb_msg.reason_code());
+            return m;
         }
-        exit_msg m;
-        m.sender.endpoint = from_proto(pb_msg.sender());
-        m.sender.id = ActorId(pb_msg.actor_id());
-        m.sender.type = 0;  // Type not stored in protobuf
-        m.sender.incarnation = 0;  // Incarnation not stored in protobuf
-        m.reason = error(pb_msg.reason_code());
-        return m;
-    }
-    case TypeTag::LinkMsg: {
-        ::hpactor::LinkMessage pb_msg;
-        if (!pb_msg.ParseFromString(serialized)) {
-            return MessageVariant{};
+        case TypeTag::LinkMsg: {
+            ::hpactor::LinkMessage pb_msg;
+            if (!pb_msg.ParseFromString(serialized)) {
+                return MessageVariant{};
+            }
+            link_msg m;
+            m.target.endpoint = from_proto(pb_msg.target());
+            m.target.id = ActorId(pb_msg.actor_id());
+            m.target.type = 0;        // Type not stored in protobuf
+            m.target.incarnation = 0; // Incarnation not stored in protobuf
+            return m;
         }
-        link_msg m;
-        m.target.endpoint = from_proto(pb_msg.target());
-        m.target.id = ActorId(pb_msg.actor_id());
-        m.target.type = 0;  // Type not stored in protobuf
-        m.target.incarnation = 0;  // Incarnation not stored in protobuf
-        return m;
-    }
-    case TypeTag::UnlinkMsg: {
-        ::hpactor::UnlinkMessage pb_msg;
-        if (!pb_msg.ParseFromString(serialized)) {
-            return MessageVariant{};
+        case TypeTag::UnlinkMsg: {
+            ::hpactor::UnlinkMessage pb_msg;
+            if (!pb_msg.ParseFromString(serialized)) {
+                return MessageVariant{};
+            }
+            unlink_msg m;
+            m.target.endpoint = from_proto(pb_msg.target());
+            m.target.id = ActorId(pb_msg.actor_id());
+            m.target.type = 0;        // Type not stored in protobuf
+            m.target.incarnation = 0; // Incarnation not stored in protobuf
+            return m;
         }
-        unlink_msg m;
-        m.target.endpoint = from_proto(pb_msg.target());
-        m.target.id = ActorId(pb_msg.actor_id());
-        m.target.type = 0;  // Type not stored in protobuf
-        m.target.incarnation = 0;  // Incarnation not stored in protobuf
-        return m;
-    }
-    default:
-        return MessageVariant{};
+        default:
+            return MessageVariant{};
     }
 }
 
-bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnMessageVariant& msg) {
+bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag,
+                                      const SpawnMessageVariant& msg) {
     // SpawnRequest
     if (std::holds_alternative<SpawnRequest>(msg)) {
         const SpawnRequest& m = std::get<SpawnRequest>(msg);
         ::hpactor::SpawnRequestMessage pb_msg;
         pb_msg.set_actor_type_name(m.actor_type_name);
         pb_msg.set_args_type(static_cast<uint32_t>(m.args_type));
-        pb_msg.set_serialized_args(m.serialized_args.data(), m.serialized_args.size());
+        pb_msg.set_serialized_args(m.serialized_args.data(),
+                                   m.serialized_args.size());
         to_proto(pb_msg.mutable_supervisor(), m.supervisor_addr);
         std::string serialized = pb_msg.SerializeAsString();
         return bytes(serialized.begin(), serialized.end());
@@ -285,34 +295,36 @@ bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnM
     return bytes{};
 }
 
-SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& data) {
+SpawnMessageVariant
+DefaultSerializer::decode_spawn(TypeTag tag, const bytes& data) {
     std::string serialized(data.begin(), data.end());
 
     switch (tag) {
-    case TypeTag::SpawnRequestTag: {
-        ::hpactor::SpawnRequestMessage pb_msg;
-        if (!pb_msg.ParseFromString(serialized)) {
-            return SpawnMessageVariant{};
+        case TypeTag::SpawnRequestTag: {
+            ::hpactor::SpawnRequestMessage pb_msg;
+            if (!pb_msg.ParseFromString(serialized)) {
+                return SpawnMessageVariant{};
+            }
+            SpawnRequest m;
+            m.actor_type_name = pb_msg.actor_type_name();
+            m.args_type = static_cast<TypeTag>(pb_msg.args_type());
+            m.serialized_args.assign(pb_msg.serialized_args().begin(),
+                                     pb_msg.serialized_args().end());
+            m.supervisor_addr = from_proto(pb_msg.supervisor());
+            return m;
         }
-        SpawnRequest m;
-        m.actor_type_name = pb_msg.actor_type_name();
-        m.args_type = static_cast<TypeTag>(pb_msg.args_type());
-        m.serialized_args.assign(pb_msg.serialized_args().begin(), pb_msg.serialized_args().end());
-        m.supervisor_addr = from_proto(pb_msg.supervisor());
-        return m;
-    }
-    case TypeTag::SpawnResponseTag: {
-        ::hpactor::SpawnResponseMessage pb_msg;
-        if (!pb_msg.ParseFromString(serialized)) {
-            return SpawnMessageVariant{};
+        case TypeTag::SpawnResponseTag: {
+            ::hpactor::SpawnResponseMessage pb_msg;
+            if (!pb_msg.ParseFromString(serialized)) {
+                return SpawnMessageVariant{};
+            }
+            SpawnResponse m;
+            m.actor_addr = from_proto(pb_msg.actor_addr());
+            m.error_code = pb_msg.error_code();
+            return m;
         }
-        SpawnResponse m;
-        m.actor_addr = from_proto(pb_msg.actor_addr());
-        m.error_code = pb_msg.error_code();
-        return m;
-    }
-    default:
-        return SpawnMessageVariant{};
+        default:
+            return SpawnMessageVariant{};
     }
 }
 

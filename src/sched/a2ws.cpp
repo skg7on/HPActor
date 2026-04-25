@@ -17,8 +17,10 @@
 namespace hpactor::sched {
 
 A2WS::A2WS(uint32_t num_workers, uint32_t pool_size)
-    : num_workers_(num_workers), pool_size_(pool_size), workers_(num_workers), victim_hints_(num_workers) {
-    // Initialize victim hints to point to self + 1 (start scanning from next worker)
+    : num_workers_(num_workers), pool_size_(pool_size), workers_(num_workers),
+      victim_hints_(num_workers) {
+    // Initialize victim hints to point to self + 1 (start scanning from next
+    // worker)
     for (uint32_t i = 0; i < num_workers; ++i) {
         victim_hints_[i].store((i + 1) % num_workers, std::memory_order_relaxed);
     }
@@ -47,11 +49,12 @@ void A2WS::record_attempt(uint32_t thief, uint32_t victim, bool success) {
         victim_hints_[thief].store(next_hint, std::memory_order_relaxed);
     } else {
         // Success - stick with current victim for now
-        // Could also use adaptive logic to prefer victims with history of success
+        // Could also use adaptive logic to prefer victims with history of
+        // success
     }
 
-    (void)thief;  // Currently unused in victim selection
-    (void)current_hint;  // Currently unused
+    (void)thief;        // Currently unused in victim selection
+    (void)current_hint; // Currently unused
 }
 
 void A2WS::record_steal(uint32_t thief, uint32_t victim) {

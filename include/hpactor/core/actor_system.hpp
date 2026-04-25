@@ -18,12 +18,12 @@
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/core/actor_registry.hpp>
 #include <hpactor/core/mailbox.hpp>
+#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/types/types.hpp>
-#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -54,8 +54,8 @@ struct Config {
 
     // Network configuration
     bool enable_network = false;
-    uint16_t tcp_port = 0;  // TCP port to listen on (0 = don't listen)
-    uint16_t udp_port = 5353;  // UDP discovery port
+    uint16_t tcp_port = 0;    // TCP port to listen on (0 = don't listen)
+    uint16_t udp_port = 5353; // UDP discovery port
 
     // Remote spawn configuration
     std::chrono::milliseconds spawn_timeout{5000};
@@ -116,16 +116,24 @@ class ActorSystem {
     }
 
     // Node ID
-    CommunicationEndpoint endpoint() const { return endpoint_; }
+    CommunicationEndpoint endpoint() const {
+        return endpoint_;
+    }
 
     // Check if actor system is running
-    bool is_running() const { return running_.load(std::memory_order_acquire); }
+    bool is_running() const {
+        return running_.load(std::memory_order_acquire);
+    }
 
     // Get scheduler for direct scheduling operations
-    sched::IScheduler* scheduler() { return scheduler_.get(); }
+    sched::IScheduler* scheduler() {
+        return scheduler_.get();
+    }
 
     // RPC channel for remote calls
-    RpcChannel& rpc_channel() { return *rpc_channel_; }
+    RpcChannel& rpc_channel() {
+        return *rpc_channel_;
+    }
 
     // Internal actor lookup (used by scheduler)
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
@@ -139,29 +147,35 @@ class ActorSystem {
     // Deliver message to local actor with priority and deadline for scheduling
     // priority: 0-3 (0 = highest)
     // deadline_ns: absolute deadline in nanoseconds (INT64_MAX = no deadline)
-    void deliver_local(ActorId target, MessageVariant msg,
-                       uint8_t priority, int64_t deadline_ns);
+    void deliver_local(ActorId target, MessageVariant msg, uint8_t priority,
+                       int64_t deadline_ns);
 
     // Enqueue an I/O completion to be delivered to an actor
     // Called by EventLoop when async operations complete
     void enqueue_completion(net::OpCompletion completion);
 
     // Network access
-    net::Transport* transport() { return transport_.get(); }
-    net::UdpRegistrar* registrar() { return registrar_.get(); }
+    net::Transport* transport() {
+        return transport_.get();
+    }
+    net::UdpRegistrar* registrar() {
+        return registrar_.get();
+    }
 
     // Remote actor spawning (main/non-actor context only)
     result<ActorRef> spawn_remote(const std::string& node_name,
-                                  const std::string& actor_type,
-                                  const bytes& args);
+                                  const std::string& actor_type, const bytes& args);
 
     AsyncActor spawn_remote_async(const std::string& node_name,
-                                  const std::string& actor_type,
-                                  const bytes& args);
+                                  const std::string& actor_type, const bytes& args);
 
     // Actor type registry for remote spawning
-    ActorTypeRegistry& actor_type_registry() { return *actor_type_registry_; }
-    const ActorTypeRegistry& actor_type_registry() const { return *actor_type_registry_; }
+    ActorTypeRegistry& actor_type_registry() {
+        return *actor_type_registry_;
+    }
+    const ActorTypeRegistry& actor_type_registry() const {
+        return *actor_type_registry_;
+    }
 
   private:
     friend class Scheduler;
@@ -178,7 +192,8 @@ class ActorSystem {
     std::mutex actors_mutex_;
 
     // Actor mailboxes - maps ActorId to mailbox
-    std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<Message<MessageVariant>>>> mailboxes_;
+    std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<Message<MessageVariant>>>>
+        mailboxes_;
     std::mutex mailboxes_mutex_;
 
     // Actor contexts - maps ActorId to context
@@ -200,7 +215,8 @@ class ActorSystem {
     std::unique_ptr<net::EventLoop> network_loop_;
     std::thread network_thread_;
 
-    // Actor type registry for remote spawning (owned via pointer to avoid circular dep)
+    // Actor type registry for remote spawning (owned via pointer to avoid
+    // circular dep)
     std::unique_ptr<ActorTypeRegistry> actor_type_registry_;
 
     // RPC channel for remote calls (after transport_ creation)
@@ -229,8 +245,9 @@ Actor ActorSystem::spawn(Args&&... args) {
     // Create mailbox
     {
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-        mailboxes_.emplace(id, std::make_unique<mailbox::MPSCActorMailbox<Message<MessageVariant>>>(
-            id, scheduler_.get()));
+        mailboxes_.emplace(
+            id, std::make_unique<mailbox::MPSCActorMailbox<Message<MessageVariant>>>(
+                    id, scheduler_.get()));
     }
 
     // Create actor context and set it on the actor
