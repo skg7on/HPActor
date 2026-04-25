@@ -16,61 +16,95 @@
 #include <hpactor/spawn.hpp>
 #include <hpactor/net/frame.hpp>
 
-#include <cstring>
+// Include the generated protobuf headers
+#include <hpactor/common.pb.h>
+#include <hpactor/messages.pb.h>
 
 namespace hpactor {
 
 namespace {
 
-// Endpoint serialization (network byte order)
-// Wire format: [protocol:1][addr:n][port:2]
-//   protocol: 0x04 = IPv4, 0x06 = IPv6
-bytes encode_endpoint(const CommunicationEndpoint& ep) {
-    bytes result;
-    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
-        result.resize(7);  // 1 + 4 + 2
-        result[0] = 0x04;
-        uint32_t addr = ipv4->addr;
-        uint16_t port = ipv4->port_nw;
-        std::memcpy(result.data() + 1, &addr, 4);
-        std::memcpy(result.data() + 5, &port, 2);
-    } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
-        result.resize(19);  // 1 + 16 + 2
-        result[0] = 0x06;
-        std::memcpy(result.data() + 1, ipv6->addr.data(), 16);
-        uint16_t port = ipv6->port_nw;
-        std::memcpy(result.data() + 17, &port, 2);
-    }
-    return result;
+// -----------------------------------------------------------------------------
+// Protobuf conversion helpers (same pattern as frame_protobuf.cpp)
+// -----------------------------------------------------------------------------
+
+// Helper: convert HPActor Ipv4Endpoint to protobuf PbIpv4Endpoint
+static void to_proto(::hpactor::PbIpv4Endpoint* pb_ep, const ::hpactor::Ipv4Endpoint& ep) {
+    pb_ep->set_addr(ep.addr);  // Network byte order
+    pb_ep->set_port(ep.port_nw);
 }
 
-CommunicationEndpoint decode_endpoint(bytes data) {
-    if (data.empty()) {
-        return Ipv4Endpoint{};  // Return default/empty endpoint
+// Helper: convert HPActor Ipv6Endpoint to protobuf PbIpv6Endpoint
+static void to_proto(::hpactor::PbIpv6Endpoint* pb_ep, const ::hpactor::Ipv6Endpoint& ep) {
+    pb_ep->set_addr(ep.addr.data(), 16);
+    pb_ep->set_port(ep.port_nw);
+}
+
+// Helper: convert HPActor CommunicationEndpoint to protobuf PbActorEndpoint
+static void to_proto(::hpactor::PbActorEndpoint* pb_endpoint, const ::hpactor::CommunicationEndpoint& ep) {
+    if (auto* ipv4 = std::get_if<::hpactor::Ipv4Endpoint>(&ep)) {
+        to_proto(pb_endpoint->mutable_ipv4(), *ipv4);
+    } else if (auto* ipv6 = std::get_if<::hpactor::Ipv6Endpoint>(&ep)) {
+        to_proto(pb_endpoint->mutable_ipv6(), *ipv6);
     }
-    uint8_t protocol = data[0];
-    if (protocol == 0x04) {
-        // IPv4: [0x04][addr: 4][port: 2]
-        if (data.size() < 7) {
-            return Ipv4Endpoint{};
-        }
-        uint32_t addr;
-        uint16_t port;
-        std::memcpy(&addr, data.data() + 1, 4);
-        std::memcpy(&port, data.data() + 5, 2);
-        return Ipv4Endpoint{addr, port};
-    } else if (protocol == 0x06) {
-        // IPv6: [0x06][addr: 16][port: 2]
-        if (data.size() < 19) {
-            return Ipv6Endpoint{};
-        }
-        std::array<uint8_t, 16> addr;
-        std::memcpy(addr.data(), data.data() + 1, 16);
-        uint16_t port;
-        std::memcpy(&port, data.data() + 17, 2);
-        return Ipv6Endpoint{addr, port};
+}
+
+// Helper: convert protobuf PbIpv4Endpoint to HPActor Ipv4Endpoint
+static ::hpactor::Ipv4Endpoint from_proto(const ::hpactor::PbIpv4Endpoint& pb_ep) {
+    return ::hpactor::Ipv4Endpoint{pb_ep.addr(), static_cast<uint16_t>(pb_ep.port())};
+}
+
+// Helper: convert protobuf PbIpv6Endpoint to HPActor Ipv6Endpoint
+static ::hpactor::Ipv6Endpoint from_proto(const ::hpactor::PbIpv6Endpoint& pb_ep) {
+    std::array<uint8_t, 16> addr;
+    std::memcpy(addr.data(), pb_ep.addr().data(), 16);
+    return ::hpactor::Ipv6Endpoint{addr, static_cast<uint16_t>(pb_ep.port())};
+}
+
+// Helper: convert protobuf PbActorEndpoint to HPActor CommunicationEndpoint
+static ::hpactor::CommunicationEndpoint from_proto(const ::hpactor::PbActorEndpoint& pb_endpoint) {
+    if (pb_endpoint.has_ipv4()) {
+        return from_proto(pb_endpoint.ipv4());
+    } else if (pb_endpoint.has_ipv6()) {
+        return from_proto(pb_endpoint.ipv6());
     }
-    return Ipv4Endpoint{};  // Unknown protocol, return default
+    return ::hpactor::Ipv4Endpoint{};
+}
+
+// Helper: convert HPActor ActorAddress to protobuf PbActorAddress
+static void to_proto(::hpactor::PbActorAddress* pb_addr, const ::hpactor::ActorAddress& addr) {
+    to_proto(pb_addr->mutable_endpoint(), addr.endpoint);
+    pb_addr->set_type(addr.type);
+    pb_addr->set_actor_id(addr.id.value());
+    pb_addr->set_incarnation(addr.incarnation);
+}
+
+// Helper: convert protobuf PbActorAddress to HPActor ActorAddress
+static ::hpactor::ActorAddress from_proto(const ::hpactor::PbActorAddress& pb_addr) {
+    return ::hpactor::ActorAddress{
+        from_proto(pb_addr.endpoint()),
+        static_cast<::hpactor::ActorType>(pb_addr.type()),
+        ::hpactor::ActorId{pb_addr.actor_id()},
+        pb_addr.incarnation()
+    };
+}
+
+// Helper: convert HPActor ActorAddress to protobuf PbActorRef
+static void to_proto(::hpactor::PbActorRef* pb_ref, const ::hpactor::ActorAddress& addr) {
+    to_proto(pb_ref->mutable_endpoint(), addr.endpoint);
+    pb_ref->set_type(addr.type);
+    pb_ref->set_actor_id(addr.id.value());
+    pb_ref->set_incarnation(addr.incarnation);
+}
+
+// Helper: convert protobuf PbActorRef to HPActor ActorAddress
+static ::hpactor::ActorAddress from_proto(const ::hpactor::PbActorRef& pb_ref) {
+    return ::hpactor::ActorAddress{
+        from_proto(pb_ref.endpoint()),
+        static_cast<::hpactor::ActorType>(pb_ref.type()),
+        ::hpactor::ActorId{pb_ref.actor_id()},
+        pb_ref.incarnation()
+    };
 }
 
 } // anonymous namespace
@@ -94,19 +128,11 @@ bytes DefaultSerializer::encode(TypeTag tag, const MessageVariant& msg) {
     auto it = encoders_.find(tag);
     if (it != encoders_.end()) {
         bytes result;
-        std::visit([&result, tag, this, &msg](const auto& m) {
-            using T = std::decay_t<decltype(m)>;
-            if constexpr (std::is_same_v<T, down_msg> ||
-                        std::is_same_v<T, exit_msg> ||
-                        std::is_same_v<T, link_msg> ||
-                        std::is_same_v<T, unlink_msg>) {
-                result = encode_system(msg);
-            } else {
-                // User type - use encoder if registered
-                auto encoder_it = encoders_.find(tag);
-                if (encoder_it != encoders_.end()) {
-                    result = encoder_it->second(&m);
-                }
+        std::visit([&result, tag, this](const auto& m) {
+            // User type - use encoder if registered
+            auto encoder_it = encoders_.find(tag);
+            if (encoder_it != encoders_.end()) {
+                result = encoder_it->second(&m);
             }
         }, msg);
         return result;
@@ -121,13 +147,9 @@ MessageVariant DefaultSerializer::decode(TypeTag tag, const bytes& data) {
         return decode_system(tag, data);
     }
 
-    // User type - use registered decoder
-    auto it = decoders_.find(tag);
-    if (it != decoders_.end()) {
-        // For now, return empty - actual decode requires knowing the type
-        // This will be implemented when we have proper type erasure
-    }
-
+    // User type decoding requires proper type erasure (not yet implemented)
+    // The decoder lookup below is intentionally unused - type reconstruction
+    // from bytes requires knowing the concrete type at compile time
     return MessageVariant{};
 }
 
@@ -137,162 +159,100 @@ void DefaultSerializer::register_type(TypeTag tag, encode_func encode, decode_fu
 }
 
 bytes DefaultSerializer::encode_system(const MessageVariant& msg) {
-    bytes result;
-
     // down_msg
     if (std::holds_alternative<down_msg>(msg)) {
         const down_msg& m = std::get<down_msg>(msg);
-        // endpoint (binary) + actor_id (8 bytes) + code (4 bytes)
-        bytes ep_bytes = encode_endpoint(m.terminated_actor.endpoint);
-        result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t) + sizeof(uint32_t));
-        size_t offset = 0;
-        uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
-        std::memcpy(result.data() + offset, &ep_len, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (ep_len > 0) {
-            std::memcpy(result.data() + offset, ep_bytes.data(), ep_len);
-            offset += ep_len;
-        }
-        uint64_t actor_id = m.terminated_actor.id.value();
-        uint32_t code = m.reason.code();
-        std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-        std::memcpy(result.data() + offset, &code, sizeof(uint32_t));
+        ::hpactor::DownMessage pb_msg;
+        to_proto(pb_msg.mutable_endpoint(), m.terminated_actor.endpoint);
+        pb_msg.set_actor_id(m.terminated_actor.id.value());
+        pb_msg.set_reason_code(m.reason.code());
+        std::string serialized = pb_msg.SerializeAsString();
+        return bytes(serialized.begin(), serialized.end());
     }
     // exit_msg
     else if (std::holds_alternative<exit_msg>(msg)) {
         const exit_msg& m = std::get<exit_msg>(msg);
-        bytes ep_bytes = encode_endpoint(m.sender.endpoint);
-        result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t) + sizeof(uint32_t));
-        size_t offset = 0;
-        uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
-        std::memcpy(result.data() + offset, &ep_len, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (ep_len > 0) {
-            std::memcpy(result.data() + offset, ep_bytes.data(), ep_len);
-            offset += ep_len;
-        }
-        uint64_t actor_id = m.sender.id.value();
-        uint32_t code = m.reason.code();
-        std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-        std::memcpy(result.data() + offset, &code, sizeof(uint32_t));
+        ::hpactor::ExitMessage pb_msg;
+        to_proto(pb_msg.mutable_sender(), m.sender.endpoint);
+        pb_msg.set_actor_id(m.sender.id.value());
+        pb_msg.set_reason_code(m.reason.code());
+        std::string serialized = pb_msg.SerializeAsString();
+        return bytes(serialized.begin(), serialized.end());
     }
     // link_msg
     else if (std::holds_alternative<link_msg>(msg)) {
         const link_msg& m = std::get<link_msg>(msg);
-        bytes ep_bytes = encode_endpoint(m.target.endpoint);
-        result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t));
-        size_t offset = 0;
-        uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
-        std::memcpy(result.data() + offset, &ep_len, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (ep_len > 0) {
-            std::memcpy(result.data() + offset, ep_bytes.data(), ep_len);
-            offset += ep_len;
-        }
-        uint64_t actor_id = m.target.id.value();
-        std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
+        ::hpactor::LinkMessage pb_msg;
+        to_proto(pb_msg.mutable_target(), m.target.endpoint);
+        pb_msg.set_actor_id(m.target.id.value());
+        std::string serialized = pb_msg.SerializeAsString();
+        return bytes(serialized.begin(), serialized.end());
     }
     // unlink_msg
     else if (std::holds_alternative<unlink_msg>(msg)) {
         const unlink_msg& m = std::get<unlink_msg>(msg);
-        bytes ep_bytes = encode_endpoint(m.target.endpoint);
-        result.resize(sizeof(uint32_t) + ep_bytes.size() + sizeof(uint64_t));
-        size_t offset = 0;
-        uint32_t ep_len = static_cast<uint32_t>(ep_bytes.size());
-        std::memcpy(result.data() + offset, &ep_len, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (ep_len > 0) {
-            std::memcpy(result.data() + offset, ep_bytes.data(), ep_len);
-            offset += ep_len;
-        }
-        uint64_t actor_id = m.target.id.value();
-        std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
+        ::hpactor::UnlinkMessage pb_msg;
+        to_proto(pb_msg.mutable_target(), m.target.endpoint);
+        pb_msg.set_actor_id(m.target.id.value());
+        std::string serialized = pb_msg.SerializeAsString();
+        return bytes(serialized.begin(), serialized.end());
     }
 
-    return result;
+    return bytes{};
 }
 
 MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) {
+    std::string serialized(data.begin(), data.end());
+
     switch (tag) {
     case TypeTag::DownMsg: {
-        down_msg m;
-        size_t offset = 0;
-        // endpoint (binary)
-        uint32_t ep_len;
-        std::memcpy(&ep_len, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (ep_len > 0) {
-            bytes ep_data(data.begin() + static_cast<long>(offset),
-                         data.begin() + static_cast<long>(offset) + ep_len);
-            m.terminated_actor.endpoint = decode_endpoint(ep_data);
-            offset += ep_len;
+        ::hpactor::DownMessage pb_msg;
+        if (!pb_msg.ParseFromString(serialized)) {
+            return MessageVariant{};
         }
-        uint64_t actor_id;
-        std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-        uint32_t code;
-        std::memcpy(&code, data.data() + offset, sizeof(uint32_t));
-        m.terminated_actor.id = ActorId(actor_id);
-        m.reason = error(code);
+        down_msg m;
+        m.terminated_actor.endpoint = from_proto(pb_msg.endpoint());
+        m.terminated_actor.id = ActorId(pb_msg.actor_id());
+        m.terminated_actor.type = 0;  // Type not stored in protobuf
+        m.terminated_actor.incarnation = 0;  // Incarnation not stored in protobuf
+        m.reason = error(pb_msg.reason_code());
         return m;
     }
     case TypeTag::ExitMsg: {
-        exit_msg m;
-        size_t offset = 0;
-        uint32_t ep_len;
-        std::memcpy(&ep_len, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (ep_len > 0) {
-            bytes ep_data(data.begin() + static_cast<long>(offset),
-                         data.begin() + static_cast<long>(offset) + ep_len);
-            m.sender.endpoint = decode_endpoint(ep_data);
-            offset += ep_len;
+        ::hpactor::ExitMessage pb_msg;
+        if (!pb_msg.ParseFromString(serialized)) {
+            return MessageVariant{};
         }
-        uint64_t actor_id;
-        std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-        uint32_t code;
-        std::memcpy(&code, data.data() + offset, sizeof(uint32_t));
-        m.sender.id = ActorId(actor_id);
-        m.reason = error(code);
+        exit_msg m;
+        m.sender.endpoint = from_proto(pb_msg.sender());
+        m.sender.id = ActorId(pb_msg.actor_id());
+        m.sender.type = 0;  // Type not stored in protobuf
+        m.sender.incarnation = 0;  // Incarnation not stored in protobuf
+        m.reason = error(pb_msg.reason_code());
         return m;
     }
     case TypeTag::LinkMsg: {
-        link_msg m;
-        size_t offset = 0;
-        uint32_t ep_len;
-        std::memcpy(&ep_len, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (ep_len > 0) {
-            bytes ep_data(data.begin() + static_cast<long>(offset),
-                         data.begin() + static_cast<long>(offset) + ep_len);
-            m.target.endpoint = decode_endpoint(ep_data);
-            offset += ep_len;
+        ::hpactor::LinkMessage pb_msg;
+        if (!pb_msg.ParseFromString(serialized)) {
+            return MessageVariant{};
         }
-        uint64_t actor_id;
-        std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
-        m.target.id = ActorId(actor_id);
+        link_msg m;
+        m.target.endpoint = from_proto(pb_msg.target());
+        m.target.id = ActorId(pb_msg.actor_id());
+        m.target.type = 0;  // Type not stored in protobuf
+        m.target.incarnation = 0;  // Incarnation not stored in protobuf
         return m;
     }
     case TypeTag::UnlinkMsg: {
-        unlink_msg m;
-        size_t offset = 0;
-        uint32_t ep_len;
-        std::memcpy(&ep_len, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (ep_len > 0) {
-            bytes ep_data(data.begin() + static_cast<long>(offset),
-                         data.begin() + static_cast<long>(offset) + ep_len);
-            m.target.endpoint = decode_endpoint(ep_data);
-            offset += ep_len;
+        ::hpactor::UnlinkMessage pb_msg;
+        if (!pb_msg.ParseFromString(serialized)) {
+            return MessageVariant{};
         }
-        uint64_t actor_id;
-        std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
-        m.target.id = ActorId(actor_id);
+        unlink_msg m;
+        m.target.endpoint = from_proto(pb_msg.target());
+        m.target.id = ActorId(pb_msg.actor_id());
+        m.target.type = 0;  // Type not stored in protobuf
+        m.target.incarnation = 0;  // Incarnation not stored in protobuf
         return m;
     }
     default:
@@ -301,214 +261,54 @@ MessageVariant DefaultSerializer::decode_system(TypeTag tag, const bytes& data) 
 }
 
 bytes DefaultSerializer::encode_spawn([[maybe_unused]] TypeTag tag, const SpawnMessageVariant& msg) {
-    bytes result;
-
     // SpawnRequest
     if (std::holds_alternative<SpawnRequest>(msg)) {
         const SpawnRequest& m = std::get<SpawnRequest>(msg);
-        // actor_type_name (4 bytes len + string) + args_type (4 bytes) +
-        // serialized_args (4 bytes len + data) +
-        // supervisor_endpoint (binary) + supervisor_type (4 bytes) +
-        // supervisor_actor_id (8 bytes) + supervisor_incarnation (8 bytes)
-        size_t name_len = m.actor_type_name.size();
-        size_t args_len = m.serialized_args.size();
-        bytes sup_ep_bytes = encode_endpoint(m.supervisor_addr.endpoint);
-
-        result.resize(sizeof(uint32_t) + name_len + sizeof(TypeTag) +
-                      sizeof(uint32_t) + args_len +
-                      sizeof(uint32_t) + sup_ep_bytes.size() + sizeof(uint32_t) + sizeof(uint64_t) + sizeof(uint64_t));
-        size_t offset = 0;
-
-        // actor_type_name length
-        uint32_t name_len_u32 = static_cast<uint32_t>(name_len);
-        std::memcpy(result.data() + offset, &name_len_u32, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-
-        // actor_type_name string
-        std::memcpy(result.data() + offset, m.actor_type_name.data(), name_len);
-        offset += name_len;
-
-        // args_type
-        uint32_t args_type = static_cast<uint32_t>(m.args_type);
-        std::memcpy(result.data() + offset, &args_type, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-
-        // serialized_args length
-        uint32_t args_len_u32 = static_cast<uint32_t>(args_len);
-        std::memcpy(result.data() + offset, &args_len_u32, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-
-        // serialized_args data
-        if (args_len > 0) {
-            std::memcpy(result.data() + offset, m.serialized_args.data(), args_len);
-            offset += args_len;
-        }
-
-        // supervisor_endpoint (binary)
-        uint32_t sup_ep_len = static_cast<uint32_t>(sup_ep_bytes.size());
-        std::memcpy(result.data() + offset, &sup_ep_len, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (sup_ep_len > 0) {
-            std::memcpy(result.data() + offset, sup_ep_bytes.data(), sup_ep_len);
-            offset += sup_ep_len;
-        }
-
-        // supervisor_type
-        uint32_t sup_type = m.supervisor_addr.type;
-        std::memcpy(result.data() + offset, &sup_type, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-
-        // supervisor_actor_id
-        uint64_t sup_actor_id = m.supervisor_addr.id.value();
-        std::memcpy(result.data() + offset, &sup_actor_id, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-
-        // supervisor_incarnation
-        uint64_t sup_incarnation = m.supervisor_addr.incarnation;
-        std::memcpy(result.data() + offset, &sup_incarnation, sizeof(uint64_t));
+        ::hpactor::SpawnRequestMessage pb_msg;
+        pb_msg.set_actor_type_name(m.actor_type_name);
+        pb_msg.set_args_type(static_cast<uint32_t>(m.args_type));
+        pb_msg.set_serialized_args(m.serialized_args.data(), m.serialized_args.size());
+        to_proto(pb_msg.mutable_supervisor(), m.supervisor_addr);
+        std::string serialized = pb_msg.SerializeAsString();
+        return bytes(serialized.begin(), serialized.end());
     }
     // SpawnResponse
     else if (std::holds_alternative<SpawnResponse>(msg)) {
         const SpawnResponse& m = std::get<SpawnResponse>(msg);
-        bytes actor_ep_bytes = encode_endpoint(m.actor_addr.endpoint);
-        result.resize(sizeof(uint32_t) + actor_ep_bytes.size() + sizeof(uint32_t) +
-                      sizeof(uint64_t) + sizeof(uint64_t) + sizeof(uint32_t));
-        size_t offset = 0;
-
-        // actor_endpoint (binary)
-        uint32_t actor_ep_len = static_cast<uint32_t>(actor_ep_bytes.size());
-        std::memcpy(result.data() + offset, &actor_ep_len, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (actor_ep_len > 0) {
-            std::memcpy(result.data() + offset, actor_ep_bytes.data(), actor_ep_len);
-            offset += actor_ep_len;
-        }
-
-        // actor_type
-        uint32_t actor_type = m.actor_addr.type;
-        std::memcpy(result.data() + offset, &actor_type, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-
-        // actor_id
-        uint64_t actor_id = m.actor_addr.id.value();
-        std::memcpy(result.data() + offset, &actor_id, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-
-        // actor_incarnation
-        uint64_t actor_incarnation = m.actor_addr.incarnation;
-        std::memcpy(result.data() + offset, &actor_incarnation, sizeof(uint64_t));
-        offset += sizeof(uint64_t);
-
-        // error_code
-        uint32_t error_code = m.error_code;
-        std::memcpy(result.data() + offset, &error_code, sizeof(uint32_t));
+        ::hpactor::SpawnResponseMessage pb_msg;
+        to_proto(pb_msg.mutable_actor_addr(), m.actor_addr);
+        pb_msg.set_error_code(m.error_code);
+        std::string serialized = pb_msg.SerializeAsString();
+        return bytes(serialized.begin(), serialized.end());
     }
 
-    return result;
+    return bytes{};
 }
 
 SpawnMessageVariant DefaultSerializer::decode_spawn(TypeTag tag, const bytes& data) {
+    std::string serialized(data.begin(), data.end());
+
     switch (tag) {
     case TypeTag::SpawnRequestTag: {
+        ::hpactor::SpawnRequestMessage pb_msg;
+        if (!pb_msg.ParseFromString(serialized)) {
+            return SpawnMessageVariant{};
+        }
         SpawnRequest m;
-        size_t offset = 0;
-
-        // actor_type_name length
-        uint32_t name_len;
-        std::memcpy(&name_len, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-
-        // actor_type_name string
-        m.actor_type_name.resize(name_len);
-        std::memcpy(m.actor_type_name.data(), data.data() + offset, name_len);
-        offset += name_len;
-
-        // args_type
-        uint32_t args_type_val;
-        std::memcpy(&args_type_val, data.data() + offset, sizeof(uint32_t));
-        m.args_type = static_cast<TypeTag>(args_type_val);
-        offset += sizeof(uint32_t);
-
-        // serialized_args length
-        uint32_t args_len;
-        std::memcpy(&args_len, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-
-        // serialized_args data
-        m.serialized_args.resize(args_len);
-        if (args_len > 0) {
-            std::memcpy(m.serialized_args.data(), data.data() + offset, args_len);
-            offset += args_len;
-        }
-
-        // supervisor_endpoint (binary)
-        uint32_t sup_ep_len;
-        std::memcpy(&sup_ep_len, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (sup_ep_len > 0) {
-            bytes sup_ep_data(data.begin() + static_cast<long>(offset),
-                             data.begin() + static_cast<long>(offset) + sup_ep_len);
-            m.supervisor_addr.endpoint = decode_endpoint(sup_ep_data);
-            offset += sup_ep_len;
-        }
-
-        // supervisor_type
-        uint32_t sup_type;
-        std::memcpy(&sup_type, data.data() + offset, sizeof(uint32_t));
-        m.supervisor_addr.type = sup_type;
-        offset += sizeof(uint32_t);
-
-        // supervisor_actor_id
-        uint64_t sup_actor_id;
-        std::memcpy(&sup_actor_id, data.data() + offset, sizeof(uint64_t));
-        m.supervisor_addr.id = ActorId(sup_actor_id);
-        offset += sizeof(uint64_t);
-
-        // supervisor_incarnation
-        uint64_t sup_incarnation;
-        std::memcpy(&sup_incarnation, data.data() + offset, sizeof(uint64_t));
-        m.supervisor_addr.incarnation = sup_incarnation;
-
+        m.actor_type_name = pb_msg.actor_type_name();
+        m.args_type = static_cast<TypeTag>(pb_msg.args_type());
+        m.serialized_args.assign(pb_msg.serialized_args().begin(), pb_msg.serialized_args().end());
+        m.supervisor_addr = from_proto(pb_msg.supervisor());
         return m;
     }
     case TypeTag::SpawnResponseTag: {
-        SpawnResponse m;
-        size_t offset = 0;
-
-        // actor_endpoint (binary)
-        uint32_t actor_ep_len;
-        std::memcpy(&actor_ep_len, data.data() + offset, sizeof(uint32_t));
-        offset += sizeof(uint32_t);
-        if (actor_ep_len > 0) {
-            bytes actor_ep_data(data.begin() + static_cast<long>(offset),
-                               data.begin() + static_cast<long>(offset) + actor_ep_len);
-            m.actor_addr.endpoint = decode_endpoint(actor_ep_data);
-            offset += actor_ep_len;
+        ::hpactor::SpawnResponseMessage pb_msg;
+        if (!pb_msg.ParseFromString(serialized)) {
+            return SpawnMessageVariant{};
         }
-
-        // actor_type
-        uint32_t actor_type;
-        std::memcpy(&actor_type, data.data() + offset, sizeof(uint32_t));
-        m.actor_addr.type = actor_type;
-        offset += sizeof(uint32_t);
-
-        // actor_id
-        uint64_t actor_id;
-        std::memcpy(&actor_id, data.data() + offset, sizeof(uint64_t));
-        m.actor_addr.id = ActorId(actor_id);
-        offset += sizeof(uint64_t);
-
-        // actor_incarnation
-        uint64_t actor_incarnation;
-        std::memcpy(&actor_incarnation, data.data() + offset, sizeof(uint64_t));
-        m.actor_addr.incarnation = actor_incarnation;
-        offset += sizeof(uint64_t);
-
-        // error_code
-        uint32_t error_code;
-        std::memcpy(&error_code, data.data() + offset, sizeof(uint32_t));
-        m.error_code = error_code;
-
+        SpawnResponse m;
+        m.actor_addr = from_proto(pb_msg.actor_addr());
+        m.error_code = pb_msg.error_code();
         return m;
     }
     default:

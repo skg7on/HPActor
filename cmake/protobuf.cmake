@@ -15,6 +15,10 @@ function(PROTOBUF_GENERATE_CPP SRCS HDRS)
     endif()
   endif()
 
+  # Accumulate source and header lists locally, then set PARENT_SCOPE once at end
+  set(_srcs)
+  set(_hdrs)
+
   foreach(FIL ${ARGN})
     get_filename_component(FIL_abs ${FIL} ABSOLUTE)
     get_filename_component(FIL_dir ${FIL} DIRECTORY)
@@ -36,8 +40,8 @@ function(PROTOBUF_GENERATE_CPP SRCS HDRS)
     # Ensure output directory exists
     file(MAKE_DIRECTORY ${OUT_DIR})
 
-    set(${SRCS} ${${SRCS}} ${OUT_DIR}/${FIL_base}.pb.cc PARENT_SCOPE)
-    set(${HDRS} ${${HDRS}} ${OUT_DIR}/${FIL_base}.pb.h PARENT_SCOPE)
+    list(APPEND _srcs ${OUT_DIR}/${FIL_base}.pb.cc)
+    list(APPEND _hdrs ${OUT_DIR}/${FIL_base}.pb.h)
 
     add_custom_command(
       OUTPUT ${OUT_DIR}/${FIL_base}.pb.cc
@@ -50,4 +54,8 @@ function(PROTOBUF_GENERATE_CPP SRCS HDRS)
       VERBATIM
     )
   endforeach()
+
+  # Set output variables in parent scope
+  set(${SRCS} ${_srcs} PARENT_SCOPE)
+  set(${HDRS} ${_hdrs} PARENT_SCOPE)
 endfunction()

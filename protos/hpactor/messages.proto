@@ -1,0 +1,43 @@
+// protos/hpactor/messages.proto
+syntax = "proto3";
+
+package hpactor;
+
+import "hpactor/common.proto";
+
+// Application-level messages for actor communication
+// These messages are serialized into frames for transport
+
+message DownMessage {
+  PbActorEndpoint endpoint = 1;
+  uint64 actor_id = 2;
+  uint32 reason_code = 3;
+}
+
+message ExitMessage {
+  PbActorEndpoint sender = 1;
+  uint64 actor_id = 2;
+  uint32 reason_code = 3;
+}
+
+message LinkMessage {
+  PbActorEndpoint target = 1;
+  uint64 actor_id = 2;
+}
+
+message UnlinkMessage {
+  PbActorEndpoint target = 1;
+  uint64 actor_id = 2;
+}
+
+message SpawnRequestMessage {
+  string actor_type_name = 1;
+  uint32 args_type = 2;
+  bytes serialized_args = 3;
+  PbActorRef supervisor = 4;
+}
+
+message SpawnResponseMessage {
+  PbActorAddress actor_addr = 1;
+  uint32 error_code = 2;
+}
