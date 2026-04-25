@@ -72,6 +72,7 @@ struct NodeEndpoint {
     bool is_static_route = false;
     std::vector<AcceptorInfo> acceptors;
     std::chrono::steady_clock::time_point last_seen;
+    std::string uds_path;     // NEW: path to UDS socket, empty if not available
 };
 
 // -----------------------------------------------------------------------------
