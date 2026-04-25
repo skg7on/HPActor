@@ -131,6 +131,10 @@ add_executable(test_registrar net/test_registrar.cpp)
 target_link_libraries(test_registrar hpactor)
 add_test(NAME test_registrar COMMAND test_registrar)
 
+add_executable(test_registrar_connection net/test_registrar_connection.cpp)
+target_link_libraries(test_registrar_connection hpactor)
+add_test(NAME test_registrar_connection COMMAND test_registrar_connection)
+
 # =============================================================================
 # Spawn tests - remote actor spawn
 # =============================================================================

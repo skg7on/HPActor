@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/types/types.hpp>
 #include <hpactor/ref/actor_address.hpp>
@@ -209,6 +210,82 @@ class RegistrarServer;
 class RegistrarClient;
 class NodeRegistry;
 
+// Forward declaration
+class RegistrarConnection;
+using RegistrarConnectionPtr = std::shared_ptr<RegistrarConnection>;
+
+// RegistrarConnection - async TCP connection for registrar protocol
+class RegistrarConnection : public std::enable_shared_from_this<RegistrarConnection> {
+    friend class RegistrarServer;
+
+public:
+    using message_handler = std::function<void(TcpMessageType, const bytes&)>;
+    using disconnect_handler = std::function<void()>;
+    using send_complete_handler = std::function<void(int result)>;
+
+    // Create from accepted server socket
+    static RegistrarConnectionPtr accepted(int fd,
+                                          CommunicationEndpoint remote_endpoint,
+                                          EventLoop* loop);
+
+    // Create as client connection
+    static RegistrarConnectionPtr connecting(int fd,
+                                           CommunicationEndpoint remote_endpoint,
+                                           EventLoop* loop);
+
+    ~RegistrarConnection();
+
+    // Set handlers
+    void set_message_handler(message_handler h);
+    void set_disconnect_handler(disconnect_handler h);
+    void set_send_complete_handler(send_complete_handler h);
+
+    // Send registrar message
+    void send_message(TcpMessageType type, const bytes& payload);
+
+    // Close connection
+    void close();
+
+    // Get remote endpoint
+    CommunicationEndpoint remote_endpoint() const { return remote_endpoint_; }
+
+    // Get fd
+    int fd() const { return fd_; }
+
+private:
+    enum class ReadState {
+        ReadingHeader,
+        ReadingPayload
+    };
+
+    RegistrarConnection(CommunicationEndpoint remote_endpoint, EventLoop* loop, int fd);
+
+    void register_with_loop();
+    void handle_read_event();
+    void handle_payload_read();
+    void flush_write_buffer();
+    void handle_send_completion(int result);
+
+    CommunicationEndpoint remote_endpoint_;
+    EventLoop* loop_ = nullptr;
+    int fd_ = -1;
+
+    ReadState read_state_ = ReadState::ReadingHeader;
+    size_t header_bytes_read_ = 0;
+    bytes header_buffer_;
+
+    TcpMessageType current_type_ = TcpMessageType::Register;
+    size_t payload_bytes_read_ = 0;
+    bytes payload_buffer_;
+
+    bytes write_buffer_;
+    bool is_sending_ = false;
+
+    message_handler message_handler_;
+    disconnect_handler disconnect_handler_;
+    send_complete_handler send_complete_handler_;
+};
+
 // -----------------------------------------------------------------------------
 // RegistrarServer - TCP-based authoritative registrar
 // -----------------------------------------------------------------------------
@@ -233,33 +310,33 @@ public:
     void set_event_loop(EventLoop* loop) { loop_ = loop; }
 
     // Handle incoming TCP connection
-    void handle_accept(int client_fd);
+    void handle_accept(int client_fd, CommunicationEndpoint remote_endpoint);
 
     // Broadcast event to all connected clients
     void broadcast_node_joined(CommunicationEndpoint endpoint, const NodeEndpoint& ep);
     void broadcast_node_left(CommunicationEndpoint endpoint);
 
 private:
-    void accept_loop();
-    void handle_tcp_message(int client_fd, TcpMessageType type, const bytes& data);
-
-    // Send TCP response to client
-    void send_tcp_response(int client_fd, TcpMessageType type, const bytes& payload);
+    void handle_tcp_message(RegistrarConnectionPtr conn, TcpMessageType type, const bytes& data);
+    void handle_disconnect(RegistrarConnectionPtr conn);
 
     RegistrarConfig config_;
     [[maybe_unused]] CommunicationEndpoint local_endpoint_;
     NodeRegistry registry_;
     EventLoop* loop_ = nullptr;
+    Acceptor acceptor_;
 
-    int tcp_socket_ = -1;
     int udp_socket_ = -1;
     std::atomic<bool> running_{false};
 
-    // Connected clients (endpoint -> fd)
-    std::unordered_map<CommunicationEndpoint, int> clients_;
+    // Connected clients (endpoint -> connection)
+    std::unordered_map<CommunicationEndpoint, RegistrarConnectionPtr> clients_;
+    // fd -> connection map for completion routing
+    std::unordered_map<int, RegistrarConnectionPtr> fd_to_connection_;
     std::mutex clients_mutex_;
 
-    std::thread accept_thread_;
+    // Event processing thread
+    std::thread event_thread_;
 };
 
 // -----------------------------------------------------------------------------
@@ -347,26 +424,12 @@ public:
     bool is_connected() const { return connected_.load(); }
 
 private:
-    void connection_loop();
-    void heartbeat_loop();
+    void attempt_connection();
     void send_registration();
-    void send_heartbeat();
 
-    // TCP connection to server
-    bool connect_to_server();
-    void disconnect_from_server();
-
-    // Resolve node via UDP query to server
-    NodeEndpoint* resolve_node(CommunicationEndpoint endpoint);
-
-    // Failover: try to become server or find new server
-    void failover();
-
-    // Handle connection loss (called on disconnect detection)
-    void handle_connection_lost();
-
-    // Find server via UDP broadcast
-    void find_server_via_broadcast();
+    // Handle server messages
+    void handle_server_message(TcpMessageType type, const bytes& data);
+    void handle_disconnect();
 
     RegistrarConfig config_;
     CommunicationEndpoint local_endpoint_;
@@ -374,16 +437,11 @@ private:
     NodeRegistry* shared_registry_;  // Not owned
     EventLoop* loop_ = nullptr;
 
-    int tcp_socket_ = -1;
-    int udp_socket_ = -1;
+    RegistrarConnectionPtr server_connection_;
     std::atomic<bool> running_{false};
     std::atomic<bool> connected_{false};
 
-    std::thread connection_thread_;
-    std::thread heartbeat_thread_;
-
-    // Timer handles for EventLoop-based timers
-    uint64_t connection_timer_ = 0;
+    // Timer handles
     uint64_t heartbeat_timer_ = 0;
 
     // For heartbeat tracking

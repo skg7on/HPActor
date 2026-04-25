@@ -14,6 +14,7 @@
 
 #include <hpactor/net/registrar.hpp>
 
+#include <algorithm>
 #include <arpa/inet.h>
 #include <netdb.h>
 #include <sys/socket.h>
@@ -26,6 +27,239 @@
 namespace hpactor {
 
 namespace net {
+
+// -----------------------------------------------------------------------------
+// RegistrarConnection Implementation
+// -----------------------------------------------------------------------------
+
+RegistrarConnection::RegistrarConnection(CommunicationEndpoint remote_endpoint,
+                                        EventLoop* loop,
+                                        int fd)
+    : remote_endpoint_(remote_endpoint),
+      loop_(loop),
+      fd_(fd),
+      header_buffer_(TcpHeaderSize) {}
+
+RegistrarConnection::~RegistrarConnection() {
+    close();
+}
+
+RegistrarConnectionPtr RegistrarConnection::accepted(int fd,
+                                                     CommunicationEndpoint remote_endpoint,
+                                                     EventLoop* loop) {
+    auto conn = std::shared_ptr<RegistrarConnection>(
+        new RegistrarConnection(remote_endpoint, loop, fd));
+    conn->register_with_loop();
+    return conn;
+}
+
+RegistrarConnectionPtr RegistrarConnection::connecting(int fd,
+                                                     CommunicationEndpoint remote_endpoint,
+                                                     EventLoop* loop) {
+    return std::shared_ptr<RegistrarConnection>(
+        new RegistrarConnection(remote_endpoint, loop, fd));
+}
+
+void RegistrarConnection::register_with_loop() {
+    // Note: We do NOT set loop_->set_completion_callback() here
+    // because that would overwrite the server's callback.
+    // Instead, the server sets ONE completion callback that routes
+    // completions via a static fd->connection map.
+    // This connection registers itself in that map.
+    if (loop_ && fd_ >= 0) {
+        loop_->add_fd(fd_, EventLoop::Event::Read);
+    }
+}
+
+void RegistrarConnection::set_message_handler(message_handler h) {
+    message_handler_ = std::move(h);
+}
+
+void RegistrarConnection::set_disconnect_handler(disconnect_handler h) {
+    disconnect_handler_ = std::move(h);
+}
+
+void RegistrarConnection::set_send_complete_handler(send_complete_handler h) {
+    send_complete_handler_ = std::move(h);
+}
+
+void RegistrarConnection::send_message(TcpMessageType type, const bytes& payload) {
+    if (fd_ < 0 || !loop_) return;
+
+    // Build message: [Magic: 4][Version: 1][Type: 1][Length: 4][Payload: N]
+    bytes message;
+    message.resize(TcpHeaderSize + payload.size());
+
+    uint32_t magic_be = htonl(TcpRegistrarMagic);
+    memcpy(message.data(), &magic_be, 4);
+    message[4] = TcpRegistrarVersion;
+    message[5] = static_cast<uint8_t>(type);
+    uint32_t len_be = htonl(static_cast<uint32_t>(payload.size()));
+    memcpy(message.data() + 6, &len_be, 4);
+    if (!payload.empty()) {
+        memcpy(message.data() + TcpHeaderSize, payload.data(), payload.size());
+    }
+
+    // Append to write buffer and flush
+    write_buffer_.insert(write_buffer_.end(), message.begin(), message.end());
+    flush_write_buffer();
+}
+
+void RegistrarConnection::close() {
+    if (fd_ >= 0) {
+        if (loop_) {
+            loop_->remove_fd(fd_);
+        }
+        ::close(fd_);
+        fd_ = -1;
+    }
+}
+
+void RegistrarConnection::handle_read_event() {
+    if (fd_ < 0 || !loop_) return;
+
+    // Non-blocking read loop (fd is known to be readable via EventLoop notification)
+    // This pattern follows PlainConnection: poll has_event() to know when to read
+
+    // Read into header buffer first
+    while (header_bytes_read_ < TcpHeaderSize) {
+        // Check if still readable (edge-triggered)
+        if (!loop_->has_event(fd_, EventLoop::Event::Read)) {
+            return;  // Would block, wait for next notification
+        }
+
+        ssize_t bytes_read = recv(fd_,
+                                  header_buffer_.data() + header_bytes_read_,
+                                  TcpHeaderSize - header_bytes_read_,
+                                  0);
+        if (bytes_read <= 0) {
+            // Connection closed or error
+            if (disconnect_handler_) {
+                disconnect_handler_();
+            }
+            close();
+            return;
+        }
+        header_bytes_read_ += static_cast<size_t>(bytes_read);
+    }
+
+    // Parse header
+    uint32_t magic;
+    memcpy(&magic, header_buffer_.data(), 4);
+    magic = ntohl(magic);
+
+    if (magic != TcpRegistrarMagic) {
+        // Invalid magic - consume byte and try again
+        memmove(header_buffer_.data(), header_buffer_.data() + 1, TcpHeaderSize - 1);
+        header_bytes_read_--;
+        // Loop back to try reading more header bytes
+        return;
+    }
+
+    uint8_t version = header_buffer_[4];
+    if (version != TcpRegistrarVersion) {
+        // Unsupported version - consume byte and try again
+        memmove(header_buffer_.data(), header_buffer_.data() + 1, TcpHeaderSize - 1);
+        header_bytes_read_--;
+        return;
+    }
+
+    current_type_ = static_cast<TcpMessageType>(header_buffer_[5]);
+
+    uint32_t payload_len;
+    memcpy(&payload_len, header_buffer_.data() + 6, 4);
+    payload_len = ntohl(payload_len);
+
+    // Allocate payload buffer
+    payload_buffer_.resize(payload_len);
+    payload_bytes_read_ = 0;
+    read_state_ = ReadState::ReadingPayload;
+
+    // Continue to read payload
+    handle_payload_read();
+}
+
+void RegistrarConnection::handle_payload_read() {
+    if (fd_ < 0) return;
+
+    // Continue reading payload
+    while (payload_bytes_read_ < payload_buffer_.size()) {
+        // Check if still readable
+        if (!loop_->has_event(fd_, EventLoop::Event::Read)) {
+            return;  // Would block, wait for next notification
+        }
+
+        ssize_t bytes_read = recv(fd_,
+                                  payload_buffer_.data() + payload_bytes_read_,
+                                  payload_buffer_.size() - payload_bytes_read_,
+                                  0);
+        if (bytes_read <= 0) {
+            // Connection closed or error
+            if (disconnect_handler_) {
+                disconnect_handler_();
+            }
+            close();
+            return;
+        }
+        payload_bytes_read_ += static_cast<size_t>(bytes_read);
+    }
+
+    // Payload complete - deliver to handler
+    if (message_handler_) {
+        message_handler_(current_type_, payload_buffer_);
+    }
+
+    // Reset to reading next header
+    header_bytes_read_ = 0;
+    std::fill(header_buffer_.begin(), header_buffer_.end(), 0);
+    payload_buffer_.clear();
+    read_state_ = ReadState::ReadingHeader;
+}
+
+void RegistrarConnection::flush_write_buffer() {
+    if (fd_ < 0 || loop_ == nullptr || write_buffer_.empty() || is_sending_) {
+        return;
+    }
+
+    is_sending_ = true;
+
+    struct iovec iov;
+    iov.iov_base = write_buffer_.data();
+    iov.iov_len = write_buffer_.size();
+
+    // Use async_send - completion routed via EventLoop completion_callback_
+    loop_->backend()->async_send(fd_, &iov, 1, ActorId(0),
+                                  static_cast<uint32_t>(OpType::Send));
+}
+
+void RegistrarConnection::handle_send_completion(int result) {
+    if (send_complete_handler_) {
+        send_complete_handler_(result);
+    }
+    is_sending_ = false;
+
+    if (result < 0) {
+        // Send error
+        if (disconnect_handler_) {
+            disconnect_handler_();
+        }
+        close();
+        return;
+    }
+
+    // Remove sent bytes from write buffer
+    if (static_cast<size_t>(result) >= write_buffer_.size()) {
+        write_buffer_.clear();
+    } else {
+        write_buffer_.erase(write_buffer_.begin(),
+                            write_buffer_.begin() + result);
+    }
+
+    // Continue flushing if more data
+    if (!write_buffer_.empty()) {
+        flush_write_buffer();
+    }
+}
 
 // -----------------------------------------------------------------------------
 // HostResolver Implementation
