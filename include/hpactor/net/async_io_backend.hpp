@@ -41,6 +41,10 @@ struct OpCompletion {
     int     fd;         // fd the operation was on
     int     result;      // >= 0 bytes on success, < 0 errno on failure
     uint64_t user_data;  // original user_data from the SQE
+
+    // For recvfrom: source address of received datagram
+    struct sockaddr_in src_addr;
+    socklen_t src_addr_len = 0;
 };
 
 class AsyncIoBackend {
