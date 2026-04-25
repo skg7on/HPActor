@@ -3,35 +3,13 @@ syntax = "proto3";
 
 package hpactor.net;
 
+import "hpactor/common.proto";
+
 message Frame {
-  ActorAddress sender = 1;
-  ActorAddress receiver = 2;
+  hpactor.PbActorAddress sender = 1;
+  hpactor.PbActorAddress receiver = 2;
   uint64 message_id = 3;
   uint32 flags = 4;
   bytes payload = 5;
   uint32 type_tag = 6;
-}
-
-message ActorAddress {
-  Endpoint endpoint = 1;
-  uint32 type = 2;
-  uint64 actor_id = 3;
-  uint64 incarnation = 4;
-}
-
-message Endpoint {
-  oneof type {
-    Ipv4Endpoint ipv4 = 1;
-    Ipv6Endpoint ipv6 = 2;
-  }
-}
-
-message Ipv4Endpoint {
-  fixed32 addr = 1;
-  uint32 port = 2;
-}
-
-message Ipv6Endpoint {
-  bytes addr = 1;
-  uint32 port = 2;
 }

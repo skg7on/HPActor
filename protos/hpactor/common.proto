@@ -1,0 +1,39 @@
+// protos/hpactor/common.proto
+syntax = "proto3";
+
+package hpactor;
+
+// Common protobuf types for HPActor serialization
+// These types are shared between frame.proto (transport) and messages.proto (application messages)
+// Naming: Pb-prefixed to avoid collision with C++ types in hpactor namespace
+
+message PbActorEndpoint {
+  oneof type {
+    PbIpv4Endpoint ipv4 = 1;
+    PbIpv6Endpoint ipv6 = 2;
+  }
+}
+
+message PbActorRef {
+  PbActorEndpoint endpoint = 1;
+  uint32 type = 2;
+  uint64 actor_id = 3;
+  uint64 incarnation = 4;
+}
+
+message PbActorAddress {
+  PbActorEndpoint endpoint = 1;
+  uint32 type = 2;
+  uint64 actor_id = 3;
+  uint64 incarnation = 4;
+}
+
+message PbIpv4Endpoint {
+  fixed32 addr = 1;
+  uint32 port = 2;
+}
+
+message PbIpv6Endpoint {
+  bytes addr = 1;
+  uint32 port = 2;
+}
