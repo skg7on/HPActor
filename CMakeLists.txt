@@ -115,6 +115,13 @@ elseif(ENABLE_TSAN)
 endif()
 
 # =============================================================================
+# Platform-Specific Settings
+# =============================================================================
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0" CACHE STRING "macOS deployment target")
+endif()
+
+# =============================================================================
 # Library Sources
 # =============================================================================
 add_library(hpactor_lib STATIC
