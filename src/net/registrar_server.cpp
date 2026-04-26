@@ -22,7 +22,6 @@
 #include <unistd.h>
 
 #include <cstring>
-#include <thread>
 
 namespace hpactor {
 
@@ -36,7 +35,20 @@ RegistrarServer::RegistrarServer(const RegistrarConfig& config,
                                  CommunicationEndpoint local_endpoint,
                                  EventLoop* loop)
     : config_(config), local_endpoint_(local_endpoint), registry_(config),
-      loop_(loop), acceptor_(loop) {}
+      loop_(loop), acceptor_(loop) {
+    // Set completion callback for send routing - must be done before
+    // connections register themselves
+    if (loop_) {
+        loop_->set_completion_callback([this](OpCompletion c) {
+            if (c.type == OpType::Send) {
+                auto it = fd_to_connection_.find(c.fd);
+                if (it != fd_to_connection_.end()) {
+                    it->second->handle_send_completion(c.result);
+                }
+            }
+        });
+    }
+}
 
 RegistrarServer::~RegistrarServer() {
     stop();
@@ -49,19 +61,9 @@ void RegistrarServer::start() {
 
     running_.store(true);
 
-    // Set completion callback for send routing BEFORE creating connections
-    if (loop_) {
-        loop_->set_completion_callback([this](OpCompletion c) {
-            if (c.type == OpType::Send) {
-                auto it = fd_to_connection_.find(c.fd);
-                if (it != fd_to_connection_.end()) {
-                    it->second->handle_send_completion(c.result);
-                }
-            }
-        });
-    }
-
     // Use Acceptor for TCP listening (async)
+    // The Acceptor uses the EventLoop to monitor the listening socket
+    // and invokes our accept handler when connections arrive
     acceptor_.set_accept_handler([this](int fd, CommunicationEndpoint remote_ep) {
         handle_accept(fd, remote_ep);
     });
@@ -70,35 +72,26 @@ void RegistrarServer::start() {
     // Create UDP socket for resolution queries
     udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
     if (udp_socket_ >= 0) {
+        int reuse = 1;
+        setsockopt(udp_socket_, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
         struct sockaddr_in udp_addr;
         memset(&udp_addr, 0, sizeof(udp_addr));
         udp_addr.sin_family = AF_INET;
         udp_addr.sin_addr.s_addr = INADDR_ANY;
         udp_addr.sin_port = htons(config_.udp_port);
-        bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr),
-             sizeof(udp_addr));
-    }
-
-    // Start event processing loop in background thread
-    event_thread_ = std::thread([this]() {
-        while (running_.load()) {
-            if (loop_) {
-                int n = loop_->wait(100); // 100ms timeout
-                if (n > 0) {
-                    // Process client connections for read events
-                    std::lock_guard<std::mutex> lock(clients_mutex_);
-                    for (auto& [fd, conn] : fd_to_connection_) {
-                        (void)fd;
-                        if (loop_->has_event(conn->fd(), EventLoop::Event::Read)) {
-                            conn->handle_read_event();
-                        }
-                    }
-                }
-            } else {
-                std::this_thread::sleep_for(std::chrono::milliseconds(100));
-            }
+        if (bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr),
+             sizeof(udp_addr)) < 0) {
+            // Bind failed - close socket and set to -1
+            close(udp_socket_);
+            udp_socket_ = -1;
         }
-    });
+
+        // Register UDP socket with EventLoop if we have one
+        if (loop_) {
+            loop_->add_fd(udp_socket_, EventLoop::Event::Read);
+        }
+    }
 }
 
 void RegistrarServer::stop() {
@@ -107,11 +100,6 @@ void RegistrarServer::stop() {
     }
 
     running_.store(false);
-
-    // Stop event processing thread
-    if (event_thread_.joinable()) {
-        event_thread_.join();
-    }
 
     // Close all client connections
     {
@@ -129,6 +117,9 @@ void RegistrarServer::stop() {
 
     // Close UDP socket
     if (udp_socket_ >= 0) {
+        if (loop_) {
+            loop_->remove_fd(udp_socket_);
+        }
         close(udp_socket_);
         udp_socket_ = -1;
     }

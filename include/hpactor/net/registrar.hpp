@@ -25,7 +25,6 @@
 #include <memory>
 #include <mutex>
 #include <string>
-#include <thread>
 #include <unordered_map>
 #include <vector>
 
@@ -343,9 +342,6 @@ class RegistrarServer {
     // fd -> connection map for completion routing
     std::unordered_map<int, RegistrarConnectionPtr> fd_to_connection_;
     std::mutex clients_mutex_;
-
-    // Event processing thread
-    std::thread event_thread_;
 };
 
 // -----------------------------------------------------------------------------
