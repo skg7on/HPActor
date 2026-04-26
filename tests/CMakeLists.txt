@@ -147,6 +147,10 @@ add_executable(test_uds_integration net/test_uds_integration.cpp)
 target_link_libraries(test_uds_integration hpactor)
 add_test(NAME test_uds_integration COMMAND test_uds_integration)
 
+add_executable(test_tcp_transport_comprehensive net/test_tcp_transport_comprehensive.cpp)
+target_link_libraries(test_tcp_transport_comprehensive hpactor)
+add_test(NAME test_tcp_transport_comprehensive COMMAND test_tcp_transport_comprehensive)
+
 # =============================================================================
 # Spawn tests - remote actor spawn
 # =============================================================================
