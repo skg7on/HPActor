@@ -26,8 +26,10 @@ void ActorRef::send(const ActorAddress& target, MessageVariant msg) {
             actor->get()->system().deliver_local(target.id, std::move(msg));
         }
     } else {
-        // Remote send via proxy - not implemented until Phase 2
-        // ActorProxy* proxy = get_proxy();
+        ActorProxy* proxy = get_proxy();
+        if (proxy) {
+            proxy->send(target, std::move(msg));
+        }
     }
 }
 
