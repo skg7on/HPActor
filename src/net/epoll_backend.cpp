@@ -238,15 +238,36 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
     int result_err = 0;
 
     if (optype == OpType::Accept) {
-        // Accept pending
-        if (int(events) & EPOLLIN) {
+        // Accept pending - loop to accept all available connections (edge-triggered)
+        while (true) {
             int client_fd = ::accept(fd, nullptr, nullptr);
-            if (client_fd >= 0) {
-                result_err = client_fd;
-            } else {
+            if (client_fd < 0) {
+                if (errno == EAGAIN) {
+                    // No more connections pending - re-arm for next
+                    break;
+                }
                 result_err = errno;
+                break;
+            }
+            // Register client_fd with event loop before delivering completion
+            // so caller can immediately use it with async_recv
+            add_fd(client_fd, IoEvent::Read);
+
+            // Deliver completion for this client_fd
+            OpCompletion completion{
+                .actor = op.actor,
+                .type = OpType::Accept,
+                .fd = client_fd,
+                .result = client_fd,
+                .user_data = 0,
+            };
+            {
+                std::lock_guard<std::mutex> lock(completions_mutex_);
+                pending_completions_.push_back(completion);
             }
         }
+        // Keep pending op for next accept (will be re-triggered)
+        return;
     } else if (optype == OpType::Connect) {
         // Connect pending - check result with getsockopt
         if (int(events) & EPOLLOUT) {
@@ -565,13 +586,39 @@ void EpollBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
 void EpollBackend::async_accept(int fd, ActorId actor) {
     int client_fd = ::accept(fd, nullptr, nullptr);
     if (client_fd < 0 && errno == EAGAIN) {
-        // Would block - store pending accept for wait() to process
+        // Would block - register fd with epoll for edge-triggered accept
+        // then store pending accept for wait() to process
+        struct epoll_event ev;
+        ev.events = EPOLLIN | EPOLLET;
+        ev.data.fd = fd;
+        if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, fd, &ev) < 0) {
+            // Failed to register - deliver error completion
+            OpCompletion completion{
+                .actor = actor,
+                .type = OpType::Accept,
+                .fd = -1,
+                .result = -errno,
+                .user_data = 0,
+            };
+            {
+                std::lock_guard<std::mutex> lock(completions_mutex_);
+                pending_completions_.push_back(completion);
+            }
+            return;
+        }
         PendingOp op;
         op.actor = actor;
         op.op_type = static_cast<uint32_t>(OpType::Accept);
         pending_ops_[fd] = std::move(op);
         return;
     }
+
+    if (client_fd >= 0) {
+        // Register client_fd with event loop before delivering completion
+        // so caller can immediately use it with async_recv
+        add_fd(client_fd, IoEvent::Read);
+    }
+
     OpCompletion completion{
         .actor = actor,
         .type = OpType::Accept,

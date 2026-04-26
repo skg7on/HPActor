@@ -135,6 +135,10 @@ void accept_trampoline(void* ctx) {
     auto* c = static_cast<AcceptContext*>(ctx);
     int client_fd = ::accept(c->fd, nullptr, nullptr);
     if (client_fd >= 0) {
+        // Register client_fd with event loop before delivering completion
+        // so caller can immediately use it with async_recv
+        c->self->add_fd(client_fd, IoEvent::Read);
+
         OpCompletion completion{
             .actor = c->actor,
             .type = OpType::Accept,
@@ -144,7 +148,9 @@ void accept_trampoline(void* ctx) {
         };
         c->self->deliver_completion(completion);
     }
-    delete c;
+    // Note: We don't delete c here - the AcceptContext is reused for subsequent
+    // accepts. The dispatch_source remains active and will fire again when
+    // another connection arrives.
 }
 
 void connect_trampoline(void* ctx) {
@@ -336,11 +342,21 @@ void GcdBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
 }
 
 void GcdBackend::async_accept(int fd, ActorId actor) {
+    // Cancel any existing source for this fd to prevent context leak
+    auto existing = accept_sources_.find(fd);
+    if (existing != accept_sources_.end()) {
+        dispatch_source_cancel(existing->second);
+        dispatch_release(existing->second);
+        accept_sources_.erase(existing);
+    }
+
     auto* ctx = new AcceptContext{this, fd, actor};
     dispatch_source_t source =
         dispatch_source_create(DISPATCH_SOURCE_TYPE_READ,
                                static_cast<uintptr_t>(fd), 0, dispatch_queue_);
     dispatch_set_context(source, ctx);
+    // Note: finalizer only runs when source is cancelled/released, not on each
+    // accept. Context is reused for subsequent accepts.
     dispatch_set_finalizer_f(
         source, [](void* ctx) { delete static_cast<AcceptContext*>(ctx); });
     dispatch_source_set_event_handler_f(source, accept_trampoline);

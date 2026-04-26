@@ -138,6 +138,9 @@ class KqueueBackend : public AsyncIoBackend {
     // fd -> pending I/O operation for edge-triggered async I/O
     std::unordered_map<int, PendingOp> pending_ops_;
 
+    // fd -> actor waiting for accept (listening sockets)
+    std::unordered_map<int, ActorId> accept_actors_;
+
     // Registered buffers (not supported in kqueue - always empty)
     std::vector<std::pair<const void*, size_t>> registered_buffers_;
 

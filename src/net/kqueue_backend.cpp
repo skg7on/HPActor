@@ -318,18 +318,28 @@ void KqueueBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
 }
 
 void KqueueBackend::async_accept(int fd, ActorId actor) {
-    int client_fd = ::accept(fd, nullptr, nullptr);
-    OpCompletion completion{
-        .actor = actor,
-        .type = OpType::Accept,
-        .fd = (client_fd >= 0) ? client_fd : -1,
-        .result = (client_fd >= 0) ? client_fd : -errno,
-        .user_data = 0,
-    };
-    {
-        std::lock_guard<std::mutex> lock(completions_mutex_);
-        pending_completions_.push_back(completion);
+    // Register listening fd with edge-triggered accept interest (EV_ONESHOT)
+    // When a connection arrives, we'll accept it in wait() and deliver completion
+    struct kevent ev;
+    EV_SET(&ev, fd, EVFILT_READ, EV_ADD | EV_ONESHOT, 0, 0, nullptr);
+    if (kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr) < 0) {
+        // Failed to register - deliver error completion
+        OpCompletion completion{
+            .actor = actor,
+            .type = OpType::Accept,
+            .fd = -1,
+            .result = -errno,
+            .user_data = 0,
+        };
+        {
+            std::lock_guard<std::mutex> lock(completions_mutex_);
+            pending_completions_.push_back(completion);
+        }
+        return;
     }
+
+    // Store actor for when accept event fires
+    accept_actors_[fd] = actor;
 }
 
 void KqueueBackend::async_connect(int fd, const sockaddr* addr,
@@ -545,6 +555,43 @@ int KqueueBackend::wait(int timeout_ms) {
     // Process pending socket I/O operations
     for (int i = 0; i < num_events; ++i) {
         int fd = static_cast<int>(events[i].ident);
+
+        // Check if this is an accept event on a listening socket
+        if (events[i].filter == EVFILT_READ) {
+            auto accept_it = accept_actors_.find(fd);
+            if (accept_it != accept_actors_.end()) {
+                // This is an accept event - accept the connection
+                ActorId actor = accept_it->second;
+                int client_fd = ::accept(fd, nullptr, nullptr);
+
+                if (client_fd >= 0) {
+                    // Register client_fd with event loop for read interest
+                    // so caller can use it with async_recv immediately
+                    add_fd(client_fd, IoEvent::Read);
+                }
+
+                OpCompletion completion{
+                    .actor = actor,
+                    .type = OpType::Accept,
+                    .fd = client_fd,
+                    .result = (client_fd >= 0) ? client_fd : -errno,
+                    .user_data = 0,
+                };
+                {
+                    std::lock_guard<std::mutex> lock(completions_mutex_);
+                    pending_completions_.push_back(completion);
+                }
+
+                // Remove from accept_actors_ since we've handled this accept
+                accept_actors_.erase(accept_it);
+
+                // Re-register listening fd for next accept if needed
+                // (EV_ONESHOT was used, so we need to re-arm for next connection)
+                // The caller must call async_accept again to register
+
+                continue;
+            }
+        }
 
         // Check if we have a pending operation for this fd
         auto it = pending_ops_.find(fd);
