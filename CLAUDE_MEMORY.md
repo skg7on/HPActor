@@ -39,6 +39,9 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - **UNIX Domain Socket Support (2026-04-25)** — `listen_unix_domain()` in Acceptor, `connect_unix_domain()` in TcpTransport, registry-driven UDS path lookup with TCP fallback, UDS path derivation utility with `/tmp/hpactor/<node_id>.sock` convention
 - **Registrar Protobuf Serialization (2026-04-25)** — `registrar.proto` with PbRegisterPayload, PbAcceptPayload, PbNodeJoinPayload, PbNodeLeavePayload, PbErrorPayload, PbResolveQueryPayload, PbResolveResponsePayload; `registrar_serialization.hpp` with to_proto/parse helpers; RegistrarServer/RegistrarClient updated to use protobuf instead of manual byte serialization
 - **Async UDP (2026-04-25)** — OpCompletion extended with src_addr/src_addr_len for UDP recvfrom; UdpRegistrar async UDP via EventLoop edge-triggered polling and async_sendto
+- **RegistrarServer refactor (2026-04-26)** — removed background polling thread; RegistrarServer now uses EventLoop's completion callback for send routing; added SO_REUSEADDR and error handling for UDP bind
+- **ActorRef remote send (2026-04-26)** — ActorRef::send() now calls ActorProxy::send() for remote actors instead of placeholder comment
+- **liburing optional (2026-04-26)** — on Linux, liburing is now optional; if not found, build uses epoll backend only without external dependencies
 
 **CommunicationEndpoint Refactor** ✅ Complete (2026-04-23, 50 tests passing)
 - NodeId (string "host:port") replaced with CommunicationEndpoint (std::variant<Ipv4Endpoint, Ipv6Endpoint>)
@@ -92,7 +95,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue), includes cyclic queue fix when returning last element
 - `execute_actor()` dispatch layer for coroutine resumption with state transitions
 
-**Tests:** ✅ 55 tests passing
+**Tests:** ✅ 56 tests passing
 - Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 - UDS: test_unix_domain_socket (path derivation, acceptor, fallback), test_uds_integration (connect and data flow)
 
@@ -179,13 +182,11 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 ## Build Commands
 
 ```bash
-# From project root - using homebrew clang-20 toolchain (Debug build)
-cmake -S . -B build -GNinja \
-  -DCMAKE_C_COMPILER=/opt/homebrew/bin/clang \
-  -DCMAKE_CXX_COMPILER=/opt/homebrew/bin/clang++ \
-  -DCMAKE_BUILD_TYPE=Debug
+# Configure and build
+cmake -S . -B build -GNinja
 ninja -C build
 
+# Run tests
 ctest --output-on-failure
 
 # With sanitizers
