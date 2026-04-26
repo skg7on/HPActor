@@ -196,10 +196,16 @@ target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::
 
 # Async I/O backends
 if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    find_package(liburing REQUIRED)
-    target_link_libraries(hpactor_lib PUBLIC liburing::uring)
-    # io_uring backend (with epoll fallback)
-    target_sources(hpactor_lib PRIVATE src/net/iouring_backend.cpp src/net/epoll_backend.cpp)
+    # Try to find liburing, make it optional - fall back to epoll if not found
+    find_package(liburing)
+    if(liburing_FOUND)
+        message(STATUS "liburing found - using io_uring backend")
+        target_link_libraries(hpactor_lib PUBLIC liburing::uring)
+        target_sources(hpactor_lib PRIVATE src/net/iouring_backend.cpp src/net/epoll_backend.cpp)
+    else()
+        message(STATUS "liburing not found - using epoll backend only (no io_uring support)")
+        target_sources(hpactor_lib PRIVATE src/net/epoll_backend.cpp)
+    endif()
 elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     # Compute macOS SDK path and link libdispatch from the SDK
     execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE HPACTOR_SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
