@@ -3,6 +3,15 @@ cmake_minimum_required(VERSION 3.16)
 # Generate compile_commands.json for tooling (must be before project())
 set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
+# =============================================================================
+# Platform-Specific Settings (must be before find_package)
+# =============================================================================
+if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # Protobuf dylib (libprotobuf.34+) is built for macOS 26.0+
+    # CMAKE_OSX_DEPLOYMENT_TARGET must be >= 26.0 to avoid linker warnings
+    set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0" CACHE STRING "macOS deployment target")
+endif()
+
 project(HPActor VERSION 0.1.0 LANGUAGES CXX)
 
 # Note: With Ninja, compile_commands.json is placed in CMAKE_SOURCE_DIR by default
@@ -98,6 +107,10 @@ add_compile_options(
     -Wold-style-cast
 )
 
+# Suppress linker warnings for dylibs built for newer macOS versions
+# (homebrew protobuf/abseil/openssl are built for macOS 26.0+)
+add_link_options(-Wl,-w)
+
 # Suppress abseil logging dependency in protobuf
 add_compile_definitions(GOOGLE_PROTOBUF_SUPPRESS_ABSL_LOG)
 
@@ -118,13 +131,15 @@ endif()
 # Platform-Specific Settings
 # =============================================================================
 if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    # Protobuf dylib (libprotobuf.34+) is built for macOS 26.0+
+    # CMAKE_OSX_DEPLOYMENT_TARGET must be >= 26.0 to avoid linker warnings
     set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0" CACHE STRING "macOS deployment target")
 endif()
 
 # =============================================================================
 # Library Sources
 # =============================================================================
-add_library(hpactor_lib STATIC
+add_library(hpactor_lib SHARED
     src/actor/abstract_actor.cpp
     src/actor/actor_context.cpp
     src/actor/actor_system.cpp
@@ -170,8 +185,8 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/messages.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/registrar.proto
 )
-add_library(hpactor_proto STATIC ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf)
+add_library(hpactor_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
+target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf absl::log_internal_check_op)
 target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(OpenSSL REQUIRED)
