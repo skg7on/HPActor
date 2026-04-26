@@ -782,6 +782,25 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
     }
 }
 
+void EpollBackend::set_read_handler(int fd, read_callback handler) {
+    // Allocate buffer and store handler
+    constexpr size_t kRecvBufferSize = 65536;
+    ReadHandler rh;
+    rh.buffer.resize(kRecvBufferSize);
+    rh.callback = std::move(handler);
+    read_handlers_[fd] = std::move(rh);
+
+    // Issue initial recv
+    iovec iov;
+    iov.iov_base = read_handlers_[fd].buffer.data();
+    iov.iov_len = read_handlers_[fd].buffer.size();
+    async_recv(fd, &iov, 1, ActorId(0), static_cast<uint32_t>(OpType::Recv));
+}
+
+void EpollBackend::clear_read_handler(int fd) {
+    read_handlers_.erase(fd);
+}
+
 int EpollBackend::wait(int timeout_ms) {
     struct epoll_event events[16];
     int num_events = epoll_wait(epoll_fd_, events, 16, timeout_ms);

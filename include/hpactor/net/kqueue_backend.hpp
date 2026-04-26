@@ -94,6 +94,10 @@ class KqueueBackend : public AsyncIoBackend {
         loop_ = loop;
     }
 
+    // Read handler management for connection receive
+    void set_read_handler(int fd, read_callback handler) override;
+    void clear_read_handler(int fd) override;
+
   private:
     // Timer entry
     struct TimerEntry {
@@ -140,6 +144,13 @@ class KqueueBackend : public AsyncIoBackend {
 
     // fd -> actor waiting for accept (listening sockets)
     std::unordered_map<int, ActorId> accept_actors_;
+
+    // fd -> read handler for connection receive
+    struct ReadHandler {
+        bytes buffer;
+        read_callback callback;
+    };
+    std::unordered_map<int, ReadHandler> read_handlers_;
 
     // Registered buffers (not supported in kqueue - always empty)
     std::vector<std::pair<const void*, size_t>> registered_buffers_;

@@ -104,6 +104,10 @@ class GcdBackend : public AsyncIoBackend {
         loop_ = loop;
     }
 
+    // Read handler management
+    void set_read_handler(int fd, read_callback handler) override;
+    void clear_read_handler(int fd) override;
+
     // Get the dispatch queue for timer rescheduling
     dispatch_queue_t get_dispatch_queue() const {
         return dispatch_queue_;
@@ -143,6 +147,14 @@ class GcdBackend : public AsyncIoBackend {
 
     // fd → dispatch_source_t (for async_connect)
     std::unordered_map<int, dispatch_source_t> connect_sources_;
+
+    // fd → read handler for connection receive
+    struct ReadHandler {
+        bytes buffer;
+        read_callback callback;
+        dispatch_source_t source = nullptr;
+    };
+    std::unordered_map<int, ReadHandler> read_handlers_;
 
     // EventLoop pointer for routing completions
     net::EventLoop* loop_ = nullptr;

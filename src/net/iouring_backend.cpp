@@ -235,14 +235,6 @@ void IoUringBackend::process_completions() {
         uint32_t op_type;
         decode_user_data(cqe->user_data, fd, actor, op_type);
 
-        OpCompletion completion{
-            .actor = actor,
-            .type = static_cast<OpType>(op_type),
-            .fd = fd,
-            .result = cqe->res,
-            .user_data = cqe->user_data,
-        };
-
         // Handle timer cancellation
         if (op_type == static_cast<uint32_t>(OpType::TimerFired)) {
             if (cancelled_timers_.count(cqe->user_data)) {
@@ -252,6 +244,33 @@ void IoUringBackend::process_completions() {
             }
         }
 
+        // Check if this is a read completion for a tracked fd
+        if (op_type == static_cast<uint32_t>(OpType::Recv)) {
+            auto it = read_handlers_.find(fd);
+            if (it != read_handlers_.end() && cqe->res > 0) {
+                // Copy received data
+                bytes data(it->second.buffer.data(),
+                         it->second.buffer.data() + cqe->res);
+                // Re-issue recv for next message
+                iovec iov;
+                iov.iov_base = it->second.buffer.data();
+                iov.iov_len = it->second.buffer.size();
+                async_recv(fd, &iov, 1, ActorId(0), static_cast<uint32_t>(OpType::Recv));
+                // Call the handler with received data
+                it->second.callback(data);
+                io_uring_cqe_seen(&ring_, cqe);
+                continue;
+            }
+        }
+
+        OpCompletion completion{
+            .actor = actor,
+            .type = static_cast<OpType>(op_type),
+            .fd = fd,
+            .result = cqe->res,
+            .user_data = cqe->user_data,
+        };
+
         deliver_completion(completion);
         io_uring_cqe_seen(&ring_, cqe);
     }
@@ -260,6 +279,25 @@ void IoUringBackend::process_completions() {
 void IoUringBackend::deliver_completion(OpCompletion completion) {
     // Stub for now — actor system wiring is Phase 5.5
     (void)completion;
+}
+
+void IoUringBackend::set_read_handler(int fd, read_callback handler) {
+    // Allocate buffer and store handler
+    constexpr size_t kRecvBufferSize = 65536;
+    ReadHandler rh;
+    rh.buffer.resize(kRecvBufferSize);
+    rh.callback = std::move(handler);
+    read_handlers_[fd] = std::move(rh);
+
+    // Issue initial recv
+    iovec iov;
+    iov.iov_base = read_handlers_[fd].buffer.data();
+    iov.iov_len = read_handlers_[fd].buffer.size();
+    async_recv(fd, &iov, 1, ActorId(0), static_cast<uint32_t>(OpType::Recv));
+}
+
+void IoUringBackend::clear_read_handler(int fd) {
+    read_handlers_.erase(fd);
 }
 
 uint64_t IoUringBackend::encode_user_data(int fd, ActorId actor, uint32_t op_type) {

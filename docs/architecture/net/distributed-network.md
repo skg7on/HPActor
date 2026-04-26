@@ -123,30 +123,7 @@ For deep understanding of how transparency works - message encoding, struct seri
 
 ## Network Configuration
 
-Configure the network stack in YAML format:
-
-```go
-node, err := ergo.StartNode("myapp@localhost", gen.NodeOptions{
-    Network: gen.NetworkOptions{
-        Mode:           gen.NetworkModeEnabled,
-        Cookie:         "secret-cluster-cookie",
-        MaxMessageSize: 10 * 1024 * 1024, // 10MB
-        Flags: gen.NetworkFlags{
-            Enable:                       true,
-            EnableRemoteSpawn:            true,
-            EnableRemoteApplicationStart: true,
-            EnableImportantDelivery:      true,
-        },
-        Acceptors: []gen.AcceptorOptions{
-            {
-                Port:       15000,
-                PortRange:  10,
-                BufferSize: 64 * 1024,
-            },
-        },
-    },
-})
-```
+Configure the network stack in YAML format.
 
 **Mode** - `NetworkModeEnabled` enables full networking with acceptors. `NetworkModeHidden` allows outgoing connections only (no acceptors). `NetworkModeDisabled` disables networking entirely.
 

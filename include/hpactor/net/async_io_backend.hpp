@@ -15,6 +15,8 @@
 #pragma once
 
 #include <hpactor/types/types.hpp>
+
+#include <functional>
 #include <sys/socket.h>
 #include <sys/uio.h>
 
@@ -91,6 +93,13 @@ class AsyncIoBackend {
 
     // Called by backend implementations to deliver a completion
     virtual void deliver_completion(OpCompletion completion) = 0;
+
+    // Read handler for connection receive
+    // When set, the backend will automatically issue recv for the fd
+    // and call the handler when data arrives
+    using read_callback = std::function<void(const bytes&)>;
+    virtual void set_read_handler(int fd, read_callback handler) = 0;
+    virtual void clear_read_handler(int fd) = 0;
 };
 
 [[maybe_unused]] static uint64_t

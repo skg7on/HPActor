@@ -85,6 +85,10 @@ class IoUringBackend : public AsyncIoBackend {
     int wait(int timeout_ms) override;
     void process_completions() override;
 
+    // Read handler management
+    void set_read_handler(int fd, read_callback handler) override;
+    void clear_read_handler(int fd) override;
+
   private:
     // Encode fd+actor+op_type into user_data
     static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type);
@@ -111,6 +115,13 @@ class IoUringBackend : public AsyncIoBackend {
 
     // Ops pending submission (not yet submitted to kernel)
     std::vector<struct io_uring_sqe*> pending_sqes_;
+
+    // fd -> read handler for connection receive
+    struct ReadHandler {
+        bytes buffer;
+        read_callback callback;
+    };
+    std::unordered_map<int, ReadHandler> read_handlers_;
 
     bool running_ = false;
 

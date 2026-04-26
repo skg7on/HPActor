@@ -89,6 +89,10 @@ class EpollBackend : public AsyncIoBackend {
         loop_ = loop;
     }
 
+    // Read handler management
+    void set_read_handler(int fd, read_callback handler) override;
+    void clear_read_handler(int fd) override;
+
   private:
     // Timer entry
     struct TimerEntry {
@@ -139,6 +143,13 @@ class EpollBackend : public AsyncIoBackend {
 
     // fd -> pending I/O operation for true async I/O
     std::unordered_map<int, PendingOp> pending_ops_;
+
+    // fd -> read handler for connection receive
+    struct ReadHandler {
+        bytes buffer;
+        read_callback callback;
+    };
+    std::unordered_map<int, ReadHandler> read_handlers_;
 
     // Registered buffers (not supported in epoll - always empty)
     std::vector<std::pair<const void*, size_t>> registered_buffers_;

@@ -106,6 +106,13 @@ class BackendAdapter : public AsyncIoBackend {
         backend_->async_sendto(fd, bufs, buf_count, addr, addrlen, actor, op_type);
     }
 
+    void set_read_handler(int fd, read_callback handler) override {
+        backend_->set_read_handler(fd, std::move(handler));
+    }
+    void clear_read_handler(int fd) override {
+        backend_->clear_read_handler(fd);
+    }
+
     uint64_t run_after(ActorId actor, int delay_ms) override {
         return backend_->run_after(actor, delay_ms);
     }
