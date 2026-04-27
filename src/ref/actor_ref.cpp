@@ -19,7 +19,7 @@
 
 namespace hpactor {
 
-void ActorRef::send(const ActorAddress& target, MessageVariant msg) {
+void ActorRef::send(const ActorAddress& target, TypedMessage msg) {
     if (is_local()) {
         Actor* actor = get_actor();
         if (actor) {

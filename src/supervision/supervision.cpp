@@ -16,18 +16,17 @@
 #include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/supervision.hpp>
 
+#include <hpactor/messages.pb.h>
+
 namespace hpactor {
 
-void Supervisor::on_child_stopped(ActorId /*child_id*/) {
-    // Default implementation does nothing
-}
+void Supervisor::on_child_stopped(ActorId /*child_id*/) {}
 
 OneForOneSupervisor::OneForOneSupervisor(SupervisionPolicy policy)
     : policy_(std::move(policy)) {}
 
 SupervisionDirective
 OneForOneSupervisor::on_child_failure(const ChildFailure& failure) {
-    // OneForOne: only the failed child is affected
     return failure.directive;
 }
 
@@ -36,11 +35,9 @@ AllForOneSupervisor::AllForOneSupervisor(SupervisionPolicy policy)
 
 SupervisionDirective
 AllForOneSupervisor::on_child_failure(const ChildFailure& /*failure*/) {
-    // AllForOne: failure affects all children, restart all
     return SupervisionDirective::Restart;
 }
 
-// SupervisorActor implementation
 SupervisorActor::SupervisorActor(ActorContext* ctx, ActorSystem& sys,
                                  Supervisor& strategy, std::vector<Actor> children)
     : EventBasedActor(ctx, sys), strategy_(strategy),
@@ -48,23 +45,23 @@ SupervisorActor::SupervisorActor(ActorContext* ctx, ActorSystem& sys,
       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
 
 Behavior SupervisorActor::make_behavior() {
-    return Behavior{[this](MessageVariant msg) {
-        std::visit(
-            [this](auto&& m) {
-                using T = std::decay_t<decltype(m)>;
-                if constexpr (std::is_same_v<T, down_msg>) {
-                    handle_child_down(m);
-                }
-            },
-            msg);
+    return Behavior{[this](TypedMessage& msg) {
+        if (msg.type_id() == TypeTag::DownMsg) {
+            handle_child_down(msg.type_id(), msg.payload());
+        }
     }};
 }
 
-void SupervisorActor::handle_child_down(const down_msg& msg) {
-    auto child_id = msg.terminated_actor.id;
+void SupervisorActor::handle_child_down(TypeTag /*tag*/, const bytes& payload) {
+    auto pb = std::make_shared<::hpactor::DownMessage>();
+    if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
+        return;
+    }
 
-    ChildFailure failure{child_id, msg.reason, SupervisionDirective::Restart};
+    ActorId child_id(pb->actor_id());
+    error reason(pb->reason_code());
 
+    ChildFailure failure{child_id, reason, SupervisionDirective::Restart};
     auto directive = strategy_.on_child_failure(failure);
 
     switch (directive) {
@@ -79,7 +76,6 @@ void SupervisorActor::handle_child_down(const down_msg& msg) {
                             children_.end());
             break;
         case SupervisionDirective::Escalate:
-            // TODO: escalate to parent supervisor
             break;
     }
 }
@@ -104,7 +100,6 @@ void SupervisorActor::restart_child(ActorId child_id) {
     }
 
     ++count;
-    // TODO: Actual restart would recreate and add the child actor
 }
 
 void SupervisorActor::restart_all_children() {
@@ -113,7 +108,6 @@ void SupervisorActor::restart_all_children() {
     }
 }
 
-// SelfSupervisingActor implementation
 SelfSupervisingActor::SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
                                            SupervisionPolicy policy)
     : EventBasedActor(ctx, sys), policy_(std::move(policy)),
@@ -170,8 +164,12 @@ SelfSupervisingActor::on_failure(ActorId child_id, const error& err) {
     return decide_restart(child_id, err);
 }
 
-void SelfSupervisingActor::handle_child_down(const down_msg& msg) {
-    decide_restart(msg.terminated_actor.id, msg.reason);
+void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/, const bytes& payload) {
+    auto pb = std::make_shared<::hpactor::DownMessage>();
+    if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
+        return;
+    }
+    decide_restart(ActorId(pb->actor_id()), error(pb->reason_code()));
 }
 
 SupervisionDirective

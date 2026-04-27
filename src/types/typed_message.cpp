@@ -12,26 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#pragma once
-
-#include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/typed_message.hpp>
 
 namespace hpactor {
 
-// ProtoStatefulActor extends EventBasedActor with an explicit state object.
-// The state is accessible via state() and persists across handler invocations.
-// Use in conjunction with EventBasedActor::on<T>() for protobuf-native handlers.
-template<typename StateT>
-class ProtoStatefulActor : public EventBasedActor {
-public:
-    ProtoStatefulActor(ActorContext* ctx, ActorSystem& sys)
-        : EventBasedActor(ctx, sys) {}
-
-    StateT& state() { return state_; }
-    const StateT& state() const { return state_; }
-
-private:
-    StateT state_;
-};
+TypedMessage::TypedMessage(TypeTag tag, const google::protobuf::Message& msg)
+    : tag_(tag) {
+    auto size = msg.ByteSizeLong();
+    payload_.resize(size);
+    (void)msg.SerializeToArray(payload_.data(), static_cast<int>(size));
+}
 
 } // namespace hpactor

@@ -60,7 +60,7 @@ class SupervisorActor : public EventBasedActor {
     Behavior make_behavior() override;
 
   private:
-    void handle_child_down(const down_msg& msg);
+    void handle_child_down(TypeTag tag, const bytes& payload);
     void restart_child(ActorId child_id);
     void restart_all_children();
     Supervisor& strategy_;
@@ -91,7 +91,7 @@ class SelfSupervisingActor : public EventBasedActor {
     virtual SupervisionDirective on_failure(ActorId child_id, const error& err);
 
   private:
-    void handle_child_down(const down_msg& msg);
+    void handle_child_down(TypeTag tag, const bytes& payload);
     SupervisionDirective decide_restart(ActorId child_id, const error& err);
     std::vector<Actor> children_;
     SupervisionPolicy policy_;

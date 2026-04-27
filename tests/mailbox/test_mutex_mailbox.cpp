@@ -13,48 +13,46 @@
 // limitations under the License.
 
 #include <cassert>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/mutex_mailbox.hpp>
-#include <string>
 #include <thread>
 #include <vector>
 
 using namespace hpactor;
 
-struct PingMsg {
-    int value;
-};
-
 int main() {
-    hpactor::MutexMailbox<PingMsg> mailbox;
+    MutexMailbox<TypedMessage> mailbox;
 
     // Test push/pop
-    mailbox.push(Message<PingMsg>{PingMsg{42}});
+    mailbox.push(TypedMessage(TypeTag::User, bytes{42}));
     assert(mailbox.size() == 1);
 
-    hpactor::Message<PingMsg> msg;
+    TypedMessage msg;
     bool popped = mailbox.pop(msg);
     assert(popped);
-    assert(msg.payload().value == 42);
+    assert(msg.type_id() == TypeTag::User);
+    assert(msg.payload().size() == 1);
+    assert(msg.payload()[0] == 42);
     assert(mailbox.empty());
 
     // Test try_pop on empty
     bool tried = mailbox.try_pop(msg);
-    assert(!tried); // Should return false
+    assert(!tried);
 
     // Test thread safety - push from multiple threads
     std::vector<std::thread> threads;
     for (int i = 0; i < 10; ++i) {
         threads.emplace_back([&mailbox, i]() {
             for (int j = 0; j < 100; ++j) {
-                mailbox.push(Message<PingMsg>{PingMsg{i * 100 + j}});
+                mailbox.push(TypedMessage(TypeTag::User,
+                    bytes{static_cast<uint8_t>(i), static_cast<uint8_t>(j)}));
             }
         });
     }
     for (auto& t : threads)
         t.join();
 
-    assert(mailbox.size() == 1000); // All messages delivered
+    assert(mailbox.size() == 1000);
 
     return 0;
 }

@@ -12,32 +12,26 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <atomic>
 #include <cassert>
 #include <cstdio>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/mutex_mailbox.hpp>
 #include <thread>
 #include <vector>
 
-struct StressMsg {
-    int value;
-    char padding[60]; // Cache line padding
-};
+using namespace hpactor;
 
 int main() {
-    hpactor::MutexMailbox<StressMsg> mailbox;
-    std::atomic<int> count{0};
+    MutexMailbox<TypedMessage> mailbox;
     constexpr int num_threads = 100;
     constexpr int msgs_per_thread = 10000;
 
     std::vector<std::thread> threads;
     for (int i = 0; i < num_threads; ++i) {
-        threads.emplace_back([&mailbox, &count, i]() {
+        threads.emplace_back([&mailbox, i]() {
             for (int j = 0; j < msgs_per_thread; ++j) {
-                mailbox.push(
-                    hpactor::Message<StressMsg>{StressMsg{i * 1000 + j, {}}});
-                count.fetch_add(1, std::memory_order_relaxed);
+                mailbox.push(TypedMessage(TypeTag::User,
+                    bytes{static_cast<uint8_t>(i), static_cast<uint8_t>(j)}));
             }
         });
     }
@@ -46,7 +40,7 @@ int main() {
 
     // Drain all messages
     int popped = 0;
-    hpactor::Message<StressMsg> msg;
+    TypedMessage msg;
     while (mailbox.try_pop(msg)) {
         popped++;
     }

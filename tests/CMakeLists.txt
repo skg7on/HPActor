@@ -11,10 +11,6 @@ add_executable(test_result core/test_result.cpp)
 target_link_libraries(test_result hpactor)
 add_test(NAME test_result COMMAND test_result)
 
-add_executable(test_serializer core/test_serializer.cpp)
-target_link_libraries(test_serializer hpactor)
-add_test(NAME test_serializer COMMAND test_serializer)
-
 # =============================================================================
 # Mailbox tests
 # =============================================================================
@@ -76,10 +72,6 @@ add_test(NAME test_actor_system COMMAND test_actor_system)
 add_executable(test_actor_mailbox actor/test_actor_mailbox.cpp)
 target_link_libraries(test_actor_mailbox hpactor)
 add_test(NAME test_actor_mailbox COMMAND test_actor_mailbox)
-
-add_executable(test_proto_actor actor/test_proto_actor.cpp)
-target_link_libraries(test_proto_actor hpactor)
-add_test(NAME test_proto_actor COMMAND test_proto_actor)
 
 add_executable(test_proto_stateful_actor actor/test_proto_stateful_actor.cpp)
 target_link_libraries(test_proto_stateful_actor hpactor)

@@ -23,7 +23,7 @@
 //   - Subclassing hpactor::EventBasedActor
 //   - Implementing make_behavior() to define initial message handling
 //   - Using become() to dynamically switch behaviors at runtime
-//   - Handling messages via std::visit on MessageVariant
+//   - Handling messages via std::visit on TypedMessage
 //
 // NOTE: This example demonstrates the intended API design. The runtime
 // infrastructure (spawn, send, scheduler) is not yet functional.
@@ -31,7 +31,7 @@
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -65,7 +65,7 @@ struct ShutdownMessage {};
 //   class MyActor : public hpactor::EventBasedActor {
 //     protected:
 //       hpactor::Behavior make_behavior() override {
-//         return hpactor::Behavior{[this](hpactor::MessageVariant&& msg) {
+//         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
 //           // Handle messages
 //         }};
 //       }
@@ -74,7 +74,7 @@ struct ShutdownMessage {};
 //         : hpactor::EventBasedActor(ctx, sys) {}
 //   };
 //
-// NOTE: The actual MessageVariant in hpactor only contains system messages.
+// NOTE: The actual TypedMessage in hpactor only contains system messages.
 // User-defined messages would be added via a custom variant type.
 //
 // -----------------------------------------------------------------------------
@@ -84,10 +84,10 @@ class EchoActor : public hpactor::EventBasedActor {
     // make_behavior() is called once when the actor activates
     // Override this to define your initial behavior
     hpactor::Behavior make_behavior() override {
-        // Return a Behavior with a lambda that handles MessageVariant
+        // Return a Behavior with a lambda that handles TypedMessage
         // In practice, you'd use std::visit to pattern match on message type
-        return hpactor::Behavior{[this](hpactor::MessageVariant&& msg) {
-            this->handle_message(std::move(msg));
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            this->handle_message(msg);
         }};
     }
 
@@ -96,7 +96,7 @@ class EchoActor : public hpactor::EventBasedActor {
         : hpactor::EventBasedActor(ctx, sys) {}
 
     // Message handler - in a real implementation, this would use std::visit
-    void handle_message(hpactor::MessageVariant&& /*msg*/) {
+    void handle_message(hpactor::TypedMessage& /*msg*/) {
         // Pattern matching would look like:
         // std::visit([this](auto&& m) {
         //   using T = std::decay_t<decltype(m)>;
@@ -119,7 +119,7 @@ class EchoActor : public hpactor::EventBasedActor {
 //
 // Pattern:
 //   void MyActor::switch_to_new_behavior() {
-//     become(hpactor::Behavior{[this](hpactor::MessageVariant&& msg) {
+//     become(hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
 //       // New behavior handler
 //     }});
 //   }
@@ -130,7 +130,7 @@ class SwitchingActor : public hpactor::EventBasedActor {
   protected:
     hpactor::Behavior make_behavior() override {
         // Initial behavior - echo mode
-        return hpactor::Behavior{[this](hpactor::MessageVariant&& msg) {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             this->handle_message_echo_mode(std::move(msg));
         }};
     }
@@ -141,7 +141,7 @@ class SwitchingActor : public hpactor::EventBasedActor {
 
     // Switch to uppercase mode
     void switch_to_uppercase_mode() {
-        become(hpactor::Behavior{[this](hpactor::MessageVariant&& msg) {
+        become(hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             this->handle_message_uppercase_mode(std::move(msg));
         }});
         std::cout << "SwitchingActor: switched to UPPERCASE mode" << std::endl;
@@ -149,7 +149,7 @@ class SwitchingActor : public hpactor::EventBasedActor {
 
     // Switch back to echo mode
     void switch_to_echo_mode() {
-        become(hpactor::Behavior{[this](hpactor::MessageVariant&& msg) {
+        become(hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             this->handle_message_echo_mode(std::move(msg));
         }});
         std::cout << "SwitchingActor: switched to ECHO mode" << std::endl;
@@ -158,13 +158,13 @@ class SwitchingActor : public hpactor::EventBasedActor {
   private:
     enum class Mode { Echo, Uppercase };
 
-    void handle_message_echo_mode(hpactor::MessageVariant&& /*msg*/) {
+    void handle_message_echo_mode(hpactor::TypedMessage&& /*msg*/) {
         // Would pattern match on message type
         // For now, just note the mode
         std::cout << "SwitchingActor [Echo]: processing message" << std::endl;
     }
 
-    void handle_message_uppercase_mode(hpactor::MessageVariant&& /*msg*/) {
+    void handle_message_uppercase_mode(hpactor::TypedMessage&& /*msg*/) {
         // Would pattern match on message type
         std::cout << "SwitchingActor [Uppercase]: processing message" << std::endl;
     }

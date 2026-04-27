@@ -138,7 +138,6 @@ add_library(hpactor_lib SHARED
     src/actor/actor_system.cpp
     src/actor/event_based_actor.cpp
     src/actor/local_actor.cpp
-    src/actor/proto_actor.cpp
     src/actor/scheduler.cpp
     src/actor/spawn_receiver.cpp
     src/actor_type_registry.cpp
@@ -146,7 +145,8 @@ add_library(hpactor_lib SHARED
     src/ref/actor_ref.cpp
     src/spawn.cpp
     src/supervision/supervision.cpp
-    src/core/serialization.cpp
+    src/core/proto_type_registry.cpp
+    src/types/typed_message.cpp
     src/net/event_loop.cpp
     src/net/acceptor.cpp
     src/net/connection.cpp

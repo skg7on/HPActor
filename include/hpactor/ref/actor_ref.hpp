@@ -124,9 +124,7 @@ class ActorRef {
     }
 
     // Send a message to this actor
-    // Note: For user-defined message types, use system().deliver_local()
-    // directly until serialization is implemented in Phase 3
-    void send(const ActorAddress& target, MessageVariant msg);
+    void send(const ActorAddress& target, TypedMessage msg);
 
     // Access underlying Actor (for internal use)
     Actor* get_actor() {

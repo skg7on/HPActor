@@ -22,14 +22,27 @@ namespace hpactor {
 EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
     : LocalActor(ctx, sys) {}
 
-void EventBasedActor::on_activate() {
-    // Scheduler and mailbox are set by ActorSystem on spawn
-}
+void EventBasedActor::on_activate() {}
 
-void EventBasedActor::receive(MessageVariant&& msg) {
-    // Legacy non-coroutine receive path (for actors not using act())
+void EventBasedActor::receive(TypedMessage& msg) {
+    if (!handlers_initialized_) {
+        initialize_proto_handlers();
+    }
+
+    // Try proto handler dispatch by TypeTag first
+    auto it = proto_handlers_.find(msg.type_id());
+    if (it != proto_handlers_.end()) {
+        auto deserialized = it->second.deserialize(msg.payload());
+        if (deserialized) {
+            bytes response = it->second.invoke(std::move(deserialized));
+            (void)response; // TODO: integrate with reply routing
+        }
+        return;
+    }
+
+    // Fall through to Behavior-based handling
     if (behavior_) {
-        behavior_(std::move(msg));
+        behavior_(msg);
     }
 }
 
@@ -41,11 +54,33 @@ void EventBasedActor::become_empty() {
     behavior_ = Behavior{};
 }
 
+void EventBasedActor::initialize_proto_handlers() {
+    if (handlers_initialized_) return;
+    register_handlers();
+    handlers_initialized_ = true;
+}
+
+void EventBasedActor::on_proto_message(TypeTag tag, const bytes& payload) {
+    if (!handlers_initialized_) {
+        initialize_proto_handlers();
+    }
+
+    auto it = proto_handlers_.find(tag);
+    if (it == proto_handlers_.end()) {
+        return;
+    }
+
+    ProtoHandler& handler = it->second;
+    auto msg = handler.deserialize(payload);
+    if (!msg) return;
+
+    bytes response = handler.invoke(std::move(msg));
+    (void)response; // TODO: integrate with reply routing
+}
+
 void EventBasedActor::on_deactivate() {
 #if HPACTOR_USE_COROUTINES
-    // Clean up coroutine if still running
     if (actor_coroutine_ && !actor_coroutine_.done()) {
-        // Force termination
         actor_coroutine_.task().handle().destroy();
         actor_coroutine_ = sched::ActorCoroutine{};
     }

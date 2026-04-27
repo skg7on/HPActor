@@ -17,7 +17,6 @@
 #include <condition_variable>
 #include <cstddef>
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/message.hpp>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -32,11 +31,11 @@ template <typename T> class IMailbox {
     virtual ~IMailbox() = default;
 
     // Hot path - marked noexcept for real-time guarantees
-    virtual void push(Message<T>&& msg) noexcept = 0;
-    virtual bool try_pop(Message<T>& out) noexcept = 0;
+    virtual void push(T&& msg) noexcept = 0;
+    virtual bool try_pop(T& out) noexcept = 0;
 
     // Blocking pop - may block, used for actor message processing loop
-    virtual bool pop(Message<T>& out) = 0;
+    virtual bool pop(T& out) = 0;
 
     virtual size_t size() const = 0;
     virtual bool empty() const = 0;
@@ -54,7 +53,6 @@ std::unique_ptr<IMailbox<T>> create_mailbox() {
     if constexpr (Type == MailboxType::Mutex) {
         return std::make_unique<MutexMailbox<T>>();
     }
-    // LockFree would be added here later
 }
 
 // ActorBase - alias for AbstractActor (base class for all actors)
@@ -65,15 +63,13 @@ template <typename T> class ActorMailbox : public IMailbox<T> {
   public:
     ActorMailbox() = default;
 
-    // Hot path - marked noexcept for real-time guarantees
-    void push(Message<T>&& msg) noexcept override {
+    void push(T&& msg) noexcept override {
         std::lock_guard<std::mutex> lock(mutex_);
         queue_.push(std::move(msg));
         cv_.notify_one();
     }
 
-    // Hot path - marked noexcept for real-time guarantees
-    bool try_pop(Message<T>& out) noexcept override {
+    bool try_pop(T& out) noexcept override {
         std::lock_guard<std::mutex> lock(mutex_);
         if (queue_.empty()) {
             return false;
@@ -83,7 +79,7 @@ template <typename T> class ActorMailbox : public IMailbox<T> {
         return true;
     }
 
-    bool pop(Message<T>& out) override {
+    bool pop(T& out) override {
         std::unique_lock<std::mutex> lock(mutex_);
         cv_.wait(lock, [this] { return !queue_.empty(); });
         out = std::move(queue_.front());
@@ -101,7 +97,7 @@ template <typename T> class ActorMailbox : public IMailbox<T> {
         return queue_.empty();
     }
 
-    bool pop_with_timeout(Message<T>& out, std::chrono::milliseconds timeout) {
+    bool pop_with_timeout(T& out, std::chrono::milliseconds timeout) {
         std::unique_lock<std::mutex> lock(mutex_);
         bool result =
             cv_.wait_for(lock, timeout, [this] { return !queue_.empty(); });
@@ -118,7 +114,7 @@ template <typename T> class ActorMailbox : public IMailbox<T> {
 
   private:
     mutable std::mutex mutex_;
-    std::queue<Message<T>> queue_;
+    std::queue<T> queue_;
     std::condition_variable cv_;
     ActorBase* owner_ = nullptr;
 };

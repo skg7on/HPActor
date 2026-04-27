@@ -40,7 +40,7 @@ void Scheduler::stop() {
     }
 }
 
-void Scheduler::enqueue(ActorId target, MessageVariant /*msg*/) {
+void Scheduler::enqueue(ActorId target, TypedMessage /*msg*/) {
     if (!running_.load(std::memory_order_acquire)) {
         return;
     }
@@ -91,10 +91,9 @@ void Scheduler::process_actor(ActorId actor_id) {
         return;
     }
 
-    Message<MessageVariant> msg;
+    TypedMessage msg;
     if (mailbox->try_pop(msg)) {
-        // Call the actor's receive with the message payload
-        actor->receive(msg.move_payload());
+        actor->receive(msg);
     }
 }
 

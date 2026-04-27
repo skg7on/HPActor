@@ -56,11 +56,11 @@ template <typename... Signatures> class TypedBehavior {
         return *this;
     }
 
-    result<void> invoke(MessageVariant& /*msg*/) {
+    result<void> invoke(TypedMessage& /*msg*/) {
         return result<void>::make();
     }
 
-    bool matches(const MessageVariant& /*msg*/) const {
+    bool matches(const TypedMessage& /*msg*/) const {
         return false;
     }
 
@@ -83,7 +83,7 @@ template <typename R, typename Msg> class message_handler<result<R>(Msg)> {
         return result<R>::make(error{});
     }
 
-    bool matches(const MessageVariant& /*msg*/) const {
+    bool matches(const TypedMessage& /*msg*/) const {
         return false;
     }
 };

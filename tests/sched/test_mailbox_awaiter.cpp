@@ -14,7 +14,7 @@
 
 // tests/sched/test_mailbox_awaiter.cpp
 #include <cassert>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/sched/coroutine_awaiters.hpp>
@@ -52,7 +52,7 @@ struct MockScheduler : public hpactor::sched::IScheduler {
 int main() {
     MockScheduler scheduler;
     hpactor::ActorId actor_id{1};
-    hpactor::mailbox::MPSCActorMailbox<hpactor::Message<int>> mb(actor_id,
+    hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(actor_id,
                                                                  &scheduler);
 
     // Test 1: await_ready() returns false when mailbox is empty
@@ -61,20 +61,20 @@ int main() {
         promise.actor_id = actor_id;
         promise.state.set(hpactor::ActorState::kRunning);
 
-        hpactor::sched::MailboxAwaiter<hpactor::Message<int>> awaiter(promise, &mb);
+        hpactor::sched::MailboxAwaiter<hpactor::TypedMessage> awaiter(promise, &mb);
         assert(!awaiter.await_ready()); // mailbox empty → don't skip suspend
     }
 
     // Test 2: await_ready() returns true when mailbox has message
     {
-        auto* msg = new hpactor::Message<int>(42);
+        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x01, 0x02});
         mb.inject_for_test(msg); // inject without edge-trigger
 
         hpactor::sched::CoroutinePromise promise;
         promise.actor_id = actor_id;
         promise.state.set(hpactor::ActorState::kRunning);
 
-        hpactor::sched::MailboxAwaiter<hpactor::Message<int>> awaiter(promise, &mb);
+        hpactor::sched::MailboxAwaiter<hpactor::TypedMessage> awaiter(promise, &mb);
         assert(awaiter.await_ready()); // mailbox non-empty → skip suspend
 
         // Clean up
@@ -89,7 +89,7 @@ int main() {
         promise.state.set(hpactor::ActorState::kRunning);
         promise.mailbox_was_empty.store(true, std::memory_order_release);
 
-        hpactor::sched::MailboxAwaiter<hpactor::Message<int>> awaiter(promise, &mb);
+        hpactor::sched::MailboxAwaiter<hpactor::TypedMessage> awaiter(promise, &mb);
 
         // await_suspend should CAS Running→Idle and reset edge-trigger
         bool did_suspend =
@@ -111,7 +111,7 @@ int main() {
         promise.actor_id = actor_id;
         promise.state.set(hpactor::ActorState::kTerminated); // not Running
 
-        hpactor::sched::MailboxAwaiter<hpactor::Message<int>> awaiter(promise, &mb);
+        hpactor::sched::MailboxAwaiter<hpactor::TypedMessage> awaiter(promise, &mb);
         bool did_suspend = awaiter.await_suspend(std::coroutine_handle<>{});
         assert(!did_suspend); // should not suspend — already terminated
     }
@@ -125,10 +125,10 @@ int main() {
         promise.mailbox_was_empty.store(true, std::memory_order_release);
 
         // Enqueue a message BEFORE await_suspend
-        auto* msg = new hpactor::Message<int>(99);
+        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x63, 0x00});
         mb.inject_for_test(msg);
 
-        hpactor::sched::MailboxAwaiter<hpactor::Message<int>> awaiter(promise, &mb);
+        hpactor::sched::MailboxAwaiter<hpactor::TypedMessage> awaiter(promise, &mb);
 
         // await_ready returns true (message is in mailbox)
         assert(awaiter.await_ready());

@@ -149,15 +149,15 @@ class ActorSystem {
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
 
     // Get actor's mailbox (used by scheduler)
-    mailbox::MPSCActorMailbox<Message<MessageVariant>>* get_mailbox(ActorId id);
+    mailbox::MPSCActorMailbox<TypedMessage>* get_mailbox(ActorId id);
 
     // Deliver message to local actor
-    void deliver_local(ActorId target, MessageVariant msg);
+    void deliver_local(ActorId target, TypedMessage msg);
 
     // Deliver message to local actor with priority and deadline for scheduling
     // priority: 0-3 (0 = highest)
     // deadline_ns: absolute deadline in nanoseconds (INT64_MAX = no deadline)
-    void deliver_local(ActorId target, MessageVariant msg, uint8_t priority,
+    void deliver_local(ActorId target, TypedMessage msg, uint8_t priority,
                        int64_t deadline_ns);
 
     // Enqueue an I/O completion to be delivered to an actor
@@ -202,7 +202,7 @@ class ActorSystem {
     std::mutex actors_mutex_;
 
     // Actor mailboxes - maps ActorId to mailbox
-    std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<Message<MessageVariant>>>>
+    std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<TypedMessage>>>
         mailboxes_;
     std::mutex mailboxes_mutex_;
 
@@ -259,7 +259,7 @@ Actor ActorSystem::spawn(Args&&... args) {
     {
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
         mailboxes_.emplace(
-            id, std::make_unique<mailbox::MPSCActorMailbox<Message<MessageVariant>>>(
+            id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
                     id, scheduler_.get()));
     }
 

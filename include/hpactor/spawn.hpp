@@ -40,7 +40,7 @@ constexpr uint32_t spawn_receiver_not_running = 5;
 
 // -----------------------------------------------------------------------------
 // SpawnRequest - sent from caller to spawn receiver on remote node
-// Note: This becomes part of MessageVariant via serialization.hpp
+// Serialized via protobuf messages in messages.proto
 // -----------------------------------------------------------------------------
 struct SpawnRequest {
     std::string actor_type_name;  // e.g., "calculator"
@@ -51,7 +51,7 @@ struct SpawnRequest {
 
 // -----------------------------------------------------------------------------
 // SpawnResponse - sent back from spawn receiver to caller
-// Note: This becomes part of MessageVariant via serialization.hpp
+// Serialized via protobuf messages in messages.proto
 // -----------------------------------------------------------------------------
 struct SpawnResponse {
     ActorAddress actor_addr; // new actor's address (node_id, type, id,
@@ -60,11 +60,6 @@ struct SpawnResponse {
 };
 
 // -----------------------------------------------------------------------------
-// SpawnMessageVariant - variant for spawn protocol messages only
-// This is separate from the main MessageVariant to avoid circular includes
-// -----------------------------------------------------------------------------
-using SpawnMessageVariant = std::variant<SpawnRequest, SpawnResponse>;
-
 // -----------------------------------------------------------------------------
 // AsyncActor - handle for asynchronous remote spawn
 // -----------------------------------------------------------------------------

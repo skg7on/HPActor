@@ -51,7 +51,7 @@ class TypedEventBasedActor : public LocalActor {
     void on_activate() override {}
     void on_deactivate() override {}
 
-    void receive(MessageVariant&& /*msg*/) override {}
+    void receive(TypedMessage& /*msg*/) override {}
 
   private:
     behavior_type behavior_;

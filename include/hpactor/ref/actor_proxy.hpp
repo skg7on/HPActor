@@ -59,8 +59,7 @@ class ActorProxy {
     }
 
     // Send a message to this actor (fire-and-forget)
-    // Serialization will be implemented in Phase 3
-    void send(const ActorAddress& target, MessageVariant msg);
+    void send(const ActorAddress& target, TypedMessage msg);
 
     // Access the underlying transport (for internal use)
     net::Transport* transport() const {

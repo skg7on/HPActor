@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include <hpactor/actor/message.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
 #include <hpactor/sched/scheduler.hpp>
 

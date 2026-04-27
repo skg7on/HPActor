@@ -13,16 +13,15 @@
 // limitations under the License.
 
 #include <cassert>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <hpactor/core/mutex_mailbox.hpp>
 
-struct SimpleMsg {};
+using namespace hpactor;
 
 int main() {
-    auto mailbox =
-        hpactor::create_mailbox<SimpleMsg, hpactor::MailboxType::Mutex>();
-    mailbox->push(hpactor::Message<SimpleMsg>{});
+    auto mailbox = create_mailbox<TypedMessage, MailboxType::Mutex>();
+    mailbox->push(TypedMessage(TypeTag::User, bytes{1, 2, 3}));
     assert(mailbox->size() == 1);
     return 0;
 }
