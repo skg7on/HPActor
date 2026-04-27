@@ -3,6 +3,7 @@
 
 #include <cassert>
 #include <cstdio>
+#include <optional>
 
 using namespace hpactor;
 using namespace hpactor::net;

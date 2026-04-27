@@ -440,7 +440,7 @@ void test_concurrent_acceptor_operations() {
 
     // Create multiple acceptors sharing the same event loop
     std::vector<std::unique_ptr<Acceptor>> acceptors;
-    std::vector<int> ports;
+    std::vector<unsigned short> ports;
 
     for (int i = 0; i < 3; ++i) {
         auto acceptor = std::make_unique<Acceptor>(&loop);

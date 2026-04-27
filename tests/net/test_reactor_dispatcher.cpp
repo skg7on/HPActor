@@ -4,6 +4,7 @@
 #include <cassert>
 #include <cstdio>
 #include <cstring>
+#include <optional>
 #include <sys/socket.h>
 #include <sys/un.h>
 #include <unistd.h>

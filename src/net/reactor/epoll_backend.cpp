@@ -94,10 +94,11 @@ void EpollBackend::stop() {
 
 bool EpollBackend::add_fd(int fd, IoEvent events) {
     uint32_t epoll_events = 0;
-    if (events & static_cast<uint32_t>(IoEvent::Read)) {
+    using T = std::underlying_type_t<IoEvent>;
+    if (static_cast<T>(events) & static_cast<T>(IoEvent::Read)) {
         epoll_events |= EPOLLIN;
     }
-    if (events & static_cast<uint32_t>(IoEvent::Write)) {
+    if (static_cast<T>(events) & static_cast<T>(IoEvent::Write)) {
         epoll_events |= EPOLLOUT;
     }
 
@@ -445,7 +446,7 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
         offset += bufs[i].iov_len;
     }
 
-    ssize_t total_n = 0;
+    size_t total_n = 0;
     int last_err = 0;
 
     // Loop until EAGAIN to drain send buffer completely (edge-triggered
@@ -459,8 +460,8 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
             last_err = errno;
             break;
         }
-        total_n += n;
-        if (total_n >= static_cast<ssize_t>(data.size())) {
+        total_n += static_cast<size_t>(n);
+        if (total_n >= data.size()) {
             break; // All data sent
         }
         // Continue looping to send more
@@ -737,7 +738,7 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
         offset += bufs[i].iov_len;
     }
 
-    ssize_t total_n = 0;
+    size_t total_n = 0;
     int last_err = 0;
 
     // Loop until EAGAIN to drain send buffer completely (edge-triggered
@@ -752,8 +753,8 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
             last_err = errno;
             break;
         }
-        total_n += n;
-        if (total_n >= static_cast<ssize_t>(data.size())) {
+        total_n += static_cast<size_t>(n);
+        if (total_n >= data.size()) {
             break; // All data sent
         }
         // Continue looping to send more
