@@ -21,6 +21,7 @@
 #include <cstring>
 #include <memory>
 #include <string>
+#include <type_traits>
 #include <unordered_map>
 
 namespace hpactor {
@@ -31,36 +32,41 @@ namespace hpactor {
 // Enables automatic serialization and deserialization of protobuf messages
 // using TypeTag identifiers, avoiding RTTI. Supports wire encoding that
 // prepends a 4-byte big-endian TypeTag to the protobuf payload.
+//
+// NOTE: Not thread-safe. Register all types during single-threaded
+// initialization before any actors begin processing messages.
 // -----------------------------------------------------------------------------
 class ProtoTypeRegistry {
 public:
     // Register a protobuf message type with a TypeTag.
     template<typename ProtoMsgT>
     void register_type(TypeTag tag, const std::string& type_name) {
+        static_assert(std::is_base_of_v<google::protobuf::Message, ProtoMsgT>,
+                      "ProtoMsgT must be a protobuf message type");
         Entry entry;
         entry.type_name = type_name;
         entry.prototype = std::make_shared<ProtoMsgT>();
         registry_[tag] = std::move(entry);
     }
 
-    bool has_tag(TypeTag tag) const {
+    [[nodiscard]] bool has_tag(TypeTag tag) const {
         return registry_.find(tag) != registry_.end();
     }
 
-    std::string type_name(TypeTag tag) const {
+    [[nodiscard]] std::string type_name(TypeTag tag) const {
         auto it = registry_.find(tag);
         if (it != registry_.end()) return it->second.type_name;
         return {};
     }
 
-    std::unique_ptr<google::protobuf::Message> create(TypeTag tag) const {
+    [[nodiscard]] std::unique_ptr<google::protobuf::Message> create(TypeTag tag) const {
         auto it = registry_.find(tag);
         if (it == registry_.end() || !it->second.prototype) return nullptr;
         return std::unique_ptr<google::protobuf::Message>(
             it->second.prototype->New());
     }
 
-    std::unique_ptr<google::protobuf::Message> deserialize(
+    [[nodiscard]] std::unique_ptr<google::protobuf::Message> deserialize(
         TypeTag tag, const bytes& data) const {
         auto msg = create(tag);
         if (!msg) return nullptr;
@@ -70,7 +76,7 @@ public:
         return msg;
     }
 
-    bytes serialize(const google::protobuf::Message& msg) const {
+    [[nodiscard]] bytes serialize(const google::protobuf::Message& msg) const {
         auto size = msg.ByteSizeLong();
         bytes result(size);
         if (!msg.SerializeToArray(result.data(), static_cast<int>(size))) {
@@ -81,7 +87,7 @@ public:
 
     // Encode TypeTag + payload into a single byte buffer:
     // [4 bytes: TypeTag big-endian][protobuf payload bytes]
-    bytes encode_wire(TypeTag tag, const google::protobuf::Message& msg) const {
+    [[nodiscard]] bytes encode_wire(TypeTag tag, const google::protobuf::Message& msg) const {
         bytes payload = serialize(msg);
         bytes result(payload.size() + 4);
         uint32_t tag_val = static_cast<uint32_t>(tag);
@@ -95,7 +101,7 @@ public:
         return result;
     }
 
-    std::pair<TypeTag, std::unique_ptr<google::protobuf::Message>>
+    [[nodiscard]] std::pair<TypeTag, std::unique_ptr<google::protobuf::Message>>
     decode_wire(const bytes& data) const {
         if (data.size() < 4) return {TypeTag::Invalid, nullptr};
         uint32_t tag_val =
