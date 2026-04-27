@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/net/kqueue_backend.hpp>
+#include <hpactor/net/reactor/kqueue_backend.hpp>
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) ||      \
     defined(__NetBSD__)
