@@ -128,14 +128,6 @@ elseif(ENABLE_TSAN)
     add_link_options(-fsanitize=thread)
 endif()
 
-# =============================================================================
-# Platform-Specific Settings
-# =============================================================================
-if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    # Protobuf dylib (libprotobuf.34+) is built for macOS 26.0+
-    # CMAKE_OSX_DEPLOYMENT_TARGET must be >= 26.0 to avoid linker warnings
-    set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0" CACHE STRING "macOS deployment target")
-endif()
 
 # =============================================================================
 # Library Sources

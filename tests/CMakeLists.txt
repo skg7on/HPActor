@@ -151,6 +151,14 @@ add_executable(test_tcp_transport_comprehensive net/test_tcp_transport_comprehen
 target_link_libraries(test_tcp_transport_comprehensive hpactor)
 add_test(NAME test_tcp_transport_comprehensive COMMAND test_tcp_transport_comprehensive)
 
+add_executable(test_reactor_dispatcher net/test_reactor_dispatcher.cpp)
+target_link_libraries(test_reactor_dispatcher hpactor)
+add_test(NAME test_reactor_dispatcher COMMAND test_reactor_dispatcher)
+
+add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
+target_link_libraries(test_proactor_dispatcher hpactor)
+add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)
+
 # =============================================================================
 # Spawn tests - remote actor spawn
 # =============================================================================

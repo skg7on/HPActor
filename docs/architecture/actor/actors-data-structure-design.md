@@ -1,9 +1,5 @@
 # C++ Actor Framework - Actor Core Concept and Design Specification
 
-> **Spec Status:** Draft
-> **Created:** 2026-04-11
-> **Based on:** Distributed Actor System Architecture.md
-
 ## 1. Executive Summary
 
 This document specifies the Actor implementation for the HPActor C++20 framework. Actors follow an **event-based** programming model with **turn-based concurrency**, supporting both **statically typed** and **dynamically typed** messaging. The design is inspired by the CAF (C++ Actor Framework) and aligns with the distributed system architecture.
