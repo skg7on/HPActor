@@ -209,7 +209,9 @@ if(ENABLE_PROACTOR)
         # Always include kqueue as fallback
         target_sources(hpactor_lib PRIVATE src/net/reactor/kqueue_backend.cpp)
     endif()
+    add_compile_definitions(HPACTOR_ENABLE_PROACTOR=1)
 else()
+    add_compile_definitions(HPACTOR_ENABLE_PROACTOR=0)
     # Reactor mode
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         message(STATUS "Using epoll (Reactor)")

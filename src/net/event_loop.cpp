@@ -16,11 +16,15 @@
 #include <hpactor/net/event_loop.hpp>
 
 #if defined(__APPLE__)
-#    include <hpactor/net/proactor/gcd_backend.hpp>
 #    include <hpactor/net/reactor/kqueue_backend.hpp>
+#    if HPACTOR_ENABLE_PROACTOR
+#        include <hpactor/net/proactor/gcd_backend.hpp>
+#    endif
 #elif defined(__linux__)
 #    include <hpactor/net/reactor/epoll_backend.hpp>
-#    include <hpactor/net/proactor/iouring_backend.hpp>
+#    if HPACTOR_ENABLE_PROACTOR
+#        include <hpactor/net/proactor/iouring_backend.hpp>
+#    endif
 #endif
 
 namespace hpactor {
@@ -35,16 +39,19 @@ EventLoop::EventLoop() {
         backend_name_ = "kqueue";
         static_cast<KqueueBackend*>(kqueue_backend.get())->set_loop(this);
         backend_ = std::move(kqueue_backend);
+#if HPACTOR_ENABLE_PROACTOR
     } else {
-        // Fall back to GCD
+        // Fall back to GCD only when Proactor mode is enabled
         auto gcd_backend = std::make_unique<GcdBackend>();
         if (gcd_backend->start()) {
             backend_name_ = "gcd";
             static_cast<GcdBackend*>(gcd_backend.get())->set_loop(this);
             backend_ = std::move(gcd_backend);
         }
+#endif
     }
 #elif defined(__linux__)
+#if HPACTOR_ENABLE_PROACTOR
     // Try io_uring first (preferred on Linux)
     auto iouring_backend = std::make_unique<IoUringBackend>();
     if (iouring_backend->start()) {
@@ -59,6 +66,15 @@ EventLoop::EventLoop() {
             backend_ = std::move(epoll_backend);
         }
     }
+#else
+    // Reactor mode: use epoll directly
+    auto epoll_backend = std::make_unique<EpollBackend>();
+    if (epoll_backend->start()) {
+        backend_name_ = "epoll";
+        static_cast<EpollBackend*>(epoll_backend.get())->set_loop(this);
+        backend_ = std::move(epoll_backend);
+    }
+#endif
 #endif
 }
 
