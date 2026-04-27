@@ -423,7 +423,7 @@ git commit -m "refactor(net): remove old AsyncIoBackend interface"
 
 ---
 
-## Task 9: Create Dispatcher classes
+## Task 10: Create Dispatcher classes
 
 **Files:**
 - Create: `include/hpactor/net/proactor_dispatcher.hpp`
@@ -495,7 +495,7 @@ git commit -m "feat(net): add ProactorDispatcher and ReactorDispatcher"
 
 ---
 
-## Task 10: Add CMake ENABLE_PROACTOR option
+## Task 11: Add CMake ENABLE_PROACTOR option
 
 **Files:**
 - Modify: `CMakeLists.txt`
@@ -547,7 +547,7 @@ git commit -m "build: add ENABLE_PROACTOR CMake option"
 
 ---
 
-## Task 11: Update ActorSystem EventLoop usage for policy
+## Task 12: Update ActorSystem EventLoop usage for policy
 
 **Files:**
 - Modify: `include/hpactor/core/actor_system.hpp`
@@ -583,7 +583,7 @@ git commit -m "refactor: make ActorSystem work with both Proactor and Reactor mo
 
 ---
 
-## Task 12: Run tests and verify
+## Task 13: Run tests and verify
 
 **Files:**
 - Build and test all 51 tests
@@ -626,7 +626,7 @@ git commit -m "test: verify all tests pass with both Proactor and Reactor modes"
 
 ---
 
-## Task 13: Final verification
+## Task 14: Final verification
 
 - [ ] **Step 1: Verify file structure**
 
