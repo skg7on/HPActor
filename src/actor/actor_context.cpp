@@ -15,6 +15,8 @@
 #include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
 
+#include <google/protobuf/message.h>
+
 namespace hpactor {
 
 ActorContext::ActorContext(Actor owner, ActorSystem* system)
@@ -105,6 +107,24 @@ RpcFuture<bytes>
 ActorContext::rpc(const ActorAddress& target, const bytes& encoded_request,
                   std::chrono::milliseconds timeout_ms) {
     return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms);
+}
+
+void ActorContext::send_proto(ActorAddress target, TypeTag tag,
+                               const google::protobuf::Message& msg) {
+    // Encode TypeTag + payload into wire format
+    bytes wire = system_->proto_registry().encode_wire(tag, msg);
+
+    // TODO: create a TypedMessage variant and deliver locally
+    (void)target;
+    (void)wire;
+}
+
+void ActorContext::reply_proto(TypeTag tag,
+                                const google::protobuf::Message& msg) {
+    // Track current sender per actor to enable reply routing
+    // TODO: store current_sender_ in actor state
+    (void)tag;
+    (void)msg;
 }
 
 } // namespace hpactor
