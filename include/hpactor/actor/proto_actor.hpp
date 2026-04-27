@@ -63,7 +63,9 @@ public:
         entry.type_name = ProtoMsgT().GetTypeName();
         entry.deserialize = [](const bytes& data) -> std::shared_ptr<void> {
             auto msg = std::make_shared<ProtoMsgT>();
-            msg->ParseFromArray(data.data(), static_cast<int>(data.size()));
+            if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
+                return nullptr;
+            }
             return msg;
         };
         entry.invoke = [handler_ptr](std::shared_ptr<void> raw) -> bytes {
@@ -86,7 +88,9 @@ public:
         entry.type_name = ReqT().GetTypeName();
         entry.deserialize = [](const bytes& data) -> std::shared_ptr<void> {
             auto msg = std::make_shared<ReqT>();
-            msg->ParseFromArray(data.data(), static_cast<int>(data.size()));
+            if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
+                return nullptr;
+            }
             return msg;
         };
         entry.invoke = [handler_ptr](std::shared_ptr<void> raw) -> bytes {
