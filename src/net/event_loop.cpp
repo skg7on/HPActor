@@ -27,153 +27,36 @@ namespace hpactor {
 
 namespace net {
 
-namespace {
-
-// Backend factory helper - tries to create a backend, returns nullptr on
-// failure
-template <typename Backend, typename... Args>
-std::unique_ptr<Backend> try_create_backend(Args&&... args) {
-    auto backend = std::make_unique<Backend>(std::forward<Args>(args)...);
-    return backend;
-}
-
-} // anonymous namespace
-
-// BackendAdapter wraps the real AsyncIoBackend and intercepts
-// deliver_completion to route to EventLoop
-class BackendAdapter : public AsyncIoBackend {
-  public:
-    BackendAdapter(EventLoop* loop, std::unique_ptr<AsyncIoBackend> backend)
-        : loop_(loop), backend_(std::move(backend)) {}
-
-    bool start() override {
-        return backend_->start();
-    }
-    void stop() override {
-        backend_->stop();
-    }
-
-    bool add_fd(int fd, IoEvent events) override {
-        return backend_->add_fd(fd, events);
-    }
-    bool update_fd(int fd, IoEvent events) override {
-        return backend_->update_fd(fd, events);
-    }
-    bool remove_fd(int fd) override {
-        return backend_->remove_fd(fd);
-    }
-
-    int register_buffer(const void* addr, size_t len) override {
-        return backend_->register_buffer(addr, len);
-    }
-    bool unregister_buffer(int buffer_id) override {
-        return backend_->unregister_buffer(buffer_id);
-    }
-
-    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                    uint32_t op_type) override {
-        backend_->async_send(fd, bufs, buf_count, actor, op_type);
-    }
-    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                    uint32_t op_type) override {
-        backend_->async_recv(fd, bufs, buf_count, actor, op_type);
-    }
-
-    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                          ActorId actor, uint32_t op_type) override {
-        backend_->async_send_fixed(fd, buffer_id, offset, len, actor, op_type);
-    }
-    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                          ActorId actor, uint32_t op_type) override {
-        backend_->async_recv_fixed(fd, buffer_id, offset, len, actor, op_type);
-    }
-
-    void async_accept(int fd, ActorId actor) override {
-        backend_->async_accept(fd, actor);
-    }
-    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                       ActorId actor) override {
-        backend_->async_connect(fd, addr, addrlen, actor);
-    }
-
-    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                        uint32_t op_type) override {
-        backend_->async_recvfrom(fd, bufs, buf_count, actor, op_type);
-    }
-    void
-    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
-                 socklen_t addrlen, ActorId actor, uint32_t op_type) override {
-        backend_->async_sendto(fd, bufs, buf_count, addr, addrlen, actor, op_type);
-    }
-
-    void set_read_handler(int fd, read_callback handler) override {
-        backend_->set_read_handler(fd, std::move(handler));
-    }
-    void clear_read_handler(int fd) override {
-        backend_->clear_read_handler(fd);
-    }
-
-    uint64_t run_after(ActorId actor, int delay_ms) override {
-        return backend_->run_after(actor, delay_ms);
-    }
-    uint64_t run_every(ActorId actor, int interval_ms) override {
-        return backend_->run_every(actor, interval_ms);
-    }
-    void cancel_timer(uint64_t handle) override {
-        backend_->cancel_timer(handle);
-    }
-
-    int wait(int timeout_ms) override {
-        return backend_->wait(timeout_ms);
-    }
-    void process_completions() override {
-        backend_->process_completions();
-    }
-
-    // Override deliver_completion to intercept and route to EventLoop
-    void deliver_completion(OpCompletion completion) override {
-        loop_->enqueue_completion(completion);
-    }
-
-  private:
-    EventLoop* loop_;
-    std::unique_ptr<AsyncIoBackend> backend_;
-};
-
 EventLoop::EventLoop() {
 #if defined(__APPLE__)
     // Try kqueue first (for sync I/O testing)
-    auto kqueue_backend = try_create_backend<KqueueBackend>();
+    auto kqueue_backend = std::make_unique<KqueueBackend>();
     if (kqueue_backend->start()) {
         backend_name_ = "kqueue";
         static_cast<KqueueBackend*>(kqueue_backend.get())->set_loop(this);
-        backend_ =
-            std::make_unique<BackendAdapter>(this, std::move(kqueue_backend));
+        backend_ = std::move(kqueue_backend);
     } else {
         // Fall back to GCD
-        auto gcd_backend = try_create_backend<GcdBackend>();
+        auto gcd_backend = std::make_unique<GcdBackend>();
         if (gcd_backend->start()) {
             backend_name_ = "gcd";
             static_cast<GcdBackend*>(gcd_backend.get())->set_loop(this);
-            backend_ =
-                std::make_unique<BackendAdapter>(this, std::move(gcd_backend));
+            backend_ = std::move(gcd_backend);
         }
     }
 #elif defined(__linux__)
     // Try io_uring first (preferred on Linux)
-    auto iouring_backend = try_create_backend<IoUringBackend>();
+    auto iouring_backend = std::make_unique<IoUringBackend>();
     if (iouring_backend->start()) {
         backend_name_ = "iouring";
-        backend_ =
-            std::make_unique<BackendAdapter>(this, std::move(iouring_backend));
+        backend_ = std::move(iouring_backend);
     } else {
         // Fall back to epoll
-        auto epoll_backend = try_create_backend<EpollBackend>();
+        auto epoll_backend = std::make_unique<EpollBackend>();
         if (epoll_backend->start()) {
             backend_name_ = "epoll";
             static_cast<EpollBackend*>(epoll_backend.get())->set_loop(this);
-            backend_ =
-                std::make_unique<BackendAdapter>(this, std::move(epoll_backend));
+            backend_ = std::move(epoll_backend);
         }
     }
 #endif
@@ -226,6 +109,14 @@ bool EventLoop::remove_fd(int fd) {
         return false;
     }
     return backend_->remove_fd(fd);
+}
+
+void EventLoop::set_read_handler(int /*fd*/, read_callback /*handler*/) {
+    // No-op: Reactor mode uses fd_actors_ map instead of read handlers
+}
+
+void EventLoop::clear_read_handler(int /*fd*/) {
+    // No-op: Reactor mode uses fd_actors_ map instead of read handlers
 }
 
 int EventLoop::wait(int timeout_ms) {
@@ -282,7 +173,7 @@ void EventLoop::cancel_timer(uint64_t timer_handle) {
 
 void EventLoop::process_completions() {
     if (backend_) {
-        backend_->process_completions();
+        backend_->process_events();
     }
 }
 

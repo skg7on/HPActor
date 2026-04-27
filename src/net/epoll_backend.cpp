@@ -828,7 +828,7 @@ int EpollBackend::wait(int timeout_ms) {
     return num_events;
 }
 
-void EpollBackend::process_completions() {
+void EpollBackend::process_events() {
     std::vector<OpCompletion> completions;
     {
         std::lock_guard<std::mutex> lock(completions_mutex_);
@@ -969,7 +969,7 @@ int EpollBackend::wait(int timeout_ms) {
     (void)timeout_ms;
     return -1;
 }
-void EpollBackend::process_completions() {}
+void EpollBackend::process_events() {}
 
 void EpollBackend::deliver_completion(OpCompletion completion) {
     (void)completion;

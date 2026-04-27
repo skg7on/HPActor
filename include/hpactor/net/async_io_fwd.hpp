@@ -5,6 +5,8 @@
 #include <sys/socket.h>
 #include <sys/uio.h>
 
+#include <functional>
+
 namespace hpactor {
 namespace net {
 
@@ -27,6 +29,9 @@ struct OpCompletion {
     sockaddr_in src_addr = {};
     socklen_t src_addr_len = 0;
 };
+
+// Read handler callback type - called when data is received
+using read_callback = std::function<void(const bytes&)>;
 
 } // namespace net
 } // namespace hpactor

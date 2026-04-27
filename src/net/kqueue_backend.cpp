@@ -272,19 +272,6 @@ void KqueueBackend::async_recv(int fd, const iovec* bufs, int buf_count,
         .user_data = 0,
     };
 
-    // Check if there's a read handler for this fd
-    auto it = read_handlers_.find(fd);
-    if (it != read_handlers_.end() && result > 0) {
-        // Copy received data to a bytes object
-        uint8_t* data = static_cast<uint8_t*>(bufs[0].iov_base);
-        bytes received(data, data + result);
-        // Re-issue recv for next message (using handler's buffer)
-        async_recv(fd, bufs, buf_count, actor, op_type);
-        // Call the handler with received data
-        it->second.callback(received);
-        return;
-    }
-
     {
         std::lock_guard<std::mutex> lock(completions_mutex_);
         pending_completions_.push_back(completion);
@@ -309,25 +296,6 @@ void KqueueBackend::async_send_fixed(int fd, int buffer_id, size_t offset,
         std::lock_guard<std::mutex> lock(completions_mutex_);
         pending_completions_.push_back(completion);
     }
-}
-
-void KqueueBackend::set_read_handler(int fd, read_callback handler) {
-    // Allocate a buffer for receiving
-    constexpr size_t kRecvBufferSize = 65536;
-    ReadHandler rh;
-    rh.buffer.resize(kRecvBufferSize);
-    rh.callback = std::move(handler);
-    read_handlers_[fd] = std::move(rh);
-
-    // Issue initial recv
-    iovec iov;
-    iov.iov_base = read_handlers_[fd].buffer.data();
-    iov.iov_len = read_handlers_[fd].buffer.size();
-    async_recv(fd, &iov, 1, ActorId(0), static_cast<uint32_t>(OpType::Recv));
-}
-
-void KqueueBackend::clear_read_handler(int fd) {
-    read_handlers_.erase(fd);
 }
 
 void KqueueBackend::async_recv_fixed(int fd, int buffer_id, size_t offset,
@@ -737,7 +705,7 @@ int KqueueBackend::wait(int timeout_ms) {
     return num_events;
 }
 
-void KqueueBackend::process_completions() {
+void KqueueBackend::process_events() {
     // Process pending completions from async_* calls
     std::vector<OpCompletion> completions;
     {
@@ -881,7 +849,7 @@ int KqueueBackend::wait(int timeout_ms) {
     (void)timeout_ms;
     return -1;
 }
-void KqueueBackend::process_completions() {}
+void KqueueBackend::process_events() {}
 
 void KqueueBackend::deliver_completion(OpCompletion completion) {
     (void)completion;

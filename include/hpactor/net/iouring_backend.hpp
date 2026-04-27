@@ -14,7 +14,8 @@
 
 #pragma once
 
-#include <hpactor/net/async_io_backend.hpp>
+#include <hpactor/net/async_io_fwd.hpp>
+#include <hpactor/net/reactor_backend.hpp>
 
 #include <atomic>
 #include <unordered_map>
@@ -43,7 +44,7 @@ struct io_uring_params {
 namespace hpactor {
 namespace net {
 
-class IoUringBackend : public AsyncIoBackend {
+class IoUringBackend : public IReactorBackend {
   public:
     IoUringBackend();
     ~IoUringBackend() override;
@@ -58,36 +59,44 @@ class IoUringBackend : public AsyncIoBackend {
     int register_buffer(const void* addr, size_t len) override;
     bool unregister_buffer(int buffer_id) override;
 
-    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                    uint32_t op_type) override;
-    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                    uint32_t op_type) override;
-
-    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                          ActorId actor, uint32_t op_type) override;
-    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                          ActorId actor, uint32_t op_type) override;
-
-    void async_accept(int fd, ActorId actor) override;
-    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                       ActorId actor) override;
-
-    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                        uint32_t op_type) override;
-    void
-    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
-                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
-
     uint64_t run_after(ActorId actor, int delay_ms) override;
     uint64_t run_every(ActorId actor, int interval_ms) override;
     void cancel_timer(uint64_t handle) override;
 
     int wait(int timeout_ms) override;
-    void process_completions() override;
+    void process_events() override;
 
-    // Read handler management
-    void set_read_handler(int fd, read_callback handler) override;
-    void clear_read_handler(int fd) override;
+    // Proactor methods
+    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_accept(int fd, ActorId actor) override;
+    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
+                       ActorId actor) override;
+    void async_sendto(int fd, const iovec* bufs, int buf_count,
+                       const sockaddr* addr, socklen_t addrlen, ActorId actor,
+                       uint32_t op_type) override;
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                        uint32_t op_type) override;
+
+    // Read handler management - no-op in reactor mode
+    void set_read_handler(int fd, read_callback handler) override {
+        (void)fd;
+        (void)handler;
+    }
+    void clear_read_handler(int fd) override {
+        (void)fd;
+    }
+
+    // Called by completions to deliver to actor
+    void deliver_completion(OpCompletion completion);
+
+    // --- Extended proactor methods (not in IReactorBackend) ---
+    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type);
+    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type);
 
   private:
     // Encode fd+actor+op_type into user_data
@@ -97,9 +106,6 @@ class IoUringBackend : public AsyncIoBackend {
 
     // Submit pending SQEs to kernel
     int submit();
-
-    // Called by completions to deliver to actor
-    void deliver_completion(OpCompletion completion) override;
 
     struct io_uring ring_;
 
@@ -115,13 +121,6 @@ class IoUringBackend : public AsyncIoBackend {
 
     // Ops pending submission (not yet submitted to kernel)
     std::vector<struct io_uring_sqe*> pending_sqes_;
-
-    // fd -> read handler for connection receive
-    struct ReadHandler {
-        bytes buffer;
-        read_callback callback;
-    };
-    std::unordered_map<int, ReadHandler> read_handlers_;
 
     bool running_ = false;
 

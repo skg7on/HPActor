@@ -14,7 +14,8 @@
 
 #pragma once
 
-#include <hpactor/net/async_io_backend.hpp>
+#include <hpactor/net/async_io_fwd.hpp>
+#include <hpactor/net/reactor_backend.hpp>
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__OpenBSD__) ||      \
     defined(__NetBSD__)
@@ -44,7 +45,7 @@ namespace net {
 // Forward declaration to avoid circular include
 class EventLoop;
 
-class KqueueBackend : public AsyncIoBackend {
+class KqueueBackend : public IReactorBackend {
   public:
     KqueueBackend();
     ~KqueueBackend() override;
@@ -59,44 +60,49 @@ class KqueueBackend : public AsyncIoBackend {
     int register_buffer(const void* addr, size_t len) override;
     bool unregister_buffer(int buffer_id) override;
 
-    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                    uint32_t op_type) override;
-    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                    uint32_t op_type) override;
-
-    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                          ActorId actor, uint32_t op_type) override;
-    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                          ActorId actor, uint32_t op_type) override;
-
-    void async_accept(int fd, ActorId actor) override;
-    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                       ActorId actor) override;
-
-    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                        uint32_t op_type) override;
-    void
-    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
-                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
-
     uint64_t run_after(ActorId actor, int delay_ms) override;
     uint64_t run_every(ActorId actor, int interval_ms) override;
     void cancel_timer(uint64_t handle) override;
 
     int wait(int timeout_ms) override;
-    void process_completions() override;
+    void process_events() override;
 
-    // Called by completions to deliver to actor
-    void deliver_completion(OpCompletion completion) override;
+    // Proactor methods
+    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_accept(int fd, ActorId actor) override;
+    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
+                       ActorId actor) override;
+    void async_sendto(int fd, const iovec* bufs, int buf_count,
+                       const sockaddr* addr, socklen_t addrlen, ActorId actor,
+                       uint32_t op_type) override;
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                        uint32_t op_type) override;
+
+    // Read handler management - no-op in reactor mode
+    void set_read_handler(int fd, read_callback handler) override {
+        (void)fd;
+        (void)handler;
+    }
+    void clear_read_handler(int fd) override {
+        (void)fd;
+    }
 
     // Set the EventLoop pointer for routing completions
     void set_loop(net::EventLoop* loop) {
         loop_ = loop;
     }
 
-    // Read handler management for connection receive
-    void set_read_handler(int fd, read_callback handler) override;
-    void clear_read_handler(int fd) override;
+    // Called by completions to deliver to actor
+    void deliver_completion(OpCompletion completion);
+
+    // --- Extended proactor methods (not in IReactorBackend) ---
+    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type);
+    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type);
 
   private:
     // Timer entry
@@ -131,9 +137,7 @@ class KqueueBackend : public AsyncIoBackend {
     // Timer management
     std::vector<TimerEntry> timers_; // sorted by expires_at_ms
     std::unordered_set<uint64_t> cancelled_timers_;
-    std::unordered_map<uint64_t, size_t> handle_to_timer_index_; // for
-                                                                 // cancellation
-                                                                 // lookup
+    std::unordered_map<uint64_t, size_t> handle_to_timer_index_;
     std::atomic<uint64_t> next_timer_handle_{1};
 
     // fd -> registered events for update tracking
@@ -144,13 +148,6 @@ class KqueueBackend : public AsyncIoBackend {
 
     // fd -> actor waiting for accept (listening sockets)
     std::unordered_map<int, ActorId> accept_actors_;
-
-    // fd -> read handler for connection receive
-    struct ReadHandler {
-        bytes buffer;
-        read_callback callback;
-    };
-    std::unordered_map<int, ReadHandler> read_handlers_;
 
     // Registered buffers (not supported in kqueue - always empty)
     std::vector<std::pair<const void*, size_t>> registered_buffers_;

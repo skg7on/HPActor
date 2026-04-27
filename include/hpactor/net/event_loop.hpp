@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/net/async_io_backend.hpp>
+#include <hpactor/net/reactor_backend.hpp>
 
 #include <atomic>
 #include <functional>
@@ -132,7 +132,7 @@ class EventLoop {
     }
 
     // Get the underlying backend for direct async operations
-    AsyncIoBackend* backend() {
+    IReactorBackend* backend() {
         return backend_.get();
     }
 
@@ -140,7 +140,7 @@ class EventLoop {
     // Deliver a timer completion to the stored callback
     void deliver_timer_completion(OpCompletion completion);
 
-    std::unique_ptr<AsyncIoBackend> backend_;
+    std::unique_ptr<IReactorBackend> backend_;
     std::atomic<bool> running_{false};
     const char* backend_name_ = "unknown";
 

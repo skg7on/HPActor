@@ -14,7 +14,8 @@
 
 #pragma once
 
-#include <hpactor/net/async_io_backend.hpp>
+#include <hpactor/net/async_io_fwd.hpp>
+#include <hpactor/net/reactor_backend.hpp>
 
 #if defined(__APPLE__)
 #    include <dispatch/dispatch.h>
@@ -49,7 +50,7 @@ namespace net {
 // Forward declaration to avoid circular include
 class EventLoop;
 
-class GcdBackend : public AsyncIoBackend {
+class GcdBackend : public IReactorBackend {
   public:
     GcdBackend();
     ~GcdBackend() override;
@@ -64,35 +65,38 @@ class GcdBackend : public AsyncIoBackend {
     int register_buffer(const void* addr, size_t len) override;
     bool unregister_buffer(int buffer_id) override;
 
-    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                    uint32_t op_type) override;
-    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                    uint32_t op_type) override;
-
-    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                          ActorId actor, uint32_t op_type) override;
-    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
-                          ActorId actor, uint32_t op_type) override;
-
-    void async_accept(int fd, ActorId actor) override;
-    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
-                       ActorId actor) override;
-
-    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
-                        uint32_t op_type) override;
-    void
-    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
-                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
-
     uint64_t run_after(ActorId actor, int delay_ms) override;
     uint64_t run_every(ActorId actor, int interval_ms) override;
     void cancel_timer(uint64_t handle) override;
 
     int wait(int timeout_ms) override;
-    void process_completions() override;
+    void process_events() override;
+
+    // Proactor methods
+    void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                    uint32_t op_type) override;
+    void async_accept(int fd, ActorId actor) override;
+    void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
+                       ActorId actor) override;
+    void async_sendto(int fd, const iovec* bufs, int buf_count,
+                       const sockaddr* addr, socklen_t addrlen, ActorId actor,
+                       uint32_t op_type) override;
+    void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
+                        uint32_t op_type) override;
+
+    // Read handler management - no-op in reactor mode
+    void set_read_handler(int fd, read_callback handler) override {
+        (void)fd;
+        (void)handler;
+    }
+    void clear_read_handler(int fd) override {
+        (void)fd;
+    }
 
     // Deliver completion to actor (public for trampoline access)
-    void deliver_completion(OpCompletion completion) override;
+    void deliver_completion(OpCompletion completion);
 
     // Check if timer handle was cancelled (public for trampoline access)
     bool is_timer_cancelled(uint64_t handle) const {
@@ -104,10 +108,6 @@ class GcdBackend : public AsyncIoBackend {
         loop_ = loop;
     }
 
-    // Read handler management
-    void set_read_handler(int fd, read_callback handler) override;
-    void clear_read_handler(int fd) override;
-
     // Get the dispatch queue for timer rescheduling
     dispatch_queue_t get_dispatch_queue() const {
         return dispatch_queue_;
@@ -117,6 +117,12 @@ class GcdBackend : public AsyncIoBackend {
     bool is_running() const {
         return running_;
     }
+
+    // --- Extended proactor methods (not in IReactorBackend) ---
+    void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type);
+    void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,
+                          ActorId actor, uint32_t op_type);
 
   private:
     // Active timer handles for cancellation
@@ -147,14 +153,6 @@ class GcdBackend : public AsyncIoBackend {
 
     // fd → dispatch_source_t (for async_connect)
     std::unordered_map<int, dispatch_source_t> connect_sources_;
-
-    // fd → read handler for connection receive
-    struct ReadHandler {
-        bytes buffer;
-        read_callback callback;
-        dispatch_source_t source = nullptr;
-    };
-    std::unordered_map<int, ReadHandler> read_handlers_;
 
     // EventLoop pointer for routing completions
     net::EventLoop* loop_ = nullptr;

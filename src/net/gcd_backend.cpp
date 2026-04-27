@@ -488,7 +488,7 @@ int GcdBackend::wait(int timeout_ms) {
     return result;
 }
 
-void GcdBackend::process_completions() {
+void GcdBackend::process_events() {
     std::lock_guard<std::mutex> lock(completion_mutex_);
     while (!completion_queue_.empty()) {
         auto completion = completion_queue_.front();
@@ -509,58 +509,6 @@ void GcdBackend::deliver_completion(OpCompletion completion) {
     if (wakeup_pipe_[1] >= 0) {
         uint8_t byte = 1;
         (void)write(wakeup_pipe_[1], &byte, 1);
-    }
-}
-
-void GcdBackend::set_read_handler(int fd, read_callback handler) {
-    // Cancel any existing source for this fd
-    auto existing = read_handlers_.find(fd);
-    if (existing != read_handlers_.end()) {
-        if (existing->second.source) {
-            dispatch_source_cancel(existing->second.source);
-            dispatch_release(existing->second.source);
-        }
-    }
-
-    // Allocate buffer and create dispatch source for read
-    constexpr size_t kRecvBufferSize = 65536;
-    ReadHandler rh;
-    rh.buffer.resize(kRecvBufferSize);
-    rh.callback = std::move(handler);
-
-    // Create dispatch source for reading
-    dispatch_source_t source =
-        dispatch_source_create(DISPATCH_SOURCE_TYPE_READ,
-                             static_cast<uintptr_t>(fd), 0,
-                             dispatch_queue_);
-    rh.source = source;
-
-    // Set up the event handler
-    dispatch_source_set_event_handler(source, ^{
-        // Read available data
-        ssize_t n = ::read(fd, const_cast<uint8_t*>(rh.buffer.data()), rh.buffer.size());
-        if (n > 0) {
-            bytes data(rh.buffer.data(), rh.buffer.data() + n);
-            rh.callback(data);
-        } else if (n == 0) {
-            // EOF - connection closed
-            clear_read_handler(fd);
-        }
-        // If n < 0 and EAGAIN, just wait for next event
-    });
-
-    read_handlers_[fd] = std::move(rh);
-    dispatch_resume(source);
-}
-
-void GcdBackend::clear_read_handler(int fd) {
-    auto it = read_handlers_.find(fd);
-    if (it != read_handlers_.end()) {
-        if (it->second.source) {
-            dispatch_source_cancel(it->second.source);
-            dispatch_release(it->second.source);
-        }
-        read_handlers_.erase(it);
     }
 }
 
@@ -669,15 +617,6 @@ void GcdBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
     (void)op_type;
 }
 
-void GcdBackend::set_read_handler(int fd, read_callback handler) {
-    (void)fd;
-    (void)handler;
-}
-
-void GcdBackend::clear_read_handler(int fd) {
-    (void)fd;
-}
-
 uint64_t GcdBackend::run_after(ActorId actor, int delay_ms) {
     (void)actor;
     (void)delay_ms;
@@ -696,7 +635,7 @@ int GcdBackend::wait(int timeout_ms) {
     (void)timeout_ms;
     return -1;
 }
-void GcdBackend::process_completions() {}
+void GcdBackend::process_events() {}
 
 void GcdBackend::deliver_completion(OpCompletion completion) {
     (void)completion;
