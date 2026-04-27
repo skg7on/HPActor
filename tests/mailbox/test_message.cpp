@@ -13,24 +13,25 @@
 // limitations under the License.
 
 #include <cassert>
-#include <hpactor/actor/message.hpp>
-#include <string>
-
-struct TestPayload {
-    int value;
-    std::string data;
-};
+#include <hpactor/actor/typed_message.hpp>
 
 int main() {
     // Test default construction
-    hpactor::Message<TestPayload> msg;
-    // Test with payload
-    hpactor::Message<TestPayload> msg2{TestPayload{42, "hello"}};
-    assert(msg2.payload().value == 42);
-    assert(msg2.payload().data == "hello");
+    hpactor::TypedMessage msg;
+    assert(msg.type_id() == hpactor::TypeTag::Invalid);
+    assert(msg.payload().empty());
+    assert(msg.parsed() == nullptr);
+
+    // Test construction from tag + payload
+    hpactor::bytes data = {0x01, 0x02, 0x03};
+    hpactor::TypedMessage msg2(hpactor::TypeTag::User, data);
+    assert(msg2.type_id() == hpactor::TypeTag::User);
+    assert(msg2.payload().size() == 3);
+
     // Test move semantics
-    TestPayload p{100, "moved"};
-    hpactor::Message<TestPayload> msg3{std::move(p)};
-    assert(msg3.payload().value == 100);
+    hpactor::TypedMessage msg3 = std::move(msg2);
+    assert(msg3.type_id() == hpactor::TypeTag::User);
+    assert(msg3.payload().size() == 3);
+
     return 0;
 }

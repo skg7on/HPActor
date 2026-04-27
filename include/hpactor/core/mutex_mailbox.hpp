@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #pragma once
-#include <hpactor/actor/message.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <memory>
 #include <mutex>
@@ -25,13 +24,12 @@ template <typename T> class MutexMailbox : public IMailbox<T> {
   public:
     MutexMailbox() = default;
 
-    // Hot path - marked noexcept for real-time guarantees
-    void push(Message<T>&& msg) noexcept override {
+    void push(T&& msg) noexcept override {
         std::lock_guard<std::mutex> lock(mutex_);
         queue_.push(std::move(msg));
     }
 
-    bool pop(Message<T>& out) override {
+    bool pop(T& out) override {
         std::lock_guard<std::mutex> lock(mutex_);
         if (queue_.empty()) {
             return false;
@@ -41,8 +39,7 @@ template <typename T> class MutexMailbox : public IMailbox<T> {
         return true;
     }
 
-    // Hot path - marked noexcept for real-time guarantees
-    bool try_pop(Message<T>& out) noexcept override {
+    bool try_pop(T& out) noexcept override {
         return pop(out);
     }
 
@@ -58,7 +55,7 @@ template <typename T> class MutexMailbox : public IMailbox<T> {
 
   private:
     mutable std::mutex mutex_;
-    std::queue<Message<T>> queue_;
+    std::queue<T> queue_;
 };
 
 } // namespace hpactor

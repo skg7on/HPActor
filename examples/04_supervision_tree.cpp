@@ -31,7 +31,7 @@
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -77,7 +77,7 @@
 class WorkerActor : public hpactor::EventBasedActor {
   protected:
     hpactor::Behavior make_behavior() override {
-        return hpactor::Behavior{[](hpactor::MessageVariant&& /*msg*/) {
+        return hpactor::Behavior{[](hpactor::TypedMessage& /*msg*/) {
             std::cout << "WorkerActor handling message" << std::endl;
         }};
     }

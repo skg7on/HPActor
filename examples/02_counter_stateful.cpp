@@ -30,7 +30,7 @@
 //
 // =============================================================================
 
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
@@ -99,7 +99,7 @@ struct SetBoundsMessage {
 //   class CounterActor : public hpactor::StatefulActor<CounterState> {
 //     protected:
 //       hpactor::Behavior make_behavior() override {
-//         return hpactor::Behavior{[this](hpactor::MessageVariant&& msg) {
+//         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
 //           // Access state via state().member
 //         }};
 //       }
@@ -130,7 +130,7 @@ struct SetBoundsMessage {
 class CounterActor /*: public hpactor::StatefulActor<CounterState>*/ {
     // protected:
     //   hpactor::Behavior make_behavior() override {
-    //       return hpactor::Behavior{[this](hpactor::MessageVariant&& /*msg*/)
+    //       return hpactor::Behavior{[this](hpactor::TypedMessage& /*msg*/)
     //       {
     //           // In a real implementation, would use std::visit to handle
     //           messages

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <cassert>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
@@ -55,10 +55,10 @@ int main() {
     // Test 1: first enqueue to empty mailbox calls notify_ready
     {
         MockScheduler scheduler;
-        hpactor::mailbox::MPSCActorMailbox<hpactor::Message<int>> mb(
+        hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(
             hpactor::ActorId{42}, &scheduler);
         assert(scheduler.notify_ready_count.load() == 0);
-        auto* msg = new hpactor::Message<int>(123);
+        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x7B});
         mb.enqueue(msg);
         assert(scheduler.notify_ready_count.load() == 1);
         assert(scheduler.last_actor.value() == 42);
@@ -67,10 +67,10 @@ int main() {
     // Test 2: second enqueue to non-empty mailbox does NOT call notify_ready
     {
         MockScheduler scheduler;
-        hpactor::mailbox::MPSCActorMailbox<hpactor::Message<int>> mb(
+        hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(
             hpactor::ActorId{1}, &scheduler);
-        auto* msg1 = new hpactor::Message<int>(1);
-        auto* msg2 = new hpactor::Message<int>(2);
+        auto* msg1 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x01});
+        auto* msg2 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x02});
         mb.enqueue(msg1);
         assert(scheduler.notify_ready_count.load() == 1);
         mb.enqueue(msg2);
@@ -80,10 +80,10 @@ int main() {
     // Test 3: dequeue drains mailbox, next enqueue calls notify_ready again
     {
         MockScheduler scheduler;
-        hpactor::mailbox::MPSCActorMailbox<hpactor::Message<int>> mb(
+        hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(
             hpactor::ActorId{1}, &scheduler);
-        auto* msg1 = new hpactor::Message<int>(1);
-        auto* msg2 = new hpactor::Message<int>(2);
+        auto* msg1 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x01});
+        auto* msg2 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x02});
         mb.enqueue(msg1);
         assert(scheduler.notify_ready_count.load() == 1);
         mb.dequeue();
@@ -94,13 +94,13 @@ int main() {
     // Test 4: push() convenience method
     {
         MockScheduler scheduler;
-        hpactor::mailbox::MPSCActorMailbox<hpactor::Message<int>> mb(
+        hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(
             hpactor::ActorId{1}, &scheduler);
-        mb.push(hpactor::Message<int>(999));
+        mb.push(hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x03, 0xE7}));
         assert(scheduler.notify_ready_count.load() == 1);
         auto* node = mb.dequeue();
         assert(node != nullptr);
-        assert(node->payload() == 999);
+        assert(!node->payload().empty());
         delete node;
     }
 

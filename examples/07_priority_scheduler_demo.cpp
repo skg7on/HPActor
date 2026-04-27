@@ -28,7 +28,7 @@
 // allowing messages to be scheduled at specific priority levels.
 //
 // NOTE: For full actor messaging with typed messages, user message types
-// need to be added to the MessageVariant type. This demo uses the
+// need to be added to the TypedMessage type. This demo uses the
 // scheduling API directly to demonstrate priority scheduling behavior.
 // =============================================================================
 

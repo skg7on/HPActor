@@ -13,7 +13,6 @@
 // limitations under the License.
 
 #include <cassert>
-#include <hpactor/actor/message.hpp>
 #include <hpactor/core/mailbox.hpp>
 
 using namespace hpactor;

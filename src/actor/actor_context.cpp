@@ -24,22 +24,24 @@ ActorContext::ActorContext(Actor owner, ActorSystem* system)
 
 ActorContext::~ActorContext() = default;
 
-void ActorContext::send(const ActorAddress& target, MessageVariant msg) {
+void ActorContext::send(const ActorAddress& target, TypedMessage msg) {
     if (target.is_local()) {
         auto actor_ptr = owner_.get();
         if (actor_ptr) {
             actor_ptr->system().deliver_local(target.id, std::move(msg));
         } else if (system_) {
-            // Fallback: use system directly when owner is not set
             system_->deliver_local(target.id, std::move(msg));
         }
-    } else {
-        // Remote delivery - will be implemented in Phase 1
-        // For now, ignore remote sends
     }
 }
 
-void ActorContext::send_with_priority(const ActorAddress& target, MessageVariant msg,
+void ActorContext::send(const ActorAddress& target, TypeTag tag,
+                        const google::protobuf::Message& proto_msg) {
+    TypedMessage msg(tag, proto_msg);
+    send(target, std::move(msg));
+}
+
+void ActorContext::send_with_priority(const ActorAddress& target, TypedMessage msg,
                                       uint8_t priority, int64_t deadline_ns) {
     if (target.is_local()) {
         auto actor_ptr = owner_.get();
@@ -48,15 +50,17 @@ void ActorContext::send_with_priority(const ActorAddress& target, MessageVariant
         }
         actor_ptr->system().deliver_local(target.id, std::move(msg), priority,
                                           deadline_ns);
-    } else {
-        // Remote delivery - will be implemented in Phase 1
-        // For now, ignore remote sends
     }
 }
 
-void ActorContext::reply(MessageVariant msg) {
+void ActorContext::reply(TypedMessage msg) {
     // TODO: reply to the sender of the current message
     (void)msg;
+}
+
+void ActorContext::reply(TypeTag tag, const google::protobuf::Message& proto_msg) {
+    TypedMessage msg(tag, proto_msg);
+    reply(std::move(msg));
 }
 
 void ActorContext::reply_with_error(error err) {
@@ -64,7 +68,7 @@ void ActorContext::reply_with_error(error err) {
     (void)err;
 }
 
-void ActorContext::schedule(std::chrono::milliseconds delay, MessageVariant msg) {
+void ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {
     // TODO: schedule message via actor system's clock/alarm mechanism
     (void)delay;
     (void)msg;
@@ -107,24 +111,6 @@ RpcFuture<bytes>
 ActorContext::rpc(const ActorAddress& target, const bytes& encoded_request,
                   std::chrono::milliseconds timeout_ms) {
     return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms);
-}
-
-void ActorContext::send_proto(ActorAddress target, TypeTag tag,
-                               const google::protobuf::Message& msg) {
-    // Encode TypeTag + payload into wire format
-    bytes wire = system_->proto_registry().encode_wire(tag, msg);
-
-    // TODO: create a TypedMessage variant and deliver locally
-    (void)target;
-    (void)wire;
-}
-
-void ActorContext::reply_proto(TypeTag tag,
-                                const google::protobuf::Message& msg) {
-    // Track current sender per actor to enable reply routing
-    // TODO: store current_sender_ in actor state
-    (void)tag;
-    (void)msg;
 }
 
 } // namespace hpactor

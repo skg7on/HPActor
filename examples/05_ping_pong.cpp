@@ -30,7 +30,7 @@
 
 #include <hpactor/actor/blocking_actor.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor/scoped_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
@@ -91,7 +91,7 @@ struct StopMessage {};
 class PingActor : public hpactor::EventBasedActor {
   protected:
     hpactor::Behavior make_behavior() override {
-        return hpactor::Behavior{[](hpactor::MessageVariant&& /*msg*/) {
+        return hpactor::Behavior{[](hpactor::TypedMessage& /*msg*/) {
             // In a real implementation, would use std::visit to handle messages
             std::cout << "PingActor: received message" << std::endl;
         }};
@@ -109,7 +109,7 @@ class PingActor : public hpactor::EventBasedActor {
 class PongActor : public hpactor::EventBasedActor {
   protected:
     hpactor::Behavior make_behavior() override {
-        return hpactor::Behavior{[](hpactor::MessageVariant&& /*msg*/) {
+        return hpactor::Behavior{[](hpactor::TypedMessage& /*msg*/) {
             std::cout << "PongActor: received message" << std::endl;
         }};
     }

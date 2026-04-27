@@ -15,9 +15,10 @@
 #pragma once
 
 #include <functional>
-#include <hpactor/actor/message.hpp>
 
 namespace hpactor {
+
+class TypedMessage;
 
 // -----------------------------------------------------------------------------
 // overloaded - helper for std::visit with lambdas (C++20 backport)
@@ -32,7 +33,7 @@ template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 // -----------------------------------------------------------------------------
 class Behavior {
   public:
-    using handler_type = std::function<void(MessageVariant&&)>;
+    using handler_type = std::function<void(TypedMessage&)>;
 
     Behavior() = default;
 
@@ -42,9 +43,9 @@ class Behavior {
         return handler_ != nullptr;
     }
 
-    void operator()(MessageVariant&& msg) const {
+    void operator()(TypedMessage& msg) const {
         if (handler_) {
-            handler_(std::move(msg));
+            handler_(msg);
         }
     }
 

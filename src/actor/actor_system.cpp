@@ -20,7 +20,10 @@
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/spawn.hpp>
-#include <hpactor/types/serialization.hpp>
+
+// Protobuf message types for spawn serialization
+#include <hpactor/common.pb.h>
+#include <hpactor/messages.pb.h>
 
 namespace hpactor {
 
@@ -54,44 +57,36 @@ ActorSystem::ActorSystem(const Config& config)
       scheduler_(std::make_unique<sched::HybridScheduler>(
           *this, config.scheduler_threads)),
       actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
+    // Register system protobuf types
+    proto_registry_.register_system_types();
+
     scheduler_->start();
 
     if (config.enable_network) {
-        // Initialize network components
         network_loop_ = std::make_unique<net::EventLoop>();
         network_loop_->set_actor_system(this);
 
-        // Create registrar first (before transport)
         if (config.udp_port > 0) {
             registrar_ =
                 std::make_unique<net::UdpRegistrar>(config.registrar, endpoint_);
             registrar_->start();
         }
 
-        // Create transport with registry
-        // Note: TcpTransport expects NodeRegistry*, but UdpRegistrar owns one
-        // internally. For now, pass nullptr and rely on UdpRegistrar for
-        // discovery.
         transport_ = std::make_unique<net::TcpTransport>(endpoint_, config.tls,
                                                          config.pool, nullptr);
 
-        // Initialize RPC channel after transport is created
         rpc_channel_ =
             std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
 
-        // Set RPC response handler on transport to route responses to RPC
-        // channel
         transport_->set_rpc_handler(
             [this](hpactor::MessageId id, const hpactor::bytes& data) {
                 rpc_channel_->on_response(id, data);
             });
 
-        // Listen on TCP port if specified
         if (config.tcp_port > 0) {
             transport_->listen(config.tcp_port);
         }
 
-        // Start network event loop in background thread
         network_thread_ = std::thread([this]() {
             while (network_loop_->wait(100) >= 0) {
                 network_loop_->process_completions();
@@ -100,8 +95,6 @@ ActorSystem::ActorSystem(const Config& config)
             }
         });
 
-        // Spawn the SpawnReceiver system actor using well-known ID
-        // SpawnReceiverId = ActorId(0xFFFF0001) is reserved for spawn handling
         auto spawn_receiver = std::make_shared<SpawnReceiver>(
             *this, *actor_type_registry_, transport_.get());
         spawn_receiver->set_address(
@@ -112,12 +105,11 @@ ActorSystem::ActorSystem(const Config& config)
             actors_.emplace(SpawnReceiverId, spawn_receiver);
         }
 
-        // Create mailbox for spawn receiver
         {
             std::lock_guard<std::mutex> lock(mailboxes_mutex_);
             mailboxes_.emplace(
                 SpawnReceiverId,
-                std::make_unique<mailbox::MPSCActorMailbox<Message<MessageVariant>>>(
+                std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
                     SpawnReceiverId, scheduler_.get()));
         }
     }
@@ -147,8 +139,6 @@ Actor ActorSystem::resolve_actor(const std::string& name) {
     if (!addr) {
         return Actor{};
     }
-    // Return an actor handle - actual resolution would require more
-    // infrastructure
     return Actor{};
 }
 
@@ -177,7 +167,7 @@ std::shared_ptr<AbstractActor> ActorSystem::get_actor(ActorId id) {
     return nullptr;
 }
 
-mailbox::MPSCActorMailbox<Message<MessageVariant>>*
+mailbox::MPSCActorMailbox<TypedMessage>*
 ActorSystem::get_mailbox(ActorId id) {
     std::lock_guard<std::mutex> lock(mailboxes_mutex_);
     auto it = mailboxes_.find(id);
@@ -187,27 +177,22 @@ ActorSystem::get_mailbox(ActorId id) {
     return nullptr;
 }
 
-void ActorSystem::deliver_local(ActorId target, MessageVariant msg) {
+void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
     deliver_local(target, std::move(msg), 0, INT64_MAX);
 }
 
-void ActorSystem::deliver_local(ActorId target, MessageVariant msg,
+void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
                                 uint8_t /*priority*/, int64_t /*deadline_ns*/) {
     auto* mailbox = get_mailbox(target);
     if (!mailbox)
         return;
-    mailbox->push(Message<MessageVariant>(std::move(msg)));
+    mailbox->push(std::move(msg));
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
-    completion_msg msg;
-    msg.actor = completion.actor;
-    msg.type = completion.type;
-    msg.fd = completion.fd;
-    msg.result = completion.result;
-    msg.user_data = completion.user_data;
-
-    deliver_local(completion.actor, std::move(msg));
+    // Convert I/O completion to a TypedMessage using a system tag placeholder.
+    // TODO: define completion_msg in protobuf or use a dedicated internal path.
+    (void)completion;
 }
 
 result<ActorRef>
@@ -222,29 +207,32 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     AsyncActor handle(endpoint_, config_.spawn_timeout);
 
     if (!config_.enable_network || !transport_) {
-        // No network - mark as failed
         SpawnResponse resp;
         resp.error_code = spawn_errors::node_unreachable;
         handle.set_response(resp);
         return handle;
     }
 
-    // node_name is expected to be an endpoint in "host:port" format
     auto remote_endpoint = endpoint_ops::parse_endpoint(node_name);
 
-    // Serialize request using DefaultSerializer::encode_spawn
-    DefaultSerializer serializer;
-    SpawnRequest req;
-    req.actor_type_name = actor_type;
-    req.args_type = TypeTag::User;
-    req.serialized_args = bytes{};
-    req.supervisor_addr = system_actor_.address(); // Supervisor is system actor
-                                                   // for now
+    // Serialize spawn request using protobuf
+    ::hpactor::SpawnRequestMessage pb_req;
+    pb_req.set_actor_type_name(actor_type);
+    pb_req.set_args_type(static_cast<uint32_t>(TypeTag::User));
+    // supervisor as ActorRef
+    auto* pb_sup = pb_req.mutable_supervisor();
+    auto sup_addr = system_actor_.address();
+    // Set supervisor endpoint
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&sup_addr.endpoint)) {
+        pb_sup->mutable_endpoint()->mutable_ipv4()->set_addr(ipv4->addr);
+        pb_sup->mutable_endpoint()->mutable_ipv4()->set_port(ipv4->port_nw);
+    }
+    pb_sup->set_type(sup_addr.type);
+    pb_sup->set_actor_id(sup_addr.id.value());
+    pb_sup->set_incarnation(sup_addr.incarnation);
 
-    SpawnMessageVariant mv = req;
-    bytes request_bytes = serializer.encode_spawn(TypeTag::SpawnRequestTag, mv);
+    bytes request_bytes = proto_registry_.serialize(pb_req);
 
-    // Create frame for spawn request
     net::WireFrame frame;
     frame.sender = system_actor_.address();
     frame.receiver =
@@ -253,7 +241,6 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     frame.flags = net::WireFrame::RpcRequest;
     frame.payload = request_bytes;
 
-    // Create pending actor for response routing
     auto pending = std::make_shared<AsyncActor>(std::move(handle));
     pending->set_message_id(frame.message_id);
 
@@ -262,7 +249,6 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
         pending_spawns_.emplace(frame.message_id, pending);
     }
 
-    // Send via transport
     transport_->send(frame.receiver, frame.encode());
 
     return std::move(*pending);

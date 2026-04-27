@@ -42,24 +42,24 @@ void test_abstract_actor_interface() {
         "AbstractActor must inherit from enable_shared_from_this");
 }
 
-void test_message_variant_types() {
-    // Test that MessageVariant can hold all required message types
-    MessageVariant msg = down_msg{{}, error{}};
-    assert(std::holds_alternative<down_msg>(msg));
+void test_typed_message_types() {
+    // Test that TypedMessage can identify all required system message types
+    TypedMessage msg(TypeTag::DownMsg, bytes{});
+    assert(msg.type_id() == TypeTag::DownMsg);
 
-    msg = exit_msg{{}, error{}};
-    assert(std::holds_alternative<exit_msg>(msg));
+    msg = TypedMessage(TypeTag::ExitMsg, bytes{});
+    assert(msg.type_id() == TypeTag::ExitMsg);
 
-    msg = link_msg{{}};
-    assert(std::holds_alternative<link_msg>(msg));
+    msg = TypedMessage(TypeTag::LinkMsg, bytes{});
+    assert(msg.type_id() == TypeTag::LinkMsg);
 
-    msg = unlink_msg{{}};
-    assert(std::holds_alternative<unlink_msg>(msg));
+    msg = TypedMessage(TypeTag::UnlinkMsg, bytes{});
+    assert(msg.type_id() == TypeTag::UnlinkMsg);
 }
 
 int main() {
     test_abstract_actor_interface();
-    test_message_variant_types();
+    test_typed_message_types();
 
     return 0;
 }

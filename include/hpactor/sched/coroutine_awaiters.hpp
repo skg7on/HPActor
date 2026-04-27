@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/sched/coroutine_task.hpp>

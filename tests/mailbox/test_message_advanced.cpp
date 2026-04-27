@@ -13,37 +13,32 @@
 // limitations under the License.
 
 #include <cassert>
-#include <hpactor/actor/message.hpp>
-#include <string>
-
-struct MoveOnly {
-    int value;
-    std::string data;
-    MoveOnly() = default;
-    MoveOnly(int v, std::string d) : value(v), data(std::move(d)) {}
-    MoveOnly(MoveOnly&& other) noexcept
-        : value(other.value), data(std::move(other.data)) {}
-    MoveOnly& operator=(MoveOnly&& other) noexcept {
-        value = other.value;
-        data = std::move(other.data);
-        return *this;
-    }
-    // Delete copy
-    MoveOnly(const MoveOnly&) = delete;
-    MoveOnly& operator=(const MoveOnly&) = delete;
-};
+#include <hpactor/actor/typed_message.hpp>
+#include <hpactor/common.pb.h> // for test protobuf types
 
 int main() {
-    // Test move-only type with rvalue (move constructor)
-    MoveOnly m{42, "test"};
-    hpactor::Message<MoveOnly> msg{std::move(m)};
-    assert(msg.payload().value == 42);
-    // Verify original moved-from state
-    assert(m.value == 42); // int copied, string moved-from
+    // Test TypedMessage from protobuf message
+    ::hpactor::PbIpv4Endpoint ep;
+    ep.set_addr(0x7F000001);
+    ep.set_port(8080);
 
-    // Test move-only type by constructing MoveOnly first, then wrapping
-    hpactor::Message<MoveOnly> msg2{MoveOnly{100, "moved"}};
-    assert(msg2.payload().value == 100);
+    hpactor::TypedMessage msg(hpactor::TypeTag::User, ep);
+    assert(msg.type_id() == hpactor::TypeTag::User);
+    assert(!msg.payload().empty());
+
+    // Test lazy deserialization with as<T>()
+    auto parsed = msg.as<::hpactor::PbIpv4Endpoint>();
+    assert(parsed != nullptr);
+    assert(parsed->addr() == 0x7F000001);
+    assert(parsed->port() == 8080);
+
+    // Test parsed() access after as<T>() caches result
+    assert(msg.parsed() != nullptr);
+
+    // Test move preserves parsed state
+    auto msg2 = std::move(msg);
+    assert(msg2.parsed() != nullptr);
+    assert(msg2.payload().size() > 0);
 
     return 0;
 }

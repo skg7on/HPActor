@@ -182,9 +182,9 @@ void HybridScheduler::process_actor(ActorId actor) {
         return;
     }
 
-    Message<MessageVariant> msg;
+    TypedMessage msg;
     if (mailbox->try_pop(msg)) {
-        actor_ptr->receive(msg.move_payload());
+        actor_ptr->receive(msg);
     }
 }
 
@@ -248,9 +248,9 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         return;
     }
 
-    Message<MessageVariant> msg;
+    TypedMessage msg;
     if (mailbox->try_pop(msg)) {
-        actor->receive(msg.move_payload());
+        actor->receive(msg);
     }
 
     // After processing one message, check if there are more messages waiting.

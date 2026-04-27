@@ -28,12 +28,12 @@
 // Note: Message types (ping_msg, pong_msg, stop_msg, start_msg) are defined
 // in the framework's abstract_actor.hpp for convenience. In a real application,
 // custom message types would be defined in user code and included via a
-// user-defined MessageVariant type.
+// user-defined TypedMessage type.
 //
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -49,10 +49,24 @@
 using namespace hpactor;
 
 // -----------------------------------------------------------------------------
-// Example message types (ping_msg, pong_msg, etc.) are defined in the
-// framework's abstract_actor.hpp as part of MessageVariant for convenience.
-// In a real application, you would define your own message types and
-// compose them with system messages in your own ApplicationMessageVariant.
+// Demo message tag
+constexpr TypeTag kPingTag = static_cast<TypeTag>(static_cast<uint32_t>(TypeTag::User) + 1);
+
+// Helper to create a ping TypedMessage (stores sequence as payload bytes)
+TypedMessage make_ping_msg(int seq) {
+    bytes payload(sizeof(seq));
+    std::memcpy(payload.data(), &seq, sizeof(seq));
+    return TypedMessage(kPingTag, std::move(payload));
+}
+
+int get_ping_sequence(const TypedMessage& msg) {
+    if (msg.payload().size() >= sizeof(int)) {
+        int seq;
+        std::memcpy(&seq, msg.payload().data(), sizeof(seq));
+        return seq;
+    }
+    return -1;
+}
 // -----------------------------------------------------------------------------
 
 // -----------------------------------------------------------------------------
@@ -76,13 +90,11 @@ class EchoActor : public hpactor::EventBasedActor {
         int count = 0;
         while (count < 3 && !g_done.load()) {
             auto msg = co_await make_mailbox_awaiter();
-            auto& variant = msg.payload();
 
-            if (std::holds_alternative<ping_msg>(variant)) {
-                auto& ping = std::get<ping_msg>(variant);
+            if (msg.type_id() == kPingTag) {
+                int seq = get_ping_sequence(msg);
                 std::cout
-                    << "[EchoActor] Got ping #" << ping.sequence << " from node "
-                    << hpactor::endpoint_ops::to_string(ping.from.endpoint)
+                    << "[EchoActor] Got ping #" << seq
                     << " -> thread " << std::this_thread::get_id() << "\n";
                 ++count;
                 ++g_context_switches;
@@ -115,7 +127,7 @@ void demo_single_actor() {
               << "\n";
 
     // Send it a message
-    system.deliver_local(echo_ref.address().id, ping_msg{echo_ref.address(), 0});
+    system.deliver_local(echo_ref.address().id, make_ping_msg(0));
 
     // Let scheduler run for a moment
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -152,9 +164,9 @@ void demo_multi_actor() {
               << "\n";
 
     // Send messages to both echo actors
-    system.deliver_local(echo1_ref.address().id, ping_msg{echo1_ref.address(), 1});
-    system.deliver_local(echo2_ref.address().id, ping_msg{echo2_ref.address(), 2});
-    system.deliver_local(echo1_ref.address().id, ping_msg{echo1_ref.address(), 3});
+    system.deliver_local(echo1_ref.address().id, make_ping_msg(1));
+    system.deliver_local(echo2_ref.address().id, make_ping_msg(2));
+    system.deliver_local(echo1_ref.address().id, make_ping_msg(3));
 
     // Let the actors exchange messages
     std::cout << "\nLetting actors exchange messages...\n";

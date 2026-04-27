@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
@@ -22,6 +23,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <memory>
 #include <vector>
 
 namespace google {
@@ -51,27 +53,30 @@ class ActorContext {
 
     template <typename T, typename... Args> T spawn(Args&&... args);
 
-    // Send messages
-    void send(const ActorAddress& target, MessageVariant msg);
+    // Send a pre-constructed TypedMessage
+    void send(const ActorAddress& target, TypedMessage msg);
 
-    // Send message with priority and deadline for scheduling
-    // priority: 0-3 (0 = highest)
-    // deadline_ns: absolute deadline in nanoseconds (INT64_MAX = no deadline)
-    void send_with_priority(const ActorAddress& target, MessageVariant msg,
+    // Send a protobuf message (serializes eagerly)
+    void send(const ActorAddress& target, TypeTag tag,
+              const google::protobuf::Message& msg);
+
+    // Convenience: send a typed protobuf message
+    template <typename ProtoMsgT>
+    void send(const ActorAddress& target, const ProtoMsgT& msg);
+
+    // Send with priority and deadline
+    void send_with_priority(const ActorAddress& target, TypedMessage msg,
                             uint8_t priority, int64_t deadline_ns);
 
     // Replies
-    void reply(MessageVariant msg);
+    void reply(TypedMessage msg);
+    void reply(TypeTag tag, const google::protobuf::Message& msg);
+    template <typename ProtoMsgT>
+    void reply(const ProtoMsgT& msg);
     void reply_with_error(error err);
 
-    // Protobuf-native message send/reply
-    void send_proto(ActorAddress target, TypeTag tag,
-                    const google::protobuf::Message& msg);
-    void reply_proto(TypeTag tag,
-                     const google::protobuf::Message& msg);
-
     // Scheduled execution
-    void schedule(std::chrono::milliseconds delay, MessageVariant msg);
+    void schedule(std::chrono::milliseconds delay, TypedMessage msg);
 
     // Children management
     std::vector<Actor> children() const;
@@ -89,7 +94,6 @@ class ActorContext {
     void monitor(const ActorAddress& target);
 
     // RPC calls (for non-actor threads only)
-    // Note: caller serializes request and deserializes response
     RpcFuture<bytes>
     rpc(const ActorAddress& target, const bytes& encoded_request,
         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));

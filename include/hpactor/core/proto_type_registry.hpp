@@ -128,6 +128,9 @@ public:
         return {tag, std::move(msg)};
     }
 
+    // Pre-register all system message types with well-known TypeTags.
+    void register_system_types();
+
 private:
     struct Entry {
         std::string type_name;

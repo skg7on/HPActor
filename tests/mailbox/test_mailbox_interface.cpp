@@ -14,20 +14,14 @@
 
 // tests/test_mailbox_interface.cpp
 #include <cassert>
-#include <hpactor/actor/message.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/mailbox.hpp>
-#include <string>
-#include <thread>
 
-struct PingMsg {
-    int value;
-};
+using namespace hpactor;
 
 int main() {
-    // Test can create via interface
-    hpactor::IMailbox<PingMsg>* mailbox = nullptr;
-    // Interface doesn't compile - no factory
-    // This test just verifies interface compiles
+    // Verify IMailbox<TypedMessage> interface compiles
+    IMailbox<TypedMessage>* mailbox = nullptr;
     (void)mailbox;
     return 0;
 }

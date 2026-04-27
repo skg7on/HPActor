@@ -44,7 +44,7 @@ class Scheduler {
     void stop();
 
     // Enqueue a message for delivery to an actor
-    void enqueue(ActorId target, MessageVariant msg);
+    void enqueue(ActorId target, TypedMessage msg);
 
     // Check if scheduler is running
     bool is_running() const {
