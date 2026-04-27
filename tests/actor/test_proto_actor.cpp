@@ -20,7 +20,7 @@
 
 using namespace hpactor;
 
-class TestActor : public proto_actor {
+class TestActor : public ProtoActor {
 protected:
     void register_handlers() override {
         // Handlers will be registered once protobuf types are available
@@ -32,8 +32,8 @@ int main() {
 
     // Test 1: proto_actor type exists
     {
-        printf("Test 1: proto_actor compilation... ");
-        static_assert(sizeof(proto_actor) > 0, "proto_actor should not be empty");
+        printf("Test 1: ProtoActor compilation... ");
+        static_assert(sizeof(ProtoActor) > 0, "ProtoActor should not be empty");
         printf("PASS\n");
     }
 

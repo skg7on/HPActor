@@ -16,16 +16,16 @@
 
 namespace hpactor {
 
-proto_actor::proto_actor(ActorContext* ctx, ActorSystem& sys)
+ProtoActor::ProtoActor(ActorContext* ctx, ActorSystem& sys)
     : EventBasedActor(ctx, sys) {}
 
-void proto_actor::initialize_proto_handlers() {
+void ProtoActor::initialize_proto_handlers() {
     if (handlers_initialized_) return;
     register_handlers();
     handlers_initialized_ = true;
 }
 
-void proto_actor::on_proto_message(TypeTag tag, const bytes& payload) {
+void ProtoActor::on_proto_message(TypeTag tag, const bytes& payload) {
     if (!handlers_initialized_) {
         initialize_proto_handlers();
     }
@@ -43,7 +43,7 @@ void proto_actor::on_proto_message(TypeTag tag, const bytes& payload) {
     (void)response;
 }
 
-void proto_actor::receive(MessageVariant&& msg) {
+void ProtoActor::receive(MessageVariant&& msg) {
     if (!handlers_initialized_) {
         initialize_proto_handlers();
     }

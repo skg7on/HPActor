@@ -48,9 +48,9 @@ struct ProtoHandler {
 //
 // Users override register_handlers() and call on<MsgT>() / on_request<ReqT,ResT>()
 // to register handlers for their protobuf message types.
-class proto_actor : public EventBasedActor {
+class ProtoActor : public EventBasedActor {
 public:
-    proto_actor(ActorContext* ctx, ActorSystem& sys);
+    ProtoActor(ActorContext* ctx, ActorSystem& sys);
 
     // Register a fire-and-forget handler for a protobuf message type
     template<typename ProtoMsgT>

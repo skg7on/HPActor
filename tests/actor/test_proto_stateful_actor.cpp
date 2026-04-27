@@ -23,9 +23,9 @@ struct CounterState {
     int count = 0;
 };
 
-class CounterActor : public proto_stateful_actor<CounterState> {
+class CounterActor : public ProtoStatefulActor<CounterState> {
 public:
-    using proto_stateful_actor::proto_stateful_actor;
+    using ProtoStatefulActor::ProtoStatefulActor;
 
 protected:
     void register_handlers() override {

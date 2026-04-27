@@ -23,10 +23,10 @@ namespace hpactor {
 // The state is accessible via state() and persists across handler invocations.
 // -----------------------------------------------------------------------------
 template<typename StateT>
-class proto_stateful_actor : public proto_actor {
+class ProtoStatefulActor : public ProtoActor {
 public:
-    proto_stateful_actor(ActorContext* ctx, ActorSystem& sys)
-        : proto_actor(ctx, sys) {}
+    ProtoStatefulActor(ActorContext* ctx, ActorSystem& sys)
+        : ProtoActor(ctx, sys) {}
 
     StateT& state() { return state_; }
     const StateT& state() const { return state_; }
