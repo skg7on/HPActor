@@ -12,7 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/async_io_backend.hpp>
+#include <hpactor/net/async_io_fwd.hpp>
+#include <hpactor/net/reactor_backend.hpp>
 
 #include <cassert>
 

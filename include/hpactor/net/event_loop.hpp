@@ -119,7 +119,7 @@ class EventLoop {
     void process_completions();
 
     // Enqueue a completion to be delivered to an actor
-    // Called by AsyncIoBackend via its deliver_completion
+    // Called by proactor backend via its deliver_completion
     void enqueue_completion(OpCompletion completion);
 
     // Set the ActorSystem for delivering completions
