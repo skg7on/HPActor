@@ -21,7 +21,14 @@
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
+#include <cstdint>
 #include <vector>
+
+namespace google {
+namespace protobuf {
+class Message;
+} // namespace protobuf
+} // namespace google
 
 namespace hpactor {
 
@@ -56,6 +63,12 @@ class ActorContext {
     // Replies
     void reply(MessageVariant msg);
     void reply_with_error(error err);
+
+    // Protobuf-native message send/reply
+    void send_proto(ActorAddress target, TypeTag tag,
+                    const google::protobuf::Message& msg);
+    void reply_proto(TypeTag tag,
+                     const google::protobuf::Message& msg);
 
     // Scheduled execution
     void schedule(std::chrono::milliseconds delay, MessageVariant msg);
