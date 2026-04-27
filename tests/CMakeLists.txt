@@ -81,6 +81,10 @@ add_executable(test_proto_actor actor/test_proto_actor.cpp)
 target_link_libraries(test_proto_actor hpactor)
 add_test(NAME test_proto_actor COMMAND test_proto_actor)
 
+add_executable(test_proto_stateful_actor actor/test_proto_stateful_actor.cpp)
+target_link_libraries(test_proto_stateful_actor hpactor)
+add_test(NAME test_proto_stateful_actor COMMAND test_proto_stateful_actor)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
