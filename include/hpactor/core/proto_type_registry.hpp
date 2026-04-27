@@ -49,6 +49,19 @@ public:
         registry_[tag] = std::move(entry);
     }
 
+    // Look up the TypeTag for a registered protobuf message type.
+    // Returns TypeTag::Invalid if the type is not registered.
+    template<typename ProtoMsgT>
+    TypeTag lookup() const {
+        for (const auto& [tag, entry] : registry_) {
+            if (entry.prototype &&
+                entry.prototype->GetTypeName() == ProtoMsgT().GetTypeName()) {
+                return tag;
+            }
+        }
+        return TypeTag::Invalid;
+    }
+
     [[nodiscard]] bool has_tag(TypeTag tag) const {
         return registry_.find(tag) != registry_.end();
     }

@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -120,17 +121,12 @@ protected:
     // Get TypeTag for a protobuf type from the system registry
     template<typename ProtoMsgT>
     TypeTag type_tag_for() const {
-        // Temporary: assign unique tags by incrementing counter.
-        // Replaced by system().proto_registry().lookup<ProtoMsgT>() in Task 4.
-        return static_cast<TypeTag>(
-            static_cast<uint32_t>(TypeTag::User) + next_proto_tag_++);
+        return system().proto_registry().lookup<ProtoMsgT>();
     }
 
 private:
     bool handlers_initialized_ = false;
     std::unordered_map<TypeTag, ProtoHandler> proto_handlers_;
-    // Temporary counter for unique TypeTag assignment. Replaced by Task 4.
-    mutable uint32_t next_proto_tag_ = 0;
 };
 
 } // namespace hpactor

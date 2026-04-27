@@ -21,6 +21,7 @@
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tcp_transport.hpp>
+#include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/types/types.hpp>
@@ -37,7 +38,7 @@ namespace hpactor {
 // Forward declarations
 class AsyncActor;
 class ActorTypeRegistry;
-class ProtoTypeRegistry;
+
 
 // Scheduler interface forward declaration
 namespace sched {
@@ -117,7 +118,12 @@ class ActorSystem {
     }
 
     // Proto type registry
-    ProtoTypeRegistry& proto_registry() const;
+    ProtoTypeRegistry& proto_registry() {
+        return proto_registry_;
+    }
+    const ProtoTypeRegistry& proto_registry() const {
+        return proto_registry_;
+    }
 
     // Node ID
     CommunicationEndpoint endpoint() const {
@@ -225,6 +231,9 @@ class ActorSystem {
 
     // RPC channel for remote calls (after transport_ creation)
     std::unique_ptr<RpcChannel> rpc_channel_;
+
+    // Proto type registry for protobuf message serialization
+    ProtoTypeRegistry proto_registry_;
 
     // Pending remote spawns awaiting response
     std::unordered_map<uint64_t, std::shared_ptr<AsyncActor>> pending_spawns_;
