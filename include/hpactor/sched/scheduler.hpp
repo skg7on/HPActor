@@ -22,6 +22,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <memory>
 #include <functional>
 #include <mutex>
 #include <thread>

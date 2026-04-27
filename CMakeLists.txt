@@ -174,7 +174,14 @@ target_include_directories(hpactor_lib PUBLIC include)
 # Protobuf and Abseil detection
 # Protobuf >= 22.0 requires Abseil as a transitive dependency
 find_package(Protobuf REQUIRED)
-if(Protobuf_VERSION VERSION_GREATER_EQUAL "22.0")
+
+# Detect Protobuf version from protoc (more robust than Protobuf_VERSION)
+execute_process(COMMAND ${Protobuf_PROTOC_EXECUTABLE} --version
+    OUTPUT_VARIABLE HPACTOR_PROTOC_VERSION_OUTPUT
+    OUTPUT_STRIP_TRAILING_WHITESPACE
+)
+string(REGEX MATCH "[0-9]+\\.[0-9]+" HPACTOR_PROTOC_VERSION "${HPACTOR_PROTOC_VERSION_OUTPUT}")
+if(HPACTOR_PROTOC_VERSION VERSION_GREATER_EQUAL "22.0")
     find_package(absl REQUIRED)
     set(HPACTOR_PROTO_ABSL_LIBS absl::log_internal_check_op)
     set(HPACTOR_ABSL_LIBS absl::log absl::log_internal_check_op)

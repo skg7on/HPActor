@@ -270,7 +270,7 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
         return;
     } else if (optype == OpType::Connect) {
         // Connect pending - check result with getsockopt
-        if (int(events) & EPOLLOUT) {
+        if (static_cast<unsigned int>(events) & EPOLLOUT) {
             int err = 0;
             socklen_t errlen = sizeof(err);
             getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
@@ -282,7 +282,7 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
         }
     } else if (optype == OpType::Send || optype == OpType::SendTo) {
         // Send pending - loop until EAGAIN to drain all buffered data
-        if (int(events) & EPOLLOUT) {
+        if (static_cast<unsigned int>(events) & EPOLLOUT) {
             while (true) {
                 if (optype == OpType::SendTo) {
                     n = ::sendto(fd, op.data.data(), op.data.size(), 0,
@@ -312,7 +312,7 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
         }
     } else if (optype == OpType::Recv || optype == OpType::RecvFrom) {
         // Recv pending - loop until EAGAIN to drain all available data
-        if (int(events) & EPOLLIN) {
+        if (static_cast<unsigned int>(events) & EPOLLIN) {
             while (true) {
                 if (optype == OpType::RecvFrom) {
                     n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
@@ -670,10 +670,16 @@ void EpollBackend::async_recvfrom(int fd, const iovec* bufs, int buf_count,
     ssize_t total_n = 0;
     int last_err = 0;
 
+    struct msghdr msg = {};
+    msg.msg_name = &addr;
+    msg.msg_namelen = addrlen;
+    msg.msg_iov = const_cast<iovec*>(bufs);
+    msg.msg_iovlen = static_cast<decltype(msg.msg_iovlen)>(buf_count);
+
     // Loop until EAGAIN to drain all available data (edge-triggered
     // requirement)
     while (true) {
-        ssize_t n = ::recvmsg(fd, bufs, &addr, &addrlen);
+        ssize_t n = ::recvmsg(fd, &msg, 0);
         if (n < 0) {
             if (errno == EAGAIN) {
                 break; // No more data available right now
@@ -780,25 +786,6 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
         std::lock_guard<std::mutex> lock(completions_mutex_);
         pending_completions_.push_back(completion);
     }
-}
-
-void EpollBackend::set_read_handler(int fd, read_callback handler) {
-    // Allocate buffer and store handler
-    constexpr size_t kRecvBufferSize = 65536;
-    ReadHandler rh;
-    rh.buffer.resize(kRecvBufferSize);
-    rh.callback = std::move(handler);
-    read_handlers_[fd] = std::move(rh);
-
-    // Issue initial recv
-    iovec iov;
-    iov.iov_base = read_handlers_[fd].buffer.data();
-    iov.iov_len = read_handlers_[fd].buffer.size();
-    async_recv(fd, &iov, 1, ActorId(0), static_cast<uint32_t>(OpType::Recv));
-}
-
-void EpollBackend::clear_read_handler(int fd) {
-    read_handlers_.erase(fd);
 }
 
 int EpollBackend::wait(int timeout_ms) {

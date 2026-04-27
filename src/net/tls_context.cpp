@@ -16,6 +16,7 @@
 
 #include <hpactor/net/platform.hpp>
 
+#include <algorithm>
 #include <cstring>
 #include <openssl/err.h>
 #include <openssl/evp.h>
