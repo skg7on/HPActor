@@ -29,12 +29,17 @@ namespace hpactor {
 struct ProtoHandler {
     std::string type_name;
 
+    ProtoHandler() = default;
+    ProtoHandler(ProtoHandler&&) = default;
+    ProtoHandler& operator=(ProtoHandler&&) = default;
+    ProtoHandler(const ProtoHandler&) = delete;
+    ProtoHandler& operator=(const ProtoHandler&) = delete;
+
     // Deserialize bytes into a shared_ptr<void> holding the concrete protobuf type
     std::function<std::shared_ptr<void>(const bytes&)> deserialize;
 
     // Invoke the handler with a deserialized message.
     // Returns serialized response bytes (empty for fire-and-forget).
-    // response_tag is filled with the response TypeTag (if this is a request handler).
     std::function<bytes(std::shared_ptr<void>)> invoke;
 };
 
@@ -99,7 +104,7 @@ public:
     void on_proto_message(TypeTag tag, const bytes& payload);
 
     // Check if this actor can handle a given TypeTag
-    bool handles(TypeTag tag) const {
+    [[nodiscard]] bool handles(TypeTag tag) const {
         return proto_handlers_.find(tag) != proto_handlers_.end();
     }
 
@@ -115,14 +120,17 @@ protected:
     // Get TypeTag for a protobuf type from the system registry
     template<typename ProtoMsgT>
     TypeTag type_tag_for() const {
-        // Will be properly implemented when ProtoTypeRegistry gets lookup<>
-        // and ActorSystem provides proto_registry().
-        return TypeTag::Invalid;
+        // Temporary: assign unique tags by incrementing counter.
+        // Replaced by system().proto_registry().lookup<ProtoMsgT>() in Task 4.
+        return static_cast<TypeTag>(
+            static_cast<uint32_t>(TypeTag::User) + next_proto_tag_++);
     }
 
 private:
     bool handlers_initialized_ = false;
     std::unordered_map<TypeTag, ProtoHandler> proto_handlers_;
+    // Temporary counter for unique TypeTag assignment. Replaced by Task 4.
+    mutable uint32_t next_proto_tag_ = 0;
 };
 
 } // namespace hpactor
