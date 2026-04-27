@@ -37,6 +37,7 @@ namespace hpactor {
 // Forward declarations
 class AsyncActor;
 class ActorTypeRegistry;
+class ProtoTypeRegistry;
 
 // Scheduler interface forward declaration
 namespace sched {
@@ -114,6 +115,9 @@ class ActorSystem {
     actor_registry& registry() {
         return registry_;
     }
+
+    // Proto type registry
+    ProtoTypeRegistry& proto_registry() const;
 
     // Node ID
     CommunicationEndpoint endpoint() const {
