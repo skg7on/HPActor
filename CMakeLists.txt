@@ -22,6 +22,7 @@ project(HPActor VERSION 0.1.0 LANGUAGES CXX)
 option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 option(ENABLE_EXAMPLES "Build example programs" ON)
+option(ENABLE_PROACTOR "Use Proactor I/O model (io_uring/GCD)" ON)
 
 # Sanitizer mutual exclusivity
 if(ENABLE_ASAN AND ENABLE_TSAN)
@@ -194,29 +195,29 @@ find_package(Protobuf REQUIRED)
 find_package(absl REQUIRED)
 target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf absl::log absl::log_internal_check_op hpactor_proto)
 
-# Async I/O backends
-if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
-    # Try to find liburing, make it optional - fall back to epoll if not found
-    find_package(liburing)
-    if(liburing_FOUND)
-        message(STATUS "liburing found - using io_uring backend")
-        target_link_libraries(hpactor_lib PUBLIC liburing::uring)
-        target_sources(hpactor_lib PRIVATE src/net/proactor/iouring_backend.cpp src/net/reactor/epoll_backend.cpp)
-    else()
-        message(STATUS "liburing not found - using epoll backend only (no io_uring support)")
+if(ENABLE_PROACTOR)
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        if(liburing_FOUND)
+            message(STATUS "Using io_uring (Proactor)")
+            target_sources(hpactor_lib PRIVATE src/net/proactor/iouring_backend.cpp)
+        endif()
+        # Always include epoll as fallback
         target_sources(hpactor_lib PRIVATE src/net/reactor/epoll_backend.cpp)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        message(STATUS "Using GCD (Proactor)")
+        target_sources(hpactor_lib PRIVATE src/net/proactor/gcd_backend.cpp)
+        # Always include kqueue as fallback
+        target_sources(hpactor_lib PRIVATE src/net/reactor/kqueue_backend.cpp)
     endif()
-elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
-    # Compute macOS SDK path and link libdispatch from the SDK
-    execute_process(COMMAND xcrun --show-sdk-path OUTPUT_VARIABLE HPACTOR_SDK_PATH OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(STRIP "${HPACTOR_SDK_PATH}" HPACTOR_SDK_PATH)
-    set(HPACTOR_DISPATCH_LIB "${HPACTOR_SDK_PATH}/usr/lib/system/libdispatch.tbd")
-    if(NOT EXISTS "${HPACTOR_DISPATCH_LIB}")
-        message(FATAL_ERROR "libdispatch not found at ${HPACTOR_DISPATCH_LIB}")
+else()
+    # Reactor mode
+    if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+        message(STATUS "Using epoll (Reactor)")
+        target_sources(hpactor_lib PRIVATE src/net/reactor/epoll_backend.cpp)
+    elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+        message(STATUS "Using kqueue (Reactor)")
+        target_sources(hpactor_lib PRIVATE src/net/reactor/kqueue_backend.cpp)
     endif()
-    target_link_libraries(hpactor_lib PUBLIC "${HPACTOR_DISPATCH_LIB}")
-    # GCD backend (with kqueue fallback)
-    target_sources(hpactor_lib PRIVATE src/net/proactor/gcd_backend.cpp src/net/reactor/kqueue_backend.cpp)
 endif()
 
 # Alias for backwards compatibility
