@@ -171,6 +171,18 @@ add_library(hpactor_lib SHARED
 )
 target_include_directories(hpactor_lib PUBLIC include)
 
+# Protobuf and Abseil detection
+# Protobuf >= 22.0 requires Abseil as a transitive dependency
+find_package(Protobuf REQUIRED)
+if(Protobuf_VERSION VERSION_GREATER_EQUAL "22.0")
+    find_package(absl REQUIRED)
+    set(HPACTOR_PROTO_ABSL_LIBS absl::log_internal_check_op)
+    set(HPACTOR_ABSL_LIBS absl::log absl::log_internal_check_op)
+else()
+    set(HPACTOR_PROTO_ABSL_LIBS "")
+    set(HPACTOR_ABSL_LIBS "")
+endif()
+
 # Generate protobuf C++ headers/sources
 include(${CMAKE_SOURCE_DIR}/cmake/protobuf.cmake)
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
@@ -180,13 +192,11 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/registrar.proto
 )
 add_library(hpactor_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
-target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf absl::log_internal_check_op)
+target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf ${HPACTOR_PROTO_ABSL_LIBS})
 target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(OpenSSL REQUIRED)
-find_package(Protobuf REQUIRED)
-find_package(absl REQUIRED)
-target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf absl::log absl::log_internal_check_op hpactor_proto)
+target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf ${HPACTOR_ABSL_LIBS} hpactor_proto)
 
 if(ENABLE_PROACTOR)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
