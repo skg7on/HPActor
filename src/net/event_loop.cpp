@@ -16,7 +16,7 @@
 #include <hpactor/net/event_loop.hpp>
 
 #if defined(__APPLE__)
-#    include <hpactor/net/gcd_backend.hpp>
+#    include <hpactor/net/proactor/gcd_backend.hpp>
 #    include <hpactor/net/reactor/kqueue_backend.hpp>
 #elif defined(__linux__)
 #    include <hpactor/net/reactor/epoll_backend.hpp>

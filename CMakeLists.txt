@@ -216,7 +216,7 @@ elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     endif()
     target_link_libraries(hpactor_lib PUBLIC "${HPACTOR_DISPATCH_LIB}")
     # GCD backend (with kqueue fallback)
-    target_sources(hpactor_lib PRIVATE src/net/gcd_backend.cpp src/net/reactor/kqueue_backend.cpp)
+    target_sources(hpactor_lib PRIVATE src/net/proactor/gcd_backend.cpp src/net/reactor/kqueue_backend.cpp)
 endif()
 
 # Alias for backwards compatibility

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/net/gcd_backend.hpp>
+#include <hpactor/net/proactor/gcd_backend.hpp>
 
 #if defined(__APPLE__)
 #    include <cerrno>
