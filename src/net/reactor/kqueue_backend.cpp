@@ -75,11 +75,11 @@ bool KqueueBackend::add_fd(int fd, IoEvent events) {
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
-    if (int(events) & int(IoEvent::Read)) {
+    if (static_cast<uint32_t>(events) & static_cast<uint32_t>(IoEvent::Read)) {
         EV_SET(&ev[nevents], fd, EVFILT_READ, EV_ADD, 0, 0, nullptr);
         nevents++;
     }
-    if (int(events) & int(IoEvent::Write)) {
+    if (static_cast<uint32_t>(events) & static_cast<uint32_t>(IoEvent::Write)) {
         EV_SET(&ev[nevents], fd, EVFILT_WRITE, EV_ADD, 0, 0, nullptr);
         nevents++;
     }
@@ -109,11 +109,11 @@ bool KqueueBackend::update_fd(int fd, IoEvent events) {
 
     // Add new filters
     nevents = 0;
-    if (int(events) & int(IoEvent::Read)) {
+    if (static_cast<uint32_t>(events) & static_cast<uint32_t>(IoEvent::Read)) {
         EV_SET(&ev[nevents], fd, EVFILT_READ, EV_ADD, 0, 0, nullptr);
         nevents++;
     }
-    if (int(events) & int(IoEvent::Write)) {
+    if (static_cast<uint32_t>(events) & static_cast<uint32_t>(IoEvent::Write)) {
         EV_SET(&ev[nevents], fd, EVFILT_WRITE, EV_ADD, 0, 0, nullptr);
         nevents++;
     }
@@ -675,7 +675,7 @@ int KqueueBackend::wait(int timeout_ms) {
                         break;
                     }
                     total_n += n;
-                    if (static_cast<size_t>(total_n) >= op.data.size()) {
+                    if (total_n >= static_cast<ssize_t>(op.data.size())) {
                         break; // All sent
                     }
                 }

@@ -107,7 +107,7 @@ bool EventLoop::add_fd(int fd, Event events) {
         return false;
     }
     IoEvent io_events = IoEvent::Read;
-    if (int(events) & int(Event::Write)) {
+    if (static_cast<uint32_t>(events) & static_cast<uint32_t>(Event::Write)) {
         io_events = static_cast<IoEvent>(static_cast<uint32_t>(io_events) |
                                          static_cast<uint32_t>(IoEvent::Write));
     }

@@ -246,7 +246,7 @@ private:
             msg.msg_name = &op.addr;
             msg.msg_namelen = addrlen;
             msg.msg_iov = op.saved_bufs;
-            msg.msg_iovlen = op.buf_count;
+            msg.msg_iovlen = static_cast<decltype(msg.msg_iovlen)>(op.buf_count);
 
             ssize_t n = ::recvmsg(fd, &msg, 0);
             if (n < 0) {
@@ -273,7 +273,7 @@ private:
         ssize_t total_n = 0;
         int last_err = 0;
 
-        while (static_cast<size_t>(total_n) < op.data.size()) {
+        while (total_n < static_cast<ssize_t>(op.data.size())) {
             ssize_t n = ::send(fd, op.data.data() + total_n,
                                op.data.size() - static_cast<size_t>(total_n), 0);
             if (n < 0) {
@@ -298,7 +298,7 @@ private:
         ssize_t total_n = 0;
         int last_err = 0;
 
-        while (static_cast<size_t>(total_n) < op.data.size()) {
+        while (total_n < static_cast<ssize_t>(op.data.size())) {
             ssize_t n = ::sendto(fd, op.data.data() + total_n,
                                  op.data.size() - static_cast<size_t>(total_n), 0,
                                  reinterpret_cast<const sockaddr*>(&op.addr),

@@ -94,10 +94,10 @@ void EpollBackend::stop() {
 
 bool EpollBackend::add_fd(int fd, IoEvent events) {
     uint32_t epoll_events = 0;
-    if (int(events) & int(IoEvent::Read)) {
+    if (events & static_cast<uint32_t>(IoEvent::Read)) {
         epoll_events |= EPOLLIN;
     }
-    if (int(events) & int(IoEvent::Write)) {
+    if (events & static_cast<uint32_t>(IoEvent::Write)) {
         epoll_events |= EPOLLOUT;
     }
 
@@ -270,7 +270,7 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
         return;
     } else if (optype == OpType::Connect) {
         // Connect pending - check result with getsockopt
-        if (static_cast<unsigned int>(events) & EPOLLOUT) {
+        if (events & EPOLLOUT) {
             int err = 0;
             socklen_t errlen = sizeof(err);
             getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
@@ -282,7 +282,7 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
         }
     } else if (optype == OpType::Send || optype == OpType::SendTo) {
         // Send pending - loop until EAGAIN to drain all buffered data
-        if (static_cast<unsigned int>(events) & EPOLLOUT) {
+        if (events & EPOLLOUT) {
             while (true) {
                 if (optype == OpType::SendTo) {
                     n = ::sendto(fd, op.data.data(), op.data.size(), 0,
@@ -312,7 +312,7 @@ void EpollBackend::process_pending_op(int fd, uint32_t events) {
         }
     } else if (optype == OpType::Recv || optype == OpType::RecvFrom) {
         // Recv pending - loop until EAGAIN to drain all available data
-        if (static_cast<unsigned int>(events) & EPOLLIN) {
+        if (events & EPOLLIN) {
             while (true) {
                 if (optype == OpType::RecvFrom) {
                     n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
@@ -460,7 +460,7 @@ void EpollBackend::async_send(int fd, const iovec* bufs, int buf_count,
             break;
         }
         total_n += n;
-        if (static_cast<size_t>(total_n) >= data.size()) {
+        if (total_n >= static_cast<ssize_t>(data.size())) {
             break; // All data sent
         }
         // Continue looping to send more
@@ -753,7 +753,7 @@ void EpollBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
             break;
         }
         total_n += n;
-        if (static_cast<size_t>(total_n) >= data.size()) {
+        if (total_n >= static_cast<ssize_t>(data.size())) {
             break; // All data sent
         }
         // Continue looping to send more
