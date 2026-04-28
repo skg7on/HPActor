@@ -14,6 +14,7 @@
 
 #include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/ref/actor_proxy.hpp>
 
 #include <google/protobuf/message.h>
 
@@ -24,15 +25,56 @@ ActorContext::ActorContext(Actor owner, ActorSystem* system)
 
 ActorContext::~ActorContext() = default;
 
-void ActorContext::send(const ActorAddress& target, TypedMessage msg) {
-    if (target.is_local()) {
-        auto actor_ptr = owner_.get();
-        if (actor_ptr) {
-            actor_ptr->system().deliver_local(target.id, std::move(msg));
-        } else if (system_) {
-            system_->deliver_local(target.id, std::move(msg));
-        }
+ActorRef ActorContext::resolve(const ActorAddress& target) {
+    // 1. Check cache (hot path)
+    auto cached = ref_cache_.get(target.id);
+    if (cached.has_value()) {
+        return *cached;
     }
+
+    // 2. Check local registry
+    auto system = system_ ? system_ : (owner_ ? &owner_.get()->system() : nullptr);
+    if (!system) {
+        return ActorRef{};
+    }
+
+    auto actor = system->get_actor(target.id);
+    if (actor) {
+        ActorRef ref{Actor(actor)};
+        ref_cache_.put(target.id, ref);
+        return ref;
+    }
+
+    // 3. Non-loopback endpoint: create ActorProxy
+    if (!target.is_local()) {
+        ActorProxy proxy(target, system);
+        ActorRef ref(std::move(proxy));
+        // Only cache if transport was resolved successfully
+        if (ref.get_proxy() && ref.get_proxy()->transport()) {
+            ref_cache_.put(target.id, ref);
+        }
+        return ref;
+    }
+
+    return ActorRef{};
+}
+
+void ActorContext::send(ActorRef& target, TypedMessage msg) {
+    // Stamp sender identity for reply tracking
+    if (owner_) {
+        msg.set_sender_address(owner_.address());
+    }
+
+    target.send(target.address(), std::move(msg));
+}
+
+void ActorContext::send(const ActorAddress& target, TypedMessage msg) {
+    auto ref = resolve(target);
+    if (ref) {
+        send(ref, std::move(msg));
+    }
+    // If resolve failed (no transport, no local actor), silently drop.
+    // Matches async messaging semantics — fire and forget.
 }
 
 void ActorContext::send(const ActorAddress& target, TypeTag tag,
@@ -43,19 +85,27 @@ void ActorContext::send(const ActorAddress& target, TypeTag tag,
 
 void ActorContext::send_with_priority(const ActorAddress& target, TypedMessage msg,
                                       uint8_t priority, int64_t deadline_ns) {
-    if (target.is_local()) {
-        auto actor_ptr = owner_.get();
-        if (!actor_ptr) {
-            return;
+    auto ref = resolve(target);
+    if (!ref) return;
+
+    if (owner_) {
+        msg.set_sender_address(owner_.address());
+    }
+
+    if (ref.is_local()) {
+        auto system = owner_ ? &owner_.get()->system() : system_;
+        if (system) {
+            system->deliver_local(target.id, std::move(msg), priority, deadline_ns);
         }
-        actor_ptr->system().deliver_local(target.id, std::move(msg), priority,
-                                          deadline_ns);
+    } else {
+        ref.send(target, std::move(msg));
     }
 }
 
 void ActorContext::reply(TypedMessage msg) {
-    // TODO: reply to the sender of the current message
-    (void)msg;
+    if (current_sender_.id != ActorId{0}) {
+        send(current_sender_, std::move(msg));
+    }
 }
 
 void ActorContext::reply(TypeTag tag, const google::protobuf::Message& proto_msg) {
@@ -64,8 +114,11 @@ void ActorContext::reply(TypeTag tag, const google::protobuf::Message& proto_msg
 }
 
 void ActorContext::reply_with_error(error err) {
-    // TODO: reply with error to the sender of the current message
-    (void)err;
+    // Placeholder — will be fully implemented in Task 8 (ErrorMsg TypeTag)
+    if (current_sender_.id != ActorId{0}) {
+        // For now, send error as a simple TypedMessage with error details
+        (void)err;
+    }
 }
 
 void ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {
