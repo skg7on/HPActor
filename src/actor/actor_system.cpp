@@ -83,6 +83,11 @@ ActorSystem::ActorSystem(const Config& config)
                 rpc_channel_->on_response(id, data);
             });
 
+        transport_->set_actor_message_handler(
+            [this](const net::WireFrame& frame) {
+                this->deliver_remote(frame);
+            });
+
         if (config.tcp_port > 0) {
             transport_->listen(config.tcp_port);
         }
@@ -187,6 +192,12 @@ void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
     if (!mailbox)
         return;
     mailbox->push(std::move(msg));
+}
+
+void ActorSystem::deliver_remote(const net::WireFrame& frame) {
+    TypedMessage msg(static_cast<TypeTag>(frame.type_tag), frame.payload);
+    msg.set_sender_address(frame.sender);
+    deliver_local(frame.receiver.id, std::move(msg));
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {

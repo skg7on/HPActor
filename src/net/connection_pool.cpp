@@ -220,8 +220,10 @@ void ConnectionPool::on_frame_received(const bytes& frame_data) {
         return;
     }
 
-    // TODO: existing actor message handling
-    (void)frame;
+    // Route to actor message handler (deliver_remote)
+    if (actor_message_handler_) {
+        actor_message_handler_(frame);
+    }
 }
 
 void ConnectionPool::schedule_reconnect() {

@@ -19,6 +19,7 @@
 #include <hpactor/core/actor_registry.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/net/frame.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
@@ -159,6 +160,10 @@ class ActorSystem {
     // deadline_ns: absolute deadline in nanoseconds (INT64_MAX = no deadline)
     void deliver_local(ActorId target, TypedMessage msg, uint8_t priority,
                        int64_t deadline_ns);
+
+    // Deliver a remote message (from WireFrame) to the target actor's mailbox.
+    // Bridges the transport layer to the unified deliver_local() sink.
+    void deliver_remote(const net::WireFrame& frame);
 
     // Enqueue an I/O completion to be delivered to an actor
     // Called by EventLoop when async operations complete

@@ -64,6 +64,11 @@ class TcpTransport : public Transport {
     // Set RPC response handler - propagates to all connection pools
     void set_rpc_handler(rpc_response_handler handler) override;
 
+    // Set actor message handler - propagates to all connection pools
+    void set_actor_message_handler(std::function<void(const net::WireFrame&)> h) {
+        actor_msg_handler_ = std::move(h);
+    }
+
   private:
     void handle_accept(int client_fd, CommunicationEndpoint remote_endpoint);
 
@@ -87,6 +92,7 @@ class TcpTransport : public Transport {
     HostResolver host_resolver_;
     std::unordered_map<CommunicationEndpoint, std::shared_ptr<ConnectionPool>> pools_;
     std::function<void(MessageId, const bytes&)> rpc_handler_;
+    std::function<void(const net::WireFrame&)> actor_msg_handler_;
 
     // Map of fd -> Connection for completion routing
     std::unordered_map<int, ConnectionPtr> connections_;

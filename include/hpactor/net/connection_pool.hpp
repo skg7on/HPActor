@@ -34,6 +34,8 @@ namespace hpactor {
 
 namespace net {
 
+struct WireFrame;  // forward decl, full def in <hpactor/net/frame.hpp>
+
 // -----------------------------------------------------------------------------
 // PoolConfig - connection pool configuration
 // -----------------------------------------------------------------------------
@@ -110,6 +112,14 @@ class ConnectionPool : public Connection,
         std::function<void(uint64_t message_id, const SpawnResponse&)>;
     void set_spawn_handler(spawn_response_handler handler);
 
+    // Set handler for actor messages (called for non-RPC, non-spawn frames)
+    using actor_message_handler = std::function<void(const WireFrame& frame)>;
+
+    void set_actor_message_handler(actor_message_handler handler) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        actor_message_handler_ = std::move(handler);
+    }
+
     // Called by TcpTransport when connection becomes ready
     void on_connection_ready(ConnectionPtr conn);
 
@@ -156,6 +166,7 @@ class ConnectionPool : public Connection,
 
     rpc_response_handler rpc_handler_;
     spawn_response_handler spawn_handler_;
+    actor_message_handler actor_message_handler_;
 };
 
 } // namespace net
