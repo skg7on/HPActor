@@ -1,16 +1,67 @@
 # HPActor
 
-A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, and Multi-priority queues for mathematically deterministic response times.
+A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, and multi-priority queues for mathematically deterministic response times.
 
 ## Features
 
-- **Actor Type Hierarchy**: Event-based and blocking actors with strong typing support
-- **Coroutine Scheduling**: C++20 stackless coroutines with `HybridScheduler` (work-stealing + EDF)
-- **Edge-Trigger Mailbox**: Lock-free MPSC queue with `mailbox_was_empty_` CAS wakeup — no lost wakeups
+### Actor Model
+- **Actor Type Hierarchy**: Event-based, blocking, typed, and stateful actors with unified `ActorRef` references
 - **Dynamic Behavior**: Actors change message handlers at runtime via `become()`
-- **Supervision Strategies**: OneForOne and AllForOne fault-tolerance policies
-- **Network Layer**: TLS 1.3, connection pooling, service discovery via registrar
-- **Header-only Types**: Actor types, behaviors, and messages in headers; runtime in source files
+- **Coroutine-Powered**: C++20 stackless coroutines — thousands of actors multiplexed onto a small thread pool
+- **Unified Message Passing**: `TypedMessage` wraps any protobuf payload with sender address for request/response routing
+- **ActorRefCache**: Lock-free LRU cache for resolved `ActorRef` lookups, O(1) amortized
+- **Error Reply**: `reply_with_error()` / `reply_with_result()` for structured error handling across the network
+
+### Protobuf-Native Programming Model
+- **proto_actor**: Base class with template handler registration — `on<T>()` for fire-and-forget, `on_request<ReqT, ResT>()` for request-response
+- **ProtoStatefulActor\<T\>**: Protobuf actor with explicit state access via `state()`
+- **ProtoTypeRegistry**: Maps `TypeTag` to protobuf message types with 4-byte BE TypeTag + payload wire format
+- **Zero-Copy Potential**: Protobuf messages flow from wire to handler without intermediate variant wrapping
+
+### Scheduling Subsystem
+- **HybridScheduler**: Work-stealing scheduler with A2WS adaptive victim selection
+- **ChaselevDeque\<T\>**: Lock-free work-stealing deque (LIFO owner pop, FIFO thief steal)
+- **MultiPriorityWorkQueue**: Per-priority ChaseLev arrays — starvation-free priority scheduling
+- **EDFQueue**: Earliest Deadline First min-heap for real-time work, O(log n) push/pop
+- **TimingWheel**: Hierarchical O(1) timer wheel with cascading (4 levels)
+- **CoroutineFramePool**: Lock-free stack pool for coroutine frames, O(1) acquire/release
+
+### Mailbox
+- **MPSCMailbox\<T\>**: Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue)
+- **MPSCActorMailbox\<T\>**: Edge-triggered CAS wakeup — no lost wakeups, no spurious rescheduling
+- **Swap-in Interface**: `IMailbox<T>` allows replacing the mailbox implementation without touching actor code
+
+### Actor Lifecycle
+- **ActorState**: Atomic state machine (Idle → Ready → Running → IOWaiting → Terminated) with CAS transitions
+- **Hierarchical Supervision**: OneForOne (restart failed child) and AllForOne (restart all children) strategies
+- **SupervisorActor**: Supervises children via strategy pattern
+- **SelfSupervisingActor**: Manages own children with configurable policy (max restarts, restart interval)
+- **Remote Child Tracking**: Supervision across process boundaries
+
+### Networking
+- **EventLoop**: kqueue (macOS) / epoll (Linux) edge-triggered event loop with timer support
+- **Reactor/Proactor Separation**: `IReactorBackend` interface — `EpollBackend`/`KqueueBackend` (reactor) and `IoUringBackend`/`GcdBackend` (proactor)
+- **TCP Transport**: 4-byte length-prefixed framing with `ConnectionPtr` abstraction
+- **TLS 1.3**: AES-256-CBC encryption, RSA key exchange, `TlsConnection` state machine
+- **Connection Pool**: Dynamic pooling per node, round-robin, exponential backoff reconnect
+- **UNIX Domain Socket**: Registry-driven UDS path lookup with TCP fallback
+- **Async RPC**: `RpcChannel` with at-least-once delivery, retry on timeout, `RpcFuture<bytes>`
+
+### Service Discovery
+- **Registrar**: UDP discovery + TCP registration with heartbeat, failover, and protobuf serialization
+- **HostResolver**: DNS resolution with caching
+- **NodeRegistry**: Registry of known nodes with static routes
+
+### Remote Actor Spawn
+- **AsyncActor**: Non-blocking spawn handle with `get()`, `ready()`, `cancel()`
+- **ActorTypeRegistry**: Register spawnable actor types by name
+- **SpawnReceiver**: System actor for handling spawn requests across the network
+- **Well-Known System IDs**: `SpawnReceiverId`, `SystemActorType` — constexpr initialized
+
+### Serialization
+- **Protobuf Wire Format**: `common.proto` (endpoint types), `frame.proto` (WireFrame transport), `messages.proto` (system messages)
+- **DefaultSerializer**: Protobuf-based encode/decode for all system message types
+- **CommunicationEndpoint**: `std::variant<Ipv4Endpoint, Ipv6Endpoint>` — network-byte-order storage for zero-copy socket operations
 
 ## Architecture
 
@@ -22,9 +73,33 @@ AbstractActor (interface base)
         ├── EventBasedActor (cooperative, behavior-based, coroutine-powered)
         │       ├── StatefulActor<T> (explicit state)
         │       └── TypedEventBasedActor<Signatures...> (statically typed)
-        └── BlockingActor (thread-based, blocking receive)
-                └── ScopedActor (for main/non-actor contexts)
+        ├── BlockingActor (thread-based, blocking receive)
+        │       └── ScopedActor (for main/non-actor contexts)
+        └── ProtoActor (protobuf-native, on<T>() / on_request<ReqT,ResT>())
+                └── ProtoStatefulActor<T> (protobuf + explicit state)
 ```
+
+### Message Flow
+
+Actors communicate via `TypedMessage` (protobuf payload with sender address):
+
+```cpp
+context()->send(addr, msg);        // send message to actor
+context()->reply(msg);             // reply to current sender
+context()->reply_with_error(code); // reply with error to sender
+become(Behavior);                  // change behavior dynamically
+co_await mailbox_awaiter;          // suspend until message arrives
+```
+
+### Actor References
+
+```
+ActorRef (std::variant)
+├── Actor        — shared_ptr to local actor (direct dispatch)
+└── ActorProxy   — remote actor handle (transport-based send)
+```
+
+`ActorRef` unifies local and remote references — callers use `send()` without knowing where the actor lives. Resolution uses `ActorRefCache` for O(1) amortized lookups.
 
 ### Scheduling Subsystem
 
@@ -38,57 +113,43 @@ AbstractActor (interface base)
 | `MPSCMailbox<T>` | Vyukov lock-free MPSC queue |
 | `MPSCActorMailbox<T>` | Edge-trigger wrapper with CAS wakeup |
 | `CoroutineTask` | C++20 coroutine handle wrapper for actor coroutines |
+| `CoroutineFramePool` | Lock-free stack pool for coroutine frames |
 
 ### Network Layer
 
 | Component | Purpose |
 |-----------|---------|
-| `EventLoop` | kqueue (macOS) / epoll (Linux) event loop |
+| `EventLoop` | kqueue (macOS) / epoll (Linux) edge-triggered event loop |
+| `IReactorBackend` | Unified backend interface for reactor and proactor modes |
+| `EpollBackend` | Linux epoll reactor backend |
+| `KqueueBackend` | macOS kqueue reactor backend |
+| `IoUringBackend` | Linux io_uring proactor backend |
+| `GcdBackend` | macOS GCD proactor backend |
 | `TcpTransport` | TCP transport with TLS 1.3 support |
+| `PlainConnection` | Raw TCP with 4-byte length-prefixed framing |
 | `TlsConnection` | AES-256-CBC encryption, RSA key exchange |
 | `ConnectionPool` | Dynamic pooling with exponential backoff |
 | `Registrar` | UDP discovery + TCP registration with heartbeat |
 | `HostResolver` | DNS resolution with caching |
 | `RpcChannel` | Async RPC with at-least-once delivery and retry |
-| `WireFrame` | Protobuf-serialized network frame (IPv4/IPv6) |
 
 ### Protobuf Serialization
 
 | Component | Purpose |
 |-----------|---------|
-| `common.proto` | Shared endpoint types (ActorEndpoint, ActorAddress) |
+| `common.proto` | Shared endpoint types (ActorEndpoint, ActorAddress, Ipv4Endpoint, Ipv6Endpoint) |
 | `frame.proto` | WireFrame transport format |
-| `messages.proto` | System message types (Down, Exit, Link, Unlink, Spawn) |
+| `messages.proto` | System message types (Down, Exit, Link, Unlink, SpawnRequest, SpawnResponse) |
 | `DefaultSerializer` | Protobuf-based encode/decode for all message types |
-
-### Key Components
-
-| Component | Location | Purpose |
-|-----------|----------|---------|
-| `ActorSystem` | `core/actor_system.hpp` | Actor environment, spawn, registry, clock |
-| `ActorContext` | `actor/actor_context.hpp` | Actor execution context, message sending |
-| `Behavior` | `actor/behavior.hpp` | Message handler with `become()` support |
-| `TypedBehavior` | `actor/typed_behavior.hpp` | Statically typed handlers |
-| `ActorState` | `actor/actor_state.hpp` | Atomic state machine (Idle/Ready/Running/IOWaiting/Terminated) |
-| `Supervision` | `supervision/*.hpp` | Fault-tolerance (OneForOne, AllForOne) |
-
-### Message Flow
-
-Actors communicate via `MessageVariant` (std::variant of all message types):
-
-```cpp
-context()->send(addr, msg);   // send message
-context()->reply(msg);        // reply to sender
-become(Behavior);             // change behavior dynamically
-co_await mailbox_awaiter;     // suspend until message arrives
-```
+| `registrar.proto` | Registrar protocol messages (Register, Accept, Join, Leave, Resolve) |
+| `registrar_serialization.hpp` | to_proto/parse helpers for registrar protobuf types |
 
 ### Supervision
 
 - `OneForOneSupervisor` — only the failed child restarts
 - `AllForOneSupervisor` — all children restart when one fails
 - `SupervisorActor` — supervises children via strategy pattern
-- `SelfSupervisingActor` — manages own children with policy
+- `SelfSupervisingActor` — manages own children with policy (max_restarts, restart_interval)
 
 ## Build
 
@@ -97,7 +158,7 @@ co_await mailbox_awaiter;     // suspend until message arrives
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (51 tests)
+# Run tests (61 tests)
 ctest --output-on-failure
 
 # Run a single test
@@ -111,6 +172,7 @@ ctest --output-on-failure
 | `-DENABLE_TSAN=ON` | Enable ThreadSanitizer |
 | `-DENABLE_ASAN=ON` | Enable AddressSanitizer |
 | `-DENABLE_EXAMPLES=OFF` | Disable examples (default ON) |
+| `-DENABLE_PROACTOR=ON` | Enable proactor backend (OFF=macOS default, ON=Linux default) |
 
 ## Design Constraints
 
@@ -135,7 +197,7 @@ Actor types, behaviors, and message definitions are header-only templates — ze
 The mailbox uses a Vyukov MPSC queue with an edge-trigger `CAS` wakeup mechanism. This was designed through iterative testing rather than upfront theory — the "swap-in mailbox interface" means the implementation can be replaced if the lock-free approach proves problematic on new hardware.
 
 ### No external dependencies except OpenSSL
-TLS is the only external dependency. All other functionality (event loops, schedulers, actors, serialization) is self-contained. This reduces attack surface, simplifies distribution, and eliminates dependency version conflicts.
+TLS is the only external dependency. All other functionality (event loops, schedulers, actors, serialization, protobuf) is self-contained. This reduces attack surface, simplifies distribution, and eliminates dependency version conflicts. On Linux, liburing is optional for the proactor backend.
 
 ### LLVM coding standards
 The codebase uses LLVM style (`clang-format`) with strict warnings (`-Wall -Wextra -Wpedantic`). This ensures the code is clean, portable, and compatible with the clang toolchain used for development.
@@ -144,40 +206,61 @@ The codebase uses LLVM style (`clang-format`) with strict warnings (`-Wall -Wext
 
 ```
 include/hpactor/
-├── actor/        — Actor base classes, behaviors, typed actors
-├── core/         — ActorSystem, ActorContext, registry, mailbox interface
-├── mailbox/      — MPSCMailbox, MPSCActorMailbox (lock-free queues)
-├── net/          — EventLoop, TLS, connection pool, registrar
-├── ref/          — Actor references (address, ref, proxy)
-├── sched/        — HybridScheduler, work queues, timing wheel, coroutines
-├── spawn/        — AsyncActor for non-blocking spawn
-├── supervision/  — OneForOne, AllForOne supervisors
-└── types/        — Type system, protobuf serialization
+├── actor/          — Actor base classes, behaviors, typed actors, proto actors
+├── core/           — ActorSystem, ActorContext, mailbox, registry, config
+├── mailbox/        — MPSCMailbox, MPSCActorMailbox (lock-free queues)
+├── net/            — EventLoop, TLS, connection pool, registrar, reactor/proactor
+├── ref/            — Actor references (address, ref, proxy, cache)
+├── rpc/            — Async RPC channel with retry and timeout
+├── sched/          — HybridScheduler, work queues, timing wheel, coroutines
+├── spawn/          — AsyncActor for non-blocking remote spawn
+├── supervision/    — OneForOne, AllForOne supervisors
+├── types/          — Type system, protobuf serialization, endpoints
+├── behavior.hpp    — Dynamic behavior with message_handler
+├── typed_behavior.hpp — Statically typed behavior for typed actors
+├── actor_context.hpp  — Actor execution context (send, reply, spawn, link)
+└── actor_type_registry.hpp — Spawnable actor type registration
 
 src/
-├── actor/        — ActorSystem, EventBasedActor, spawn receiver
-├── core/         — serialization.cpp (protobuf-based)
-├── net/          — EventLoop, TcpTransport, TLS, connection pool
-├── ref/          — ActorRef, ActorProxy implementations
-└── sched/        — HybridScheduler, timing wheel, EDF queue
+├── actor/          — ActorSystem, EventBasedActor, SpawnReceiver, ProtoActor
+├── core/           — serialization.cpp (protobuf-based)
+├── net/            — EventLoop, TcpTransport, TLS, connection pool, frame
+├── ref/            — ActorRef, ActorProxy implementations
+├── rpc/            — RpcChannel implementation
+├── sched/          — HybridScheduler, timing wheel, EDF queue, coroutine pool
+├── spawn.cpp       — AsyncActor implementation
+└── actor_type_registry.cpp — ActorTypeRegistry implementation
 
 protos/hpactor/
-├── common.proto  — Shared endpoint types
-├── frame.proto   — WireFrame transport format
-└── messages.proto — System message types
+├── common.proto    — Shared endpoint types
+├── frame.proto     — WireFrame transport format
+├── messages.proto  — System message types
+└── registrar.proto — Registrar protocol messages
 
-tests/            — 51 unit tests (actor, core, mailbox, net, sched, spawn)
-examples/         — 5 API usage examples
+tests/              — 61 unit tests (actor, core, mailbox, net, ref, rpc, sched, spawn, supervision)
+examples/           — 5 API usage examples
 ```
 
 ## Status
 
-### Complete
-- Actor core: spawn, send, receive, behaviors, typed actors
-- Supervision: OneForOne, AllForOne, SupervisorActor
-- Scheduling: HybridScheduler with work-stealing + EDF + timing wheel
-- Coroutine support: CoroutineTask, ActorCoroutine, MailboxAwaiter, TimerAwaiter, YieldAwaiter
-- Mailbox: MPSCMailbox (Vyukov), MPSCActorMailbox (edge-trigger)
-- Network: TLS 1.3, connection pooling, registrar-based service discovery
-- Remote spawn: AsyncActor with spawn_remote()
-- Serialization: Protobuf-based for all system messages (WireFrame, Down, Exit, Link, Unlink, Spawn)
+### Complete (61 tests passing)
+
+- **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
+- **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
+- **Actor References**: ActorRef (local/proxy variant), ActorRefCache (LRU resolution cache)
+- **Supervision**: OneForOne, AllForOne, SupervisorActor, SelfSupervisingActor
+- **Scheduling**: HybridScheduler with work-stealing + EDF + timing wheel + coroutine frame pool
+- **Coroutines**: CoroutineTask, MailboxAwaiter, TimerAwaiter, YieldAwaiter
+- **Mailbox**: MPSCMailbox (Vyukov lock-free), MPSCActorMailbox (edge-triggered CAS)
+- **Network**: TLS 1.3, connection pooling, UDS support, reactor/proactor backends
+- **Service Discovery**: UDP registrar + TCP registration with protobuf serialization
+- **Remote Spawn**: AsyncActor with spawn_remote(), ActorTypeRegistry
+- **RPC**: Async RPC channel with at-least-once delivery, retry, and timeout
+- **Serialization**: Protobuf-based for all system messages (WireFrame, Down, Exit, Link, Unlink, Spawn)
+
+### Next Steps
+
+- Full proto_actor integration test with end-to-end protobuf message flow
+- Argument deserialization for passing constructor args through spawn
+- Full two-process integration test with TCP transport
+- Typed RPC API (`call<Request, Response>` with serialization)
