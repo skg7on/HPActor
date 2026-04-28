@@ -114,11 +114,22 @@ void ActorContext::reply(TypeTag tag, const google::protobuf::Message& proto_msg
 }
 
 void ActorContext::reply_with_error(error err) {
-    // Placeholder — will be fully implemented in Task 8 (ErrorMsg TypeTag)
-    if (current_sender_.id != ActorId{0}) {
-        // For now, send error as a simple TypedMessage with error details
-        (void)err;
-    }
+    if (current_sender_.id == ActorId{0}) return;
+
+    // Wire format: [4 bytes: error code BE][error message string]
+    // A protobuf error message can replace this payload later without
+    // changing the TypeTag or dispatch path.
+    bytes payload;
+    uint32_t code = err.code();
+    payload.push_back(static_cast<uint8_t>((code >> 24) & 0xFF));
+    payload.push_back(static_cast<uint8_t>((code >> 16) & 0xFF));
+    payload.push_back(static_cast<uint8_t>((code >> 8) & 0xFF));
+    payload.push_back(static_cast<uint8_t>(code & 0xFF));
+    const auto& msg = err.message();
+    payload.insert(payload.end(), msg.begin(), msg.end());
+
+    TypedMessage error_msg(TypeTag::ErrorMsg, std::move(payload));
+    send(current_sender_, std::move(error_msg));
 }
 
 void ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {
