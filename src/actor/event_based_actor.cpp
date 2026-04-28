@@ -29,13 +29,22 @@ void EventBasedActor::receive(TypedMessage& msg) {
         initialize_proto_handlers();
     }
 
+    // Capture sender for reply() tracking
+    auto* ctx = context();
+    if (ctx) {
+        ctx->set_current_sender(msg.sender_address());
+    }
+
     // Try proto handler dispatch by TypeTag first
     auto it = proto_handlers_.find(msg.type_id());
     if (it != proto_handlers_.end()) {
         auto deserialized = it->second.deserialize(msg.payload());
         if (deserialized) {
             bytes response = it->second.invoke(std::move(deserialized));
-            (void)response; // TODO: integrate with reply routing
+            if (!response.empty() && ctx) {
+                TypedMessage reply_msg(it->first, response);
+                ctx->reply(std::move(reply_msg));
+            }
         }
         return;
     }
@@ -75,7 +84,11 @@ void EventBasedActor::on_proto_message(TypeTag tag, const bytes& payload) {
     if (!msg) return;
 
     bytes response = handler.invoke(std::move(msg));
-    (void)response; // TODO: integrate with reply routing
+    auto* ctx = context();
+    if (!response.empty() && ctx) {
+        TypedMessage reply_msg(tag, response);
+        ctx->reply(std::move(reply_msg));
+    }
 }
 
 void EventBasedActor::on_deactivate() {

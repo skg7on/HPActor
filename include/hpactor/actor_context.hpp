@@ -19,6 +19,7 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
+#include <hpactor/core/actor_ref_cache.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
@@ -56,6 +57,9 @@ class ActorContext {
     // Send a pre-constructed TypedMessage
     void send(const ActorAddress& target, TypedMessage msg);
 
+    // Primary: send to an already-resolved ActorRef (local or remote)
+    void send(ActorRef& target, TypedMessage msg);
+
     // Send a protobuf message (serializes eagerly)
     void send(const ActorAddress& target, TypeTag tag,
               const google::protobuf::Message& msg);
@@ -75,6 +79,10 @@ class ActorContext {
     void reply(const ProtoMsgT& msg);
     void reply_with_error(error err);
 
+    // Get the sender of the current message (for reply routing)
+    const ActorAddress& current_sender() const { return current_sender_; }
+    void set_current_sender(const ActorAddress& sender) { current_sender_ = sender; }
+
     // Scheduled execution
     void schedule(std::chrono::milliseconds delay, TypedMessage msg);
 
@@ -93,6 +101,9 @@ class ActorContext {
     // Monitoring
     void monitor(const ActorAddress& target);
 
+    // Resolve an ActorAddress to an ActorRef (lazy + cached)
+    ActorRef resolve(const ActorAddress& target);
+
     // RPC calls (for non-actor threads only)
     RpcFuture<bytes>
     rpc(const ActorAddress& target, const bytes& encoded_request,
@@ -105,6 +116,9 @@ class ActorContext {
     std::vector<ActorRef> remote_children_;
     std::vector<ActorAddress> linked_;
     std::vector<ActorAddress> monitored_;
+
+    ActorRefCache ref_cache_;
+    ActorAddress current_sender_;
 };
 
 } // namespace hpactor

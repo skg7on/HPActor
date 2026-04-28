@@ -14,6 +14,7 @@
 
 // ActorProxy implementation - see actor_proxy.hpp
 
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
@@ -23,9 +24,19 @@ namespace hpactor {
 ActorProxy::ActorProxy(ActorAddress address, net::Transport* transport)
     : address_(address), transport_(transport) {}
 
+ActorProxy::ActorProxy(const ActorAddress& addr, ActorSystem* system)
+    : address_(addr),
+      transport_(system ? system->get_transport_for(addr.endpoint) : nullptr) {}
+
 void ActorProxy::send(const ActorAddress& target, TypedMessage msg) {
+    if (!transport_) {
+        return;  // Silently drop; matches fire-and-forget semantics
+    }
     net::WireFrame frame;
-    frame.sender = address_;
+    // Use msg.sender_address() if present, fall back to the proxy address
+    frame.sender = msg.sender_address().id != ActorId{0}
+                       ? msg.sender_address()
+                       : address_;
     frame.receiver = target;
     frame.message_id = MessageId::generate().value();
     frame.type_tag = static_cast<uint32_t>(msg.type_id());

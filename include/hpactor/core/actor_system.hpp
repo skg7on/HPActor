@@ -19,6 +19,7 @@
 #include <hpactor/core/actor_registry.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/net/frame.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
@@ -160,6 +161,10 @@ class ActorSystem {
     void deliver_local(ActorId target, TypedMessage msg, uint8_t priority,
                        int64_t deadline_ns);
 
+    // Deliver a remote message (from WireFrame) to the target actor's mailbox.
+    // Bridges the transport layer to the unified deliver_local() sink.
+    void deliver_remote(const net::WireFrame& frame);
+
     // Enqueue an I/O completion to be delivered to an actor
     // Called by EventLoop when async operations complete
     void enqueue_completion(net::OpCompletion completion);
@@ -168,6 +173,14 @@ class ActorSystem {
     net::Transport* transport() {
         return transport_.get();
     }
+
+    // Return the transport for sending to a remote endpoint.
+    // Currently returns the single transport_ for all remote endpoints, since
+    // TcpTransport handles per-endpoint routing internally via its pools_ map.
+    // The endpoint parameter is reserved for future multi-transport scenarios.
+    // Returns nullptr if networking is not enabled.
+    net::Transport* get_transport_for(const CommunicationEndpoint& endpoint);
+
     net::UdpRegistrar* registrar() {
         return registrar_.get();
     }

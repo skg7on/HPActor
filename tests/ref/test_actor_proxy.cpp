@@ -21,7 +21,7 @@ using namespace hpactor;
 
 int main() {
     // Test ActorProxy construction with invalid address
-    ActorProxy proxy1(ActorAddress{}, nullptr);
+    ActorProxy proxy1(ActorAddress{}, static_cast<net::Transport*>(nullptr));
     assert(!proxy1);
     assert(proxy1.address().endpoint == endpoint_ops::parse_endpoint(""));
     assert(proxy1.endpoint() == endpoint_ops::parse_endpoint(""));
@@ -31,7 +31,7 @@ int main() {
     ActorId id(42);
     ActorAddress addr(endpoint_ops::parse_endpoint("remotehost:12345"), 0, id,
                       0); // remote node
-    ActorProxy proxy2(addr, nullptr);
+    ActorProxy proxy2(addr, static_cast<net::Transport*>(nullptr));
     assert(proxy2);
     assert(proxy2.address() == addr);
     assert(proxy2.endpoint() == endpoint_ops::parse_endpoint("remotehost:"

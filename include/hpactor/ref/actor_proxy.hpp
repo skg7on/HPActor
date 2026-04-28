@@ -21,6 +21,7 @@
 namespace hpactor {
 
 // Forward declarations
+class ActorSystem;
 namespace net {
 class Transport;
 }
@@ -37,6 +38,10 @@ class ActorProxy {
     // Create an actor proxy for a remote actor
     // The transport pointer must outlive this proxy
     ActorProxy(ActorAddress address, net::Transport* transport);
+
+    // Create an actor proxy from address + system (resolves transport internally).
+    // Used by ActorContext::resolve() for lazy proxy creation.
+    ActorProxy(const ActorAddress& addr, ActorSystem* system);
 
     // Get the actor's address
     ActorAddress address() const {

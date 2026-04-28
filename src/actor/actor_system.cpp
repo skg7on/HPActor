@@ -83,6 +83,11 @@ ActorSystem::ActorSystem(const Config& config)
                 rpc_channel_->on_response(id, data);
             });
 
+        transport_->set_actor_message_handler(
+            [this](const net::WireFrame& frame) {
+                this->deliver_remote(frame);
+            });
+
         if (config.tcp_port > 0) {
             transport_->listen(config.tcp_port);
         }
@@ -189,10 +194,27 @@ void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
     mailbox->push(std::move(msg));
 }
 
+void ActorSystem::deliver_remote(const net::WireFrame& frame) {
+    TypedMessage msg(static_cast<TypeTag>(frame.type_tag), frame.payload);
+    msg.set_sender_address(frame.sender);
+    deliver_local(frame.receiver.id, std::move(msg));
+}
+
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
     // Convert I/O completion to a TypedMessage using a system tag placeholder.
     // TODO: define completion_msg in protobuf or use a dedicated internal path.
     (void)completion;
+}
+
+net::Transport*
+ActorSystem::get_transport_for(const CommunicationEndpoint& /*endpoint*/) {
+    // TcpTransport already handles per-endpoint routing via its internal pools_
+    // map — TcpTransport::send() calls get_or_create_pool(target.endpoint)
+    // internally. Return the single transport_ for all remote endpoints.
+    if (!config_.enable_network) {
+        return nullptr;
+    }
+    return transport_.get();
 }
 
 result<ActorRef>

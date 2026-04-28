@@ -74,6 +74,10 @@ TcpTransport::get_or_create_pool(CommunicationEndpoint remote_endpoint) {
     if (rpc_handler_) {
         pool->set_rpc_handler(rpc_handler_);
     }
+    // Set actor message handler if one has been registered
+    if (actor_msg_handler_) {
+        pool->set_actor_message_handler(actor_msg_handler_);
+    }
     return pool;
 }
 

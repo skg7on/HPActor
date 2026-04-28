@@ -439,6 +439,7 @@ enum class TypeTag : uint32_t {
     // Spawn protocol (Phase 8)
     SpawnRequestTag = 5,
     SpawnResponseTag = 6,
+    ErrorMsg = 7,
 
     // First available user tag
     User = 100,
