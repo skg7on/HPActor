@@ -85,6 +85,10 @@ add_executable(test_actor_ref_cache actor/test_actor_ref_cache.cpp)
 target_link_libraries(test_actor_ref_cache hpactor)
 add_test(NAME test_actor_ref_cache COMMAND test_actor_ref_cache)
 
+add_executable(test_unified_message_passing actor/test_unified_message_passing.cpp)
+target_link_libraries(test_unified_message_passing hpactor hpactor_proto pthread)
+add_test(NAME test_unified_message_passing COMMAND test_unified_message_passing)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
