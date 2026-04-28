@@ -734,13 +734,14 @@ void KqueueBackend::service_read_handler(int fd) {
         cb = it->second;
     }
 
-    // Read in a loop until EAGAIN (edge-triggered safety)
+    // Read in a loop until EAGAIN (edge-triggered safety).
+    // Accumulate all chunks into one buffer so the callback is invoked once.
+    bytes accumulated;
     uint8_t buf[65536];
     while (true) {
         ssize_t n = ::read(fd, buf, sizeof(buf));
         if (n > 0) {
-            bytes data(buf, buf + n);
-            cb(data);
+            accumulated.insert(accumulated.end(), buf, buf + n);
         } else if (n == 0) {
             break; // EOF
         } else {
@@ -749,6 +750,9 @@ void KqueueBackend::service_read_handler(int fd) {
             }
             break; // error
         }
+    }
+    if (!accumulated.empty()) {
+        cb(accumulated);
     }
 }
 
