@@ -24,7 +24,7 @@ namespace hpactor {
 
 class ActorRefCache {
 public:
-    explicit ActorRefCache(size_t max_entries = kDefaultMaxEntries)
+    explicit ActorRefCache(size_t max_entries = DefaultMaxEntries)
         : max_entries_(max_entries) {}
 
     std::optional<ActorRef> get(ActorId id) {
@@ -50,7 +50,7 @@ public:
     }
 
 private:
-    static constexpr size_t kDefaultMaxEntries = 256;
+    static constexpr size_t DefaultMaxEntries = 256;
 
     struct Entry {
         ActorRef ref;
