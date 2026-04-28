@@ -168,6 +168,11 @@ class ActorSystem {
     net::Transport* transport() {
         return transport_.get();
     }
+
+    // Get or create a TcpTransport for the given remote endpoint.
+    // Returns nullptr if networking is not enabled.
+    net::Transport* get_transport_for(const CommunicationEndpoint& endpoint);
+
     net::UdpRegistrar* registrar() {
         return registrar_.get();
     }

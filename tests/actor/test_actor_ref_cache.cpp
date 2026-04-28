@@ -15,7 +15,7 @@ void test_empty_cache() {
 void test_put_and_get() {
     ActorRefCache cache;
     ActorAddress addr{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{1}, ActorId{1}, 0};
-    ActorProxy proxy(addr, nullptr);
+    ActorProxy proxy(addr, static_cast<net::Transport*>(nullptr));
     ActorRef ref(std::move(proxy));
 
     cache.put(ActorId{1}, ref);
@@ -31,11 +31,11 @@ void test_put_updates_existing() {
     ActorAddress addr1{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{1}, ActorId{1}, 0};
     ActorAddress addr2{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{2}, ActorId{1}, 0};
 
-    ActorProxy proxy1(addr1, nullptr);
+    ActorProxy proxy1(addr1, static_cast<net::Transport*>(nullptr));
     ActorRef ref1(std::move(proxy1));
     cache.put(ActorId{1}, ref1);
 
-    ActorProxy proxy2(addr2, nullptr);
+    ActorProxy proxy2(addr2, static_cast<net::Transport*>(nullptr));
     ActorRef ref2(std::move(proxy2));
     cache.put(ActorId{1}, ref2);  // overwrite
 
@@ -49,7 +49,7 @@ void test_eviction_at_max() {
 
     for (uint64_t i = 1; i <= 3; ++i) {
         ActorAddress addr{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{1}, ActorId{i}, 0};
-        ActorProxy proxy(addr, nullptr);
+        ActorProxy proxy(addr, static_cast<net::Transport*>(nullptr));
         ActorRef ref(std::move(proxy));
         cache.put(ActorId{i}, ref);
     }
@@ -61,7 +61,7 @@ void test_eviction_at_max() {
 
     // Insert 4th — should evict least recently used (id=1, accessed once at insert)
     ActorAddress addr4{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{1}, ActorId{4}, 0};
-    ActorProxy proxy4(addr4, nullptr);
+    ActorProxy proxy4(addr4, static_cast<net::Transport*>(nullptr));
     ActorRef ref4(std::move(proxy4));
     cache.put(ActorId{4}, ref4);
 
@@ -77,7 +77,7 @@ void test_lru_access_updates_tick() {
 
     for (uint64_t i = 1; i <= 3; ++i) {
         ActorAddress addr{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{1}, ActorId{i}, 0};
-        ActorProxy proxy(addr, nullptr);
+        ActorProxy proxy(addr, static_cast<net::Transport*>(nullptr));
         ActorRef ref(std::move(proxy));
         cache.put(ActorId{i}, ref);
     }
@@ -87,7 +87,7 @@ void test_lru_access_updates_tick() {
 
     // Insert 4th — should evict id=2 (now LRU)
     ActorAddress addr4{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{1}, ActorId{4}, 0};
-    ActorProxy proxy4(addr4, nullptr);
+    ActorProxy proxy4(addr4, static_cast<net::Transport*>(nullptr));
     ActorRef ref4(std::move(proxy4));
     cache.put(ActorId{4}, ref4);
 

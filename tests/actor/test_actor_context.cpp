@@ -68,7 +68,7 @@ void test_actor_context_remote_children() {
     // Create a mock remote actor address
     ActorAddress remote_addr{endpoint_ops::parse_endpoint("node2:12345"),
                              ActorType{10}, ActorId{100}, 1};
-    ActorProxy proxy(remote_addr, nullptr);
+    ActorProxy proxy(remote_addr, static_cast<net::Transport*>(nullptr));
     ActorRef remote_child(std::move(proxy));
 
     // Add remote child

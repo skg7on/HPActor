@@ -195,6 +195,17 @@ void ActorSystem::enqueue_completion(net::OpCompletion completion) {
     (void)completion;
 }
 
+net::Transport*
+ActorSystem::get_transport_for(const CommunicationEndpoint& /*endpoint*/) {
+    // TcpTransport already handles per-endpoint routing via its internal pools_
+    // map — TcpTransport::send() calls get_or_create_pool(target.endpoint)
+    // internally. Return the single transport_ for all remote endpoints.
+    if (!config_.enable_network) {
+        return nullptr;
+    }
+    return transport_.get();
+}
+
 result<ActorRef>
 ActorSystem::spawn_remote(const std::string& node_name,
                           const std::string& actor_type, const bytes& /*args*/) {
