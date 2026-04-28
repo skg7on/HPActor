@@ -29,6 +29,9 @@ ActorProxy::ActorProxy(const ActorAddress& addr, ActorSystem* system)
       transport_(system ? system->get_transport_for(addr.endpoint) : nullptr) {}
 
 void ActorProxy::send(const ActorAddress& target, TypedMessage msg) {
+    if (!transport_) {
+        return;  // Silently drop; matches fire-and-forget semantics
+    }
     net::WireFrame frame;
     // Use msg.sender_address() if present, fall back to the proxy address
     frame.sender = msg.sender_address().id != ActorId{0}

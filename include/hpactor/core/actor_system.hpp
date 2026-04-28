@@ -169,7 +169,10 @@ class ActorSystem {
         return transport_.get();
     }
 
-    // Get or create a TcpTransport for the given remote endpoint.
+    // Return the transport for sending to a remote endpoint.
+    // Currently returns the single transport_ for all remote endpoints, since
+    // TcpTransport handles per-endpoint routing internally via its pools_ map.
+    // The endpoint parameter is reserved for future multi-transport scenarios.
     // Returns nullptr if networking is not enabled.
     net::Transport* get_transport_for(const CommunicationEndpoint& endpoint);
 
