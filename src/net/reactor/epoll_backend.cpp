@@ -299,7 +299,10 @@ bool EpollBackend::try_pending_recv(int fd, PendingOp& op, uint32_t events,
     while (true) {
         ssize_t n;
         if (optype == OpType::RecvFrom) {
-            n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
+            struct msghdr hdr = {};
+            hdr.msg_iov = op.saved_bufs;
+            hdr.msg_iovlen = static_cast<decltype(hdr.msg_iovlen)>(op.buf_count);
+            n = ::recvmsg(fd, &hdr, 0);
         } else {
             n = ::readv(fd, op.saved_bufs, op.buf_count);
         }
