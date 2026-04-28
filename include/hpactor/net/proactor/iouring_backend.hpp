@@ -80,7 +80,7 @@ class IoUringBackend : public IReactorBackend {
     void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
                         uint32_t op_type) override;
 
-    // Read handler management - no-op in reactor mode
+    // Read handler management - no-op (proactor uses async_recv)
     void set_read_handler(int fd, read_callback handler) override {
         (void)fd;
         (void)handler;
@@ -88,6 +88,8 @@ class IoUringBackend : public IReactorBackend {
     void clear_read_handler(int fd) override {
         (void)fd;
     }
+
+    bool supports_read_handler() const override { return false; }
 
     // Called by completions to deliver to actor
     void deliver_completion(OpCompletion completion);

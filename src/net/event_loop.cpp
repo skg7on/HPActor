@@ -127,12 +127,20 @@ bool EventLoop::remove_fd(int fd) {
     return backend_->remove_fd(fd);
 }
 
-void EventLoop::set_read_handler(int /*fd*/, read_callback /*handler*/) {
-    // No-op: Reactor mode uses fd_actors_ map instead of read handlers
+void EventLoop::set_read_handler(int fd, read_callback handler) {
+    if (backend_) {
+        backend_->set_read_handler(fd, std::move(handler));
+    }
 }
 
-void EventLoop::clear_read_handler(int /*fd*/) {
-    // No-op: Reactor mode uses fd_actors_ map instead of read handlers
+void EventLoop::clear_read_handler(int fd) {
+    if (backend_) {
+        backend_->clear_read_handler(fd);
+    }
+}
+
+bool EventLoop::supports_read_handler() const {
+    return backend_ && backend_->supports_read_handler();
 }
 
 int EventLoop::wait(int timeout_ms) {

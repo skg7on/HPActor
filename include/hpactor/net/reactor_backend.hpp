@@ -49,9 +49,15 @@ public:
     virtual void async_recvfrom(int fd, const iovec* bufs, int buf_count,
                                 ActorId actor, uint32_t op_type) = 0;
 
-    // Read handler management - no-op in reactor mode
+    // Read handler management — reactor backends read data in wait() and
+    // dispatch via callback. Proactor backends use async_recv completions.
     virtual void set_read_handler(int fd, read_callback handler) = 0;
     virtual void clear_read_handler(int fd) = 0;
+
+    // Returns true if this backend supports calling read handlers directly
+    // from wait(). Reactor backends (epoll, kqueue) return true.
+    // Proactor backends (io_uring, GCD) return false.
+    virtual bool supports_read_handler() const = 0;
 };
 
 } // namespace net

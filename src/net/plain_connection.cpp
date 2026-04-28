@@ -40,6 +40,20 @@ PlainConnection::create_client(int fd, CommunicationEndpoint remote_endpoint,
         new PlainConnection(remote_endpoint, loop, fd));
     conn->set_state(ConnectionState::Connected);
     conn->is_sending_ = false;
+
+    // Register fd with event loop for read events
+    if (loop && fd >= 0) {
+        loop->add_fd(fd, EventLoop::Event::Read);
+        if (loop->supports_read_handler()) {
+            std::weak_ptr<PlainConnection> weak_conn = conn;
+            loop->set_read_handler(fd, [weak_conn](const bytes& data) {
+                if (auto self = weak_conn.lock()) {
+                    self->handle_read(data);
+                }
+            });
+        }
+    }
+
     return conn;
 }
 
@@ -54,6 +68,14 @@ PlainConnection::create_server(int fd, CommunicationEndpoint remote_endpoint,
     // Register fd with event loop for read events
     if (loop && fd >= 0) {
         loop->add_fd(fd, EventLoop::Event::Read);
+        if (loop->supports_read_handler()) {
+            std::weak_ptr<PlainConnection> weak_conn = conn;
+            loop->set_read_handler(fd, [weak_conn](const bytes& data) {
+                if (auto self = weak_conn.lock()) {
+                    self->handle_read(data);
+                }
+            });
+        }
     }
 
     return conn;
@@ -86,6 +108,7 @@ void PlainConnection::send(const bytes& frame_data) {
 void PlainConnection::close() {
     if (fd_ >= 0) {
         if (loop_) {
+            loop_->clear_read_handler(fd_);
             loop_->remove_fd(fd_);
         }
         ::close(fd_);

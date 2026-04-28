@@ -86,7 +86,7 @@ class GcdBackend : public IReactorBackend {
     void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
                         uint32_t op_type) override;
 
-    // Read handler management - no-op in reactor mode
+    // Read handler management - no-op (proactor uses async_recv)
     void set_read_handler(int fd, read_callback handler) override {
         (void)fd;
         (void)handler;
@@ -94,6 +94,8 @@ class GcdBackend : public IReactorBackend {
     void clear_read_handler(int fd) override {
         (void)fd;
     }
+
+    bool supports_read_handler() const override { return false; }
 
     // Deliver completion to actor (public for trampoline access)
     void deliver_completion(OpCompletion completion);

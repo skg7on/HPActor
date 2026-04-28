@@ -81,14 +81,11 @@ class KqueueBackend : public IReactorBackend {
     void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
                         uint32_t op_type) override;
 
-    // Read handler management - no-op in reactor mode
-    void set_read_handler(int fd, read_callback handler) override {
-        (void)fd;
-        (void)handler;
-    }
-    void clear_read_handler(int fd) override {
-        (void)fd;
-    }
+    // Read handler management — kqueue reads data in wait() and dispatches
+    void set_read_handler(int fd, read_callback handler) override;
+    void clear_read_handler(int fd) override;
+
+    bool supports_read_handler() const override { return true; }
 
     // Set the EventLoop pointer for routing completions
     void set_loop(net::EventLoop* loop) {
@@ -164,6 +161,12 @@ class KqueueBackend : public IReactorBackend {
     // Storage for kevent array from last wait()
     struct kevent events_[16];
     int last_num_events_ = 0;
+
+    // Read handler callbacks for PlainConnection-style consumers
+    std::unordered_map<int, read_callback> read_handlers_;
+
+    // Read data from fd and dispatch to registered read handler
+    void service_read_handler(int fd);
 };
 
 } // namespace net

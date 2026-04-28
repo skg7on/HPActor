@@ -94,6 +94,10 @@ class EventLoop {
     // Remove read handler for an FD
     void clear_read_handler(int fd);
 
+    // Returns true if the backend supports calling read handlers directly
+    // from wait(). Reactor backends return true, proactor return false.
+    bool supports_read_handler() const;
+
     // Wait for events (blocking with timeout)
     // Returns number of events triggered, 0 on timeout, -1 on error
     int wait(int timeout_ms);

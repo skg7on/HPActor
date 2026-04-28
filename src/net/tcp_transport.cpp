@@ -266,13 +266,30 @@ void TcpTransport::unregister_connection(int fd) {
 
 void TcpTransport::handle_accept(int client_fd,
                                  CommunicationEndpoint remote_endpoint) {
+    // Get or create pool for the connecting endpoint
+    auto pool = get_or_create_pool(remote_endpoint);
+
     ConnectionPtr conn;
     if (pool_config_.use_tls) {
-        conn = TlsConnection::create_server(client_fd, remote_endpoint,
-                                            &tls_context_, &loop_);
+        auto tls_conn = TlsConnection::create_server(client_fd, remote_endpoint,
+                                                     &tls_context_, &loop_);
+        tls_conn->set_frame_handler(
+            [pool](const bytes& data) { pool->on_frame_received(data); });
+        tls_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
+            pool->on_connection_error(c, e);
+        });
+        conn = tls_conn;
     } else {
-        conn = PlainConnection::create_server(client_fd, remote_endpoint, &loop_);
+        auto plain_conn = PlainConnection::create_server(client_fd, remote_endpoint, &loop_);
+        plain_conn->set_frame_handler(
+            [pool](const bytes& data) { pool->on_frame_received(data); });
+        plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
+            pool->on_connection_error(c, e);
+        });
+        conn = plain_conn;
     }
+
+    pool->add_connection(conn);
     register_connection(conn, client_fd);
 }
 

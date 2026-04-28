@@ -139,6 +139,7 @@ bool KqueueBackend::remove_fd(int fd) {
 
     kevent(kqueue_fd_, ev, nevents, nullptr, 0, nullptr);
     fd_events_.erase(fd);
+    read_handlers_.erase(fd);
     return true;
 }
 
@@ -698,11 +699,57 @@ int KqueueBackend::wait(int timeout_ms) {
                 }
             }
         }
+
+        // Fallback: if no pending op handled this fd, check read_handlers_
+        if (events[i].filter == EVFILT_READ) {
+            service_read_handler(fd);
+        }
     next_event:
         continue;
     }
 
     return num_events;
+}
+
+void KqueueBackend::set_read_handler(int fd, read_callback handler) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (handler) {
+        read_handlers_[fd] = std::move(handler);
+    } else {
+        read_handlers_.erase(fd);
+    }
+}
+
+void KqueueBackend::clear_read_handler(int fd) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    read_handlers_.erase(fd);
+}
+
+void KqueueBackend::service_read_handler(int fd) {
+    read_callback cb;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = read_handlers_.find(fd);
+        if (it == read_handlers_.end()) return;
+        cb = it->second;
+    }
+
+    // Read in a loop until EAGAIN (edge-triggered safety)
+    uint8_t buf[65536];
+    while (true) {
+        ssize_t n = ::read(fd, buf, sizeof(buf));
+        if (n > 0) {
+            bytes data(buf, buf + n);
+            cb(data);
+        } else if (n == 0) {
+            break; // EOF
+        } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) {
+                break; // drained
+            }
+            break; // error
+        }
+    }
 }
 
 void KqueueBackend::process_events() {
