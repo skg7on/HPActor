@@ -18,6 +18,7 @@
 #include <hpactor/net/transport.hpp>
 
 #include <functional>
+#include <span>
 
 namespace hpactor {
 
@@ -68,8 +69,9 @@ class PlainConnection : public Connection,
     // Close connection
     void close() override;
 
-    // Handle incoming data (for framing)
-    void handle_read(const bytes& data);
+    // Called by the event loop when fd is readable. Reads directly into
+    // the accumulation buffer, extracts complete frames as zero-copy spans.
+    void on_fd_readable(int fd);
 
     // Handle send completion (called by EventLoop)
     void handle_send_completion(int result) override;
@@ -90,6 +92,9 @@ class PlainConnection : public Connection,
     int fd_ = -1;
 
     ConnectionState state_ = ConnectionState::Disconnected;
+
+    // Read chunk size for ::read() into read_buffer_
+    static constexpr size_t kReadChunkSize = 65536;
 
     // Read buffer
     bytes read_buffer_;

@@ -30,8 +30,9 @@ struct OpCompletion {
     socklen_t src_addr_len = 0;
 };
 
-// Read handler callback type - called when data is received
-using read_callback = std::function<void(const bytes&)>;
+// Read handler callback type - called when fd is readable.
+// The callback owns the read: it must ::read() from the fd directly.
+using read_callback = std::function<void(int fd)>;
 
 // Encode actor, fd, and op_type into a single uint64_t for user_data field.
 // Format: bits 0-31 = fd, bits 32-47 = actor_id, bits 48-55 = reserved,

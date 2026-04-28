@@ -18,6 +18,7 @@
 #include <hpactor/types/types.hpp>
 
 #include <functional>
+#include <span>
 #include <memory>
 
 namespace hpactor {
@@ -56,8 +57,9 @@ using ConnectionPtr = std::shared_ptr<Connection>;
 // -----------------------------------------------------------------------------
 // Callback for when connection becomes ready
 using connection_ready_handler = std::function<void(ConnectionPtr)>;
-// Callback for incoming frames
-using frame_handler = std::function<void(const bytes&)>;
+// Callback for incoming frames — span is a zero-copy view into the
+// accumulation buffer. Valid only for the duration of the call.
+using frame_handler = std::function<void(std::span<const uint8_t>)>;
 // Callback for connection errors
 using connection_error_handler = std::function<void(ConnectionPtr, const error&)>;
 

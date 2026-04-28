@@ -161,7 +161,7 @@ void ConnectionPool::create_connection() {
             on_connection_error(c, e);
         });
         conn->set_frame_handler(
-            [this](const bytes& data) { on_frame_received(data); });
+            [this](std::span<const uint8_t> data) { on_frame_received(data); });
 
         conn->start_client_handshake();
     }
@@ -187,7 +187,7 @@ void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
     schedule_reconnect();
 }
 
-void ConnectionPool::on_frame_received(const bytes& frame_data) {
+void ConnectionPool::on_frame_received(std::span<const uint8_t> frame_data) {
     WireFrame frame = WireFrame::decode(frame_data);
 
     // Check for RPC response

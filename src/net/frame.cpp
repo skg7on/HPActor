@@ -26,5 +26,9 @@ WireFrame WireFrame::decode(const bytes& data) {
     return frame_from_proto(data);
 }
 
+WireFrame WireFrame::decode(std::span<const uint8_t> data) {
+    return decode(bytes(data.begin(), data.end()));
+}
+
 } // namespace net
 } // namespace hpactor

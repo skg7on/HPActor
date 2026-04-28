@@ -83,8 +83,8 @@ class EventLoop {
     // Remove an fd registration
     bool remove_fd(int fd);
 
-    // Read handler callback type - called when data is received
-    using read_callback = std::function<void(const bytes&)>;
+    // Read handler callback type (re-exported from async_io_fwd.hpp)
+    using read_callback = net::read_callback;
 
     // Set a read handler for an FD. When data arrives, it's delivered to this
     // callback. The EventLoop will automatically issue async_recv for the FD

@@ -125,7 +125,7 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
             pool->on_connection_error(c, e);
         });
         tls_conn->set_frame_handler(
-            [pool](const bytes& data) { pool->on_frame_received(data); });
+            [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
         conn = tls_conn;
         tls_conn->start_client_handshake();
     } else {
@@ -138,7 +138,7 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
             pool->on_connection_error(c, e);
         });
         plain_conn->set_frame_handler(
-            [pool](const bytes& data) { pool->on_frame_received(data); });
+            [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
         conn = plain_conn;
     }
 
@@ -207,7 +207,7 @@ TcpTransport::connect_unix_domain(CommunicationEndpoint remote_endpoint,
         pool->on_connection_error(c, e);
     });
     plain_conn->set_frame_handler(
-        [pool](const bytes& data) { pool->on_frame_received(data); });
+        [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
     conn = plain_conn;
 
     pool->add_connection(conn);
@@ -274,7 +274,7 @@ void TcpTransport::handle_accept(int client_fd,
         auto tls_conn = TlsConnection::create_server(client_fd, remote_endpoint,
                                                      &tls_context_, &loop_);
         tls_conn->set_frame_handler(
-            [pool](const bytes& data) { pool->on_frame_received(data); });
+            [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
         tls_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
@@ -282,7 +282,7 @@ void TcpTransport::handle_accept(int client_fd,
     } else {
         auto plain_conn = PlainConnection::create_server(client_fd, remote_endpoint, &loop_);
         plain_conn->set_frame_handler(
-            [pool](const bytes& data) { pool->on_frame_received(data); });
+            [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });

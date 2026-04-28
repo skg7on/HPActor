@@ -18,6 +18,8 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <span>
+
 namespace hpactor {
 
 namespace net {
@@ -53,6 +55,9 @@ struct WireFrame {
 
     // Decode frame from bytes
     static WireFrame decode(const bytes& data);
+
+    // Decode frame from span — ownership-boundary copy into payload
+    static WireFrame decode(std::span<const uint8_t> data);
 
     // Flag constants
     static constexpr uint32_t Important = 1 << 0;   // Requires delivery

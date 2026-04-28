@@ -16,6 +16,7 @@
 
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/plain_connection.hpp>
+#include <span>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
@@ -126,8 +127,9 @@ class ConnectionPool : public Connection,
     // Called by TcpTransport when connection has error
     void on_connection_error(ConnectionPtr conn, const error& err);
 
-    // Handle incoming frame (called by connection's frame handler)
-    void on_frame_received(const bytes& frame_data);
+    // Handle incoming frame (called by connection's frame handler).
+    // Span is a zero-copy view into the accumulation buffer.
+    void on_frame_received(std::span<const uint8_t> frame_data);
 
     // Add an externally-created connection to the pool
     void add_connection(ConnectionPtr conn);

@@ -46,9 +46,9 @@ PlainConnection::create_client(int fd, CommunicationEndpoint remote_endpoint,
         loop->add_fd(fd, EventLoop::Event::Read);
         if (loop->supports_read_handler()) {
             std::weak_ptr<PlainConnection> weak_conn = conn;
-            loop->set_read_handler(fd, [weak_conn](const bytes& data) {
+            loop->set_read_handler(fd, [weak_conn](int event_fd) {
                 if (auto self = weak_conn.lock()) {
-                    self->handle_read(data);
+                    self->on_fd_readable(event_fd);
                 }
             });
         }
@@ -70,9 +70,9 @@ PlainConnection::create_server(int fd, CommunicationEndpoint remote_endpoint,
         loop->add_fd(fd, EventLoop::Event::Read);
         if (loop->supports_read_handler()) {
             std::weak_ptr<PlainConnection> weak_conn = conn;
-            loop->set_read_handler(fd, [weak_conn](const bytes& data) {
+            loop->set_read_handler(fd, [weak_conn](int event_fd) {
                 if (auto self = weak_conn.lock()) {
-                    self->handle_read(data);
+                    self->on_fd_readable(event_fd);
                 }
             });
         }
@@ -117,29 +117,47 @@ void PlainConnection::close() {
     set_state(ConnectionState::Disconnected);
 }
 
-void PlainConnection::handle_read(const bytes& data) {
-    read_buffer_.insert(read_buffer_.end(), data.begin(), data.end());
+void PlainConnection::on_fd_readable(int fd) {
+    // Copy 1: read directly into the accumulation buffer — no stack buffer.
+    size_t off = read_buffer_.size();
+    read_buffer_.resize(off + kReadChunkSize);
+    while (true) {
+        ssize_t n = ::read(fd, read_buffer_.data() + off,
+                           read_buffer_.size() - off);
+        if (n > 0) {
+            off += static_cast<size_t>(n);
+            read_buffer_.resize(off + kReadChunkSize);
+        } else if (n == 0) {
+            break;
+        } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            break;
+        }
+    }
+    read_buffer_.resize(off);
 
-    // Process complete frames
-    // Simple framing: 4-byte length header
-    while (read_buffer_.size() >= 4) {
-        size_t frame_len = (static_cast<size_t>(read_buffer_[0]) << 24) |
-                           (static_cast<size_t>(read_buffer_[1]) << 16) |
-                           (static_cast<size_t>(read_buffer_[2]) << 8) |
-                           static_cast<size_t>(read_buffer_[3]);
+    // Zero-copy: extract complete frames as span views into read_buffer_.
+    size_t offset = 0;
+    while (read_buffer_.size() - offset >= 4) {
+        size_t frame_len = (static_cast<size_t>(read_buffer_[offset]) << 24) |
+                           (static_cast<size_t>(read_buffer_[offset + 1]) << 16) |
+                           (static_cast<size_t>(read_buffer_[offset + 2]) << 8) |
+                           static_cast<size_t>(read_buffer_[offset + 3]);
 
-        if (read_buffer_.size() < 4 + frame_len) {
-            break; // Wait for more data
+        if (read_buffer_.size() - offset < 4 + frame_len) {
+            break;
         }
 
-        bytes frame(read_buffer_.begin() + static_cast<long>(4),
-                    read_buffer_.begin() + static_cast<long>(4 + frame_len));
-        read_buffer_.erase(read_buffer_.begin(),
-                           read_buffer_.begin() + static_cast<long>(4 + frame_len));
+        std::span<const uint8_t> frame(&read_buffer_[offset + 4], frame_len);
+        offset += 4 + frame_len;
 
         if (frame_handler_) {
             frame_handler_(frame);
         }
+    }
+    if (offset > 0) {
+        read_buffer_.erase(read_buffer_.begin(),
+                           read_buffer_.begin() + static_cast<long>(offset));
     }
 }
 

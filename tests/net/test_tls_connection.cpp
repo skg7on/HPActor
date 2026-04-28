@@ -443,7 +443,9 @@ void test_frame_handler_callback() {
         &ctx, &loop);
 
     bytes received_frame;
-    server->set_frame_handler([&](const bytes& data) { received_frame = data; });
+    server->set_frame_handler([&](std::span<const uint8_t> data) {
+        received_frame.assign(data.begin(), data.end());
+    });
 
     // Verify frame_handler is set (it's only called in Encrypted state)
     // Just verify we can set it without crashing
