@@ -126,6 +126,19 @@ class KqueueBackend : public IReactorBackend {
     static void decode_user_data(uint64_t user_data, int& fd, ActorId& actor,
                                  uint32_t& op_type);
 
+    // Dispatch a single kevent to the appropriate handler
+    void dispatch_event(int ident, int filter);
+
+    // Timer sub-methods
+    void process_timer_event(uint64_t ident);
+    void cleanup_cancelled_timers();
+
+    // Accept and pending-op sub-methods
+    bool process_accept_event(int fd);
+    void process_pending_op(int fd, int filter);
+    bool try_pending_recv(int fd, PendingOp& op, ssize_t& total, int& error);
+    bool try_pending_send(int fd, PendingOp& op, ssize_t& total, int& error);
+
     int kqueue_fd_ = -1;
 
     // EventLoop pointer for routing completions

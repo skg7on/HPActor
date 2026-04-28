@@ -488,6 +488,179 @@ void KqueueBackend::async_sendto(int fd, const iovec* bufs, int buf_count,
     }
 }
 
+// --- Timer sub-methods (extracted from wait) ---
+
+void KqueueBackend::process_timer_event(uint64_t ident) {
+    uint64_t handle = static_cast<uint64_t>(ident);
+    if (cancelled_timers_.count(handle) > 0) {
+        cancelled_timers_.erase(handle);
+        return;
+    }
+    for (auto& timer : timers_) {
+        if (timer.handle == handle) {
+            OpCompletion completion{
+                .actor = timer.actor,
+                .type = OpType::TimerFired,
+                .fd = -1,
+                .result = 0,
+                .user_data = handle,
+            };
+            deliver_completion(completion);
+
+            if (timer.interval_ms > 0) {
+                struct kevent ev;
+                EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT,
+                       NOTE_USECONDS, timer.interval_ms * 1000, 0);
+                kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr);
+            }
+            break;
+        }
+    }
+    cancelled_timers_.erase(handle);
+}
+
+void KqueueBackend::cleanup_cancelled_timers() {
+    timers_.erase(std::remove_if(timers_.begin(), timers_.end(),
+                                 [this](const TimerEntry& t) {
+                                     return cancelled_timers_.count(t.handle) > 0 &&
+                                            t.interval_ms == 0;
+                                 }),
+                  timers_.end());
+}
+
+// --- Accept processing (extracted from wait) ---
+
+bool KqueueBackend::process_accept_event(int fd) {
+    auto accept_it = accept_actors_.find(fd);
+    if (accept_it == accept_actors_.end()) return false;
+
+    ActorId actor = accept_it->second;
+    int client_fd = ::accept(fd, nullptr, nullptr);
+
+    if (client_fd >= 0) {
+        add_fd(client_fd, IoEvent::Read);
+    }
+
+    OpCompletion completion{
+        .actor = actor,
+        .type = OpType::Accept,
+        .fd = client_fd,
+        .result = (client_fd >= 0) ? client_fd : -errno,
+        .user_data = 0,
+    };
+    {
+        std::lock_guard<std::mutex> lock(completions_mutex_);
+        pending_completions_.push_back(completion);
+    }
+    accept_actors_.erase(accept_it);
+    return true;
+}
+
+// --- Pending-op sub-methods (extracted from wait) ---
+
+bool KqueueBackend::try_pending_recv(int fd, PendingOp& op, ssize_t& total,
+                                     int& error) {
+    while (true) {
+        struct msghdr msg;
+        msg.msg_name = nullptr;
+        msg.msg_namelen = 0;
+        msg.msg_iov = op.saved_bufs;
+        msg.msg_iovlen = op.buf_count;
+        msg.msg_control = nullptr;
+        msg.msg_controllen = 0;
+        msg.msg_flags = 0;
+
+        ssize_t n = ::recvmsg(fd, &msg, MSG_DONTWAIT);
+        if (n < 0) {
+            if (errno == EAGAIN) return false; // Keep pending op
+            error = errno;
+            return true;
+        }
+        total += n;
+        if (n == 0) return true; // EOF
+    }
+}
+
+bool KqueueBackend::try_pending_send(int fd, PendingOp& op, ssize_t& total,
+                                     int& error) {
+    OpType optype = static_cast<OpType>(op.op_type);
+    while (true) {
+        ssize_t n;
+        if (optype == OpType::SendTo) {
+            n = ::sendto(fd, op.data.data() + total,
+                         op.data.size() - static_cast<size_t>(total),
+                         MSG_DONTWAIT,
+                         reinterpret_cast<const sockaddr*>(&op.addr),
+                         op.addrlen);
+        } else {
+            n = ::send(fd, op.data.data() + total,
+                       op.data.size() - static_cast<size_t>(total),
+                       MSG_DONTWAIT);
+        }
+        if (n < 0) {
+            if (errno == EAGAIN) return false; // Keep pending op
+            error = errno;
+            return true;
+        }
+        total += n;
+        if (total >= static_cast<ssize_t>(op.data.size())) return true;
+    }
+}
+
+void KqueueBackend::process_pending_op(int fd, int filter) {
+    auto it = pending_ops_.find(fd);
+    if (it == pending_ops_.end()) return;
+
+    PendingOp& op = it->second;
+    OpType optype = static_cast<OpType>(op.op_type);
+    ssize_t total = 0;
+    int error = 0;
+    bool completed = false;
+
+    if (filter == EVFILT_READ &&
+        (optype == OpType::Recv || optype == OpType::RecvFrom)) {
+        completed = try_pending_recv(fd, op, total, error);
+    } else if (filter == EVFILT_WRITE &&
+               (optype == OpType::Send || optype == OpType::SendTo)) {
+        completed = try_pending_send(fd, op, total, error);
+    }
+
+    if (completed) {
+        int result = (error != 0) ? -error : static_cast<int>(total);
+        OpCompletion completion{
+            .actor = op.actor, .type = optype, .fd = fd,
+            .result = result, .user_data = 0,
+        };
+        {
+            std::lock_guard<std::mutex> lock(completions_mutex_);
+            pending_completions_.push_back(completion);
+        }
+        pending_ops_.erase(it);
+    }
+}
+
+// --- Event dispatch ---
+
+void KqueueBackend::dispatch_event(int ident, int filter) {
+    if (filter == EVFILT_TIMER) {
+        process_timer_event(static_cast<uint64_t>(ident));
+        return;
+    }
+    if (filter == EVFILT_READ && accept_actors_.find(ident) != accept_actors_.end()) {
+        process_accept_event(ident);
+        return;
+    }
+    if (pending_ops_.find(ident) != pending_ops_.end()) {
+        process_pending_op(ident, filter);
+        return;
+    }
+    if (filter == EVFILT_READ) {
+        service_read_handler(ident);
+    }
+}
+
+// --- Simplified wait() ---
+
 int KqueueBackend::wait(int timeout_ms) {
     struct timespec ts;
     ts.tv_sec = timeout_ms / 1000;
@@ -496,218 +669,23 @@ int KqueueBackend::wait(int timeout_ms) {
     struct kevent events[16];
     int num_events = kevent(kqueue_fd_, nullptr, 0, events, 16, &ts);
 
-    // Store events for process_completions to handle
     if (num_events > 0 && num_events <= 16) {
-        for (int i = 0; i < num_events; ++i) {
-            events_[i] = events[i];
-        }
+        for (int i = 0; i < num_events; ++i) events_[i] = events[i];
         last_num_events_ = num_events;
     } else {
         last_num_events_ = 0;
     }
 
     if (num_events < 0) {
-        if (errno == EINTR) {
-            return 0;
-        }
+        if (errno == EINTR) return 0;
         return -1;
     }
 
-    // Process timer expirations
     for (int i = 0; i < num_events; ++i) {
-        if (events[i].filter == EVFILT_TIMER) {
-            uint64_t handle = static_cast<uint64_t>(events[i].ident);
-            if (cancelled_timers_.count(handle) == 0) {
-                // Find the timer
-                for (auto& timer : timers_) {
-                    if (timer.handle == handle) {
-                        OpCompletion completion{
-                            .actor = timer.actor,
-                            .type = OpType::TimerFired,
-                            .fd = -1,
-                            .result = 0,
-                            .user_data = handle,
-                        };
-                        deliver_completion(completion);
-
-                        // Reschedule repeating timers by re-registering with
-                        // kqueue
-                        if (timer.interval_ms > 0) {
-                            struct kevent ev;
-                            EV_SET(&ev, handle, EVFILT_TIMER, EV_ADD | EV_ONESHOT,
-                                   NOTE_USECONDS, timer.interval_ms * 1000, 0);
-                            kevent(kqueue_fd_, &ev, 1, nullptr, 0, nullptr);
-                        }
-                        break;
-                    }
-                }
-            }
-            cancelled_timers_.erase(handle);
-        }
+        dispatch_event(static_cast<int>(events[i].ident), events[i].filter);
     }
 
-    // Clean up cancelled one-shot timers
-    timers_.erase(std::remove_if(timers_.begin(), timers_.end(),
-                                 [this](const TimerEntry& t) {
-                                     return cancelled_timers_.count(t.handle) > 0 &&
-                                            t.interval_ms == 0;
-                                 }),
-                  timers_.end());
-
-    // Process pending socket I/O operations
-    for (int i = 0; i < num_events; ++i) {
-        int fd = static_cast<int>(events[i].ident);
-
-        // Check if this is an accept event on a listening socket
-        if (events[i].filter == EVFILT_READ) {
-            auto accept_it = accept_actors_.find(fd);
-            if (accept_it != accept_actors_.end()) {
-                // This is an accept event - accept the connection
-                ActorId actor = accept_it->second;
-                int client_fd = ::accept(fd, nullptr, nullptr);
-
-                if (client_fd >= 0) {
-                    // Register client_fd with event loop for read interest
-                    // so caller can use it with async_recv immediately
-                    add_fd(client_fd, IoEvent::Read);
-                }
-
-                OpCompletion completion{
-                    .actor = actor,
-                    .type = OpType::Accept,
-                    .fd = client_fd,
-                    .result = (client_fd >= 0) ? client_fd : -errno,
-                    .user_data = 0,
-                };
-                {
-                    std::lock_guard<std::mutex> lock(completions_mutex_);
-                    pending_completions_.push_back(completion);
-                }
-
-                // Remove from accept_actors_ since we've handled this accept
-                accept_actors_.erase(accept_it);
-
-                // Re-register listening fd for next accept if needed
-                // (EV_ONESHOT was used, so we need to re-arm for next connection)
-                // The caller must call async_accept again to register
-
-                continue;
-            }
-        }
-
-        // Check if we have a pending operation for this fd
-        auto it = pending_ops_.find(fd);
-        if (it != pending_ops_.end()) {
-            PendingOp& op = it->second;
-            OpType optype = static_cast<OpType>(op.op_type);
-
-            if (events[i].filter == EVFILT_READ &&
-                (optype == OpType::Recv || optype == OpType::RecvFrom)) {
-                // Process pending recv
-                ssize_t total_n = 0;
-                int last_err = 0;
-
-                while (true) {
-                    struct msghdr msg;
-                    msg.msg_name = nullptr;
-                    msg.msg_namelen = 0;
-                    msg.msg_iov = op.saved_bufs;
-                    msg.msg_iovlen = op.buf_count;
-                    msg.msg_control = nullptr;
-                    msg.msg_controllen = 0;
-                    msg.msg_flags = 0;
-
-                    ssize_t n = ::recvmsg(fd, &msg, MSG_DONTWAIT);
-                    if (n < 0) {
-                        if (errno == EAGAIN) {
-                            // No more data, keep pending op for next trigger
-                            goto next_event;
-                        }
-                        last_err = errno;
-                        break;
-                    }
-                    total_n += n;
-                    if (n == 0) {
-                        break; // EOF
-                    }
-                }
-
-                if (total_n > 0 || last_err != 0) {
-                    int result =
-                        (last_err != 0) ? -last_err : static_cast<int>(total_n);
-                    OpCompletion completion{
-                        .actor = op.actor,
-                        .type = optype,
-                        .fd = fd,
-                        .result = result,
-                        .user_data = 0,
-                    };
-                    {
-                        std::lock_guard<std::mutex> lock(completions_mutex_);
-                        pending_completions_.push_back(completion);
-                    }
-                    pending_ops_.erase(it);
-                }
-            } else if (events[i].filter == EVFILT_WRITE &&
-                       (optype == OpType::Send || optype == OpType::SendTo)) {
-                // Process pending send
-                ssize_t total_n = 0;
-                int last_err = 0;
-
-                while (true) {
-                    ssize_t n;
-                    if (optype == OpType::SendTo) {
-                        n = ::sendto(fd, op.data.data() + total_n,
-                                     op.data.size() - static_cast<size_t>(total_n),
-                                     MSG_DONTWAIT,
-                                     reinterpret_cast<const sockaddr*>(&op.addr),
-                                     op.addrlen);
-                    } else {
-                        n = ::send(fd, op.data.data() + total_n,
-                                   op.data.size() - static_cast<size_t>(total_n),
-                                   MSG_DONTWAIT);
-                    }
-                    if (n < 0) {
-                        if (errno == EAGAIN) {
-                            // Would block, keep pending op
-                            goto next_event;
-                        }
-                        last_err = errno;
-                        break;
-                    }
-                    total_n += n;
-                    if (total_n >= static_cast<ssize_t>(op.data.size())) {
-                        break; // All sent
-                    }
-                }
-
-                if (total_n > 0 || last_err != 0) {
-                    int result =
-                        (last_err != 0) ? -last_err : static_cast<int>(total_n);
-                    OpCompletion completion{
-                        .actor = op.actor,
-                        .type = optype,
-                        .fd = fd,
-                        .result = result,
-                        .user_data = 0,
-                    };
-                    {
-                        std::lock_guard<std::mutex> lock(completions_mutex_);
-                        pending_completions_.push_back(completion);
-                    }
-                    pending_ops_.erase(it);
-                }
-            }
-        }
-
-        // Fallback: if no pending op handled this fd, check read_handlers_
-        if (events[i].filter == EVFILT_READ) {
-            service_read_handler(fd);
-        }
-    next_event:
-        continue;
-    }
-
+    cleanup_cancelled_timers();
     return num_events;
 }
 

@@ -127,6 +127,21 @@ class EpollBackend : public IReactorBackend {
     // Process a pending I/O operation for a socket event
     void process_pending_op(int fd, uint32_t events);
 
+    // Dispatch a single epoll event to the appropriate handler
+    void dispatch_event(int fd, uint32_t events);
+
+    // Sub-methods for process_pending_op — each handles one op type
+    void try_pending_accept(int fd, PendingOp& op);
+    bool try_pending_connect(int fd, PendingOp& op, uint32_t events, int& error);
+    bool try_pending_send(int fd, PendingOp& op, uint32_t events,
+                          ssize_t& total, int& error);
+    bool try_pending_recv(int fd, PendingOp& op, uint32_t events,
+                          ssize_t& total, int& error);
+
+    // Enqueue an OpCompletion for a completed pending operation
+    void deliver_op_completion(const PendingOp& op, OpType optype, int fd,
+                               ssize_t total, int error);
+
     int epoll_fd_ = -1;
     int timerfd_ = -1;
 

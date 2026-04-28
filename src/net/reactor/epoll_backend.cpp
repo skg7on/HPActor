@@ -226,135 +226,169 @@ int EpollBackend::process_timers() {
     return triggered;
 }
 
-void EpollBackend::process_pending_op(int fd, uint32_t events) {
-    auto it = pending_ops_.find(fd);
-    if (it == pending_ops_.end()) {
-        // No pending op for this fd - event was for monitoring only
-        return;
-    }
+// --- Sub-methods extracted from process_pending_op ---
 
-    // Process pending operation based on type
-    PendingOp& op = it->second;
+void EpollBackend::try_pending_accept(int fd, PendingOp& op) {
+    while (true) {
+        int client_fd = ::accept(fd, nullptr, nullptr);
+        if (client_fd < 0) {
+            if (errno == EAGAIN) break;
+            break;
+        }
+        add_fd(client_fd, IoEvent::Read);
+
+        OpCompletion completion{
+            .actor = op.actor,
+            .type = OpType::Accept,
+            .fd = client_fd,
+            .result = client_fd,
+            .user_data = 0,
+        };
+        {
+            std::lock_guard<std::mutex> lock(completions_mutex_);
+            pending_completions_.push_back(completion);
+        }
+    }
+}
+
+bool EpollBackend::try_pending_connect(int fd, PendingOp& op, uint32_t events,
+                                       int& error) {
+    (void)fd;
+    (void)op;
+    if (!(events & EPOLLOUT)) return false;
+    int err = 0;
+    socklen_t errlen = sizeof(err);
+    getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
+    error = err;
+    return true;
+}
+
+bool EpollBackend::try_pending_send(int fd, PendingOp& op, uint32_t events,
+                                    ssize_t& total, int& error) {
+    if (!(events & EPOLLOUT)) return false;
+
     OpType optype = static_cast<OpType>(op.op_type);
-    ssize_t n = -1;
-    int result_err = 0;
-
-    if (optype == OpType::Accept) {
-        // Accept pending - loop to accept all available connections (edge-triggered)
-        while (true) {
-            int client_fd = ::accept(fd, nullptr, nullptr);
-            if (client_fd < 0) {
-                if (errno == EAGAIN) {
-                    // No more connections pending - re-arm for next
-                    break;
-                }
-                result_err = errno;
-                break;
-            }
-            // Register client_fd with event loop before delivering completion
-            // so caller can immediately use it with async_recv
-            add_fd(client_fd, IoEvent::Read);
-
-            // Deliver completion for this client_fd
-            OpCompletion completion{
-                .actor = op.actor,
-                .type = OpType::Accept,
-                .fd = client_fd,
-                .result = client_fd,
-                .user_data = 0,
-            };
-            {
-                std::lock_guard<std::mutex> lock(completions_mutex_);
-                pending_completions_.push_back(completion);
-            }
+    while (true) {
+        ssize_t n;
+        if (optype == OpType::SendTo) {
+            n = ::sendto(fd, op.data.data(), op.data.size(), 0,
+                         reinterpret_cast<const sockaddr*>(&op.addr),
+                         op.addrlen);
+        } else {
+            n = ::send(fd, op.data.data(), op.data.size(), 0);
         }
-        // Keep pending op for next accept (will be re-triggered)
-        return;
-    } else if (optype == OpType::Connect) {
-        // Connect pending - check result with getsockopt
-        if (events & EPOLLOUT) {
-            int err = 0;
-            socklen_t errlen = sizeof(err);
-            getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
-            if (err == 0) {
-                result_err = 0; // Connected successfully
-            } else {
-                result_err = err;
-            }
+        if (n < 0) {
+            if (errno == EAGAIN) return false; // Keep pending op
+            error = errno;
+            return true;
         }
-    } else if (optype == OpType::Send || optype == OpType::SendTo) {
-        // Send pending - loop until EAGAIN to drain all buffered data
-        if (events & EPOLLOUT) {
-            while (true) {
-                if (optype == OpType::SendTo) {
-                    n = ::sendto(fd, op.data.data(), op.data.size(), 0,
-                                 reinterpret_cast<const sockaddr*>(&op.addr),
-                                 op.addrlen);
-                } else {
-                    n = ::send(fd, op.data.data(), op.data.size(), 0);
-                }
-                if (n < 0) {
-                    if (errno == EAGAIN) {
-                        // Would block - keep pending op for next trigger
-                        return; // Don't erase pending op
-                    }
-                    result_err = errno;
-                    break;
-                }
-                result_err += n;
-                if (n < static_cast<ssize_t>(op.data.size())) {
-                    // Partial send - keep remaining data in pending op
-                    op.data.erase(op.data.begin(), op.data.begin() + n);
-                    // Continue looping to drain more
-                } else {
-                    // All data sent
-                    break;
-                }
-            }
+        total += n;
+        if (n < static_cast<ssize_t>(op.data.size())) {
+            op.data.erase(op.data.begin(), op.data.begin() + n);
+        } else {
+            return true; // All data sent
         }
-    } else if (optype == OpType::Recv || optype == OpType::RecvFrom) {
-        // Recv pending - loop until EAGAIN to drain all available data
-        if (events & EPOLLIN) {
-            while (true) {
-                if (optype == OpType::RecvFrom) {
-                    n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
-                } else {
-                    n = ::readv(fd, op.saved_bufs, op.buf_count);
-                }
-                if (n < 0) {
-                    if (errno == EAGAIN) {
-                        // No more data - keep pending op for next trigger
-                        return; // Don't erase pending op
-                    }
-                    result_err = errno;
-                    break;
-                }
-                result_err += n;
-                // For scatter-gather, check if all bufs were filled
-                if (optype == OpType::Recv) {
-                    // readv may return 0 on empty socket or partial on bufs
-                    // full If we got data, try to read more (EAGAIN will stop
-                    // us)
-                }
-                // Continue looping to drain more data
-            }
-        }
-        // Unknown op type, deliver with error
-        result_err = EINVAL;
     }
+}
 
+bool EpollBackend::try_pending_recv(int fd, PendingOp& op, uint32_t events,
+                                    ssize_t& total, int& error) {
+    if (!(events & EPOLLIN)) return false;
+
+    OpType optype = static_cast<OpType>(op.op_type);
+    while (true) {
+        ssize_t n;
+        if (optype == OpType::RecvFrom) {
+            n = ::recvfrom(fd, nullptr, 0, MSG_PEEK, nullptr, nullptr);
+        } else {
+            n = ::readv(fd, op.saved_bufs, op.buf_count);
+        }
+        if (n < 0) {
+            if (errno == EAGAIN) return false; // Keep pending op
+            error = errno;
+            return true;
+        }
+        total += n;
+        if (n == 0) return true; // EOF
+    }
+}
+
+void EpollBackend::deliver_op_completion(const PendingOp& op, OpType optype,
+                                         int fd, ssize_t total, int error) {
     OpCompletion completion{
         .actor = op.actor,
         .type = optype,
         .fd = fd,
-        .result = result_err,
+        .result = (error != 0) ? -error : static_cast<int>(total),
         .user_data = 0,
     };
     {
         std::lock_guard<std::mutex> lock(completions_mutex_);
         pending_completions_.push_back(completion);
     }
-    pending_ops_.erase(it);
+}
+
+// --- Dispatcher ---
+
+void EpollBackend::process_pending_op(int fd, uint32_t events) {
+    auto it = pending_ops_.find(fd);
+    if (it == pending_ops_.end()) return;
+
+    PendingOp& op = it->second;
+    OpType optype = static_cast<OpType>(op.op_type);
+
+    switch (optype) {
+    case OpType::Accept:
+        try_pending_accept(fd, op);
+        return; // Keep pending op for re-trigger
+
+    case OpType::Connect: {
+        int error = 0;
+        if (try_pending_connect(fd, op, events, error)) {
+            deliver_op_completion(op, optype, fd, 0, error);
+            pending_ops_.erase(it);
+        }
+        return;
+    }
+    case OpType::Send:
+    case OpType::SendTo: {
+        ssize_t total = 0;
+        int error = 0;
+        if (try_pending_send(fd, op, events, total, error)) {
+            deliver_op_completion(op, optype, fd, total, error);
+            pending_ops_.erase(it);
+        }
+        return;
+    }
+    case OpType::Recv:
+    case OpType::RecvFrom: {
+        ssize_t total = 0;
+        int error = 0;
+        if (try_pending_recv(fd, op, events, total, error)) {
+            deliver_op_completion(op, optype, fd, total, error);
+            pending_ops_.erase(it);
+        }
+        return;
+    }
+    default:
+        deliver_op_completion(op, optype, fd, 0, EINVAL);
+        pending_ops_.erase(it);
+        return;
+    }
+}
+
+// --- Event dispatch ---
+
+void EpollBackend::dispatch_event(int fd, uint32_t events) {
+    if (fd == timerfd_) {
+        process_timers();
+    } else if (fd >= 0) {
+        if (pending_ops_.find(fd) != pending_ops_.end()) {
+            process_pending_op(fd, events);
+        } else if (events & EPOLLIN) {
+            service_read_handler(fd);
+        }
+    }
 }
 
 uint64_t EpollBackend::run_after(ActorId actor, int delay_ms) {
@@ -795,28 +829,12 @@ int EpollBackend::wait(int timeout_ms) {
     int num_events = epoll_wait(epoll_fd_, events, 16, timeout_ms);
 
     if (num_events < 0) {
-        if (errno == EINTR) {
-            return 0; // Interrupted, not an error
-        }
+        if (errno == EINTR) return 0;
         return -1;
     }
 
-    // Process all events
     for (int i = 0; i < num_events; ++i) {
-        int fd = events[i].data.fd;
-
-        if (fd == timerfd_) {
-            // Timer event
-            process_timers();
-        } else if (fd >= 0) {
-            // Only one path handles the fd: pending op takes priority,
-            // otherwise fall back to read handler.
-            if (pending_ops_.find(fd) != pending_ops_.end()) {
-                process_pending_op(fd, events[i].events);
-            } else if (events[i].events & EPOLLIN) {
-                service_read_handler(fd);
-            }
-        }
+        dispatch_event(events[i].data.fd, events[i].events);
     }
 
     return num_events;
