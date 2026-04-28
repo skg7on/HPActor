@@ -101,6 +101,9 @@ class ActorContext {
     // Monitoring
     void monitor(const ActorAddress& target);
 
+    // Resolve an ActorAddress to an ActorRef (lazy + cached)
+    ActorRef resolve(const ActorAddress& target);
+
     // RPC calls (for non-actor threads only)
     RpcFuture<bytes>
     rpc(const ActorAddress& target, const bytes& encoded_request,
@@ -113,9 +116,6 @@ class ActorContext {
     std::vector<ActorRef> remote_children_;
     std::vector<ActorAddress> linked_;
     std::vector<ActorAddress> monitored_;
-
-    // Resolve an ActorAddress to an ActorRef (lazy + cached)
-    ActorRef resolve(const ActorAddress& target);
 
     ActorRefCache ref_cache_;
     ActorAddress current_sender_;
