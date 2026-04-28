@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <google/protobuf/message.h>
@@ -48,14 +49,15 @@ public:
     TypedMessage(TypedMessage&& other) noexcept
         : tag_(other.tag_),
           payload_(std::move(other.payload_)),
-          parsed_(std::move(other.parsed_)) {
+          parsed_(std::move(other.parsed_)),
+          sender_address_(other.sender_address_) {
         // mpsc_next is left default-initialized in the moved-from object
     }
     TypedMessage& operator=(TypedMessage&& other) noexcept {
         tag_ = other.tag_;
         payload_ = std::move(other.payload_);
         parsed_ = std::move(other.parsed_);
-        // mpsc_next intentionally not touched — ownership transferred
+        sender_address_ = other.sender_address_;
         return *this;
     }
 
@@ -100,6 +102,11 @@ public:
         return msg;
     }
 
+    // Sender address — set by ActorContext::send() (local) or deliver_remote() (remote).
+    // Read by EventBasedActor::receive() to populate current_sender_ for reply().
+    const ActorAddress& sender_address() const noexcept { return sender_address_; }
+    void set_sender_address(const ActorAddress& addr) { sender_address_ = addr; }
+
     // MPSC mailbox intrusive link. Must be named mpsc_next for MPSCMailbox<T>.
     std::atomic<TypedMessage*> mpsc_next{nullptr};
 
@@ -107,6 +114,7 @@ private:
     TypeTag tag_ = TypeTag::Invalid;
     bytes payload_;
     mutable std::shared_ptr<google::protobuf::Message> parsed_;
+    ActorAddress sender_address_;
 };
 
 } // namespace hpactor
