@@ -81,6 +81,10 @@ add_executable(test_proto_registry actor/test_proto_registry.cpp)
 target_link_libraries(test_proto_registry hpactor hpactor_proto pthread)
 add_test(NAME test_proto_registry COMMAND test_proto_registry)
 
+add_executable(test_actor_ref_cache actor/test_actor_ref_cache.cpp)
+target_link_libraries(test_actor_ref_cache hpactor)
+add_test(NAME test_actor_ref_cache COMMAND test_actor_ref_cache)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================

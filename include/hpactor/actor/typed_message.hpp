@@ -58,6 +58,7 @@ public:
         payload_ = std::move(other.payload_);
         parsed_ = std::move(other.parsed_);
         sender_address_ = other.sender_address_;
+        // mpsc_next intentionally not touched — ownership transferred
         return *this;
     }
 
