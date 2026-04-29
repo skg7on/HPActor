@@ -26,10 +26,10 @@
 //
 // Two dispatch paths exist, selected at compile time:
 //
-//   Coroutine path (HPACTOR_USE_COROUTINES=1, default):
+//   Coroutine path (HPACTOR_SUPPORT_COROUTINES=1, default):
 //     Override act() — a C++20 coroutine that co_awaits messages.
 //
-//   Behavior path (HPACTOR_USE_COROUTINES=0):
+//   Behavior path (HPACTOR_SUPPORT_COROUTINES=0):
 //     Override make_behavior() — a callback invoked by receive().
 //     Use become() for runtime behavior switching.
 //
@@ -42,7 +42,7 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 #include <hpactor/sched/coroutine_awaiters.hpp>
 #endif
 
@@ -82,12 +82,12 @@ class EchoActor : public hpactor::EventBasedActor {
   public:
     EchoActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
-#if !HPACTOR_USE_COROUTINES
+#if !HPACTOR_SUPPORT_COROUTINES
         become(make_behavior());
 #endif
     }
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
     hpactor::sched::CoroutineTask act() override {
         std::cout << "  EchoActor [" << id().value() << "]: started"
                   << std::endl;
@@ -138,12 +138,12 @@ class RelayActor : public hpactor::EventBasedActor {
     RelayActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
                hpactor::ActorAddress target)
         : hpactor::EventBasedActor(ctx, sys), target_(target) {
-#if !HPACTOR_USE_COROUTINES
+#if !HPACTOR_SUPPORT_COROUTINES
         become(make_behavior());
 #endif
     }
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
     hpactor::sched::CoroutineTask act() override {
         std::cout << "  RelayActor [" << id().value() << "]: started"
                   << std::endl;
@@ -192,12 +192,12 @@ class SwitchingActor : public hpactor::EventBasedActor {
   public:
     SwitchingActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
-#if !HPACTOR_USE_COROUTINES
+#if !HPACTOR_SUPPORT_COROUTINES
         become(make_behavior());
 #endif
     }
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
     hpactor::sched::CoroutineTask act() override {
         std::cout << "  SwitchingActor [" << id().value()
                   << "]: started in echo mode" << std::endl;
@@ -293,7 +293,7 @@ int main() {
     hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
     std::cout << "Dispatch: C++20 coroutines\n" << std::endl;
 #else
     std::cout << "Dispatch: Behavior callbacks (become/make_behavior)\n"

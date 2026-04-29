@@ -23,7 +23,7 @@
 #include <atomic>
 #include <cstdint>
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 
 #    include <coroutine>
 
@@ -177,4 +177,4 @@ template <typename T> class BlockingMailboxAwaiter {
 
 } // namespace hpactor::sched
 
-#endif // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_SUPPORT_COROUTINES

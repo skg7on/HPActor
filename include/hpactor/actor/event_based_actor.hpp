@@ -26,7 +26,7 @@
 #include <string>
 #include <unordered_map>
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 #    include <hpactor/sched/actor_coroutine.hpp>
 #    include <hpactor/sched/coroutine_awaiters.hpp>
 #    include <hpactor/sched/coroutine_task.hpp>
@@ -135,7 +135,7 @@ class EventBasedActor : public LocalActor {
         return proto_handlers_.find(tag) != proto_handlers_.end();
     }
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
     // Coroutine support (C++20 only)
     virtual sched::CoroutineTask act() {
         co_return;
@@ -188,9 +188,9 @@ class EventBasedActor : public LocalActor {
         }
     }
 
-#else // !HPACTOR_USE_COROUTINES
+#else // !HPACTOR_SUPPORT_COROUTINES
     void ensure_coroutine_started() {}
-#endif // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_SUPPORT_COROUTINES
 
     sched::IScheduler* get_scheduler() {
         return scheduler_;
@@ -241,7 +241,7 @@ class EventBasedActor : public LocalActor {
     EventBasedActor(ActorContext* ctx, ActorSystem& sys);
 
   private:
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
     sched::ActorCoroutine actor_coroutine_;
     std::coroutine_handle<sched::CoroutinePromise> coro_handle_;
 #endif

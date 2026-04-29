@@ -35,11 +35,15 @@ endif()
 
 # User-facing option to override C++20 coroutine auto-detection.
 # AUTO (default) — use compiler detection. ON/OFF — force enable/disable.
+# When enabled, coroutine scheduling code is compiled in as an ADDITIONAL feature
+# alongside the default behavior-based scheduler. The runtime choice between
+# coroutine and behavior-based scheduling is controlled via Config::use_coroutines.
 set(HPACTOR_ENABLE_COROUTINES "AUTO" CACHE STRING
     "Enable C++20 coroutines (AUTO, ON, OFF)")
 
 # Detect C++20 coroutine support. If the compiler supports C++20 and provides
-# the <coroutine> header, use C++20 features. Otherwise fall back to C++17.
+# the <coroutine> header, coroutine support code is compiled alongside the
+# default behavior-based path. Otherwise only behavior-based scheduling is available.
 include(CheckCXXSourceCompiles)
 include(CheckIncludeFileCXX)
 
@@ -86,26 +90,22 @@ file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/coro_test.cpp")
 
 if(HPACTOR_ENABLE_COROUTINES STREQUAL "AUTO")
     if(HPACTOR_HAVE_CPP20_COROUTINES)
-        message(STATUS "C++20 coroutines detected - using coroutine-based scheduling")
+        message(STATUS "C++20 coroutines detected - coroutine support compiled in (default: behavior-based)")
         set(CMAKE_CXX_STANDARD 20)
-        set(HPACTOR_USE_COROUTINES ON CACHE BOOL "Enable C++20 coroutines" FORCE)
-        add_compile_definitions(HPACTOR_USE_COROUTINES=1)
+        set(HPACTOR_SUPPORT_COROUTINES ON CACHE BOOL "Compile in C++20 coroutine support" FORCE)
     else()
-        message(STATUS "C++20 mode - no coroutine support detected (behavior-based scheduling)")
+        message(STATUS "C++20 mode - no coroutine support detected (behavior-based only)")
         set(CMAKE_CXX_STANDARD 20)
-        set(HPACTOR_USE_COROUTINES OFF CACHE BOOL "Enable C++20 coroutines" FORCE)
-        add_compile_definitions(HPACTOR_USE_COROUTINES=0)
+        set(HPACTOR_SUPPORT_COROUTINES OFF CACHE BOOL "Compile in C++20 coroutine support" FORCE)
     endif()
 elseif(HPACTOR_ENABLE_COROUTINES)
-    message(STATUS "C++20 coroutines explicitly enabled")
+    message(STATUS "C++20 coroutines explicitly enabled - coroutine support compiled in")
     set(CMAKE_CXX_STANDARD 20)
-    set(HPACTOR_USE_COROUTINES ON CACHE BOOL "Enable C++20 coroutines" FORCE)
-    add_compile_definitions(HPACTOR_USE_COROUTINES=1)
+    set(HPACTOR_SUPPORT_COROUTINES ON CACHE BOOL "Compile in C++20 coroutine support" FORCE)
 else()
-    message(STATUS "C++20 mode - coroutines explicitly disabled (behavior-based scheduling)")
+    message(STATUS "C++20 mode - coroutines explicitly disabled (behavior-based only)")
     set(CMAKE_CXX_STANDARD 20)
-    set(HPACTOR_USE_COROUTINES OFF CACHE BOOL "Enable C++20 coroutines" FORCE)
-    add_compile_definitions(HPACTOR_USE_COROUTINES=0)
+    set(HPACTOR_SUPPORT_COROUTINES OFF CACHE BOOL "Compile in C++20 coroutine support" FORCE)
 endif()
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -187,7 +187,7 @@ add_library(hpactor_lib SHARED
     src/rpc/rpc_channel.cpp
     src/adt/stream_buffer.cpp
 )
-target_include_directories(hpactor_lib PUBLIC include)
+target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR})
 
 # Protobuf and Abseil detection
 # Protobuf >= 22.0 requires Abseil as a transitive dependency
@@ -237,9 +237,9 @@ if(ENABLE_PROACTOR)
         # Always include kqueue as fallback
         target_sources(hpactor_lib PRIVATE src/net/reactor/kqueue_backend.cpp)
     endif()
-    add_compile_definitions(HPACTOR_ENABLE_PROACTOR=1)
+    set(HPACTOR_ENABLE_PROACTOR ON)
 else()
-    add_compile_definitions(HPACTOR_ENABLE_PROACTOR=0)
+    set(HPACTOR_ENABLE_PROACTOR OFF)
     # Reactor mode
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         message(STATUS "Using epoll (Reactor)")
@@ -249,6 +249,13 @@ else()
         target_sources(hpactor_lib PRIVATE src/net/reactor/kqueue_backend.cpp)
     endif()
 endif()
+
+# Generate hpactor_config.hpp from CMake template
+configure_file(
+    ${CMAKE_SOURCE_DIR}/include/hpactor/hpactor_config.hpp.in
+    ${CMAKE_CURRENT_BINARY_DIR}/hpactor/hpactor_config.hpp
+    @ONLY
+)
 
 # Alias for backwards compatibility
 add_library(hpactor ALIAS hpactor_lib)

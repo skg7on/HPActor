@@ -17,7 +17,7 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 #    include <hpactor/sched/coroutine_task.hpp>
 #endif
 
@@ -198,51 +198,54 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     }
     auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
 
-#if HPACTOR_USE_COROUTINES
-    // C++20 coroutine path
-    // Lazily start the coroutine on first pickup
-    actor->ensure_coroutine_started();
+#if HPACTOR_SUPPORT_COROUTINES
+    if (system_.use_coroutines()) {
+        // C++20 coroutine path (runtime opt-in via Config::use_coroutines)
+        // Lazily start the coroutine on first pickup
+        actor->ensure_coroutine_started();
 
-    auto& coroutine = actor->get_actor_coroutine();
-    if (!coroutine)
-        return;
+        auto& coroutine = actor->get_actor_coroutine();
+        if (!coroutine)
+            return;
 
-    auto& promise = coroutine.task().handle().promise();
+        auto& promise = coroutine.task().handle().promise();
 
-    // First transition: kIdle → kReady (if needed)
-    // This handles the case where actor is picked up after suspending
-    if (promise.state.is_idle()) {
-        promise.state.set(ActorState::kReady);
-    }
+        // First transition: kIdle → kReady (if needed)
+        // This handles the case where actor is picked up after suspending
+        if (promise.state.is_idle()) {
+            promise.state.set(ActorState::kReady);
+        }
 
-    // Transition: Ready → Running
-    // If not in Ready state (already Running/Terminated), skip
-    uint32_t expected = ActorState::kReady;
-    if (!promise.state.cas(expected, ActorState::kRunning)) {
-        if (promise.state.is_terminated()) {
+        // Transition: Ready → Running
+        // If not in Ready state (already Running/Terminated), skip
+        uint32_t expected = ActorState::kReady;
+        if (!promise.state.cas(expected, ActorState::kRunning)) {
+            if (promise.state.is_terminated()) {
+                actor->on_exit();
+            }
+            // Already running, idle, or IOWaiting — skip
+            return;
+        }
+
+        // Resume the coroutine
+        coroutine.resume();
+
+        // Post-resume: coroutine suspended (Idle/IOWaiting) or terminated.
+        // Note: cannot access promise after resume() returns if coroutine
+        // terminated — the promise is destroyed with the coroutine frame. Use
+        // coroutine.done() which checks internal handle state (not the promise).
+        if (coroutine.done()) {
             actor->on_exit();
         }
-        // Already running, idle, or IOWaiting — skip
+        // If idle or IOWaiting, the actor will be re-woken by:
+        // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue → notify_ready)
+        // - TimerAwaiter callback (EventLoop → notify_ready)
+        // Nothing to do here for suspended actors
         return;
     }
+#endif // HPACTOR_SUPPORT_COROUTINES
 
-    // Resume the coroutine
-    coroutine.resume();
-
-    // Post-resume: coroutine suspended (Idle/IOWaiting) or terminated.
-    // Note: cannot access promise after resume() returns if coroutine
-    // terminated — the promise is destroyed with the coroutine frame. Use
-    // coroutine.done() which checks internal handle state (not the promise).
-    if (coroutine.done()) {
-        actor->on_exit();
-    }
-    // If idle or IOWaiting, the actor will be re-woken by:
-    // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue → notify_ready)
-    // - TimerAwaiter callback (EventLoop → notify_ready)
-    // Nothing to do here for suspended actors
-
-#else  // !HPACTOR_USE_COROUTINES
-    // C++17 callback path: behavior-based scheduling
+    // Behavior-based scheduling (default)
     // Process actor by dispatching messages through Behavior
     // The actor's receive() method calls the current behavior handler
 
@@ -262,7 +265,6 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     if (!mailbox->empty()) {
         notify_ready(item.actor, 0, INT64_MAX);
     }
-#endif // HPACTOR_USE_COROUTINES
 }
 
 void HybridScheduler::worker_loop(uint32_t worker_id) {

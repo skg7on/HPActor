@@ -22,7 +22,7 @@
 #include <cstdint>
 #include <thread>
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 #    include <coroutine>
 #endif
 
@@ -33,7 +33,7 @@ class ActorCoroutine;
 class WorkerThread;
 class CoroutineTask;
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 
 // CoroutinePromise: promise_type for actor coroutines
 // Controls lifecycle: initial_suspend → Running → (Suspend | Terminate)
@@ -193,7 +193,7 @@ inline CoroutineTask CoroutinePromise::get_return_object() {
     return CoroutineTask{handle_type::from_promise(*this)};
 }
 
-#else // !HPACTOR_USE_COROUTINES
+#else // !HPACTOR_SUPPORT_COROUTINES
 
 // C++17 fallback: stub CoroutinePromise and CoroutineTask so that
 // the rest of the type system (ActorState, ActorId, etc.) still compiles.
@@ -258,6 +258,6 @@ class CoroutineTask {
     void resume() {}
 };
 
-#endif // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_SUPPORT_COROUTINES
 
 } // namespace hpactor::sched

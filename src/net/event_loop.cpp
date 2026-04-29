@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/net/event_loop.hpp>
 
 #if defined(__APPLE__)

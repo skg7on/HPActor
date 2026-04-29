@@ -22,7 +22,7 @@
 
 namespace hpactor::sched {
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 
 // ActorCoroutine: owns a coroutine handle for an actor.
 // Produced by EventBasedActor::act() and consumed by
@@ -97,6 +97,6 @@ class ActorCoroutine {
     ActorId actor_id_;
 };
 
-#endif // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_SUPPORT_COROUTINES
 
 } // namespace hpactor::sched

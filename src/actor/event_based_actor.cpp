@@ -92,7 +92,7 @@ void EventBasedActor::on_proto_message(TypeTag tag, const bytes& payload) {
 }
 
 void EventBasedActor::on_deactivate() {
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
     if (actor_coroutine_ && !actor_coroutine_.done()) {
         actor_coroutine_.task().handle().destroy();
         actor_coroutine_ = sched::ActorCoroutine{};

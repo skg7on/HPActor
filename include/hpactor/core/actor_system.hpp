@@ -67,6 +67,11 @@ struct Config {
     net::TlsConfig tls = {};
     net::PoolConfig pool = {};
     net::RegistrarConfig registrar = {};
+
+    // Coroutine scheduling (requires HPACTOR_SUPPORT_COROUTINES=1 at compile time)
+    // When true, actors use coroutine-based execution instead of behavior-based.
+    // Default: false (behavior-based scheduling).
+    bool use_coroutines = false;
 };
 
 // -----------------------------------------------------------------------------
@@ -139,6 +144,12 @@ class ActorSystem {
     // Get scheduler for direct scheduling operations
     sched::IScheduler* scheduler() {
         return scheduler_.get();
+    }
+
+    // Runtime coroutine toggle (requires HPACTOR_SUPPORT_COROUTINES=1 at compile
+    // time). Default: false (behavior-based scheduling).
+    bool use_coroutines() const {
+        return config_.use_coroutines;
     }
 
     // RPC channel for remote calls

@@ -19,7 +19,7 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/types/types.hpp>
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 
 #    include <coroutine>
 #    include <cstdint>
@@ -83,4 +83,4 @@ class SchedulerYield {
 
 } // namespace hpactor::sched
 
-#endif // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_SUPPORT_COROUTINES

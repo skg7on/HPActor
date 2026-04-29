@@ -21,7 +21,7 @@
 #include <hpactor/sched/coroutine_task.hpp>
 #include <hpactor/types/types.hpp>
 
-#if HPACTOR_USE_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
 
 #    include <coroutine>
 
@@ -146,7 +146,7 @@ int main() {
     return 0;
 }
 
-#else // !HPACTOR_USE_COROUTINES
+#else // !HPACTOR_SUPPORT_COROUTINES
 
 // C++17 fallback: MailboxAwaiter is not available
 // This test is skipped in C++17 mode
@@ -156,4 +156,4 @@ int main() {
     return 0;
 }
 
-#endif // HPACTOR_USE_COROUTINES
+#endif // HPACTOR_SUPPORT_COROUTINES
