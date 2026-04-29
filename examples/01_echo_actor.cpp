@@ -24,12 +24,13 @@
 //   - context()->reply() to respond to the sender
 //   - Dynamic behavior switching (become() / coroutine flag)
 //
-// Two dispatch paths exist, selected at compile time:
+// Two dispatch paths exist, selected at runtime via Config::use_coroutines:
 //
-//   Coroutine path (HPACTOR_SUPPORT_COROUTINES=1, default):
+//   Coroutine path (requires HPACTOR_SUPPORT_COROUTINES=1 at compile time):
 //     Override act() — a C++20 coroutine that co_awaits messages.
+//     Enable with: config.use_coroutines = true (default: false).
 //
-//   Behavior path (HPACTOR_SUPPORT_COROUTINES=0):
+//   Behavior path (always available, the default):
 //     Override make_behavior() — a callback invoked by receive().
 //     Use become() for runtime behavior switching.
 //
@@ -82,7 +83,11 @@ class EchoActor : public hpactor::EventBasedActor {
   public:
     EchoActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
-#if !HPACTOR_SUPPORT_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
+        if (!sys.use_coroutines()) {
+            become(make_behavior());
+        }
+#else
         become(make_behavior());
 #endif
     }
@@ -138,7 +143,11 @@ class RelayActor : public hpactor::EventBasedActor {
     RelayActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
                hpactor::ActorAddress target)
         : hpactor::EventBasedActor(ctx, sys), target_(target) {
-#if !HPACTOR_SUPPORT_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
+        if (!sys.use_coroutines()) {
+            become(make_behavior());
+        }
+#else
         become(make_behavior());
 #endif
     }
@@ -192,7 +201,11 @@ class SwitchingActor : public hpactor::EventBasedActor {
   public:
     SwitchingActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
-#if !HPACTOR_SUPPORT_COROUTINES
+#if HPACTOR_SUPPORT_COROUTINES
+        if (!sys.use_coroutines()) {
+            become(make_behavior());
+        }
+#else
         become(make_behavior());
 #endif
     }
@@ -291,10 +304,16 @@ int main() {
     std::cout << "=== HPActor Example 01: Echo Actor ===" << std::endl;
 
     hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024};
+    // config.use_coroutines = true;  // uncomment to enable C++20 coroutine dispatch
     hpactor::ActorSystem system(config);
 
 #if HPACTOR_SUPPORT_COROUTINES
-    std::cout << "Dispatch: C++20 coroutines\n" << std::endl;
+    if (config.use_coroutines) {
+        std::cout << "Dispatch: C++20 coroutines\n" << std::endl;
+    } else {
+        std::cout << "Dispatch: Behavior callbacks (become/make_behavior)\n"
+                  << std::endl;
+    }
 #else
     std::cout << "Dispatch: Behavior callbacks (become/make_behavior)\n"
               << std::endl;
