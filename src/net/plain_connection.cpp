@@ -118,15 +118,12 @@ void PlainConnection::close() {
 }
 
 void PlainConnection::on_fd_readable(int fd) {
-    // Copy 1: read directly into the accumulation buffer — no stack buffer.
-    size_t off = read_buffer_.size();
-    read_buffer_.resize(off + kReadChunkSize);
+    // Read directly into the accumulation buffer via reserve_tail/commit_tail.
     while (true) {
-        ssize_t n = ::read(fd, read_buffer_.data() + off,
-                           read_buffer_.size() - off);
+        uint8_t* area = read_buffer_.reserve_tail(kReadChunkSize);
+        ssize_t n = ::read(fd, area, kReadChunkSize);
         if (n > 0) {
-            off += static_cast<size_t>(n);
-            read_buffer_.resize(off + kReadChunkSize);
+            read_buffer_.commit_tail(static_cast<size_t>(n));
         } else if (n == 0) {
             break;
         } else {
@@ -134,7 +131,6 @@ void PlainConnection::on_fd_readable(int fd) {
             break;
         }
     }
-    read_buffer_.resize(off);
 
     // Zero-copy: extract complete frames as span views into read_buffer_.
     size_t offset = 0;
@@ -148,7 +144,8 @@ void PlainConnection::on_fd_readable(int fd) {
             break;
         }
 
-        std::span<const uint8_t> frame(&read_buffer_[offset + 4], frame_len);
+        std::span<const uint8_t> frame(read_buffer_.data() + offset + 4,
+                                       frame_len);
         offset += 4 + frame_len;
 
         if (frame_handler_) {
@@ -156,8 +153,7 @@ void PlainConnection::on_fd_readable(int fd) {
         }
     }
     if (offset > 0) {
-        read_buffer_.erase(read_buffer_.begin(),
-                           read_buffer_.begin() + static_cast<long>(offset));
+        read_buffer_.consume(offset);
     }
 }
 
@@ -166,7 +162,7 @@ void PlainConnection::send_raw(const bytes& data) {
         return;
 
     // Append data to write buffer
-    write_buffer_.insert(write_buffer_.end(), data.begin(), data.end());
+    write_buffer_.append(data.data(), data.size());
 
     // If already sending, wait for completion
     if (is_sending_)
@@ -213,7 +209,7 @@ void PlainConnection::handle_send_completion(int result) {
     if (static_cast<size_t>(result) >= write_buffer_.size()) {
         write_buffer_.clear();
     } else {
-        write_buffer_.erase(write_buffer_.begin(), write_buffer_.begin() + result);
+        write_buffer_.consume(static_cast<size_t>(result));
     }
 
     // If more data to send, continue flushing

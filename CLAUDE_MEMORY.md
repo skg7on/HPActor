@@ -131,7 +131,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Phase 0-7 Complete** (48 tests passing)
+**Phase 0-7 Complete** (61 tests passing)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -154,9 +154,19 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - ActorContext gains add_remote_child(ActorRef) method
 - Integration test (test_spawn_integration) validates frame encoding and message correlation
 
-**Next Steps (Phase 9 - remaining items)**
-- Argument deserialization (passing constructor args through spawn)
+**Phase 9-10 Complete** (Unified Message Passing + Zero-Copy Net)
+- Unified message passing: proto_actor.hpp deleted, replaced by TypedMessage<T> + TypedEventBasedActor
+- ErrorMsg TypeTag, reply_with_error(), current_sender_ capture for reply routing
+- Zero-copy read path in reactor backends via std::span (5 copies → 2)
+- Unified ReadStrategy abstraction for EpollBackend/KqueueBackend
+- service_read_handler gated on pending op, accumulated reads
+- MSG_PEEK infinite loop fix in EpollBackend recvfrom
+- Reactor/Proactor separation: IReactorBackend, ReactorDispatcher, ProactorDispatcher
+
+**Next Steps (Phase 11 - remaining items)**
+- Proactor backend production hardening (GcdBackend, IoUringBackend)
 - Full two-process integration test with TCP transport
+- Argument deserialization (passing constructor args through spawn)
 - Typed RPC API (template call<Request, Response> with serialization)
 
 **Source Reorganization**

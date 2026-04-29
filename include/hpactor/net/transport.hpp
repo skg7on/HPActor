@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -105,7 +106,7 @@ class Connection : public std::enable_shared_from_this<Connection> {
     CommunicationEndpoint remote_endpoint_;
     ConnectionState state_ = ConnectionState::Disconnected;
     message_handler message_handler_;
-    bytes read_buffer_; // For partial frame reads
+    adt::StreamBuffer read_buffer_; // For partial frame reads
 };
 
 // Connection pointer type

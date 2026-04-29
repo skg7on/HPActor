@@ -168,6 +168,7 @@ add_library(hpactor_lib SHARED
     src/sched/timing_wheel.cpp
     src/sched/coroutine_frame_pool.cpp
     src/rpc/rpc_channel.cpp
+    src/adt/stream_buffer.cpp
 )
 target_include_directories(hpactor_lib PUBLIC include)
 

@@ -28,18 +28,21 @@ void Connection::set_message_handler(message_handler handler) {
 }
 
 void Connection::handle_read(const bytes& data) {
-    read_buffer_.insert(read_buffer_.end(), data.begin(), data.end());
+    read_buffer_.append(data.data(), data.size());
 
     // Simple framing: look for message boundary (newline for now)
     // TODO: implement proper length-prefixed framing
     while (!read_buffer_.empty()) {
-        auto it = std::find(read_buffer_.begin(), read_buffer_.end(), '\n');
-        if (it == read_buffer_.end()) {
+        auto* begin = read_buffer_.data();
+        auto* end = begin + read_buffer_.size();
+        auto it = std::find(begin, end, '\n');
+        if (it == end) {
             break;
         }
 
-        bytes message(read_buffer_.begin(), it);
-        read_buffer_.erase(read_buffer_.begin(), it + 1);
+        bytes message(begin, it);
+        size_t consumed = static_cast<size_t>(it - begin) + 1; // +1 for '\n'
+        read_buffer_.consume(consumed);
 
         if (message_handler_ && !message.empty()) {
             on_message(message);

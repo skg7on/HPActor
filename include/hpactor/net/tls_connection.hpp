@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
@@ -191,10 +192,10 @@ class TlsConnection : public Connection,
     bytes session_iv_;  // AES IV
 
     // Read buffer
-    bytes read_buffer_;
+    adt::StreamBuffer read_buffer_;
 
     // Write buffer
-    bytes write_buffer_;
+    adt::StreamBuffer write_buffer_;
 
     // True while async send is in progress
     bool is_sending_ = false;

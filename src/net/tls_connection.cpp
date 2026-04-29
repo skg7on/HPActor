@@ -42,20 +42,19 @@ bytes format_tls_message(TlsMessageType type, const bytes& payload) {
 }
 
 // Parse a TLS message - extract payload from formatted message
-bytes parse_tls_payload(const bytes& data, size_t& consumed) {
+bytes parse_tls_payload(const uint8_t* data, size_t len, size_t& consumed) {
     consumed = 0;
-    if (data.size() < 4) {
+    if (len < 4) {
         return bytes{};
     }
     size_t payload_len = (static_cast<size_t>(data[1]) << 16) |
                          (static_cast<size_t>(data[2]) << 8) |
                          static_cast<size_t>(data[3]);
     size_t total_len = 4 + payload_len;
-    if (data.size() < total_len) {
+    if (len < total_len) {
         return bytes{};
     }
-    bytes payload(data.begin() + static_cast<long>(4),
-                  data.begin() + static_cast<long>(total_len));
+    bytes payload(data + 4, data + total_len);
     consumed = total_len;
     return payload;
 }
@@ -153,17 +152,17 @@ void TlsConnection::start_client_handshake() {
 }
 
 void TlsConnection::handle_read(const bytes& data) {
-    read_buffer_.insert(read_buffer_.end(), data.begin(), data.end());
+    read_buffer_.append(data.data(), data.size());
 
     // Process complete messages in buffer
     while (read_buffer_.size() >= 4) {
         size_t consumed = 0;
-        bytes payload = parse_tls_payload(read_buffer_, consumed);
+        bytes payload = parse_tls_payload(read_buffer_.data(),
+                                          read_buffer_.size(), consumed);
         if (consumed == 0) {
             break; // Wait for more data
         }
-        read_buffer_.erase(read_buffer_.begin(),
-                           read_buffer_.begin() + static_cast<long>(consumed));
+        read_buffer_.consume(consumed);
 
         if (session_state_ == TlsSessionState::Encrypted) {
             // Decrypt and deliver to frame handler
@@ -496,7 +495,7 @@ void TlsConnection::send_raw(const bytes& data) {
         return;
 
     // Append data to write buffer
-    write_buffer_.insert(write_buffer_.end(), data.begin(), data.end());
+    write_buffer_.append(data.data(), data.size());
 
     // If already sending, wait for completion
     if (is_sending_)
@@ -538,7 +537,7 @@ void TlsConnection::handle_send_completion(int result) {
     if (static_cast<size_t>(result) >= write_buffer_.size()) {
         write_buffer_.clear();
     } else {
-        write_buffer_.erase(write_buffer_.begin(), write_buffer_.begin() + result);
+        write_buffer_.consume(static_cast<size_t>(result));
     }
 
     // If more data to send, continue flushing
