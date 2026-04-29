@@ -186,6 +186,57 @@ void test_actor_context_reply_no_sender() {
     // Test passes if we reach here without crashing
 }
 
+// -----------------------------------------------------------------------
+// Task 2: Tests for linked/monitored accessor methods
+// -----------------------------------------------------------------------
+
+void test_actor_context_add_remove_linked() {
+    Actor empty_actor;
+    ActorContext ctx(empty_actor);
+
+    assert(ctx.linked_actors().empty());
+
+    ActorAddress addr1{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{1},
+                       ActorId{10}, 0};
+    ctx.add_linked(addr1);
+    assert(ctx.linked_actors().size() == 1);
+    assert(ctx.linked_actors()[0] == addr1);
+
+    // Duplicate add — allowed (idempotency is caller's responsibility)
+    ctx.add_linked(addr1);
+    assert(ctx.linked_actors().size() == 2);
+
+    ctx.remove_linked(addr1);
+    assert(ctx.linked_actors().size() == 1);
+
+    ctx.remove_linked(addr1);
+    assert(ctx.linked_actors().empty());
+
+    // Remove non-existent — no-op, no crash
+    ctx.remove_linked(addr1);
+    assert(ctx.linked_actors().empty());
+}
+
+void test_actor_context_add_remove_monitored() {
+    Actor empty_actor;
+    ActorContext ctx(empty_actor);
+
+    assert(ctx.monitored_actors().empty());
+
+    ActorAddress addr1{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{2},
+                       ActorId{20}, 0};
+    ctx.add_monitored(addr1);
+    assert(ctx.monitored_actors().size() == 1);
+    assert(ctx.monitored_actors()[0] == addr1);
+
+    ctx.remove_monitored(addr1);
+    assert(ctx.monitored_actors().empty());
+
+    // Remove non-existent — no-op
+    ctx.remove_monitored(addr1);
+    assert(ctx.monitored_actors().empty());
+}
+
 int main() {
     test_actor_context_children();
     test_actor_context_linked_actors();
@@ -197,5 +248,7 @@ int main() {
     test_actor_context_resolve_remote();
     test_actor_context_reply();
     test_actor_context_reply_no_sender();
+    test_actor_context_add_remove_linked();
+    test_actor_context_add_remove_monitored();
     return 0;
 }
