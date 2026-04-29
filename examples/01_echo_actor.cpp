@@ -24,15 +24,14 @@
 //   - context()->reply() to respond to the sender
 //   - Dynamic behavior switching (become() / coroutine flag)
 //
-// Two dispatch paths exist, selected at runtime via Config::use_coroutines:
+// Behavior dispatch (always available, the default):
+//   Override make_behavior() — a callback invoked by receive().
+//   Use become() for runtime behavior switching.
 //
-//   Coroutine path (requires HPACTOR_SUPPORT_COROUTINES=1 at compile time):
-//     Override act() — a C++20 coroutine that co_awaits messages.
-//     Enable with: config.use_coroutines = true (default: false).
-//
-//   Behavior path (always available, the default):
-//     Override make_behavior() — a callback invoked by receive().
-//     Use become() for runtime behavior switching.
+// Coroutine dispatch (optional; requires HPACTOR_SUPPORT_COROUTINES=1):
+//   Override act() — a C++20 coroutine that co_awaits messages, used when
+//   config.use_coroutines = true. The behavior path serves as the foundation;
+//   the coroutine path is an additional dispatch mode on top of it.
 //
 // =============================================================================
 
@@ -83,13 +82,7 @@ class EchoActor : public hpactor::EventBasedActor {
   public:
     EchoActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
-#if HPACTOR_SUPPORT_COROUTINES
-        if (!sys.use_coroutines()) {
-            become(make_behavior());
-        }
-#else
         become(make_behavior());
-#endif
     }
 
 #if HPACTOR_SUPPORT_COROUTINES
@@ -103,9 +96,6 @@ class EchoActor : public hpactor::EventBasedActor {
                 auto text = extract_string(msg.payload());
                 std::cout << "  EchoActor [" << id().value()
                           << "]: received \"" << text << "\"" << std::endl;
-                // Reply to sender. current_sender must be set manually in the
-                // coroutine path (receive() does it automatically in the
-                // behavior path).
                 context()->set_current_sender(msg.sender_address());
                 context()->reply(
                     make_string_msg(EchoMsgTag, "echo: " + text));
@@ -116,7 +106,8 @@ class EchoActor : public hpactor::EventBasedActor {
                   << count << " messages)" << std::endl;
         co_return;
     }
-#else
+#endif
+
   protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
@@ -131,7 +122,6 @@ class EchoActor : public hpactor::EventBasedActor {
             }
         }};
     }
-#endif
 };
 
 // =============================================================================
@@ -143,13 +133,7 @@ class RelayActor : public hpactor::EventBasedActor {
     RelayActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
                hpactor::ActorAddress target)
         : hpactor::EventBasedActor(ctx, sys), target_(target) {
-#if HPACTOR_SUPPORT_COROUTINES
-        if (!sys.use_coroutines()) {
-            become(make_behavior());
-        }
-#else
         become(make_behavior());
-#endif
     }
 
 #if HPACTOR_SUPPORT_COROUTINES
@@ -173,7 +157,8 @@ class RelayActor : public hpactor::EventBasedActor {
                   << count << " messages)" << std::endl;
         co_return;
     }
-#else
+#endif
+
   protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
@@ -187,7 +172,6 @@ class RelayActor : public hpactor::EventBasedActor {
             }
         }};
     }
-#endif
 
   private:
     hpactor::ActorAddress target_;
@@ -201,13 +185,7 @@ class SwitchingActor : public hpactor::EventBasedActor {
   public:
     SwitchingActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
-#if HPACTOR_SUPPORT_COROUTINES
-        if (!sys.use_coroutines()) {
-            become(make_behavior());
-        }
-#else
         become(make_behavior());
-#endif
     }
 
 #if HPACTOR_SUPPORT_COROUTINES
@@ -247,7 +225,8 @@ class SwitchingActor : public hpactor::EventBasedActor {
         }
         co_return;
     }
-#else
+#endif
+
   protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
@@ -283,7 +262,6 @@ class SwitchingActor : public hpactor::EventBasedActor {
             }
         }});
     }
-#endif
 };
 
 // ---------------------------------------------------------------------------
@@ -307,17 +285,13 @@ int main() {
     // config.use_coroutines = true;  // uncomment to enable C++20 coroutine dispatch
     hpactor::ActorSystem system(config);
 
+    std::cout << "Dispatch: Behavior callbacks (become/make_behavior)";
 #if HPACTOR_SUPPORT_COROUTINES
     if (config.use_coroutines) {
-        std::cout << "Dispatch: C++20 coroutines\n" << std::endl;
-    } else {
-        std::cout << "Dispatch: Behavior callbacks (become/make_behavior)\n"
-                  << std::endl;
+        std::cout << " + C++20 coroutines";
     }
-#else
-    std::cout << "Dispatch: Behavior callbacks (become/make_behavior)\n"
-              << std::endl;
 #endif
+    std::cout << "\n" << std::endl;
 
     // Spawn actors
     auto echo = system.spawn<EchoActor>();
