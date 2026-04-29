@@ -60,6 +60,8 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     // Set actor address (called by ActorSystem during spawn)
     void set_address(ActorAddress addr) {
         address_ = addr;
+        id_ = addr.id;
+        type_ = addr.type;
     }
 
     // Set scheduler and mailbox (called by ActorSystem during spawn)

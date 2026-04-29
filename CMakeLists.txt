@@ -33,6 +33,11 @@ endif()
 # Compiler Settings - C++20/C++17 with LLVM Standards
 # =============================================================================
 
+# User-facing option to override C++20 coroutine auto-detection.
+# AUTO (default) — use compiler detection. ON/OFF — force enable/disable.
+set(HPACTOR_ENABLE_COROUTINES "AUTO" CACHE STRING
+    "Enable C++20 coroutines (AUTO, ON, OFF)")
+
 # Detect C++20 coroutine support. If the compiler supports C++20 and provides
 # the <coroutine> header, use C++20 features. Otherwise fall back to C++17.
 include(CheckCXXSourceCompiles)
@@ -79,14 +84,26 @@ try_compile(HPACTOR_HAVE_CPP20_COROUTINES
 )
 file(REMOVE "${CMAKE_CURRENT_BINARY_DIR}/coro_test.cpp")
 
-if(HPACTOR_HAVE_CPP20_COROUTINES)
-    message(STATUS "C++20 coroutines detected - using coroutine-based scheduling")
+if(HPACTOR_ENABLE_COROUTINES STREQUAL "AUTO")
+    if(HPACTOR_HAVE_CPP20_COROUTINES)
+        message(STATUS "C++20 coroutines detected - using coroutine-based scheduling")
+        set(CMAKE_CXX_STANDARD 20)
+        set(HPACTOR_USE_COROUTINES ON CACHE BOOL "Enable C++20 coroutines" FORCE)
+        add_compile_definitions(HPACTOR_USE_COROUTINES=1)
+    else()
+        message(STATUS "C++20 mode - no coroutine support detected (behavior-based scheduling)")
+        set(CMAKE_CXX_STANDARD 20)
+        set(HPACTOR_USE_COROUTINES OFF CACHE BOOL "Enable C++20 coroutines" FORCE)
+        add_compile_definitions(HPACTOR_USE_COROUTINES=0)
+    endif()
+elseif(HPACTOR_ENABLE_COROUTINES)
+    message(STATUS "C++20 coroutines explicitly enabled")
     set(CMAKE_CXX_STANDARD 20)
     set(HPACTOR_USE_COROUTINES ON CACHE BOOL "Enable C++20 coroutines" FORCE)
     add_compile_definitions(HPACTOR_USE_COROUTINES=1)
 else()
-    message(STATUS "C++17 mode - using callback-based scheduling")
-    set(CMAKE_CXX_STANDARD 17)
+    message(STATUS "C++20 mode - coroutines explicitly disabled (behavior-based scheduling)")
+    set(CMAKE_CXX_STANDARD 20)
     set(HPACTOR_USE_COROUTINES OFF CACHE BOOL "Enable C++20 coroutines" FORCE)
     add_compile_definitions(HPACTOR_USE_COROUTINES=0)
 endif()

@@ -171,12 +171,18 @@ class EventBasedActor : public LocalActor {
                 actor_coroutine_ = sched::ActorCoroutine{std::move(task), id()};
 
                 if (mailbox_) {
-                    auto* coro_ptr = &actor_coroutine_;
-                    mailbox_->set_continuation_callback([coro_ptr]() {
-                        if (!coro_ptr->done()) {
-                            coro_ptr->promise().notify_mailbox_nonempty();
-                        }
-                    });
+                    // Continuation callback disabled: direct resume races with
+                    // the scheduler's execute_actor state machine, causing
+                    // await_suspend CAS(kRunning→kIdle) to fail and the
+                    // coroutine to busy-loop. Wakeups go through notify_ready()
+                    // which transitions state correctly.
+                    //
+                    // auto* coro_ptr = &actor_coroutine_;
+                    // mailbox_->set_continuation_callback([coro_ptr]() {
+                    //     if (!coro_ptr->done()) {
+                    //         coro_ptr->promise().notify_mailbox_nonempty();
+                    //     }
+                    // });
                 }
             }
         }

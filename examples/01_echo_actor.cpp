@@ -16,17 +16,22 @@
 // HPActor Example 01: Echo Actor
 // =============================================================================
 //
-// This example demonstrates the foundational pattern for creating an
-// event-based actor in HPActor.
+// Demonstrates the core actor patterns in HPActor:
 //
-// Key concepts demonstrated:
-//   - Subclassing hpactor::EventBasedActor
-//   - Implementing make_behavior() to define initial message handling
-//   - Using become() to dynamically switch behaviors at runtime
-//   - Handling messages via std::visit on TypedMessage
+//   - Subclassing EventBasedActor
+//   - ActorSystem::spawn<T>() to create actors
+//   - context()->send() for actor-to-actor messaging
+//   - context()->reply() to respond to the sender
+//   - Dynamic behavior switching (become() / coroutine flag)
 //
-// NOTE: This example demonstrates the intended API design. The runtime
-// infrastructure (spawn, send, scheduler) is not yet functional.
+// Two dispatch paths exist, selected at compile time:
+//
+//   Coroutine path (HPACTOR_USE_COROUTINES=1, default):
+//     Override act() — a C++20 coroutine that co_awaits messages.
+//
+//   Behavior path (HPACTOR_USE_COROUTINES=0):
+//     Override make_behavior() — a callback invoked by receive().
+//     Use become() for runtime behavior switching.
 //
 // =============================================================================
 
@@ -35,186 +40,303 @@
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/hpactor_config.hpp>
+
+#if HPACTOR_USE_COROUTINES
+#include <hpactor/sched/coroutine_awaiters.hpp>
+#endif
+
+#include <algorithm>
+#include <cctype>
+#include <chrono>
 #include <iostream>
 #include <string>
-#include <variant>
+#include <thread>
 
-// -----------------------------------------------------------------------------
-// Message Definitions
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Custom message type tags
+// ---------------------------------------------------------------------------
 
-struct EchoMessage {
-    std::string text;
-};
+static const hpactor::TypeTag EchoMsgTag{100};
+static const hpactor::TypeTag UppercaseMsgTag{101};
 
-struct UppercaseMessage {
-    std::string text;
-};
+// ---------------------------------------------------------------------------
+// String message helpers
+// ---------------------------------------------------------------------------
 
-struct ShutdownMessage {};
+static hpactor::TypedMessage make_string_msg(hpactor::TypeTag tag,
+                                             const std::string& text) {
+    hpactor::bytes payload(text.begin(), text.end());
+    return hpactor::TypedMessage(tag, std::move(payload));
+}
 
-// -----------------------------------------------------------------------------
-// EchoActor - demonstrates behavior-based message handling
-// -----------------------------------------------------------------------------
-//
-// The EventBasedActor is the core building block for message-driven actors.
-// It uses a Behavior object to handle messages and supports dynamic behavior
-// switching via become().
-//
-// Pattern:
-//   class MyActor : public hpactor::EventBasedActor {
-//     protected:
-//       hpactor::Behavior make_behavior() override {
-//         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
-//           // Handle messages
-//         }};
-//       }
-//     public:
-//       MyActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
-//         : hpactor::EventBasedActor(ctx, sys) {}
-//   };
-//
-// NOTE: The actual TypedMessage in hpactor only contains system messages.
-// User-defined messages would be added via a custom variant type.
-//
-// -----------------------------------------------------------------------------
+static std::string extract_string(const hpactor::bytes& payload) {
+    return {payload.begin(), payload.end()};
+}
+
+// =============================================================================
+// EchoActor — receives messages and echoes back to sender via reply()
+// =============================================================================
 
 class EchoActor : public hpactor::EventBasedActor {
-  protected:
-    // make_behavior() is called once when the actor activates
-    // Override this to define your initial behavior
-    hpactor::Behavior make_behavior() override {
-        // Return a Behavior with a lambda that handles TypedMessage
-        // In practice, you'd use std::visit to pattern match on message type
-        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
-            this->handle_message(msg);
-        }};
-    }
-
   public:
     EchoActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
-        : hpactor::EventBasedActor(ctx, sys) {}
-
-    // Message handler - in a real implementation, this would use std::visit
-    void handle_message(hpactor::TypedMessage& /*msg*/) {
-        // Pattern matching would look like:
-        // std::visit([this](auto&& m) {
-        //   using T = std::decay_t<decltype(m)>;
-        //   if constexpr (std::is_same_v<T, EchoMessage>) { ... }
-        // }, msg);
-        std::cout << "EchoActor: received message" << std::endl;
+        : hpactor::EventBasedActor(ctx, sys) {
+#if !HPACTOR_USE_COROUTINES
+        become(make_behavior());
+#endif
     }
-};
 
-// -----------------------------------------------------------------------------
-// SwitchingActor - demonstrates dynamic behavior switching with become()
-// -----------------------------------------------------------------------------
-//
-// become() allows actors to change their behavior at runtime. This is the
-// foundation of many actor patterns:
-//
-//   - State machines
-//   - Protocol switching
-//   - Dynamic message handling
-//
-// Pattern:
-//   void MyActor::switch_to_new_behavior() {
-//     become(hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
-//       // New behavior handler
-//     }});
-//   }
-//
-// -----------------------------------------------------------------------------
-
-class SwitchingActor : public hpactor::EventBasedActor {
+#if HPACTOR_USE_COROUTINES
+    hpactor::sched::CoroutineTask act() override {
+        std::cout << "  EchoActor [" << id().value() << "]: started"
+                  << std::endl;
+        int count = 0;
+        while (count < 4) {
+            auto msg = co_await make_mailbox_awaiter();
+            if (msg.type_id() == EchoMsgTag) {
+                auto text = extract_string(msg.payload());
+                std::cout << "  EchoActor [" << id().value()
+                          << "]: received \"" << text << "\"" << std::endl;
+                // Reply to sender. current_sender must be set manually in the
+                // coroutine path (receive() does it automatically in the
+                // behavior path).
+                context()->set_current_sender(msg.sender_address());
+                context()->reply(
+                    make_string_msg(EchoMsgTag, "echo: " + text));
+                ++count;
+            }
+        }
+        std::cout << "  EchoActor [" << id().value() << "]: done ("
+                  << count << " messages)" << std::endl;
+        co_return;
+    }
+#else
   protected:
     hpactor::Behavior make_behavior() override {
-        // Initial behavior - echo mode
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
-            this->handle_message_echo_mode(std::move(msg));
+            if (msg.type_id() == EchoMsgTag) {
+                std::cout << "  EchoActor [" << id().value()
+                          << "]: received \""
+                          << extract_string(msg.payload()) << "\""
+                          << std::endl;
+                context()->reply(
+                    make_string_msg(EchoMsgTag, "echo: " +
+                                     extract_string(msg.payload())));
+            }
         }};
     }
+#endif
+};
 
+// =============================================================================
+// RelayActor — forwards messages to a target via context()->send()
+// =============================================================================
+
+class RelayActor : public hpactor::EventBasedActor {
   public:
-    SwitchingActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
-        : hpactor::EventBasedActor(ctx, sys) {}
-
-    // Switch to uppercase mode
-    void switch_to_uppercase_mode() {
-        become(hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
-            this->handle_message_uppercase_mode(std::move(msg));
-        }});
-        std::cout << "SwitchingActor: switched to UPPERCASE mode" << std::endl;
+    RelayActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+               hpactor::ActorAddress target)
+        : hpactor::EventBasedActor(ctx, sys), target_(target) {
+#if !HPACTOR_USE_COROUTINES
+        become(make_behavior());
+#endif
     }
 
-    // Switch back to echo mode
-    void switch_to_echo_mode() {
-        become(hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
-            this->handle_message_echo_mode(std::move(msg));
-        }});
-        std::cout << "SwitchingActor: switched to ECHO mode" << std::endl;
+#if HPACTOR_USE_COROUTINES
+    hpactor::sched::CoroutineTask act() override {
+        std::cout << "  RelayActor [" << id().value() << "]: started"
+                  << std::endl;
+        int count = 0;
+        while (count < 2) {
+            auto msg = co_await make_mailbox_awaiter();
+            if (msg.type_id() == EchoMsgTag) {
+                auto text = extract_string(msg.payload());
+                std::cout << "  RelayActor [" << id().value()
+                          << "]: forwarding \"" << text << "\"" << std::endl;
+                context()->send(target_,
+                                make_string_msg(EchoMsgTag,
+                                                "relayed: " + text));
+                ++count;
+            }
+        }
+        std::cout << "  RelayActor [" << id().value() << "]: done ("
+                  << count << " messages)" << std::endl;
+        co_return;
+    }
+#else
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == EchoMsgTag) {
+                auto text = extract_string(msg.payload());
+                std::cout << "  RelayActor [" << id().value()
+                          << "]: forwarding \"" << text << "\"" << std::endl;
+                context()->send(
+                    target_,
+                    make_string_msg(EchoMsgTag, "relayed: " + text));
+            }
+        }};
+    }
+#endif
+
+  private:
+    hpactor::ActorAddress target_;
+};
+
+// =============================================================================
+// SwitchingActor — dynamic behavior switching
+// =============================================================================
+
+class SwitchingActor : public hpactor::EventBasedActor {
+  public:
+    SwitchingActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
+        : hpactor::EventBasedActor(ctx, sys) {
+#if !HPACTOR_USE_COROUTINES
+        become(make_behavior());
+#endif
+    }
+
+#if HPACTOR_USE_COROUTINES
+    hpactor::sched::CoroutineTask act() override {
+        std::cout << "  SwitchingActor [" << id().value()
+                  << "]: started in echo mode" << std::endl;
+        bool uppercase_mode = false;
+        while (true) {
+            auto msg = co_await make_mailbox_awaiter();
+            if (msg.type_id() == UppercaseMsgTag) {
+                std::cout << "  SwitchingActor [" << id().value()
+                          << "]: switching to UPPERCASE mode" << std::endl;
+                uppercase_mode = true;
+            } else if (msg.type_id() == EchoMsgTag) {
+                auto text = extract_string(msg.payload());
+                if (uppercase_mode) {
+                    std::string upper = text;
+                    std::transform(upper.begin(), upper.end(), upper.begin(),
+                                   [](unsigned char c) {
+                                       return std::toupper(c);
+                                   });
+                    std::cout << "  SwitchingActor [" << id().value()
+                              << "]: \"" << text << "\" → \""
+                              << upper << "\"" << std::endl;
+                    context()->set_current_sender(msg.sender_address());
+                    context()->reply(
+                        make_string_msg(EchoMsgTag, "[UPPER] " + upper));
+                } else {
+                    std::cout << "  SwitchingActor [" << id().value()
+                              << "]: received \"" << text << "\""
+                              << std::endl;
+                    context()->set_current_sender(msg.sender_address());
+                    context()->reply(
+                        make_string_msg(EchoMsgTag, "[echo] " + text));
+                }
+            }
+        }
+        co_return;
+    }
+#else
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == UppercaseMsgTag) {
+                std::cout << "  SwitchingActor [" << id().value()
+                          << "]: switching to UPPERCASE mode" << std::endl;
+                become_uppercase();
+            } else if (msg.type_id() == EchoMsgTag) {
+                auto text = extract_string(msg.payload());
+                std::cout << "  SwitchingActor [" << id().value()
+                          << "]: received \"" << text << "\"" << std::endl;
+                context()->reply(
+                    make_string_msg(EchoMsgTag, "[echo] " + text));
+            }
+        }};
     }
 
   private:
-    enum class Mode { Echo, Uppercase };
-
-    void handle_message_echo_mode(hpactor::TypedMessage&& /*msg*/) {
-        // Would pattern match on message type
-        // For now, just note the mode
-        std::cout << "SwitchingActor [Echo]: processing message" << std::endl;
+    void become_uppercase() {
+        become(hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == EchoMsgTag) {
+                auto text = extract_string(msg.payload());
+                std::string upper = text;
+                std::transform(upper.begin(), upper.end(), upper.begin(),
+                               [](unsigned char c) {
+                                   return std::toupper(c);
+                               });
+                std::cout << "  SwitchingActor [" << id().value()
+                          << "]: \"" << text << "\" → \""
+                          << upper << "\"" << std::endl;
+                context()->reply(
+                    make_string_msg(EchoMsgTag, "[UPPER] " + upper));
+            }
+        }});
     }
-
-    void handle_message_uppercase_mode(hpactor::TypedMessage&& /*msg*/) {
-        // Would pattern match on message type
-        std::cout << "SwitchingActor [Uppercase]: processing message" << std::endl;
-    }
+#endif
 };
 
-// -----------------------------------------------------------------------------
-// Main - demonstrates actor usage patterns
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// send_from_main
+// ---------------------------------------------------------------------------
+
+static void send_from_main(hpactor::ActorSystem& system,
+                           hpactor::ActorId target, hpactor::TypeTag tag,
+                           const std::string& text) {
+    system.deliver_local(target, make_string_msg(tag, text));
+}
+
+// =============================================================================
+// Main
+// =============================================================================
 
 int main() {
     std::cout << "=== HPActor Example 01: Echo Actor ===" << std::endl;
 
-    // Create actor system with configuration
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
-    std::cout << "\nNOTE: Actor spawning and message passing are not yet "
-                 "implemented.\n"
-              << "This example demonstrates the intended API usage patterns.\n"
+#if HPACTOR_USE_COROUTINES
+    std::cout << "Dispatch: C++20 coroutines\n" << std::endl;
+#else
+    std::cout << "Dispatch: Behavior callbacks (become/make_behavior)\n"
+              << std::endl;
+#endif
+
+    // Spawn actors
+    auto echo = system.spawn<EchoActor>();
+    std::cout << "Spawned EchoActor (id=" << echo.id().value() << ")"
               << std::endl;
 
-    // -----------------------------------------------------------------
-    // Pattern 1: Creating an actor directly (before spawn is implemented)
-    // -----------------------------------------------------------------
-    // In a complete system:
-    //   auto actor = std::make_shared<EchoActor>(context.get(), system);
-    //   context->add_child(actor);
+    auto relay = system.spawn<RelayActor>(echo.address());
+    std::cout << "Spawned RelayActor (id=" << relay.id().value()
+              << ", target=EchoActor)" << std::endl;
 
-    // -----------------------------------------------------------------
-    // Pattern 2: Creating actor with ActorSystem
-    // -----------------------------------------------------------------
-    // When ActorSystem::spawn() is implemented:
-    //   auto echo = system.spawn<EchoActor>();
-    //   system.send(echo.address(), EchoMessage{"Hello"});
-    //   system.send(echo.address(), UppercaseMessage{"hello"});
-    //   system.send(echo.address(), ShutdownMessage{});
-
-    // -----------------------------------------------------------------
-    // Pattern 3: Behavior switching with become()
-    // -----------------------------------------------------------------
-    //   auto switching = system.spawn<SwitchingActor>();
-    //   system.send(switching.address(), UppercaseMessage{});
-    //   system.send(switching.address(), EchoMessage{}); // Now uppercase
-
-    std::cout << "API patterns demonstrated:" << std::endl;
-    std::cout << "  1. Subclass EventBasedActor" << std::endl;
-    std::cout << "  2. Override make_behavior() to define initial behavior"
+    auto switching = system.spawn<SwitchingActor>();
+    std::cout << "Spawned SwitchingActor (id=" << switching.id().value() << ")"
               << std::endl;
-    std::cout << "  3. Use become() to switch behaviors at runtime" << std::endl;
-    std::cout << "  4. std::visit for type-safe message handling" << std::endl;
 
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    // ---- Demo 1: Direct messaging + reply ----
+    // Send all messages upfront so the first notify_ready drains them all
+    // in a single execute_actor call (the behavior path re-enqueues while
+    // the mailbox is non-empty).
+    std::cout << "\n--- Demo 1: EchoActor direct ---" << std::endl;
+    send_from_main(system, echo.id(), EchoMsgTag, "hello");
+    send_from_main(system, echo.id(), EchoMsgTag, "world");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // ---- Demo 2: Relay (context->send) ----
+    std::cout << "\n--- Demo 2: RelayActor → EchoActor ---" << std::endl;
+    send_from_main(system, relay.id(), EchoMsgTag, "alpha");
+    send_from_main(system, relay.id(), EchoMsgTag, "beta");
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // ---- Demo 3: Behavior switching ----
+    std::cout << "\n--- Demo 3: SwitchingActor mode toggle ---" << std::endl;
+    send_from_main(system, switching.id(), EchoMsgTag, "quiet");
+    send_from_main(system, switching.id(), UppercaseMsgTag, "");
+    send_from_main(system, switching.id(), EchoMsgTag, "LOUD");
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    std::cout << "\n=== Complete ===" << std::endl;
     return 0;
 }

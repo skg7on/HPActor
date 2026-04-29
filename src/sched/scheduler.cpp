@@ -83,8 +83,11 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
         return;
     }
 
-    uint32_t victim = a2ws_.get_victim(0); // Use A2WS for initial placement
-    (void)victim;                          // TODO: Use affinity hint
+    // Round-robin across workers for fair initial placement.
+    // The atomic counter avoids the stale hint issue where get_victim always
+    // returns the same value because record_attempt is only called on steals.
+    static std::atomic<uint32_t> rr_counter{0};
+    uint32_t victim = rr_counter.fetch_add(1, std::memory_order_relaxed);
     WorkItem item{actor, deadline_ns, 0};
 
     // If deadline is INT64_MAX, use priority queue; otherwise use EDF queue
