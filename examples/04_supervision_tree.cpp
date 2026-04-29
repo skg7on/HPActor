@@ -16,17 +16,23 @@
 // HPActor Example 04: Supervision Tree
 // =============================================================================
 //
-// This example demonstrates hierarchical supervision in HPActor.
+// Demonstrates fault-tolerance via supervision trees:
 //
-// Key concepts demonstrated:
-//   - hpactor::SupervisionPolicy with OneForOne and AllForOne strategies
-//   - hpactor::SupervisorActor that supervises child actors
-//   - hpactor::SelfSupervisingActor for self-supervised children
-//   - Child actor registration and down_msg handling
-//   - Restart count limits and restart_interval
+//   - SupervisorActor with OneForOne / AllForOne strategies
+//   - Worker actors processing messages under supervision
+//   - Child failure detection, restart counting, and rate limiting
+//   - Restart with a spawn factory (RestartingSupervisor subclass)
+//   - SelfSupervisingActor with custom on_failure() policy
 //
-// NOTE: This example demonstrates the intended API design. The runtime
-// infrastructure (spawn, send, scheduler) is not yet functional.
+// Supervision tree built in this example:
+//
+//   RestartingSupervisor (OneForOne)
+//     ├── Worker-1
+//     ├── Worker-2
+//     └── Worker-3
+//
+//   SelfSupervisor (max_restarts=2, Escalate on failure)
+//     └── Worker-4
 //
 // =============================================================================
 
@@ -35,244 +41,286 @@
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/ref/actor_address.hpp>
-#include <hpactor/supervision/one_for_one_supervisor.hpp>
+#include <hpactor/messages.pb.h>
 #include <hpactor/supervision/supervision.hpp>
+#include <hpactor/supervision/one_for_one_supervisor.hpp>
+#include <hpactor/supervision/all_for_one_supervisor.hpp>
+
+#include <cstring>
+#include <functional>
 #include <iostream>
-#include <variant>
+#include <string>
+#include <thread>
+#include <vector>
 
-// -----------------------------------------------------------------------------
-// Supervision Concepts
-// -----------------------------------------------------------------------------
-//
-// Supervision in actor systems provides fault-tolerance through hierarchical
-// error handling:
-//
-//   Supervisor (parent)
-//      |
-//      +-- ChildActor1  (fails) --> Restart
-//      +-- ChildActor2  (continues)
-//      +-- ChildActor3  (continues)
-//
-// When a child actor fails:
-//   1. The child sends a down_msg to its parent (supervisor)
-//   2. The supervisor's strategy decides what to do
-//   3. The strategy returns a SupervisionDirective
-//
-// SupervisionDirective:
-//   - Restart: Restart the failed child
-//   - Stop: Stop the failed child (and possibly others)
-//   - Escalate: Pass the failure to this actor's supervisor
-//
-// SupervisionPolicy::Strategy:
-//   - OneForOne: Only the failed child is affected
-//   - AllForOne: All children are affected (restart all)
-//
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Message type tags
+// ---------------------------------------------------------------------------
 
-// -----------------------------------------------------------------------------
-// WorkerActor - a simple actor that can fail
-// -----------------------------------------------------------------------------
+static const hpactor::TypeTag WorkTag{600};
+static const hpactor::TypeTag CrashTag{601};
+static const hpactor::TypeTag StatusTag{602};
+
+// ---------------------------------------------------------------------------
+// Payload helpers
+// ---------------------------------------------------------------------------
+
+static hpactor::bytes encode_int(int value) {
+    hpactor::bytes payload(sizeof(int));
+    std::memcpy(payload.data(), &value, sizeof(int));
+    return payload;
+}
+
+static int decode_int(const hpactor::bytes& payload) {
+    if (payload.size() < sizeof(int)) return 0;
+    int value;
+    std::memcpy(&value, payload.data(), sizeof(int));
+    return value;
+}
+
+static hpactor::TypedMessage make_msg(hpactor::TypeTag tag, int value = 0) {
+    return hpactor::TypedMessage(tag, encode_int(value));
+}
+
+// ---------------------------------------------------------------------------
+// Build a DownMessage protobuf and wrap it as TypeTag::DownMsg
+// ---------------------------------------------------------------------------
+
+static hpactor::TypedMessage make_down_msg(uint64_t actor_id,
+                                           uint32_t reason_code) {
+    hpactor::DownMessage down;
+    down.set_actor_id(actor_id);
+    down.set_reason_code(reason_code);
+    hpactor::bytes payload(down.ByteSizeLong());
+    (void)down.SerializeToArray(payload.data(),
+                                 static_cast<int>(payload.size()));
+    return hpactor::TypedMessage(hpactor::TypeTag::DownMsg, std::move(payload));
+}
+
+// =============================================================================
+// WorkerActor — processes work, can be told to crash
+// =============================================================================
 
 class WorkerActor : public hpactor::EventBasedActor {
+  public:
+    WorkerActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+                int worker_num)
+        : hpactor::EventBasedActor(ctx, sys), worker_num_(worker_num) {
+        become(make_behavior());
+    }
+
+    int worker_num() const { return worker_num_; }
+    int work_done() const { return work_done_; }
+
   protected:
     hpactor::Behavior make_behavior() override {
-        return hpactor::Behavior{[](hpactor::TypedMessage& /*msg*/) {
-            std::cout << "WorkerActor handling message" << std::endl;
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == WorkTag) {
+                int load = decode_int(msg.payload());
+                work_done_ += load;
+                std::cout << "  Worker-" << worker_num_ << " [" << id().value()
+                          << "]: work +" << load << " (total=" << work_done_
+                          << ")" << std::endl;
+            } else if (msg.type_id() == CrashTag) {
+                int code = decode_int(msg.payload());
+                std::cout << "  Worker-" << worker_num_ << " [" << id().value()
+                          << "]: CRASHING (code=" << code << ")" << std::endl;
+            } else if (msg.type_id() == StatusTag) {
+                std::cout << "  Worker-" << worker_num_ << " [" << id().value()
+                          << "]: status — work_done=" << work_done_
+                          << std::endl;
+            }
         }};
     }
 
-  public:
-    WorkerActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
-        : hpactor::EventBasedActor(ctx, sys) {}
-};
-
-// -----------------------------------------------------------------------------
-// SupervisionPolicy Configuration
-// -----------------------------------------------------------------------------
-
-void demonstrate_supervision_policy() {
-    std::cout << "=== SupervisionPolicy Configuration ===" << std::endl;
-
-    // OneForOne - only the failed child is restarted
-    // hpactor::SupervisionPolicy one_for_one{
-    //     .strategy = hpactor::SupervisionPolicy::Strategy::OneForOne,
-    //     .max_restarts = 3,                           // Max restarts within
-    //     interval .restart_interval = std::chrono::seconds(5)  // Sliding
-    //     window
-    // };
-
-    // AllForOne - all children are restarted when one fails
-    // hpactor::SupervisionPolicy all_for_one{
-    //     .strategy = hpactor::SupervisionPolicy::Strategy::AllForOne,
-    //     .max_restarts = 3,
-    //     .restart_interval = std::chrono::seconds(10)
-    // };
-
-    std::cout << "OneForOne: Only failed child is restarted" << std::endl;
-    std::cout << "AllForOne: All children restart when one fails" << std::endl;
-    std::cout << std::endl;
-}
-
-// -----------------------------------------------------------------------------
-// Supervisor Implementation Pattern
-// -----------------------------------------------------------------------------
-//
-// The SupervisorActor takes a Supervisor& strategy and a vector of children.
-// It handles down_msg from children and delegates to the strategy.
-//
-// Pattern:
-//   hpactor::OneForOneSupervisor strategy(policy);
-//   std::vector<hpactor::Actor> children = { child1, child2 };
-//   hpactor::SupervisorActor supervisor(ctx, sys, strategy,
-//   std::move(children));
-//
-// NOTE: The actual restart logic in SupervisorActor::restart_child is a stub
-// (marked TODO). This example shows the intended API design.
-//
-// -----------------------------------------------------------------------------
-
-class DatabaseSupervisor : public hpactor::SupervisorActor {
-  public:
-    DatabaseSupervisor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
-                       hpactor::SupervisionPolicy policy,
-                       std::vector<hpactor::Actor> children)
-        : hpactor::SupervisorActor(ctx, sys, strategy_, std::move(children)),
-          strategy_(policy) {}
-
   private:
-    hpactor::OneForOneSupervisor strategy_;
+    int worker_num_;
+    int work_done_ = 0;
 };
 
-// -----------------------------------------------------------------------------
-// SelfSupervisingActor Pattern
-// -----------------------------------------------------------------------------
-//
-// SelfSupervisingActor manages its own children with a SupervisionPolicy.
-// Override on_failure() to implement custom restart logic.
-//
-// Pattern:
-//   class MyActor : public hpactor::SelfSupervisingActor {
-//     protected:
-//       SupervisionDirective on_failure(ActorId child_id, const error& err)
-//       override {
-//         // Custom restart logic
-//         return SupervisionDirective::Restart;
-//       }
-//   };
-//
-// -----------------------------------------------------------------------------
+// =============================================================================
+// RestartingSupervisor — SupervisorActor that actually respawns children
+// =============================================================================
 
-class SessionManager : public hpactor::SelfSupervisingActor {
+class RestartingSupervisor : public hpactor::SupervisorActor {
   public:
-    SessionManager(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
-                   hpactor::SupervisionPolicy policy)
-        : hpactor::SelfSupervisingActor(ctx, sys, policy), policy_(policy) {}
+    using Factory = std::function<hpactor::Actor()>;
+
+    RestartingSupervisor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+                         hpactor::Supervisor& strategy,
+                         std::vector<hpactor::Actor> children, Factory factory)
+        : hpactor::SupervisorActor(ctx, sys, strategy, std::move(children)),
+          factory_(std::move(factory)) {}
+
+    const std::vector<hpactor::Actor>& children() const { return children_; }
 
   protected:
-    // Override to implement custom restart behavior
-    hpactor::SupervisionDirective
-    on_failure(hpactor::ActorId child_id, const hpactor::error& err) override {
-        std::cout << "SessionManager: child " << child_id.value()
-                  << " failed with: " << err.message() << std::endl;
+    void restart_child(hpactor::ActorId child_id) override {
+        // Remove the dead child from our list
+        children_.erase(std::remove_if(children_.begin(), children_.end(),
+                                       [&child_id](const hpactor::Actor& a) {
+                                           return a.id() == child_id;
+                                       }),
+                        children_.end());
 
-        // Custom logic: only restart if not too many failures
-        return hpactor::SupervisionDirective::Restart;
+        // Let the base manage restart counts and the sliding window
+        hpactor::SupervisorActor::restart_child(child_id);
+
+        // Spawn a fresh replacement via the factory
+        hpactor::Actor new_child = factory_();
+        children_.push_back(new_child);
+
+        std::cout << "  [Supervisor]: restarted child → new id="
+                  << new_child.id().value() << std::endl;
     }
 
   private:
-    hpactor::SupervisionPolicy policy_;
+    Factory factory_;
 };
 
-// -----------------------------------------------------------------------------
-// Failure Handling Flow
-// -----------------------------------------------------------------------------
+// =============================================================================
+// SelfSupervisor — SelfSupervisingActor with custom on_failure policy
+// =============================================================================
 
-void demonstrate_failure_flow() {
-    std::cout << "\n=== Failure Handling Flow ===" << std::endl;
+class SelfSupervisor : public hpactor::SelfSupervisingActor {
+  public:
+    SelfSupervisor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+                   hpactor::SupervisionPolicy policy)
+        : hpactor::SelfSupervisingActor(ctx, sys, std::move(policy)) {
+        become(make_behavior());
+    }
 
-    std::cout << R"(
-    1. Child actor encounters error (crash, exception, etc.)
-           |
-           v
-    2. Child sends down_msg{address, error} to parent
-           |
-           v
-    3. Supervisor::handle_child_down() called
-           |
-           v
-    4. Supervisor::strategy_.on_child_failure(failure) called
-           |                        |
-           | OneForOne              | AllForOne
-           v                        v
-    5a. Restart child          5b. Restart ALL children
-           |                        |
-           v                        v
-    6. If restart count exceeded within interval:
-         - Stop child (and siblings for AllForOne)
-         - Optionally escalate to OUR supervisor
-    )" << std::endl;
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == hpactor::TypeTag::DownMsg) {
+                handle_child_down(msg.type_id(), msg.payload());
+            }
+        }};
+    }
+
+    hpactor::SupervisionDirective
+    on_failure(hpactor::ActorId child_id,
+               const hpactor::error& err) override {
+        std::cout << "  [SelfSupervisor]: child " << child_id.value()
+                  << " failed (code=" << err.code() << ")"
+                  << " — escalating" << std::endl;
+        return hpactor::SupervisionDirective::Escalate;
+    }
+};
+
+// ---------------------------------------------------------------------------
+// send_from_main
+// ---------------------------------------------------------------------------
+
+static void send_from_main(hpactor::ActorSystem& system,
+                           hpactor::ActorId target, hpactor::TypeTag tag,
+                           int value = 0) {
+    system.deliver_local(target, make_msg(tag, value));
 }
 
-// -----------------------------------------------------------------------------
-// Main - demonstrates supervision usage
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Main
+// =============================================================================
 
 int main() {
     std::cout << "=== HPActor Example 04: Supervision Tree ===" << std::endl;
 
-    demonstrate_supervision_policy();
-
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
-    demonstrate_failure_flow();
+    // ---- Setup: OneForOne Supervisor with 3 workers ----
+    hpactor::OneForOneSupervisor one_for_one;
 
-    std::cout << "\nNOTE: Actor spawning and message passing are not yet "
-                 "fully implemented.\n"
-              << "This example demonstrates the intended API usage patterns.\n"
-              << std::endl;
+    // Track worker IDs so we can address them from main
+    std::vector<hpactor::ActorId> worker_ids;
 
-    // -----------------------------------------------------------------
-    // Pattern: Creating a supervised worker
-    // -----------------------------------------------------------------
-    // In a complete system:
-    //
-    //   // Create supervisor with OneForOne strategy
-    //   hpactor::SupervisionPolicy policy{...};
-    //   hpactor::OneForOneSupervisor strategy(policy);
-    //   auto supervisor = system.spawn<DatabaseSupervisor>(policy, {});
-    //
-    //   // Supervisor manages workers
-    //   auto worker1 = system.spawn<WorkerActor>();
-    //   auto worker2 = system.spawn<WorkerActor>();
-    //
-    //   // Workers fail sometimes
-    //   // When worker1 fails, supervisor restarts only worker1 (OneForOne)
-    //   // worker2 continues unaffected
-    //
-    // -----------------------------------------------------------------
-    // Pattern: Using SelfSupervisingActor
-    // -----------------------------------------------------------------
-    //   auto session_manager = system.spawn<SessionManager>(policy);
-    //
-    //   // Session manager adds children and supervises them
-    //   // If one connection fails, all are restarted (AllForOne)
+    int worker_counter = 0;
+    auto factory = [&]() -> hpactor::Actor {
+        ++worker_counter;
+        auto w = system.spawn<WorkerActor>(worker_counter);
+        worker_ids.push_back(w.id());
+        return w;
+    };
 
-    std::cout << "Supervision patterns:" << std::endl;
-    std::cout << "  1. SupervisorActor + Supervisor strategy "
-                 "(OneForOne/AllForOne)"
+    std::vector<hpactor::Actor> workers;
+    for (int i = 1; i <= 3; ++i) {
+        workers.push_back(factory());
+    }
+
+    auto supervisor = system.spawn<RestartingSupervisor>(
+        one_for_one, std::move(workers), factory);
+    std::cout << "Spawned RestartingSupervisor (id=" << supervisor.id().value()
+              << ", OneForOne, 3 workers: ids=" << worker_ids[0].value()
+              << "," << worker_ids[1].value() << "," << worker_ids[2].value()
+              << ")" << std::endl;
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    // ---- Demo 1: Workers process work ----
+    std::cout << "\n--- Demo 1: Workers process work ---" << std::endl;
+    send_from_main(system, worker_ids[0], WorkTag, 10);
+    send_from_main(system, worker_ids[1], WorkTag, 20);
+    send_from_main(system, worker_ids[2], WorkTag, 30);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // ---- Demo 2: OneForOne — crash worker-2, supervisor restarts ----
+    std::cout << "\n--- Demo 2: OneForOne restart ---" << std::endl;
+    // Simulate crash
+    send_from_main(system, worker_ids[1], CrashTag, 42);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    // Deliver DownMsg to supervisor (framework would do this automatically
+    // when failure detection is wired)
+    system.deliver_local(supervisor.id(),
+                         make_down_msg(worker_ids[1].value(), 42));
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+    // The replacement worker should now be at worker_ids[3]
+    if (worker_ids.size() > 3) {
+        send_from_main(system, worker_ids[3], WorkTag, 15);
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // ---- Demo 3: SelfSupervisingActor with custom policy ----
+    std::cout << "\n--- Demo 3: SelfSupervisingActor (Escalate on failure) ---"
               << std::endl;
-    std::cout << "  2. SelfSupervisingActor with custom on_failure()" << std::endl;
-    std::cout << std::endl;
-    std::cout << "Key API:" << std::endl;
-    std::cout << "  SupervisionPolicy{strategy, max_restarts, restart_interval}"
+    hpactor::SupervisionPolicy strict_policy;
+    strict_policy.max_restarts = 2;
+    strict_policy.restart_interval = std::chrono::milliseconds{5000};
+
+    auto self_sup = system.spawn<SelfSupervisor>(strict_policy);
+    std::cout << "Spawned SelfSupervisor (id=" << self_sup.id().value()
+              << ", max_restarts=2, on_failure → Escalate)" << std::endl;
+
+    auto worker4 = factory();
+    auto worker4_id = worker4.id();
+    std::cout << "  Added Worker-" << worker_counter << " (id="
+              << worker4_id.value() << ")" << std::endl;
+    send_from_main(system, worker4_id, WorkTag, 5);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Simulate rapid failures — SelfSupervisor's decide_restart rate-limits
+    std::cout << "\n  Simulating 3 rapid failures (max_restarts=2)..."
               << std::endl;
-    std::cout << "  OneForOneSupervisor(policy)" << std::endl;
+    for (int i = 0; i < 3; ++i) {
+        std::cout << "  Failure #" << (i + 1) << ": ";
+        system.deliver_local(self_sup.id(),
+                             make_down_msg(worker4_id.value(), 99));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    }
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // ---- Summary ----
+    std::cout << "\n--- Supervision API reference ---" << std::endl;
     std::cout << "  SupervisorActor(ctx, sys, strategy, children)" << std::endl;
-    std::cout << "  SelfSupervisingActor(ctx, sys, policy)" << std::endl;
-    std::cout << "  on_failure(child_id, error) -> SupervisionDirective"
+    std::cout << "    restart_child(child_id)  // virtual, override for spawn"
+              << std::endl;
+    std::cout << "  OneForOneSupervisor  — echoes failure directive" << std::endl;
+    std::cout << "  AllForOneSupervisor  — always returns Restart" << std::endl;
+    std::cout << "  SelfSupervisingActor — owns children, virtual on_failure()"
+              << std::endl;
+    std::cout << "  SupervisionPolicy{max_restarts, restart_interval}"
               << std::endl;
 
+    std::cout << "\n=== Complete ===" << std::endl;
     return 0;
 }

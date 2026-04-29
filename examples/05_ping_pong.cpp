@@ -16,289 +16,234 @@
 // HPActor Example 05: Ping-Pong Actor Communication
 // =============================================================================
 //
-// This example demonstrates actor-to-actor communication patterns including:
-//   - hpactor::scoped_actor for non-actor contexts (main function)
-//   - Actor-to-actor messaging via ActorContext::send()
-//   - hpactor::ActorContext::reply() for response messages
-//   - Actor linking with link_to() for death sharing
-//   - Actor monitoring with demonitor()
+// Demonstrates actor-to-actor communication patterns:
 //
-// NOTE: This example demonstrates the intended API design. The runtime
-// infrastructure (spawn, send, reply, scheduler loop) is not yet functional.
+//   - context()->send() for directed messages
+//   - context()->reply() for request-response
+//   - Multiple actors communicating concurrently
+//   - Behavior switching in response to control messages
+//   - The link_to() / monitor() API surface (declared, implementations WIP)
+//
+// Architecture:
+//
+//   PingActor-1 ──(ping)──> PongActor ──(pong/reply)──> PingActor-1
+//   PingActor-2 ──(ping)──> PongActor ──(pong/reply)──> PingActor-2
+//                    ^
+//                    |  control messages toggle echo/reverse mode
+//                   main
 //
 // =============================================================================
 
-#include <hpactor/actor/blocking_actor.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/typed_message.hpp>
-#include <hpactor/actor/scoped_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/ref/actor_address.hpp>
+
+#include <algorithm>
+#include <cctype>
+#include <cstring>
 #include <iostream>
-#include <variant>
+#include <string>
+#include <thread>
 
-// -----------------------------------------------------------------------------
-// Ping-Pong Concepts
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Message type tags
+// ---------------------------------------------------------------------------
+
+static const hpactor::TypeTag PingTag{500};
+static const hpactor::TypeTag PongTag{501};
+static const hpactor::TypeTag ReverseModeTag{502};
+static const hpactor::TypeTag EchoModeTag{503};
+static const hpactor::TypeTag StartTag{504};
+
+// ---------------------------------------------------------------------------
+// Payload helpers — encode/decode int as bytes
+// ---------------------------------------------------------------------------
+
+static hpactor::bytes encode_int(int value) {
+    hpactor::bytes payload(sizeof(int));
+    std::memcpy(payload.data(), &value, sizeof(int));
+    return payload;
+}
+
+static int decode_int(const hpactor::bytes& payload) {
+    if (payload.size() < sizeof(int)) return 0;
+    int value;
+    std::memcpy(&value, payload.data(), sizeof(int));
+    return value;
+}
+
+static hpactor::TypedMessage make_msg(hpactor::TypeTag tag, int value = 0) {
+    return hpactor::TypedMessage(tag, encode_int(value));
+}
+
+// =============================================================================
+// PongActor — receives pings, replies with pongs
+// =============================================================================
 //
-// The ping-pong pattern demonstrates the fundamental request-response pattern
-// in actor systems:
+// Demonstrates behavior switching: normal echo mode vs reverse mode.
+// In echo mode, pong echoes the count. In reverse mode, pong negates it.
 //
-//   Main/ScopedActor
-//        |
-//        | send(pong_addr, PingMessage{count})
-//        v
-//      PongActor
-//        |
-//        | reply(PongMessage{count})
-//        v
-//   (implicit sender, which is PingActor in a full system)
-//
-// With linking, actors share failure:
-//
-//   PingActor --link_to--> PongActor
-//        |
-//        | If PongActor dies:
-//        v
-//   PingActor receives down_msg and can react
-//
-// -----------------------------------------------------------------------------
-
-// -----------------------------------------------------------------------------
-// Message Definitions
-// -----------------------------------------------------------------------------
-
-struct PingMessage {
-    int count; // Number of remaining pings
-};
-
-struct PongMessage {
-    int count; // Number of remaining pongs
-};
-
-struct StartMessage {
-    int initial_count;
-};
-
-struct StopMessage {};
-
-// -----------------------------------------------------------------------------
-// PingActor - sends pings and handles pongs
-// -----------------------------------------------------------------------------
-
-class PingActor : public hpactor::EventBasedActor {
-  protected:
-    hpactor::Behavior make_behavior() override {
-        return hpactor::Behavior{[](hpactor::TypedMessage& /*msg*/) {
-            // In a real implementation, would use std::visit to handle messages
-            std::cout << "PingActor: received message" << std::endl;
-        }};
-    }
-
-  public:
-    PingActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
-        : hpactor::EventBasedActor(ctx, sys) {}
-};
-
-// -----------------------------------------------------------------------------
-// PongActor - receives pings and sends pongs
-// -----------------------------------------------------------------------------
+// =============================================================================
 
 class PongActor : public hpactor::EventBasedActor {
+  public:
+    PongActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
+        : hpactor::EventBasedActor(ctx, sys) {
+        become(make_behavior());
+    }
+
   protected:
     hpactor::Behavior make_behavior() override {
-        return hpactor::Behavior{[](hpactor::TypedMessage& /*msg*/) {
-            std::cout << "PongActor: received message" << std::endl;
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == PingTag) {
+                int count = decode_int(msg.payload());
+                int response = reverse_mode_ ? -count : count;
+                std::cout << "  PongActor [" << id().value() << "]: ping "
+                          << count << " → pong " << response << std::endl;
+                context()->reply(make_msg(PongTag, response));
+            } else if (msg.type_id() == ReverseModeTag) {
+                reverse_mode_ = true;
+                std::cout << "  PongActor [" << id().value()
+                          << "]: switched to REVERSE mode" << std::endl;
+            } else if (msg.type_id() == EchoModeTag) {
+                reverse_mode_ = false;
+                std::cout << "  PongActor [" << id().value()
+                          << "]: switched to ECHO mode" << std::endl;
+            }
         }};
     }
 
-  public:
-    PongActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
-        : hpactor::EventBasedActor(ctx, sys) {}
+  private:
+    bool reverse_mode_ = false;
 };
 
-// -----------------------------------------------------------------------------
-// ScopedActor Pattern
-// -----------------------------------------------------------------------------
-//
-// hpactor::ScopedActor is a blocking actor for non-actor contexts like main().
-// It allows the main thread to participate in the actor system.
-//
-// Pattern:
-//   hpactor::ScopedActor scope(system);
-//
-//   // Spawn actors
-//   auto ping = system.spawn<PingActor>();
-//   auto pong = system.spawn<PongActor>();
-//
-//   // Set pong address in ping actor
-//   scope.send(ping.address(), SetPongMessage{pong.address()});
-//
-//   // Start the exchange
-//   scope.send(ping.address(), StartMessage{5});
-//
-//   // Block until done
-//   scope.receive<StopMessage>();
-//
-// -----------------------------------------------------------------------------
+// =============================================================================
+// PingActor — sends pings to a target, counts responses
+// =============================================================================
 
-void demonstrate_scoped_actor() {
-    std::cout << "=== ScopedActor Pattern ===" << std::endl;
+class PingActor : public hpactor::EventBasedActor {
+  public:
+    PingActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+              hpactor::ActorAddress target, int rounds, const std::string& name)
+        : hpactor::EventBasedActor(ctx, sys), target_(target),
+          rounds_remaining_(rounds), name_(name) {
+        // Demonstrate link_to API (on AbstractActor, safe to call here).
+        // Implementation is a WIP stub, but the API surface is callable.
+        link_to(target);
+        become(make_behavior());
+    }
 
-    std::cout << R"(
-ScopedActor allows non-actor code (like main()) to:
-  - Send messages to actors
-  - Receive responses (blocking)
-  - Link to actors for death notification
-  - Act as an actor itself
+    // Called after spawn completes (context, scheduler, mailbox are set).
+    void on_activate() override {
+        // monitor() requires context_, which is set after construction.
+        // Safe to call here since the spawn flow wires context first.
+        context()->monitor(target_);
+    }
 
-Pattern:
-  hpactor::ScopedActor scope(system);
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == StartTag) {
+                total_rounds_ = rounds_remaining_;
+                std::cout << "  " << name_ << " [" << id().value()
+                          << "]: starting (" << rounds_remaining_
+                          << " rounds)" << std::endl;
+                send_next();
+            } else if (msg.type_id() == PongTag) {
+                int response = decode_int(msg.payload());
+                std::cout << "  " << name_ << " [" << id().value()
+                          << "]: received pong " << response << std::endl;
+                --rounds_remaining_;
+                if (rounds_remaining_ > 0) {
+                    send_next();
+                } else {
+                    std::cout << "  " << name_ << " [" << id().value()
+                              << "]: done (" << total_rounds_ << " rounds)"
+                              << std::endl;
+                }
+            }
+        }};
+    }
 
-  // Spawn actors
-  auto actor = system.spawn<MyActor>();
+  private:
+    void send_next() {
+        context()->send(target_, make_msg(PingTag, rounds_remaining_));
+    }
 
-  // Send messages
-  scope.send(actor.address(), MyMessage{});
+    hpactor::ActorAddress target_;
+    int rounds_remaining_;
+    int total_rounds_ = 0;
+    std::string name_;
+};
 
-  // Receive with timeout
-  auto msg = scope.receive<MyResponse>(std::chrono::seconds(5));
-)" << std::endl;
+// ---------------------------------------------------------------------------
+// send_from_main
+// ---------------------------------------------------------------------------
+
+static void send_from_main(hpactor::ActorSystem& system,
+                           hpactor::ActorId target, hpactor::TypeTag tag,
+                           int value = 0) {
+    system.deliver_local(target, make_msg(tag, value));
 }
 
-// -----------------------------------------------------------------------------
-// Linking Pattern
-// -----------------------------------------------------------------------------
-//
-// Linking creates a death-sharing relationship between actors:
-//
-//   ActorA --link_to--> ActorB
-//     |
-//     +-- If ActorB dies, ActorA receives down_msg
-//     +-- If ActorA dies, ActorB receives down_msg
-//
-// This is useful for:
-//   - Actor groups that should fail together
-//   - Cleanup when dependencies die
-//   - Cascading shutdown
-//
-// -----------------------------------------------------------------------------
-
-void demonstrate_linking() {
-    std::cout << "\n=== Linking Pattern ===" << std::endl;
-
-    std::cout << R"(
-Linking creates death-sharing relationships:
-
-  actor->link_to(other_addr);
-
-  // If other_addr dies, actor receives:
-  context()->receive(down_msg{other_addr, reason});
-
-  // Unlink to remove the relationship:
-  actor->unlink_from(other_addr);
-
-Use cases:
-  - Worker processes linked to their supervisor
-  - Resource cleanup when dependency dies
-  - Cascading shutdown propagation
-)" << std::endl;
-}
-
-// -----------------------------------------------------------------------------
-// Monitoring Pattern
-// -----------------------------------------------------------------------------
-//
-// Monitoring is one-way death notification (unlike linking):
-//
-//   ActorA --monitors--> ActorB
-//     |
-//     +-- If ActorB dies, ActorA receives down_msg
-//     +-- But if ActorA dies, ActorB is unaffected
-//
-// Unlike linking, monitoring doesn't affect the monitored actor.
-//
-// -----------------------------------------------------------------------------
-
-void demonstrate_monitoring() {
-    std::cout << "\n=== Monitoring Pattern ===" << std::endl;
-
-    std::cout << R"(
-Monitoring is one-way death notification:
-
-  context()->monitor(target_addr);
-
-  // When target dies, this actor receives:
-  down_msg{terminated_actor: target_addr, reason: error{}}
-
-  // Stop monitoring:
-  demonitor(target_addr);
-
-Use cases:
-  - Supervisors monitoring children (one-way)
-  - Watchdogs that react to but don't affect others
-  - Distributed system health monitoring
-)" << std::endl;
-}
-
-// -----------------------------------------------------------------------------
-// Main - demonstrates actor communication patterns
-// -----------------------------------------------------------------------------
+// =============================================================================
+// Main
+// =============================================================================
 
 int main() {
-    std::cout << "=== HPActor Example 05: Ping-Pong Actor Communication ==="
+    std::cout << "=== HPActor Example 05: Ping-Pong Communication ==="
               << std::endl;
 
-    demonstrate_scoped_actor();
-    demonstrate_linking();
-    demonstrate_monitoring();
-
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
-    std::cout << "\nNOTE: Actor spawning and message passing are not yet "
-                 "fully implemented.\n"
-              << "This example demonstrates the intended API usage patterns.\n"
+    // Spawn PongActor — the shared target
+    auto pong = system.spawn<PongActor>();
+    std::cout << "Spawned PongActor (id=" << pong.id().value() << ")"
               << std::endl;
 
-    // -----------------------------------------------------------------
-    // Pattern: Complete ping-pong exchange
-    // -----------------------------------------------------------------
-    // In a complete system:
-    //
-    //   hpactor::ActorSystem system(config);
-    //   hpactor::ScopedActor scope(system);
-    //
-    //   // Spawn actors
-    //   auto ping = system.spawn<PingActor>();
-    //   auto pong = system.spawn<PongActor>();
-    //
-    //   // Set pong address in ping actor
-    //   ping->set_pong_address(pong.address());
-    //
-    //   // Link ping to pong (if pong dies, ping reacts)
-    //   ping->link_to(pong.address());
-    //
-    //   // Start the exchange
-    //   ping->start(5);
-    //
-    //   // Or with typed actors:
-    //   hpactor::typed_actor<
-    //       hpactor::result<void>(SetPongMessage),
-    //       hpactor::result<void>(StartMessage)
-    //   > typed_ping = ping;
-    //   typed_ping(SetPongMessage{pong.address()});
-    //   typed_ping(StartMessage{5});
+    // Spawn two PingActors targeting the same PongActor
+    auto ping1 = system.spawn<PingActor>(pong.address(), 3, "PingActor-1");
+    std::cout << "Spawned PingActor-1 (id=" << ping1.id().value()
+              << ", rounds=3, linked+monitoring PongActor)" << std::endl;
 
-    std::cout << "\nKey communication APIs:" << std::endl;
-    std::cout << "  context()->send(addr, message)  // Send to actor" << std::endl;
-    std::cout << "  context()->reply(message)       // Reply to sender" << std::endl;
-    std::cout << "  actor->link_to(addr)            // Death sharing" << std::endl;
-    std::cout << "  context()->monitor(addr)         // One-way watch" << std::endl;
-    std::cout << "  scope.receive<T>()               // Blocking receive"
+    auto ping2 = system.spawn<PingActor>(pong.address(), 2, "PingActor-2");
+    std::cout << "Spawned PingActor-2 (id=" << ping2.id().value()
+              << ", rounds=2, linked+monitoring PongActor)" << std::endl;
+
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    // ---- Demo 1: Echo mode ping-pong ----
+    std::cout << "\n--- Demo 1: Echo-mode ping-pong ---" << std::endl;
+    send_from_main(system, ping1.id(), StartTag);
+    send_from_main(system, ping2.id(), StartTag);
+    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+
+    // ---- Demo 2: Reverse mode ----
+    std::cout << "\n--- Demo 2: Reverse-mode ping-pong ---" << std::endl;
+    auto ping3 = system.spawn<PingActor>(pong.address(), 2, "PingActor-3");
+    std::cout << "Spawned PingActor-3 (id=" << ping3.id().value()
+              << ", rounds=2)" << std::endl;
+    send_from_main(system, pong.id(), ReverseModeTag);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    send_from_main(system, ping3.id(), StartTag);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    // Switch back to echo mode
+    send_from_main(system, pong.id(), EchoModeTag);
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+
+    // ---- Demo 3: API surface — link_to / monitor ----
+    std::cout << "\n--- Demo 3: Link/Monitor API ---" << std::endl;
+    std::cout << "  link_to() and monitor() are called in PingActor's"
+              << std::endl;
+    std::cout << "  constructor. Implementations are WIP stubs, but the"
+              << std::endl;
+    std::cout << "  API surface is fully declared and callable."
               << std::endl;
 
+    std::cout << "\n=== Complete ===" << std::endl;
     return 0;
 }

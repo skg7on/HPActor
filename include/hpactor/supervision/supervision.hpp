@@ -59,14 +59,18 @@ class SupervisorActor : public EventBasedActor {
   protected:
     Behavior make_behavior() override;
 
-  private:
-    void handle_child_down(TypeTag tag, const bytes& payload);
-    void restart_child(ActorId child_id);
+    // Override to add actual spawn logic for restarted children.
+    // The base implementation manages restart counts and the sliding window.
+    virtual void restart_child(ActorId child_id);
     void restart_all_children();
+
     Supervisor& strategy_;
     std::vector<Actor> children_;
     std::unordered_map<ActorId, uint32_t> restart_counts_;
     std::chrono::steady_clock::time_point first_failure_time_;
+
+  private:
+    void handle_child_down(TypeTag tag, const bytes& payload);
 };
 
 // SelfSupervisingActor - EventBasedActor that manages its own children
@@ -89,9 +93,9 @@ class SelfSupervisingActor : public EventBasedActor {
 
   protected:
     virtual SupervisionDirective on_failure(ActorId child_id, const error& err);
+    void handle_child_down(TypeTag tag, const bytes& payload);
 
   private:
-    void handle_child_down(TypeTag tag, const bytes& payload);
     SupervisionDirective decide_restart(ActorId child_id, const error& err);
     std::vector<Actor> children_;
     SupervisionPolicy policy_;

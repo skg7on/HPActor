@@ -42,7 +42,9 @@ SupervisorActor::SupervisorActor(ActorContext* ctx, ActorSystem& sys,
                                  Supervisor& strategy, std::vector<Actor> children)
     : EventBasedActor(ctx, sys), strategy_(strategy),
       children_(std::move(children)),
-      first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
+      first_failure_time_(std::chrono::steady_clock::time_point::min()) {
+    become(make_behavior());
+}
 
 Behavior SupervisorActor::make_behavior() {
     return Behavior{[this](TypedMessage& msg) {

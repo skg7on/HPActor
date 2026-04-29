@@ -34,9 +34,10 @@ class TypedEventBasedActor : public LocalActor {
     }
 
     template <typename T>
-    typename handler_type<T>::result operator()(T&& /*msg*/) {
-        using handler_t = handler_type<T>;
-        return typename handler_t::result{};
+    result<typename matching_handler_type<std::decay_t<T>,
+                                          Signatures...>::result>
+    operator()(T&& msg) {
+        return behavior_.template invoke_msg<T>(std::forward<T>(msg));
     }
 
   protected:
