@@ -23,6 +23,7 @@
 namespace hpactor {
 
 // Forward declarations
+class ActorContext;
 class ActorSystem;
 namespace net {
 enum class OpType : uint32_t;
@@ -87,6 +88,10 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
 
   protected:
     AbstractActor(ActorId id, ActorType type, ActorSystem& sys);
+
+    // Overridden by LocalActor to return the ActorContext.
+    // Returns nullptr for actors without a context (e.g., system actor).
+    virtual ActorContext* actor_context() { return nullptr; }
 
   private:
     ActorId id_;
