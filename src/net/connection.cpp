@@ -19,7 +19,9 @@ namespace hpactor {
 namespace net {
 
 Connection::Connection(CommunicationEndpoint remote_endpoint)
-    : remote_endpoint_(remote_endpoint) {}
+    : remote_endpoint_(remote_endpoint) {
+    read_buffer_.reserve(adt::StreamBuffer::kDefaultInitialCapacity);
+}
 
 Connection::~Connection() = default;
 

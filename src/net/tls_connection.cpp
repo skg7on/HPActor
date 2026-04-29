@@ -65,6 +65,8 @@ TlsConnection::TlsConnection(CommunicationEndpoint remote_endpoint,
                              TlsContext* tls_context, EventLoop* loop, int socket_fd)
     : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
       tls_context_(tls_context), loop_(loop), fd_(socket_fd) {
+    read_buffer_.reserve(adt::StreamBuffer::kDefaultInitialCapacity);
+    write_buffer_.reserve(adt::StreamBuffer::kDefaultInitialCapacity);
     // Generate random client nonce
     RAND_bytes(client_nonce_.data(), static_cast<int>(kNonceSize));
 }

@@ -25,6 +25,9 @@
 #include <variant>
 #include <vector>
 
+#include <hpactor/adt/stream_buffer.hpp>
+#include <vector>
+
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
@@ -420,7 +423,7 @@ struct TraceContext {
 // -----------------------------------------------------------------------------
 // bytes - byte buffer type
 // -----------------------------------------------------------------------------
-using bytes = std::vector<uint8_t>;
+using bytes = adt::StreamBuffer;
 
 // -----------------------------------------------------------------------------
 // TypeTag - type identifier for serialization (replaces RTTI)

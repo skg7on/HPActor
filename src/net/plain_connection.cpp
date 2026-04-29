@@ -27,7 +27,10 @@ namespace net {
 PlainConnection::PlainConnection(CommunicationEndpoint remote_endpoint,
                                  EventLoop* loop, int socket_fd)
     : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
-      loop_(loop), fd_(socket_fd) {}
+      loop_(loop), fd_(socket_fd) {
+    read_buffer_.reserve(kReadChunkSize);
+    write_buffer_.reserve(kReadChunkSize);
+}
 
 PlainConnection::~PlainConnection() {
     close();
