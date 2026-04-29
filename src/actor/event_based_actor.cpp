@@ -146,4 +146,30 @@ void EventBasedActor::on_deactivate() {
 #endif
 }
 
+void EventBasedActor::on_exit() {
+    auto* ctx = context();
+    if (!ctx) return;
+
+    // Build DownMessage
+    hpactor::DownMessage pb;
+    pb.set_actor_id(id().value());
+    pb.set_reason_code(exit_reason_);
+
+    bytes payload(pb.ByteSizeLong());
+    (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    // Send DownMsg to all linked actors
+    for (const auto& addr : ctx->linked_actors()) {
+        TypedMessage down_msg(TypeTag::DownMsg, bytes(payload));
+        ctx->send(addr, std::move(down_msg));
+    }
+
+    // Send DownMsg to all monitored actors
+    for (const auto& addr : ctx->monitored_actors()) {
+        TypedMessage down_msg(TypeTag::DownMsg, bytes(payload));
+        ctx->send(addr, std::move(down_msg));
+    }
+    // linked_ and monitored_ vectors will be destroyed with the context
+}
+
 } // namespace hpactor
