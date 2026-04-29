@@ -24,6 +24,9 @@ namespace hpactor {
 // -----------------------------------------------------------------------------
 template <typename T> class StatefulActor : public EventBasedActor {
   public:
+    StatefulActor(ActorContext* ctx, ActorSystem& sys)
+        : EventBasedActor(ctx, sys) {}
+
     T& state() {
         return state_;
     }

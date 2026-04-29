@@ -16,288 +16,221 @@
 // HPActor Example 02: Stateful Actor
 // =============================================================================
 //
-// This example demonstrates how to use hpactor::StatefulActor to manage
-// explicit state that persists across message handlers.
+// Demonstrates StatefulActor<T> — an EventBasedActor with explicit state that
+// persists across message handlers. Uses the behavior-based dispatch path
+// (the default; StatefulActor mandates make_behavior()).
 //
-// Key concepts demonstrated:
+// Key concepts:
 //   - Subclassing hpactor::StatefulActor<T> with a custom state struct
-//   - Accessing state via state() and state() const accessors
-//   - State persistence across message handlers
-//   - Multiple message types for different operations on state
-//
-// NOTE: This example demonstrates the intended API design. The runtime
-// infrastructure (spawn, send, scheduler) is not yet functional.
+//   - Accessing state via state() and state() const
+//   - Typed message dispatch in make_behavior()
+//   - context()->reply() to respond to the sender
 //
 // =============================================================================
 
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
+
+#include <cstring>
 #include <iostream>
 #include <string>
+#include <thread>
 
-// -----------------------------------------------------------------------------
-// State Struct Definition
-// -----------------------------------------------------------------------------
-//
-// The state struct is the single source of truth for actor state.
-// It can contain any data types and is accessed via StatefulActor::state().
-//
-// Pattern:
-//   struct MyState {
-//     int counter = 0;
-//     std::string name;
-//     std::vector<int> history;
-//   };
-//
-//   class MyActor : public hpactor::StatefulActor<MyState> {
-//     protected:
-//       hpactor::Behavior make_behavior() override { ... }
-//   };
-//
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// Message type tags
+// ---------------------------------------------------------------------------
+
+static const hpactor::TypeTag IncrementTag{200};
+static const hpactor::TypeTag DecrementTag{201};
+static const hpactor::TypeTag ResetTag{202};
+static const hpactor::TypeTag GetValueTag{203};
+static const hpactor::TypeTag SetValueTag{204};
+
+// ---------------------------------------------------------------------------
+// Payload helpers — encode/decode ints as bytes
+// ---------------------------------------------------------------------------
+
+static hpactor::bytes encode_int(int value) {
+    hpactor::bytes payload(sizeof(int));
+    std::memcpy(payload.data(), &value, sizeof(int));
+    return payload;
+}
+
+static int decode_int(const hpactor::bytes& payload) {
+    if (payload.size() < sizeof(int)) return 0;
+    int value;
+    std::memcpy(&value, payload.data(), sizeof(int));
+    return value;
+}
+
+static hpactor::TypedMessage make_msg(hpactor::TypeTag tag, int value = 0) {
+    return hpactor::TypedMessage(tag, encode_int(value));
+}
+
+// =============================================================================
+// CounterState — state for CounterActor
+// =============================================================================
 
 struct CounterState {
-    int value = 0;       // Current counter value
-    int max_value = 100; // Upper bound (prevent overflow)
-    int min_value = 0;   // Lower bound
-    std::string name;    // Optional name for debugging
+    int value = 0;
+    int max_value = 100;
+    int min_value = 0;
 };
 
-// -----------------------------------------------------------------------------
-// Message Definitions
-// -----------------------------------------------------------------------------
+// =============================================================================
+// CounterActor — increment, decrement, reset, get-value with bounds checking
+// =============================================================================
 
-struct IncrementMessage {
-    int delta = 1; // Amount to increment (default: 1)
-};
-
-struct DecrementMessage {
-    int delta = 1; // Amount to decrement (default: 1)
-};
-
-struct ResetMessage {};
-
-struct GetValueMessage {};
-
-struct SetBoundsMessage {
-    int min_value;
-    int max_value;
-};
-
-// -----------------------------------------------------------------------------
-// CounterActor - demonstrates StatefulActor with explicit state
-// -----------------------------------------------------------------------------
-//
-// StatefulActor<T> is an EventBasedActor with an explicit state object.
-// State persists across message handlers - unlike implicit member variables,
-// the state is clearly delimited and can be inspected/dumped easily.
-//
-// Pattern:
-//   class CounterActor : public hpactor::StatefulActor<CounterState> {
-//     protected:
-//       hpactor::Behavior make_behavior() override {
-//         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
-//           // Access state via state().member
-//         }};
-//       }
-//     public:
-//       CounterActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
-//         : hpactor::StatefulActor<CounterState>(ctx, sys) {
-//         state().name = "counter";  // Initialize state
-//       }
-//   };
-//
-// -----------------------------------------------------------------------------
-
-// Note: StatefulActor doesn't properly inherit constructors from
-// EventBasedActor. This is a known issue in the framework. Once fixed, the
-// constructor would be:
-//
-//   CounterActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
-//       : hpactor::StatefulActor<CounterState>(ctx, sys) {
-//       // Initialize state
-//       state().name = "counter";
-//       state().value = 0;
-//       state().min_value = 0;
-//       state().max_value = 100;
-//   }
-//
-// For now, the pattern is demonstrated without direct instantiation.
-
-class CounterActor /*: public hpactor::StatefulActor<CounterState>*/ {
-    // protected:
-    //   hpactor::Behavior make_behavior() override {
-    //       return hpactor::Behavior{[this](hpactor::TypedMessage& /*msg*/)
-    //       {
-    //           // In a real implementation, would use std::visit to handle
-    //           messages
-    //           // and modify state via state().member = value
-    //           std::cout << "CounterActor [" << state().name << "] handling
-    //           message"
-    //                     << std::endl;
-    //       }};
-    //   }
-
+class CounterActor : public hpactor::StatefulActor<CounterState> {
   public:
-    CounterActor(/*hpactor::ActorContext* ctx, hpactor::ActorSystem& sys*/) {
-        // When StatefulActor constructor inheritance is fixed:
-        // : hpactor::StatefulActor<CounterState>(ctx, sys) {
-        // Initialize state
-        name_ = "counter";
-        value_ = 0;
-        min_value_ = 0;
-        max_value_ = 100;
+    CounterActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+                 int initial = 0, int min_val = 0, int max_val = 100)
+        : hpactor::StatefulActor<CounterState>(ctx, sys) {
+        state().value = initial;
+        state().min_value = min_val;
+        state().max_value = max_val;
+        become(make_behavior());
     }
 
-    // Demo state accessors (would be state() in real implementation)
-    int value() const {
-        return value_;
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == IncrementTag) {
+                int delta = decode_int(msg.payload());
+                if (delta <= 0) delta = 1;
+                state().value += delta;
+                if (state().value > state().max_value)
+                    state().value = state().max_value;
+                std::cout << "  CounterActor [" << id().value()
+                          << "]: +" << delta << " → " << state().value
+                          << std::endl;
+            } else if (msg.type_id() == DecrementTag) {
+                int delta = decode_int(msg.payload());
+                if (delta <= 0) delta = 1;
+                state().value -= delta;
+                if (state().value < state().min_value)
+                    state().value = state().min_value;
+                std::cout << "  CounterActor [" << id().value()
+                          << "]: -" << delta << " → " << state().value
+                          << std::endl;
+            } else if (msg.type_id() == ResetTag) {
+                state().value = 0;
+                std::cout << "  CounterActor [" << id().value()
+                          << "]: reset → 0" << std::endl;
+            } else if (msg.type_id() == GetValueTag) {
+                std::cout << "  CounterActor [" << id().value()
+                          << "]: value = " << state().value << std::endl;
+                context()->reply(make_msg(GetValueTag, state().value));
+            }
+        }};
     }
-    int max_value() const {
-        return max_value_;
-    }
-    int min_value() const {
-        return min_value_;
-    }
-    const std::string& name() const {
-        return name_;
-    }
-
-    void set_value(int v) {
-        value_ = v;
-    }
-    void increment(int delta) {
-        value_ += delta;
-    }
-    void decrement(int delta) {
-        value_ -= delta;
-    }
-    void reset() {
-        value_ = 0;
-    }
-
-  private:
-    // These would be part of CounterState in real StatefulActor
-    std::string name_;
-    int value_ = 0;
-    int max_value_ = 100;
-    int min_value_ = 0;
-
-    // Message handlers would look like:
-    //
-    // void handle(IncrementMessage msg) {
-    //   state().value += msg.delta;
-    //   if (state().value > state().max_value) {
-    //     state().value = state().max_value;
-    //   }
-    // }
 };
 
-// -----------------------------------------------------------------------------
-// GaugeActor - demonstrates different state with same pattern
-// -----------------------------------------------------------------------------
+// =============================================================================
+// GaugeState — state for GaugeActor
+// =============================================================================
 
 struct GaugeState {
     double value = 0.0;
-    double max_value = 1000.0;
-    std::string unit;
+    double max_value = 100.0;
 };
 
-// Note: Same constructor inheritance issue as CounterActor
-// When framework is fixed:
-//   class GaugeActor : public hpactor::StatefulActor<GaugeState> { ... }
+// =============================================================================
+// GaugeActor — set-value and bounded increment, demonstrates different state
+// =============================================================================
 
-class GaugeActor {
+class GaugeActor : public hpactor::StatefulActor<GaugeState> {
   public:
-    GaugeActor() {
-        unit_ = "percent";
-        value_ = 0.0;
-        max_value_ = 100.0;
+    GaugeActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+               double initial = 0.0, double max_val = 100.0)
+        : hpactor::StatefulActor<GaugeState>(ctx, sys) {
+        state().value = initial;
+        state().max_value = max_val;
+        become(make_behavior());
     }
 
-    double value() const {
-        return value_;
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == IncrementTag) {
+                double delta = static_cast<double>(decode_int(msg.payload()));
+                state().value += delta;
+                if (state().value > state().max_value)
+                    state().value = state().max_value;
+                std::cout << "  GaugeActor [" << id().value()
+                          << "]: +" << delta << " → " << state().value
+                          << std::endl;
+            } else if (msg.type_id() == SetValueTag) {
+                double new_val = static_cast<double>(decode_int(msg.payload()));
+                state().value = new_val;
+                if (state().value > state().max_value)
+                    state().value = state().max_value;
+                std::cout << "  GaugeActor [" << id().value()
+                          << "]: set → " << state().value << std::endl;
+            } else if (msg.type_id() == GetValueTag) {
+                std::cout << "  GaugeActor [" << id().value()
+                          << "]: value = " << state().value << std::endl;
+                context()->reply(make_msg(GetValueTag,
+                                          static_cast<int>(state().value)));
+            }
+        }};
     }
-    double max_value() const {
-        return max_value_;
-    }
-    const std::string& unit() const {
-        return unit_;
-    }
-
-    void set_value(double v) {
-        value_ = v;
-    }
-    void increment(double delta) {
-        value_ += delta;
-        if (value_ > max_value_)
-            value_ = max_value_;
-    }
-    void decrement(double delta) {
-        value_ -= delta;
-        if (value_ < 0)
-            value_ = 0;
-    }
-    void reset() {
-        value_ = 0.0;
-    }
-
-  private:
-    std::string unit_;
-    double value_ = 0.0;
-    double max_value_ = 100.0;
 };
 
-// -----------------------------------------------------------------------------
-// Main - demonstrates stateful actor usage
-// -----------------------------------------------------------------------------
+// ---------------------------------------------------------------------------
+// send_from_main — enqueue a message from outside the actor system
+// ---------------------------------------------------------------------------
+
+static void send_from_main(hpactor::ActorSystem& system,
+                           hpactor::ActorId target, hpactor::TypeTag tag,
+                           int value = 0) {
+    system.deliver_local(target, make_msg(tag, value));
+}
+
+// =============================================================================
+// Main
+// =============================================================================
 
 int main() {
     std::cout << "=== HPActor Example 02: Stateful Actor ===" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024};
     hpactor::ActorSystem system(config);
 
-    std::cout << "\nNOTE: Actor spawning and message passing are not yet "
-                 "implemented.\n"
-              << "This example demonstrates the intended API usage patterns.\n"
-              << std::endl;
+    // Spawn actors with initial state
+    auto counter = system.spawn<CounterActor>(10, 0, 100);
+    std::cout << "Spawned CounterActor (id=" << counter.id().value()
+              << ", initial=10, bounds=[0,100])" << std::endl;
 
-    std::cout << "StatefulActor pattern:" << std::endl;
-    std::cout << "  1. Define a state struct (CounterState, GaugeState)"
-              << std::endl;
-    std::cout << "  2. Subclass StatefulActor<YourStateStruct>" << std::endl;
-    std::cout << "  3. Access state via state() and state() const" << std::endl;
-    std::cout << "  4. State persists across message handlers" << std::endl;
-    std::cout << std::endl;
+    auto gauge = system.spawn<GaugeActor>(50.0, 100.0);
+    std::cout << "Spawned GaugeActor (id=" << gauge.id().value()
+              << ", initial=50.0, max=100.0)" << std::endl;
 
-    // -----------------------------------------------------------------
-    // Pattern: Using StatefulActor with custom state
-    // -----------------------------------------------------------------
-    // In a complete system:
-    //
-    //   auto counter = system.spawn<CounterActor>();
-    //
-    //   // Counter starts at 0
-    //   system.send(counter.address(), IncrementMessage{10});  // value = 10
-    //   system.send(counter.address(), IncrementMessage{5});   // value = 15
-    //   system.send(counter.address(), DecrementMessage{3});  // value = 12
-    //   system.send(counter.address(), GetValueMessage{});     // prints 12
-    //   system.send(counter.address(), ResetMessage{});       // value = 0
-    //
-    //   // With bounds
-    //   system.send(counter.address(), SetBoundsMessage{0, 100});
-    //   system.send(counter.address(), IncrementMessage{200}); // clamped to
-    //   100
+    std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
-    std::cout << "Key API:" << std::endl;
-    std::cout << "  StatefulActor<StateStruct>::state() -> T&" << std::endl;
-    std::cout << "  StatefulActor<StateStruct>::state() const -> const T&"
-              << std::endl;
-    std::cout << "  state().member  // Direct access to state fields" << std::endl;
+    // ---- Demo 1: CounterActor operations ----
+    std::cout << "\n--- Demo 1: CounterActor ---" << std::endl;
+    send_from_main(system, counter.id(), IncrementTag, 5);
+    send_from_main(system, counter.id(), IncrementTag, 3);
+    send_from_main(system, counter.id(), DecrementTag, 2);
+    send_from_main(system, counter.id(), GetValueTag);
+    send_from_main(system, counter.id(), ResetTag);
+    send_from_main(system, counter.id(), GetValueTag);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
+    // ---- Demo 2: GaugeActor operations ----
+    std::cout << "\n--- Demo 2: GaugeActor ---" << std::endl;
+    send_from_main(system, gauge.id(), IncrementTag, 25);
+    send_from_main(system, gauge.id(), IncrementTag, 30);
+    send_from_main(system, gauge.id(), GetValueTag);
+    send_from_main(system, gauge.id(), SetValueTag, 10);
+    send_from_main(system, gauge.id(), IncrementTag, 5);
+    send_from_main(system, gauge.id(), GetValueTag);
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+
+    std::cout << "\n=== Complete ===" << std::endl;
     return 0;
 }
