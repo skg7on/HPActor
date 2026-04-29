@@ -16,6 +16,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/messages.pb.h>
 
 namespace hpactor {
 
@@ -25,6 +26,51 @@ EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
 void EventBasedActor::on_activate() {}
 
 void EventBasedActor::receive(TypedMessage& msg) {
+    // -- System message interception (link / monitor / death) --
+    {
+        auto* ctx = context();
+        switch (msg.type_id()) {
+            case TypeTag::LinkMsg: {
+                // Bidirectional link handshake: add sender to our linked_ set
+                if (ctx) {
+                    const auto& sender = msg.sender_address();
+                    bool already_linked = false;
+                    for (const auto& linked : ctx->linked_actors()) {
+                        if (linked == sender) {
+                            already_linked = true;
+                            break;
+                        }
+                    }
+                    if (!already_linked) {
+                        ctx->add_linked(sender);
+                    }
+                }
+                return; // System message — fully handled, do not forward
+            }
+
+            case TypeTag::UnlinkMsg: {
+                if (ctx) {
+                    ctx->remove_linked(msg.sender_address());
+                }
+                return; // System message — fully handled
+            }
+
+            case TypeTag::DownMsg: {
+                // Clean up linked/monitored entries for the dead actor
+                if (ctx) {
+                    ctx->remove_linked(msg.sender_address());
+                    ctx->remove_monitored(msg.sender_address());
+                }
+                // Fall through — behavior/supervision must see DownMsg
+                break;
+            }
+
+            default:
+                break;
+        }
+    }
+    // -- End system message interception --
+
     if (!handlers_initialized_) {
         initialize_proto_handlers();
     }
