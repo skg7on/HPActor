@@ -143,7 +143,8 @@ class RelayActor : public hpactor::EventBasedActor {
         int count = 0;
         while (count < 2) {
             auto msg = co_await make_mailbox_awaiter();
-            if (msg.type_id() == EchoMsgTag) {
+            if (msg.type_id() == EchoMsgTag
+                && msg.sender_address().id == hpactor::ActorId{0}) {
                 auto text = extract_string(msg.payload());
                 std::cout << "  RelayActor [" << id().value()
                           << "]: forwarding \"" << text << "\"" << std::endl;
@@ -163,12 +164,16 @@ class RelayActor : public hpactor::EventBasedActor {
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             if (msg.type_id() == EchoMsgTag) {
-                auto text = extract_string(msg.payload());
-                std::cout << "  RelayActor [" << id().value()
-                          << "]: forwarding \"" << text << "\"" << std::endl;
-                context()->send(
-                    target_,
-                    make_string_msg(EchoMsgTag, "relayed: " + text));
+                // Only forward messages from main (id=0), not replies from
+                // EchoActor — otherwise we create an infinite forward loop.
+                if (msg.sender_address().id == hpactor::ActorId{0}) {
+                    auto text = extract_string(msg.payload());
+                    std::cout << "  RelayActor [" << id().value()
+                              << "]: forwarding \"" << text << "\"" << std::endl;
+                    context()->send(
+                        target_,
+                        make_string_msg(EchoMsgTag, "relayed: " + text));
+                }
             }
         }};
     }

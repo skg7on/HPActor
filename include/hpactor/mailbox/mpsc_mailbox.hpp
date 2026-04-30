@@ -106,6 +106,20 @@ template <typename T> class MPSCMailbox {
 
             // Save last dequeued for orphan recovery.
             last_dequeued_.store(next, std::memory_order_release);
+
+            // Fix dangling head_ pointer: if head_ still points to the
+            // node we are about to free, reset it to the stub so that
+            // the next producer's head_.exchange() does not write to
+            // freed memory (mpsc_next.store).
+            {
+                T* h = head_.load(std::memory_order_acquire);
+                if (h == next) {
+                    head_.compare_exchange_strong(
+                        next, static_cast<T*>(&stub_),
+                        std::memory_order_release, std::memory_order_relaxed);
+                }
+            }
+
             count_.fetch_sub(1, std::memory_order_release);
             return next;
         }
