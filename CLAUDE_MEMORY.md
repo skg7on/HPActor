@@ -12,7 +12,16 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current State
 
-**Actor Core Framework:** ✅ Complete (Phase A-G)
+**Actor Core Framework:** ✅ Complete (Phase A-G, 65 tests passing)
+
+**Link/Monitor:** ✅ Complete (2026-04-29)
+- `link_to()`/`unlink_from()` — bidirectional death sharing via LinkMsg/UnlinkMsg
+- `monitor()`/`demonitor()` — one-way death watching
+- Death propagation via `on_exit()` with `DownMsg` to linked + monitored actors
+- System message dispatch in `EventBasedActor::receive()` intercepts LinkMsg/UnlinkMsg/DownMsg
+
+**HTTP Protocol:** ✅ Complete (2026-04-30)
+- HTTP parser, serializer, server (test_http_parser, test_http_serializer, test_http_server)
 - Fundamental types: ActorId, error, Clock, AlarmHandle, TraceContext, MessageId, result<T>
 - Actor base classes: abstract_actor, local_actor, event_based_actor
 - ActorContext, ActorSystem, actor_registry
@@ -95,7 +104,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue), includes cyclic queue fix when returning last element
 - `execute_actor()` dispatch layer for coroutine resumption with state transitions
 
-**Tests:** ✅ 56 tests passing
+**Tests:** ✅ 65 tests passing
 - Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 - UDS: test_unix_domain_socket (path derivation, acceptor, fallback), test_uds_integration (connect and data flow)
 
@@ -131,7 +140,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Phase 0-7 Complete** (61 tests passing)
+**Phase 0-7 Complete** (65 tests passing)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -175,11 +184,11 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `ref/` — Actor references (address, ref, proxy)
   - `net/` — Networking (event loop, TLS, connection pool, transports)
   - `supervision/` — Supervision strategies
-  - `core/` — Core runtime (actor_system, scheduler, mailbox, registry)
+  - `core/` — Core runtime (actor_system, mailbox, registry)
   - `sched/` — Scheduling subsystem (work_queue, edf_queue, a2ws, timing_wheel, coroutine_frame_pool)
   - `types/` — Type system (types, types_fwd, serialization)
   - `rpc/` — RPC channel (rpc_channel.hpp)
-- `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, scheduler.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
+- `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
 - `src/sched/` — scheduler.cpp, worker_thread.cpp, edf_queue.cpp, a2ws.cpp, timing_wheel.cpp, coroutine_frame_pool.cpp

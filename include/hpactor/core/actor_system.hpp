@@ -218,8 +218,6 @@ class ActorSystem {
     }
 
   private:
-    friend class Scheduler;
-
     Config config_;
     CommunicationEndpoint endpoint_;
     Clock clock_;
