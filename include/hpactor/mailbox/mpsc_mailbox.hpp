@@ -97,7 +97,6 @@ template <typename T> class MPSCMailbox {
                         tail->mpsc_next.store(next_next,
                                               std::memory_order_release);
                     }
-                    continue;
                 }
             }
 
