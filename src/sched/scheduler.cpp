@@ -221,6 +221,7 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         uint32_t expected = ActorState::kReady;
         if (!promise.state.cas(expected, ActorState::kRunning)) {
             if (promise.state.is_terminated()) {
+                actor->set_exit_reason(errors::actor_down);
                 actor->on_exit();
             }
             // Already running, idle, or IOWaiting — skip
