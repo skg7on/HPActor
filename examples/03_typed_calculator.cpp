@@ -20,7 +20,7 @@
 //
 //   - Typed message structs (no protobuf needed for local messages)
 //   - TypedBehavior<Signatures...> with handler registration via on()
-//   - typed_actor<Signatures...> handle — statically checked at compile time
+//   - TypedEventBasedActorRef<Signatures...> handle — statically checked at compile time
 //   - result<T> return values from handlers
 //   - Compile-time prevention of sending wrong message types
 //
@@ -73,7 +73,7 @@ struct ShutdownMessage {};
 // Calculator actor type alias
 // ---------------------------------------------------------------------------
 
-using calculator_handle = hpactor::typed_actor<
+using calculator_handle = hpactor::TypedEventBasedActorRef<
     hpactor::result<int>(AddMessage),
     hpactor::result<int>(SubtractMessage),
     hpactor::result<int>(MultiplyMessage),
@@ -156,7 +156,7 @@ int main() {
                   void>);
     std::cout << "  handler_type traits verified" << std::endl;
 
-    // Verify typed_actor handle type
+    // Verify TypedEventBasedActorRef handle type
     static_assert(sizeof(calculator_handle) > 0);
     std::cout << "  calculator_handle type verified" << std::endl;
 
@@ -172,7 +172,7 @@ int main() {
               << std::endl;
 
     // Get a type-safe handle.
-    // The typed_actor handle constrains what messages can be sent —
+    // The TypedEventBasedActorRef handle constrains what messages can be sent —
     // calling calc_handle(WrongType{}) would be a compile error.
     auto actor_ptr = std::static_pointer_cast<CalculatorActor>(
         system.get_actor(calc.id()));
@@ -212,7 +212,7 @@ int main() {
     std::cout << "  TypedBehavior<Signatures...>" << std::endl;
     std::cout << "    on(F&& handler)  // register handler for message type"
               << std::endl;
-    std::cout << "  typed_actor<Signatures...>  // type-safe handle"
+    std::cout << "  TypedEventBasedActorRef<Signatures...>  // type-safe handle"
               << std::endl;
     std::cout << "    operator()(T&&)  // compile-time checked send"
               << std::endl;

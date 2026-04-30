@@ -31,11 +31,11 @@ struct shutdown_message {};
 
 // Typed actor using message struct signatures
 using calculator_actor =
-    hpactor::typed_actor<hpactor::result<int>(add_message), hpactor::result<int>(subtract_message),
+    hpactor::TypedEventBasedActorRef<hpactor::result<int>(add_message), hpactor::result<int>(subtract_message),
                          hpactor::result<void>(shutdown_message)>;
 
 void test_typed_actor_definition() {
-    static_assert(sizeof(calculator_actor) > 0, "typed_actor should be "
+    static_assert(sizeof(calculator_actor) > 0, "TypedEventBasedActorRef should be "
                                                 "instantiable");
 }
 

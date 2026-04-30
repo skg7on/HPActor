@@ -59,14 +59,14 @@ class TypedEventBasedActor : public LocalActor {
 };
 
 // -----------------------------------------------------------------------------
-// typed_actor - type-safe reference to a TypedEventBasedActor
+// TypedEventBasedActorRef - type-safe reference to a TypedEventBasedActor
 // -----------------------------------------------------------------------------
-template <typename... Signatures> class typed_actor {
+template <typename... Signatures> class TypedEventBasedActorRef {
   public:
     using base_type = TypedEventBasedActor<Signatures...>;
 
-    typed_actor() = default;
-    explicit typed_actor(std::shared_ptr<base_type> ptr)
+    TypedEventBasedActorRef() = default;
+    explicit TypedEventBasedActorRef(std::shared_ptr<base_type> ptr)
         : actor_(std::move(ptr)) {}
 
     template <typename T> void operator()(T&& msg) {
