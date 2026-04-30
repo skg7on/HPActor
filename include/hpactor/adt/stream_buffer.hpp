@@ -156,6 +156,7 @@ private:
 
     std::vector<uint8_t> buf_;
     size_t read_pos_ = 0;
+    size_t reserve_tail_amount_ = 0;
 };
 
 // ---- Template implementations ----

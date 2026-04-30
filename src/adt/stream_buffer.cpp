@@ -72,11 +72,21 @@ void StreamBuffer::resize(size_t n, uint8_t value) {
 
 uint8_t* StreamBuffer::reserve_tail(size_t n) {
     ensure_capacity(n);
-    return buf_.data() + buf_.size();
+    size_t old_size = buf_.size();
+    buf_.resize(old_size + n);
+    reserve_tail_amount_ = n;
+    return buf_.data() + old_size;
 }
 
 void StreamBuffer::commit_tail(size_t n) {
-    buf_.resize(buf_.size() + n);
+    if (reserve_tail_amount_ > 0) {
+        if (n < reserve_tail_amount_) {
+            buf_.resize(buf_.size() - (reserve_tail_amount_ - n));
+        }
+        reserve_tail_amount_ = 0;
+    } else {
+        buf_.resize(buf_.size() + n);
+    }
 }
 
 // ---- Append (copy-in) ----
