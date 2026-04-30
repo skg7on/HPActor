@@ -14,46 +14,25 @@
 
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/http_client.hpp>
+#include <hpactor/net/http_parser.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
-#include <netdb.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
 #include <chrono>
 #include <cstring>
-#include <functional>
-#include <mutex>
+#include <future>
 #include <string>
 #include <unordered_map>
 #include <vector>
 
 namespace hpactor {
 namespace net {
-
-// =============================================================================
-// HttpKeepAlivePool — per-host connection pool
-// =============================================================================
-class HttpKeepAlivePool {
-  public:
-    explicit HttpKeepAlivePool(size_t max_conns = 4) : max_conns_(max_conns) {}
-
-    // Placeholder: acquire an idle connection or create a new one
-    int acquire(const std::string& /*host*/, uint16_t /*port*/) {
-        return -1;
-    }
-
-    void release(int /*fd*/, bool /*keep_alive*/) {}
-
-  private:
-    [[maybe_unused]] size_t max_conns_ = 4;
-    struct PooledConn { int fd = -1; bool in_use = false; };
-    std::vector<PooledConn> conns_;
-};
 
 // =============================================================================
 // URL Parsing
@@ -65,7 +44,10 @@ struct ParsedUrl {
     std::string path;
 };
 
-[[maybe_unused]] static ParsedUrl parse_url(const std::string& url) {
+// Note: uses std::stoi for port — assumes well-formed numeric ports.
+// Validation of malformed URLs (e.g. "http://host:abc/path") is out of scope
+// for this phase.
+static ParsedUrl parse_url(const std::string& url) {
     ParsedUrl result;
 
     auto scheme_end = url.find("://");
@@ -96,7 +78,7 @@ struct ParsedUrl {
 }
 
 // =============================================================================
-// HttpClient Implementation (stub)
+// HttpClient Implementation — blocking TCP (for test usage)
 // =============================================================================
 
 HttpClient::HttpClient(EventLoop* loop) : loop_(loop) {}
@@ -104,12 +86,106 @@ HttpClient::HttpClient(EventLoop* loop) : loop_(loop) {}
 HttpClient::~HttpClient() { abort(); }
 
 RpcFuture<bytes>
-HttpClient::request(HttpMethod /*method*/, const std::string& /*url*/,
-                    std::vector<HttpHeader> /*headers*/, bytes /*body*/) {
-    // Stub — full implementation in next iteration
+HttpClient::request(HttpMethod method, const std::string& url,
+                    std::vector<HttpHeader> headers, bytes body) {
+    auto parsed = parse_url(url);
+
+    // 1. Connect
+    int fd = socket(AF_INET, SOCK_STREAM, 0);
+    if (fd < 0) {
+        std::promise<result<bytes>> p;
+        p.set_value(result<bytes>::make(
+            error(errors::http_connect_failed, "socket() failed")));
+        return RpcFuture<bytes>(p.get_future(), default_timeout_);
+    }
+
+    struct sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(parsed.port);
+    inet_pton(AF_INET, parsed.host.c_str(), &addr.sin_addr);
+
+    if (connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+        close(fd);
+        std::promise<result<bytes>> p;
+        p.set_value(result<bytes>::make(
+            error(errors::http_connect_failed, "connect() failed")));
+        return RpcFuture<bytes>(p.get_future(), default_timeout_);
+    }
+
+    // 2. Build HTTP/1.1 request wire bytes
+    bytes wire;
+    std::string request_line = to_string(method);
+    request_line += " " + parsed.path + " HTTP/1.1\r\n";
+    wire.append(reinterpret_cast<const uint8_t*>(request_line.data()),
+                request_line.size());
+
+    std::string host_header = "Host: " + parsed.host;
+    if (parsed.port != 80) {
+        host_header += ":" + std::to_string(parsed.port);
+    }
+    host_header += "\r\n";
+    wire.append(reinterpret_cast<const uint8_t*>(host_header.data()),
+                host_header.size());
+
+    for (const auto& h : headers) {
+        std::string hdr = h.name + ": " + h.value + "\r\n";
+        wire.append(reinterpret_cast<const uint8_t*>(hdr.data()), hdr.size());
+    }
+
+    if (!body.empty()) {
+        std::string cl =
+            "Content-Length: " + std::to_string(body.size()) + "\r\n";
+        wire.append(reinterpret_cast<const uint8_t*>(cl.data()), cl.size());
+    }
+    const uint8_t crlf[] = {'\r', '\n'};
+    wire.append(crlf, 2);
+    wire.append(body.data(), body.size());
+
+    // 3. Send
+    ssize_t sent = write(fd, wire.data(), wire.size());
+    if (sent < 0) {
+        close(fd);
+        std::promise<result<bytes>> p;
+        p.set_value(result<bytes>::make(
+            error(errors::http_connect_failed, "write() failed")));
+        return RpcFuture<bytes>(p.get_future(), default_timeout_);
+    }
+
+    // 4. Read response via llhttp in HTTP_RESPONSE mode
+    HttpParser parser(HttpParserMode::Response);
+    int response_status = 0;
+    bytes response_body;
+    bool complete = false;
+
+    parser.set_on_response(
+        [&](int status, const std::vector<HttpHeader>& /*resp_headers*/,
+            const bytes& body) {
+            response_status = status;
+            response_body = body;
+            complete = true;
+        });
+
+    uint8_t buf[4096];
+    ssize_t n;
+    while (!complete && (n = read(fd, buf, sizeof(buf))) > 0) {
+        parser.execute(
+            std::span<const uint8_t>(buf, static_cast<size_t>(n)));
+    }
+    close(fd);
+
+    // 5. Fulfill promise
     std::promise<result<bytes>> p;
-    p.set_value(result<bytes>::make(bytes{}));
-    return RpcFuture<bytes>(p.get_future(), std::chrono::milliseconds(5000));
+    if (response_status >= 200 && response_status < 300) {
+        p.set_value(result<bytes>::make(std::move(response_body)));
+    } else if (response_status == 0) {
+        p.set_value(result<bytes>::make(
+            error(errors::http_parse_error, "No response received")));
+    } else {
+        p.set_value(result<bytes>::make(
+            error(errors::http_parse_error,
+                  "HTTP " + std::to_string(response_status))));
+    }
+    return RpcFuture<bytes>(p.get_future(), default_timeout_);
 }
 
 RpcFuture<bytes>
@@ -135,7 +211,7 @@ HttpClient::del(const std::string& url, std::vector<HttpHeader> headers) {
 }
 
 void HttpClient::abort() {
-    // Stub
+    // Full implementation deferred — blocking I/O mode has no in-flight state.
 }
 
 } // namespace net

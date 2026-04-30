@@ -20,9 +20,11 @@
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <functional>
 #include <memory>
+#include <mutex>
 #include <string>
 #include <unordered_map>
 #include <utility>
@@ -108,11 +110,12 @@ class HttpServer {
     RouteRegistry routes_;
     std::unordered_map<int, std::unique_ptr<ConnectionCtx>> connections_;
     std::unordered_map<uint64_t, std::unique_ptr<PendingReply>> pending_replies_;
+    mutable std::mutex map_mutex_;
     Actor reply_adapter_{nullptr};
 
     int listening_fd_ = -1;
     uint16_t bound_port_ = 0;
-    bool running_ = false;
+    std::atomic<bool> running_{false};
 
     std::chrono::milliseconds reply_timeout_{5000};
     size_t max_connections_{1000};

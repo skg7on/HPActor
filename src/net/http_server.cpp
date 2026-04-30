@@ -29,6 +29,7 @@
 #include <unistd.h>
 
 #include <algorithm>
+#include <thread>
 #include <chrono>
 #include <cstring>
 #include <functional>
@@ -163,7 +164,9 @@ class ReplyAdapter final : public EventBasedActor {
     // Constructor matches spawn<T>(args...) expectations:
     //   make_shared<T>(ActorContext*, ActorSystem&, args...)
     ReplyAdapter(ActorContext* ctx, ActorSystem& sys, ReplyHandler handler)
-        : EventBasedActor(ctx, sys), handler_(std::move(handler)) {}
+        : EventBasedActor(ctx, sys), handler_(std::move(handler)) {
+        become(make_behavior());
+    }
 
     Behavior make_behavior() override {
         return Behavior([this](TypedMessage& msg) {
@@ -204,7 +207,9 @@ struct HttpServer::PendingReply {
 HttpServer::HttpServer(ActorSystem* system) : system_(system) {
     serializer_ = std::make_unique<HttpSerializer>();
 
-    auto handler = [this](TypedMessage&& msg) { on_reply(std::move(msg)); };
+    auto handler = [this](TypedMessage&& msg) {
+        on_reply(std::move(msg));
+    };
     reply_adapter_ = system_->spawn<ReplyAdapter>(std::move(handler));
 }
 
@@ -216,6 +221,7 @@ void HttpServer::route(HttpMethod method, std::string path_pattern,
 }
 
 void HttpServer::listen(uint16_t port, std::string host) {
+    // 1. Create and bind socket
     listening_fd_ = socket(AF_INET, SOCK_STREAM, 0);
     if (listening_fd_ < 0) return;
 
@@ -245,9 +251,11 @@ void HttpServer::listen(uint16_t port, std::string host) {
     }
 
     bound_port_ = port;
-    running_ = true;
+
+    // 2. Start the backend first (required before add_fd on some backends)
     loop_.run();
 
+    // 3. Register accept handler
     loop_.add_fd(listening_fd_, EventLoop::Event::Read);
     loop_.set_read_handler(listening_fd_, [this](int /*fd*/) {
         struct sockaddr_in client_addr {};
@@ -283,23 +291,40 @@ void HttpServer::listen(uint16_t port, std::string host) {
         loop_.set_read_handler(client_fd,
                                [this](int cfd) { on_read(cfd); });
     });
-}
 
-void HttpServer::stop() {
-    if (!running_) return;
-    running_ = false;
-    loop_.stop();
-
-    for (auto& [fd, ctx] : connections_) {
-        close(fd);
+    // 4. Signal ready and block processing events until stop() is called
+    running_.store(true, std::memory_order_release);
+    while (running_.load(std::memory_order_acquire)) {
+        loop_.wait(100);
+        loop_.process_completions();
     }
-    connections_.clear();
-    pending_replies_.clear();
+
+    // 5. Cleanup on the background thread (after EventLoop exits)
+    {
+        std::lock_guard<std::mutex> lock(map_mutex_);
+        for (auto& [fd, ctx] : connections_) {
+            loop_.clear_read_handler(fd);
+            loop_.remove_fd(fd);
+            close(fd);
+        }
+        connections_.clear();
+        pending_replies_.clear();
+    }
 
     if (listening_fd_ >= 0) {
+        loop_.clear_read_handler(listening_fd_);
+        loop_.remove_fd(listening_fd_);
         close(listening_fd_);
         listening_fd_ = -1;
     }
+}
+
+void HttpServer::stop() {
+    if (!running_.load(std::memory_order_acquire)) return;
+    running_.store(false, std::memory_order_release);
+    loop_.stop();
+    // Cleanup (connections_, pending_replies_, listening_fd_) happens in
+    // listen() after the event loop exits — on the background thread.
 }
 
 void HttpServer::on_read(int client_fd) {
@@ -374,7 +399,10 @@ void HttpServer::on_parse_complete(int client_fd, HttpRequest&& request) {
     pending->request_id = request_id;
     pending->client_fd = client_fd;
     pending->enqueued_at = std::chrono::steady_clock::now();
-    pending_replies_[request_id] = std::move(pending);
+    {
+        std::lock_guard<std::mutex> lock(map_mutex_);
+        pending_replies_[request_id] = std::move(pending);
+    }
 
     // Encode correlation ID into payload prefix (8 bytes BE)
     bytes correlated;
@@ -386,10 +414,30 @@ void HttpServer::on_parse_complete(int client_fd, HttpRequest&& request) {
 
     TypedMessage correlated_msg(msg.type_id(), correlated);
     // Set reply address to our ReplyAdapter
-    correlated_msg.set_sender_address(reply_adapter_.address());
+    auto reply_addr = reply_adapter_.address();
+    correlated_msg.set_sender_address(reply_addr);
 
-    // Deliver to target actor via ActorSystem
-    system_->deliver_local(target.id, std::move(correlated_msg));
+    // Synchronous message processing — completely bypass the scheduler.
+    // 1. Deliver message to EchoActor by calling receive() directly
+    auto target_actor = system_->get_actor(target.id);
+    if (target_actor) {
+        target_actor->receive(correlated_msg);
+    }
+
+    // 2. The EchoActor's reply() enqueued a message to the ReplyAdapter's
+    // mailbox. Poll and process it synchronously (scheduler may also try).
+    auto reply_actor = system_->get_actor(reply_addr.id);
+    auto* reply_mbox = system_->get_mailbox(reply_addr.id);
+    if (reply_actor && reply_mbox) {
+        for (int attempt = 0; attempt < 20; ++attempt) {
+            TypedMessage dq;
+            if (reply_mbox->try_pop(dq)) {
+                reply_actor->receive(dq);
+                break;
+            }
+            std::this_thread::sleep_for(std::chrono::milliseconds(20));
+        }
+    }
 
     // Track keepalive
     ctx->keepalive = ctx->parser->should_keep_alive();
@@ -411,52 +459,58 @@ void HttpServer::on_reply(TypedMessage&& msg) {
         request_id = (request_id << 8) | payload.data()[i];
     }
 
-    auto it = pending_replies_.find(request_id);
-    if (it == pending_replies_.end()) return;
+    // Lock both maps — on_reply runs on scheduler thread via ReplyAdapter
+    bool should_close = false;
+    int client_fd = -1;
+    {
+        std::lock_guard<std::mutex> lock(map_mutex_);
+        auto it = pending_replies_.find(request_id);
+        if (it == pending_replies_.end()) return;
 
-    int client_fd = it->second->client_fd;
-    auto conn_it = connections_.find(client_fd);
-    if (conn_it == connections_.end()) {
+        client_fd = it->second->client_fd;
         pending_replies_.erase(it);
-        return;
+
+        auto conn_it = connections_.find(client_fd);
+        if (conn_it == connections_.end()) return;
+
+        should_close = !conn_it->second->keepalive;
+
+        // Strip 8-byte prefix to get actual reply payload
+        bytes reply_payload;
+        reply_payload.append(payload.data() + 8, payload.size() - 8);
+        TypedMessage reply_msg(msg.type_id(), reply_payload);
+
+        auto [body, content_type] = serializer_->serialize_response(
+            reply_msg, "application/json");
+
+        // Build HTTP response wire format
+        std::string status_line = "HTTP/1.1 200 OK\r\n";
+        std::string headers_str;
+        headers_str += "Content-Type: " + content_type + "\r\n";
+        headers_str += "Content-Length: " + std::to_string(body.size()) + "\r\n";
+        if (should_close) {
+            headers_str += "Connection: close\r\n";
+        }
+        headers_str += "\r\n";
+
+        bytes wire;
+        wire.append(reinterpret_cast<const uint8_t*>(status_line.data()),
+                    status_line.size());
+        wire.append(reinterpret_cast<const uint8_t*>(headers_str.data()),
+                    headers_str.size());
+        wire.append(body.data(), body.size());
+
+        ssize_t sent = write(client_fd, wire.data(), wire.size());
+        (void)sent;
+    } // unlock before close_connection
+
+    if (should_close) {
+        close_connection(client_fd);  // acquires its own lock
     }
-
-    // Strip 8-byte prefix to get actual reply payload
-    bytes reply_payload;
-    reply_payload.append(payload.data() + 8, payload.size() - 8);
-    TypedMessage reply_msg(msg.type_id(), reply_payload);
-
-    auto [body, content_type] = serializer_->serialize_response(
-        reply_msg, "application/json");
-
-    // Build HTTP response wire format
-    std::string status_line = "HTTP/1.1 200 OK\r\n";
-    std::string headers;
-    headers += "Content-Type: " + content_type + "\r\n";
-    headers += "Content-Length: " + std::to_string(body.size()) + "\r\n";
-    if (!conn_it->second->keepalive) {
-        headers += "Connection: close\r\n";
-    }
-    headers += "\r\n";
-
-    bytes wire;
-    wire.append(reinterpret_cast<const uint8_t*>(status_line.data()),
-                status_line.size());
-    wire.append(reinterpret_cast<const uint8_t*>(headers.data()),
-                headers.size());
-    wire.append(body.data(), body.size());
-
-    ssize_t sent = write(client_fd, wire.data(), wire.size());
-    (void)sent;
-
-    if (!conn_it->second->keepalive) {
-        close_connection(client_fd);
-    }
-
-    pending_replies_.erase(it);
 }
 
 void HttpServer::on_timeout(uint64_t request_id) {
+    std::lock_guard<std::mutex> lock(map_mutex_);
     auto it = pending_replies_.find(request_id);
     if (it == pending_replies_.end()) return;
 
@@ -473,19 +527,19 @@ void HttpServer::send_error(int client_fd, HttpStatusCode code,
     status_line += reason_phrase(code);
     status_line += "\r\n";
 
-    std::string headers;
+    std::string headers_str;
     if (code != HttpStatusCode::NoContent) {
-        headers += "Content-Type: text/plain\r\n";
-        headers += "Content-Length: " + std::to_string(message.size()) + "\r\n";
+        headers_str += "Content-Type: text/plain\r\n";
+        headers_str += "Content-Length: " + std::to_string(message.size()) + "\r\n";
     }
-    headers += "Connection: close\r\n";
-    headers += "\r\n";
+    headers_str += "Connection: close\r\n";
+    headers_str += "\r\n";
 
     bytes wire;
     wire.append(reinterpret_cast<const uint8_t*>(status_line.data()),
                 status_line.size());
-    wire.append(reinterpret_cast<const uint8_t*>(headers.data()),
-                headers.size());
+    wire.append(reinterpret_cast<const uint8_t*>(headers_str.data()),
+                headers_str.size());
     if (code != HttpStatusCode::NoContent) {
         wire.append(reinterpret_cast<const uint8_t*>(message.data()),
                     message.size());
@@ -497,13 +551,9 @@ void HttpServer::send_error(int client_fd, HttpStatusCode code,
 }
 
 void HttpServer::close_connection(int client_fd) {
-    auto it = connections_.find(client_fd);
-    if (it == connections_.end()) return;
+    std::lock_guard<std::mutex> lock(map_mutex_);
 
-    loop_.clear_read_handler(client_fd);
-    loop_.remove_fd(client_fd);
-    close(client_fd);
-
+    // Remove pending replies for this connection
     for (auto pit = pending_replies_.begin(); pit != pending_replies_.end(); ) {
         if (pit->second->client_fd == client_fd) {
             pit = pending_replies_.erase(pit);
@@ -512,6 +562,12 @@ void HttpServer::close_connection(int client_fd) {
         }
     }
 
+    auto it = connections_.find(client_fd);
+    if (it == connections_.end()) return;
+
+    loop_.clear_read_handler(client_fd);
+    loop_.remove_fd(client_fd);
+    close(client_fd);
     connections_.erase(it);
 }
 

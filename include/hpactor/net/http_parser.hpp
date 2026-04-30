@@ -39,6 +39,17 @@ enum class HttpParseState {
 };
 
 // ---------------------------------------------------------------------------
+// HttpParserMode — selects between HTTP request and response parsing
+// ---------------------------------------------------------------------------
+enum class HttpParserMode { Request, Response };
+
+// ---------------------------------------------------------------------------
+// ResponseCallback — fired in Response mode with status, headers, body
+// ---------------------------------------------------------------------------
+using ResponseCallback = std::function<void(int status_code,
+    const std::vector<HttpHeader>& headers, const bytes& body)>;
+
+// ---------------------------------------------------------------------------
 // HttpParser — wraps llhttp for use with StreamBuffer and HttpRequest
 // ---------------------------------------------------------------------------
 class HttpParser {
@@ -46,7 +57,7 @@ class HttpParser {
     using MessageCallback = std::function<void(HttpRequest&&)>;
     using ErrorCallback = std::function<void(llhttp_errno_t, const char*)>;
 
-    HttpParser();
+    explicit HttpParser(HttpParserMode mode = HttpParserMode::Request);
     ~HttpParser();
 
     HttpParser(const HttpParser&) = delete;
@@ -55,6 +66,7 @@ class HttpParser {
     size_t execute(std::span<const uint8_t> data);
 
     void set_on_message(MessageCallback cb) { on_message_ = std::move(cb); }
+    void set_on_response(ResponseCallback cb) { on_response_ = std::move(cb); }
     void set_on_error(ErrorCallback cb) { on_error_ = std::move(cb); }
 
     void reset();
@@ -77,6 +89,7 @@ class HttpParser {
 
     llhttp_t parser_;
     llhttp_settings_t settings_;
+    HttpParserMode mode_ = HttpParserMode::Request;
     HttpParseState state_ = HttpParseState::Idle;
     bool upgrade_ = false;
 
@@ -91,6 +104,7 @@ class HttpParser {
     bytes body_buf_;
 
     MessageCallback on_message_;
+    ResponseCallback on_response_;
     ErrorCallback on_error_;
 };
 

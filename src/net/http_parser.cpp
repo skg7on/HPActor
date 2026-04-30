@@ -27,7 +27,7 @@ namespace net {
 // HttpParser Implementation
 // =============================================================================
 
-HttpParser::HttpParser() {
+HttpParser::HttpParser(HttpParserMode mode) : mode_(mode) {
     llhttp_settings_init(&settings_);
 
     settings_.on_message_begin = on_message_begin_cb;
@@ -39,14 +39,18 @@ HttpParser::HttpParser() {
     settings_.on_body = on_body_cb;
     settings_.on_message_complete = on_message_complete_cb;
 
-    llhttp_init(&parser_, HTTP_REQUEST, &settings_);
+    auto llhttp_type = (mode == HttpParserMode::Request) ? HTTP_REQUEST
+                                                          : HTTP_RESPONSE;
+    llhttp_init(&parser_, llhttp_type, &settings_);
     parser_.data = this;
 }
 
 HttpParser::~HttpParser() = default;
 
 void HttpParser::reset() {
-    llhttp_init(&parser_, HTTP_REQUEST, &settings_);
+    auto llhttp_type = (mode_ == HttpParserMode::Request) ? HTTP_REQUEST
+                                                            : HTTP_RESPONSE;
+    llhttp_init(&parser_, llhttp_type, &settings_);
     parser_.data = this;
 
     url_buf_.clear();
@@ -152,15 +156,23 @@ int HttpParser::on_message_complete_cb(llhttp_t* parser) {
     auto* self = static_cast<HttpParser*>(parser->data);
     self->state_ = HttpParseState::Complete;
 
-    if (self->on_message_) {
-        HttpRequest req;
-        req.method = self->method_;
-        req.path = std::move(self->url_buf_);
-        req.headers = std::move(self->headers_);
-        req.http_major = self->http_major_;
-        req.http_minor = self->http_minor_;
-        req.body = std::move(self->body_buf_);
-        self->on_message_(std::move(req));
+    if (self->mode_ == HttpParserMode::Response) {
+        if (self->on_response_) {
+            int status = llhttp_get_status_code(parser);
+            self->on_response_(status, std::move(self->headers_),
+                                std::move(self->body_buf_));
+        }
+    } else {
+        if (self->on_message_) {
+            HttpRequest req;
+            req.method = self->method_;
+            req.path = std::move(self->url_buf_);
+            req.headers = std::move(self->headers_);
+            req.http_major = self->http_major_;
+            req.http_minor = self->http_minor_;
+            req.body = std::move(self->body_buf_);
+            self->on_message_(std::move(req));
+        }
     }
 
     return 0;

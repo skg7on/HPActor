@@ -256,3 +256,19 @@ add_test(NAME test_mailbox_awaiter COMMAND test_mailbox_awaiter)
 add_executable(test_coroutine_scheduling sched/test_coroutine_scheduling.cpp)
 target_link_libraries(test_coroutine_scheduling hpactor)
 add_test(NAME test_coroutine_scheduling COMMAND test_coroutine_scheduling)
+
+# =============================================================================
+# HTTP tests
+# =============================================================================
+add_executable(test_http_parser net/test_http_parser.cpp)
+target_link_libraries(test_http_parser hpactor)
+add_test(NAME test_http_parser COMMAND test_http_parser)
+
+add_executable(test_http_serializer net/test_http_serializer.cpp)
+target_link_libraries(test_http_serializer hpactor)
+add_test(NAME test_http_serializer COMMAND test_http_serializer)
+
+add_executable(test_http_server net/test_http_server.cpp)
+target_link_libraries(test_http_server hpactor)
+add_test(NAME test_http_server COMMAND test_http_server)
+set_tests_properties(test_http_server PROPERTIES TIMEOUT 15)
