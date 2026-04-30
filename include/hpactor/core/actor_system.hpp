@@ -21,6 +21,7 @@
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/registrar.hpp>
+#include <hpactor/net/http_client.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/ref/actor_ref.hpp>
@@ -157,6 +158,11 @@ class ActorSystem {
         return *rpc_channel_;
     }
 
+    // HTTP client for outbound HTTP requests
+    net::HttpClient& http_client() {
+        return *http_client_;
+    }
+
     // Internal actor lookup (used by scheduler)
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
 
@@ -255,6 +261,8 @@ class ActorSystem {
 
     // RPC channel for remote calls (after transport_ creation)
     std::unique_ptr<RpcChannel> rpc_channel_;
+    // HTTP client for outbound HTTP calls
+    std::unique_ptr<net::HttpClient> http_client_;
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;

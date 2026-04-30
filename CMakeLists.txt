@@ -12,7 +12,7 @@ if(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
     set(CMAKE_OSX_DEPLOYMENT_TARGET "26.0" CACHE STRING "macOS deployment target")
 endif()
 
-project(HPActor VERSION 0.1.0 LANGUAGES CXX)
+project(HPActor VERSION 0.1.0 LANGUAGES C CXX)
 
 # Note: With Ninja, compile_commands.json is placed in CMAKE_SOURCE_DIR by default
 
@@ -178,6 +178,9 @@ add_library(hpactor_lib SHARED
     src/net/registrar.cpp
     src/net/registrar_server.cpp
     src/net/registrar_client.cpp
+    src/net/http_parser.cpp
+    src/net/http_server.cpp
+    src/net/http_client.cpp
     src/sched/scheduler.cpp
     src/sched/worker_thread.cpp
     src/sched/edf_queue.cpp
@@ -186,8 +189,20 @@ add_library(hpactor_lib SHARED
     src/sched/coroutine_frame_pool.cpp
     src/rpc/rpc_channel.cpp
     src/adt/stream_buffer.cpp
+    third_party/llhttp/llhttp.c
+    third_party/llhttp/api.c
+    third_party/llhttp/http.c
 )
-target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR})
+# llhttp sources are C, not C++ — compile with C compiler and relaxed warnings
+set_source_files_properties(
+    third_party/llhttp/llhttp.c
+    third_party/llhttp/api.c
+    third_party/llhttp/http.c
+    PROPERTIES
+        LANGUAGE C
+        COMPILE_FLAGS "-Wno-error -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
+)
+target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR} third_party/llhttp)
 
 # Protobuf and Abseil detection
 # Protobuf >= 22.0 requires Abseil as a transitive dependency

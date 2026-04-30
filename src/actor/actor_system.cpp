@@ -78,6 +78,8 @@ ActorSystem::ActorSystem(const Config& config)
         rpc_channel_ =
             std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
 
+        http_client_ = std::make_unique<net::HttpClient>(network_loop_.get());
+
         transport_->set_rpc_handler(
             [this](hpactor::MessageId id, const hpactor::bytes& data) {
                 rpc_channel_->on_response(id, data);

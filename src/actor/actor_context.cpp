@@ -177,4 +177,35 @@ ActorContext::rpc(const ActorAddress& target, const bytes& encoded_request,
     return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms);
 }
 
+RpcFuture<bytes>
+ActorContext::http_get(const std::string& url,
+                       std::vector<net::HttpHeader> headers) {
+    return system_->http_client().get(url, std::move(headers));
+}
+
+RpcFuture<bytes>
+ActorContext::http_post(const std::string& url, bytes body,
+                         std::vector<net::HttpHeader> headers) {
+    return system_->http_client().post(url, std::move(body), std::move(headers));
+}
+
+RpcFuture<bytes>
+ActorContext::http_put(const std::string& url, bytes body,
+                        std::vector<net::HttpHeader> headers) {
+    return system_->http_client().put(url, std::move(body), std::move(headers));
+}
+
+RpcFuture<bytes>
+ActorContext::http_delete(const std::string& url,
+                           std::vector<net::HttpHeader> headers) {
+    return system_->http_client().del(url, std::move(headers));
+}
+
+RpcFuture<bytes>
+ActorContext::http_request(net::HttpMethod method, const std::string& url,
+                            std::vector<net::HttpHeader> headers, bytes body) {
+    return system_->http_client().request(method, url, std::move(headers),
+                                           std::move(body));
+}
+
 } // namespace hpactor

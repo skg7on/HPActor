@@ -18,6 +18,7 @@
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
+#include <hpactor/net/http_types.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/core/actor_ref_cache.hpp>
 #include <hpactor/types/types.hpp>
@@ -122,6 +123,25 @@ class ActorContext {
     RpcFuture<bytes>
     rpc(const ActorAddress& target, const bytes& encoded_request,
         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));
+
+    // HTTP egress — async HTTP calls to external services.
+    // Delegates to ActorSystem's HttpClient. Returns a future for the response body.
+    RpcFuture<bytes>
+    http_get(const std::string& url,
+             std::vector<net::HttpHeader> headers = {});
+    RpcFuture<bytes>
+    http_post(const std::string& url, bytes body,
+              std::vector<net::HttpHeader> headers = {});
+    RpcFuture<bytes>
+    http_put(const std::string& url, bytes body,
+             std::vector<net::HttpHeader> headers = {});
+    RpcFuture<bytes>
+    http_delete(const std::string& url,
+                std::vector<net::HttpHeader> headers = {});
+    RpcFuture<bytes>
+    http_request(net::HttpMethod method, const std::string& url,
+                 std::vector<net::HttpHeader> headers = {},
+                 bytes body = {});
 
   private:
     Actor owner_;
