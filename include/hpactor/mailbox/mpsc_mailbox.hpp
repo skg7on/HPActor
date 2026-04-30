@@ -49,29 +49,67 @@ template <typename T> class MPSCMailbox {
         count_.fetch_add(1, std::memory_order_release);
     }
 
-    // Consumer: dequeue oldest node, or nullptr if empty
-    // The stub (tail_) is always a dummy; stub.mpsc_next → oldest element (or
-    // nullptr if empty). To return the oldest element, we advance
-    // stub.mpsc_next to skip over it (sever the link).
+    // Consumer: dequeue oldest node, or nullptr if empty.
     T* dequeue() noexcept {
-        T* tail = tail_.load(std::memory_order_acquire);
-        T* next = tail->mpsc_next.load(std::memory_order_acquire);
-        if (next == nullptr)
-            return nullptr;
+        for (;;) {
+            // Quick return path for empty queue.
+            if (count_.load(std::memory_order_acquire) == 0)
+                return nullptr;
 
-        // Sever the link from stub to the node we're about to return:
-        // advance stub.mpsc_next to skip over `next` (point to next->next)
-        T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
-        tail->mpsc_next.store(next_next, std::memory_order_release);
+            T* tail = tail_.load(std::memory_order_acquire);
+            T* next = tail->mpsc_next.load(std::memory_order_acquire);
+            if (next == nullptr) {
+                // Count says non-empty but stub->next is null:
+                // elements are orphaned.  Try to recover through
+                // the last-dequeued node's forward link.
+                T* ld = last_dequeued_.load(std::memory_order_acquire);
+                if (ld) {
+                    next = ld->mpsc_next.load(std::memory_order_acquire);
+                    if (next) {
+                        // Restore the chain: stub -> recovered
+                        tail->mpsc_next.store(next,
+                                              std::memory_order_release);
+                        continue; // retry from the top
+                    }
+                }
+                return nullptr;
+            }
 
-        // If we're returning the last element (next_next == tail/stub),
-        // reset the queue to empty state to avoid cyclic pointer issues
-        if (next_next == tail) {
-            tail->mpsc_next.store(nullptr, std::memory_order_release);
+            T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
+            if (next_next == nullptr) {
+                T* head = head_.load(std::memory_order_acquire);
+                if (head != next) {
+                    do {
+                        next_next = next->mpsc_next.load(
+                            std::memory_order_acquire);
+                    } while (next_next == nullptr);
+                }
+            }
+
+            tail->mpsc_next.store(next_next, std::memory_order_release);
+
+            if (next_next == nullptr) {
+                T* head = head_.load(std::memory_order_acquire);
+                if (head != next) {
+                    next_next = next->mpsc_next.load(
+                        std::memory_order_acquire);
+                    if (next_next) {
+                        tail->mpsc_next.store(next_next,
+                                              std::memory_order_release);
+                    }
+                    continue;
+                }
+            }
+
+            if (next_next == tail) {
+                tail->mpsc_next.store(nullptr, std::memory_order_release);
+            }
+
+            // Save last dequeued for orphan recovery.
+            last_dequeued_.store(next, std::memory_order_release);
+            count_.fetch_sub(1, std::memory_order_release);
+            return next;
         }
-
-        count_.fetch_sub(1, std::memory_order_release);
-        return next;
     }
 
     // Consumer: try dequeue once (non-blocking) — same as dequeue
@@ -92,6 +130,7 @@ template <typename T> class MPSCMailbox {
     alignas(64) std::atomic<T*> tail_; // always stub (dummy)
     alignas(64) Stub stub_;            // dummy anchor
     std::atomic<int64_t> count_;       // element count
+    std::atomic<T*> last_dequeued_{nullptr}; // for orphan recovery
 };
 
 } // namespace hpactor::mailbox

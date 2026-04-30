@@ -89,6 +89,10 @@ add_executable(test_unified_message_passing actor/test_unified_message_passing.c
 target_link_libraries(test_unified_message_passing hpactor hpactor_proto pthread)
 add_test(NAME test_unified_message_passing COMMAND test_unified_message_passing)
 
+add_executable(test_link_monitor actor/test_link_monitor.cpp)
+target_link_libraries(test_link_monitor hpactor hpactor_proto pthread)
+add_test(NAME test_link_monitor COMMAND test_link_monitor)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================

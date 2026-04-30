@@ -55,6 +55,33 @@ void EventBasedActor::receive(TypedMessage& msg) {
                 return; // System message — fully handled
             }
 
+            case TypeTag::MonitorMsg: {
+                // Add sender to our monitored_ list (one-way relationship).
+                // The sender wants to be notified when we die.
+                if (ctx) {
+                    const auto& sender = msg.sender_address();
+                    bool already = false;
+                    for (const auto& m : ctx->monitored_actors()) {
+                        if (m == sender) {
+                            already = true;
+                            break;
+                        }
+                    }
+                    if (!already) {
+                        ctx->add_monitored(sender);
+                    }
+                }
+                return; // System message — fully handled
+            }
+
+            case TypeTag::DemonitorMsg: {
+                // Remove sender from our monitored_ list.
+                if (ctx) {
+                    ctx->remove_monitored(msg.sender_address());
+                }
+                return; // System message — fully handled
+            }
+
             case TypeTag::DownMsg: {
                 // Clean up linked/monitored entries for the dead actor
                 if (ctx) {

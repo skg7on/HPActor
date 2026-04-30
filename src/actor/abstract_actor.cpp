@@ -71,19 +71,18 @@ void AbstractActor::monitor(const ActorAddr& target) {
     auto* ctx = actor_context();
     if (!ctx) return;
 
-    // Idempotency
-    for (const auto& m : ctx->monitored_actors()) {
-        if (m == target) return;
-    }
-
-    // Use the existing ActorContext::monitor which adds to monitored_
-    ctx->monitor(target);
+    // Send MonitorMsg to target. The target's receive() will add us
+    // to its monitored_ list so that on_exit() notifies us on death.
+    ctx->send(target, TypedMessage(TypeTag::MonitorMsg, bytes{}));
 }
 
 void AbstractActor::demonitor(const ActorAddr& target) {
     auto* ctx = actor_context();
     if (!ctx) return;
-    ctx->remove_monitored(target);
+
+    // Send DemonitorMsg to target. The target's receive() will remove us
+    // from its monitored_ list.
+    ctx->send(target, TypedMessage(TypeTag::DemonitorMsg, bytes{}));
 }
 
 void AbstractActor::set_scheduler(sched::IScheduler* /*scheduler*/) {

@@ -438,6 +438,8 @@ enum class TypeTag : uint32_t {
     ExitMsg = 2,
     LinkMsg = 3,
     UnlinkMsg = 4,
+    MonitorMsg = 10,
+    DemonitorMsg = 11,
 
     // Spawn protocol (Phase 8)
     SpawnRequestTag = 5,
