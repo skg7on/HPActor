@@ -13,26 +13,76 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/actor_context.hpp>
+#include <hpactor/messages.pb.h>
+
+#include <iostream>
 
 namespace hpactor {
 
 AbstractActor::AbstractActor(ActorId id, ActorType type, ActorSystem& sys)
     : id_(id), type_(type), system_(sys) {}
 
-void AbstractActor::link_to(const ActorAddr& /*other*/) {
-    // TODO: implement link mechanism
+void AbstractActor::link_to(const ActorAddr& other) {
+    auto* ctx = actor_context();
+    if (!ctx) return;
+
+    // Reject link-to-self
+    if (other == address()) {
+        std::cerr << "HPActor: link_to self (" << id().value() << ") ignored"
+                  << std::endl;
+        return;
+    }
+
+    // Idempotency: check if already linked
+    for (const auto& linked : ctx->linked_actors()) {
+        if (linked == other) return;
+    }
+
+    ctx->add_linked(other);
+
+    // Notify target via LinkMessage
+    hpactor::LinkMessage pb;
+    pb.set_actor_id(id().value());
+
+    bytes payload(pb.ByteSizeLong());
+    (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    ctx->send(other, TypedMessage(TypeTag::LinkMsg, std::move(payload)));
 }
 
-void AbstractActor::unlink_from(const ActorAddr& /*other*/) {
-    // TODO: implement unlink mechanism
+void AbstractActor::unlink_from(const ActorAddr& other) {
+    auto* ctx = actor_context();
+    if (!ctx) return;
+
+    ctx->remove_linked(other);
+
+    // Notify target via UnlinkMessage
+    hpactor::UnlinkMessage pb;
+    pb.set_actor_id(id().value());
+
+    bytes payload(pb.ByteSizeLong());
+    (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    ctx->send(other, TypedMessage(TypeTag::UnlinkMsg, std::move(payload)));
 }
 
-void AbstractActor::monitor(const ActorAddr& /*target*/) {
-    // TODO: implement monitor mechanism
+void AbstractActor::monitor(const ActorAddr& target) {
+    auto* ctx = actor_context();
+    if (!ctx) return;
+
+    // Send MonitorMsg to target. The target's receive() will add us
+    // to its monitored_ list so that on_exit() notifies us on death.
+    ctx->send(target, TypedMessage(TypeTag::MonitorMsg, bytes{}));
 }
 
-void AbstractActor::demonitor(const ActorAddr& /*target*/) {
-    // TODO: implement demonitor mechanism
+void AbstractActor::demonitor(const ActorAddr& target) {
+    auto* ctx = actor_context();
+    if (!ctx) return;
+
+    // Send DemonitorMsg to target. The target's receive() will remove us
+    // from its monitored_ list.
+    ctx->send(target, TypedMessage(TypeTag::DemonitorMsg, bytes{}));
 }
 
 void AbstractActor::set_scheduler(sched::IScheduler* /*scheduler*/) {

@@ -168,7 +168,7 @@ std::vector<ActorAddress> ActorContext::linked_actors() const {
 }
 
 void ActorContext::monitor(const ActorAddress& target) {
-    monitored_.push_back(target);
+    add_monitored(target);
 }
 
 RpcFuture<bytes>

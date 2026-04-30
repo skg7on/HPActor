@@ -16,6 +16,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/messages.pb.h>
 
 namespace hpactor {
 
@@ -25,6 +26,78 @@ EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
 void EventBasedActor::on_activate() {}
 
 void EventBasedActor::receive(TypedMessage& msg) {
+    // -- System message interception (link / monitor / death) --
+    {
+        auto* ctx = context();
+        switch (msg.type_id()) {
+            case TypeTag::LinkMsg: {
+                // Bidirectional link handshake: add sender to our linked_ set
+                if (ctx) {
+                    const auto& sender = msg.sender_address();
+                    bool already_linked = false;
+                    for (const auto& linked : ctx->linked_actors()) {
+                        if (linked == sender) {
+                            already_linked = true;
+                            break;
+                        }
+                    }
+                    if (!already_linked) {
+                        ctx->add_linked(sender);
+                    }
+                }
+                return; // System message — fully handled, do not forward
+            }
+
+            case TypeTag::UnlinkMsg: {
+                if (ctx) {
+                    ctx->remove_linked(msg.sender_address());
+                }
+                return; // System message — fully handled
+            }
+
+            case TypeTag::MonitorMsg: {
+                // Add sender to our monitored_ list (one-way relationship).
+                // The sender wants to be notified when we die.
+                if (ctx) {
+                    const auto& sender = msg.sender_address();
+                    bool already = false;
+                    for (const auto& m : ctx->monitored_actors()) {
+                        if (m == sender) {
+                            already = true;
+                            break;
+                        }
+                    }
+                    if (!already) {
+                        ctx->add_monitored(sender);
+                    }
+                }
+                return; // System message — fully handled
+            }
+
+            case TypeTag::DemonitorMsg: {
+                // Remove sender from our monitored_ list.
+                if (ctx) {
+                    ctx->remove_monitored(msg.sender_address());
+                }
+                return; // System message — fully handled
+            }
+
+            case TypeTag::DownMsg: {
+                // Clean up linked/monitored entries for the dead actor
+                if (ctx) {
+                    ctx->remove_linked(msg.sender_address());
+                    ctx->remove_monitored(msg.sender_address());
+                }
+                // Fall through — behavior/supervision must see DownMsg
+                break;
+            }
+
+            default:
+                break;
+        }
+    }
+    // -- End system message interception --
+
     if (!handlers_initialized_) {
         initialize_proto_handlers();
     }
@@ -98,6 +171,32 @@ void EventBasedActor::on_deactivate() {
         actor_coroutine_ = sched::ActorCoroutine{};
     }
 #endif
+}
+
+void EventBasedActor::on_exit() {
+    auto* ctx = context();
+    if (!ctx) return;
+
+    // Build DownMessage
+    hpactor::DownMessage pb;
+    pb.set_actor_id(id().value());
+    pb.set_reason_code(exit_reason_);
+
+    bytes payload(pb.ByteSizeLong());
+    (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    // Send DownMsg to all linked actors
+    for (const auto& addr : ctx->linked_actors()) {
+        TypedMessage down_msg(TypeTag::DownMsg, bytes(payload));
+        ctx->send(addr, std::move(down_msg));
+    }
+
+    // Send DownMsg to all monitored actors
+    for (const auto& addr : ctx->monitored_actors()) {
+        TypedMessage down_msg(TypeTag::DownMsg, bytes(payload));
+        ctx->send(addr, std::move(down_msg));
+    }
+    // linked_ and monitored_ vectors will be destroyed with the context
 }
 
 } // namespace hpactor

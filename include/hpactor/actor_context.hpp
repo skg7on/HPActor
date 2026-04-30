@@ -22,6 +22,7 @@
 #include <hpactor/core/actor_ref_cache.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <cstdint>
 #include <memory>
@@ -95,11 +96,24 @@ class ActorContext {
     void add_remote_child(ActorRef child);
     std::vector<ActorRef> remote_children() const;
 
-    // Link management
+    // Link management (used by AbstractActor)
     std::vector<ActorAddress> linked_actors() const;
+    void add_linked(const ActorAddress& addr) { linked_.push_back(addr); }
+    void remove_linked(const ActorAddress& addr) {
+        auto it = std::find(linked_.begin(), linked_.end(), addr);
+        if (it != linked_.end()) linked_.erase(it);
+    }
 
     // Monitoring
     void monitor(const ActorAddress& target);
+
+    // Monitor management (used by AbstractActor)
+    void add_monitored(const ActorAddress& addr) { monitored_.push_back(addr); }
+    void remove_monitored(const ActorAddress& addr) {
+        auto it = std::find(monitored_.begin(), monitored_.end(), addr);
+        if (it != monitored_.end()) monitored_.erase(it);
+    }
+    const std::vector<ActorAddress>& monitored_actors() const { return monitored_; }
 
     // Resolve an ActorAddress to an ActorRef (lazy + cached)
     ActorRef resolve(const ActorAddress& target);

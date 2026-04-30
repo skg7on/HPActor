@@ -40,6 +40,8 @@ class LocalActor : public AbstractActor {
     LocalActor(ActorContext* ctx, ActorSystem& sys);
     LocalActor(ActorId id, ActorContext* ctx, ActorSystem& sys);
 
+    ActorContext* actor_context() override { return ctx_; }
+
     virtual void on_activate() {}
     virtual void on_deactivate() {}
 

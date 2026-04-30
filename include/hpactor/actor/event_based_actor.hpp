@@ -236,7 +236,10 @@ class EventBasedActor : public LocalActor {
     }
 
   public:
-    virtual void on_exit() {}
+    virtual void on_exit();
+
+    void set_exit_reason(uint32_t code) { exit_reason_ = code; }
+    uint32_t exit_reason() const { return exit_reason_; }
 
     EventBasedActor(ActorContext* ctx, ActorSystem& sys);
 
@@ -246,6 +249,7 @@ class EventBasedActor : public LocalActor {
     std::coroutine_handle<sched::CoroutinePromise> coro_handle_;
 #endif
     Behavior behavior_;
+    uint32_t exit_reason_ = 0;
     mailbox::MPSCActorMailbox<TypedMessage>* mailbox_ = nullptr;
     sched::IScheduler* scheduler_ = nullptr;
 
