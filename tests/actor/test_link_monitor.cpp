@@ -214,10 +214,18 @@ void test_link_to_dead_or_self() {
 
 // Stub tests when coroutine support is not compiled in.
 // Death propagation (on_exit) requires the coroutine scheduler path.
-void test_link_to_down_notification() {}
-void test_monitor_down_notification() {}
-void test_unlink_from_stops_notification() {}
-void test_demonitor_stops_notification() {}
+void test_link_to_down_notification() {
+    std::cout << "SKIP: coroutines not available" << std::endl;
+}
+void test_monitor_down_notification() {
+    std::cout << "SKIP: coroutines not available" << std::endl;
+}
+void test_unlink_from_stops_notification() {
+    std::cout << "SKIP: coroutines not available" << std::endl;
+}
+void test_demonitor_stops_notification() {
+    std::cout << "SKIP: coroutines not available" << std::endl;
+}
 void test_link_to_dead_or_self() {
     Config config{.scheduler_threads = 1, .max_queue_depth = 1024};
     ActorSystem system(config);
