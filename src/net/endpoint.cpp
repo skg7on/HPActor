@@ -81,9 +81,8 @@ CommunicationEndpoint parse_endpoint(std::string_view node_id) {
     // Try numeric IPv4 address first
     struct in_addr addr;
     if (inet_pton(AF_INET, std::string(host).c_str(), &addr) == 1) {
-        // inet_pton returns network byte order in s_addr, convert to stored
-        // network byte order
-        return Ipv4Endpoint{htonl(addr.s_addr), htons(static_cast<uint16_t>(port))};
+        // inet_pton returns network byte order in s_addr
+        return Ipv4Endpoint{addr.s_addr, htons(static_cast<uint16_t>(port))};
     }
 
     // Try numeric IPv6 address
