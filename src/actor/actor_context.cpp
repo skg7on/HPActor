@@ -32,27 +32,29 @@ ActorRef ActorContext::resolve(const ActorAddress& target) {
         return *cached;
     }
 
-    // 2. Check local registry
+    // 2. Resolve system pointer
     auto system = system_ ? system_ : (owner_ ? &owner_.get()->system() : nullptr);
     if (!system) {
         return ActorRef{};
     }
 
-    auto actor = system->get_actor(target.id);
-    if (actor) {
-        ActorRef ref{Actor(actor)};
-        ref_cache_.put(target.id, ref);
-        return ref;
-    }
-
-    // 3. Non-loopback endpoint: create ActorProxy
-    if (!target.is_local()) {
+    // 3. If target endpoint differs from our own, it's a remote actor.
+    //    Skip local lookup — actor IDs are only unique within a system.
+    if (!(target.endpoint == system->endpoint())) {
         ActorProxy proxy(target, system);
         ActorRef ref(std::move(proxy));
         // Only cache if transport was resolved successfully
         if (ref.get_proxy() && ref.get_proxy()->transport()) {
             ref_cache_.put(target.id, ref);
         }
+        return ref;
+    }
+
+    // 4. Local endpoint: check local actors
+    auto actor = system->get_actor(target.id);
+    if (actor) {
+        ActorRef ref{Actor(actor)};
+        ref_cache_.put(target.id, ref);
         return ref;
     }
 
