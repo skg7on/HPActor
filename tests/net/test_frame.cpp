@@ -45,7 +45,7 @@ int main() {
     f2.message_id = 12345;
 
     // Test encode/decode roundtrip
-    bytes encoded = f2.encode();
+    StreamBuffer encoded = f2.encode();
     assert(!encoded.empty());
 
     WireFrame f3 = WireFrame::decode(encoded);
@@ -60,7 +60,7 @@ int main() {
     assert(f3.message_id == f2.message_id);
 
     // Test malformed data handling
-    bytes malformed = {0xFF, 0xFF, 0xFF, 0xFF}; // Invalid protobuf
+    StreamBuffer malformed = {0xFF, 0xFF, 0xFF, 0xFF}; // Invalid protobuf
     WireFrame f_bad = WireFrame::decode(malformed);
     // Should return default frame, not crash
     assert(f_bad.sender.id.value() == 0);
@@ -79,7 +79,7 @@ int main() {
     f_ipv6.payload = {1, 2, 3};
     f_ipv6.message_id = 99999;
 
-    bytes encoded_ipv6 = f_ipv6.encode();
+    StreamBuffer encoded_ipv6 = f_ipv6.encode();
     WireFrame decoded_ipv6 = WireFrame::decode(encoded_ipv6);
 
     assert(std::get<Ipv6Endpoint>(decoded_ipv6.sender.endpoint).port_nw ==

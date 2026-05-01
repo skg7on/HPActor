@@ -121,7 +121,7 @@ void ActorContext::reply_with_error(error err) {
     // Wire format: [4 bytes: error code BE][error message string]
     // A protobuf error message can replace this payload later without
     // changing the TypeTag or dispatch path.
-    bytes payload;
+    StreamBuffer payload;
     uint32_t code = err.code();
     payload.push_back(static_cast<uint8_t>((code >> 24) & 0xFF));
     payload.push_back(static_cast<uint8_t>((code >> 16) & 0xFF));
@@ -173,39 +173,39 @@ void ActorContext::monitor(const ActorAddress& target) {
     add_monitored(target);
 }
 
-RpcFuture<bytes>
-ActorContext::rpc(const ActorAddress& target, const bytes& encoded_request,
+RpcFuture<StreamBuffer>
+ActorContext::rpc(const ActorAddress& target, const StreamBuffer& encoded_request,
                   std::chrono::milliseconds timeout_ms) {
     return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms);
 }
 
-RpcFuture<bytes>
+RpcFuture<StreamBuffer>
 ActorContext::http_get(const std::string& url,
                        std::vector<net::HttpHeader> headers) {
     return system_->http_client().get(url, std::move(headers));
 }
 
-RpcFuture<bytes>
-ActorContext::http_post(const std::string& url, bytes body,
+RpcFuture<StreamBuffer>
+ActorContext::http_post(const std::string& url, StreamBuffer body,
                          std::vector<net::HttpHeader> headers) {
     return system_->http_client().post(url, std::move(body), std::move(headers));
 }
 
-RpcFuture<bytes>
-ActorContext::http_put(const std::string& url, bytes body,
+RpcFuture<StreamBuffer>
+ActorContext::http_put(const std::string& url, StreamBuffer body,
                         std::vector<net::HttpHeader> headers) {
     return system_->http_client().put(url, std::move(body), std::move(headers));
 }
 
-RpcFuture<bytes>
+RpcFuture<StreamBuffer>
 ActorContext::http_delete(const std::string& url,
                            std::vector<net::HttpHeader> headers) {
     return system_->http_client().del(url, std::move(headers));
 }
 
-RpcFuture<bytes>
+RpcFuture<StreamBuffer>
 ActorContext::http_request(net::HttpMethod method, const std::string& url,
-                            std::vector<net::HttpHeader> headers, bytes body) {
+                            std::vector<net::HttpHeader> headers, StreamBuffer body) {
     return system_->http_client().request(method, url, std::move(headers),
                                            std::move(body));
 }

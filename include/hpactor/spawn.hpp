@@ -45,7 +45,7 @@ constexpr uint32_t spawn_receiver_not_running = 5;
 struct SpawnRequest {
     std::string actor_type_name;  // e.g., "calculator"
     TypeTag args_type;            // type tag for deserializing args
-    bytes serialized_args;        // type-erased constructor arguments
+    StreamBuffer serialized_args;        // type-erased constructor arguments
     ActorAddress supervisor_addr; // supervisor's address for link establishment
 };
 

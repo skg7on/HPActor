@@ -52,7 +52,7 @@ class TcpTransport : public Transport {
     void listen(uint16_t port) override;
     void stop_listening() override;
 
-    void send(const ActorAddress& target, const bytes& encoded) override;
+    void send(const ActorAddress& target, const StreamBuffer& encoded) override;
 
     bool is_connected(EndPoint remote_endpoint) const override;
     EndPoint endpoint() const override {
@@ -91,7 +91,7 @@ class TcpTransport : public Transport {
     NodeRegistry* registry_ = nullptr; // Optional registry for node lookup
     HostResolver host_resolver_;
     std::unordered_map<EndPoint, std::shared_ptr<ConnectionPool>> pools_;
-    std::function<void(MessageId, const bytes&)> rpc_handler_;
+    std::function<void(MessageId, const StreamBuffer&)> rpc_handler_;
     std::function<void(const net::WireFrame&)> actor_msg_handler_;
 
     // Map of fd -> Connection for completion routing

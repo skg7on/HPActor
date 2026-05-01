@@ -54,7 +54,7 @@ Behavior SupervisorActor::make_behavior() {
     }};
 }
 
-void SupervisorActor::handle_child_down(TypeTag /*tag*/, const bytes& payload) {
+void SupervisorActor::handle_child_down(TypeTag /*tag*/, const StreamBuffer& payload) {
     auto pb = std::make_shared<::hpactor::DownMessage>();
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
         return;
@@ -166,7 +166,7 @@ SelfSupervisingActor::on_failure(ActorId child_id, const error& err) {
     return decide_restart(child_id, err);
 }
 
-void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/, const bytes& payload) {
+void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/, const StreamBuffer& payload) {
     auto pb = std::make_shared<::hpactor::DownMessage>();
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
         return;

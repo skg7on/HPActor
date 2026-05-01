@@ -64,20 +64,20 @@ public:
 
     // Local send: carries both parsed form (zero-copy) and pre-serialized form.
     TypedMessage(TypeTag tag, std::shared_ptr<google::protobuf::Message> msg,
-                 bytes serialized)
+                 StreamBuffer serialized)
         : tag_(tag), payload_(std::move(serialized)),
           parsed_(std::move(msg)) {}
 
     // Remote receive / serialized only: payload is present, parsed is lazily
     // populated via as<T>().
-    explicit TypedMessage(TypeTag tag, bytes payload)
+    explicit TypedMessage(TypeTag tag, StreamBuffer payload)
         : tag_(tag), payload_(std::move(payload)) {}
 
     // Convenience: construct from a protobuf message, serializing eagerly.
     TypedMessage(TypeTag tag, const google::protobuf::Message& msg);
 
     TypeTag type_id() const noexcept { return tag_; }
-    const bytes& payload() const noexcept { return payload_; }
+    const StreamBuffer& payload() const noexcept { return payload_; }
 
     // Non-null when the message is available in parsed form (local fast path).
     std::shared_ptr<google::protobuf::Message> parsed() const noexcept {
@@ -113,7 +113,7 @@ public:
 
 private:
     TypeTag tag_ = TypeTag::Invalid;
-    bytes payload_;
+    StreamBuffer payload_;
     mutable std::shared_ptr<google::protobuf::Message> parsed_;
     ActorAddress sender_address_;
 };

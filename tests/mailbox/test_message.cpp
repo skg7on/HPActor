@@ -23,7 +23,7 @@ int main() {
     assert(msg.parsed() == nullptr);
 
     // Test construction from tag + payload
-    hpactor::bytes data = {0x01, 0x02, 0x03};
+    hpactor::StreamBuffer data = {0x01, 0x02, 0x03};
     hpactor::TypedMessage msg2(hpactor::TypeTag::User, data);
     assert(msg2.type_id() == hpactor::TypeTag::User);
     assert(msg2.payload().size() == 3);

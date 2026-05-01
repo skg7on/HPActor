@@ -114,7 +114,7 @@ void test_link_to_down_notification() {
     assert(found);
 
     // Deliver message to trigger B's coroutine (which will exit after one msg)
-    system.deliver_local(b.id(), TypedMessage(TypeTag::User, bytes{1}));
+    system.deliver_local(b.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
 
     // Poll until A receives DownMsg or timeout
     auto* rec = static_cast<DownRecordingActor*>(a.get().get());
@@ -135,7 +135,7 @@ void test_monitor_down_notification() {
 
     a.get()->monitor(b.address());
 
-    system.deliver_local(b.id(), TypedMessage(TypeTag::User, bytes{1}));
+    system.deliver_local(b.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
 
     auto* rec = static_cast<DownRecordingActor*>(a.get().get());
     bool received = poll_until([rec, &b]() {
@@ -162,7 +162,7 @@ void test_unlink_from_stops_notification() {
         assert(!(linked == b.address()));
     }
 
-    system.deliver_local(b.id(), TypedMessage(TypeTag::User, bytes{1}));
+    system.deliver_local(b.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
 
     // Give time for any potential message delivery, then verify no DownMsg
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
@@ -183,7 +183,7 @@ void test_demonitor_stops_notification() {
     a.get()->monitor(b.address());
     a.get()->demonitor(b.address());
 
-    system.deliver_local(b.id(), TypedMessage(TypeTag::User, bytes{1}));
+    system.deliver_local(b.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
 
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 

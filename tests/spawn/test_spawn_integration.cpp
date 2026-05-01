@@ -24,7 +24,7 @@ void test_frame_encoding() {
     frame.message_id = 12345;
     frame.flags = hpactor::net::WireFrame::RpcRequest;
 
-    hpactor::bytes encoded = frame.encode();
+    hpactor::StreamBuffer encoded = frame.encode();
     assert(encoded.size() > 0);
 
     hpactor::net::WireFrame decoded = hpactor::net::WireFrame::decode(encoded);
@@ -55,7 +55,7 @@ void test_spawn_request_protobuf() {
     sup->set_actor_id(42);
     sup->set_incarnation(1);
 
-    hpactor::bytes encoded = registry.serialize(pb_req);
+    hpactor::StreamBuffer encoded = registry.serialize(pb_req);
     assert(encoded.size() > 0);
 
     auto decoded = registry.deserialize(hpactor::TypeTag::SpawnRequestTag, encoded);

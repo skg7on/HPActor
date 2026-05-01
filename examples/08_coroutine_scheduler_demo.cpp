@@ -52,9 +52,9 @@ using namespace hpactor;
 // Demo message tag
 constexpr TypeTag kPingTag = static_cast<TypeTag>(static_cast<uint32_t>(TypeTag::User) + 1);
 
-// Helper to create a ping TypedMessage (stores sequence as payload bytes)
+// Helper to create a ping TypedMessage (stores sequence as payload StreamBuffer)
 TypedMessage make_ping_msg(int seq) {
-    bytes payload(sizeof(seq));
+    StreamBuffer payload(sizeof(seq));
     std::memcpy(payload.data(), &seq, sizeof(seq));
     return TypedMessage(kPingTag, std::move(payload));
 }

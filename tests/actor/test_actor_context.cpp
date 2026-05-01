@@ -91,7 +91,7 @@ void test_actor_context_send_with_actor_ref() {
     ActorContext ctx(actor, &system);
 
     ActorRef target_ref(actor);
-    TypedMessage msg(TypeTag::User, bytes{1, 2, 3});
+    TypedMessage msg(TypeTag::User, StreamBuffer{1, 2, 3});
     ctx.send(target_ref, std::move(msg));
 
     auto* mailbox = system.get_mailbox(actor.address().id);
@@ -108,7 +108,7 @@ void test_actor_context_send_sets_sender_address() {
 
     ActorContext ctx(sender, &system);
 
-    TypedMessage msg(TypeTag::User, bytes{42});
+    TypedMessage msg(TypeTag::User, StreamBuffer{42});
     ActorRef target_ref(target);
     ctx.send(target_ref, std::move(msg));
 
@@ -162,7 +162,7 @@ void test_actor_context_reply() {
     ActorContext ctx(actor_a, &system);
     ctx.set_current_sender(actor_b.address());
 
-    TypedMessage reply_msg(TypeTag::User, bytes{99});
+    TypedMessage reply_msg(TypeTag::User, StreamBuffer{99});
     ctx.reply(std::move(reply_msg));
 
     auto* mailbox = system.get_mailbox(actor_b.address().id);
@@ -181,7 +181,7 @@ void test_actor_context_reply_no_sender() {
     auto actor = system.spawn<EventBasedActor>();
     ActorContext ctx(actor, &system);
     // No current_sender_ set — reply should be no-op, not crash
-    TypedMessage reply_msg(TypeTag::User, bytes{99});
+    TypedMessage reply_msg(TypeTag::User, StreamBuffer{99});
     ctx.reply(std::move(reply_msg));
     // Test passes if we reach here without crashing
 }

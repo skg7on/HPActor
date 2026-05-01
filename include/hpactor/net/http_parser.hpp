@@ -47,7 +47,7 @@ enum class HttpParserMode { Request, Response };
 // ResponseCallback — fired in Response mode with status, headers, body
 // ---------------------------------------------------------------------------
 using ResponseCallback = std::function<void(int status_code,
-    const std::vector<HttpHeader>& headers, const bytes& body)>;
+    const std::vector<HttpHeader>& headers, const StreamBuffer& body)>;
 
 // ---------------------------------------------------------------------------
 // HttpParser — wraps llhttp for use with StreamBuffer and HttpRequest
@@ -101,7 +101,7 @@ class HttpParser {
     HttpMethod method_ = HttpMethod::GET;
     int http_major_ = 1;
     int http_minor_ = 1;
-    bytes body_buf_;
+    StreamBuffer body_buf_;
 
     MessageCallback on_message_;
     ResponseCallback on_response_;

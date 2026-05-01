@@ -65,9 +65,9 @@ static const hpactor::TypeTag KickTag{199};
 // Serialization helpers (plain C++ structs, no protobuf)
 // ---------------------------------------------------------------------------
 
-static hpactor::bytes serialize_pid_response(int pid,
+static hpactor::StreamBuffer serialize_pid_response(int pid,
                                              const std::string& hostname) {
-    hpactor::bytes b;
+    hpactor::StreamBuffer b;
     b.push_back(static_cast<uint8_t>((pid >> 24) & 0xFF));
     b.push_back(static_cast<uint8_t>((pid >> 16) & 0xFF));
     b.push_back(static_cast<uint8_t>((pid >> 8) & 0xFF));
@@ -77,7 +77,7 @@ static hpactor::bytes serialize_pid_response(int pid,
 }
 
 static std::pair<int, std::string>
-deserialize_pid_response(const hpactor::bytes& b) {
+deserialize_pid_response(const hpactor::StreamBuffer& b) {
     int pid = (static_cast<int>(b[0]) << 24)
             | (static_cast<int>(b[1]) << 16)
             | (static_cast<int>(b[2]) << 8)
@@ -85,14 +85,14 @@ deserialize_pid_response(const hpactor::bytes& b) {
     return {pid, std::string(b.begin() + 4, b.end())};
 }
 
-static hpactor::bytes serialize_actor_count(int count) {
+static hpactor::StreamBuffer serialize_actor_count(int count) {
     return {static_cast<uint8_t>((count >> 24) & 0xFF),
             static_cast<uint8_t>((count >> 16) & 0xFF),
             static_cast<uint8_t>((count >> 8) & 0xFF),
             static_cast<uint8_t>(count & 0xFF)};
 }
 
-static int deserialize_actor_count(const hpactor::bytes& b) {
+static int deserialize_actor_count(const hpactor::StreamBuffer& b) {
     return (static_cast<int>(b[0]) << 24)
          | (static_cast<int>(b[1]) << 16)
          | (static_cast<int>(b[2]) << 8)
@@ -153,7 +153,7 @@ class QueryActor : public hpactor::EventBasedActor {
                 if (msg.type_id() == KickTag) {
                     step_ = Step::WaitPid;
                     context()->send(remote_.address(),
-                        hpactor::TypedMessage(QueryPidTag, hpactor::bytes{}));
+                        hpactor::TypedMessage(QueryPidTag, hpactor::StreamBuffer{}));
                 }
                 break;
             case Step::WaitPid:
@@ -166,7 +166,7 @@ class QueryActor : public hpactor::EventBasedActor {
                     step_ = Step::WaitActorCount;
                     context()->send(remote_.address(),
                         hpactor::TypedMessage(QueryActorCountTag,
-                                               hpactor::bytes{}));
+                                               hpactor::StreamBuffer{}));
                 }
                 break;
             case Step::WaitActorCount:
@@ -177,7 +177,7 @@ class QueryActor : public hpactor::EventBasedActor {
                     step_ = Step::Done;
                     context()->send(remote_.address(),
                         hpactor::TypedMessage(ShutdownMsgTag,
-                                               hpactor::bytes{}));
+                                               hpactor::StreamBuffer{}));
                     done_.set_value();
                 }
                 break;
@@ -261,7 +261,7 @@ static void run_client(uint16_t port) {
     // Spawn ProcessInfoActor on the server
     std::cout << "CLIENT: spawning remote ProcessInfoActor..." << std::endl;
     auto result =
-        system.spawn_remote(endpoint_str, "process_info", hpactor::bytes{});
+        system.spawn_remote(endpoint_str, "process_info", hpactor::StreamBuffer{});
     if (!result.has_value()) {
         std::cerr << "CLIENT: spawn_remote failed: "
                   << result.error().message() << std::endl;
@@ -279,7 +279,7 @@ static void run_client(uint16_t port) {
 
     // Kick the query actor
     system.deliver_local(query.id(),
-                         hpactor::TypedMessage(KickTag, hpactor::bytes{}));
+                         hpactor::TypedMessage(KickTag, hpactor::StreamBuffer{}));
 
     auto status = done_future.wait_for(std::chrono::seconds(10));
     if (status == std::future_status::timeout) {

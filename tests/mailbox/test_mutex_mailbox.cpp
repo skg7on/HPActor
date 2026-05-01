@@ -24,7 +24,7 @@ int main() {
     MutexMailbox<TypedMessage> mailbox;
 
     // Test push/pop
-    mailbox.push(TypedMessage(TypeTag::User, bytes{42}));
+    mailbox.push(TypedMessage(TypeTag::User, StreamBuffer{42}));
     assert(mailbox.size() == 1);
 
     TypedMessage msg;
@@ -45,7 +45,7 @@ int main() {
         threads.emplace_back([&mailbox, i]() {
             for (int j = 0; j < 100; ++j) {
                 mailbox.push(TypedMessage(TypeTag::User,
-                    bytes{static_cast<uint8_t>(i), static_cast<uint8_t>(j)}));
+                    StreamBuffer{static_cast<uint8_t>(i), static_cast<uint8_t>(j)}));
             }
         });
     }

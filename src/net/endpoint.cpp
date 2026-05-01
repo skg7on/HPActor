@@ -88,9 +88,9 @@ EndPoint parse_endpoint(std::string_view node_id) {
     // Try numeric IPv6 address
     struct in6_addr addr6;
     if (inet_pton(AF_INET6, std::string(host).c_str(), &addr6) == 1) {
-        std::array<uint8_t, 16> bytes;
-        std::memcpy(bytes.data(), addr6.s6_addr, 16);
-        return Ipv6Endpoint{bytes, htons(static_cast<uint16_t>(port))};
+        std::array<uint8_t, 16> StreamBuffer;
+        std::memcpy(StreamBuffer.data(), addr6.s6_addr, 16);
+        return Ipv6Endpoint{StreamBuffer, htons(static_cast<uint16_t>(port))};
     }
 
     // Fallback: try DNS resolution via getaddrinfo for IPv4
@@ -116,10 +116,10 @@ EndPoint parse_endpoint(std::string_view node_id) {
     ret = getaddrinfo(std::string(host).c_str(), nullptr, &hints, &result);
     if (ret == 0 && result != nullptr) {
         auto* ai = reinterpret_cast<struct sockaddr_in6*>(result->ai_addr);
-        std::array<uint8_t, 16> bytes;
-        std::memcpy(bytes.data(), ai->sin6_addr.s6_addr, 16);
+        std::array<uint8_t, 16> StreamBuffer;
+        std::memcpy(StreamBuffer.data(), ai->sin6_addr.s6_addr, 16);
         freeaddrinfo(result);
-        return Ipv6Endpoint{bytes, htons(static_cast<uint16_t>(port))};
+        return Ipv6Endpoint{StreamBuffer, htons(static_cast<uint16_t>(port))};
     }
     if (result) {
         freeaddrinfo(result);
@@ -134,10 +134,10 @@ EndPoint parse_endpoint(std::string_view node_id) {
     ret = getaddrinfo(std::string(host).c_str(), nullptr, &hints, &result);
     if (ret == 0 && result != nullptr) {
         auto* ai = reinterpret_cast<struct sockaddr_in6*>(result->ai_addr);
-        std::array<uint8_t, 16> bytes;
-        std::memcpy(bytes.data(), ai->sin6_addr.s6_addr, 16);
+        std::array<uint8_t, 16> StreamBuffer;
+        std::memcpy(StreamBuffer.data(), ai->sin6_addr.s6_addr, 16);
         freeaddrinfo(result);
-        return Ipv6Endpoint{bytes, htons(static_cast<uint16_t>(port))};
+        return Ipv6Endpoint{StreamBuffer, htons(static_cast<uint16_t>(port))};
     }
     if (result) {
         freeaddrinfo(result);

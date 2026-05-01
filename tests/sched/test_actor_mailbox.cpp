@@ -58,7 +58,7 @@ int main() {
         hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(
             hpactor::ActorId{42}, &scheduler);
         assert(scheduler.notify_ready_count.load() == 0);
-        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x7B});
+        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::StreamBuffer{0x7B});
         mb.enqueue(msg);
         assert(scheduler.notify_ready_count.load() == 1);
         assert(scheduler.last_actor.value() == 42);
@@ -69,8 +69,8 @@ int main() {
         MockScheduler scheduler;
         hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(
             hpactor::ActorId{1}, &scheduler);
-        auto* msg1 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x01});
-        auto* msg2 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x02});
+        auto* msg1 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::StreamBuffer{0x01});
+        auto* msg2 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::StreamBuffer{0x02});
         mb.enqueue(msg1);
         assert(scheduler.notify_ready_count.load() == 1);
         mb.enqueue(msg2);
@@ -82,8 +82,8 @@ int main() {
         MockScheduler scheduler;
         hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(
             hpactor::ActorId{1}, &scheduler);
-        auto* msg1 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x01});
-        auto* msg2 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x02});
+        auto* msg1 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::StreamBuffer{0x01});
+        auto* msg2 = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::StreamBuffer{0x02});
         mb.enqueue(msg1);
         assert(scheduler.notify_ready_count.load() == 1);
         mb.dequeue();
@@ -96,7 +96,7 @@ int main() {
         MockScheduler scheduler;
         hpactor::mailbox::MPSCActorMailbox<hpactor::TypedMessage> mb(
             hpactor::ActorId{1}, &scheduler);
-        mb.push(hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x03, 0xE7}));
+        mb.push(hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::StreamBuffer{0x03, 0xE7}));
         assert(scheduler.notify_ready_count.load() == 1);
         auto* node = mb.dequeue();
         assert(node != nullptr);

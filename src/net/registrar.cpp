@@ -81,12 +81,12 @@ void RegistrarConnection::set_send_complete_handler(send_complete_handler h) {
     send_complete_handler_ = std::move(h);
 }
 
-void RegistrarConnection::send_message(TcpMessageType type, const bytes& payload) {
+void RegistrarConnection::send_message(TcpMessageType type, const StreamBuffer& payload) {
     if (fd_ < 0 || !loop_)
         return;
 
     // Build message: [Magic: 4][Version: 1][Type: 1][Length: 4][Payload: N]
-    bytes message;
+    StreamBuffer message;
     message.resize(TcpHeaderSize + payload.size());
 
     uint32_t magic_be = htonl(TcpRegistrarMagic);
@@ -246,7 +246,7 @@ void RegistrarConnection::handle_send_completion(int result) {
         return;
     }
 
-    // Remove sent bytes from write buffer
+    // Remove sent StreamBuffer from write buffer
     if (static_cast<size_t>(result) >= write_buffer_.size()) {
         write_buffer_.clear();
     } else {
@@ -594,7 +594,7 @@ void UdpRegistrar::handle_udp_read_ready() {
                  reinterpret_cast<struct sockaddr*>(&src_addr), &src_addr_len);
 
     if (bytes_read > 0) {
-        bytes data(buffer, buffer + bytes_read);
+        StreamBuffer data(buffer, buffer + bytes_read);
         char ip_str[INET_ADDRSTRLEN];
         std::string from_host;
         uint16_t from_port = 0;
@@ -608,14 +608,14 @@ void UdpRegistrar::handle_udp_read_ready() {
     }
 }
 
-void UdpRegistrar::handle_udp_recv_completion(const bytes& data,
+void UdpRegistrar::handle_udp_recv_completion(const StreamBuffer& data,
                                               const std::string& from_host,
                                               uint16_t from_port) {
     // Call the existing handler
     handle_udp_packet(data, from_host, from_port);
 }
 
-void UdpRegistrar::send_udp_response(const bytes& data,
+void UdpRegistrar::send_udp_response(const StreamBuffer& data,
                                      const struct sockaddr_in& dest) {
     if (udp_socket_ < 0)
         return;
@@ -686,7 +686,7 @@ void UdpRegistrar::set_node_callback(node_callback cb) {
     node_callback_ = std::move(cb);
 }
 
-void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_host,
+void UdpRegistrar::handle_udp_packet(const StreamBuffer& data, const std::string& from_host,
                                      uint16_t from_port) {
     // Handle incoming UDP packet for resolution
     // Packet format: [Magic: 4][Version: 1][Type: 1][Length: 4][Payload...]
@@ -719,7 +719,7 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
         return;
     }
 
-    const bytes payload(data.begin() + RegistrarHeaderSize,
+    const StreamBuffer payload(data.begin() + RegistrarHeaderSize,
                         data.begin() + RegistrarHeaderSize + payload_len);
 
     switch (type) {
@@ -745,10 +745,10 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                     resp_msg.mutable_endpoint_info()->set_tcp_port(ep->tcp_port);
 
                     std::string serialized_resp = resp_msg.SerializeAsString();
-                    bytes response_payload(serialized_resp.begin(),
+                    StreamBuffer response_payload(serialized_resp.begin(),
                                            serialized_resp.end());
 
-                    bytes response;
+                    StreamBuffer response;
                     response.resize(RegistrarHeaderSize + response_payload.size());
 
                     uint32_t magic_be = htonl(RegistrarMagic);

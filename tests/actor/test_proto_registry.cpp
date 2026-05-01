@@ -65,7 +65,7 @@ int main() {
     {
         printf("Test 5: deserialize unregistered tag... ");
         ProtoTypeRegistry reg;
-        bytes data = {0x00, 0x00, 0x00, 0x01, 0x00};
+        StreamBuffer data = {0x00, 0x00, 0x00, 0x01, 0x00};
         auto msg = reg.deserialize(static_cast<TypeTag>(1), data);
         assert(msg == nullptr);
         printf("PASS\n");
@@ -82,7 +82,7 @@ int main() {
         ref.set_actor_id(42);
         ref.set_incarnation(0);
 
-        bytes wire = reg.encode_wire(TypeTag::User, ref);
+        StreamBuffer wire = reg.encode_wire(TypeTag::User, ref);
         assert(wire.size() > 4);
 
         auto [tag, msg] = reg.decode_wire(wire);
@@ -100,7 +100,7 @@ int main() {
     {
         printf("Test 7: short buffer decode... ");
         ProtoTypeRegistry reg;
-        bytes short_buf = {0x00, 0x00};
+        StreamBuffer short_buf = {0x00, 0x00};
         auto [tag, msg] = reg.decode_wire(short_buf);
         assert(tag == TypeTag::Invalid);
         assert(msg == nullptr);

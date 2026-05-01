@@ -427,9 +427,9 @@ struct TraceContext {
 };
 
 // -----------------------------------------------------------------------------
-// bytes - byte buffer type
+// StreamBuffer - byte buffer type
 // -----------------------------------------------------------------------------
-using bytes = adt::StreamBuffer;
+using adt::StreamBuffer;
 
 // -----------------------------------------------------------------------------
 // TypeTag - type identifier for serialization (replaces RTTI)

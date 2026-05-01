@@ -84,7 +84,7 @@ int main() {
         assert(captured.has_value() && "completion should be captured");
         assert(captured->type == OpType::Recv && "should be Recv completion");
         assert(captured->actor == ActorId(7) && "actor should match");
-        assert(captured->result == 14 && "should have read 14 bytes");
+        assert(captured->result == 14 && "should have read 14 StreamBuffer");
         assert(memcmp(recv_buf, "hello reactor", 14) == 0 &&
                "data should match");
 
@@ -117,12 +117,12 @@ int main() {
         assert(captured.has_value() && "completion should be captured");
         assert(captured->type == OpType::Send && "should be Send completion");
         assert(captured->actor == ActorId(3) && "actor should match");
-        assert(captured->result == 5 && "should have sent 5 bytes");
+        assert(captured->result == 5 && "should have sent 5 StreamBuffer");
 
         // Verify data arrived on other end
         char verify_buf[16] = {};
         ssize_t n = read(fds[1], verify_buf, sizeof(verify_buf));
-        assert(n == 5 && "should read 5 bytes");
+        assert(n == 5 && "should read 5 StreamBuffer");
         assert(memcmp(verify_buf, "world", 5) == 0 && "data should match");
 
         close(fds[0]);
@@ -268,7 +268,7 @@ int main() {
 
         assert(captured.has_value() && "completion should be captured");
         assert(captured->type == OpType::SendTo && "should be SendTo");
-        assert(captured->result == 10 && "should send 10 bytes");
+        assert(captured->result == 10 && "should send 10 StreamBuffer");
 
         close(fds[0]);
         close(fds[1]);

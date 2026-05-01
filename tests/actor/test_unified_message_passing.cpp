@@ -36,7 +36,7 @@ void test_deliver_remote_bridge() {
                                 ActorType{1}, ActorId{99}, 0};
     frame.receiver = target.address();
     frame.type_tag = static_cast<uint32_t>(TypeTag::User);
-    frame.payload = bytes{1, 3, 3, 7};
+    frame.payload = StreamBuffer{1, 3, 3, 7};
 
     system.deliver_remote(frame);
 
@@ -60,7 +60,7 @@ void test_unified_send_reply_loop() {
 
     // Alice sends to Bob
     ActorContext alice_ctx(alice, &system);
-    TypedMessage msg(TypeTag::User, bytes{42});
+    TypedMessage msg(TypeTag::User, StreamBuffer{42});
     ActorRef bob_ref(bob);
     alice_ctx.send(bob_ref, std::move(msg));
 
@@ -75,7 +75,7 @@ void test_unified_send_reply_loop() {
     // Bob replies
     ActorContext bob_ctx(bob, &system);
     bob_ctx.set_current_sender(received.sender_address());
-    TypedMessage reply_msg(TypeTag::User, bytes{24});
+    TypedMessage reply_msg(TypeTag::User, StreamBuffer{24});
     bob_ctx.reply(std::move(reply_msg));
 
     // Alice receives reply
@@ -122,7 +122,7 @@ void test_send_to_self() {
     auto actor = system.spawn<EventBasedActor>();
     ActorContext ctx(actor, &system);
 
-    TypedMessage msg(TypeTag::User, bytes{7});
+    TypedMessage msg(TypeTag::User, StreamBuffer{7});
     ActorRef self_ref(actor);
     ctx.send(self_ref, std::move(msg));
 

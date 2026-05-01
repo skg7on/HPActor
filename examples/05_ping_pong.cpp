@@ -58,16 +58,16 @@ static const hpactor::TypeTag EchoModeTag{503};
 static const hpactor::TypeTag StartTag{504};
 
 // ---------------------------------------------------------------------------
-// Payload helpers — encode/decode int as bytes
+// Payload helpers — encode/decode int as StreamBuffer
 // ---------------------------------------------------------------------------
 
-static hpactor::bytes encode_int(int value) {
-    hpactor::bytes payload(sizeof(int));
+static hpactor::StreamBuffer encode_int(int value) {
+    hpactor::StreamBuffer payload(sizeof(int));
     std::memcpy(payload.data(), &value, sizeof(int));
     return payload;
 }
 
-static int decode_int(const hpactor::bytes& payload) {
+static int decode_int(const hpactor::StreamBuffer& payload) {
     if (payload.size() < sizeof(int)) return 0;
     int value;
     std::memcpy(&value, payload.data(), sizeof(int));

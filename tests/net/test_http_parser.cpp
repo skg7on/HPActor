@@ -31,7 +31,7 @@ std::span<const uint8_t> bytes_from(const char* str) {
     return {reinterpret_cast<const uint8_t*>(str), strlen(str)};
 }
 
-std::string body_to_string(const bytes& body) {
+std::string body_to_string(const StreamBuffer& body) {
     return {body.begin(), body.end()};
 }
 
@@ -191,7 +191,7 @@ static void test_parse_incremental_feed() {
     const char* raw = "GET /test HTTP/1.1\r\nHost: example.com\r\n\r\n";
     size_t len = strlen(raw);
 
-    // Feed 4 bytes at a time
+    // Feed 4 StreamBuffer at a time
     for (size_t i = 0; i < len; i += 4) {
         size_t chunk = std::min(size_t(4), len - i);
         std::span<const uint8_t> data(

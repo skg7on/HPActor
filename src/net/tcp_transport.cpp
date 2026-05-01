@@ -227,7 +227,7 @@ void TcpTransport::stop_listening() {
     acceptor_.close();
 }
 
-void TcpTransport::send(const ActorAddress& target, const bytes& encoded) {
+void TcpTransport::send(const ActorAddress& target, const StreamBuffer& encoded) {
     auto pool = get_or_create_pool(target.endpoint);
     pool->send(target, encoded);
 }

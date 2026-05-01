@@ -59,7 +59,7 @@ void test_spawn_request_encode_via_protobuf() {
     sup->set_actor_id(42);
     sup->set_incarnation(1);
 
-    hpactor::bytes encoded = registry.serialize(pb_req);
+    hpactor::StreamBuffer encoded = registry.serialize(pb_req);
     assert(!encoded.empty());
 
     // Decode back
@@ -84,7 +84,7 @@ void test_spawn_response_encode_via_protobuf() {
     addr->set_incarnation(1);
     pb_resp.set_error_code(hpactor::spawn_errors::success);
 
-    hpactor::bytes encoded = registry.serialize(pb_resp);
+    hpactor::StreamBuffer encoded = registry.serialize(pb_resp);
     assert(!encoded.empty());
 
     auto decoded = registry.deserialize(hpactor::TypeTag::SpawnResponseTag, encoded);

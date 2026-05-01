@@ -127,7 +127,7 @@ struct HttpRequest {
     int http_major = 1;
     int http_minor = 1;
     std::vector<HttpHeader> headers;
-    bytes body;
+    StreamBuffer body;
     std::unordered_map<std::string, std::string> path_params;
     std::unordered_map<std::string, std::string> query_params;
 
@@ -149,22 +149,22 @@ struct HttpRequest {
 struct HttpResponse {
     HttpStatusCode status_code = HttpStatusCode::OK;
     std::vector<HttpHeader> headers;
-    bytes body;
+    StreamBuffer body;
 
-    static HttpResponse ok(bytes body = {}) {
+    static HttpResponse ok(StreamBuffer body = {}) {
         return {HttpStatusCode::OK, {}, std::move(body)};
     }
-    static HttpResponse created(bytes body = {}) {
+    static HttpResponse created(StreamBuffer body = {}) {
         return {HttpStatusCode::Created, {}, std::move(body)};
     }
     static HttpResponse no_content() {
         return {HttpStatusCode::NoContent, {}, {}};
     }
-    static HttpResponse not_found(bytes body = {}) {
+    static HttpResponse not_found(StreamBuffer body = {}) {
         return {HttpStatusCode::NotFound, {}, std::move(body)};
     }
     static HttpResponse error(HttpStatusCode code, std::string message) {
-        bytes body;
+        StreamBuffer body;
         body.append(reinterpret_cast<const uint8_t*>(message.data()), message.size());
         return {code, {{"Content-Type", "text/plain"}}, std::move(body)};
     }

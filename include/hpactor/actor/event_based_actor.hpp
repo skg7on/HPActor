@@ -48,11 +48,11 @@ struct ProtoHandler {
     ProtoHandler& operator=(const ProtoHandler&) = delete;
 
     // Deserialize bytes into a shared_ptr<void> holding the concrete protobuf type
-    std::function<std::shared_ptr<void>(const bytes&)> deserialize;
+    std::function<std::shared_ptr<void>(const StreamBuffer&)> deserialize;
 
     // Invoke the handler with a deserialized message.
     // Returns serialized response bytes (empty for fire-and-forget).
-    std::function<bytes(std::shared_ptr<void>)> invoke;
+    std::function<StreamBuffer(std::shared_ptr<void>)> invoke;
 };
 
 // -----------------------------------------------------------------------------
@@ -83,14 +83,14 @@ class EventBasedActor : public LocalActor {
 
         ProtoHandler entry;
         entry.type_name = ProtoMsgT().GetTypeName();
-        entry.deserialize = [](const bytes& data) -> std::shared_ptr<void> {
+        entry.deserialize = [](const StreamBuffer& data) -> std::shared_ptr<void> {
             auto msg = std::make_shared<ProtoMsgT>();
             if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
                 return nullptr;
             }
             return msg;
         };
-        entry.invoke = [handler_ptr](std::shared_ptr<void> raw) -> bytes {
+        entry.invoke = [handler_ptr](std::shared_ptr<void> raw) -> StreamBuffer {
             auto& msg = *static_cast<ProtoMsgT*>(raw.get());
             (*handler_ptr)(msg);
             return {};
@@ -108,17 +108,17 @@ class EventBasedActor : public LocalActor {
 
         ProtoHandler entry;
         entry.type_name = ReqT().GetTypeName();
-        entry.deserialize = [](const bytes& data) -> std::shared_ptr<void> {
+        entry.deserialize = [](const StreamBuffer& data) -> std::shared_ptr<void> {
             auto msg = std::make_shared<ReqT>();
             if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
                 return nullptr;
             }
             return msg;
         };
-        entry.invoke = [handler_ptr](std::shared_ptr<void> raw) -> bytes {
+        entry.invoke = [handler_ptr](std::shared_ptr<void> raw) -> StreamBuffer {
             auto& req = *static_cast<ReqT*>(raw.get());
             ResT res = (*handler_ptr)(req);
-            bytes result(res.ByteSizeLong());
+            StreamBuffer result(res.ByteSizeLong());
             res.SerializeToArray(result.data(),
                                  static_cast<int>(result.size()));
             return result;
@@ -128,7 +128,7 @@ class EventBasedActor : public LocalActor {
     }
 
     // Dispatch an incoming protobuf message by TypeTag
-    void on_proto_message(TypeTag tag, const bytes& payload);
+    void on_proto_message(TypeTag tag, const StreamBuffer& payload);
 
     // Check if this actor can handle a given TypeTag
     [[nodiscard]] bool handles(TypeTag tag) const {

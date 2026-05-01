@@ -28,8 +28,8 @@ using namespace hpactor::net;
 int main() {
     // Test framing encoding
     // Build a test message: Register type with empty payload
-    bytes payload;
-    bytes message;
+    StreamBuffer payload;
+    StreamBuffer message;
     message.resize(10); // TcpHeaderSize = 10
 
     uint32_t magic_be = htonl(TcpRegistrarMagic);

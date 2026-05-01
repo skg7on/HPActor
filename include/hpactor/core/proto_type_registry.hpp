@@ -80,7 +80,7 @@ public:
     }
 
     [[nodiscard]] std::unique_ptr<google::protobuf::Message> deserialize(
-        TypeTag tag, const bytes& data) const {
+        TypeTag tag, const StreamBuffer& data) const {
         auto msg = create(tag);
         if (!msg) return nullptr;
         if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
@@ -89,9 +89,9 @@ public:
         return msg;
     }
 
-    [[nodiscard]] bytes serialize(const google::protobuf::Message& msg) const {
+    [[nodiscard]] StreamBuffer serialize(const google::protobuf::Message& msg) const {
         auto size = msg.ByteSizeLong();
-        bytes result(size);
+        StreamBuffer result(size);
         if (!msg.SerializeToArray(result.data(), static_cast<int>(size))) {
             result.clear();
         }
@@ -100,9 +100,9 @@ public:
 
     // Encode TypeTag + payload into a single byte buffer:
     // [4 bytes: TypeTag big-endian][protobuf payload bytes]
-    [[nodiscard]] bytes encode_wire(TypeTag tag, const google::protobuf::Message& msg) const {
-        bytes payload = serialize(msg);
-        bytes result(payload.size() + 4);
+    [[nodiscard]] StreamBuffer encode_wire(TypeTag tag, const google::protobuf::Message& msg) const {
+        StreamBuffer payload = serialize(msg);
+        StreamBuffer result(payload.size() + 4);
         uint32_t tag_val = static_cast<uint32_t>(tag);
         result[0] = static_cast<uint8_t>((tag_val >> 24) & 0xFF);
         result[1] = static_cast<uint8_t>((tag_val >> 16) & 0xFF);
@@ -115,7 +115,7 @@ public:
     }
 
     [[nodiscard]] std::pair<TypeTag, std::unique_ptr<google::protobuf::Message>>
-    decode_wire(const bytes& data) const {
+    decode_wire(const StreamBuffer& data) const {
         if (data.size() < 4) return {TypeTag::Invalid, nullptr};
         uint32_t tag_val =
             (static_cast<uint32_t>(data[0]) << 24) |
@@ -123,7 +123,7 @@ public:
             (static_cast<uint32_t>(data[2]) << 8) |
             static_cast<uint32_t>(data[3]);
         TypeTag tag = static_cast<TypeTag>(tag_val);
-        bytes payload(data.begin() + 4, data.end());
+        StreamBuffer payload(data.begin() + 4, data.end());
         auto msg = deserialize(tag, payload);
         return {tag, std::move(msg)};
     }

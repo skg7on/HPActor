@@ -101,7 +101,7 @@ void PlainConnection::set_send_completion_handler(std::function<void(int result)
     send_completion_handler_ = std::move(handler);
 }
 
-void PlainConnection::send(const bytes& frame_data) {
+void PlainConnection::send(const StreamBuffer& frame_data) {
     if (state_ != ConnectionState::Connected) {
         return;
     }
@@ -160,7 +160,7 @@ void PlainConnection::on_fd_readable(int fd) {
     }
 }
 
-void PlainConnection::send_raw(const bytes& data) {
+void PlainConnection::send_raw(const StreamBuffer& data) {
     if (fd_ < 0 || !loop_)
         return;
 
@@ -208,7 +208,7 @@ void PlainConnection::handle_send_completion(int result) {
         return;
     }
 
-    // Remove sent bytes from write buffer
+    // Remove sent StreamBuffer from write buffer
     if (static_cast<size_t>(result) >= write_buffer_.size()) {
         write_buffer_.clear();
     } else {

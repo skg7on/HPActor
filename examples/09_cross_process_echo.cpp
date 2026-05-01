@@ -59,11 +59,11 @@ static const hpactor::TypeTag KickTag{99};
 
 static hpactor::TypedMessage make_string_msg(hpactor::TypeTag tag,
                                              const std::string& text) {
-    hpactor::bytes payload(text.begin(), text.end());
+    hpactor::StreamBuffer payload(text.begin(), text.end());
     return hpactor::TypedMessage(tag, std::move(payload));
 }
 
-static std::string extract_string(const hpactor::bytes& payload) {
+static std::string extract_string(const hpactor::StreamBuffer& payload) {
     return {payload.begin(), payload.end()};
 }
 
@@ -205,7 +205,7 @@ static void run_client(uint16_t port) {
     auto client = system.spawn<ClientActor>(echo_addr, 3, std::move(done));
 
     // Kick the client actor to start sending
-    system.deliver_local(client.id(), hpactor::TypedMessage(KickTag, hpactor::bytes{}));
+    system.deliver_local(client.id(), hpactor::TypedMessage(KickTag, hpactor::StreamBuffer{}));
 
     // Wait for client to receive all replies or timeout
     auto status = done_future.wait_for(std::chrono::seconds(5));

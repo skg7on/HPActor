@@ -68,7 +68,7 @@ ConnectionPtr ConnectionPool::get_connection() {
     return active_connections_[index];
 }
 
-void ConnectionPool::send(const ActorAddress& target, const bytes& encoded) {
+void ConnectionPool::send(const ActorAddress& target, const StreamBuffer& encoded) {
     if (shutting_down_.load()) {
         return;
     }
@@ -88,7 +88,7 @@ void ConnectionPool::send(const ActorAddress& target, const bytes& encoded) {
     create_connection();
 }
 
-void ConnectionPool::send(const bytes& data) {
+void ConnectionPool::send(const StreamBuffer& data) {
     // Create a minimal actor address using the remote endpoint
     ActorAddress target;
     target.endpoint =
@@ -273,7 +273,7 @@ void ConnectionPool::flush_pending() {
     }
 }
 
-bool ConnectionPool::add_pending(const ActorAddress& target, const bytes& data) {
+bool ConnectionPool::add_pending(const ActorAddress& target, const StreamBuffer& data) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (pending_messages_.size() >= config_.max_pending) {
         return false;

@@ -85,18 +85,18 @@ HttpClient::HttpClient(EventLoop* loop) : loop_(loop) {}
 
 HttpClient::~HttpClient() { abort(); }
 
-RpcFuture<bytes>
+RpcFuture<StreamBuffer>
 HttpClient::request(HttpMethod method, const std::string& url,
-                    std::vector<HttpHeader> headers, bytes body) {
+                    std::vector<HttpHeader> headers, StreamBuffer body) {
     auto parsed = parse_url(url);
 
     // 1. Connect
     int fd = socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
-        std::promise<result<bytes>> p;
-        p.set_value(result<bytes>::make(
+        std::promise<result<StreamBuffer>> p;
+        p.set_value(result<StreamBuffer>::make(
             error(errors::http_connect_failed, "socket() failed")));
-        return RpcFuture<bytes>(p.get_future(), default_timeout_);
+        return RpcFuture<StreamBuffer>(p.get_future(), default_timeout_);
     }
 
     struct sockaddr_in addr{};
@@ -106,14 +106,14 @@ HttpClient::request(HttpMethod method, const std::string& url,
 
     if (connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
         close(fd);
-        std::promise<result<bytes>> p;
-        p.set_value(result<bytes>::make(
+        std::promise<result<StreamBuffer>> p;
+        p.set_value(result<StreamBuffer>::make(
             error(errors::http_connect_failed, "connect() failed")));
-        return RpcFuture<bytes>(p.get_future(), default_timeout_);
+        return RpcFuture<StreamBuffer>(p.get_future(), default_timeout_);
     }
 
     // 2. Build HTTP/1.1 request wire bytes
-    bytes wire;
+    StreamBuffer wire;
     std::string request_line = to_string(method);
     request_line += " " + parsed.path + " HTTP/1.1\r\n";
     wire.append(reinterpret_cast<const uint8_t*>(request_line.data()),
@@ -145,21 +145,21 @@ HttpClient::request(HttpMethod method, const std::string& url,
     ssize_t sent = write(fd, wire.data(), wire.size());
     if (sent < 0) {
         close(fd);
-        std::promise<result<bytes>> p;
-        p.set_value(result<bytes>::make(
+        std::promise<result<StreamBuffer>> p;
+        p.set_value(result<StreamBuffer>::make(
             error(errors::http_connect_failed, "write() failed")));
-        return RpcFuture<bytes>(p.get_future(), default_timeout_);
+        return RpcFuture<StreamBuffer>(p.get_future(), default_timeout_);
     }
 
     // 4. Read response via llhttp in HTTP_RESPONSE mode
     HttpParser parser(HttpParserMode::Response);
     int response_status = 0;
-    bytes response_body;
+    StreamBuffer response_body;
     bool complete = false;
 
     parser.set_on_response(
         [&](int status, const std::vector<HttpHeader>& /*resp_headers*/,
-            const bytes& body) {
+            const StreamBuffer& body) {
             response_status = status;
             response_body = body;
             complete = true;
@@ -174,38 +174,38 @@ HttpClient::request(HttpMethod method, const std::string& url,
     close(fd);
 
     // 5. Fulfill promise
-    std::promise<result<bytes>> p;
+    std::promise<result<StreamBuffer>> p;
     if (response_status >= 200 && response_status < 300) {
-        p.set_value(result<bytes>::make(std::move(response_body)));
+        p.set_value(result<StreamBuffer>::make(std::move(response_body)));
     } else if (response_status == 0) {
-        p.set_value(result<bytes>::make(
+        p.set_value(result<StreamBuffer>::make(
             error(errors::http_parse_error, "No response received")));
     } else {
-        p.set_value(result<bytes>::make(
+        p.set_value(result<StreamBuffer>::make(
             error(errors::http_parse_error,
                   "HTTP " + std::to_string(response_status))));
     }
-    return RpcFuture<bytes>(p.get_future(), default_timeout_);
+    return RpcFuture<StreamBuffer>(p.get_future(), default_timeout_);
 }
 
-RpcFuture<bytes>
+RpcFuture<StreamBuffer>
 HttpClient::get(const std::string& url, std::vector<HttpHeader> headers) {
     return request(HttpMethod::GET, url, std::move(headers), {});
 }
 
-RpcFuture<bytes>
-HttpClient::post(const std::string& url, bytes body,
+RpcFuture<StreamBuffer>
+HttpClient::post(const std::string& url, StreamBuffer body,
                   std::vector<HttpHeader> headers) {
     return request(HttpMethod::POST, url, std::move(headers), std::move(body));
 }
 
-RpcFuture<bytes>
-HttpClient::put(const std::string& url, bytes body,
+RpcFuture<StreamBuffer>
+HttpClient::put(const std::string& url, StreamBuffer body,
                  std::vector<HttpHeader> headers) {
     return request(HttpMethod::PUT, url, std::move(headers), std::move(body));
 }
 
-RpcFuture<bytes>
+RpcFuture<StreamBuffer>
 HttpClient::del(const std::string& url, std::vector<HttpHeader> headers) {
     return request(HttpMethod::DELETE, url, std::move(headers), {});
 }

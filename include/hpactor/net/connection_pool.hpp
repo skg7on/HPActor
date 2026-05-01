@@ -53,7 +53,7 @@ struct PoolConfig {
 // Pending message entry
 struct PendingMessage {
     ActorAddress target;
-    bytes data;
+    StreamBuffer data;
     std::chrono::steady_clock::time_point enqueued_at;
 };
 
@@ -77,13 +77,13 @@ class ConnectionPool : public Connection,
     ConnectionPool& operator=(const ConnectionPool&) = delete;
 
     // Connection interface - send raw bytes (uses default target)
-    void send(const bytes& data) override;
+    void send(const StreamBuffer& data) override;
 
     // Close the connection
     void close() override;
 
     // Send message to specific actor on remote node (uses pool)
-    void send(const ActorAddress& target, const bytes& encoded);
+    void send(const ActorAddress& target, const StreamBuffer& encoded);
 
     // Check if pool has active connections
     bool is_connected() const;
@@ -104,7 +104,7 @@ class ConnectionPool : public Connection,
     }
 
     // Set handler for RPC responses (called when RpcResponse frame is received)
-    using rpc_response_handler = std::function<void(MessageId, const bytes&)>;
+    using rpc_response_handler = std::function<void(MessageId, const StreamBuffer&)>;
     void set_rpc_handler(rpc_response_handler handler);
 
     // Set handler for spawn responses (called when SpawnResponse frame is
@@ -148,7 +148,7 @@ class ConnectionPool : public Connection,
     void flush_pending();
 
     // Add pending message
-    bool add_pending(const ActorAddress& target, const bytes& data);
+    bool add_pending(const ActorAddress& target, const StreamBuffer& data);
 
     EndPoint remote_endpoint_;
     PoolConfig config_;

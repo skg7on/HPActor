@@ -66,11 +66,11 @@ static const hpactor::TypeTag UppercaseMsgTag{101};
 
 static hpactor::TypedMessage make_string_msg(hpactor::TypeTag tag,
                                              const std::string& text) {
-    hpactor::bytes payload(text.begin(), text.end());
+    hpactor::StreamBuffer payload(text.begin(), text.end());
     return hpactor::TypedMessage(tag, std::move(payload));
 }
 
-static std::string extract_string(const hpactor::bytes& payload) {
+static std::string extract_string(const hpactor::StreamBuffer& payload) {
     return {payload.begin(), payload.end()};
 }
 

@@ -70,18 +70,18 @@ class TlsContext {
     static TlsContext from_config(const TlsConfig& config);
 
     // Verify peer certificate against trusted CAs
-    CertVerifyResult verify_certificate(const bytes& cert_der) const;
+    CertVerifyResult verify_certificate(const StreamBuffer& cert_der) const;
 
     // Sign data with own private key (for CertificateVerify)
-    bytes sign_data(const bytes& data) const;
+    StreamBuffer sign_data(const StreamBuffer& data) const;
 
     // Decrypt pre_master_secret using own private key (RSA decryption)
     // Returns true on success, false on failure
-    bool decrypt_pre_master_secret(const bytes& encrypted,
-                                   bytes& pre_master_secret) const;
+    bool decrypt_pre_master_secret(const StreamBuffer& encrypted,
+                                   StreamBuffer& pre_master_secret) const;
 
     // Get public key bytes from own certificate (for sending to peer)
-    const bytes& public_key() const {
+    const StreamBuffer& public_key() const {
         return public_key_;
     }
 
@@ -91,7 +91,7 @@ class TlsContext {
     }
 
     // Get own certificate in DER format
-    const bytes& certificate() const {
+    const StreamBuffer& certificate() const {
         return certificate_;
     }
 
@@ -99,26 +99,26 @@ class TlsContext {
     TlsContext();
 
     EndPoint endpoint_;
-    bytes certificate_;
-    bytes public_key_;
-    bytes private_key_;
+    StreamBuffer certificate_;
+    StreamBuffer public_key_;
+    StreamBuffer private_key_;
 
     // RSA key handle (OpenSSL)
     struct RSAKey;
     std::unique_ptr<RSAKey> rsa_key_;
 
     // Trusted CA certificates (for verification)
-    std::vector<bytes> ca_certs_;
+    std::vector<StreamBuffer> ca_certs_;
 
     // Peer certificates (for verification)
-    std::vector<bytes> peer_certs_;
+    std::vector<StreamBuffer> peer_certs_;
 };
 
 // Configuration for in-memory TLS setup
 struct TlsConfig {
-    bytes own_cert_der;
-    bytes own_key_der;
-    std::vector<bytes> ca_certs_der;
+    StreamBuffer own_cert_der;
+    StreamBuffer own_key_der;
+    std::vector<StreamBuffer> ca_certs_der;
     EndPoint endpoint; // local endpoint for this node
     bool verify_peer = true;
 };

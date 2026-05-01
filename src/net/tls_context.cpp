@@ -161,7 +161,7 @@ TlsContext TlsContext::from_config(const TlsConfig& config) {
 }
 
 TlsContext::CertVerifyResult
-TlsContext::verify_certificate(const bytes& cert_der) const {
+TlsContext::verify_certificate(const StreamBuffer& cert_der) const {
     const unsigned char* data = cert_der.data();
     X509* cert = d2i_X509(nullptr, &data, static_cast<long>(cert_der.size()));
     if (!cert) {
@@ -186,8 +186,8 @@ TlsContext::verify_certificate(const bytes& cert_der) const {
     return CertVerifyResult::Ok;
 }
 
-bytes TlsContext::sign_data(const bytes& data) const {
-    bytes signature;
+StreamBuffer TlsContext::sign_data(const StreamBuffer& data) const {
+    StreamBuffer signature;
     if (!rsa_key_ || !rsa_key_->pkey) {
         return signature;
     }
@@ -227,8 +227,8 @@ bytes TlsContext::sign_data(const bytes& data) const {
     return signature;
 }
 
-bool TlsContext::decrypt_pre_master_secret(const bytes& encrypted,
-                                           bytes& pre_master_secret) const {
+bool TlsContext::decrypt_pre_master_secret(const StreamBuffer& encrypted,
+                                           StreamBuffer& pre_master_secret) const {
     if (!rsa_key_ || !rsa_key_->pkey) {
         return false;
     }

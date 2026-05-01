@@ -45,7 +45,7 @@ void AbstractActor::link_to(const ActorAddr& other) {
     hpactor::LinkMessage pb;
     pb.set_actor_id(id().value());
 
-    bytes payload(pb.ByteSizeLong());
+    StreamBuffer payload(pb.ByteSizeLong());
     (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
 
     ctx->send(other, TypedMessage(TypeTag::LinkMsg, std::move(payload)));
@@ -61,7 +61,7 @@ void AbstractActor::unlink_from(const ActorAddr& other) {
     hpactor::UnlinkMessage pb;
     pb.set_actor_id(id().value());
 
-    bytes payload(pb.ByteSizeLong());
+    StreamBuffer payload(pb.ByteSizeLong());
     (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
 
     ctx->send(other, TypedMessage(TypeTag::UnlinkMsg, std::move(payload)));
@@ -73,7 +73,7 @@ void AbstractActor::monitor(const ActorAddr& target) {
 
     // Send MonitorMsg to target. The target's receive() will add us
     // to its monitored_ list so that on_exit() notifies us on death.
-    ctx->send(target, TypedMessage(TypeTag::MonitorMsg, bytes{}));
+    ctx->send(target, TypedMessage(TypeTag::MonitorMsg, StreamBuffer{}));
 }
 
 void AbstractActor::demonitor(const ActorAddr& target) {
@@ -82,7 +82,7 @@ void AbstractActor::demonitor(const ActorAddr& target) {
 
     // Send DemonitorMsg to target. The target's receive() will remove us
     // from its monitored_ list.
-    ctx->send(target, TypedMessage(TypeTag::DemonitorMsg, bytes{}));
+    ctx->send(target, TypedMessage(TypeTag::DemonitorMsg, StreamBuffer{}));
 }
 
 void AbstractActor::set_scheduler(sched::IScheduler* /*scheduler*/) {

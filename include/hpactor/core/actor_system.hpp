@@ -207,10 +207,10 @@ class ActorSystem {
 
     // Remote actor spawning (main/non-actor context only)
     result<ActorRef> spawn_remote(const std::string& node_name,
-                                  const std::string& actor_type, const bytes& args);
+                                  const std::string& actor_type, const StreamBuffer& args);
 
     AsyncActor spawn_remote_async(const std::string& node_name,
-                                  const std::string& actor_type, const bytes& args);
+                                  const std::string& actor_type, const StreamBuffer& args);
 
     // Actor type registry for remote spawning
     ActorTypeRegistry& actor_type_registry() {

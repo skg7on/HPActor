@@ -65,7 +65,7 @@ class PlainConnection : public Connection,
     void set_send_completion_handler(std::function<void(int result)> handler);
 
     // Send raw frame data
-    void send(const bytes& frame_data) override;
+    void send(const StreamBuffer& frame_data) override;
 
     // Close connection
     void close() override;
@@ -83,7 +83,7 @@ class PlainConnection : public Connection,
     void set_state(ConnectionState new_state);
 
     // Send raw bytes on socket
-    void send_raw(const bytes& data);
+    void send_raw(const StreamBuffer& data);
 
     // Flush write buffer
     void flush_write_buffer();

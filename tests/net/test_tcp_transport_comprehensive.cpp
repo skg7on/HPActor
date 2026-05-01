@@ -192,7 +192,7 @@ void test_send_during_close_race() {
 
     // Send multiple messages rapidly
     for (int i = 0; i < 10; ++i) {
-        bytes data{static_cast<uint8_t>('A' + i)};
+        StreamBuffer data{static_cast<uint8_t>('A' + i)};
         client->send(data);
     }
 
@@ -204,7 +204,7 @@ void test_send_during_close_race() {
     loop.process_completions();
 
     // Server side should have received some data
-    bytes server_data;
+    StreamBuffer server_data;
     char buf[256];
     ssize_t n;
     while ((n = recv(sv[1], buf, sizeof(buf), 0)) > 0) {
@@ -379,7 +379,7 @@ void test_send_without_frame_handler() {
     conn->set_send_completion_handler([&](int) { completions++; });
 
     // Send data
-    bytes data{'H', 'i'};
+    StreamBuffer data{'H', 'i'};
     conn->send(data);
 
     // Wait for completion

@@ -75,13 +75,13 @@ class SlowActor final : public EventBasedActor {
 // =============================================================================
 namespace {
 
-bytes make_body(const char* str) {
-    bytes body;
+StreamBuffer make_body(const char* str) {
+    StreamBuffer body;
     body.append(reinterpret_cast<const uint8_t*>(str), strlen(str));
     return body;
 }
 
-std::string body_to_string(const bytes& body) {
+std::string body_to_string(const StreamBuffer& body) {
     return {body.begin(), body.end()};
 }
 
@@ -128,7 +128,7 @@ struct HttpTestFixture {
                 auto it = req.path_params.find("name");
                 std::string name = (it != req.path_params.end())
                                        ? it->second : "unknown";
-                bytes body;
+                StreamBuffer body;
                 body.append(reinterpret_cast<const uint8_t*>(name.data()),
                             name.size());
                 TypedMessage msg(TypeTag::User, body);

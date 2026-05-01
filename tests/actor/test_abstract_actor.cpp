@@ -44,16 +44,16 @@ void test_abstract_actor_interface() {
 
 void test_typed_message_types() {
     // Test that TypedMessage can identify all required system message types
-    TypedMessage msg(TypeTag::DownMsg, bytes{});
+    TypedMessage msg(TypeTag::DownMsg, StreamBuffer{});
     assert(msg.type_id() == TypeTag::DownMsg);
 
-    msg = TypedMessage(TypeTag::ExitMsg, bytes{});
+    msg = TypedMessage(TypeTag::ExitMsg, StreamBuffer{});
     assert(msg.type_id() == TypeTag::ExitMsg);
 
-    msg = TypedMessage(TypeTag::LinkMsg, bytes{});
+    msg = TypedMessage(TypeTag::LinkMsg, StreamBuffer{});
     assert(msg.type_id() == TypeTag::LinkMsg);
 
-    msg = TypedMessage(TypeTag::UnlinkMsg, bytes{});
+    msg = TypedMessage(TypeTag::UnlinkMsg, StreamBuffer{});
     assert(msg.type_id() == TypeTag::UnlinkMsg);
 }
 

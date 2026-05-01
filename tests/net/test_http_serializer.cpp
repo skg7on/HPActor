@@ -26,8 +26,8 @@ using namespace hpactor::net;
 
 namespace {
 
-bytes make_body(const char* str) {
-    bytes body;
+StreamBuffer make_body(const char* str) {
+    StreamBuffer body;
     body.append(reinterpret_cast<const uint8_t*>(str), strlen(str));
     return body;
 }
@@ -55,7 +55,7 @@ static void test_deserialize_json_content_type() {
 }
 
 // =============================================================================
-// Test 10: Deserialize protobuf content type — bytes pass through
+// Test 10: Deserialize protobuf content type — StreamBuffer pass through
 // =============================================================================
 static void test_deserialize_protobuf_content_type() {
     HttpSerializer serializer;
@@ -81,7 +81,7 @@ static void test_deserialize_protobuf_content_type() {
 static void test_serialize_response_accept_json() {
     HttpSerializer serializer;
 
-    bytes payload = make_body("test-data");
+    StreamBuffer payload = make_body("test-data");
     TypedMessage msg(TypeTag::User, payload);
 
     auto [body, content_type] = serializer.serialize_response(
@@ -98,7 +98,7 @@ static void test_serialize_response_accept_json() {
 static void test_serialize_accept_quality_weights() {
     HttpSerializer serializer;
 
-    bytes payload = make_body("data");
+    StreamBuffer payload = make_body("data");
     TypedMessage msg(TypeTag::User, payload);
 
     // JSON has q=0.8, text/plain has q=0.5 → JSON should win
@@ -114,7 +114,7 @@ static void test_serialize_accept_quality_weights() {
 static void test_serialize_no_accept_default_json() {
     HttpSerializer serializer;
 
-    bytes payload = make_body("data");
+    StreamBuffer payload = make_body("data");
     TypedMessage msg(TypeTag::User, payload);
 
     auto [body, content_type] = serializer.serialize_response(msg, "");

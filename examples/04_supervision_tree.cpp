@@ -65,13 +65,13 @@ static const hpactor::TypeTag StatusTag{602};
 // Payload helpers
 // ---------------------------------------------------------------------------
 
-static hpactor::bytes encode_int(int value) {
-    hpactor::bytes payload(sizeof(int));
+static hpactor::StreamBuffer encode_int(int value) {
+    hpactor::StreamBuffer payload(sizeof(int));
     std::memcpy(payload.data(), &value, sizeof(int));
     return payload;
 }
 
-static int decode_int(const hpactor::bytes& payload) {
+static int decode_int(const hpactor::StreamBuffer& payload) {
     if (payload.size() < sizeof(int)) return 0;
     int value;
     std::memcpy(&value, payload.data(), sizeof(int));
@@ -91,7 +91,7 @@ static hpactor::TypedMessage make_down_msg(uint64_t actor_id,
     hpactor::DownMessage down;
     down.set_actor_id(actor_id);
     down.set_reason_code(reason_code);
-    hpactor::bytes payload(down.ByteSizeLong());
+    hpactor::StreamBuffer payload(down.ByteSizeLong());
     (void)down.SerializeToArray(payload.data(),
                                  static_cast<int>(payload.size()));
     return hpactor::TypedMessage(hpactor::TypeTag::DownMsg, std::move(payload));

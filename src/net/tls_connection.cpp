@@ -30,8 +30,8 @@ namespace net {
 namespace {
 
 // Format a TLS message with type and payload
-bytes format_tls_message(TlsMessageType type, const bytes& payload) {
-    bytes msg;
+StreamBuffer format_tls_message(TlsMessageType type, const StreamBuffer& payload) {
+    StreamBuffer msg;
     msg.push_back(static_cast<uint8_t>(type));
     // Add length as 3 bytes (TLS style)
     msg.push_back(static_cast<uint8_t>((payload.size() >> 16) & 0xFF));
@@ -42,19 +42,19 @@ bytes format_tls_message(TlsMessageType type, const bytes& payload) {
 }
 
 // Parse a TLS message - extract payload from formatted message
-bytes parse_tls_payload(const uint8_t* data, size_t len, size_t& consumed) {
+StreamBuffer parse_tls_payload(const uint8_t* data, size_t len, size_t& consumed) {
     consumed = 0;
     if (len < 4) {
-        return bytes{};
+        return StreamBuffer{};
     }
     size_t payload_len = (static_cast<size_t>(data[1]) << 16) |
                          (static_cast<size_t>(data[2]) << 8) |
                          static_cast<size_t>(data[3]);
     size_t total_len = 4 + payload_len;
     if (len < total_len) {
-        return bytes{};
+        return StreamBuffer{};
     }
-    bytes payload(data + 4, data + total_len);
+    StreamBuffer payload(data + 4, data + total_len);
     consumed = total_len;
     return payload;
 }
@@ -149,17 +149,17 @@ void TlsConnection::start_client_handshake() {
     set_handshake_state(TlsHandshakeState::WaitingForServerHello);
     set_state(ConnectionState::Handshake);
 
-    bytes client_hello = build_client_hello();
+    StreamBuffer client_hello = build_client_hello();
     send_raw(client_hello);
 }
 
-void TlsConnection::handle_read(const bytes& data) {
+void TlsConnection::handle_read(const StreamBuffer& data) {
     read_buffer_.append(data.data(), data.size());
 
     // Process complete messages in buffer
     while (read_buffer_.size() >= 4) {
         size_t consumed = 0;
-        bytes payload = parse_tls_payload(read_buffer_.data(),
+        StreamBuffer payload = parse_tls_payload(read_buffer_.data(),
                                           read_buffer_.size(), consumed);
         if (consumed == 0) {
             break; // Wait for more data
@@ -168,14 +168,14 @@ void TlsConnection::handle_read(const bytes& data) {
 
         if (session_state_ == TlsSessionState::Encrypted) {
             // Decrypt and deliver to frame handler
-            bytes plaintext = decrypt_aes(payload);
+            StreamBuffer plaintext = decrypt_aes(payload);
             if (!plaintext.empty() && frame_handler_) {
                 frame_handler_(plaintext);
             }
         } else {
             // Handle handshake messages
             TlsMessageType msg_type = static_cast<TlsMessageType>(payload[0]);
-            bytes msg_payload(payload.begin() + 1, payload.end());
+            StreamBuffer msg_payload(payload.begin() + 1, payload.end());
 
             switch (msg_type) {
                 case TlsMessageType::ServerHello:
@@ -204,9 +204,9 @@ void TlsConnection::handle_read(const bytes& data) {
     }
 }
 
-void TlsConnection::send(const bytes& frame_data) {
+void TlsConnection::send(const StreamBuffer& frame_data) {
     if (session_state_ == TlsSessionState::Encrypted) {
-        bytes encrypted = encrypt_aes(frame_data);
+        StreamBuffer encrypted = encrypt_aes(frame_data);
         send_raw(format_tls_message(TlsMessageType::Finished, encrypted));
     }
 }
@@ -222,8 +222,8 @@ void TlsConnection::close() {
     set_state(ConnectionState::Disconnected);
 }
 
-bytes TlsConnection::build_client_hello() {
-    bytes payload;
+StreamBuffer TlsConnection::build_client_hello() {
+    StreamBuffer payload;
     // Message type
     payload.push_back(static_cast<uint8_t>(TlsMessageType::ClientHello));
     // Client nonce (32 bytes)
@@ -231,57 +231,57 @@ bytes TlsConnection::build_client_hello() {
     // Public key from TLS context
     if (!tls_context_) {
         set_handshake_state(TlsHandshakeState::Error);
-        return bytes{};
+        return StreamBuffer{};
     }
-    const bytes& pub_key = tls_context_->public_key();
+    const StreamBuffer& pub_key = tls_context_->public_key();
     payload.insert(payload.end(), pub_key.begin(), pub_key.end());
 
-    bytes msg = format_tls_message(TlsMessageType::ClientHello, payload);
+    StreamBuffer msg = format_tls_message(TlsMessageType::ClientHello, payload);
     handshake_messages_.insert(handshake_messages_.end(), msg.begin(), msg.end());
     return msg;
 }
 
-bytes TlsConnection::build_certificate() {
-    bytes payload;
+StreamBuffer TlsConnection::build_certificate() {
+    StreamBuffer payload;
     // Certificate data from TLS context
     if (!tls_context_) {
         set_handshake_state(TlsHandshakeState::Error);
-        return bytes{};
+        return StreamBuffer{};
     }
-    const bytes& cert = tls_context_->certificate();
+    const StreamBuffer& cert = tls_context_->certificate();
     payload.insert(payload.end(), cert.begin(), cert.end());
 
-    bytes msg = format_tls_message(TlsMessageType::Certificate, payload);
+    StreamBuffer msg = format_tls_message(TlsMessageType::Certificate, payload);
     handshake_messages_.insert(handshake_messages_.end(), msg.begin(), msg.end());
     return msg;
 }
 
-bytes TlsConnection::build_certificate_verify(const Nonce& challenge) {
-    bytes payload;
+StreamBuffer TlsConnection::build_certificate_verify(const Nonce& challenge) {
+    StreamBuffer payload;
     // Sign the challenge nonce with our private key
-    bytes data_to_sign(challenge.begin(), challenge.end());
+    StreamBuffer data_to_sign(challenge.begin(), challenge.end());
     if (!tls_context_) {
         set_handshake_state(TlsHandshakeState::Error);
-        return bytes{};
+        return StreamBuffer{};
     }
-    bytes signature = tls_context_->sign_data(data_to_sign);
+    StreamBuffer signature = tls_context_->sign_data(data_to_sign);
     payload.insert(payload.end(), signature.begin(), signature.end());
 
-    bytes msg = format_tls_message(TlsMessageType::CertificateVerify, payload);
+    StreamBuffer msg = format_tls_message(TlsMessageType::CertificateVerify, payload);
     handshake_messages_.insert(handshake_messages_.end(), msg.begin(), msg.end());
     return msg;
 }
 
-bytes TlsConnection::build_finished() {
-    bytes payload;
+StreamBuffer TlsConnection::build_finished() {
+    StreamBuffer payload;
     // Compute verify_data using PRF
-    bytes verify_data = prf_sha256(master_secret_, "finished", handshake_messages_);
+    StreamBuffer verify_data = prf_sha256(master_secret_, "finished", handshake_messages_);
     payload.insert(payload.end(), verify_data.begin(), verify_data.end());
 
     return format_tls_message(TlsMessageType::Finished, payload);
 }
 
-void TlsConnection::handle_server_hello(const bytes& data) {
+void TlsConnection::handle_server_hello(const StreamBuffer& data) {
     if (handshake_state_ != TlsHandshakeState::WaitingForServerHello) {
         set_handshake_state(TlsHandshakeState::Error);
         return;
@@ -300,7 +300,7 @@ void TlsConnection::handle_server_hello(const bytes& data) {
     // implementation by the certificate message that follows.
 
     // Send our certificate
-    bytes cert_msg = build_certificate();
+    StreamBuffer cert_msg = build_certificate();
     send_raw(cert_msg);
 
     // Generate pre_master_secret
@@ -310,7 +310,7 @@ void TlsConnection::handle_server_hello(const bytes& data) {
     set_handshake_state(TlsHandshakeState::WaitingForCertificate);
 }
 
-void TlsConnection::handle_certificate(const bytes& data) {
+void TlsConnection::handle_certificate(const StreamBuffer& data) {
     if (handshake_state_ != TlsHandshakeState::WaitingForCertificate) {
         set_handshake_state(TlsHandshakeState::Error);
         return;
@@ -329,13 +329,13 @@ void TlsConnection::handle_certificate(const bytes& data) {
     }
 
     // Send certificate verify message
-    bytes verify_msg = build_certificate_verify(server_nonce_);
+    StreamBuffer verify_msg = build_certificate_verify(server_nonce_);
     send_raw(verify_msg);
 
     set_handshake_state(TlsHandshakeState::WaitingForCertificateVerify);
 }
 
-void TlsConnection::handle_certificate_verify(const bytes& data) {
+void TlsConnection::handle_certificate_verify(const StreamBuffer& data) {
     (void)data;
     if (handshake_state_ != TlsHandshakeState::WaitingForCertificateVerify) {
         set_handshake_state(TlsHandshakeState::Error);
@@ -348,7 +348,7 @@ void TlsConnection::handle_certificate_verify(const bytes& data) {
     set_handshake_state(TlsHandshakeState::WaitingForFinished);
 }
 
-void TlsConnection::handle_finished(const bytes& data) {
+void TlsConnection::handle_finished(const StreamBuffer& data) {
     (void)data;
     if (handshake_state_ != TlsHandshakeState::WaitingForFinished) {
         set_handshake_state(TlsHandshakeState::Error);
@@ -370,10 +370,10 @@ void TlsConnection::handle_finished(const bytes& data) {
     }
 }
 
-void TlsConnection::derive_session_keys(const bytes& pre_master_secret,
+void TlsConnection::derive_session_keys(const StreamBuffer& pre_master_secret,
                                         const Nonce& client_nonce,
                                         const Nonce& server_nonce) {
-    bytes random_data;
+    StreamBuffer random_data;
     random_data.insert(random_data.end(), client_nonce.begin(), client_nonce.end());
     random_data.insert(random_data.end(), server_nonce.begin(), server_nonce.end());
     master_secret_ = prf_sha256(pre_master_secret, "master secret", random_data);
@@ -381,7 +381,7 @@ void TlsConnection::derive_session_keys(const bytes& pre_master_secret,
     random_data.clear();
     random_data.insert(random_data.end(), server_nonce.begin(), server_nonce.end());
     random_data.insert(random_data.end(), client_nonce.begin(), client_nonce.end());
-    bytes key_block = prf_sha256(master_secret_, "key expansion", random_data);
+    StreamBuffer key_block = prf_sha256(master_secret_, "key expansion", random_data);
 
     session_key_.assign(key_block.begin(), key_block.begin() + 32);
     session_iv_.assign(key_block.begin() + 32, key_block.begin() + 48);
@@ -390,9 +390,9 @@ void TlsConnection::derive_session_keys(const bytes& pre_master_secret,
 namespace {
 
 // HMAC-SHA256 using EVP_Q_mac (OpenSSL 3.0 compatible)
-bytes hmac_sha256(const bytes& key, const bytes& data) {
+StreamBuffer hmac_sha256(const StreamBuffer& key, const StreamBuffer& data) {
     constexpr size_t hash_size = 32; // SHA256 output size
-    bytes out(hash_size, 0);
+    StreamBuffer out(hash_size, 0);
     size_t out_len = hash_size;
 
     // Use EVP_Q_mac with HMAC algorithm and SHA256 digest
@@ -405,14 +405,14 @@ bytes hmac_sha256(const bytes& key, const bytes& data) {
 
 } // anonymous namespace
 
-bytes TlsConnection::prf_sha256(const bytes& secret, const char* label,
-                                const bytes& data) {
-    bytes result;
-    bytes label_seed;
+StreamBuffer TlsConnection::prf_sha256(const StreamBuffer& secret, const char* label,
+                                const StreamBuffer& data) {
+    StreamBuffer result;
+    StreamBuffer label_seed;
     label_seed.insert(label_seed.end(), label, label + std::strlen(label));
     label_seed.insert(label_seed.end(), data.begin(), data.end());
 
-    bytes a = label_seed;
+    StreamBuffer a = label_seed;
 
     while (result.size() < 48) { // Generate enough for master_secret + key
                                  // expansion
@@ -420,18 +420,18 @@ bytes TlsConnection::prf_sha256(const bytes& secret, const char* label,
         a = hmac_sha256(secret, a);
 
         // HMAC(secret, A(i) + label_seed)
-        bytes a_label_seed = a;
+        StreamBuffer a_label_seed = a;
         a_label_seed.insert(a_label_seed.end(), label_seed.begin(),
                             label_seed.end());
-        bytes h = hmac_sha256(secret, a_label_seed);
+        StreamBuffer h = hmac_sha256(secret, a_label_seed);
 
         result.insert(result.end(), h.begin(), h.end());
     }
     return result;
 }
 
-bytes TlsConnection::encrypt_aes(const bytes& plaintext) {
-    bytes ciphertext;
+StreamBuffer TlsConnection::encrypt_aes(const StreamBuffer& plaintext) {
+    StreamBuffer ciphertext;
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx)
         return ciphertext;
@@ -453,8 +453,8 @@ bytes TlsConnection::encrypt_aes(const bytes& plaintext) {
     return ciphertext;
 }
 
-bytes TlsConnection::decrypt_aes(const bytes& ciphertext) {
-    bytes plaintext;
+StreamBuffer TlsConnection::decrypt_aes(const StreamBuffer& ciphertext) {
+    StreamBuffer plaintext;
     EVP_CIPHER_CTX* ctx = EVP_CIPHER_CTX_new();
     if (!ctx)
         return plaintext;
@@ -492,7 +492,7 @@ void TlsConnection::set_session_state(TlsSessionState new_state) {
     session_state_ = new_state;
 }
 
-void TlsConnection::send_raw(const bytes& data) {
+void TlsConnection::send_raw(const StreamBuffer& data) {
     if (fd_ < 0 || !loop_)
         return;
 
@@ -535,7 +535,7 @@ void TlsConnection::handle_send_completion(int result) {
         return;
     }
 
-    // Remove sent bytes from write buffer
+    // Remove sent StreamBuffer from write buffer
     if (static_cast<size_t>(result) >= write_buffer_.size()) {
         write_buffer_.clear();
     } else {

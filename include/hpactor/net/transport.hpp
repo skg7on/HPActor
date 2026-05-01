@@ -69,7 +69,7 @@ using connection_error_handler = std::function<void(ConnectionPtr, const error&)
 // -----------------------------------------------------------------------------
 class Connection : public std::enable_shared_from_this<Connection> {
   public:
-    using message_handler = std::function<void(const bytes&)>;
+    using message_handler = std::function<void(const StreamBuffer&)>;
 
     Connection(EndPoint remote_endpoint);
     virtual ~Connection();
@@ -85,13 +85,13 @@ class Connection : public std::enable_shared_from_this<Connection> {
     void set_message_handler(message_handler handler);
 
     // Send data on this connection
-    virtual void send(const bytes& data) = 0;
+    virtual void send(const StreamBuffer& data) = 0;
 
     // Close this connection
     virtual void close() = 0;
 
     // Handle incoming data (for framing)
-    void handle_read(const bytes& data);
+    void handle_read(const StreamBuffer& data);
 
     // Handle send completion (called by EventLoop on async_send completion)
     virtual void handle_send_completion(int result);
@@ -100,7 +100,7 @@ class Connection : public std::enable_shared_from_this<Connection> {
     void set_state(ConnectionState new_state);
 
   protected:
-    virtual void on_message(const bytes& data);
+    virtual void on_message(const StreamBuffer& data);
 
   private:
     EndPoint remote_endpoint_;
@@ -140,7 +140,7 @@ class Transport {
 
     // Send a message to a remote actor
     // The encoded parameter contains the serialized message
-    virtual void send(const ActorAddress& target, const bytes& encoded) = 0;
+    virtual void send(const ActorAddress& target, const StreamBuffer& encoded) = 0;
 
     // Check if connected to a specific node
     virtual bool is_connected(EndPoint remote_endpoint) const = 0;
@@ -152,7 +152,7 @@ class Transport {
     virtual void close_connection(EndPoint remote_endpoint) = 0;
 
     // Set RPC response handler - called when RPC response frames are received
-    using rpc_response_handler = std::function<void(MessageId, const bytes&)>;
+    using rpc_response_handler = std::function<void(MessageId, const StreamBuffer&)>;
     virtual void set_rpc_handler(rpc_response_handler handler) = 0;
 };
 

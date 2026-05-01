@@ -18,16 +18,16 @@ namespace hpactor {
 
 namespace net {
 
-bytes WireFrame::encode() const {
+StreamBuffer WireFrame::encode() const {
     return frame_to_proto(*this);
 }
 
-WireFrame WireFrame::decode(const bytes& data) {
+WireFrame WireFrame::decode(const StreamBuffer& data) {
     return frame_from_proto(data);
 }
 
 WireFrame WireFrame::decode(std::span<const uint8_t> data) {
-    return decode(bytes(data.begin(), data.end()));
+    return decode(StreamBuffer(data.begin(), data.end()));
 }
 
 } // namespace net

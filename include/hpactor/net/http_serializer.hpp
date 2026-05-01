@@ -51,14 +51,14 @@ class HttpSerializer {
     // Serializes the TypedMessage payload according to the client's Accept
     // header. Returns the response body bytes and the Content-Type string
     // to set on the HTTP response.
-    std::pair<bytes, std::string>
+    std::pair<StreamBuffer, std::string>
     serialize_response(const TypedMessage& msg,
                        const std::string& accept_header);
 
     // -----------------------------------------------------------------------
     // Egress: TypedMessage → HTTP request body + Content-Type (for HttpClient)
     // -----------------------------------------------------------------------
-    std::pair<bytes, std::string>
+    std::pair<StreamBuffer, std::string>
     serialize_request(const TypedMessage& msg);
 
     // -----------------------------------------------------------------------
@@ -82,8 +82,8 @@ class HttpSerializer {
     std::string negotiate_response_type(const std::string& accept_header) const;
 
     // Minimal JSON escape/wrap utilities (full JSON↔protobuf mapping is a future phase)
-    static bytes wrap_as_json_bytes(const bytes& proto_payload);
-    static bytes wrap_as_text_bytes(const bytes& payload);
+    static StreamBuffer wrap_as_json_bytes(const StreamBuffer& proto_payload);
+    static StreamBuffer wrap_as_text_bytes(const StreamBuffer& payload);
 
     std::unordered_map<uint32_t, std::string> default_formats_;
 };
@@ -123,7 +123,7 @@ HttpSerializer::deserialize_request(const HttpRequest& req, TypeTag expected_tag
         TypedMessage(expected_tag, req.body));
 }
 
-inline std::pair<bytes, std::string>
+inline std::pair<StreamBuffer, std::string>
 HttpSerializer::serialize_response(const TypedMessage& msg,
                                     const std::string& accept_header) {
     std::string response_type = negotiate_response_type(accept_header);
@@ -140,7 +140,7 @@ HttpSerializer::serialize_response(const TypedMessage& msg,
     return {wrap_as_json_bytes(msg.payload()), "application/json; charset=utf-8"};
 }
 
-inline std::pair<bytes, std::string>
+inline std::pair<StreamBuffer, std::string>
 HttpSerializer::serialize_request(const TypedMessage& msg) {
     // HttpClient always sends protobuf binary for efficiency
     return {msg.payload(), "application/x-protobuf"};
@@ -234,10 +234,10 @@ HttpSerializer::parse_accept_header(const std::string& header) const {
     return result;
 }
 
-inline bytes HttpSerializer::wrap_as_json_bytes(const bytes& proto_payload) {
+inline StreamBuffer HttpSerializer::wrap_as_json_bytes(const StreamBuffer& proto_payload) {
     // Minimal JSON wrapper for protobuf payload.
     // Full JSON↔protobuf conversion is a future phase.
-    bytes result;
+    StreamBuffer result;
     if (proto_payload.size() == 0) {
         const uint8_t empty_json[] = {'{', '}'};
         result.append(empty_json, 2);
@@ -259,7 +259,7 @@ inline bytes HttpSerializer::wrap_as_json_bytes(const bytes& proto_payload) {
     return result;
 }
 
-inline bytes HttpSerializer::wrap_as_text_bytes(const bytes& payload) {
+inline StreamBuffer HttpSerializer::wrap_as_text_bytes(const StreamBuffer& payload) {
     if (payload.size() == 0) return {};
     return payload;
 }

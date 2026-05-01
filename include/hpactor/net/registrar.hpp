@@ -220,7 +220,7 @@ class RegistrarConnection
     friend class RegistrarServer;
 
   public:
-    using message_handler = std::function<void(TcpMessageType, const bytes&)>;
+    using message_handler = std::function<void(TcpMessageType, const StreamBuffer&)>;
     using disconnect_handler = std::function<void()>;
     using send_complete_handler = std::function<void(int result)>;
 
@@ -240,7 +240,7 @@ class RegistrarConnection
     void set_send_complete_handler(send_complete_handler h);
 
     // Send registrar message
-    void send_message(TcpMessageType type, const bytes& payload);
+    void send_message(TcpMessageType type, const StreamBuffer& payload);
 
     // Close connection
     void close();
@@ -273,13 +273,13 @@ class RegistrarConnection
 
     ReadState read_state_ = ReadState::ReadingHeader;
     size_t header_bytes_read_ = 0;
-    bytes header_buffer_;
+    StreamBuffer header_buffer_;
 
     TcpMessageType current_type_ = TcpMessageType::Register;
     size_t payload_bytes_read_ = 0;
-    bytes payload_buffer_;
+    StreamBuffer payload_buffer_;
 
-    bytes write_buffer_;
+    StreamBuffer write_buffer_;
     bool is_sending_ = false;
 
     message_handler message_handler_;
@@ -325,7 +325,7 @@ class RegistrarServer {
 
   private:
     void handle_tcp_message(RegistrarConnectionPtr conn, TcpMessageType type,
-                            const bytes& data);
+                            const StreamBuffer& data);
     void handle_disconnect(RegistrarConnectionPtr conn);
 
     RegistrarConfig config_;
@@ -377,7 +377,7 @@ class UdpRegistrar {
     void set_node_callback(node_callback cb);
 
     // Handle incoming UDP packet (for resolution)
-    void handle_udp_packet(const bytes& data, const std::string& from_host,
+    void handle_udp_packet(const StreamBuffer& data, const std::string& from_host,
                            uint16_t from_port);
 
   private:
@@ -387,14 +387,14 @@ class UdpRegistrar {
     void start_client_mode_async();
     void issue_async_recvfrom();
     void handle_udp_read_ready();
-    void handle_udp_recv_completion(const bytes& data, const std::string& from_host,
+    void handle_udp_recv_completion(const StreamBuffer& data, const std::string& from_host,
                                     uint16_t from_port);
-    void send_udp_response(const bytes& data, const struct sockaddr_in& dest);
+    void send_udp_response(const StreamBuffer& data, const struct sockaddr_in& dest);
     void failover();
 
     // UDP receive state
     static constexpr size_t kUdpRecvBufferSize = 65536;
-    bytes udp_recv_buffer_;
+    StreamBuffer udp_recv_buffer_;
     struct sockaddr_in udp_src_addr_;
     socklen_t udp_src_addr_len_ = sizeof(udp_src_addr_);
 
@@ -454,7 +454,7 @@ class RegistrarClient {
     void send_registration();
 
     // Handle server messages
-    void handle_server_message(TcpMessageType type, const bytes& data);
+    void handle_server_message(TcpMessageType type, const StreamBuffer& data);
     void handle_disconnect();
 
     RegistrarConfig config_;

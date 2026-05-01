@@ -44,21 +44,21 @@ class HttpClient {
     HttpClient& operator=(const HttpClient&) = delete;
 
     // Core: async HTTP request with future response
-    RpcFuture<bytes> request(HttpMethod method,
+    RpcFuture<StreamBuffer> request(HttpMethod method,
                                      const std::string& url,
                                      std::vector<HttpHeader> headers = {},
-                                     bytes body = {});
+                                     StreamBuffer body = {});
 
     // Convenience methods
-    RpcFuture<bytes> get(const std::string& url,
+    RpcFuture<StreamBuffer> get(const std::string& url,
                                  std::vector<HttpHeader> headers = {});
-    RpcFuture<bytes> post(const std::string& url,
-                                  bytes body,
+    RpcFuture<StreamBuffer> post(const std::string& url,
+                                  StreamBuffer body,
                                   std::vector<HttpHeader> headers = {});
-    RpcFuture<bytes> put(const std::string& url,
-                                 bytes body,
+    RpcFuture<StreamBuffer> put(const std::string& url,
+                                 StreamBuffer body,
                                  std::vector<HttpHeader> headers = {});
-    RpcFuture<bytes> del(const std::string& url,
+    RpcFuture<StreamBuffer> del(const std::string& url,
                                  std::vector<HttpHeader> headers = {});
 
     // Cancel all in-flight requests

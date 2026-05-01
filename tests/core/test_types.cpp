@@ -88,8 +88,8 @@ int main() {
     assert(ctx.span_id() == 2);
     assert(ctx.flags() == 3);
 
-    // Test 14: bytes
-    hpactor::bytes data = {1, 2, 3, 4, 5};
+    // Test 14: StreamBuffer
+    hpactor::StreamBuffer data = {1, 2, 3, 4, 5};
     assert(data.size() == 5);
     assert(data[0] == 1);
     assert(data[4] == 5);

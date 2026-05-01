@@ -28,7 +28,7 @@
 
 namespace hpactor {
 
-using RpcResponseHandler = std::function<void(MessageId, const bytes&)>;
+using RpcResponseHandler = std::function<void(MessageId, const StreamBuffer&)>;
 
 // -----------------------------------------------------------------------------
 // PendingCall - tracks in-flight RPC calls
@@ -36,11 +36,11 @@ using RpcResponseHandler = std::function<void(MessageId, const bytes&)>;
 struct PendingCall {
     MessageId msg_id;
     ActorAddress target;
-    bytes encoded_request;
+    StreamBuffer encoded_request;
     std::chrono::milliseconds timeout;
     int retry_count = 0;
     int max_retries = 5;
-    std::promise<result<bytes>> promise;
+    std::promise<result<StreamBuffer>> promise;
     std::chrono::steady_clock::time_point enqueued_at;
     std::atomic<bool> ready_{false};
 };
@@ -66,17 +66,17 @@ class RpcChannel {
   public:
     explicit RpcChannel(net::Transport* transport, sched::IScheduler* scheduler);
 
-    // Raw call - takes pre-encoded bytes, returns raw bytes response
+    // Raw call - takes pre-encoded StreamBuffer, returns raw bytes response
     // Callers handle their own serialization/deserialization
-    RpcFuture<bytes>
-    call_raw(const ActorAddress& target, const bytes& encoded_request,
+    RpcFuture<StreamBuffer>
+    call_raw(const ActorAddress& target, const StreamBuffer& encoded_request,
              std::chrono::milliseconds timeout_ms);
 
     // Cancel all pending calls
     void abort();
 
     // Handle response from transport layer
-    void on_response(MessageId msg_id, const bytes& encoded_response);
+    void on_response(MessageId msg_id, const StreamBuffer& encoded_response);
 
   private:
     void on_timeout(MessageId msg_id);

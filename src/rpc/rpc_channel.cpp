@@ -40,7 +40,7 @@ template <typename T> result<T> RpcFuture<T>::get() {
 }
 
 // Explicit instantiations
-template class RpcFuture<bytes>;
+template class RpcFuture<StreamBuffer>;
 
 // -----------------------------------------------------------------------------
 // RpcChannel implementation
@@ -53,7 +53,7 @@ void RpcChannel::abort() {
     for (auto& [id, call] : pending_) {
         if (!call->ready_.load(std::memory_order_acquire)) {
             call->promise.set_value(
-                result<bytes>::make(error(errors::unknown, "RPC channel "
+                result<StreamBuffer>::make(error(errors::unknown, "RPC channel "
                                                            "aborted")));
             call->ready_.store(true, std::memory_order_release);
         }
@@ -61,7 +61,7 @@ void RpcChannel::abort() {
     pending_.clear();
 }
 
-void RpcChannel::on_response(MessageId msg_id, const bytes& encoded_response) {
+void RpcChannel::on_response(MessageId msg_id, const StreamBuffer& encoded_response) {
     std::unique_ptr<PendingCall> call;
     uint64_t key = msg_id.value();
     {
@@ -75,7 +75,7 @@ void RpcChannel::on_response(MessageId msg_id, const bytes& encoded_response) {
     }
 
     call->ready_.store(true, std::memory_order_release);
-    call->promise.set_value(result<bytes>::make(bytes(encoded_response)));
+    call->promise.set_value(result<StreamBuffer>::make(StreamBuffer(encoded_response)));
 }
 
 void RpcChannel::on_timeout(MessageId msg_id) {
@@ -96,7 +96,7 @@ void RpcChannel::on_timeout(MessageId msg_id) {
     } else {
         call_ptr->ready_.store(true, std::memory_order_release);
         call_ptr->promise.set_value(
-            result<bytes>::make(error(errors::timeout, "RPC call timed out")));
+            result<StreamBuffer>::make(error(errors::timeout, "RPC call timed out")));
         std::lock_guard<std::mutex> lock(mutex_);
         pending_.erase(key);
     }
@@ -120,16 +120,16 @@ void RpcChannel::send_request(PendingCall& call, bool is_retry) {
         frame.flags |= net::WireFrame::RpcIdempotent;
     }
 
-    bytes encoded = frame.encode();
+    StreamBuffer encoded = frame.encode();
     transport_->send(call.target, encoded);
 }
 
-RpcFuture<bytes>
-RpcChannel::call_raw(const ActorAddress& target, const bytes& encoded_request,
+RpcFuture<StreamBuffer>
+RpcChannel::call_raw(const ActorAddress& target, const StreamBuffer& encoded_request,
                      std::chrono::milliseconds timeout_ms) {
     MessageId msg_id = MessageId::generate();
 
-    auto promise_ptr = std::make_shared<std::promise<result<bytes>>>();
+    auto promise_ptr = std::make_shared<std::promise<result<StreamBuffer>>>();
     auto future = promise_ptr->get_future();
 
     auto* call_ptr =
@@ -154,7 +154,7 @@ RpcChannel::call_raw(const ActorAddress& target, const bytes& encoded_request,
     int64_t delay_ns = timeout_ms.count() * 1000000;
     scheduler_->schedule_after([this, msg_id]() { on_timeout(msg_id); }, delay_ns);
 
-    return RpcFuture<bytes>(std::move(future), timeout_ms);
+    return RpcFuture<StreamBuffer>(std::move(future), timeout_ms);
 }
 
 } // namespace hpactor

@@ -100,7 +100,7 @@ void RegistrarClient::start() {
             [this]() {
                 if (connected_.load() && server_connection_) {
                     // Build heartbeat message (no payload, just header)
-                    bytes message;
+                    StreamBuffer message;
                     message.resize(TcpHeaderSize);
 
                     uint32_t magic_be = htonl(TcpRegistrarMagic);
@@ -111,7 +111,7 @@ void RegistrarClient::start() {
                     memcpy(message.data() + 6, &len_be, 4);
 
                     server_connection_->send_message(TcpMessageType::Heartbeat,
-                                                     bytes{});
+                                                     StreamBuffer{});
                 }
             },
             static_cast<int>(config_.heartbeat_interval.count()));
@@ -230,7 +230,7 @@ void RegistrarClient::attempt_connection() {
 
     // Set up message handler
     server_connection_->set_message_handler(
-        [this](TcpMessageType type, const bytes& data) {
+        [this](TcpMessageType type, const StreamBuffer& data) {
             handle_server_message(type, data);
         });
 
@@ -261,11 +261,11 @@ void RegistrarClient::send_registration() {
     ep.tcp_port = tcp_port;
     ep.acceptors = acceptors_;
 
-    bytes payload = serialize_register_payload(ep);
+    StreamBuffer payload = serialize_register_payload(ep);
     server_connection_->send_message(TcpMessageType::Register, payload);
 }
 
-void RegistrarClient::handle_server_message(TcpMessageType type, const bytes& data) {
+void RegistrarClient::handle_server_message(TcpMessageType type, const StreamBuffer& data) {
     switch (type) {
         case TcpMessageType::Accept: {
             // Registration accepted - server acknowledges our registration

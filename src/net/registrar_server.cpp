@@ -134,7 +134,7 @@ void RegistrarServer::handle_accept(int client_fd,
     auto conn = RegistrarConnection::accepted(client_fd, remote_endpoint, loop_);
 
     // Set message handler to process incoming messages
-    conn->set_message_handler([this, conn](TcpMessageType type, const bytes& payload) {
+    conn->set_message_handler([this, conn](TcpMessageType type, const StreamBuffer& payload) {
         handle_tcp_message(conn, type, payload);
     });
 
@@ -153,7 +153,7 @@ void RegistrarServer::handle_accept(int client_fd,
 }
 
 void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
-                                         TcpMessageType type, const bytes& data) {
+                                         TcpMessageType type, const StreamBuffer& data) {
     switch (type) {
         case TcpMessageType::Register: {
             PbRegisterPayload msg;
@@ -204,7 +204,7 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
             registry_.upsert_endpoint(ep);
 
             // Send Accept response using protobuf
-            bytes accept_payload = serialize_accept_payload(0);
+            StreamBuffer accept_payload = serialize_accept_payload(0);
             conn->send_message(TcpMessageType::Accept, accept_payload);
 
             // Broadcast node joined
@@ -255,7 +255,7 @@ void RegistrarServer::handle_disconnect(RegistrarConnectionPtr conn) {
 
 void RegistrarServer::broadcast_node_joined(EndPoint endpoint,
                                             const NodeEndpoint& ep) {
-    bytes payload = serialize_node_join_payload(ep);
+    StreamBuffer payload = serialize_node_join_payload(ep);
 
     std::lock_guard<std::mutex> lock(clients_mutex_);
     for (const auto& [id, conn] : clients_) {
@@ -266,7 +266,7 @@ void RegistrarServer::broadcast_node_joined(EndPoint endpoint,
 }
 
 void RegistrarServer::broadcast_node_left(EndPoint endpoint) {
-    bytes payload = serialize_node_leave_payload(endpoint);
+    StreamBuffer payload = serialize_node_leave_payload(endpoint);
 
     std::lock_guard<std::mutex> lock(clients_mutex_);
     for (const auto& [id, conn] : clients_) {

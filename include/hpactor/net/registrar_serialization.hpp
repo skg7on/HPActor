@@ -31,13 +31,13 @@ inline PbRegisterPayload to_proto_register(const NodeEndpoint& ep) {
     return msg;
 }
 
-inline bytes serialize_register_payload(const NodeEndpoint& ep) {
+inline StreamBuffer serialize_register_payload(const NodeEndpoint& ep) {
     PbRegisterPayload msg = to_proto_register(ep);
     std::string serialized = msg.SerializeAsString();
-    return bytes(serialized.begin(), serialized.end());
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-inline bool parse_register_payload(const bytes& data, PbRegisterPayload& msg) {
+inline bool parse_register_payload(const StreamBuffer& data, PbRegisterPayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -48,13 +48,13 @@ inline PbAcceptPayload to_proto_accept(uint8_t error_code) {
     return msg;
 }
 
-inline bytes serialize_accept_payload(uint8_t error_code) {
+inline StreamBuffer serialize_accept_payload(uint8_t error_code) {
     PbAcceptPayload msg = to_proto_accept(error_code);
     std::string serialized = msg.SerializeAsString();
-    return bytes(serialized.begin(), serialized.end());
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-inline bool parse_accept_payload(const bytes& data, PbAcceptPayload& msg) {
+inline bool parse_accept_payload(const StreamBuffer& data, PbAcceptPayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -67,13 +67,13 @@ inline PbNodeJoinPayload to_proto_node_join(const NodeEndpoint& ep) {
     return msg;
 }
 
-inline bytes serialize_node_join_payload(const NodeEndpoint& ep) {
+inline StreamBuffer serialize_node_join_payload(const NodeEndpoint& ep) {
     PbNodeJoinPayload msg = to_proto_node_join(ep);
     std::string serialized = msg.SerializeAsString();
-    return bytes(serialized.begin(), serialized.end());
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-inline bool parse_node_join_payload(const bytes& data, PbNodeJoinPayload& msg) {
+inline bool parse_node_join_payload(const StreamBuffer& data, PbNodeJoinPayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -84,13 +84,13 @@ inline PbNodeLeavePayload to_proto_node_leave(const EndPoint& ep) {
     return msg;
 }
 
-inline bytes serialize_node_leave_payload(const EndPoint& ep) {
+inline StreamBuffer serialize_node_leave_payload(const EndPoint& ep) {
     PbNodeLeavePayload msg = to_proto_node_leave(ep);
     std::string serialized = msg.SerializeAsString();
-    return bytes(serialized.begin(), serialized.end());
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-inline bool parse_node_leave_payload(const bytes& data, PbNodeLeavePayload& msg) {
+inline bool parse_node_leave_payload(const StreamBuffer& data, PbNodeLeavePayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -102,10 +102,10 @@ inline PbErrorPayload to_proto_error(uint8_t code, const std::string& msg) {
     return pb;
 }
 
-inline bytes serialize_error_payload(uint8_t code, const std::string& msg) {
+inline StreamBuffer serialize_error_payload(uint8_t code, const std::string& msg) {
     PbErrorPayload pb = to_proto_error(code, msg);
     std::string serialized = pb.SerializeAsString();
-    return bytes(serialized.begin(), serialized.end());
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
 // -----------------------------------------------------------------------------
@@ -120,14 +120,14 @@ to_proto_resolve_query(const EndPoint& ep) {
     return msg;
 }
 
-inline bytes serialize_resolve_query_payload(const EndPoint& ep) {
+inline StreamBuffer serialize_resolve_query_payload(const EndPoint& ep) {
     PbResolveQueryPayload msg = to_proto_resolve_query(ep);
     std::string serialized = msg.SerializeAsString();
-    return bytes(serialized.begin(), serialized.end());
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
 inline bool
-parse_resolve_query_payload(const bytes& data, PbResolveQueryPayload& msg) {
+parse_resolve_query_payload(const StreamBuffer& data, PbResolveQueryPayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -140,14 +140,14 @@ inline PbResolveResponsePayload to_proto_resolve_response(const NodeEndpoint& ep
     return msg;
 }
 
-inline bytes serialize_resolve_response_payload(const NodeEndpoint& ep) {
+inline StreamBuffer serialize_resolve_response_payload(const NodeEndpoint& ep) {
     PbResolveResponsePayload msg = to_proto_resolve_response(ep);
     std::string serialized = msg.SerializeAsString();
-    return bytes(serialized.begin(), serialized.end());
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
 inline bool
-parse_resolve_response_payload(const bytes& data, PbResolveResponsePayload& msg) {
+parse_resolve_response_payload(const StreamBuffer& data, PbResolveResponsePayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 

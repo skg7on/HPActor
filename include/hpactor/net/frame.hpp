@@ -46,15 +46,15 @@ namespace net {
 struct WireFrame {
     ActorAddress sender;
     ActorAddress receiver;
-    bytes payload;
+    StreamBuffer payload;
     uint32_t flags = 0;
     uint64_t message_id = 0;
 
     // Encode frame to bytes
-    bytes encode() const;
+    StreamBuffer encode() const;
 
     // Decode frame from bytes
-    static WireFrame decode(const bytes& data);
+    static WireFrame decode(const StreamBuffer& data);
 
     // Decode frame from span — ownership-boundary copy into payload
     static WireFrame decode(std::span<const uint8_t> data);
@@ -78,8 +78,8 @@ struct WireFrame {
 };
 
 // Protobuf interop - convert between HPActor types and protobuf bytes
-bytes frame_to_proto(const WireFrame& frame);
-WireFrame frame_from_proto(const bytes& data);
+StreamBuffer frame_to_proto(const WireFrame& frame);
+WireFrame frame_from_proto(const StreamBuffer& data);
 
 } // namespace net
 } // namespace hpactor

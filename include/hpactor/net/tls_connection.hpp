@@ -112,10 +112,10 @@ class TlsConnection : public Connection,
     void start_client_handshake();
 
     // Handle incoming data from socket
-    void handle_read(const bytes& data);
+    void handle_read(const StreamBuffer& data);
 
     // Send encrypted frame
-    void send(const bytes& frame_data) override;
+    void send(const StreamBuffer& frame_data) override;
 
     // Close connection
     void close() override;
@@ -133,29 +133,29 @@ class TlsConnection : public Connection,
                   TlsContext* tls_context, EventLoop* loop, int fd = -1);
 
     // Handshake message builders
-    bytes build_client_hello();
-    bytes build_certificate();
-    bytes build_certificate_verify(const Nonce& challenge);
-    bytes build_finished();
+    StreamBuffer build_client_hello();
+    StreamBuffer build_certificate();
+    StreamBuffer build_certificate_verify(const Nonce& challenge);
+    StreamBuffer build_finished();
 
     // Handshake message handlers
-    void handle_server_hello(const bytes& data);
-    void handle_certificate(const bytes& data);
-    void handle_certificate_verify(const bytes& data);
-    void handle_finished(const bytes& data);
+    void handle_server_hello(const StreamBuffer& data);
+    void handle_certificate(const StreamBuffer& data);
+    void handle_certificate_verify(const StreamBuffer& data);
+    void handle_finished(const StreamBuffer& data);
 
     // Helper: derive session key from pre_master_secret
-    void derive_session_keys(const bytes& pre_master_secret,
+    void derive_session_keys(const StreamBuffer& pre_master_secret,
                              const Nonce& client_nonce, const Nonce& server_nonce);
 
     // Helper: encrypt data with session key (AES-256-CBC)
-    bytes encrypt_aes(const bytes& plaintext);
+    StreamBuffer encrypt_aes(const StreamBuffer& plaintext);
 
     // Helper: decrypt data with session key
-    bytes decrypt_aes(const bytes& ciphertext);
+    StreamBuffer decrypt_aes(const StreamBuffer& ciphertext);
 
     // Helper: compute TLS PRF (SHA-256 based)
-    bytes prf_sha256(const bytes& secret, const char* label, const bytes& data);
+    StreamBuffer prf_sha256(const StreamBuffer& secret, const char* label, const StreamBuffer& data);
 
     // Transition state
     void set_state(ConnectionState new_state);
@@ -163,7 +163,7 @@ class TlsConnection : public Connection,
     void set_session_state(TlsSessionState new_state);
 
     // Send raw bytes on socket
-    void send_raw(const bytes& data);
+    void send_raw(const StreamBuffer& data);
 
     // Flush write buffer (called after async_send completion)
     void flush_write_buffer();
@@ -184,12 +184,12 @@ class TlsConnection : public Connection,
     // Handshake nonces
     Nonce client_nonce_;
     Nonce server_nonce_;
-    bytes pre_master_secret_;
+    StreamBuffer pre_master_secret_;
 
     // Session keys
-    bytes master_secret_;
-    bytes session_key_; // AES-256 key
-    bytes session_iv_;  // AES IV
+    StreamBuffer master_secret_;
+    StreamBuffer session_key_; // AES-256 key
+    StreamBuffer session_iv_;  // AES IV
 
     // Read buffer
     adt::StreamBuffer read_buffer_;
@@ -201,7 +201,7 @@ class TlsConnection : public Connection,
     bool is_sending_ = false;
 
     // Handshake message buffer (for Finished verify_data)
-    bytes handshake_messages_;
+    StreamBuffer handshake_messages_;
 
     // Callbacks
     std::function<void(ConnectionPtr)> ready_handler_;

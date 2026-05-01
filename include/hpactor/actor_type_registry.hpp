@@ -52,7 +52,7 @@ class ActorTypeRegistry {
     // Spawn a remote actor by name - returns ActorAddress
     // args and args_type are for future deserialization support
     result<ActorAddress> spawn(ActorSystem& system, const std::string& name,
-                               const bytes& args, TypeTag args_type);
+                               const StreamBuffer& args, TypeTag args_type);
 
     bool has(const std::string& name) const;
     ActorType type_id(const std::string& name) const;

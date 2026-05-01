@@ -67,7 +67,7 @@ int main() {
 
     // Test 2: await_ready() returns true when mailbox has message
     {
-        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x01, 0x02});
+        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::StreamBuffer{0x01, 0x02});
         mb.inject_for_test(msg); // inject without edge-trigger
 
         hpactor::sched::CoroutinePromise promise;
@@ -125,7 +125,7 @@ int main() {
         promise.mailbox_was_empty.store(true, std::memory_order_release);
 
         // Enqueue a message BEFORE await_suspend
-        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::bytes{0x63, 0x00});
+        auto* msg = new hpactor::TypedMessage(hpactor::TypeTag::User, hpactor::StreamBuffer{0x63, 0x00});
         mb.inject_for_test(msg);
 
         hpactor::sched::MailboxAwaiter<hpactor::TypedMessage> awaiter(promise, &mb);

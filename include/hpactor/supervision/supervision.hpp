@@ -70,7 +70,7 @@ class SupervisorActor : public EventBasedActor {
     std::chrono::steady_clock::time_point first_failure_time_;
 
   private:
-    void handle_child_down(TypeTag tag, const bytes& payload);
+    void handle_child_down(TypeTag tag, const StreamBuffer& payload);
 };
 
 // SelfSupervisingActor - EventBasedActor that manages its own children
@@ -93,7 +93,7 @@ class SelfSupervisingActor : public EventBasedActor {
 
   protected:
     virtual SupervisionDirective on_failure(ActorId child_id, const error& err);
-    void handle_child_down(TypeTag tag, const bytes& payload);
+    void handle_child_down(TypeTag tag, const StreamBuffer& payload);
 
   private:
     SupervisionDirective decide_restart(ActorId child_id, const error& err);

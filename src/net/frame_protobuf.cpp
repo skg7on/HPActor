@@ -77,7 +77,7 @@ from_proto(const ::hpactor::PbActorAddress& pb_addr) {
 
 } // namespace protobuf
 
-bytes frame_to_proto(const WireFrame& frame) {
+StreamBuffer frame_to_proto(const WireFrame& frame) {
     ::hpactor::net::Frame pb_frame;
     protobuf::to_proto(pb_frame.mutable_sender(), frame.sender);
     protobuf::to_proto(pb_frame.mutable_receiver(), frame.receiver);
@@ -87,10 +87,10 @@ bytes frame_to_proto(const WireFrame& frame) {
     pb_frame.set_type_tag(frame.type_tag);
 
     std::string serialized = pb_frame.SerializeAsString();
-    return bytes(serialized.begin(), serialized.end());
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-WireFrame frame_from_proto(const bytes& data) {
+WireFrame frame_from_proto(const StreamBuffer& data) {
     ::hpactor::net::Frame pb_frame;
     std::string serialized(data.begin(), data.end());
     if (!pb_frame.ParseFromString(serialized)) {

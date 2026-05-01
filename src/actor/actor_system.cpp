@@ -81,7 +81,7 @@ ActorSystem::ActorSystem(const Config& config)
         http_client_ = std::make_unique<net::HttpClient>(network_loop_.get());
 
         transport_->set_rpc_handler(
-            [this](hpactor::MessageId id, const hpactor::bytes& data) {
+            [this](hpactor::MessageId id, const hpactor::StreamBuffer& data) {
                 rpc_channel_->on_response(id, data);
             });
 
@@ -226,13 +226,13 @@ ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
 
 result<ActorRef>
 ActorSystem::spawn_remote(const std::string& node_name,
-                          const std::string& actor_type, const bytes& /*args*/) {
-    return spawn_remote_async(node_name, actor_type, bytes{}).get();
+                          const std::string& actor_type, const StreamBuffer& /*args*/) {
+    return spawn_remote_async(node_name, actor_type, StreamBuffer{}).get();
 }
 
 AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
                                            const std::string& actor_type,
-                                           const bytes& /*args*/) {
+                                           const StreamBuffer& /*args*/) {
     AsyncActor handle(endpoint_, config_.spawn_timeout);
 
     if (!config_.enable_network || !transport_) {
@@ -260,7 +260,7 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     pb_sup->set_actor_id(sup_addr.id.value());
     pb_sup->set_incarnation(sup_addr.incarnation);
 
-    bytes request_bytes = proto_registry_.serialize(pb_req);
+    StreamBuffer request_bytes = proto_registry_.serialize(pb_req);
 
     net::WireFrame frame;
     frame.sender = system_actor_.address();

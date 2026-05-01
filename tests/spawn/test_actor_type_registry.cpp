@@ -47,7 +47,7 @@ void test_spawn_unknown_type() {
     Config config;
     ActorSystem system{config};
 
-    auto result = registry.spawn(system, "non-existent", bytes{}, TypeTag::Invalid);
+    auto result = registry.spawn(system, "non-existent", StreamBuffer{}, TypeTag::Invalid);
     assert(!result.has_value());
     assert(result.error().code() == spawn_errors::unknown_type);
 }
@@ -58,7 +58,7 @@ void test_spawn_valid_type() {
     ActorSystem system{config};
 
     registry.register_type<TestActor>("test-actor");
-    auto result = registry.spawn(system, "test-actor", bytes{}, TypeTag::Invalid);
+    auto result = registry.spawn(system, "test-actor", StreamBuffer{}, TypeTag::Invalid);
     assert(result.has_value());
     assert(result.value().endpoint == EndPoint{LocalEndpoint});
 }

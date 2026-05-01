@@ -29,7 +29,7 @@ void Connection::set_message_handler(message_handler handler) {
     message_handler_ = std::move(handler);
 }
 
-void Connection::handle_read(const bytes& data) {
+void Connection::handle_read(const StreamBuffer& data) {
     read_buffer_.append(data.data(), data.size());
 
     // Simple framing: look for message boundary (newline for now)
@@ -42,7 +42,7 @@ void Connection::handle_read(const bytes& data) {
             break;
         }
 
-        bytes message(begin, it);
+        StreamBuffer message(begin, it);
         size_t consumed = static_cast<size_t>(it - begin) + 1; // +1 for '\n'
         read_buffer_.consume(consumed);
 
@@ -56,7 +56,7 @@ void Connection::set_state(ConnectionState new_state) {
     state_ = new_state;
 }
 
-void Connection::on_message(const bytes& data) {
+void Connection::on_message(const StreamBuffer& data) {
     if (message_handler_) {
         message_handler_(data);
     }

@@ -19,7 +19,7 @@
 
 class MockTransport : public hpactor::net::Transport {
   public:
-    void send(const hpactor::ActorAddress&, const hpactor::bytes& encoded) override {
+    void send(const hpactor::ActorAddress&, const hpactor::StreamBuffer& encoded) override {
         sent_frames_.push_back(encoded);
     }
     hpactor::net::ConnectionPtr connect(hpactor::EndPoint,
@@ -40,7 +40,7 @@ class MockTransport : public hpactor::net::Transport {
     void close_connection(hpactor::EndPoint) override {}
     void set_rpc_handler(rpc_response_handler) override {}
 
-    std::vector<hpactor::bytes> sent_frames_;
+    std::vector<hpactor::StreamBuffer> sent_frames_;
 };
 
 struct MockScheduler : public hpactor::sched::IScheduler {
@@ -85,7 +85,7 @@ void test_response() {
 
     hpactor::ActorAddress target{hpactor::LocalEndpoint, 1, hpactor::ActorId{1}, 0};
 
-    hpactor::bytes request_data = {1, 2, 3};
+    hpactor::StreamBuffer request_data = {1, 2, 3};
     auto future =
         channel.call_raw(target, request_data, std::chrono::milliseconds{1000});
 
@@ -97,7 +97,7 @@ void test_response() {
     hpactor::MessageId actual_msg_id = hpactor::MessageId(frame.message_id);
 
     // Simulate response with the correct message ID
-    hpactor::bytes response_data = {4, 5, 6};
+    hpactor::StreamBuffer response_data = {4, 5, 6};
     channel.on_response(actual_msg_id, response_data);
 
     auto result = future.get();
@@ -112,7 +112,7 @@ void test_timeout() {
 
     hpactor::ActorAddress target{hpactor::LocalEndpoint, 1, hpactor::ActorId{1}, 0};
 
-    auto future = channel.call_raw(target, hpactor::bytes{1, 2, 3},
+    auto future = channel.call_raw(target, hpactor::StreamBuffer{1, 2, 3},
                                    std::chrono::milliseconds{50});
 
     auto result = future.get();
@@ -125,12 +125,12 @@ void test_concurrent() {
     MockScheduler scheduler;
     hpactor::RpcChannel channel(&transport, &scheduler);
 
-    std::vector<hpactor::RpcFuture<hpactor::bytes>> futures;
+    std::vector<hpactor::RpcFuture<hpactor::StreamBuffer>> futures;
     for (int i = 0; i < 10; i++) {
         hpactor::ActorAddress target{hpactor::LocalEndpoint, 1,
                                      hpactor::ActorId{static_cast<uint64_t>(i)}, 0};
         futures.push_back(
-            channel.call_raw(target, hpactor::bytes{static_cast<uint8_t>(i)},
+            channel.call_raw(target, hpactor::StreamBuffer{static_cast<uint8_t>(i)},
                              std::chrono::milliseconds{1000}));
     }
 
@@ -144,7 +144,7 @@ void test_retry() {
 
     hpactor::ActorAddress target{hpactor::LocalEndpoint, 1, hpactor::ActorId{1}, 0};
 
-    auto future = channel.call_raw(target, hpactor::bytes{1, 2, 3},
+    auto future = channel.call_raw(target, hpactor::StreamBuffer{1, 2, 3},
                                    std::chrono::milliseconds{100});
 
     size_t initial_send_count = transport.sent_frames_.size();

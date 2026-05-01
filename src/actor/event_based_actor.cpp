@@ -113,7 +113,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
     if (it != proto_handlers_.end()) {
         auto deserialized = it->second.deserialize(msg.payload());
         if (deserialized) {
-            bytes response = it->second.invoke(std::move(deserialized));
+            StreamBuffer response = it->second.invoke(std::move(deserialized));
             if (!response.empty() && ctx) {
                 TypedMessage reply_msg(it->first, response);
                 ctx->reply(std::move(reply_msg));
@@ -142,7 +142,7 @@ void EventBasedActor::initialize_proto_handlers() {
     handlers_initialized_ = true;
 }
 
-void EventBasedActor::on_proto_message(TypeTag tag, const bytes& payload) {
+void EventBasedActor::on_proto_message(TypeTag tag, const StreamBuffer& payload) {
     if (!handlers_initialized_) {
         initialize_proto_handlers();
     }
@@ -156,7 +156,7 @@ void EventBasedActor::on_proto_message(TypeTag tag, const bytes& payload) {
     auto msg = handler.deserialize(payload);
     if (!msg) return;
 
-    bytes response = handler.invoke(std::move(msg));
+    StreamBuffer response = handler.invoke(std::move(msg));
     auto* ctx = context();
     if (!response.empty() && ctx) {
         TypedMessage reply_msg(tag, response);
@@ -182,18 +182,18 @@ void EventBasedActor::on_exit() {
     pb.set_actor_id(id().value());
     pb.set_reason_code(exit_reason_);
 
-    bytes payload(pb.ByteSizeLong());
+    StreamBuffer payload(pb.ByteSizeLong());
     (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
 
     // Send DownMsg to all linked actors
     for (const auto& addr : ctx->linked_actors()) {
-        TypedMessage down_msg(TypeTag::DownMsg, bytes(payload));
+        TypedMessage down_msg(TypeTag::DownMsg, StreamBuffer(payload));
         ctx->send(addr, std::move(down_msg));
     }
 
     // Send DownMsg to all monitored actors
     for (const auto& addr : ctx->monitored_actors()) {
-        TypedMessage down_msg(TypeTag::DownMsg, bytes(payload));
+        TypedMessage down_msg(TypeTag::DownMsg, StreamBuffer(payload));
         ctx->send(addr, std::move(down_msg));
     }
     // linked_ and monitored_ vectors will be destroyed with the context

@@ -20,7 +20,7 @@ int main() {
         ep.tcp_port = 5353;
         ep.acceptors.push_back({8080, 1, 1, false});
 
-        bytes serialized = serialize_register_payload(ep);
+        StreamBuffer serialized = serialize_register_payload(ep);
         PbRegisterPayload parsed;
         bool ok = parse_register_payload(serialized, parsed);
         assert(ok);
@@ -33,7 +33,7 @@ int main() {
 
     // Test 2: PbAcceptPayload round-trip
     {
-        bytes serialized = serialize_accept_payload(0);
+        StreamBuffer serialized = serialize_accept_payload(0);
         PbAcceptPayload parsed;
         bool ok = parse_accept_payload(serialized, parsed);
         assert(ok);
@@ -47,7 +47,7 @@ int main() {
         ep.host = "10.0.0.1";
         ep.tcp_port = 4000;
 
-        bytes serialized = serialize_node_join_payload(ep);
+        StreamBuffer serialized = serialize_node_join_payload(ep);
         PbNodeJoinPayload parsed;
         bool ok = parse_node_join_payload(serialized, parsed);
         assert(ok);
@@ -59,7 +59,7 @@ int main() {
     // Test 4: PbNodeLeavePayload round-trip
     {
         auto ep = endpoint_ops::parse_endpoint("10.0.0.2:5000");
-        bytes serialized = serialize_node_leave_payload(ep);
+        StreamBuffer serialized = serialize_node_leave_payload(ep);
         PbNodeLeavePayload parsed;
         bool ok = parse_node_leave_payload(serialized, parsed);
         assert(ok);
@@ -69,7 +69,7 @@ int main() {
     // Test 5: PbResolveQueryPayload round-trip
     {
         auto ep = endpoint_ops::parse_endpoint("192.168.1.50:5353");
-        bytes serialized = serialize_resolve_query_payload(ep);
+        StreamBuffer serialized = serialize_resolve_query_payload(ep);
         PbResolveQueryPayload parsed;
         bool ok = parse_resolve_query_payload(serialized, parsed);
         assert(ok);
@@ -84,7 +84,7 @@ int main() {
         ep.host = "192.168.1.50";
         ep.tcp_port = 5353;
 
-        bytes serialized = serialize_resolve_response_payload(ep);
+        StreamBuffer serialized = serialize_resolve_response_payload(ep);
         PbResolveResponsePayload parsed;
         bool ok = parse_resolve_response_payload(serialized, parsed);
         assert(ok);
@@ -95,7 +95,7 @@ int main() {
 
     // Test 7: Malformed data handling
     {
-        bytes malformed = {0x00, 0x01, 0x02}; // Too short
+        StreamBuffer malformed = {0x00, 0x01, 0x02}; // Too short
         PbRegisterPayload parsed;
         bool ok = parse_register_payload(malformed, parsed);
         assert(!ok); // ParseFromArray returns false on error

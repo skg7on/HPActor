@@ -120,28 +120,28 @@ class ActorContext {
     ActorRef resolve(const ActorAddress& target);
 
     // RPC calls (for non-actor threads only)
-    RpcFuture<bytes>
-    rpc(const ActorAddress& target, const bytes& encoded_request,
+    RpcFuture<StreamBuffer>
+    rpc(const ActorAddress& target, const StreamBuffer& encoded_request,
         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));
 
     // HTTP egress — async HTTP calls to external services.
     // Delegates to ActorSystem's HttpClient. Returns a future for the response body.
-    RpcFuture<bytes>
+    RpcFuture<StreamBuffer>
     http_get(const std::string& url,
              std::vector<net::HttpHeader> headers = {});
-    RpcFuture<bytes>
-    http_post(const std::string& url, bytes body,
+    RpcFuture<StreamBuffer>
+    http_post(const std::string& url, StreamBuffer body,
               std::vector<net::HttpHeader> headers = {});
-    RpcFuture<bytes>
-    http_put(const std::string& url, bytes body,
+    RpcFuture<StreamBuffer>
+    http_put(const std::string& url, StreamBuffer body,
              std::vector<net::HttpHeader> headers = {});
-    RpcFuture<bytes>
+    RpcFuture<StreamBuffer>
     http_delete(const std::string& url,
                 std::vector<net::HttpHeader> headers = {});
-    RpcFuture<bytes>
+    RpcFuture<StreamBuffer>
     http_request(net::HttpMethod method, const std::string& url,
                  std::vector<net::HttpHeader> headers = {},
-                 bytes body = {});
+                 StreamBuffer body = {});
 
   private:
     Actor owner_;

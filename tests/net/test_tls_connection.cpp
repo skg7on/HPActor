@@ -129,7 +129,7 @@ void test_server_receives_client_hello() {
     client->start_client_handshake();
 
     // Simulate: read from client, deliver to server
-    bytes read_buffer;
+    StreamBuffer read_buffer;
     char buf[1024];
     ssize_t n;
     while ((n = recv(client_fd, buf, sizeof(buf), 0)) > 0) {
@@ -140,7 +140,7 @@ void test_server_receives_client_hello() {
     server->handle_read(read_buffer);
 
     // Check that something was written to server_fd (response to clienthello)
-    bytes response;
+    StreamBuffer response;
     while ((n = recv(server_fd, buf, sizeof(buf), 0)) > 0) {
         response.insert(response.end(), buf, buf + n);
     }
@@ -191,7 +191,7 @@ void test_full_handshake() {
 
     // Helper to exchange data between client and server
     auto exchange_data = [&](int from_fd, TlsConnectionPtr to_conn) {
-        bytes buffer;
+        StreamBuffer buffer;
         char buf[2048];
         ssize_t n;
         while ((n = recv(from_fd, buf, sizeof(buf), 0)) > 0) {
@@ -235,7 +235,7 @@ void test_send_in_handshake_state() {
     auto client = TlsConnection::create_client(
         hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
-    bytes test_data = {'h', 'e', 'l', 'l', 'o'};
+    StreamBuffer test_data = {'h', 'e', 'l', 'l', 'o'};
 
     // In Handshake state, send() should do nothing (encrypted session required)
     client->send(test_data);
@@ -370,11 +370,11 @@ void test_premature_message_in_wrong_state() {
     // Server is in WaitingForServerHello state (after create_server)
     // Send a Certificate message (which should come after ServerHello)
     // Build a properly formatted Certificate message with data payload
-    bytes payload;
+    StreamBuffer payload;
     payload.push_back(static_cast<uint8_t>(TlsMessageType::Certificate));
     payload.insert(payload.end(), {'D', 'E', 'R', 'd', 'a', 't', 'a'});
 
-    bytes cert_message;
+    StreamBuffer cert_message;
     cert_message.push_back(static_cast<uint8_t>(TlsMessageType::Certificate));
     size_t len = payload.size();
     cert_message.push_back(static_cast<uint8_t>((len >> 16) & 0xFF));
@@ -442,7 +442,7 @@ void test_frame_handler_callback() {
         server_fd, hpactor::endpoint_ops::parse_endpoint("localhost:12345"),
         &ctx, &loop);
 
-    bytes received_frame;
+    StreamBuffer received_frame;
     server->set_frame_handler([&](std::span<const uint8_t> data) {
         received_frame.assign(data.begin(), data.end());
     });
@@ -600,17 +600,17 @@ void test_tls_context_rsa_operations() {
     TlsContext ctx = TlsContext::from_config(config);
 
     // Test signing - may be empty if no private key available
-    bytes data_to_sign = {'t', 'e', 's', 't', 'd', 'a', 't', 'a'};
-    bytes signature = ctx.sign_data(data_to_sign);
+    StreamBuffer data_to_sign = {'t', 'e', 's', 't', 'd', 'a', 't', 'a'};
+    StreamBuffer signature = ctx.sign_data(data_to_sign);
     // Signing may produce empty result if no key is available - this is
     // acceptable
 
     // Test public key access
-    const bytes& pub_key = ctx.public_key();
+    const StreamBuffer& pub_key = ctx.public_key();
     (void)pub_key; // May be empty but accessor should work
 
     // Test certificate access
-    const bytes& cert = ctx.certificate();
+    const StreamBuffer& cert = ctx.certificate();
     (void)cert; // May be empty but accessor should work
 
     // Test endpoint
@@ -694,18 +694,18 @@ void test_message_parse_partial_data() {
         &ctx, &loop);
 
     // Build a proper ClientHello message
-    bytes payload;
+    StreamBuffer payload;
     payload.push_back(static_cast<uint8_t>(TlsMessageType::ClientHello));
-    // Add nonce (32 bytes)
+    // Add nonce (32 StreamBuffer)
     for (int i = 0; i < 32; i++) {
         payload.push_back(static_cast<uint8_t>(i));
     }
     // Add public key
-    const bytes& pub_key = ctx.public_key();
+    const StreamBuffer& pub_key = ctx.public_key();
     payload.insert(payload.end(), pub_key.begin(), pub_key.end());
 
     // Format as TLS message (type + 3-byte length + payload)
-    bytes message;
+    StreamBuffer message;
     message.push_back(static_cast<uint8_t>(TlsMessageType::ClientHello));
     size_t len = payload.size();
     message.push_back(static_cast<uint8_t>((len >> 16) & 0xFF));
@@ -785,7 +785,7 @@ void test_invalid_certificate_verification() {
     TlsContext ctx = TlsContext::from_config(config);
 
     // Try to verify invalid certificate data
-    bytes invalid_cert = {0x30, 0x82, 0x01, 0x00}; // Fake DER
+    StreamBuffer invalid_cert = {0x30, 0x82, 0x01, 0x00}; // Fake DER
     auto result = ctx.verify_certificate(invalid_cert);
 
     // Should return something other than Ok for invalid cert

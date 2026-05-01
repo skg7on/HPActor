@@ -21,7 +21,7 @@ using namespace hpactor;
 
 int main() {
     auto mailbox = create_mailbox<TypedMessage, MailboxType::Mutex>();
-    mailbox->push(TypedMessage(TypeTag::User, bytes{1, 2, 3}));
+    mailbox->push(TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3}));
     assert(mailbox->size() == 1);
     return 0;
 }

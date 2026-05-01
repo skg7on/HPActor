@@ -1047,7 +1047,7 @@ int main() {
         assert(captured_recv.has_value() && "recv completion should be "
                                             "captured");
         assert(captured_recv->result == 5 && "async_recvfrom should receive 5 "
-                                             "bytes");
+                                             "StreamBuffer");
         assert(captured_recv->type == OpType::RecvFrom && "completion type "
                                                           "should be RecvFrom");
         assert(memcmp(recv_buf, "world", 5) == 0 && "received data should "
@@ -1160,7 +1160,7 @@ int main() {
 
         assert(captured.has_value() && "completion should be captured");
         assert(captured->result == 11 && "async_send multi-iovec should send "
-                                         "11 bytes");
+                                         "11 StreamBuffer");
 
         ::close(fds[0]);
         ::close(fds[1]);
@@ -1201,7 +1201,7 @@ int main() {
 
         assert(captured.has_value() && "completion should be captured");
         assert(captured->result == 10 && "async_recv multi-iovec should "
-                                         "receive 10 bytes");
+                                         "receive 10 StreamBuffer");
         assert(memcmp(buf1, "hello", 5) == 0 && "first buffer should be "
                                                 "'hello'");
         assert(memcmp(buf2, "world", 5) == 0 && "second buffer should be "

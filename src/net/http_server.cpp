@@ -189,8 +189,8 @@ class ReplyAdapter final : public EventBasedActor {
 struct HttpServer::ConnectionCtx {
     int fd = -1;
     std::unique_ptr<HttpParser> parser;
-    bytes read_buf;
-    std::vector<bytes> write_queue;
+    StreamBuffer read_buf;
+    std::vector<StreamBuffer> write_queue;
     bool keepalive = true;
 };
 
@@ -405,7 +405,7 @@ void HttpServer::on_parse_complete(int client_fd, HttpRequest&& request) {
     }
 
     // Encode correlation ID into payload prefix (8 bytes BE)
-    bytes correlated;
+    StreamBuffer correlated;
     for (int i = 7; i >= 0; --i) {
         correlated.push_back(
             static_cast<uint8_t>((request_id >> (i * 8)) & 0xFF));
@@ -476,7 +476,7 @@ void HttpServer::on_reply(TypedMessage&& msg) {
         should_close = !conn_it->second->keepalive;
 
         // Strip 8-byte prefix to get actual reply payload
-        bytes reply_payload;
+        StreamBuffer reply_payload;
         reply_payload.append(payload.data() + 8, payload.size() - 8);
         TypedMessage reply_msg(msg.type_id(), reply_payload);
 
@@ -493,7 +493,7 @@ void HttpServer::on_reply(TypedMessage&& msg) {
         }
         headers_str += "\r\n";
 
-        bytes wire;
+        StreamBuffer wire;
         wire.append(reinterpret_cast<const uint8_t*>(status_line.data()),
                     status_line.size());
         wire.append(reinterpret_cast<const uint8_t*>(headers_str.data()),
@@ -535,7 +535,7 @@ void HttpServer::send_error(int client_fd, HttpStatusCode code,
     headers_str += "Connection: close\r\n";
     headers_str += "\r\n";
 
-    bytes wire;
+    StreamBuffer wire;
     wire.append(reinterpret_cast<const uint8_t*>(status_line.data()),
                 status_line.size());
     wire.append(reinterpret_cast<const uint8_t*>(headers_str.data()),
