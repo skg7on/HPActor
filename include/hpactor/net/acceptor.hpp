@@ -19,39 +19,29 @@
 
 #include <functional>
 #include <memory>
+#include <string>
 
 namespace hpactor {
 
 namespace net {
 
 // -----------------------------------------------------------------------------
-// Acceptor - server socket listener for incoming connections
+// Acceptor - abstract base for server socket listeners
 // -----------------------------------------------------------------------------
 class Acceptor {
   public:
     using accept_handler =
         std::function<void(int client_fd, CommunicationEndpoint /*remote_endpoint_hint*/)>;
 
-    Acceptor(EventLoop* loop);
-    ~Acceptor();
+    explicit Acceptor(EventLoop* loop);
+    virtual ~Acceptor();
 
     // Non-copyable
     Acceptor(const Acceptor&) = delete;
     Acceptor& operator=(const Acceptor&) = delete;
 
-    // Start listening on the specified port
-    // Returns true on success, false on failure
-    bool listen(uint16_t port, uint16_t port_range = 0);
-
-    // Start listening on a UNIX domain socket
-    // Returns true on success, false on failure
-    bool listen_unix_domain(const std::string& path);
-
     // Stop listening and close the socket
-    void close();
-
-    // Stop listening on UDS socket
-    void close_unix_domain();
+    virtual void close();
 
     // Set handler for accepted connections
     void set_accept_handler(accept_handler handler);
@@ -61,24 +51,61 @@ class Acceptor {
         return listening_fd_ >= 0;
     }
 
+  protected:
+    virtual void handle_read() = 0;
+
+    EventLoop* loop_;
+    int listening_fd_ = -1;
+    accept_handler accept_handler_;
+};
+
+// -----------------------------------------------------------------------------
+// TcpAcceptor - TCP socket acceptor
+// -----------------------------------------------------------------------------
+class TcpAcceptor : public Acceptor {
+  public:
+    using Acceptor::Acceptor;
+
+    // Start listening on the specified port
+    // Returns true on success, false on failure
+    bool listen(uint16_t port, uint16_t port_range = 0);
+
     // Get the bound port
     uint16_t port() const {
         return bound_port_;
     }
+
+  protected:
+    void handle_read() override;
+
+  private:
+    uint16_t bound_port_ = 0;
+};
+
+// -----------------------------------------------------------------------------
+// UnixDomainAcceptor - Unix domain socket acceptor
+// -----------------------------------------------------------------------------
+class UnixDomainAcceptor : public Acceptor {
+  public:
+    using Acceptor::Acceptor;
+
+    // Start listening on a UNIX domain socket
+    // Returns true on success, false on failure
+    bool listen(const std::string& path);
 
     // Get UDS socket path if listening on UDS
     std::string uds_path() const {
         return uds_path_;
     }
 
-  private:
-    void handle_read();
+    // Stop listening, unlink socket file, and close the fd
+    void close() override;
 
-    EventLoop* loop_;
-    int listening_fd_ = -1;
-    uint16_t bound_port_ = 0;
+  protected:
+    void handle_read() override;
+
+  private:
     std::string uds_path_;
-    accept_handler accept_handler_;
 };
 
 } // namespace net

@@ -27,13 +27,35 @@ namespace hpactor {
 
 namespace net {
 
+// -----------------------------------------------------------------------------
+// Acceptor (abstract base)
+// -----------------------------------------------------------------------------
+
 Acceptor::Acceptor(EventLoop* loop) : loop_(loop), listening_fd_(-1) {}
 
 Acceptor::~Acceptor() {
     close();
 }
 
-bool Acceptor::listen(uint16_t port, uint16_t port_range) {
+void Acceptor::close() {
+    if (listening_fd_ >= 0) {
+        if (loop_) {
+            loop_->remove_fd(listening_fd_);
+        }
+        ::close(listening_fd_);
+        listening_fd_ = -1;
+    }
+}
+
+void Acceptor::set_accept_handler(accept_handler handler) {
+    accept_handler_ = std::move(handler);
+}
+
+// -----------------------------------------------------------------------------
+// TcpAcceptor
+// -----------------------------------------------------------------------------
+
+bool TcpAcceptor::listen(uint16_t port, uint16_t port_range) {
     int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         return false;
@@ -76,7 +98,6 @@ bool Acceptor::listen(uint16_t port, uint16_t port_range) {
     }
 
     listening_fd_ = fd;
-    bound_port_ = port;
 
     // Register with event loop
     if (loop_) {
@@ -86,7 +107,39 @@ bool Acceptor::listen(uint16_t port, uint16_t port_range) {
     return true;
 }
 
-bool Acceptor::listen_unix_domain(const std::string& path) {
+void TcpAcceptor::handle_read() {
+    struct sockaddr_in client_addr;
+    socklen_t client_len = sizeof(client_addr);
+
+    int client_fd =
+        accept(listening_fd_, reinterpret_cast<struct sockaddr*>(&client_addr),
+               &client_len);
+
+    if (client_fd < 0) {
+        return;
+    }
+
+    // Set TCP_NODELAY for low latency
+    int nodelay = 1;
+    setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
+
+    // Set non-blocking
+    int flags = fcntl(client_fd, F_GETFL, 0);
+    fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
+
+    if (accept_handler_) {
+        accept_handler_(client_fd,
+                        Ipv4Endpoint{client_addr.sin_addr.s_addr, 0});
+    } else {
+        ::close(client_fd);
+    }
+}
+
+// -----------------------------------------------------------------------------
+// UnixDomainAcceptor
+// -----------------------------------------------------------------------------
+
+bool UnixDomainAcceptor::listen(const std::string& path) {
     // Remove stale socket file if it exists
     ::unlink(path.c_str());
 
@@ -116,7 +169,6 @@ bool Acceptor::listen_unix_domain(const std::string& path) {
 
     // Only set after successful listen to avoid fd leak on failure
     listening_fd_ = fd;
-    bound_port_ = 0; // UDS has no port
     uds_path_ = path;
 
     if (loop_) {
@@ -126,31 +178,16 @@ bool Acceptor::listen_unix_domain(const std::string& path) {
     return true;
 }
 
-void Acceptor::close_unix_domain() {
+void UnixDomainAcceptor::close() {
     if (!uds_path_.empty()) {
         ::unlink(uds_path_.c_str());
-        uds_path_.clear(); // Reset so uds_path() returns empty after close
+        uds_path_.clear();
     }
-    close(); // Closes the fd and sets listening_fd_ = -1
+    Acceptor::close();
 }
 
-void Acceptor::close() {
-    if (listening_fd_ >= 0) {
-        if (loop_) {
-            loop_->remove_fd(listening_fd_);
-        }
-        ::close(listening_fd_);
-        listening_fd_ = -1;
-    }
-    uds_path_.clear();
-}
-
-void Acceptor::set_accept_handler(accept_handler handler) {
-    accept_handler_ = std::move(handler);
-}
-
-void Acceptor::handle_read() {
-    struct sockaddr_in client_addr;
+void UnixDomainAcceptor::handle_read() {
+    struct sockaddr_un client_addr;
     socklen_t client_len = sizeof(client_addr);
 
     int client_fd =
@@ -161,20 +198,13 @@ void Acceptor::handle_read() {
         return;
     }
 
-    // Set TCP_NODELAY for low latency
-    int nodelay = 1;
-    setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
-
     // Set non-blocking
     int flags = fcntl(client_fd, F_GETFL, 0);
     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
 
     if (accept_handler_) {
-        // Convert IP to string (port unknown, use 0 as placeholder)
-        char ip_str[INET_ADDRSTRLEN];
-        inet_ntop(AF_INET, &client_addr.sin_addr, ip_str, INET_ADDRSTRLEN);
-        Ipv4Endpoint endpoint_hint{client_addr.sin_addr.s_addr, 0};
-        accept_handler_(client_fd, endpoint_hint);
+        // No UDS variant in CommunicationEndpoint; use default Ipv4Endpoint as hint
+        accept_handler_(client_fd, Ipv4Endpoint{});
     } else {
         ::close(client_fd);
     }

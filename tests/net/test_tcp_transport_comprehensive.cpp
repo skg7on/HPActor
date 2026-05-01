@@ -50,11 +50,11 @@ void test_acceptor_rapid_open_close() {
 
     // Rapidly open and close multiple acceptors
     for (int cycle = 0; cycle < 20; ++cycle) {
-        Acceptor acceptor(&loop);
+        UnixDomainAcceptor acceptor(&loop);
         std::string path = "/tmp/hpactor/test_rapid_" + std::to_string(cycle) + ".sock";
 
         // Listen
-        bool ok = acceptor.listen_unix_domain(path);
+        bool ok = acceptor.listen(path);
         assert(ok);
 
         // Set accept handler
@@ -64,7 +64,7 @@ void test_acceptor_rapid_open_close() {
         });
 
         // Close immediately
-        acceptor.close_unix_domain();
+        acceptor.close();
 
         // Path should be cleared after close
         assert(acceptor.uds_path().empty());
@@ -134,7 +134,7 @@ void test_uds_then_tcp_fallback_same_endpoint() {
 
     // Start a real TCP listener on the same port
     EventLoop loop;
-    Acceptor acceptor(&loop);
+    TcpAcceptor acceptor(&loop);
     bool listening = acceptor.listen(19999);
     assert(listening);
 
@@ -228,14 +228,14 @@ void test_acceptor_port_range_fallback() {
     EventLoop loop;
 
     // Start first acceptor on port 0 (kernel picks actual port)
-    Acceptor acceptor1(&loop);
+    TcpAcceptor acceptor1(&loop);
     bool ok1 = acceptor1.listen(0, 100); // Let kernel pick, then try +100
     assert(ok1);
     uint16_t port1 = acceptor1.port();
     printf("(acceptor1 port=%u)", port1);
 
     // Start second acceptor - should get different port since port1 is taken
-    Acceptor acceptor2(&loop);
+    TcpAcceptor acceptor2(&loop);
     bool ok2 = acceptor2.listen(port1, 100); // Start from port1
     assert(ok2);
     uint16_t port2 = acceptor2.port();
@@ -293,7 +293,7 @@ void test_multiple_connections_same_pool() {
 
     // Start a listener to accept connections
     EventLoop loop;
-    Acceptor acceptor(&loop);
+    TcpAcceptor acceptor(&loop);
     bool ok = acceptor.listen(21050);
     assert(ok);
 
@@ -330,7 +330,7 @@ void test_pool_abort_during_active_use() {
 
     // Start listener
     EventLoop loop;
-    Acceptor acceptor(&loop);
+    TcpAcceptor acceptor(&loop);
     acceptor.listen(21060);
     std::atomic<bool> accepted{false};
     acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
@@ -401,28 +401,28 @@ void test_acceptor_reuse_after_close() {
     printf("Test 10: Acceptor reuse after close... ");
 
     EventLoop loop;
-    Acceptor acceptor(&loop);
+    UnixDomainAcceptor acceptor(&loop);
 
     std::string path1 = "/tmp/hpactor/test_reuse1.sock";
     std::string path2 = "/tmp/hpactor/test_reuse2.sock";
 
     // First listen
-    bool ok1 = acceptor.listen_unix_domain(path1);
+    bool ok1 = acceptor.listen(path1);
     assert(ok1);
     assert(acceptor.is_listening());
     assert(acceptor.uds_path() == path1);
 
     // Close
-    acceptor.close_unix_domain();
+    acceptor.close();
     assert(!acceptor.is_listening());
 
     // Listen again on different path
-    bool ok2 = acceptor.listen_unix_domain(path2);
+    bool ok2 = acceptor.listen(path2);
     assert(ok2);
     assert(acceptor.is_listening());
     assert(acceptor.uds_path() == path2);
 
-    acceptor.close_unix_domain();
+    acceptor.close();
 
     printf("PASS\n");
 }
@@ -439,11 +439,11 @@ void test_concurrent_acceptor_operations() {
     std::atomic<bool> stop{false};
 
     // Create multiple acceptors sharing the same event loop
-    std::vector<std::unique_ptr<Acceptor>> acceptors;
+    std::vector<std::unique_ptr<TcpAcceptor>> acceptors;
     std::vector<unsigned short> ports;
 
     for (int i = 0; i < 3; ++i) {
-        auto acceptor = std::make_unique<Acceptor>(&loop);
+        auto acceptor = std::make_unique<TcpAcceptor>(&loop);
         uint16_t port = static_cast<uint16_t>(22000 + i);
         bool ok = acceptor->listen(port);
         if (ok) {
@@ -631,7 +631,7 @@ void test_connection_pool_stats() {
 
     // Start listener
     EventLoop loop;
-    Acceptor acceptor(&loop);
+    TcpAcceptor acceptor(&loop);
     acceptor.listen(22100);
     std::atomic<int> accepts{0};
     acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
@@ -676,7 +676,7 @@ void test_acceptor_edge_triggered() {
     printf("Test 16: Acceptor edge-triggered notifications... ");
 
     EventLoop loop;
-    Acceptor acceptor(&loop);
+    TcpAcceptor acceptor(&loop);
 
     bool ok = acceptor.listen(22150);
     assert(ok);
@@ -775,7 +775,7 @@ void test_rapid_connect_disconnect_cycles() {
 
     // Start listener
     EventLoop loop;
-    Acceptor acceptor(&loop);
+    TcpAcceptor acceptor(&loop);
     acceptor.listen(22400);
     std::atomic<int> accepts{0};
     acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
@@ -822,7 +822,7 @@ void test_is_connected_accuracy() {
 
     // Start listener
     EventLoop loop;
-    Acceptor acceptor(&loop);
+    TcpAcceptor acceptor(&loop);
     acceptor.listen(22500);
     acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
         ::close(fd);

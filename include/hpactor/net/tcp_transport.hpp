@@ -85,7 +85,7 @@ class TcpTransport : public Transport {
 
     CommunicationEndpoint endpoint_;
     EventLoop loop_;
-    Acceptor acceptor_;
+    TcpAcceptor acceptor_;
     TlsContext tls_context_;
     PoolConfig pool_config_;
     NodeRegistry* registry_ = nullptr; // Optional registry for node lookup

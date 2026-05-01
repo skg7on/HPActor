@@ -30,10 +30,10 @@ void test_connect_and_frame() {
     EventLoop loop;
 
     // Server: listen on UDS
-    Acceptor acceptor(&loop);
+    UnixDomainAcceptor acceptor(&loop);
     std::string socket_path = "/tmp/hpactor/test_connect_frame.sock";
 
-    bool server_started = acceptor.listen_unix_domain(socket_path);
+    bool server_started = acceptor.listen(socket_path);
     assert(server_started);
 
     int accepted_fd = -1;
@@ -66,7 +66,7 @@ void test_connect_and_frame() {
 
     // Clean up
     ::close(client_fd);
-    acceptor.close_unix_domain();
+    acceptor.close();
 }
 
 // Test path derivation for UDS paths

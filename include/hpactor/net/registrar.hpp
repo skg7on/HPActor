@@ -332,7 +332,7 @@ class RegistrarServer {
     [[maybe_unused]] CommunicationEndpoint local_endpoint_;
     NodeRegistry registry_;
     EventLoop* loop_ = nullptr;
-    Acceptor acceptor_;
+    TcpAcceptor acceptor_;
 
     int udp_socket_ = -1;
     std::atomic<bool> running_{false};

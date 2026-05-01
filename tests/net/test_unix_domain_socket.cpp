@@ -106,10 +106,10 @@ int main() {
     // Test: ListenAndAccept
     {
         hpactor::net::EventLoop loop;
-        hpactor::net::Acceptor acceptor(&loop);
+        hpactor::net::UnixDomainAcceptor acceptor(&loop);
         std::string socket_path = "/tmp/hpactor/test_listen_accept.sock";
 
-        bool server_started = acceptor.listen_unix_domain(socket_path);
+        bool server_started = acceptor.listen(socket_path);
         assert(server_started);
 
         // Verify socket file exists
@@ -121,7 +121,7 @@ int main() {
         assert(acceptor.uds_path() == socket_path);
 
         // Clean up
-        acceptor.close_unix_domain();
+        acceptor.close();
 
         // After close, socket file should be unlinked
         assert(stat(socket_path.c_str(), &st) == -1);
@@ -130,10 +130,10 @@ int main() {
     // Test: AcceptHandler
     {
         hpactor::net::EventLoop loop;
-        hpactor::net::Acceptor acceptor(&loop);
+        hpactor::net::UnixDomainAcceptor acceptor(&loop);
         std::string socket_path = "/tmp/hpactor/test_accept_handler.sock";
 
-        bool server_started = acceptor.listen_unix_domain(socket_path);
+        bool server_started = acceptor.listen(socket_path);
         assert(server_started);
 
         int client_fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
@@ -160,20 +160,24 @@ int main() {
         assert(client_fd >= 0);
 
         ::close(client_fd);
-        acceptor.close_unix_domain();
+        acceptor.close();
     }
 
-    // Test: CloseWithoutUdsPath
+    // Test: TcpAcceptor close
     {
         hpactor::net::EventLoop loop;
-        hpactor::net::Acceptor acceptor(&loop);
+        hpactor::net::TcpAcceptor acceptor(&loop);
 
         // Start regular TCP listener
         bool started = acceptor.listen(19995);
         assert(started);
 
-        // close_unix_domain() should be safe even though not listening on UDS
-        acceptor.close_unix_domain(); // Should not crash
+        // close() should be safe
+        acceptor.close();
+        assert(!acceptor.is_listening());
+
+        // Double close should also be safe
+        acceptor.close();
         assert(!acceptor.is_listening());
     }
 
