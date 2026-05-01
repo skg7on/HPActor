@@ -58,7 +58,7 @@ void test_acceptor_rapid_open_close() {
         assert(ok);
 
         // Set accept handler
-        acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
+        acceptor.set_accept_handler([&](int fd, EndPoint) {
             accept_count++;
             ::close(fd);
         });
@@ -139,7 +139,7 @@ void test_uds_then_tcp_fallback_same_endpoint() {
     assert(listening);
 
     std::atomic<int> accepts{0};
-    acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
+    acceptor.set_accept_handler([&](int fd, EndPoint) {
         accepts++;
         ::close(fd);
     });
@@ -298,7 +298,7 @@ void test_multiple_connections_same_pool() {
     assert(ok);
 
     std::atomic<int> accept_count{0};
-    acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
+    acceptor.set_accept_handler([&](int fd, EndPoint) {
         accept_count++;
         ::close(fd); // Close immediately after accept
     });
@@ -333,7 +333,7 @@ void test_pool_abort_during_active_use() {
     TcpAcceptor acceptor(&loop);
     acceptor.listen(21060);
     std::atomic<bool> accepted{false};
-    acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
+    acceptor.set_accept_handler([&](int fd, EndPoint) {
         accepted = true;
         ::close(fd);
     });
@@ -447,7 +447,7 @@ void test_concurrent_acceptor_operations() {
         uint16_t port = static_cast<uint16_t>(22000 + i);
         bool ok = acceptor->listen(port);
         if (ok) {
-            acceptor->set_accept_handler([&](int fd, CommunicationEndpoint) {
+            acceptor->set_accept_handler([&](int fd, EndPoint) {
                 total_accepts++;
                 ::close(fd);
             });
@@ -634,7 +634,7 @@ void test_connection_pool_stats() {
     TcpAcceptor acceptor(&loop);
     acceptor.listen(22100);
     std::atomic<int> accepts{0};
-    acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
+    acceptor.set_accept_handler([&](int fd, EndPoint) {
         accepts++;
         // Keep connection alive briefly
         usleep(10000);
@@ -682,7 +682,7 @@ void test_acceptor_edge_triggered() {
     assert(ok);
 
     std::atomic<int> accept_count{0};
-    acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
+    acceptor.set_accept_handler([&](int fd, EndPoint) {
         accept_count++;
         ::close(fd);
     });
@@ -778,7 +778,7 @@ void test_rapid_connect_disconnect_cycles() {
     TcpAcceptor acceptor(&loop);
     acceptor.listen(22400);
     std::atomic<int> accepts{0};
-    acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
+    acceptor.set_accept_handler([&](int fd, EndPoint) {
         accepts++;
         ::close(fd); // Immediate close to trigger connection churn
     });
@@ -824,7 +824,7 @@ void test_is_connected_accuracy() {
     EventLoop loop;
     TcpAcceptor acceptor(&loop);
     acceptor.listen(22500);
-    acceptor.set_accept_handler([&](int fd, CommunicationEndpoint) {
+    acceptor.set_accept_handler([&](int fd, EndPoint) {
         ::close(fd);
     });
 

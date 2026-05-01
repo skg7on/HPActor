@@ -40,12 +40,12 @@ int main() {
 
     // Test StaticRouteConfig defaults
     StaticRouteConfig route;
-    assert(route.endpoint == CommunicationEndpoint{});
+    assert(route.endpoint == EndPoint{});
     assert(route.port == 0);
 
     // Test NodeEndpoint defaults
     NodeEndpoint ep;
-    assert(ep.endpoint == CommunicationEndpoint{});
+    assert(ep.endpoint == EndPoint{});
     assert(ep.tcp_port == 0);
     assert(ep.is_static_route == false);
     assert(ep.acceptors.empty());

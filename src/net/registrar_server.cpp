@@ -32,7 +32,7 @@ namespace net {
 // -----------------------------------------------------------------------------
 
 RegistrarServer::RegistrarServer(const RegistrarConfig& config,
-                                 CommunicationEndpoint local_endpoint,
+                                 EndPoint local_endpoint,
                                  EventLoop* loop)
     : config_(config), local_endpoint_(local_endpoint), registry_(config),
       loop_(loop), acceptor_(loop) {
@@ -64,7 +64,7 @@ void RegistrarServer::start() {
     // Use Acceptor for TCP listening (async)
     // The Acceptor uses the EventLoop to monitor the listening socket
     // and invokes our accept handler when connections arrive
-    acceptor_.set_accept_handler([this](int fd, CommunicationEndpoint remote_ep) {
+    acceptor_.set_accept_handler([this](int fd, EndPoint remote_ep) {
         handle_accept(fd, remote_ep);
     });
     acceptor_.listen(config_.tcp_port);
@@ -126,7 +126,7 @@ void RegistrarServer::stop() {
 }
 
 void RegistrarServer::handle_accept(int client_fd,
-                                    CommunicationEndpoint remote_endpoint) {
+                                    EndPoint remote_endpoint) {
     // Set TCP_NODELAY for lower latency
     int nodelay = 1;
     setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
@@ -163,7 +163,7 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
 
             const auto& ep_info = msg.endpoint_info();
             std::string endpoint_str = ep_info.endpoint();
-            CommunicationEndpoint node_endpoint =
+            EndPoint node_endpoint =
                 endpoint_ops::parse_endpoint(endpoint_str);
 
             if (std::holds_alternative<Ipv4Endpoint>(node_endpoint) &&
@@ -213,7 +213,7 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
         }
 
         case TcpMessageType::Heartbeat: {
-            CommunicationEndpoint endpoint = conn->remote_endpoint();
+            EndPoint endpoint = conn->remote_endpoint();
             bool is_valid = std::holds_alternative<Ipv4Endpoint>(endpoint)
                                 ? !std::get<Ipv4Endpoint>(endpoint).is_unspecified()
                                 : true;
@@ -236,7 +236,7 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
 }
 
 void RegistrarServer::handle_disconnect(RegistrarConnectionPtr conn) {
-    CommunicationEndpoint endpoint = conn->remote_endpoint();
+    EndPoint endpoint = conn->remote_endpoint();
     int fd = conn->fd();
 
     // Remove from both maps
@@ -253,7 +253,7 @@ void RegistrarServer::handle_disconnect(RegistrarConnectionPtr conn) {
     registry_.remove_endpoint(endpoint);
 }
 
-void RegistrarServer::broadcast_node_joined(CommunicationEndpoint endpoint,
+void RegistrarServer::broadcast_node_joined(EndPoint endpoint,
                                             const NodeEndpoint& ep) {
     bytes payload = serialize_node_join_payload(ep);
 
@@ -265,7 +265,7 @@ void RegistrarServer::broadcast_node_joined(CommunicationEndpoint endpoint,
     }
 }
 
-void RegistrarServer::broadcast_node_left(CommunicationEndpoint endpoint) {
+void RegistrarServer::broadcast_node_left(EndPoint endpoint) {
     bytes payload = serialize_node_leave_payload(endpoint);
 
     std::lock_guard<std::mutex> lock(clients_mutex_);

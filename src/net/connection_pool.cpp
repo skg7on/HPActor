@@ -33,7 +33,7 @@ static hpactor::Ipv6Endpoint from_proto(const ::hpactor::PbIpv6Endpoint& pb_ep) 
     return hpactor::Ipv6Endpoint{addr, static_cast<uint16_t>(pb_ep.port())};
 }
 
-static hpactor::CommunicationEndpoint
+static hpactor::EndPoint
 from_proto(const ::hpactor::PbActorEndpoint& pb_endpoint) {
     if (pb_endpoint.has_ipv4()) {
         return from_proto(pb_endpoint.ipv4());
@@ -49,7 +49,7 @@ namespace hpactor {
 
 namespace net {
 
-ConnectionPool::ConnectionPool(CommunicationEndpoint remote_endpoint,
+ConnectionPool::ConnectionPool(EndPoint remote_endpoint,
                                const PoolConfig& config,
                                TlsContext* tls_context, EventLoop* loop)
     : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),

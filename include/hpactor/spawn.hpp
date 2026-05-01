@@ -72,7 +72,7 @@ class AsyncActor {
     AsyncActor& operator=(AsyncActor&& other) noexcept;
 
     // Construct with node_id and timeout
-    AsyncActor(CommunicationEndpoint endpoint, std::chrono::milliseconds timeout);
+    AsyncActor(EndPoint endpoint, std::chrono::milliseconds timeout);
 
     // Wait for response and return result (blocks until response or timeout)
     result<ActorRef> get();
@@ -84,7 +84,7 @@ class AsyncActor {
     void cancel();
 
     // Get associated node ID
-    CommunicationEndpoint endpoint() const {
+    EndPoint endpoint() const {
         return endpoint_;
     }
 
@@ -100,7 +100,7 @@ class AsyncActor {
     }
 
   private:
-    CommunicationEndpoint endpoint_ = LocalEndpoint;
+    EndPoint endpoint_ = LocalEndpoint;
     std::chrono::milliseconds timeout_{5000};
     mutable std::unique_ptr<std::mutex> mutex_;
     std::unique_ptr<std::condition_variable> cv_;

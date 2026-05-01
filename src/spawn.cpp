@@ -21,7 +21,7 @@ AsyncActor::AsyncActor()
     : mutex_(std::make_unique<std::mutex>()),
       cv_(std::make_unique<std::condition_variable>()) {}
 
-AsyncActor::AsyncActor(CommunicationEndpoint endpoint,
+AsyncActor::AsyncActor(EndPoint endpoint,
                        std::chrono::milliseconds timeout)
     : endpoint_(endpoint), timeout_(timeout),
       mutex_(std::make_unique<std::mutex>()),

@@ -71,10 +71,10 @@ class Connection : public std::enable_shared_from_this<Connection> {
   public:
     using message_handler = std::function<void(const bytes&)>;
 
-    Connection(CommunicationEndpoint remote_endpoint);
+    Connection(EndPoint remote_endpoint);
     virtual ~Connection();
 
-    CommunicationEndpoint remote_endpoint() const {
+    EndPoint remote_endpoint() const {
         return remote_endpoint_;
     }
     ConnectionState state() const {
@@ -103,7 +103,7 @@ class Connection : public std::enable_shared_from_this<Connection> {
     virtual void on_message(const bytes& data);
 
   private:
-    CommunicationEndpoint remote_endpoint_;
+    EndPoint remote_endpoint_;
     ConnectionState state_ = ConnectionState::Disconnected;
     message_handler message_handler_;
     adt::StreamBuffer read_buffer_; // For partial frame reads
@@ -125,12 +125,12 @@ class Transport {
 
     // Connect to a remote node using explicit host/port (blocking)
     // Returns a Connection pointer on success, nullptr on failure
-    virtual ConnectionPtr connect(CommunicationEndpoint remote_endpoint,
+    virtual ConnectionPtr connect(EndPoint remote_endpoint,
                                   const std::string& host, uint16_t port) = 0;
 
     // Connect to a remote node using registry lookup (DNS resolution if needed)
     // Returns ConnectionPtr on success, nullptr on failure
-    virtual ConnectionPtr connect(CommunicationEndpoint remote_endpoint) = 0;
+    virtual ConnectionPtr connect(EndPoint remote_endpoint) = 0;
 
     // Start listening for incoming connections (non-blocking)
     virtual void listen(uint16_t port) = 0;
@@ -143,13 +143,13 @@ class Transport {
     virtual void send(const ActorAddress& target, const bytes& encoded) = 0;
 
     // Check if connected to a specific node
-    virtual bool is_connected(CommunicationEndpoint remote_endpoint) const = 0;
+    virtual bool is_connected(EndPoint remote_endpoint) const = 0;
 
     // Get this transport's node ID
-    virtual CommunicationEndpoint endpoint() const = 0;
+    virtual EndPoint endpoint() const = 0;
 
     // Close connection to a specific node
-    virtual void close_connection(CommunicationEndpoint remote_endpoint) = 0;
+    virtual void close_connection(EndPoint remote_endpoint) = 0;
 
     // Set RPC response handler - called when RPC response frames are received
     using rpc_response_handler = std::function<void(MessageId, const bytes&)>;

@@ -10,7 +10,7 @@ option optimize_for = SPEED;
 // -----------------------------------------------------------------------------
 
 message PbEndpointInfo {
-    string endpoint = 1;  // Serialized CommunicationEndpoint (e.g., "127.0.0.1:5353")
+    string endpoint = 1;  // Serialized EndPoint (e.g., "127.0.0.1:5353")
     string host = 2;
     uint32 tcp_port = 3;
 }
@@ -48,7 +48,7 @@ message PbNodeJoinPayload {
 
 // TCP NodeLeave broadcast payload
 message PbNodeLeavePayload {
-    string endpoint = 1;  // Serialized CommunicationEndpoint
+    string endpoint = 1;  // Serialized EndPoint
 }
 
 // TCP Error response payload
@@ -63,7 +63,7 @@ message PbErrorPayload {
 
 // UDP ResolveQuery message payload
 message PbResolveQueryPayload {
-    string target_endpoint = 1;  // Serialized CommunicationEndpoint
+    string target_endpoint = 1;  // Serialized EndPoint
 }
 
 // UDP ResolveResponse message payload

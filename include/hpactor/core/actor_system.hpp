@@ -54,7 +54,7 @@ class HybridScheduler;
 struct Config {
     size_t scheduler_threads = 4;
     size_t max_queue_depth = 1024;
-    CommunicationEndpoint endpoint = LocalEndpoint;
+    EndPoint endpoint = LocalEndpoint;
 
     // Network configuration
     bool enable_network = false;
@@ -133,7 +133,7 @@ class ActorSystem {
     }
 
     // Node ID
-    CommunicationEndpoint endpoint() const {
+    EndPoint endpoint() const {
         return endpoint_;
     }
 
@@ -199,7 +199,7 @@ class ActorSystem {
     // TcpTransport handles per-endpoint routing internally via its pools_ map.
     // The endpoint parameter is reserved for future multi-transport scenarios.
     // Returns nullptr if networking is not enabled.
-    net::Transport* get_transport_for(const CommunicationEndpoint& endpoint);
+    net::Transport* get_transport_for(const EndPoint& endpoint);
 
     net::UdpRegistrar* registrar() {
         return registrar_.get();
@@ -222,7 +222,7 @@ class ActorSystem {
 
   private:
     Config config_;
-    CommunicationEndpoint endpoint_;
+    EndPoint endpoint_;
     Clock clock_;
     actor_registry registry_;
     std::unordered_map<ActorType, ActorTypeDef> actor_types_;

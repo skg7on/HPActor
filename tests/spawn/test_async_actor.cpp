@@ -24,7 +24,7 @@ using namespace hpactor;
 void test_async_actor_default_constructor() {
     AsyncActor handle;
     assert(!handle.ready());
-    assert(handle.endpoint() == CommunicationEndpoint{LocalEndpoint});
+    assert(handle.endpoint() == EndPoint{LocalEndpoint});
 }
 
 void test_async_actor_constructor() {

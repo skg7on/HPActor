@@ -34,19 +34,19 @@ namespace net {
 // -----------------------------------------------------------------------------
 class TcpTransport : public Transport {
   public:
-    TcpTransport(CommunicationEndpoint endpoint, const TlsConfig& tls_config,
+    TcpTransport(EndPoint endpoint, const TlsConfig& tls_config,
                  const PoolConfig& pool_config, NodeRegistry* registry = nullptr);
     ~TcpTransport() override;
 
     // Transport interface
-    ConnectionPtr connect(CommunicationEndpoint remote_endpoint,
+    ConnectionPtr connect(EndPoint remote_endpoint,
                           const std::string& host, uint16_t port) override;
 
-    ConnectionPtr connect(CommunicationEndpoint remote_endpoint) override;
+    ConnectionPtr connect(EndPoint remote_endpoint) override;
 
     // Connect via UNIX domain socket
     // Returns ConnectionPtr on success, nullptr on failure
-    ConnectionPtr connect_unix_domain(CommunicationEndpoint remote_endpoint,
+    ConnectionPtr connect_unix_domain(EndPoint remote_endpoint,
                                       const std::string& socket_path);
 
     void listen(uint16_t port) override;
@@ -54,12 +54,12 @@ class TcpTransport : public Transport {
 
     void send(const ActorAddress& target, const bytes& encoded) override;
 
-    bool is_connected(CommunicationEndpoint remote_endpoint) const override;
-    CommunicationEndpoint endpoint() const override {
+    bool is_connected(EndPoint remote_endpoint) const override;
+    EndPoint endpoint() const override {
         return endpoint_;
     }
 
-    void close_connection(CommunicationEndpoint remote_endpoint) override;
+    void close_connection(EndPoint remote_endpoint) override;
 
     // Set RPC response handler - propagates to all connection pools
     void set_rpc_handler(rpc_response_handler handler) override;
@@ -70,11 +70,11 @@ class TcpTransport : public Transport {
     }
 
   private:
-    void handle_accept(int client_fd, CommunicationEndpoint remote_endpoint);
+    void handle_accept(int client_fd, EndPoint remote_endpoint);
 
     // Get or create a connection pool for a remote node
     std::shared_ptr<ConnectionPool>
-    get_or_create_pool(CommunicationEndpoint remote_endpoint);
+    get_or_create_pool(EndPoint remote_endpoint);
 
     void register_connection(ConnectionPtr conn, int fd);
     void unregister_connection(int fd);
@@ -83,14 +83,14 @@ class TcpTransport : public Transport {
     // /tmp/hpactor/<sanitized_node_id>.sock
     std::string derive_uds_path(const std::string& node_id) const;
 
-    CommunicationEndpoint endpoint_;
+    EndPoint endpoint_;
     EventLoop loop_;
     TcpAcceptor acceptor_;
     TlsContext tls_context_;
     PoolConfig pool_config_;
     NodeRegistry* registry_ = nullptr; // Optional registry for node lookup
     HostResolver host_resolver_;
-    std::unordered_map<CommunicationEndpoint, std::shared_ptr<ConnectionPool>> pools_;
+    std::unordered_map<EndPoint, std::shared_ptr<ConnectionPool>> pools_;
     std::function<void(MessageId, const bytes&)> rpc_handler_;
     std::function<void(const net::WireFrame&)> actor_msg_handler_;
 

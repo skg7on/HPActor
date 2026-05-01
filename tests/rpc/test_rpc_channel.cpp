@@ -22,22 +22,22 @@ class MockTransport : public hpactor::net::Transport {
     void send(const hpactor::ActorAddress&, const hpactor::bytes& encoded) override {
         sent_frames_.push_back(encoded);
     }
-    hpactor::net::ConnectionPtr connect(hpactor::CommunicationEndpoint,
+    hpactor::net::ConnectionPtr connect(hpactor::EndPoint,
                                         const std::string&, uint16_t) override {
         return nullptr;
     }
-    hpactor::net::ConnectionPtr connect(hpactor::CommunicationEndpoint) override {
+    hpactor::net::ConnectionPtr connect(hpactor::EndPoint) override {
         return nullptr;
     }
     void listen(uint16_t) override {}
     void stop_listening() override {}
-    bool is_connected(hpactor::CommunicationEndpoint) const override {
+    bool is_connected(hpactor::EndPoint) const override {
         return true;
     }
-    hpactor::CommunicationEndpoint endpoint() const override {
+    hpactor::EndPoint endpoint() const override {
         return hpactor::LocalEndpoint;
     }
-    void close_connection(hpactor::CommunicationEndpoint) override {}
+    void close_connection(hpactor::EndPoint) override {}
     void set_rpc_handler(rpc_response_handler) override {}
 
     std::vector<hpactor::bytes> sent_frames_;

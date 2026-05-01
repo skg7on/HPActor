@@ -108,7 +108,7 @@ bool TcpAcceptor::listen(uint16_t port, uint16_t port_range) {
 }
 
 void TcpAcceptor::handle_read() {
-    struct sockaddr_in client_addr;
+    struct sockaddr_storage client_addr;
     socklen_t client_len = sizeof(client_addr);
 
     int client_fd =
@@ -128,8 +128,20 @@ void TcpAcceptor::handle_read() {
     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
 
     if (accept_handler_) {
-        accept_handler_(client_fd,
-                        Ipv4Endpoint{client_addr.sin_addr.s_addr, 0});
+        EndPoint endpoint;
+        if (client_addr.ss_family == AF_INET) {
+            auto* in4 = reinterpret_cast<struct sockaddr_in*>(&client_addr);
+            endpoint = Ipv4Endpoint{in4->sin_addr.s_addr, in4->sin_port};
+        } else if (client_addr.ss_family == AF_INET6) {
+            auto* in6 = reinterpret_cast<struct sockaddr_in6*>(&client_addr);
+            std::array<uint8_t, 16> addr;
+            std::memcpy(addr.data(), &in6->sin6_addr, 16);
+            endpoint = Ipv6Endpoint{addr, in6->sin6_port};
+        } else {
+            ::close(client_fd);
+            return;
+        }
+        accept_handler_(client_fd, endpoint);
     } else {
         ::close(client_fd);
     }
@@ -203,7 +215,7 @@ void UnixDomainAcceptor::handle_read() {
     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);
 
     if (accept_handler_) {
-        // No UDS variant in CommunicationEndpoint; use default Ipv4Endpoint as hint
+        // No UDS variant in EndPoint; use default Ipv4Endpoint as hint
         accept_handler_(client_fd, Ipv4Endpoint{});
     } else {
         ::close(client_fd);

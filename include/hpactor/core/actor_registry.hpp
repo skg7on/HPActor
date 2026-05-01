@@ -26,14 +26,14 @@ namespace hpactor {
 // -----------------------------------------------------------------------------
 class actor_registry {
   public:
-    explicit actor_registry(CommunicationEndpoint endpoint);
+    explicit actor_registry(EndPoint endpoint);
 
     void put(const std::string& name, ActorAddress addr);
     ActorAddress get(const std::string& name) const;
     void erase(const std::string& name);
 
   private:
-    [[maybe_unused]] CommunicationEndpoint endpoint_;
+    [[maybe_unused]] EndPoint endpoint_;
     std::unordered_map<std::string, ActorAddress> actors_;
 };
 

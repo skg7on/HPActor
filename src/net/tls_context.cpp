@@ -63,7 +63,7 @@ TlsContext& TlsContext::operator=(TlsContext&& other) noexcept {
     return *this;
 }
 
-TlsContext TlsContext::from_filesystem(CommunicationEndpoint endpoint,
+TlsContext TlsContext::from_filesystem(EndPoint endpoint,
                                        const std::string& cert_dir) {
     TlsContext ctx;
     ctx.endpoint_ = endpoint;

@@ -46,7 +46,7 @@ struct AcceptorInfo {
 // RegistrarConfig - configuration for registrar
 // -----------------------------------------------------------------------------
 struct StaticRouteConfig {
-    CommunicationEndpoint endpoint;
+    EndPoint endpoint;
     std::string address; // IP or DNS hostname (used if endpoint is empty)
     uint16_t port = 0;
 };
@@ -65,7 +65,7 @@ struct RegistrarConfig {
 // NodeEndpoint - information about a known node
 // -----------------------------------------------------------------------------
 struct NodeEndpoint {
-    CommunicationEndpoint endpoint;
+    EndPoint endpoint;
     std::string host; // Resolved IP or hostname
     uint16_t tcp_port = 0;
     bool is_static_route = false;
@@ -119,13 +119,13 @@ class NodeRegistry {
     void upsert_endpoint(NodeEndpoint endpoint);
 
     // Remove an endpoint
-    bool remove_endpoint(CommunicationEndpoint endpoint);
+    bool remove_endpoint(EndPoint endpoint);
 
     // Get endpoint (nullptr if not found)
-    NodeEndpoint* get(CommunicationEndpoint endpoint);
+    NodeEndpoint* get(EndPoint endpoint);
 
     // Check if endpoint exists
-    bool has(CommunicationEndpoint endpoint) const;
+    bool has(EndPoint endpoint) const;
 
     // Get all endpoints
     std::vector<NodeEndpoint> all() const;
@@ -135,7 +135,7 @@ class NodeRegistry {
 
   private:
     RegistrarConfig config_;
-    std::unordered_map<CommunicationEndpoint, NodeEndpoint> endpoints_;
+    std::unordered_map<EndPoint, NodeEndpoint> endpoints_;
     mutable std::mutex mutex_;
 };
 
@@ -167,7 +167,7 @@ struct NodeAnnouncePayload {
 };
 
 struct NodeQueryPayload {
-    CommunicationEndpoint target_endpoint;
+    EndPoint target_endpoint;
 };
 
 struct NodeResponsePayload {
@@ -226,11 +226,11 @@ class RegistrarConnection
 
     // Create from accepted server socket
     static RegistrarConnectionPtr
-    accepted(int fd, CommunicationEndpoint remote_endpoint, EventLoop* loop);
+    accepted(int fd, EndPoint remote_endpoint, EventLoop* loop);
 
     // Create as client connection
     static RegistrarConnectionPtr
-    connecting(int fd, CommunicationEndpoint remote_endpoint, EventLoop* loop);
+    connecting(int fd, EndPoint remote_endpoint, EventLoop* loop);
 
     ~RegistrarConnection();
 
@@ -246,7 +246,7 @@ class RegistrarConnection
     void close();
 
     // Get remote endpoint
-    CommunicationEndpoint remote_endpoint() const {
+    EndPoint remote_endpoint() const {
         return remote_endpoint_;
     }
 
@@ -258,7 +258,7 @@ class RegistrarConnection
   private:
     enum class ReadState { ReadingHeader, ReadingPayload };
 
-    RegistrarConnection(CommunicationEndpoint remote_endpoint, EventLoop* loop,
+    RegistrarConnection(EndPoint remote_endpoint, EventLoop* loop,
                         int fd);
 
     void register_with_loop();
@@ -267,7 +267,7 @@ class RegistrarConnection
     void flush_write_buffer();
     void handle_send_completion(int result);
 
-    CommunicationEndpoint remote_endpoint_;
+    EndPoint remote_endpoint_;
     EventLoop* loop_ = nullptr;
     int fd_ = -1;
 
@@ -293,7 +293,7 @@ class RegistrarConnection
 class RegistrarServer {
   public:
     RegistrarServer(const RegistrarConfig& config,
-                    CommunicationEndpoint local_endpoint,
+                    EndPoint local_endpoint,
                     EventLoop* loop = nullptr);
     ~RegistrarServer();
 
@@ -316,12 +316,12 @@ class RegistrarServer {
     }
 
     // Handle incoming TCP connection
-    void handle_accept(int client_fd, CommunicationEndpoint remote_endpoint);
+    void handle_accept(int client_fd, EndPoint remote_endpoint);
 
     // Broadcast event to all connected clients
     void
-    broadcast_node_joined(CommunicationEndpoint endpoint, const NodeEndpoint& ep);
-    void broadcast_node_left(CommunicationEndpoint endpoint);
+    broadcast_node_joined(EndPoint endpoint, const NodeEndpoint& ep);
+    void broadcast_node_left(EndPoint endpoint);
 
   private:
     void handle_tcp_message(RegistrarConnectionPtr conn, TcpMessageType type,
@@ -329,7 +329,7 @@ class RegistrarServer {
     void handle_disconnect(RegistrarConnectionPtr conn);
 
     RegistrarConfig config_;
-    [[maybe_unused]] CommunicationEndpoint local_endpoint_;
+    [[maybe_unused]] EndPoint local_endpoint_;
     NodeRegistry registry_;
     EventLoop* loop_ = nullptr;
     TcpAcceptor acceptor_;
@@ -338,7 +338,7 @@ class RegistrarServer {
     std::atomic<bool> running_{false};
 
     // Connected clients (endpoint -> connection)
-    std::unordered_map<CommunicationEndpoint, RegistrarConnectionPtr> clients_;
+    std::unordered_map<EndPoint, RegistrarConnectionPtr> clients_;
     // fd -> connection map for completion routing
     std::unordered_map<int, RegistrarConnectionPtr> fd_to_connection_;
     std::mutex clients_mutex_;
@@ -350,7 +350,7 @@ class RegistrarServer {
 class UdpRegistrar {
   public:
     UdpRegistrar(const RegistrarConfig& config,
-                 CommunicationEndpoint local_endpoint, EventLoop* loop = nullptr);
+                 EndPoint local_endpoint, EventLoop* loop = nullptr);
     ~UdpRegistrar();
 
     // Non-copyable
@@ -367,13 +367,13 @@ class UdpRegistrar {
     void stop();
 
     // Query endpoint
-    NodeEndpoint* get_endpoint(CommunicationEndpoint endpoint);
+    NodeEndpoint* get_endpoint(EndPoint endpoint);
 
     // Get all known endpoints
     std::vector<NodeEndpoint> get_all_endpoints() const;
 
     // Set callback for node online/offline events
-    using node_callback = std::function<void(CommunicationEndpoint, bool online)>;
+    using node_callback = std::function<void(EndPoint, bool online)>;
     void set_node_callback(node_callback cb);
 
     // Handle incoming UDP packet (for resolution)
@@ -399,7 +399,7 @@ class UdpRegistrar {
     socklen_t udp_src_addr_len_ = sizeof(udp_src_addr_);
 
     RegistrarConfig config_;
-    CommunicationEndpoint local_endpoint_;
+    EndPoint local_endpoint_;
     EventLoop* loop_ = nullptr;
 
     // Either server or client (not both)
@@ -421,8 +421,8 @@ class UdpRegistrar {
 class RegistrarClient {
   public:
     RegistrarClient(const RegistrarConfig& config,
-                    CommunicationEndpoint local_endpoint,
-                    CommunicationEndpoint server_endpoint,
+                    EndPoint local_endpoint,
+                    EndPoint server_endpoint,
                     NodeRegistry* shared_registry, EventLoop* loop = nullptr);
     ~RegistrarClient();
 
@@ -458,8 +458,8 @@ class RegistrarClient {
     void handle_disconnect();
 
     RegistrarConfig config_;
-    CommunicationEndpoint local_endpoint_;
-    CommunicationEndpoint server_endpoint_;
+    EndPoint local_endpoint_;
+    EndPoint server_endpoint_;
     NodeRegistry* shared_registry_; // Not owned
     EventLoop* loop_ = nullptr;
 

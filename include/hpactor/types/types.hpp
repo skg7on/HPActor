@@ -190,9 +190,9 @@ inline void Ipv6Endpoint::to_sockaddr(sockaddr_in6* out) const noexcept {
 }
 
 // -----------------------------------------------------------------------------
-// CommunicationEndpoint - variant over IPv4/IPv6
+// EndPoint - variant over IPv4/IPv6
 // -----------------------------------------------------------------------------
-using CommunicationEndpoint = std::variant<Ipv4Endpoint, Ipv6Endpoint>;
+using EndPoint = std::variant<Ipv4Endpoint, Ipv6Endpoint>;
 
 // -----------------------------------------------------------------------------
 // LocalEndpoint - loopback endpoint for local actor communication
@@ -203,7 +203,7 @@ inline constexpr Ipv4Endpoint LocalEndpoint{0x7F000001, 0}; // 127.0.0.1:0 in
 
 // to_sockaddr free function for variant
 inline void
-to_sockaddr(const CommunicationEndpoint& ep, sockaddr* out, socklen_t* len) {
+to_sockaddr(const EndPoint& ep, sockaddr* out, socklen_t* len) {
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
         if (*len >= sizeof(sockaddr_in)) {
             ipv4->to_sockaddr(reinterpret_cast<sockaddr_in*>(out));
@@ -218,13 +218,13 @@ to_sockaddr(const CommunicationEndpoint& ep, sockaddr* out, socklen_t* len) {
 }
 
 // -----------------------------------------------------------------------------
-// CommunicationEndpoint operations (implemented in cpp)
+// EndPoint operations (implemented in cpp)
 // -----------------------------------------------------------------------------
 namespace endpoint_ops {
-[[nodiscard]] Protocol protocol(const CommunicationEndpoint& ep);
-[[nodiscard]] int address_family(const CommunicationEndpoint& ep);
-[[nodiscard]] std::string to_string(const CommunicationEndpoint& ep);
-[[nodiscard]] CommunicationEndpoint parse_endpoint(std::string_view node_id);
+[[nodiscard]] Protocol protocol(const EndPoint& ep);
+[[nodiscard]] int address_family(const EndPoint& ep);
+[[nodiscard]] std::string to_string(const EndPoint& ep);
+[[nodiscard]] EndPoint parse_endpoint(std::string_view node_id);
 } // namespace endpoint_ops
 
 // -----------------------------------------------------------------------------
@@ -484,8 +484,8 @@ template <> struct std::hash<hpactor::Ipv6Endpoint> {
     }
 };
 
-template <> struct std::hash<hpactor::CommunicationEndpoint> {
-    std::size_t operator()(const hpactor::CommunicationEndpoint& ep) const noexcept {
+template <> struct std::hash<hpactor::EndPoint> {
+    std::size_t operator()(const hpactor::EndPoint& ep) const noexcept {
         if (auto* ipv4 = std::get_if<hpactor::Ipv4Endpoint>(&ep)) {
             return std::hash<hpactor::Ipv4Endpoint>{}(*ipv4);
         }

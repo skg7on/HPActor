@@ -58,7 +58,7 @@ int main() {
 
     // Test endpoint parsing for broadcast
     std::string endpoint_str = "127.0.0.1:12345";
-    CommunicationEndpoint ep = endpoint_ops::parse_endpoint(endpoint_str);
+    EndPoint ep = endpoint_ops::parse_endpoint(endpoint_str);
     assert(std::holds_alternative<Ipv4Endpoint>(ep));
     auto ipv4 = std::get<Ipv4Endpoint>(ep);
     assert(ipv4.port() == 12345);

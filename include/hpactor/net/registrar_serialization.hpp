@@ -78,13 +78,13 @@ inline bool parse_node_join_payload(const bytes& data, PbNodeJoinPayload& msg) {
 }
 
 // PbNodeLeavePayload
-inline PbNodeLeavePayload to_proto_node_leave(const CommunicationEndpoint& ep) {
+inline PbNodeLeavePayload to_proto_node_leave(const EndPoint& ep) {
     PbNodeLeavePayload msg;
     msg.set_endpoint(endpoint_ops::to_string(ep));
     return msg;
 }
 
-inline bytes serialize_node_leave_payload(const CommunicationEndpoint& ep) {
+inline bytes serialize_node_leave_payload(const EndPoint& ep) {
     PbNodeLeavePayload msg = to_proto_node_leave(ep);
     std::string serialized = msg.SerializeAsString();
     return bytes(serialized.begin(), serialized.end());
@@ -114,13 +114,13 @@ inline bytes serialize_error_payload(uint8_t code, const std::string& msg) {
 
 // PbResolveQueryPayload
 inline PbResolveQueryPayload
-to_proto_resolve_query(const CommunicationEndpoint& ep) {
+to_proto_resolve_query(const EndPoint& ep) {
     PbResolveQueryPayload msg;
     msg.set_target_endpoint(endpoint_ops::to_string(ep));
     return msg;
 }
 
-inline bytes serialize_resolve_query_payload(const CommunicationEndpoint& ep) {
+inline bytes serialize_resolve_query_payload(const EndPoint& ep) {
     PbResolveQueryPayload msg = to_proto_resolve_query(ep);
     std::string serialized = msg.SerializeAsString();
     return bytes(serialized.begin(), serialized.end());

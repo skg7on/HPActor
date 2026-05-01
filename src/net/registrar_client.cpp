@@ -75,8 +75,8 @@ void RegistrarClient::set_acceptors(std::vector<AcceptorInfo> acceptors) {
 }
 
 RegistrarClient::RegistrarClient(const RegistrarConfig& config,
-                                 CommunicationEndpoint local_endpoint,
-                                 CommunicationEndpoint server_endpoint,
+                                 EndPoint local_endpoint,
+                                 EndPoint server_endpoint,
                                  NodeRegistry* shared_registry, EventLoop* loop)
     : config_(config), local_endpoint_(local_endpoint),
       server_endpoint_(server_endpoint), shared_registry_(shared_registry),
@@ -288,7 +288,7 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const bytes& da
 
             const auto& ep_info = msg.endpoint_info();
             std::string endpoint_str = ep_info.endpoint();
-            CommunicationEndpoint endpoint =
+            EndPoint endpoint =
                 endpoint_ops::parse_endpoint(endpoint_str);
 
             std::string host = ep_info.host();
@@ -310,7 +310,7 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const bytes& da
             }
 
             std::string endpoint_str = msg.endpoint();
-            CommunicationEndpoint endpoint =
+            EndPoint endpoint =
                 endpoint_ops::parse_endpoint(endpoint_str);
             shared_registry_->remove_endpoint(endpoint);
             break;

@@ -34,11 +34,11 @@ class PlainConnection : public Connection,
   public:
     // Create client-side connection with existing connected fd
     static PlainConnectionPtr
-    create_client(int fd, CommunicationEndpoint remote_endpoint, EventLoop* loop);
+    create_client(int fd, EndPoint remote_endpoint, EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
     static PlainConnectionPtr
-    create_server(int fd, CommunicationEndpoint remote_endpoint, EventLoop* loop);
+    create_server(int fd, EndPoint remote_endpoint, EventLoop* loop);
 
     ~PlainConnection();
 
@@ -47,7 +47,7 @@ class PlainConnection : public Connection,
     PlainConnection& operator=(const PlainConnection&) = delete;
 
     // Getters
-    CommunicationEndpoint remote_endpoint() const {
+    EndPoint remote_endpoint() const {
         return remote_endpoint_;
     }
     ConnectionState state() const {
@@ -78,7 +78,7 @@ class PlainConnection : public Connection,
     void handle_send_completion(int result) override;
 
   private:
-    PlainConnection(CommunicationEndpoint remote_endpoint, EventLoop* loop, int fd);
+    PlainConnection(EndPoint remote_endpoint, EventLoop* loop, int fd);
 
     void set_state(ConnectionState new_state);
 
@@ -88,7 +88,7 @@ class PlainConnection : public Connection,
     // Flush write buffer
     void flush_write_buffer();
 
-    CommunicationEndpoint remote_endpoint_ = LocalEndpoint;
+    EndPoint remote_endpoint_ = LocalEndpoint;
     EventLoop* loop_ = nullptr;
     int fd_ = -1;
 

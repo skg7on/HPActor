@@ -31,7 +31,7 @@ namespace net {
 // TcpTransport implementation
 // -----------------------------------------------------------------------------
 
-TcpTransport::TcpTransport(CommunicationEndpoint endpoint,
+TcpTransport::TcpTransport(EndPoint endpoint,
                            const TlsConfig& tls_config,
                            const PoolConfig& pool_config, NodeRegistry* registry)
     : endpoint_(endpoint), loop_(), acceptor_(&loop_),
@@ -62,7 +62,7 @@ TcpTransport::~TcpTransport() {
 }
 
 std::shared_ptr<ConnectionPool>
-TcpTransport::get_or_create_pool(CommunicationEndpoint remote_endpoint) {
+TcpTransport::get_or_create_pool(EndPoint remote_endpoint) {
     auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
         return it->second;
@@ -81,7 +81,7 @@ TcpTransport::get_or_create_pool(CommunicationEndpoint remote_endpoint) {
     return pool;
 }
 
-ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
+ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
                                     const std::string& /*host*/, uint16_t port) {
     int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -149,7 +149,7 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint,
     return pool;
 }
 
-ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint) {
+ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint) {
     if (!registry_) {
         return nullptr; // No registry configured
     }
@@ -172,7 +172,7 @@ ConnectionPtr TcpTransport::connect(CommunicationEndpoint remote_endpoint) {
 }
 
 ConnectionPtr
-TcpTransport::connect_unix_domain(CommunicationEndpoint remote_endpoint,
+TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
                                   const std::string& socket_path) {
     int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
@@ -217,7 +217,7 @@ TcpTransport::connect_unix_domain(CommunicationEndpoint remote_endpoint,
 }
 
 void TcpTransport::listen(uint16_t port) {
-    acceptor_.set_accept_handler([this](int client_fd, CommunicationEndpoint ep) {
+    acceptor_.set_accept_handler([this](int client_fd, EndPoint ep) {
         handle_accept(client_fd, ep);
     });
     acceptor_.listen(port);
@@ -232,7 +232,7 @@ void TcpTransport::send(const ActorAddress& target, const bytes& encoded) {
     pool->send(target, encoded);
 }
 
-bool TcpTransport::is_connected(CommunicationEndpoint remote_endpoint) const {
+bool TcpTransport::is_connected(EndPoint remote_endpoint) const {
     auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
         return it->second->is_connected();
@@ -240,7 +240,7 @@ bool TcpTransport::is_connected(CommunicationEndpoint remote_endpoint) const {
     return false;
 }
 
-void TcpTransport::close_connection(CommunicationEndpoint remote_endpoint) {
+void TcpTransport::close_connection(EndPoint remote_endpoint) {
     auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
         it->second->abort();
@@ -265,7 +265,7 @@ void TcpTransport::unregister_connection(int fd) {
 }
 
 void TcpTransport::handle_accept(int client_fd,
-                                 CommunicationEndpoint remote_endpoint) {
+                                 EndPoint remote_endpoint) {
     // Get or create pool for the connecting endpoint
     auto pool = get_or_create_pool(remote_endpoint);
 

@@ -33,7 +33,7 @@ namespace net {
 // RegistrarConnection Implementation
 // -----------------------------------------------------------------------------
 
-RegistrarConnection::RegistrarConnection(CommunicationEndpoint remote_endpoint,
+RegistrarConnection::RegistrarConnection(EndPoint remote_endpoint,
                                          EventLoop* loop, int fd)
     : remote_endpoint_(remote_endpoint), loop_(loop), fd_(fd),
       header_buffer_(TcpHeaderSize) {}
@@ -43,7 +43,7 @@ RegistrarConnection::~RegistrarConnection() {
 }
 
 RegistrarConnectionPtr
-RegistrarConnection::accepted(int fd, CommunicationEndpoint remote_endpoint,
+RegistrarConnection::accepted(int fd, EndPoint remote_endpoint,
                               EventLoop* loop) {
     auto conn = std::shared_ptr<RegistrarConnection>(
         new RegistrarConnection(remote_endpoint, loop, fd));
@@ -52,7 +52,7 @@ RegistrarConnection::accepted(int fd, CommunicationEndpoint remote_endpoint,
 }
 
 RegistrarConnectionPtr
-RegistrarConnection::connecting(int fd, CommunicationEndpoint remote_endpoint,
+RegistrarConnection::connecting(int fd, EndPoint remote_endpoint,
                                 EventLoop* loop) {
     return std::shared_ptr<RegistrarConnection>(
         new RegistrarConnection(remote_endpoint, loop, fd));
@@ -366,12 +366,12 @@ void NodeRegistry::upsert_endpoint(NodeEndpoint endpoint) {
     endpoints_[endpoint.endpoint] = endpoint;
 }
 
-bool NodeRegistry::remove_endpoint(CommunicationEndpoint endpoint) {
+bool NodeRegistry::remove_endpoint(EndPoint endpoint) {
     std::lock_guard<std::mutex> lock(mutex_);
     return endpoints_.erase(endpoint) > 0;
 }
 
-NodeEndpoint* NodeRegistry::get(CommunicationEndpoint endpoint) {
+NodeEndpoint* NodeRegistry::get(EndPoint endpoint) {
     std::lock_guard<std::mutex> lock(mutex_);
     auto it = endpoints_.find(endpoint);
     if (it != endpoints_.end()) {
@@ -380,7 +380,7 @@ NodeEndpoint* NodeRegistry::get(CommunicationEndpoint endpoint) {
     return nullptr;
 }
 
-bool NodeRegistry::has(CommunicationEndpoint endpoint) const {
+bool NodeRegistry::has(EndPoint endpoint) const {
     std::lock_guard<std::mutex> lock(mutex_);
     return endpoints_.find(endpoint) != endpoints_.end();
 }
@@ -419,7 +419,7 @@ size_t NodeRegistry::remove_expired() {
 // -----------------------------------------------------------------------------
 
 UdpRegistrar::UdpRegistrar(const RegistrarConfig& config,
-                           CommunicationEndpoint local_endpoint, EventLoop* loop)
+                           EndPoint local_endpoint, EventLoop* loop)
     : config_(config), local_endpoint_(local_endpoint), loop_(loop) {}
 
 UdpRegistrar::~UdpRegistrar() {
@@ -490,7 +490,7 @@ void UdpRegistrar::start_client_mode() {
     }
 
     // Use first static route as server if available
-    CommunicationEndpoint server_endpoint;
+    EndPoint server_endpoint;
     if (!config_.static_routes.empty()) {
         server_endpoint = config_.static_routes[0].endpoint;
     }
@@ -548,7 +548,7 @@ void UdpRegistrar::start_client_mode_async() {
     }
 
     // Use first static route as server if available
-    CommunicationEndpoint server_endpoint;
+    EndPoint server_endpoint;
     if (!config_.static_routes.empty()) {
         server_endpoint = config_.static_routes[0].endpoint;
     }
@@ -667,7 +667,7 @@ void UdpRegistrar::failover() {
     }
 }
 
-NodeEndpoint* UdpRegistrar::get_endpoint(CommunicationEndpoint endpoint) {
+NodeEndpoint* UdpRegistrar::get_endpoint(EndPoint endpoint) {
     if (server_) {
         return server_->registry()->get(endpoint);
     }
@@ -730,7 +730,7 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
                 return;
             }
 
-            CommunicationEndpoint target_endpoint =
+            EndPoint target_endpoint =
                 endpoint_ops::parse_endpoint(msg.target_endpoint());
 
             // If we have a server, look up the endpoint
@@ -787,7 +787,7 @@ void UdpRegistrar::handle_udp_packet(const bytes& data, const std::string& from_
             }
 
             auto& info = msg.endpoint_info();
-            CommunicationEndpoint resp_endpoint =
+            EndPoint resp_endpoint =
                 endpoint_ops::parse_endpoint(info.endpoint());
             std::string host = info.host();
             uint16_t port = static_cast<uint16_t>(info.tcp_port());

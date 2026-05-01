@@ -64,7 +64,7 @@ class TlsContext {
     //     ca.pem                   - trusted CA certificate
     //     remote/                  - trusted peer certificates
     static TlsContext
-    from_filesystem(CommunicationEndpoint endpoint, const std::string& cert_dir);
+    from_filesystem(EndPoint endpoint, const std::string& cert_dir);
 
     // Create from in-memory configuration
     static TlsContext from_config(const TlsConfig& config);
@@ -86,7 +86,7 @@ class TlsContext {
     }
 
     // Get own node ID
-    CommunicationEndpoint endpoint() const {
+    EndPoint endpoint() const {
         return endpoint_;
     }
 
@@ -98,7 +98,7 @@ class TlsContext {
   private:
     TlsContext();
 
-    CommunicationEndpoint endpoint_;
+    EndPoint endpoint_;
     bytes certificate_;
     bytes public_key_;
     bytes private_key_;
@@ -119,7 +119,7 @@ struct TlsConfig {
     bytes own_cert_der;
     bytes own_key_der;
     std::vector<bytes> ca_certs_der;
-    CommunicationEndpoint endpoint; // local endpoint for this node
+    EndPoint endpoint; // local endpoint for this node
     bool verify_peer = true;
 };
 

@@ -31,7 +31,7 @@ namespace net {
 class Acceptor {
   public:
     using accept_handler =
-        std::function<void(int client_fd, CommunicationEndpoint /*remote_endpoint_hint*/)>;
+        std::function<void(int client_fd, EndPoint /*remote_endpoint_hint*/)>;
 
     explicit Acceptor(EventLoop* loop);
     virtual ~Acceptor();

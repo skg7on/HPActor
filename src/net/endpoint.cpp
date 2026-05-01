@@ -21,17 +21,17 @@
 namespace hpactor {
 namespace endpoint_ops {
 
-Protocol protocol(const CommunicationEndpoint& ep) {
+Protocol protocol(const EndPoint& ep) {
     if (std::holds_alternative<Ipv4Endpoint>(ep))
         return Protocol::IPv4;
     return Protocol::IPv6;
 }
 
-int address_family(const CommunicationEndpoint& ep) {
+int address_family(const EndPoint& ep) {
     return std::holds_alternative<Ipv4Endpoint>(ep) ? AF_INET : AF_INET6;
 }
 
-std::string to_string(const CommunicationEndpoint& ep) {
+std::string to_string(const EndPoint& ep) {
     char buf[64];
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
         // addr is in network byte order, pass directly to inet_ntoa
@@ -51,7 +51,7 @@ std::string to_string(const CommunicationEndpoint& ep) {
     return "<invalid>";
 }
 
-CommunicationEndpoint parse_endpoint(std::string_view node_id) {
+EndPoint parse_endpoint(std::string_view node_id) {
     // Empty node_id means local node - return loopback endpoint
     if (node_id.empty()) {
         return LocalEndpoint;

@@ -24,7 +24,7 @@ namespace hpactor {
 
 namespace net {
 
-PlainConnection::PlainConnection(CommunicationEndpoint remote_endpoint,
+PlainConnection::PlainConnection(EndPoint remote_endpoint,
                                  EventLoop* loop, int socket_fd)
     : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
       loop_(loop), fd_(socket_fd) {
@@ -37,7 +37,7 @@ PlainConnection::~PlainConnection() {
 }
 
 PlainConnectionPtr
-PlainConnection::create_client(int fd, CommunicationEndpoint remote_endpoint,
+PlainConnection::create_client(int fd, EndPoint remote_endpoint,
                                EventLoop* loop) {
     auto conn = std::shared_ptr<PlainConnection>(
         new PlainConnection(remote_endpoint, loop, fd));
@@ -61,7 +61,7 @@ PlainConnection::create_client(int fd, CommunicationEndpoint remote_endpoint,
 }
 
 PlainConnectionPtr
-PlainConnection::create_server(int fd, CommunicationEndpoint remote_endpoint,
+PlainConnection::create_server(int fd, EndPoint remote_endpoint,
                                EventLoop* loop) {
     auto conn = std::shared_ptr<PlainConnection>(
         new PlainConnection(remote_endpoint, loop, fd));

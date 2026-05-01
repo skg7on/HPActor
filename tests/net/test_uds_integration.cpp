@@ -38,7 +38,7 @@ void test_connect_and_frame() {
 
     int accepted_fd = -1;
     acceptor.set_accept_handler(
-        [&accepted_fd](int fd, CommunicationEndpoint) { accepted_fd = fd; });
+        [&accepted_fd](int fd, EndPoint) { accepted_fd = fd; });
 
     // Client: connect to the server
     int client_fd = ::socket(AF_UNIX, SOCK_STREAM, 0);

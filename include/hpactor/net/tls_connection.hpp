@@ -73,12 +73,12 @@ class TlsConnection : public Connection,
                       public std::enable_shared_from_this<TlsConnection> {
   public:
     // Create client-side connection
-    static TlsConnectionPtr create_client(CommunicationEndpoint remote_endpoint,
+    static TlsConnectionPtr create_client(EndPoint remote_endpoint,
                                           TlsContext* tls_context, EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
     static TlsConnectionPtr
-    create_server(int fd, CommunicationEndpoint remote_endpoint,
+    create_server(int fd, EndPoint remote_endpoint,
                   TlsContext* tls_context, EventLoop* loop);
 
     // Set file descriptor (for connected client sockets after TCP handshake)
@@ -91,7 +91,7 @@ class TlsConnection : public Connection,
     TlsConnection& operator=(const TlsConnection&) = delete;
 
     // Getters
-    CommunicationEndpoint remote_endpoint() const {
+    EndPoint remote_endpoint() const {
         return remote_endpoint_;
     }
     ConnectionState state() const {
@@ -129,7 +129,7 @@ class TlsConnection : public Connection,
     }
 
   private:
-    TlsConnection(CommunicationEndpoint remote_endpoint,
+    TlsConnection(EndPoint remote_endpoint,
                   TlsContext* tls_context, EventLoop* loop, int fd = -1);
 
     // Handshake message builders
@@ -172,7 +172,7 @@ class TlsConnection : public Connection,
     void on_fd_readable();
     void on_fd_writable();
 
-    CommunicationEndpoint remote_endpoint_ = LocalEndpoint;
+    EndPoint remote_endpoint_ = LocalEndpoint;
     TlsContext* tls_context_ = nullptr;
     EventLoop* loop_ = nullptr;
     int fd_ = -1;

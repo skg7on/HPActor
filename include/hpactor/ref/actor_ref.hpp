@@ -119,7 +119,7 @@ class ActorRef {
     }
 
     // Get the endpoint where this actor resides
-    CommunicationEndpoint endpoint() const {
+    EndPoint endpoint() const {
         return address().endpoint;
     }
 

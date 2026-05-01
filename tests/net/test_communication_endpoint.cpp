@@ -33,8 +33,8 @@ int main() {
     assert(ipv6.is_ipv6() == true);
     assert(ipv6.is_ipv4() == false);
 
-    // Test CommunicationEndpoint variant
-    CommunicationEndpoint ep = ipv4;
+    // Test EndPoint variant
+    EndPoint ep = ipv4;
     assert(std::holds_alternative<Ipv4Endpoint>(ep));
     assert(!std::holds_alternative<Ipv6Endpoint>(ep));
 
@@ -71,7 +71,7 @@ int main() {
 
     // Test endpoint_ops::protocol
     assert(endpoint_ops::protocol(ep) == Protocol::IPv4);
-    CommunicationEndpoint ep6 = ipv6;
+    EndPoint ep6 = ipv6;
     assert(endpoint_ops::protocol(ep6) == Protocol::IPv6);
 
     // Test endpoint_ops::address_family

@@ -68,7 +68,7 @@ struct PoolStats {
 class ConnectionPool : public Connection,
                        public std::enable_shared_from_this<ConnectionPool> {
   public:
-    ConnectionPool(CommunicationEndpoint remote_endpoint, const PoolConfig& config,
+    ConnectionPool(EndPoint remote_endpoint, const PoolConfig& config,
                    TlsContext* tls_context, EventLoop* loop);
     ~ConnectionPool();
 
@@ -99,7 +99,7 @@ class ConnectionPool : public Connection,
     void abort();
 
     // Get remote node ID
-    CommunicationEndpoint remote_endpoint() const {
+    EndPoint remote_endpoint() const {
         return remote_endpoint_;
     }
 
@@ -150,7 +150,7 @@ class ConnectionPool : public Connection,
     // Add pending message
     bool add_pending(const ActorAddress& target, const bytes& data);
 
-    CommunicationEndpoint remote_endpoint_;
+    EndPoint remote_endpoint_;
     PoolConfig config_;
     TlsContext* tls_context_;
     EventLoop* loop_;

@@ -61,7 +61,7 @@ bytes parse_tls_payload(const uint8_t* data, size_t len, size_t& consumed) {
 
 } // anonymous namespace
 
-TlsConnection::TlsConnection(CommunicationEndpoint remote_endpoint,
+TlsConnection::TlsConnection(EndPoint remote_endpoint,
                              TlsContext* tls_context, EventLoop* loop, int socket_fd)
     : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
       tls_context_(tls_context), loop_(loop), fd_(socket_fd) {
@@ -76,7 +76,7 @@ TlsConnection::~TlsConnection() {
 }
 
 TlsConnectionPtr
-TlsConnection::create_client(CommunicationEndpoint remote_endpoint,
+TlsConnection::create_client(EndPoint remote_endpoint,
                              TlsContext* tls_context, EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(
         new TlsConnection(remote_endpoint, tls_context, loop, -1));
@@ -86,7 +86,7 @@ TlsConnection::create_client(CommunicationEndpoint remote_endpoint,
 }
 
 TlsConnectionPtr
-TlsConnection::create_server(int socket_fd, CommunicationEndpoint remote_endpoint,
+TlsConnection::create_server(int socket_fd, EndPoint remote_endpoint,
                              TlsContext* tls_context, EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(
         new TlsConnection(remote_endpoint, tls_context, loop, socket_fd));
