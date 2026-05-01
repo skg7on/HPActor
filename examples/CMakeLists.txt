@@ -24,3 +24,6 @@ if(HPACTOR_SUPPORT_COROUTINES)
 add_executable(08_coroutine_scheduler_demo 08_coroutine_scheduler_demo.cpp)
 target_link_libraries(08_coroutine_scheduler_demo PRIVATE hpactor_lib)
 endif()
+
+add_executable(09_cross_process_echo 09_cross_process_echo.cpp)
+target_link_libraries(09_cross_process_echo PRIVATE hpactor_lib)
