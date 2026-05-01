@@ -34,9 +34,9 @@ int address_family(const CommunicationEndpoint& ep) {
 std::string to_string(const CommunicationEndpoint& ep) {
     char buf[64];
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
-        // Convert network byte order addr to host byte order for inet_ntop
+        // addr is in network byte order, pass directly to inet_ntoa
         struct in_addr addr;
-        addr.s_addr = ntohl(ipv4->addr);
+        addr.s_addr = ipv4->addr;
         snprintf(buf, sizeof(buf), "%s:%u", inet_ntoa(addr), ipv4->port());
         return std::string(buf);
     }
@@ -101,9 +101,8 @@ CommunicationEndpoint parse_endpoint(std::string_view node_id) {
     int ret = getaddrinfo(std::string(host).c_str(), nullptr, &hints, &result);
     if (ret == 0 && result != nullptr) {
         auto* ai = reinterpret_cast<struct sockaddr_in*>(result->ai_addr);
-        // sin_addr.s_addr is in network byte order; htonl converts to stored
-        // network byte order
-        uint32_t addr_bytes = htonl(ai->sin_addr.s_addr);
+        // sin_addr.s_addr is in network byte order
+        uint32_t addr_bytes = ai->sin_addr.s_addr;
         freeaddrinfo(result);
         return Ipv4Endpoint{addr_bytes, htons(static_cast<uint16_t>(port))};
     }
