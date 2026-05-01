@@ -24,10 +24,9 @@ namespace hpactor {
 
 namespace net {
 
-PlainConnection::PlainConnection(EndPoint remote_endpoint,
-                                 EventLoop* loop, int socket_fd)
-    : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
-      loop_(loop), fd_(socket_fd) {
+PlainConnection::PlainConnection(int fd, EndPoint local_endpoint,
+                                 EndPoint remote_endpoint, EventLoop* loop)
+    : Connection(fd, local_endpoint, remote_endpoint, loop), is_sending_(false) {
     read_buffer_.reserve(kReadChunkSize);
     write_buffer_.reserve(kReadChunkSize);
 }
@@ -37,21 +36,20 @@ PlainConnection::~PlainConnection() {
 }
 
 PlainConnectionPtr
-PlainConnection::create_client(int fd, EndPoint remote_endpoint,
-                               EventLoop* loop) {
+PlainConnection::create_client(int fd, EndPoint local_endpoint,
+                               EndPoint remote_endpoint, EventLoop* loop) {
     auto conn = std::shared_ptr<PlainConnection>(
-        new PlainConnection(remote_endpoint, loop, fd));
+        new PlainConnection(fd, local_endpoint, remote_endpoint, loop));
     conn->set_state(ConnectionState::Connected);
-    conn->is_sending_ = false;
 
     // Register fd with event loop for read events
     if (loop && fd >= 0) {
         loop->add_fd(fd, EventLoop::Event::Read);
         if (loop->supports_read_handler()) {
             std::weak_ptr<PlainConnection> weak_conn = conn;
-            loop->set_read_handler(fd, [weak_conn](int event_fd) {
+            loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
                 if (auto self = weak_conn.lock()) {
-                    self->on_fd_readable(event_fd);
+                    self->handle_read();
                 }
             });
         }
@@ -61,21 +59,20 @@ PlainConnection::create_client(int fd, EndPoint remote_endpoint,
 }
 
 PlainConnectionPtr
-PlainConnection::create_server(int fd, EndPoint remote_endpoint,
-                               EventLoop* loop) {
+PlainConnection::create_server(int fd, EndPoint local_endpoint,
+                               EndPoint remote_endpoint, EventLoop* loop) {
     auto conn = std::shared_ptr<PlainConnection>(
-        new PlainConnection(remote_endpoint, loop, fd));
+        new PlainConnection(fd, local_endpoint, remote_endpoint, loop));
     conn->set_state(ConnectionState::Connected);
-    conn->is_sending_ = false;
 
     // Register fd with event loop for read events
     if (loop && fd >= 0) {
         loop->add_fd(fd, EventLoop::Event::Read);
         if (loop->supports_read_handler()) {
             std::weak_ptr<PlainConnection> weak_conn = conn;
-            loop->set_read_handler(fd, [weak_conn](int event_fd) {
+            loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
                 if (auto self = weak_conn.lock()) {
-                    self->on_fd_readable(event_fd);
+                    self->handle_read();
                 }
             });
         }
@@ -120,11 +117,11 @@ void PlainConnection::close() {
     set_state(ConnectionState::Disconnected);
 }
 
-void PlainConnection::on_fd_readable(int fd) {
+void PlainConnection::handle_read() {
     // Read directly into the accumulation buffer via reserve_tail/commit_tail.
     while (true) {
         uint8_t* area = read_buffer_.reserve_tail(kReadChunkSize);
-        ssize_t n = ::read(fd, area, kReadChunkSize);
+        ssize_t n = ::read(fd_, area, kReadChunkSize);
         if (n > 0) {
             read_buffer_.commit_tail(static_cast<size_t>(n));
         } else if (n == 0) {
@@ -219,10 +216,6 @@ void PlainConnection::handle_send_completion(int result) {
     if (!write_buffer_.empty()) {
         flush_write_buffer();
     }
-}
-
-void PlainConnection::set_state(ConnectionState new_state) {
-    state_ = new_state;
 }
 
 } // namespace net

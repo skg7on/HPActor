@@ -117,7 +117,8 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
     if (pool_config_.use_tls) {
         // Create TLS connection
         auto tls_conn =
-            TlsConnection::create_client(remote_endpoint, &tls_context_, &loop_);
+            TlsConnection::create_client(endpoint_, remote_endpoint,
+                                         &tls_context_, &loop_);
         tls_conn->set_fd(fd);
         tls_conn->set_ready_handler(
             [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
@@ -131,7 +132,7 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
     } else {
         // Create plain connection with connected fd
         auto plain_conn =
-            PlainConnection::create_client(fd, remote_endpoint, &loop_);
+            PlainConnection::create_client(fd, endpoint_, remote_endpoint, &loop_);
         plain_conn->set_ready_handler(
             [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
@@ -146,7 +147,7 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
     pool->add_connection(conn);
     register_connection(conn, fd);
 
-    return pool;
+    return conn;
 }
 
 ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint) {
@@ -199,8 +200,7 @@ TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
     // use_tls config only applies to TCP connections.
     // UDS connections always use PlainConnection.
     auto pool = get_or_create_pool(remote_endpoint);
-    ConnectionPtr conn;
-    auto plain_conn = PlainConnection::create_client(fd, remote_endpoint, &loop_);
+    auto plain_conn = PlainConnection::create_client(fd, endpoint_, remote_endpoint, &loop_);
     plain_conn->set_ready_handler(
         [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
     plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
@@ -208,12 +208,11 @@ TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
     });
     plain_conn->set_frame_handler(
         [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
-    conn = plain_conn;
 
-    pool->add_connection(conn);
-    register_connection(conn, fd);
+    pool->add_connection(plain_conn);
+    register_connection(plain_conn, fd);
 
-    return conn;
+    return plain_conn;
 }
 
 void TcpTransport::listen(uint16_t port) {
@@ -271,7 +270,8 @@ void TcpTransport::handle_accept(int client_fd,
 
     ConnectionPtr conn;
     if (pool_config_.use_tls) {
-        auto tls_conn = TlsConnection::create_server(client_fd, remote_endpoint,
+        auto tls_conn = TlsConnection::create_server(client_fd, endpoint_,
+                                                     remote_endpoint,
                                                      &tls_context_, &loop_);
         tls_conn->set_frame_handler(
             [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
@@ -280,7 +280,8 @@ void TcpTransport::handle_accept(int client_fd,
         });
         conn = tls_conn;
     } else {
-        auto plain_conn = PlainConnection::create_server(client_fd, remote_endpoint, &loop_);
+        auto plain_conn = PlainConnection::create_server(client_fd, endpoint_,
+                                                         remote_endpoint, &loop_);
         plain_conn->set_frame_handler(
             [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {

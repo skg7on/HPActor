@@ -176,8 +176,8 @@ void test_send_during_close_race() {
     fcntl(sv[1], F_SETFL, flags | O_NONBLOCK);
 
     auto remote_ep = endpoint_ops::parse_endpoint("127.0.0.1:12345");
-    auto client = PlainConnection::create_client(sv[0], remote_ep, &loop);
-    auto server = PlainConnection::create_server(sv[1], remote_ep, &loop);
+    auto client = PlainConnection::create_client(sv[0], LocalEndpoint, remote_ep, &loop);
+    auto server = PlainConnection::create_server(sv[1], LocalEndpoint, remote_ep, &loop);
 
     std::atomic<int> send_completions{0};
     std::atomic<int> errors{0};
@@ -370,7 +370,7 @@ void test_send_without_frame_handler() {
     assert(r == 0);
 
     auto remote_ep = endpoint_ops::parse_endpoint("127.0.0.1:12345");
-    auto conn = PlainConnection::create_client(sv[0], remote_ep, &loop);
+    auto conn = PlainConnection::create_client(sv[0], LocalEndpoint, remote_ep, &loop);
 
     // Don't set frame handler - should handle gracefully
 
@@ -562,11 +562,11 @@ void test_plain_connection_state_transitions() {
     auto remote_ep = endpoint_ops::parse_endpoint("127.0.0.1:12345");
 
     // Client side - create_client sets state to Connected
-    auto client = PlainConnection::create_client(sv[0], remote_ep, &loop);
+    auto client = PlainConnection::create_client(sv[0], LocalEndpoint, remote_ep, &loop);
     assert(client->state() == ConnectionState::Connected); // Changed assertion
 
     // Server side
-    auto server = PlainConnection::create_server(sv[1], remote_ep, &loop);
+    auto server = PlainConnection::create_server(sv[1], LocalEndpoint, remote_ep, &loop);
     assert(server->state() == ConnectionState::Connected);
 
     // Client should transition to Connected when socket is connected

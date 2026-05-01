@@ -33,10 +33,11 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 **Network Layer:** ✅ Complete (Phase 4-5, optional TLS 2026-04-22, comm-endpoint refactor 2026-04-23, registrar protobuf 2026-04-25)
 - TlsContext — certificate loading, RSA signing, pre-master secret decryption
+- Connection — abstract base, owns fd, local_endpoint, remote_endpoint, EventLoop*; handle_read() pure virtual (no args), no framing assumptions
 - TlsConnection — TLS state machine, AES-256-CBC encryption, inherits from Connection
-- PlainConnection — raw TCP socket without TLS, 4-byte length-prefixed framing
-- ConnectionPool — dynamic pooling per node, round-robin, exponential backoff, uses ConnectionPtr
-- TcpTransport — uses ConnectionPtr, creates PlainConnection or TlsConnection based on pool_config_.use_tls
+- PlainConnection — raw TCP socket, 4-byte length-prefixed framing, inherits from Connection
+- ConnectionPool — standalone class (not a Connection), dynamic pooling per node, round-robin, exponential backoff
+- TcpTransport — uses ConnectionPtr, creates PlainConnection or TlsConnection based on pool_config_.use_tls; connect() returns individual Connection (not pool)
 - PoolConfig::use_tls defaults to false (plain text is default)
 - EventLoop timer support — EVFILT_TIMER/timerfd for reconnect backoff
 - EventLoop backend fallback — EpollBackend (Linux), KqueueBackend (macOS) with explicit run()/stop()

@@ -16,7 +16,6 @@
 
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/plain_connection.hpp>
-#include <span>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
@@ -65,8 +64,14 @@ struct PoolStats {
     bool is_connected = false;
 };
 
-class ConnectionPool : public Connection,
-                       public std::enable_shared_from_this<ConnectionPool> {
+// -----------------------------------------------------------------------------
+// ConnectionPool - manages multiple connections to a remote node
+// -----------------------------------------------------------------------------
+// Owns a collection of PlainConnection/TlsConnection instances for load-
+// balanced communication with a single remote endpoint. Handles reconnection
+// with exponential backoff and pending message queuing.
+// -----------------------------------------------------------------------------
+class ConnectionPool {
   public:
     ConnectionPool(EndPoint remote_endpoint, const PoolConfig& config,
                    TlsContext* tls_context, EventLoop* loop);
@@ -76,14 +81,14 @@ class ConnectionPool : public Connection,
     ConnectionPool(const ConnectionPool&) = delete;
     ConnectionPool& operator=(const ConnectionPool&) = delete;
 
-    // Connection interface - send raw bytes (uses default target)
-    void send(const StreamBuffer& data) override;
-
-    // Close the connection
-    void close() override;
-
     // Send message to specific actor on remote node (uses pool)
     void send(const ActorAddress& target, const StreamBuffer& encoded);
+
+    // Send raw bytes to the remote node (uses default target)
+    void send(const StreamBuffer& data);
+
+    // Close all connections and clear pending
+    void close();
 
     // Check if pool has active connections
     bool is_connected() const;
@@ -139,7 +144,7 @@ class ConnectionPool : public Connection,
     ConnectionPtr get_connection();
 
     // Create new connection
-    void create_connection();
+    ConnectionPtr create_connection();
 
     // Schedule reconnect with backoff
     void schedule_reconnect();

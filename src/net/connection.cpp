@@ -18,52 +18,19 @@ namespace hpactor {
 
 namespace net {
 
-Connection::Connection(EndPoint remote_endpoint)
-    : remote_endpoint_(remote_endpoint) {
-    read_buffer_.reserve(adt::StreamBuffer::kDefaultInitialCapacity);
-}
+Connection::Connection(int fd, EndPoint local_endpoint,
+                       EndPoint remote_endpoint, EventLoop* loop)
+    : fd_(fd), local_endpoint_(local_endpoint),
+      remote_endpoint_(remote_endpoint), loop_(loop) {}
 
 Connection::~Connection() = default;
-
-void Connection::set_message_handler(message_handler handler) {
-    message_handler_ = std::move(handler);
-}
-
-void Connection::handle_read(const StreamBuffer& data) {
-    read_buffer_.append(data.data(), data.size());
-
-    // Simple framing: look for message boundary (newline for now)
-    // TODO: implement proper length-prefixed framing
-    while (!read_buffer_.empty()) {
-        auto* begin = read_buffer_.data();
-        auto* end = begin + read_buffer_.size();
-        auto it = std::find(begin, end, '\n');
-        if (it == end) {
-            break;
-        }
-
-        StreamBuffer message(begin, it);
-        size_t consumed = static_cast<size_t>(it - begin) + 1; // +1 for '\n'
-        read_buffer_.consume(consumed);
-
-        if (message_handler_ && !message.empty()) {
-            on_message(message);
-        }
-    }
-}
 
 void Connection::set_state(ConnectionState new_state) {
     state_ = new_state;
 }
 
-void Connection::on_message(const StreamBuffer& data) {
-    if (message_handler_) {
-        message_handler_(data);
-    }
-}
-
 void Connection::handle_send_completion(int /*result*/) {
-    // Default no-op implementation. Derived classes override to handle
+    // Default no-op. Derived classes override to handle
     // send completions from the EventLoop.
 }
 

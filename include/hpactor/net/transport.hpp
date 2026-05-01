@@ -52,6 +52,7 @@ enum class ConnectionState {
 // Forward declarations
 class Connection;
 using ConnectionPtr = std::shared_ptr<Connection>;
+class EventLoop;
 
 // -----------------------------------------------------------------------------
 // Connection callback types
@@ -67,22 +68,20 @@ using connection_error_handler = std::function<void(ConnectionPtr, const error&)
 // -----------------------------------------------------------------------------
 // Connection - represents a connection to a remote node
 // -----------------------------------------------------------------------------
+// Owns the socket fd, local/remote endpoints, and event loop reference.
+// Derived classes implement protocol-specific read/framing via handle_read().
+// -----------------------------------------------------------------------------
 class Connection : public std::enable_shared_from_this<Connection> {
   public:
-    using message_handler = std::function<void(const StreamBuffer&)>;
-
-    Connection(EndPoint remote_endpoint);
+    Connection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
+               EventLoop* loop);
     virtual ~Connection();
 
-    EndPoint remote_endpoint() const {
-        return remote_endpoint_;
-    }
-    ConnectionState state() const {
-        return state_;
-    }
-
-    // Set handler for incoming messages
-    void set_message_handler(message_handler handler);
+    int fd() const { return fd_; }
+    EndPoint local_endpoint() const { return local_endpoint_; }
+    EndPoint remote_endpoint() const { return remote_endpoint_; }
+    EventLoop* event_loop() const { return loop_; }
+    ConnectionState state() const { return state_; }
 
     // Send data on this connection
     virtual void send(const StreamBuffer& data) = 0;
@@ -90,8 +89,8 @@ class Connection : public std::enable_shared_from_this<Connection> {
     // Close this connection
     virtual void close() = 0;
 
-    // Handle incoming data (for framing)
-    void handle_read(const StreamBuffer& data);
+    // Protocol-specific read/framing — called when fd is readable
+    virtual void handle_read() = 0;
 
     // Handle send completion (called by EventLoop on async_send completion)
     virtual void handle_send_completion(int result);
@@ -100,13 +99,11 @@ class Connection : public std::enable_shared_from_this<Connection> {
     void set_state(ConnectionState new_state);
 
   protected:
-    virtual void on_message(const StreamBuffer& data);
-
-  private:
+    int fd_ = -1;
+    EndPoint local_endpoint_;
     EndPoint remote_endpoint_;
+    EventLoop* loop_ = nullptr;
     ConnectionState state_ = ConnectionState::Disconnected;
-    message_handler message_handler_;
-    adt::StreamBuffer read_buffer_; // For partial frame reads
 };
 
 // Connection pointer type

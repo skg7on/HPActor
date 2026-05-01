@@ -34,28 +34,19 @@ class PlainConnection : public Connection,
   public:
     // Create client-side connection with existing connected fd
     static PlainConnectionPtr
-    create_client(int fd, EndPoint remote_endpoint, EventLoop* loop);
+    create_client(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
+                  EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
     static PlainConnectionPtr
-    create_server(int fd, EndPoint remote_endpoint, EventLoop* loop);
+    create_server(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
+                  EventLoop* loop);
 
     ~PlainConnection();
 
     // Non-copyable
     PlainConnection(const PlainConnection&) = delete;
     PlainConnection& operator=(const PlainConnection&) = delete;
-
-    // Getters
-    EndPoint remote_endpoint() const {
-        return remote_endpoint_;
-    }
-    ConnectionState state() const {
-        return state_;
-    }
-    int fd() const {
-        return fd_;
-    }
 
     // Set callbacks
     void set_ready_handler(std::function<void(ConnectionPtr)> handler);
@@ -70,29 +61,21 @@ class PlainConnection : public Connection,
     // Close connection
     void close() override;
 
-    // Called by the event loop when fd is readable. Reads directly into
-    // the accumulation buffer, extracts complete frames as zero-copy spans.
-    void on_fd_readable(int fd);
+    // Called by the event loop when fd is readable
+    void handle_read() override;
 
     // Handle send completion (called by EventLoop)
     void handle_send_completion(int result) override;
 
   private:
-    PlainConnection(EndPoint remote_endpoint, EventLoop* loop, int fd);
-
-    void set_state(ConnectionState new_state);
+    PlainConnection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
+                    EventLoop* loop);
 
     // Send raw bytes on socket
     void send_raw(const StreamBuffer& data);
 
     // Flush write buffer
     void flush_write_buffer();
-
-    EndPoint remote_endpoint_ = LocalEndpoint;
-    EventLoop* loop_ = nullptr;
-    int fd_ = -1;
-
-    ConnectionState state_ = ConnectionState::Disconnected;
 
     // Read chunk size for ::read() into read_buffer_
     static constexpr size_t kReadChunkSize = 65536;

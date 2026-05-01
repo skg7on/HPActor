@@ -73,12 +73,13 @@ class TlsConnection : public Connection,
                       public std::enable_shared_from_this<TlsConnection> {
   public:
     // Create client-side connection
-    static TlsConnectionPtr create_client(EndPoint remote_endpoint,
+    static TlsConnectionPtr create_client(EndPoint local_endpoint,
+                                          EndPoint remote_endpoint,
                                           TlsContext* tls_context, EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
     static TlsConnectionPtr
-    create_server(int fd, EndPoint remote_endpoint,
+    create_server(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                   TlsContext* tls_context, EventLoop* loop);
 
     // Set file descriptor (for connected client sockets after TCP handshake)
@@ -89,17 +90,6 @@ class TlsConnection : public Connection,
     // Non-copyable
     TlsConnection(const TlsConnection&) = delete;
     TlsConnection& operator=(const TlsConnection&) = delete;
-
-    // Getters
-    EndPoint remote_endpoint() const {
-        return remote_endpoint_;
-    }
-    ConnectionState state() const {
-        return state_;
-    }
-    int fd() const {
-        return fd_;
-    }
 
     // Set callbacks
     void set_ready_handler(std::function<void(ConnectionPtr)> handler);
@@ -112,7 +102,7 @@ class TlsConnection : public Connection,
     void start_client_handshake();
 
     // Handle incoming data from socket
-    void handle_read(const StreamBuffer& data);
+    void handle_read() override;
 
     // Send encrypted frame
     void send(const StreamBuffer& frame_data) override;
@@ -129,8 +119,8 @@ class TlsConnection : public Connection,
     }
 
   private:
-    TlsConnection(EndPoint remote_endpoint,
-                  TlsContext* tls_context, EventLoop* loop, int fd = -1);
+    TlsConnection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
+                  TlsContext* tls_context, EventLoop* loop);
 
     // Handshake message builders
     StreamBuffer build_client_hello();
@@ -143,6 +133,9 @@ class TlsConnection : public Connection,
     void handle_certificate(const StreamBuffer& data);
     void handle_certificate_verify(const StreamBuffer& data);
     void handle_finished(const StreamBuffer& data);
+
+    // Process buffered data (TLS record parsing and dispatch)
+    void process_buffer();
 
     // Helper: derive session key from pre_master_secret
     void derive_session_keys(const StreamBuffer& pre_master_secret,
@@ -157,8 +150,7 @@ class TlsConnection : public Connection,
     // Helper: compute TLS PRF (SHA-256 based)
     StreamBuffer prf_sha256(const StreamBuffer& secret, const char* label, const StreamBuffer& data);
 
-    // Transition state
-    void set_state(ConnectionState new_state);
+    // Transition handshake/session state
     void set_handshake_state(TlsHandshakeState new_state);
     void set_session_state(TlsSessionState new_state);
 
@@ -168,16 +160,8 @@ class TlsConnection : public Connection,
     // Flush write buffer (called after async_send completion)
     void flush_write_buffer();
 
-    // Event loop callbacks
-    void on_fd_readable();
-    void on_fd_writable();
-
-    EndPoint remote_endpoint_ = LocalEndpoint;
     TlsContext* tls_context_ = nullptr;
-    EventLoop* loop_ = nullptr;
-    int fd_ = -1;
 
-    ConnectionState state_ = ConnectionState::Disconnected;
     TlsHandshakeState handshake_state_ = TlsHandshakeState::Idle;
     TlsSessionState session_state_ = TlsSessionState::Handshake;
 
@@ -211,6 +195,9 @@ class TlsConnection : public Connection,
 
     // Server-side flag
     bool is_server_ = false;
+
+    // Read chunk size
+    static constexpr size_t kReadChunkSize = 65536;
 };
 
 } // namespace net

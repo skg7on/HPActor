@@ -61,12 +61,13 @@ StreamBuffer parse_tls_payload(const uint8_t* data, size_t len, size_t& consumed
 
 } // anonymous namespace
 
-TlsConnection::TlsConnection(EndPoint remote_endpoint,
-                             TlsContext* tls_context, EventLoop* loop, int socket_fd)
-    : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
-      tls_context_(tls_context), loop_(loop), fd_(socket_fd) {
-    read_buffer_.reserve(adt::StreamBuffer::kDefaultInitialCapacity);
-    write_buffer_.reserve(adt::StreamBuffer::kDefaultInitialCapacity);
+TlsConnection::TlsConnection(int fd, EndPoint local_endpoint,
+                             EndPoint remote_endpoint,
+                             TlsContext* tls_context, EventLoop* loop)
+    : Connection(fd, local_endpoint, remote_endpoint, loop),
+      tls_context_(tls_context) {
+    read_buffer_.reserve(kReadChunkSize);
+    write_buffer_.reserve(kReadChunkSize);
     // Generate random client nonce
     RAND_bytes(client_nonce_.data(), static_cast<int>(kNonceSize));
 }
@@ -76,30 +77,40 @@ TlsConnection::~TlsConnection() {
 }
 
 TlsConnectionPtr
-TlsConnection::create_client(EndPoint remote_endpoint,
+TlsConnection::create_client(EndPoint local_endpoint,
+                             EndPoint remote_endpoint,
                              TlsContext* tls_context, EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(
-        new TlsConnection(remote_endpoint, tls_context, loop, -1));
+        new TlsConnection(-1, local_endpoint, remote_endpoint, tls_context, loop));
     conn->set_state(ConnectionState::Connecting);
     conn->is_server_ = false;
     return conn;
 }
 
 TlsConnectionPtr
-TlsConnection::create_server(int socket_fd, EndPoint remote_endpoint,
+TlsConnection::create_server(int socket_fd, EndPoint local_endpoint,
+                             EndPoint remote_endpoint,
                              TlsContext* tls_context, EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(
-        new TlsConnection(remote_endpoint, tls_context, loop, socket_fd));
+        new TlsConnection(socket_fd, local_endpoint, remote_endpoint,
+                          tls_context, loop));
     conn->set_state(ConnectionState::Connected);
     conn->is_server_ = true;
     // Server waits for client hello
     conn->set_handshake_state(TlsHandshakeState::WaitingForServerHello);
     conn->set_session_state(TlsSessionState::Handshake);
 
-    // Register fd with event loop for read events (for receiving handshake
-    // messages)
+    // Register fd with event loop for read events
     if (loop && socket_fd >= 0) {
         loop->add_fd(socket_fd, EventLoop::Event::Read);
+        if (loop->supports_read_handler()) {
+            std::weak_ptr<TlsConnection> weak_conn = conn;
+            loop->set_read_handler(socket_fd, [weak_conn](int /*event_fd*/) {
+                if (auto self = weak_conn.lock()) {
+                    self->handle_read();
+                }
+            });
+        }
     }
 
     return conn;
@@ -127,6 +138,15 @@ void TlsConnection::set_fd(int fd) {
     // Register fd with event loop for read events
     if (loop_ && fd >= 0) {
         loop_->add_fd(fd, EventLoop::Event::Read);
+        if (loop_->supports_read_handler()) {
+            std::weak_ptr<TlsConnection> weak_conn =
+                std::enable_shared_from_this<TlsConnection>::shared_from_this();
+            loop_->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
+                if (auto self = weak_conn.lock()) {
+                    self->handle_read();
+                }
+            });
+        }
     }
 }
 
@@ -153,9 +173,25 @@ void TlsConnection::start_client_handshake() {
     send_raw(client_hello);
 }
 
-void TlsConnection::handle_read(const StreamBuffer& data) {
-    read_buffer_.append(data.data(), data.size());
+void TlsConnection::handle_read() {
+    // Read from fd into accumulation buffer
+    while (true) {
+        uint8_t* area = read_buffer_.reserve_tail(kReadChunkSize);
+        ssize_t n = ::read(fd_, area, kReadChunkSize);
+        if (n > 0) {
+            read_buffer_.commit_tail(static_cast<size_t>(n));
+        } else if (n == 0) {
+            break;
+        } else {
+            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            break;
+        }
+    }
 
+    process_buffer();
+}
+
+void TlsConnection::process_buffer() {
     // Process complete messages in buffer
     while (read_buffer_.size() >= 4) {
         size_t consumed = 0;
@@ -170,7 +206,8 @@ void TlsConnection::handle_read(const StreamBuffer& data) {
             // Decrypt and deliver to frame handler
             StreamBuffer plaintext = decrypt_aes(payload);
             if (!plaintext.empty() && frame_handler_) {
-                frame_handler_(plaintext);
+                std::span<const uint8_t> span(plaintext.data(), plaintext.size());
+                frame_handler_(span);
             }
         } else {
             // Handle handshake messages
@@ -214,6 +251,7 @@ void TlsConnection::send(const StreamBuffer& frame_data) {
 void TlsConnection::close() {
     if (fd_ >= 0) {
         if (loop_) {
+            loop_->clear_read_handler(fd_);
             loop_->remove_fd(fd_);
         }
         ::close(fd_);
@@ -294,10 +332,6 @@ void TlsConnection::handle_server_hello(const StreamBuffer& data) {
 
     // Extract server nonce
     std::memcpy(server_nonce_.data(), data.data(), kNonceSize);
-
-    // Note: Server's public key would be extracted from its certificate
-    // for encrypting pre_master_secret. This is handled in a full TLS
-    // implementation by the certificate message that follows.
 
     // Send our certificate
     StreamBuffer cert_msg = build_certificate();
@@ -476,10 +510,6 @@ StreamBuffer TlsConnection::decrypt_aes(const StreamBuffer& ciphertext) {
     return plaintext;
 }
 
-void TlsConnection::set_state(ConnectionState new_state) {
-    state_ = new_state;
-}
-
 void TlsConnection::set_handshake_state(TlsHandshakeState new_state) {
     handshake_state_ = new_state;
     if (new_state == TlsHandshakeState::Error) {
@@ -546,16 +576,6 @@ void TlsConnection::handle_send_completion(int result) {
     if (!write_buffer_.empty()) {
         flush_write_buffer();
     }
-}
-
-void TlsConnection::on_fd_readable() {
-    // Would be called by EventLoop when fd is readable
-    // Read data and call handle_read
-}
-
-void TlsConnection::on_fd_writable() {
-    // Would be called by EventLoop when fd is writable
-    // Flush write buffer
 }
 
 } // namespace net

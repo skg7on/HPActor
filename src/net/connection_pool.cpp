@@ -52,8 +52,8 @@ namespace net {
 ConnectionPool::ConnectionPool(EndPoint remote_endpoint,
                                const PoolConfig& config,
                                TlsContext* tls_context, EventLoop* loop)
-    : Connection(remote_endpoint), remote_endpoint_(remote_endpoint),
-      config_(config), tls_context_(tls_context), loop_(loop) {}
+    : remote_endpoint_(remote_endpoint), config_(config),
+      tls_context_(tls_context), loop_(loop) {}
 
 ConnectionPool::~ConnectionPool() {
     abort();
@@ -92,7 +92,7 @@ void ConnectionPool::send(const StreamBuffer& data) {
     // Create a minimal actor address using the remote endpoint
     ActorAddress target;
     target.endpoint =
-        endpoint_ops::parse_endpoint(endpoint_ops::to_string(remote_endpoint()));
+        endpoint_ops::parse_endpoint(endpoint_ops::to_string(remote_endpoint_));
     send(target, data);
 }
 
@@ -147,24 +147,44 @@ void ConnectionPool::set_spawn_handler(spawn_response_handler handler) {
     spawn_handler_ = std::move(handler);
 }
 
-void ConnectionPool::create_connection() {
+ConnectionPtr ConnectionPool::create_connection() {
     if (connecting_.load()) {
-        return;
+        return nullptr;
     }
     if (!connecting_.exchange(true)) {
-        auto conn =
-            TlsConnection::create_client(remote_endpoint(), tls_context_, loop_);
+        // Determine local endpoint from loop (default to LocalEndpoint)
+        EndPoint local_ep = LocalEndpoint;
 
-        conn->set_ready_handler(
-            [this](ConnectionPtr c) { on_connection_ready(c); });
-        conn->set_error_handler([this](ConnectionPtr c, const error& e) {
-            on_connection_error(c, e);
-        });
-        conn->set_frame_handler(
-            [this](std::span<const uint8_t> data) { on_frame_received(data); });
-
-        conn->start_client_handshake();
+        ConnectionPtr conn;
+        if (config_.use_tls) {
+            auto tls_conn =
+                TlsConnection::create_client(local_ep, remote_endpoint_,
+                                             tls_context_, loop_);
+            tls_conn->set_ready_handler(
+                [this](ConnectionPtr c) { on_connection_ready(c); });
+            tls_conn->set_error_handler([this](ConnectionPtr c, const error& e) {
+                on_connection_error(c, e);
+            });
+            tls_conn->set_frame_handler(
+                [this](std::span<const uint8_t> data) { on_frame_received(data); });
+            conn = tls_conn;
+        } else {
+            // Plain connection for internal create_connection — fd will be set
+            // after TCP connect. Create with fd=-1 for now.
+            auto plain_conn =
+                PlainConnection::create_client(-1, local_ep, remote_endpoint_, loop_);
+            plain_conn->set_ready_handler(
+                [this](ConnectionPtr c) { on_connection_ready(c); });
+            plain_conn->set_error_handler([this](ConnectionPtr c, const error& e) {
+                on_connection_error(c, e);
+            });
+            plain_conn->set_frame_handler(
+                [this](std::span<const uint8_t> data) { on_frame_received(data); });
+            conn = plain_conn;
+        }
+        return conn;
     }
+    return nullptr;
 }
 
 void ConnectionPool::on_connection_ready(ConnectionPtr conn) {
