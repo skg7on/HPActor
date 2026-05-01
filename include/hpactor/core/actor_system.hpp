@@ -169,6 +169,9 @@ class ActorSystem {
     // Get actor's mailbox (used by scheduler)
     mailbox::MPSCActorMailbox<TypedMessage>* get_mailbox(ActorId id);
 
+    // Get the number of live actors in this system
+    size_t actor_count() const;
+
     // Deliver message to local actor
     void deliver_local(ActorId target, TypedMessage msg);
 
@@ -227,7 +230,7 @@ class ActorSystem {
 
     // Actor registry - maps ActorId to actor instance
     std::unordered_map<ActorId, std::shared_ptr<AbstractActor>> actors_;
-    std::mutex actors_mutex_;
+    mutable std::mutex actors_mutex_;
 
     // Actor mailboxes - maps ActorId to mailbox
     std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<TypedMessage>>>

@@ -184,6 +184,11 @@ ActorSystem::get_mailbox(ActorId id) {
     return nullptr;
 }
 
+size_t ActorSystem::actor_count() const {
+    std::lock_guard<std::mutex> lock(actors_mutex_);
+    return actors_.size();
+}
+
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
     deliver_local(target, std::move(msg), 0, INT64_MAX);
 }
