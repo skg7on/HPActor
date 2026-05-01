@@ -45,8 +45,8 @@ ActorRef ActorContext::resolve(const ActorAddress& target) {
         return ref;
     }
 
-    // 3. Non-loopback endpoint: create ActorProxy
-    if (!target.is_local()) {
+    // 3. Different endpoint: create ActorProxy
+    if (!(target.endpoint == system->endpoint())) {
         ActorProxy proxy(target, system);
         ActorRef ref(std::move(proxy));
         // Only cache if transport was resolved successfully
