@@ -61,22 +61,31 @@ TypeTag MY_RESPONSE_TAG = TypeTag(65);
 
 ### 2.3 Wire Format
 
-All user messages on the wire follow this envelope:
+All user messages on the wire follow a length-delimited framing envelope with a protobuf body:
+
+```
+Wire format:
+  [4 bytes: magic "HPAC" (0x48 0x50 0x41 0x43)]
+  [4 bytes: remaining_length (uint32_t, network byte order)]
+  [N bytes: protobuf-serialized ActorMsgFrame]
+```
+
+The framing layer provides message boundary detection without parsing protobuf. The magic header identifies the stream as HPACTOR protocol and guards against misdirected connections.
 
 ```protobuf
 // Frame-level envelope (transport layer)
-message WireFrame {
-    ActorAddress sender = 1;
-    ActorAddress receiver = 2;
-    uint64 message_id = 3;
-    uint32 flags = 4;        // RpcRequest, RpcResponse, etc.
-    bytes payload = 5;       // Serialized TypeTag + protobuf payload
+// Defined in protos/hpactor/frame.proto
+message ActorMsgFrame {
+    PbActorAddress sender = 1;
+    PbActorAddress receiver = 2;
+    uint32 type_tag = 3;     // TypeTag enum for dispatch routing
+    uint64 message_id = 4;
+    uint32 flags = 5;        // Important, NoDrop, RpcRequest, etc.
+    bytes payload = 6;       // Serialized protobuf message bytes
 }
-
-// Payload format: [4 bytes: TypeTag][protobuf serialized bytes]
 ```
 
-The `TypeTag` prefix allows the receiver to deserialize the protobuf bytes into the correct type without any C++ RTTI.
+The `type_tag` field allows the receiver to deserialize the protobuf payload bytes into the correct message type without C++ RTTI.
 
 ---
 
@@ -229,8 +238,8 @@ public:
     std::unique_ptr<google::protobuf::Message> deserialize(
         TypeTag tag, const bytes& data);
 
-    // Serialize a protobuf message to bytes prefixed with TypeTag
-    bytes serialize(TypeTag tag, const google::protobuf::Message& msg);
+    // Serialize a protobuf message to bytes
+    StreamBuffer serialize(TypeTag tag, const google::protobuf::Message& msg);
 
 private:
     struct Entry {
@@ -273,15 +282,16 @@ The `on<MsgT>()` method:
 When a protobuf message arrives at an actor:
 
 ```
-1. Frame arrives → extract payload bytes
-2. Read first 4 bytes → TypeTag
-3. Look up TypeTag in proto_handlers_
-4. Call deserialize_fn → typed protobuf message
-5. Call handler_fn with the typed message
-6. If it's a request and handler returns a response:
-   a. Create response frame with same message_id
-   b. Serialize response with TypeTag prefix
-   c. Send back via transport
+1. TCP bytes arrive → validate magic "HPAC" → read length → extract protobuf payload
+2. Deserialize ActorMsgFrame from protobuf bytes
+3. Read type_tag from ActorMsgFrame
+4. Look up TypeTag in proto_handlers_
+5. Deserialize ActorMsgFrame.payload into typed protobuf message
+6. Call handler_fn with the typed message
+7. If it's a request and handler returns a response:
+   a. Create response ActorMsgFrame with same message_id
+   b. Serialize response into ActorMsgFrame.payload
+   c. Encode (magic + length + protobuf) and send via transport
 ```
 
 ### 4.4 `on_request` Mechanics
@@ -313,7 +323,7 @@ void on_request(std::function<ResT(const ReqT&)> handler) {
             auto& req = *static_cast<ReqT*>(raw_msg.get());
             ResT res = handler(req);
 
-            bytes res_bytes(res.ByteSizeLong());
+            StreamBuffer res_bytes(res.ByteSizeLong());
             res.SerializeToArray(res_bytes.data(),
                                  static_cast<int>(res_bytes.size()));
 
@@ -393,7 +403,7 @@ protected:
 
 ```cpp
 void send(ActorAddress target, const ProtoMsgT& msg) {
-    bytes payload = encode_proto(tag, msg);
+    StreamBuffer payload = encode_proto(tag, msg);
 
     WireFrame frame;
     frame.sender = address();
@@ -416,13 +426,13 @@ void request(ActorAddress target, const ReqT& req,
     TypeTag req_tag = system().proto_registry().get_tag<ReqT>();
     TypeTag res_tag = system().proto_registry().get_tag<ResT>();
 
-    bytes payload = encode_proto(req_tag, req);
+    StreamBuffer payload = encode_proto(req_tag, req);
 
     uint64_t msg_id = MessageId::generate().value();
 
     // Store callback by message_id
     pending_requests_[msg_id] = PendingRequest{
-        .callback = [callback](const bytes& data) {
+        .callback = [callback](const StreamBuffer& data) {
             ResT res;
             res.ParseFromArray(data.data(), static_cast<int>(data.size()));
             callback(res);
@@ -448,7 +458,7 @@ void request(ActorAddress target, const ReqT& req,
 void reply(ActorAddress sender, uint64_t message_id,
            const ProtoMsgT& msg) {
     TypeTag tag = system().proto_registry().get_tag<ProtoMsgT>();
-    bytes payload = encode_proto(tag, msg);
+    StreamBuffer payload = encode_proto(tag, msg);
 
     WireFrame frame;
     frame.sender = address();
@@ -514,12 +524,12 @@ The existing `DefaultSerializer` gains protobuf-aware encode/decode:
 ```cpp
 class DefaultSerializer {
     // Existing:
-    bytes encode(TypeTag tag, const MessageVariant& msg);
+    StreamBuffer encode(TypeTag tag, const MessageVariant& msg);
 
     // New protobuf methods:
-    bytes encode_proto(TypeTag tag, const google::protobuf::Message& msg);
+    StreamBuffer encode_proto(TypeTag tag, const google::protobuf::Message& msg);
     std::unique_ptr<google::protobuf::Message> decode_proto(
-        TypeTag tag, const bytes& data, ProtoTypeRegistry& registry);
+        TypeTag tag, const StreamBuffer& data, ProtoTypeRegistry& registry);
 };
 ```
 

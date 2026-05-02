@@ -61,10 +61,12 @@ User Code
 │       ▼              │   │    msg_id:   uint64              │
 │  mailbox->push(msg)  │   │    type_tag: uint32 (TypeTag)    │
 │                      │   │    flags:    uint32              │
-│  TypedMessage carries │   │    payload:  bytes               │
+│  TypedMessage carries │   │    payload:  StreamBuffer        │
 │  shared_ptr<Message>  │   │  }                               │
 │  and sender_address_  │   │       │                          │
-│  (zero-copy)          │   │  frame.encode() → protobuf bytes │
+│  (zero-copy)          │   │  frame.encode()                  │
+│                      │   │    → magic + length +             │
+│                      │   │      protobuf (ActorMsgFrame)     │
 │                      │   │  ConnectionPool::send()          │
 │                      │   │       │                          │
 │                      │   │  TCP socket write()              │
@@ -78,6 +80,8 @@ User Code
 │                   TCP / ConnectionPool                       │
 │                                                             │
 │  on_frame_received(bytes)                                   │
+│    → validate magic "HPAC"                                   │
+│    → read length → extract protobuf payload                  │
 │    → WireFrame::decode(bytes)                                │
 │    → {sender, receiver, msg_id, type_tag, flags, payload}   │
 └──────────────────────────┬──────────────────────────────────┘
@@ -193,20 +197,31 @@ This replaces the current TODO in `ConnectionPool::on_frame_received()`.
 
 ## Wire Format
 
-The existing protobuf `net::Frame` message serves as the wire format:
+Every actor message on the wire is wrapped in a length-delimited framing envelope:
+
+```
+Wire format:
+  [4 bytes: magic "HPAC" (0x48 0x50 0x41 0x43)]
+  [4 bytes: remaining_length (uint32_t, network byte order)]
+  [N bytes: protobuf-serialized ActorMsgFrame]
+```
+
+The magic header identifies the stream as HPACTOR protocol. The length prefix enables message boundary detection without parsing protobuf.
+
+The protobuf message `ActorMsgFrame` (defined in `protos/hpactor/frame.proto`) is the frame body:
 
 ```protobuf
-message Frame {
-    ActorEndpoint sender = 1;    // Who sent this message
-    ActorEndpoint receiver = 2;  // Target actor address
-    uint64 message_id = 3;       // Globally unique ID
-    uint32 type_tag = 4;         // TypeTag enum for dispatch
+message ActorMsgFrame {
+    PbActorAddress sender = 1;   // Who sent this message
+    PbActorAddress receiver = 2; // Target actor address
+    uint32 type_tag = 3;         // TypeTag enum for dispatch
+    uint64 message_id = 4;       // Globally unique ID
     uint32 flags = 5;            // Important, NoDrop, RpcRequest, etc.
     bytes payload = 6;           // Already-serialized protobuf content
 }
 ```
 
-The `ActorEndpoint` in the `receiver` field contains the target `ActorId` — the receiving node extracts it for mailbox lookup.
+The `PbActorAddress` in the `receiver` field contains the target `ActorId` — the receiving node extracts it for mailbox lookup.
 
 ### Frame Flags
 

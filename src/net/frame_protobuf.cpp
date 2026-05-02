@@ -78,7 +78,7 @@ from_proto(const ::hpactor::PbActorAddress& pb_addr) {
 } // namespace protobuf
 
 StreamBuffer frame_to_proto(const WireFrame& frame) {
-    ::hpactor::net::Frame pb_frame;
+    ::hpactor::net::ActorMsgFrame pb_frame;
     protobuf::to_proto(pb_frame.mutable_sender(), frame.sender);
     protobuf::to_proto(pb_frame.mutable_receiver(), frame.receiver);
     pb_frame.set_message_id(frame.message_id);
@@ -91,7 +91,7 @@ StreamBuffer frame_to_proto(const WireFrame& frame) {
 }
 
 WireFrame frame_from_proto(const StreamBuffer& data) {
-    ::hpactor::net::Frame pb_frame;
+    ::hpactor::net::ActorMsgFrame pb_frame;
     std::string serialized(data.begin(), data.end());
     if (!pb_frame.ParseFromString(serialized)) {
         return WireFrame{}; // Return default frame on parse failure

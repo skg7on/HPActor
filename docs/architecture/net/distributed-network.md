@@ -12,8 +12,8 @@ When you send a message to a remote process:
 2. **Connection lookup** - Check if a connection to that node already exists. If yes, use it. If no, continue to step 3.
 3. **Discovery** - Query the registrar (or check static routes) to find where the remote node is listening: hostname, port, TLS requirements, protocol versions.
 4. **Connection establishment** - Open TCP connections to the remote node, perform mutual authentication via handshake, negotiate capabilities, exchange caching dictionaries, create a connection pool.
-5. **Message transmission** - Encode the message into bytes (use protocol buffer as default), optionally compress it, wrap it in a protocol frame, send it over one of the TCP connections in the pool.
-6. **Remote delivery** - The receiving node reads the frame, decompresses if needed, decodes back to values, routes to the recipient's mailbox.
+5. **Message transmission** - Serialize the message via protobuf into an `ActorMsgFrame`, wrap it in a magic+length frame (4 bytes "HPAC" + 4 bytes length), optionally compress the framed bytes, send over one of the TCP connections in the pool.
+6. **Remote delivery** - The receiving node validates the magic "HPAC", reads the framed message, decompresses if needed, deserializes the `ActorMsgFrame`, routes to the recipient's mailbox.
 
 This entire pipeline is invisible to your code. You call `Send`, and the framework does the rest.
 

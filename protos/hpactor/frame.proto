@@ -5,11 +5,11 @@ package hpactor.net;
 
 import "hpactor/common.proto";
 
-message Frame {
+message ActorMsgFrame {
   hpactor.PbActorAddress sender = 1;
   hpactor.PbActorAddress receiver = 2;
-  uint64 message_id = 3;
-  uint32 flags = 4;
-  bytes payload = 5;
-  uint32 type_tag = 6;
+  uint32 type_tag = 3;
+  uint64 message_id = 4;
+  uint32 flags = 5;
+  bytes payload = 6;
 }

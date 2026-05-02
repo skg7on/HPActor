@@ -25,23 +25,13 @@ namespace hpactor {
 namespace net {
 
 // -----------------------------------------------------------------------------
-// WireFrame - network message frame format (wire format for serialization)
+// WireFrame - network message frame format
 // -----------------------------------------------------------------------------
 // Every message sent over the network is wrapped in a WireFrame.
-// Format (NodeId is now "host:port" string):
-//   [4 bytes: payload length]
-//   [4 bytes: type tag]
-//   [4 bytes: flags]
-//   [8 bytes: message id]
-//   [4 bytes: sender node_id length]
-//   [N bytes: sender node_id string]
-//   [8 bytes: sender actor_id]
-//   [8 bytes: sender incarnation]
-//   [4 bytes: receiver node_id length]
-//   [M bytes: receiver node_id string]
-//   [8 bytes: receiver actor_id]
-//   [8 bytes: receiver incarnation]
-//   [payload...]
+// Wire format:
+//   [4 bytes: magic "HPAC"]
+//   [4 bytes: remaining_length in network byte order]
+//   [N bytes: protobuf-serialized ActorMsgFrame]
 // -----------------------------------------------------------------------------
 struct WireFrame {
     ActorAddress sender;
@@ -49,11 +39,16 @@ struct WireFrame {
     StreamBuffer payload;
     uint32_t flags = 0;
     uint64_t message_id = 0;
+    uint32_t type_tag = 0;
 
-    // Encode frame to bytes
+    // Magic header identifying HPACTOR framework messages
+    static constexpr uint32_t MagicHeader = 0x43415048; // "HPAC" (little-endian)
+    static constexpr size_t HeaderSize = 8; // 4 bytes magic + 4 bytes length
+
+    // Encode frame to wire format (magic + length + protobuf payload)
     StreamBuffer encode() const;
 
-    // Decode frame from bytes
+    // Decode frame from wire format bytes
     static WireFrame decode(const StreamBuffer& data);
 
     // Decode frame from span — ownership-boundary copy into payload
@@ -72,12 +67,10 @@ struct WireFrame {
                                                       // deduplicate by
                                                       // MessageId before
                                                       // processing
-
-    // Type tag for message payload (set during protobuf serialization)
-    uint32_t type_tag = 0;
 };
 
 // Protobuf interop - convert between HPActor types and protobuf bytes
+// (pure protobuf payload without magic/length framing)
 StreamBuffer frame_to_proto(const WireFrame& frame);
 WireFrame frame_from_proto(const StreamBuffer& data);
 
