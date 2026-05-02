@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/net/plain_connection.hpp>
+#include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
@@ -133,8 +133,7 @@ class ConnectionPool {
     void on_connection_error(ConnectionPtr conn, const error& err);
 
     // Handle incoming frame (called by connection's frame handler).
-    // Span is a zero-copy view into the accumulation buffer.
-    void on_frame_received(std::span<const uint8_t> frame_data);
+    void on_frame_received(StreamBuffer frame_data);
 
     // Add an externally-created connection to the pool
     void add_connection(ConnectionPtr conn);

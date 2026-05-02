@@ -206,8 +206,7 @@ void TlsConnection::process_buffer() {
             // Decrypt and deliver to frame handler
             StreamBuffer plaintext = decrypt_aes(payload);
             if (!plaintext.empty() && frame_handler_) {
-                std::span<const uint8_t> span(plaintext.data(), plaintext.size());
-                frame_handler_(span);
+                frame_handler_(std::move(plaintext));
             }
         } else {
             // Handle handshake messages

@@ -140,20 +140,20 @@ ConnectionPtr ConnectionPool::create_connection() {
                 on_connection_error(c, e);
             });
             tls_conn->set_frame_handler(
-                [this](std::span<const uint8_t> data) { on_frame_received(data); });
+                [this](StreamBuffer data) { on_frame_received(std::move(data)); });
             conn = tls_conn;
         } else {
-            // Plain connection for internal create_connection — fd will be set
+            // WireFrame connection for internal create_connection — fd will be set
             // after TCP connect. Create with fd=-1 for now.
             auto plain_conn =
-                PlainConnection::create_client(-1, local_ep, remote_endpoint_, loop_);
+                WireFrameConnection::create_as_client(-1, local_ep, remote_endpoint_, loop_);
             plain_conn->set_ready_handler(
                 [this](ConnectionPtr c) { on_connection_ready(c); });
             plain_conn->set_error_handler([this](ConnectionPtr c, const error& e) {
                 on_connection_error(c, e);
             });
             plain_conn->set_frame_handler(
-                [this](std::span<const uint8_t> data) { on_frame_received(data); });
+                [this](StreamBuffer data) { on_frame_received(std::move(data)); });
             conn = plain_conn;
         }
         return conn;
@@ -181,7 +181,7 @@ void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
     schedule_reconnect();
 }
 
-void ConnectionPool::on_frame_received(std::span<const uint8_t> frame_data) {
+void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
     WireFrame frame = WireFrame::decode(frame_data);
 
     // Check for RPC response

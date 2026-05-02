@@ -17,7 +17,7 @@
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/net/plain_connection.hpp>
+#include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>

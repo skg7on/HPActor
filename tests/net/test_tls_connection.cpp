@@ -404,8 +404,8 @@ void test_frame_handler_callback() {
         hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
 
     StreamBuffer received_frame;
-    server->set_frame_handler([&](std::span<const uint8_t> data) {
-        received_frame.assign(data.begin(), data.end());
+    server->set_frame_handler([&](StreamBuffer data) {
+        received_frame = std::move(data);
     });
 
     ::close(client_fd);

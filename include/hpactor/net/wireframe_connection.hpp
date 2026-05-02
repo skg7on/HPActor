@@ -17,36 +17,45 @@
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/transport.hpp>
-
+#include <hpactor/net/frame.hpp>
 #include <functional>
-#include <span>
 
 namespace hpactor {
 
 namespace net {
 
-// Connection pointer type (declared before class for use in factory methods)
-class PlainConnection;
-using PlainConnectionPtr = std::shared_ptr<PlainConnection>;
+class WireFrameConnection;
+using WireFrameConnectionPtr = std::shared_ptr<WireFrameConnection>;
 
-class PlainConnection : public Connection,
-                        public std::enable_shared_from_this<PlainConnection> {
+// WireFrameConnection — TCP connection with WireFrame protocol framing.
+//
+// Reads from the socket accumulate into an internal buffer. When a complete
+// WireFrame is available (8-byte header: magic "HPAC" + 4-byte big-endian
+// payload length, followed by exactly length payload bytes), the payload is
+// delivered as a StreamBuffer to the frame_handler callback.
+//
+// Wire format expected on the wire:
+//   [4 bytes: magic "HPAC"]
+//   [4 bytes: remaining_length in network byte order]
+//   [N bytes: protobuf-serialized ActorMsgFrame]
+class WireFrameConnection : public Connection,
+                            public std::enable_shared_from_this<WireFrameConnection> {
   public:
     // Create client-side connection with existing connected fd
-    static PlainConnectionPtr
-    create_client(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
-                  EventLoop* loop);
+    static WireFrameConnectionPtr
+    create_as_client(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
+                     EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
-    static PlainConnectionPtr
-    create_server(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
-                  EventLoop* loop);
+    static WireFrameConnectionPtr
+    create_as_server(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
+                     EventLoop* loop);
 
-    ~PlainConnection();
+    ~WireFrameConnection();
 
     // Non-copyable
-    PlainConnection(const PlainConnection&) = delete;
-    PlainConnection& operator=(const PlainConnection&) = delete;
+    WireFrameConnection(const WireFrameConnection&) = delete;
+    WireFrameConnection& operator=(const WireFrameConnection&) = delete;
 
     // Set callbacks
     void set_ready_handler(std::function<void(ConnectionPtr)> handler);
@@ -68,8 +77,8 @@ class PlainConnection : public Connection,
     void handle_send_completion(int result) override;
 
   private:
-    PlainConnection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
-                    EventLoop* loop);
+    WireFrameConnection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
+                        EventLoop* loop);
 
     // Send raw bytes on socket
     void send_raw(const StreamBuffer& data);
@@ -77,10 +86,10 @@ class PlainConnection : public Connection,
     // Flush write buffer
     void flush_write_buffer();
 
-    // Read chunk size for ::read() into read_buffer_
-    static constexpr size_t kReadChunkSize = 65536;
+    // Write buffer initial capacity
+    static constexpr size_t kWriteChunkSize = 65536;
 
-    // Read buffer
+    // Accumulation buffer for incoming bytes
     adt::StreamBuffer read_buffer_;
 
     // Write buffer

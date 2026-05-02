@@ -19,7 +19,6 @@
 #include <hpactor/types/types.hpp>
 
 #include <functional>
-#include <span>
 #include <memory>
 
 namespace hpactor {
@@ -59,9 +58,9 @@ class EventLoop;
 // -----------------------------------------------------------------------------
 // Callback for when connection becomes ready
 using connection_ready_handler = std::function<void(ConnectionPtr)>;
-// Callback for incoming frames — span is a zero-copy view into the
-// accumulation buffer. Valid only for the duration of the call.
-using frame_handler = std::function<void(std::span<const uint8_t>)>;
+// Callback for incoming frames — receives a complete WireFrame envelope
+// (magic + length header + protobuf payload) as an owning StreamBuffer.
+using frame_handler = std::function<void(StreamBuffer)>;
 // Callback for connection errors
 using connection_error_handler = std::function<void(ConnectionPtr, const error&)>;
 

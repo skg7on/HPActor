@@ -126,20 +126,20 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
             pool->on_connection_error(c, e);
         });
         tls_conn->set_frame_handler(
-            [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
+            [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
         conn = tls_conn;
         tls_conn->start_client_handshake();
     } else {
         // Create plain connection with connected fd
         auto plain_conn =
-            PlainConnection::create_client(fd, endpoint_, remote_endpoint, &loop_);
+            WireFrameConnection::create_as_client(fd, endpoint_, remote_endpoint, &loop_);
         plain_conn->set_ready_handler(
             [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
         plain_conn->set_frame_handler(
-            [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
+            [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
         conn = plain_conn;
     }
 
@@ -198,16 +198,16 @@ TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
 
     // Note: TLS over UDS is not supported per design decision.
     // use_tls config only applies to TCP connections.
-    // UDS connections always use PlainConnection.
+    // UDS connections always use WireFrameConnection.
     auto pool = get_or_create_pool(remote_endpoint);
-    auto plain_conn = PlainConnection::create_client(fd, endpoint_, remote_endpoint, &loop_);
+    auto plain_conn = WireFrameConnection::create_as_client(fd, endpoint_, remote_endpoint, &loop_);
     plain_conn->set_ready_handler(
         [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
     plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
         pool->on_connection_error(c, e);
     });
     plain_conn->set_frame_handler(
-        [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
+        [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
 
     pool->add_connection(plain_conn);
     register_connection(plain_conn, fd);
@@ -274,16 +274,16 @@ void TcpTransport::handle_accept(int client_fd,
                                                      remote_endpoint,
                                                      &tls_context_, &loop_);
         tls_conn->set_frame_handler(
-            [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
+            [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
         tls_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
         conn = tls_conn;
     } else {
-        auto plain_conn = PlainConnection::create_server(client_fd, endpoint_,
-                                                         remote_endpoint, &loop_);
+        auto plain_conn = WireFrameConnection::create_as_server(client_fd, endpoint_,
+                                                               remote_endpoint, &loop_);
         plain_conn->set_frame_handler(
-            [pool](std::span<const uint8_t> data) { pool->on_frame_received(data); });
+            [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
