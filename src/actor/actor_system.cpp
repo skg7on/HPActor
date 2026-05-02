@@ -202,9 +202,13 @@ void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
-    TypedMessage msg(static_cast<TypeTag>(frame.type_tag), frame.payload);
-    msg.set_sender_address(frame.sender);
-    deliver_local(frame.receiver.id, std::move(msg));
+    StreamBuffer payload(frame.pb_frame.payload().begin(),
+                         frame.pb_frame.payload().end());
+    TypedMessage msg(static_cast<TypeTag>(frame.pb_frame.type_tag()),
+                     std::move(payload));
+    msg.set_sender_address(net::from_proto(frame.pb_frame.sender()));
+    deliver_local(net::from_proto(frame.pb_frame.receiver()).id,
+                  std::move(msg));
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
@@ -248,37 +252,31 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     ::hpactor::SpawnRequestMessage pb_req;
     pb_req.set_actor_type_name(actor_type);
     pb_req.set_args_type(static_cast<uint32_t>(TypeTag::User));
-    // supervisor as ActorRef
-    auto* pb_sup = pb_req.mutable_supervisor();
-    auto sup_addr = system_actor_.address();
-    // Set supervisor endpoint
-    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&sup_addr.endpoint)) {
-        pb_sup->mutable_endpoint()->mutable_ipv4()->set_addr(ipv4->addr);
-        pb_sup->mutable_endpoint()->mutable_ipv4()->set_port(ipv4->port_nw);
-    }
-    pb_sup->set_type(sup_addr.type);
-    pb_sup->set_actor_id(sup_addr.id.value());
-    pb_sup->set_incarnation(sup_addr.incarnation);
+    net::to_proto(pb_req.mutable_supervisor(), system_actor_.address());
 
     StreamBuffer request_bytes = proto_registry_.serialize(pb_req);
+    uint64_t msg_id = MessageId::generate().value();
 
     net::WireFrame frame;
-    frame.sender = system_actor_.address();
-    frame.receiver =
-        ActorAddress{remote_endpoint, SystemActorType, SpawnReceiverId, 0};
-    frame.message_id = MessageId::generate().value();
-    frame.flags = net::WireFrame::RpcRequest;
-    frame.payload = request_bytes;
+    net::to_proto(frame.pb_frame.mutable_sender(), system_actor_.address());
+    net::to_proto(frame.pb_frame.mutable_receiver(),
+                  ActorAddress{remote_endpoint, SystemActorType, SpawnReceiverId, 0});
+    frame.pb_frame.set_message_id(msg_id);
+    frame.pb_frame.set_flags(net::WireFrame::RpcRequest);
+    frame.pb_frame.set_payload(
+        reinterpret_cast<const char*>(request_bytes.data()),
+        request_bytes.size());
 
     auto pending = std::make_shared<AsyncActor>(std::move(handle));
-    pending->set_message_id(frame.message_id);
+    pending->set_message_id(msg_id);
 
     {
         std::lock_guard<std::mutex> lock(pending_spawns_mutex_);
-        pending_spawns_.emplace(frame.message_id, pending);
+        pending_spawns_.emplace(msg_id, pending);
     }
 
-    transport_->send(frame.receiver, frame.encode());
+    transport_->send(net::from_proto(frame.pb_frame.receiver()),
+                     frame.encode());
 
     return std::move(*pending);
 }

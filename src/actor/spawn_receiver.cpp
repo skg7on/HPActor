@@ -58,26 +58,22 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req,
     if (transport_) {
         // Serialize response using protobuf
         ::hpactor::SpawnResponseMessage pb_resp;
-        auto* pb_addr = pb_resp.mutable_actor_addr();
-        auto& addr = response.actor_addr;
-        if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&addr.endpoint)) {
-            pb_addr->mutable_endpoint()->mutable_ipv4()->set_addr(ipv4->addr);
-            pb_addr->mutable_endpoint()->mutable_ipv4()->set_port(ipv4->port_nw);
-        }
-        pb_addr->set_type(addr.type);
-        pb_addr->set_actor_id(addr.id.value());
-        pb_addr->set_incarnation(addr.incarnation);
+        net::to_proto(pb_resp.mutable_actor_addr(), response.actor_addr);
         pb_resp.set_error_code(response.error_code);
 
         net::WireFrame response_frame;
-        response_frame.sender = address();
-        response_frame.receiver = frame.sender;
-        response_frame.message_id = frame.message_id;
-        response_frame.flags = net::WireFrame::RpcResponse;
-        response_frame.type_tag = static_cast<uint32_t>(TypeTag::SpawnResponseTag);
-        response_frame.payload = system().proto_registry().serialize(pb_resp);
+        net::to_proto(response_frame.pb_frame.mutable_sender(), address());
+        response_frame.pb_frame.mutable_receiver()->CopyFrom(frame.pb_frame.sender());
+        response_frame.pb_frame.set_message_id(frame.pb_frame.message_id());
+        response_frame.pb_frame.set_flags(net::WireFrame::RpcResponse);
+        response_frame.pb_frame.set_type_tag(static_cast<uint32_t>(TypeTag::SpawnResponseTag));
+        auto serialized = system().proto_registry().serialize(pb_resp);
+        response_frame.pb_frame.set_payload(
+            reinterpret_cast<const char*>(serialized.data()),
+            serialized.size());
 
-        transport_->send(response_frame.receiver, response_frame.encode());
+        transport_->send(net::from_proto(response_frame.pb_frame.receiver()),
+                         response_frame.encode());
     }
 }
 

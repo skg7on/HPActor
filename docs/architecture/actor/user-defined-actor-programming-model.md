@@ -87,6 +87,56 @@ message ActorMsgFrame {
 
 The `type_tag` field allows the receiver to deserialize the protobuf payload bytes into the correct message type without C++ RTTI.
 
+The C++ `WireFrame` struct embeds the protobuf message directly:
+
+```cpp
+struct WireFrame {
+    static constexpr uint32_t MagicHeader = 0x43415048; // "HPAC"
+    static constexpr size_t HeaderSize = 8;
+
+    uint32_t magic_hdr = MagicHeader;
+    size_t length;
+    ::hpactor::net::ActorMsgFrame pb_frame;
+
+    StreamBuffer encode() const;
+    static WireFrame decode(const StreamBuffer& data);
+    static WireFrame decode(std::span<const uint8_t> data);
+
+    // Flag constants
+    static constexpr uint32_t Important = 1 << 0;
+    static constexpr uint32_t NoDrop = 1 << 1;
+    static constexpr uint32_t RpcRequest = 1 << 2;
+    static constexpr uint32_t RpcResponse = 1 << 3;
+    static constexpr uint32_t RpcIdempotent = 1 << 4;
+};
+
+// Address conversion helpers
+void to_proto(PbActorAddress* pb, const ActorAddress& addr);
+ActorAddress from_proto(const PbActorAddress& pb);
+```
+
+The `PbActorAddress` type uses a `oneof` to distinguish local from remote actors:
+
+```protobuf
+message PbLocalActorAddress {
+  uint32 actor_type = 1;
+  uint64 actor_id = 2;
+  uint64 incarnation = 3;
+}
+
+message PbGlobalActorAddress {
+  PbActorEndpoint endpoint = 1;
+  PbLocalActorAddress local_addr = 2;
+}
+
+message PbActorAddress {
+  oneof type {
+    PbLocalActorAddress local_addr = 1;
+    PbGlobalActorAddress global_addr = 2;
+  }
+}
+```
+
 ---
 
 ## 3. User-Defined Actor Base Classes
@@ -406,13 +456,14 @@ void send(ActorAddress target, const ProtoMsgT& msg) {
     StreamBuffer payload = encode_proto(tag, msg);
 
     WireFrame frame;
-    frame.sender = address();
-    frame.receiver = target;
-    frame.message_id = MessageId::generate().value();
-    frame.flags = 0;  // no flags = one-way
-    frame.payload = payload;
+    net::to_proto(frame.pb_frame.mutable_sender(), address());
+    net::to_proto(frame.pb_frame.mutable_receiver(), target);
+    frame.pb_frame.set_message_id(MessageId::generate().value());
+    frame.pb_frame.set_flags(0);  // no flags = one-way
+    frame.pb_frame.set_payload(
+        reinterpret_cast<const char*>(payload.data()), payload.size());
 
-    transport().send(frame);
+    transport_->send(target, frame.encode());
 }
 ```
 
@@ -442,13 +493,14 @@ void request(ActorAddress target, const ReqT& req,
     };
 
     WireFrame frame;
-    frame.sender = address();
-    frame.receiver = target;
-    frame.message_id = msg_id;
-    frame.flags = WireFrame::RpcRequest;
-    frame.payload = payload;
+    net::to_proto(frame.pb_frame.mutable_sender(), address());
+    net::to_proto(frame.pb_frame.mutable_receiver(), target);
+    frame.pb_frame.set_message_id(msg_id);
+    frame.pb_frame.set_flags(WireFrame::RpcRequest);
+    frame.pb_frame.set_payload(
+        reinterpret_cast<const char*>(payload.data()), payload.size());
 
-    transport().send(frame);
+    transport_->send(target, frame.encode());
 }
 ```
 
@@ -461,13 +513,14 @@ void reply(ActorAddress sender, uint64_t message_id,
     StreamBuffer payload = encode_proto(tag, msg);
 
     WireFrame frame;
-    frame.sender = address();
-    frame.receiver = sender;
-    frame.message_id = message_id;
-    frame.flags = WireFrame::RpcResponse;
-    frame.payload = payload;
+    net::to_proto(frame.pb_frame.mutable_sender(), address());
+    net::to_proto(frame.pb_frame.mutable_receiver(), sender);
+    frame.pb_frame.set_message_id(message_id);
+    frame.pb_frame.set_flags(WireFrame::RpcResponse);
+    frame.pb_frame.set_payload(
+        reinterpret_cast<const char*>(payload.data()), payload.size());
 
-    transport().send(frame);
+    transport_->send(sender, frame.encode());
 }
 ```
 

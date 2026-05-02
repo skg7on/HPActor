@@ -7,27 +7,6 @@ package hpactor;
 // These types are shared between frame.proto (transport) and messages.proto (application messages)
 // Naming: Pb-prefixed to avoid collision with C++ types in hpactor namespace
 
-message PbActorEndpoint {
-  oneof type {
-    PbIpv4Endpoint ipv4 = 1;
-    PbIpv6Endpoint ipv6 = 2;
-  }
-}
-
-message PbActorRef {
-  PbActorEndpoint endpoint = 1;
-  uint32 type = 2;
-  uint64 actor_id = 3;
-  uint64 incarnation = 4;
-}
-
-message PbActorAddress {
-  PbActorEndpoint endpoint = 1;
-  uint32 type = 2;
-  uint64 actor_id = 3;
-  uint64 incarnation = 4;
-}
-
 message PbIpv4Endpoint {
   fixed32 addr = 1;
   uint32 port = 2;
@@ -36,4 +15,36 @@ message PbIpv4Endpoint {
 message PbIpv6Endpoint {
   bytes addr = 1;
   uint32 port = 2;
+}
+
+message PbActorEndpoint {
+  oneof type {
+    PbIpv4Endpoint ipv4 = 1;
+    PbIpv6Endpoint ipv6 = 2;
+  }
+}
+
+message PbLocalActorAddress {
+  uint32 actor_type = 1;
+  uint64 actor_id = 2;
+  uint64 incarnation = 3;
+}
+
+message PbGlobalActorAddress {
+  PbActorEndpoint endpoint = 1;
+  PbLocalActorAddress local_addr = 2;
+}
+
+message PbActorRef {
+  oneof type {
+    PbLocalActorAddress local_addr = 1;
+    PbGlobalActorAddress global_addr = 2;
+  }
+}
+
+message PbActorAddress {
+  oneof type {
+    PbLocalActorAddress local_addr = 1;
+    PbGlobalActorAddress global_addr = 2;
+  }
 }

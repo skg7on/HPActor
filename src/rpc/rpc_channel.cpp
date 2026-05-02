@@ -111,13 +111,15 @@ void RpcChannel::schedule_retry(PendingCall* call) {
 
 void RpcChannel::send_request(PendingCall& call, bool is_retry) {
     net::WireFrame frame;
-    frame.sender = ActorAddress{};
-    frame.receiver = call.target;
-    frame.payload = call.encoded_request;
-    frame.message_id = call.msg_id.value();
-    frame.flags = net::WireFrame::RpcRequest;
+    net::to_proto(frame.pb_frame.mutable_sender(), ActorAddress{});
+    net::to_proto(frame.pb_frame.mutable_receiver(), call.target);
+    frame.pb_frame.set_payload(
+        reinterpret_cast<const char*>(call.encoded_request.data()),
+        call.encoded_request.size());
+    frame.pb_frame.set_message_id(call.msg_id.value());
+    frame.pb_frame.set_flags(net::WireFrame::RpcRequest);
     if (is_retry) {
-        frame.flags |= net::WireFrame::RpcIdempotent;
+        frame.pb_frame.set_flags(frame.pb_frame.flags() | net::WireFrame::RpcIdempotent);
     }
 
     StreamBuffer encoded = frame.encode();

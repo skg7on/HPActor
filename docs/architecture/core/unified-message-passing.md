@@ -185,9 +185,13 @@ New method that connects the transport layer to the unified mailbox:
 
 ```cpp
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
-    TypedMessage msg(static_cast<TypeTag>(frame.type_tag), frame.payload);
-    msg.set_sender_address(frame.sender);
-    deliver_local(frame.receiver.id, std::move(msg));
+    StreamBuffer payload(frame.pb_frame.payload().begin(),
+                         frame.pb_frame.payload().end());
+    TypedMessage msg(static_cast<TypeTag>(frame.pb_frame.type_tag()),
+                     std::move(payload));
+    msg.set_sender_address(net::from_proto(frame.pb_frame.sender()));
+    deliver_local(net::from_proto(frame.pb_frame.receiver()).id,
+                  std::move(msg));
 }
 ```
 
@@ -249,7 +253,7 @@ On each `EventBasedActor::receive(msg)`:
 3. `reply(msg)` sends to `current_sender_` using the same unified `send()` path
 4. `reply_with_error(err)` wraps the error in a standard error message and replies
 
-For local messages, the sender's `ActorAddress` is attached to the `TypedMessage` before it's pushed into the mailbox. For remote messages, it comes from `WireFrame::sender`.
+For local messages, the sender's `ActorAddress` is attached to the `TypedMessage` before it's pushed into the mailbox. For remote messages, it comes from `WireFrame::pb_frame.sender()` and is converted via `net::from_proto()`.
 
 ---
 

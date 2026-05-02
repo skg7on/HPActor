@@ -19,32 +19,6 @@
 #include <hpactor/common.pb.h>
 #include <hpactor/messages.pb.h>
 
-namespace {
-
-// Protobuf conversion helpers (TODO: factor into shared header)
-static hpactor::Ipv4Endpoint from_proto(const ::hpactor::PbIpv4Endpoint& pb_ep) {
-    return hpactor::Ipv4Endpoint{pb_ep.addr(),
-                                 static_cast<uint16_t>(pb_ep.port())};
-}
-
-static hpactor::Ipv6Endpoint from_proto(const ::hpactor::PbIpv6Endpoint& pb_ep) {
-    std::array<uint8_t, 16> addr;
-    std::memcpy(addr.data(), pb_ep.addr().data(), 16);
-    return hpactor::Ipv6Endpoint{addr, static_cast<uint16_t>(pb_ep.port())};
-}
-
-static hpactor::EndPoint
-from_proto(const ::hpactor::PbActorEndpoint& pb_endpoint) {
-    if (pb_endpoint.has_ipv4()) {
-        return from_proto(pb_endpoint.ipv4());
-    } else if (pb_endpoint.has_ipv6()) {
-        return from_proto(pb_endpoint.ipv6());
-    }
-    return hpactor::Ipv4Endpoint{};
-}
-
-} // anonymous namespace
-
 namespace hpactor {
 
 namespace net {
@@ -211,23 +185,17 @@ void ConnectionPool::on_frame_received(std::span<const uint8_t> frame_data) {
     WireFrame frame = WireFrame::decode(frame_data);
 
     // Check for RPC response
-    if (frame.flags & WireFrame::RpcResponse) {
+    if (frame.pb_frame.flags() & WireFrame::RpcResponse) {
         // Try to decode as spawn response first
-        if (static_cast<TypeTag>(frame.type_tag) == TypeTag::SpawnResponseTag) {
+        if (static_cast<TypeTag>(frame.pb_frame.type_tag()) == TypeTag::SpawnResponseTag) {
             ::hpactor::SpawnResponseMessage pb_resp;
-            if (pb_resp.ParseFromArray(frame.payload.data(),
-                                       static_cast<int>(frame.payload.size()))) {
+            if (pb_resp.ParseFromArray(frame.pb_frame.payload().data(),
+                                       static_cast<int>(frame.pb_frame.payload().size()))) {
                 if (spawn_handler_) {
                     SpawnResponse resp;
-                    // Extract ActorAddress from protobuf
-                    auto& pb_addr = pb_resp.actor_addr();
-                    resp.actor_addr.endpoint =
-                        from_proto(pb_addr.endpoint());
-                    resp.actor_addr.type = static_cast<ActorType>(pb_addr.type());
-                    resp.actor_addr.id = ActorId(pb_addr.actor_id());
-                    resp.actor_addr.incarnation = pb_addr.incarnation();
+                    resp.actor_addr = net::from_proto(pb_resp.actor_addr());
                     resp.error_code = pb_resp.error_code();
-                    spawn_handler_(frame.message_id, resp);
+                    spawn_handler_(frame.pb_frame.message_id(), resp);
                     return;
                 }
             }
@@ -235,7 +203,9 @@ void ConnectionPool::on_frame_received(std::span<const uint8_t> frame_data) {
 
         // Fall through to RPC handler
         if (rpc_handler_) {
-            rpc_handler_(MessageId(frame.message_id), frame.payload);
+            rpc_handler_(MessageId(frame.pb_frame.message_id()),
+                         StreamBuffer(frame.pb_frame.payload().begin(),
+                                      frame.pb_frame.payload().end()));
         }
         return;
     }

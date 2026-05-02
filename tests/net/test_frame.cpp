@@ -21,15 +21,13 @@ using namespace hpactor;
 using namespace hpactor::net;
 
 int main() {
-    // Test Frame default construction
+    // Test WireFrame default construction
     WireFrame f1;
-    assert(f1.sender.endpoint == endpoint_ops::parse_endpoint(""));
-    assert(f1.receiver.endpoint == endpoint_ops::parse_endpoint(""));
-    assert(f1.payload.empty());
-    assert(f1.flags == 0);
-    assert(f1.message_id == 0);
+    assert(f1.magic_hdr == WireFrame::MagicHeader);
+    assert(f1.pb_frame.flags() == 0);
+    assert(f1.pb_frame.message_id() == 0);
 
-    // Test Frame with values
+    // Test WireFrame with values
     ActorId sender_id(100);
     ActorId receiver_id(200);
     ActorAddress sender(endpoint_ops::parse_endpoint("node1:12345"), 10,
@@ -38,32 +36,35 @@ int main() {
                           receiver_id, 6);
 
     WireFrame f2;
-    f2.sender = sender;
-    f2.receiver = receiver;
-    f2.payload = {1, 2, 3, 4, 5};
-    f2.flags = WireFrame::Important;
-    f2.message_id = 12345;
+    to_proto(f2.pb_frame.mutable_sender(), sender);
+    to_proto(f2.pb_frame.mutable_receiver(), receiver);
+    f2.pb_frame.set_payload("hello", 5);
+    f2.pb_frame.set_flags(WireFrame::Important);
+    f2.pb_frame.set_message_id(12345);
 
     // Test encode/decode roundtrip
     StreamBuffer encoded = f2.encode();
     assert(!encoded.empty());
 
     WireFrame f3 = WireFrame::decode(encoded);
-    assert(f3.sender.endpoint == sender.endpoint);
-    assert(f3.sender.id.value() == sender.id.value());
-    assert(f3.sender.incarnation == sender.incarnation);
-    assert(f3.receiver.endpoint == receiver.endpoint);
-    assert(f3.receiver.id.value() == receiver.id.value());
-    assert(f3.receiver.incarnation == receiver.incarnation);
-    assert(f3.payload == f2.payload);
-    assert(f3.flags == f2.flags);
-    assert(f3.message_id == f2.message_id);
+    auto decoded_sender = from_proto(f3.pb_frame.sender());
+    auto decoded_receiver = from_proto(f3.pb_frame.receiver());
+    assert(decoded_sender.endpoint == sender.endpoint);
+    assert(decoded_sender.id.value() == sender.id.value());
+    assert(decoded_sender.incarnation == sender.incarnation);
+    assert(decoded_receiver.endpoint == receiver.endpoint);
+    assert(decoded_receiver.id.value() == receiver.id.value());
+    assert(decoded_receiver.incarnation == receiver.incarnation);
+    assert(f3.pb_frame.payload() == f2.pb_frame.payload());
+    assert(f3.pb_frame.flags() == f2.pb_frame.flags());
+    assert(f3.pb_frame.message_id() == f2.pb_frame.message_id());
 
     // Test malformed data handling
-    StreamBuffer malformed = {0xFF, 0xFF, 0xFF, 0xFF}; // Invalid protobuf
+    StreamBuffer malformed = {0xFF, 0xFF, 0xFF, 0xFF}; // Invalid magic
     WireFrame f_bad = WireFrame::decode(malformed);
     // Should return default frame, not crash
-    assert(f_bad.sender.id.value() == 0);
+    assert(f_bad.magic_hdr == WireFrame::MagicHeader);
+    assert(f_bad.pb_frame.message_id() == 0);
 
     // Test IPv6 endpoint
     std::array<uint8_t, 16> ipv6_addr = {0, 0, 0, 0, 0, 0, 0, 0,
@@ -74,17 +75,18 @@ int main() {
                                ActorId(400), 2};
 
     WireFrame f_ipv6;
-    f_ipv6.sender = ipv6_sender;
-    f_ipv6.receiver = ipv6_receiver;
-    f_ipv6.payload = {1, 2, 3};
-    f_ipv6.message_id = 99999;
+    to_proto(f_ipv6.pb_frame.mutable_sender(), ipv6_sender);
+    to_proto(f_ipv6.pb_frame.mutable_receiver(), ipv6_receiver);
+    f_ipv6.pb_frame.set_payload("xyz", 3);
+    f_ipv6.pb_frame.set_message_id(99999);
 
     StreamBuffer encoded_ipv6 = f_ipv6.encode();
     WireFrame decoded_ipv6 = WireFrame::decode(encoded_ipv6);
 
-    assert(std::get<Ipv6Endpoint>(decoded_ipv6.sender.endpoint).port_nw ==
-           htons(8080));
-    assert(decoded_ipv6.message_id == 99999);
+    assert(std::get<Ipv6Endpoint>(
+               from_proto(decoded_ipv6.pb_frame.sender()).endpoint)
+               .port_nw == htons(8080));
+    assert(decoded_ipv6.pb_frame.message_id() == 99999);
 
     return 0;
 }

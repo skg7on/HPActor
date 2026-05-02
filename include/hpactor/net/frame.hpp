@@ -17,7 +17,8 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
-
+#include <hpactor/common.pb.h>
+#include <hpactor/frame.pb.h>
 #include <span>
 
 namespace hpactor {
@@ -34,16 +35,13 @@ namespace net {
 //   [N bytes: protobuf-serialized ActorMsgFrame]
 // -----------------------------------------------------------------------------
 struct WireFrame {
-    ActorAddress sender;
-    ActorAddress receiver;
-    StreamBuffer payload;
-    uint32_t flags = 0;
-    uint64_t message_id = 0;
-    uint32_t type_tag = 0;
-
     // Magic header identifying HPACTOR framework messages
     static constexpr uint32_t MagicHeader = 0x43415048; // "HPAC" (little-endian)
     static constexpr size_t HeaderSize = 8; // 4 bytes magic + 4 bytes length
+
+    uint32_t magic_hdr = MagicHeader;
+    size_t length; // valid when called 'encode'
+    ::hpactor::net::ActorMsgFrame pb_frame;
 
     // Encode frame to wire format (magic + length + protobuf payload)
     StreamBuffer encode() const;
@@ -69,10 +67,14 @@ struct WireFrame {
                                                       // processing
 };
 
-// Protobuf interop - convert between HPActor types and protobuf bytes
-// (pure protobuf payload without magic/length framing)
-StreamBuffer frame_to_proto(const WireFrame& frame);
-WireFrame frame_from_proto(const StreamBuffer& data);
+// ---------------------------------------------------------------------------
+// Address conversion helpers — convert between C++ ActorAddress and protobuf
+// address types (oneof: local_addr / global_addr)
+// ---------------------------------------------------------------------------
+void to_proto(::hpactor::PbActorAddress* pb_addr, const ActorAddress& addr);
+void to_proto(::hpactor::PbActorRef* pb_ref, const ActorAddress& addr);
+ActorAddress from_proto(const ::hpactor::PbActorAddress& pb_addr);
+ActorAddress from_proto(const ::hpactor::PbActorRef& pb_ref);
 
 } // namespace net
 } // namespace hpactor

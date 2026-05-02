@@ -53,11 +53,13 @@ void test_spawn_request_encode_via_protobuf() {
     pb_req.set_args_type(static_cast<uint32_t>(hpactor::TypeTag::User));
     pb_req.set_serialized_args("abc");
     auto* sup = pb_req.mutable_supervisor();
-    sup->mutable_endpoint()->mutable_ipv4()->set_addr(0x7F000001);
-    sup->mutable_endpoint()->mutable_ipv4()->set_port(8080);
-    sup->set_type(10);
-    sup->set_actor_id(42);
-    sup->set_incarnation(1);
+    auto* sup_global = sup->mutable_global_addr();
+    sup_global->mutable_endpoint()->mutable_ipv4()->set_addr(0x7F000001);
+    sup_global->mutable_endpoint()->mutable_ipv4()->set_port(8080);
+    auto* sup_local = sup_global->mutable_local_addr();
+    sup_local->set_actor_type(10);
+    sup_local->set_actor_id(42);
+    sup_local->set_incarnation(1);
 
     hpactor::StreamBuffer encoded = registry.serialize(pb_req);
     assert(!encoded.empty());
@@ -67,7 +69,7 @@ void test_spawn_request_encode_via_protobuf() {
     assert(decoded != nullptr);
     auto* decoded_req = static_cast<::hpactor::SpawnRequestMessage*>(decoded.get());
     assert(decoded_req->actor_type_name() == "worker");
-    assert(decoded_req->supervisor().actor_id() == 42);
+    assert(decoded_req->supervisor().global_addr().local_addr().actor_id() == 42);
 }
 
 // Test SpawnResponse encode/decode via protobuf
@@ -77,11 +79,13 @@ void test_spawn_response_encode_via_protobuf() {
 
     ::hpactor::SpawnResponseMessage pb_resp;
     auto* addr = pb_resp.mutable_actor_addr();
-    addr->mutable_endpoint()->mutable_ipv4()->set_addr(0x7F000002);
-    addr->mutable_endpoint()->mutable_ipv4()->set_port(9090);
-    addr->set_type(20);
-    addr->set_actor_id(100);
-    addr->set_incarnation(1);
+    auto* addr_global = addr->mutable_global_addr();
+    addr_global->mutable_endpoint()->mutable_ipv4()->set_addr(0x7F000002);
+    addr_global->mutable_endpoint()->mutable_ipv4()->set_port(9090);
+    auto* addr_local = addr_global->mutable_local_addr();
+    addr_local->set_actor_type(20);
+    addr_local->set_actor_id(100);
+    addr_local->set_incarnation(1);
     pb_resp.set_error_code(hpactor::spawn_errors::success);
 
     hpactor::StreamBuffer encoded = registry.serialize(pb_resp);
@@ -90,7 +94,7 @@ void test_spawn_response_encode_via_protobuf() {
     auto decoded = registry.deserialize(hpactor::TypeTag::SpawnResponseTag, encoded);
     assert(decoded != nullptr);
     auto* decoded_resp = static_cast<::hpactor::SpawnResponseMessage*>(decoded.get());
-    assert(decoded_resp->actor_addr().actor_id() == 100);
+    assert(decoded_resp->actor_addr().global_addr().local_addr().actor_id() == 100);
     assert(decoded_resp->error_code() == hpactor::spawn_errors::success);
 }
 

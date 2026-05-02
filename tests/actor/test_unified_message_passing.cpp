@@ -32,11 +32,13 @@ void test_deliver_remote_bridge() {
     auto target = system.spawn<EventBasedActor>();
 
     net::WireFrame frame;
-    frame.sender = ActorAddress{endpoint_ops::parse_endpoint("10.0.0.1:9999"),
-                                ActorType{1}, ActorId{99}, 0};
-    frame.receiver = target.address();
-    frame.type_tag = static_cast<uint32_t>(TypeTag::User);
-    frame.payload = StreamBuffer{1, 3, 3, 7};
+    net::to_proto(frame.pb_frame.mutable_sender(),
+                  ActorAddress{endpoint_ops::parse_endpoint("10.0.0.1:9999"),
+                               ActorType{1}, ActorId{99}, 0});
+    net::to_proto(frame.pb_frame.mutable_receiver(), target.address());
+    frame.pb_frame.set_type_tag(static_cast<uint32_t>(TypeTag::User));
+    frame.pb_frame.set_payload(
+        reinterpret_cast<const char*>(StreamBuffer{1, 3, 3, 7}.data()), 4);
 
     system.deliver_remote(frame);
 

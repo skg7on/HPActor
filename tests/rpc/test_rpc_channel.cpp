@@ -94,7 +94,7 @@ void test_response() {
     // Decode frame to get the actual message ID
     hpactor::net::WireFrame frame =
         hpactor::net::WireFrame::decode(transport.sent_frames_[0]);
-    hpactor::MessageId actual_msg_id = hpactor::MessageId(frame.message_id);
+    hpactor::MessageId actual_msg_id = hpactor::MessageId(frame.pb_frame.message_id());
 
     // Simulate response with the correct message ID
     hpactor::StreamBuffer response_data = {4, 5, 6};

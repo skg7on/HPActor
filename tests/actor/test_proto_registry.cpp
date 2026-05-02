@@ -78,9 +78,10 @@ int main() {
         reg.register_type<PbActorRef>(TypeTag::User, "hpactor.PbActorRef");
 
         PbActorRef ref;
-        ref.set_type(1);
-        ref.set_actor_id(42);
-        ref.set_incarnation(0);
+        auto* local = ref.mutable_local_addr();
+        local->set_actor_type(1);
+        local->set_actor_id(42);
+        local->set_incarnation(0);
 
         StreamBuffer wire = reg.encode_wire(TypeTag::User, ref);
         assert(wire.size() > 4);
@@ -90,9 +91,9 @@ int main() {
         assert(msg != nullptr);
         auto* decoded = static_cast<PbActorRef*>(msg.get());
         assert(decoded != nullptr);
-        assert(decoded->type() == 1);
-        assert(decoded->actor_id() == 42);
-        assert(decoded->incarnation() == 0);
+        assert(decoded->local_addr().actor_type() == 1);
+        assert(decoded->local_addr().actor_id() == 42);
+        assert(decoded->local_addr().incarnation() == 0);
         printf("PASS\n");
     }
 

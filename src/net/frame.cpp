@@ -22,23 +22,22 @@ namespace hpactor {
 namespace net {
 
 StreamBuffer WireFrame::encode() const {
-    // Serialize to protobuf payload
-    StreamBuffer proto_payload = frame_to_proto(*this);
+    std::string serialized = pb_frame.SerializeAsString();
 
-    // Build framed message: magic + length + protobuf payload
     StreamBuffer result;
-    result.reserve(HeaderSize + proto_payload.size());
+    result.reserve(HeaderSize + serialized.size());
 
     // Magic "HPAC"
     const uint8_t magic[4] = {'H', 'P', 'A', 'C'};
     result.append(magic, 4);
 
     // Remaining length in network byte order
-    uint32_t payload_len = static_cast<uint32_t>(proto_payload.size());
+    uint32_t payload_len = static_cast<uint32_t>(serialized.size());
     uint32_t net_len = htonl(payload_len);
     result.append(reinterpret_cast<const uint8_t*>(&net_len), 4);
 
-    result.append(proto_payload.data(), proto_payload.size());
+    result.append(reinterpret_cast<const uint8_t*>(serialized.data()),
+                  serialized.size());
     return result;
 }
 
@@ -62,10 +61,14 @@ WireFrame WireFrame::decode(const StreamBuffer& data) {
         return WireFrame{};
     }
 
-    // Extract protobuf payload and decode
-    StreamBuffer proto_payload(data.begin() + HeaderSize,
-                               data.begin() + HeaderSize + payload_len);
-    return frame_from_proto(proto_payload);
+    // Parse protobuf payload directly into pb_frame
+    WireFrame frame;
+    std::string serialized(data.begin() + HeaderSize,
+                           data.begin() + HeaderSize + payload_len);
+    if (!frame.pb_frame.ParseFromString(serialized)) {
+        return WireFrame{};
+    }
+    return frame;
 }
 
 WireFrame WireFrame::decode(std::span<const uint8_t> data) {
