@@ -299,3 +299,7 @@ add_test(NAME test_size_class COMMAND test_size_class)
 add_executable(test_alloc_header mem/test_alloc_header.cpp)
 target_link_libraries(test_alloc_header hpactor)
 add_test(NAME test_alloc_header COMMAND test_alloc_header)
+
+add_executable(test_freelist mem/test_freelist.cpp)
+target_link_libraries(test_freelist hpactor pthread)
+add_test(NAME test_freelist COMMAND test_freelist)
