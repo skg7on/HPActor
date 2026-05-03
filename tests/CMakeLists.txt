@@ -295,3 +295,7 @@ set_tests_properties(test_http_gateway PROPERTIES TIMEOUT 15)
 add_executable(test_size_class mem/test_size_class.cpp)
 target_link_libraries(test_size_class hpactor)
 add_test(NAME test_size_class COMMAND test_size_class)
+
+add_executable(test_alloc_header mem/test_alloc_header.cpp)
+target_link_libraries(test_alloc_header hpactor)
+add_test(NAME test_alloc_header COMMAND test_alloc_header)
