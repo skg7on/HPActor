@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
+#include <hpactor/mem/memory_config.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <atomic>
@@ -55,9 +56,10 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
-    // Convenience: enqueue from a Message<T> rvalue (heap-allocates)
+    // Convenience: enqueue from a Message<T> rvalue (heap-allocates via custom allocator)
     void push(T&& msg) noexcept {
-        auto* node = new T(std::move(msg));
+        void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+        auto* node = new (raw) T(std::move(msg));
         enqueue(node);
     }
 
@@ -76,7 +78,8 @@ template <typename T> class MPSCActorMailbox {
         if (!node)
             return false;
         out = std::move(*node);
-        delete node;
+        node->~T();
+        mem::deallocate(node);
         return true;
     }
 
