@@ -315,3 +315,7 @@ add_test(NAME test_slab_cache COMMAND test_slab_cache)
 add_executable(test_thread_local_allocator mem/test_thread_local_allocator.cpp)
 target_link_libraries(test_thread_local_allocator hpactor pthread)
 add_test(NAME test_thread_local_allocator COMMAND test_thread_local_allocator)
+
+add_executable(test_memory_stress mem/test_memory_stress.cpp)
+target_link_libraries(test_memory_stress hpactor pthread)
+add_test(NAME test_memory_stress COMMAND test_memory_stress)
