@@ -288,3 +288,10 @@ add_executable(test_http_gateway net/test_http_gateway.cpp)
 target_link_libraries(test_http_gateway hpactor)
 add_test(NAME test_http_gateway COMMAND test_http_gateway)
 set_tests_properties(test_http_gateway PROPERTIES TIMEOUT 15)
+
+# =============================================================================
+# Memory tests
+# =============================================================================
+add_executable(test_size_class mem/test_size_class.cpp)
+target_link_libraries(test_size_class hpactor)
+add_test(NAME test_size_class COMMAND test_size_class)
