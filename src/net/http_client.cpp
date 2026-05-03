@@ -165,11 +165,14 @@ HttpClient::request(HttpMethod method, const std::string& url,
             complete = true;
         });
 
-    uint8_t buf[4096];
+    StreamBuffer read_buf;
     ssize_t n;
-    while (!complete && (n = read(fd, buf, sizeof(buf))) > 0) {
-        parser.execute(
-            std::span<const uint8_t>(buf, static_cast<size_t>(n)));
+    while (!complete && (n = read(fd, read_buf.reserve_tail(4096), 4096)) > 0) {
+        read_buf.commit_tail(static_cast<size_t>(n));
+        size_t consumed = parser.execute(read_buf);
+        if (consumed > 0) {
+            read_buf.consume(consumed);
+        }
     }
     close(fd);
 

@@ -19,7 +19,6 @@
 #include <algorithm>
 #include <cassert>
 #include <cstring>
-#include <span>
 #include <string>
 
 using namespace hpactor;
@@ -27,8 +26,10 @@ using namespace hpactor::net;
 
 namespace {
 
-std::span<const uint8_t> bytes_from(const char* str) {
-    return {reinterpret_cast<const uint8_t*>(str), strlen(str)};
+StreamBuffer bytes_from(const char* str) {
+    StreamBuffer buf;
+    buf.append(reinterpret_cast<const uint8_t*>(str), strlen(str));
+    return buf;
 }
 
 std::string body_to_string(const StreamBuffer& body) {
@@ -191,12 +192,12 @@ static void test_parse_incremental_feed() {
     const char* raw = "GET /test HTTP/1.1\r\nHost: example.com\r\n\r\n";
     size_t len = strlen(raw);
 
-    // Feed 4 StreamBuffer at a time
+    // Feed 4 bytes at a time
     for (size_t i = 0; i < len; i += 4) {
         size_t chunk = std::min(size_t(4), len - i);
-        std::span<const uint8_t> data(
-            reinterpret_cast<const uint8_t*>(raw + i), chunk);
-        parser.execute(data);
+        StreamBuffer chunk_buf;
+        chunk_buf.append(reinterpret_cast<const uint8_t*>(raw + i), chunk);
+        parser.execute(chunk_buf);
     }
 
     assert(received);

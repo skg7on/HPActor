@@ -65,7 +65,7 @@ void HttpParser::reset() {
     state_ = HttpParseState::Idle;
 }
 
-size_t HttpParser::execute(std::span<const uint8_t> data) {
+size_t HttpParser::execute(const StreamBuffer& data) {
     if (state_ == HttpParseState::Error) return 0;
 
     auto result = llhttp_execute(&parser_,

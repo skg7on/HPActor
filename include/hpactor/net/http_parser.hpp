@@ -18,7 +18,6 @@
 #include <hpactor/types/types.hpp>
 
 #include <functional>
-#include <span>
 #include <string>
 #include <vector>
 
@@ -63,7 +62,7 @@ class HttpParser {
     HttpParser(const HttpParser&) = delete;
     HttpParser& operator=(const HttpParser&) = delete;
 
-    size_t execute(std::span<const uint8_t> data);
+    size_t execute(const StreamBuffer& data);
 
     void set_on_message(MessageCallback cb) { on_message_ = std::move(cb); }
     void set_on_response(ResponseCallback cb) { on_response_ = std::move(cb); }

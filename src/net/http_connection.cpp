@@ -210,8 +210,7 @@ void HTTPConnection::handle_read() {
     if (n > 0) {
         read_buffer_.commit_tail(static_cast<size_t>(n));
         // Feed to parser.
-        std::span<const uint8_t> data(read_buffer_.data(), read_buffer_.size());
-        size_t consumed = parser_->execute(data);
+        size_t consumed = parser_->execute(read_buffer_);
         // Consume parsed bytes from read buffer.
         if (consumed > 0) {
             read_buffer_.consume(consumed);
