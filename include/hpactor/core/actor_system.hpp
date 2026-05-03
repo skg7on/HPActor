@@ -23,6 +23,7 @@
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/http_client.hpp>
 #include <hpactor/net/tcp_transport.hpp>
+#include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
@@ -305,8 +306,23 @@ Actor ActorSystem::spawn(Args&&... args) {
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mailboxes_[id].get());
 
-    // Add actor to scheduler's queue so it gets executed
-    scheduler_->notify_ready(id, 0, INT64_MAX);
+    // Register with scheduler based on dispatch policy.
+    // Cooperative actors go onto the work-stealing pool. Dedicated actors
+    // are registered with the scheduler but NOT placed on the cooperative
+    // pool — they manage their own threads or use DedicatedThreadPool.
+    switch (actor->dispatch_policy()) {
+    case sched::DispatchPolicy::Cooperative:
+        scheduler_->notify_ready(id, 0, INT64_MAX);
+        break;
+    case sched::DispatchPolicy::DedicatedThread:
+        scheduler_->register_dedicated_thread(id,
+            actor->dispatch_hints().cpu_affinity);
+        break;
+    case sched::DispatchPolicy::DedicatedPool:
+        scheduler_->register_dedicated_pool(id,
+            actor->dispatch_hints().pool_size);
+        break;
+    }
 
     // Activate the actor (DaemonActor starts its thread here, etc.)
     actor->on_activate();
