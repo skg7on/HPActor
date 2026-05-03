@@ -13,8 +13,17 @@
 // limitations under the License.
 
 #include <hpactor/mem/slab_cache.hpp>
+#include <hpactor/hpactor_config.hpp>
+
+#include <cstring>
 
 namespace hpactor::mem {
+
+#if HPACTOR_ENABLE_MEMORY_DEBUG
+namespace {
+inline constexpr uint8_t kPoisonByte = 0xAA;
+} // namespace
+#endif
 
 SlabCache::~SlabCache() {
     for (auto* slab : slabs_) {
@@ -26,6 +35,26 @@ void* SlabCache::allocate(ActorId owner) noexcept {
     // 1. Try freelist first
     auto* block = freelist_.pop();
     if (block) {
+#if HPACTOR_ENABLE_MEMORY_DEBUG
+        // Verify canary was not corrupted while block was freed
+        size_t bs = block_size(size_class_);
+        if (!CanaryFooter::verify(block, bs)) {
+            stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
+            live_count_.fetch_add(1, std::memory_order_relaxed);
+            return nullptr; // corruption detected, refuse allocation
+        }
+        // Check poison pattern — first bytes should be 0xAA
+        auto* user = static_cast<uint8_t*>(block->user_data());
+        size_t usz = user_size(bs);
+        for (size_t i = 0; i < usz && i < 16; ++i) {
+            if (user[i] != kPoisonByte) {
+                // use-after-free detected
+                stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
+                live_count_.fetch_add(1, std::memory_order_relaxed);
+                return nullptr;
+            }
+        }
+#endif
         block->owner_id = owner.value();
         block->magic = kAllocMagic;
         block->generation = current_generation_;
@@ -54,11 +83,20 @@ void* SlabCache::allocate(ActorId owner) noexcept {
     if (current_slab_) {
         return allocate(owner);
     }
-    return nullptr; // OOM
+    return nullptr;
 }
 
 void SlabCache::deallocate(void* user_ptr) noexcept {
     auto* hdr = AllocHeader::from_user_data(user_ptr);
+
+#if HPACTOR_ENABLE_MEMORY_DEBUG
+    size_t bs = block_size(size_class_);
+    // Verify canary before freeing (catch buffer overflow)
+    CanaryFooter::verify(hdr, bs);
+    // Poison user data to catch use-after-free
+    std::memset(user_ptr, kPoisonByte, user_size(bs));
+#endif
+
     hdr->magic = kFreedMagic;
     stats_.free_count.fetch_add(1, std::memory_order_relaxed);
     live_count_.fetch_sub(1, std::memory_order_relaxed);
