@@ -51,6 +51,9 @@ static bool is_default_local_endpoint(const EndPoint& ep) {
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
         return ipv4->is_loopback() && ipv4->port() == 0;
     }
+    if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
+        return ipv6->is_loopback() && ipv6->port() == 0;
+    }
     return false;
 }
 
