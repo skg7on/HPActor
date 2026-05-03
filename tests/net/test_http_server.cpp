@@ -54,7 +54,7 @@ class EchoActor final : public EventBasedActor {
 };
 
 // =============================================================================
-// SlowActor — never replies (used for timeout test via non-existent delivery)
+// SlowActor — never replies (used for timeout test)
 // =============================================================================
 class SlowActor final : public EventBasedActor {
   public:
@@ -85,36 +85,66 @@ std::string body_to_string(const StreamBuffer& body) {
     return {body.begin(), body.end()};
 }
 
+// Find an available port via OS-assigned port 0
+static uint16_t find_available_port() {
+    int test_fd = socket(AF_INET, SOCK_STREAM, 0);
+    struct sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = INADDR_ANY;
+    addr.sin_port = 0;
+    socklen_t len = sizeof(addr);
+    bind(test_fd, reinterpret_cast<struct sockaddr*>(&addr), len);
+    getsockname(test_fd, reinterpret_cast<struct sockaddr*>(&addr), &len);
+    uint16_t port = ntohs(addr.sin_port);
+    close(test_fd);
+    return port;
+}
+
 } // namespace
 
 // =============================================================================
-// HttpTestFixture — sets up ActorSystem, HttpServer, echo actor on bg thread
+// HttpTestFixture — sets up ActorSystem, HTTPServerActor via DaemonActor spawn
 // =============================================================================
 struct HttpTestFixture {
     ActorSystem system{Config{}};
-    HttpServer server{&system};
     Actor echo_actor;
-    std::thread server_thread;
+    Actor slow_actor;
+    Actor server_actor;
+    net::HTTPServerActor* server = nullptr;
     uint16_t port = 0;
 
     HttpTestFixture() {
         echo_actor = system.spawn<EchoActor>();
-        auto slow = system.spawn<SlowActor>();
-        (void)slow;
+        slow_actor = system.spawn<SlowActor>();
+        (void)slow_actor;
+
+        // Use port 0 to let the OS assign an available port.
+        // The server's port() will return 0, so we find the actual port
+        // via a test socket on the same port range.
+        port = find_available_port();
+
+        // Spawn HTTPServerActor — DaemonActor starts its dedicated thread
+        // automatically via on_activate().
+        server_actor = system.spawn<net::HTTPServerActor>("0.0.0.0", port);
+        server = static_cast<net::HTTPServerActor*>(server_actor.get().get());
+
+        // Wait for the daemon to bind and start accepting
+        while (!server->is_listening()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds(10));
+        }
 
         setup_routes();
-        start_server();
     }
 
     ~HttpTestFixture() {
-        server.stop();
-        if (server_thread.joinable()) server_thread.join();
+        // ActorSystem destructor calls on_deactivate() on the HTTPServerActor,
+        // which stops the event loop and joins the daemon thread cleanly.
     }
 
   private:
     void setup_routes() {
         // POST /echo — simple echo
-        server.route(HttpMethod::POST, "/echo",
+        server->route(HttpMethod::POST, "/echo",
             [this](const HttpRequest& req)
                 -> std::pair<ActorAddress, TypedMessage> {
                 TypedMessage msg(TypeTag::User, req.body);
@@ -122,7 +152,7 @@ struct HttpTestFixture {
             });
 
         // POST /echo/:name — named param echo
-        server.route(HttpMethod::POST, "/echo/:name",
+        server->route(HttpMethod::POST, "/echo/:name",
             [this](const HttpRequest& req)
                 -> std::pair<ActorAddress, TypedMessage> {
                 auto it = req.path_params.find("name");
@@ -136,7 +166,7 @@ struct HttpTestFixture {
             });
 
         // POST /slow — delivers to non-existent ActorId → triggers 504 timeout
-        server.route(HttpMethod::POST, "/slow",
+        server->route(HttpMethod::POST, "/slow",
             [](const HttpRequest& req)
                 -> std::pair<ActorAddress, TypedMessage> {
                 ActorAddress no_one(
@@ -145,33 +175,10 @@ struct HttpTestFixture {
                 return {no_one, std::move(msg)};
             });
     }
-
-    void start_server() {
-        // Find available port via OS-assigned port 0
-        int test_fd = socket(AF_INET, SOCK_STREAM, 0);
-        struct sockaddr_in addr{};
-        addr.sin_family = AF_INET;
-        addr.sin_addr.s_addr = INADDR_ANY;
-        addr.sin_port = 0;
-        socklen_t len = sizeof(addr);
-        bind(test_fd, reinterpret_cast<struct sockaddr*>(&addr), len);
-        getsockname(test_fd, reinterpret_cast<struct sockaddr*>(&addr), &len);
-        port = ntohs(addr.sin_port);
-        close(test_fd);
-
-        server_thread = std::thread([this] {
-            server.listen(port);  // blocks until stop()
-        });
-
-        // Poll until server is accepting
-        while (!server.is_running()) {
-            std::this_thread::sleep_for(std::chrono::milliseconds(10));
-        }
-    }
 };
 
 // =============================================================================
-// Test 14: E2E — POST to echo actor returns 200 with body
+// Test 1: E2E — POST to echo actor returns 200 with body
 // =============================================================================
 static void test_e2e_post_echo_actor() {
     HttpTestFixture f;
@@ -181,7 +188,6 @@ static void test_e2e_post_echo_actor() {
     auto future = client.post(url, make_body("hello"));
     auto result = future.get();
 
-    // If the result is an error, print the error details for debugging
     if (!result.has_value()) {
         const auto& err = result.error();
         fprintf(stderr, "ERROR: code=%u msg=%s\n", err.code(), err.message().c_str());
@@ -197,7 +203,7 @@ static void test_e2e_post_echo_actor() {
 
 #if 0
 // =============================================================================
-// Test 15: E2E — missing route returns error (requires shutdown fix)
+// Test 2: E2E — missing route returns 404
 // =============================================================================
 static void test_e2e_missing_route_404() {
     HttpTestFixture f;
@@ -212,12 +218,12 @@ static void test_e2e_missing_route_404() {
 }
 
 // =============================================================================
-// Test 16: E2E — actor timeout returns 504
+// Test 3: E2E — actor timeout returns 504
 // =============================================================================
 static void test_e2e_actor_timeout_504() {
     HttpTestFixture f;
     // Short reply timeout for faster test
-    f.server.set_reply_timeout(std::chrono::milliseconds(200));
+    f.server->set_reply_timeout(std::chrono::milliseconds(200));
 
     HttpClient client(nullptr);
     std::string url = "http://127.0.0.1:" + std::to_string(f.port) + "/slow";
@@ -229,7 +235,7 @@ static void test_e2e_actor_timeout_504() {
 }
 
 // =============================================================================
-// Test 17: E2E — invalid HTTP returns 400 (raw socket)
+// Test 4: E2E — invalid HTTP returns 400 (raw socket)
 // =============================================================================
 static void test_e2e_invalid_http_400() {
     HttpTestFixture f;
@@ -257,7 +263,7 @@ static void test_e2e_invalid_http_400() {
 }
 
 // =============================================================================
-// Test 18: E2E — keepalive: two requests on same connection
+// Test 5: E2E — keepalive: two requests on same connection
 // =============================================================================
 static void test_e2e_keepalive_two_requests() {
     HttpTestFixture f;
@@ -302,7 +308,7 @@ static void test_e2e_keepalive_two_requests() {
 }
 
 // =============================================================================
-// Test 19: E2E — named route params extracted and echoed
+// Test 6: E2E — named route params extracted and echoed
 // =============================================================================
 static void test_e2e_named_route_params() {
     HttpTestFixture f;
@@ -319,7 +325,7 @@ static void test_e2e_named_route_params() {
     assert(resp.find("{\"data\":\"") == 0);
 }
 
-#endif // 0 — remaining tests disabled pending shutdown fix
+#endif // 0 — remaining tests disabled pending full verification
 
 int main() {
     test_e2e_post_echo_actor();

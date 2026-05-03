@@ -12,16 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/net/event_loop.hpp>
-#include <hpactor/net/http_parser.hpp>
 #include <hpactor/net/http_server.hpp>
-#include <hpactor/net/http_serializer.hpp>
-#include <hpactor/net/http_types.hpp>
-#include <hpactor/types/types.hpp>
 
 #include <arpa/inet.h>
 #include <fcntl.h>
@@ -29,21 +21,14 @@
 #include <unistd.h>
 
 #include <algorithm>
-#include <thread>
-#include <chrono>
 #include <cstring>
-#include <functional>
-#include <memory>
-#include <string>
-#include <unordered_map>
-#include <utility>
-#include <vector>
+#include <thread>
 
 namespace hpactor {
 namespace net {
 
 // =============================================================================
-// RouteRegistry Implementation
+// RouteRegistry Implementation (PRESERVED VERBATIM from old http_server.cpp)
 // =============================================================================
 
 enum class PatternSegmentType { Literal, NamedParam, SingleWildcard, MultiWildcard };
@@ -153,7 +138,7 @@ RouteRegistry::match(HttpMethod method, const std::string& path,
 }
 
 // =============================================================================
-// ReplyAdapter — internal actor receiving actor replies for HttpServer
+// ReplyAdapter — internal EventBasedActor for receiving actor replies
 // =============================================================================
 namespace {
 
@@ -161,8 +146,6 @@ class ReplyAdapter final : public EventBasedActor {
   public:
     using ReplyHandler = std::function<void(TypedMessage&&)>;
 
-    // Constructor matches spawn<T>(args...) expectations:
-    //   make_shared<T>(ActorContext*, ActorSystem&, args...)
     ReplyAdapter(ActorContext* ctx, ActorSystem& sys, ReplyHandler handler)
         : EventBasedActor(ctx, sys), handler_(std::move(handler)) {
         become(make_behavior());
@@ -183,191 +166,171 @@ class ReplyAdapter final : public EventBasedActor {
 } // anonymous namespace
 
 // =============================================================================
-// HttpServer::ConnectionCtx and PendingReply
+// HTTPServerActor Implementation
 // =============================================================================
 
-struct HttpServer::ConnectionCtx {
-    int fd = -1;
-    std::unique_ptr<HttpParser> parser;
-    StreamBuffer read_buf;
-    std::vector<StreamBuffer> write_queue;
-    bool keepalive = true;
-};
-
-struct HttpServer::PendingReply {
-    uint64_t request_id;
-    int client_fd;
-    std::chrono::steady_clock::time_point enqueued_at;
-};
-
-// =============================================================================
-// HttpServer Implementation
-// =============================================================================
-
-HttpServer::HttpServer(ActorSystem* system) : system_(system) {
-    serializer_ = std::make_unique<HttpSerializer>();
+HTTPServerActor::HTTPServerActor(ActorContext* ctx, ActorSystem& sys,
+                                 const std::string& bind_host, uint16_t port)
+    : DaemonActor(ctx, sys),
+      serializer_(std::make_unique<HttpSerializer>()),
+      bind_host_(bind_host),
+      port_(port) {
 
     auto handler = [this](TypedMessage&& msg) {
-        on_reply(std::move(msg));
+        std::lock_guard<std::mutex> lock(reply_queue_mutex_);
+        reply_queue_.push(std::move(msg));
     };
-    reply_adapter_ = system_->spawn<ReplyAdapter>(std::move(handler));
+    reply_adapter_ = system().spawn<ReplyAdapter>(std::move(handler));
 }
 
-HttpServer::~HttpServer() { stop(); }
+HTTPServerActor::~HTTPServerActor() {
+    // Signal the daemon loop to stop and join its thread before the vtable
+    // changes during base-class destruction. Without this, the daemon thread
+    // may call virtual functions (on_daemon_stop / run_once) after the vtable
+    // has switched to DaemonActor, where run_once() is pure virtual.
+    on_deactivate();
+}
 
-void HttpServer::route(HttpMethod method, std::string path_pattern,
-                       MessageBuilder builder, int priority) {
+void HTTPServerActor::route(HttpMethod method, std::string path_pattern,
+                             MessageBuilder builder, int priority) {
     routes_.add(method, std::move(path_pattern), std::move(builder), priority);
 }
 
-void HttpServer::listen(uint16_t port, std::string host) {
-    // 1. Create and bind socket
-    listening_fd_ = socket(AF_INET, SOCK_STREAM, 0);
-    if (listening_fd_ < 0) return;
+void HTTPServerActor::route(HttpMethod method, std::string path_pattern,
+                             ActorAddr target) {
+    auto serializer = serializer_.get();
+    route(method, std::move(path_pattern),
+          [target, serializer](const HttpRequest& req)
+              -> std::pair<ActorAddress, TypedMessage> {
+              auto result = serializer->deserialize_request(req, TypeTag::User);
+              if (!result.has_value()) {
+                  return {invalid_actor_addr, TypedMessage{}};
+              }
+              return {target, std::move(result.value())};
+          });
+}
+
+void HTTPServerActor::on_daemon_start() {
+    listen_fd_ = socket(AF_INET, SOCK_STREAM, 0);
+    if (listen_fd_ < 0) return;
 
     int opt = 1;
-    setsockopt(listening_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    fcntl(listening_fd_, F_SETFL, O_NONBLOCK);
+    setsockopt(listen_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
+    fcntl(listen_fd_, F_SETFL, O_NONBLOCK);
 
-    struct sockaddr_in addr {};
+    struct sockaddr_in addr{};
     addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    if (host == "0.0.0.0") {
+    addr.sin_port = htons(port_);
+    if (bind_host_ == "0.0.0.0") {
         addr.sin_addr.s_addr = INADDR_ANY;
     } else {
-        inet_pton(AF_INET, host.c_str(), &addr.sin_addr);
+        inet_pton(AF_INET, bind_host_.c_str(), &addr.sin_addr);
     }
 
-    if (bind(listening_fd_, reinterpret_cast<struct sockaddr*>(&addr),
-             sizeof(addr)) < 0) {
-        close(listening_fd_);
-        listening_fd_ = -1;
+    if (bind(listen_fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+        ::close(listen_fd_);
+        listen_fd_ = -1;
         return;
     }
-    if (::listen(listening_fd_, SOMAXCONN) < 0) {
-        close(listening_fd_);
-        listening_fd_ = -1;
+    if (::listen(listen_fd_, SOMAXCONN) < 0) {
+        ::close(listen_fd_);
+        listen_fd_ = -1;
         return;
     }
 
-    bound_port_ = port;
-
-    // 2. Start the backend first (required before add_fd on some backends)
     loop_.run();
-
-    // 3. Register accept handler
-    loop_.add_fd(listening_fd_, EventLoop::Event::Read);
-    loop_.set_read_handler(listening_fd_, [this](int /*fd*/) {
-        struct sockaddr_in client_addr {};
-        socklen_t client_len = sizeof(client_addr);
-        int client_fd = ::accept(
-            listening_fd_, reinterpret_cast<struct sockaddr*>(&client_addr),
-            &client_len);
-        if (client_fd < 0) return;
-
-        fcntl(client_fd, F_SETFL, O_NONBLOCK);
-
-        if (connections_.size() >= max_connections_) {
-            close(client_fd);
-            return;
-        }
-
-        auto ctx = std::make_unique<ConnectionCtx>();
-        ctx->fd = client_fd;
-        ctx->parser = std::make_unique<HttpParser>();
-        ctx->parser->set_on_message(
-            [this, fd = client_fd](HttpRequest&& req) {
-                on_parse_complete(fd, std::move(req));
-            });
-        ctx->parser->set_on_error(
-            [this, fd = client_fd](llhttp_errno_t /*err*/, const char* msg) {
-                send_error(fd, HttpStatusCode::BadRequest,
-                           msg ? msg : "Parse error");
-            });
-
-        connections_[client_fd] = std::move(ctx);
-
-        loop_.add_fd(client_fd, EventLoop::Event::Read);
-        loop_.set_read_handler(client_fd,
-                               [this](int cfd) { on_read(cfd); });
+    loop_.add_fd(listen_fd_, EventLoop::Event::Read);
+    loop_.set_read_handler(listen_fd_, [this](int) {
+        on_accept();
     });
+}
 
-    // 4. Signal ready and block processing events until stop() is called
-    running_.store(true, std::memory_order_release);
-    while (running_.load(std::memory_order_acquire)) {
-        loop_.wait(100);
-        loop_.process_completions();
-    }
-
-    // 5. Cleanup on the background thread (after EventLoop exits)
+void HTTPServerActor::on_daemon_stop() {
     {
-        std::lock_guard<std::mutex> lock(map_mutex_);
-        for (auto& [fd, ctx] : connections_) {
-            loop_.clear_read_handler(fd);
-            loop_.remove_fd(fd);
-            close(fd);
+        std::lock_guard<std::mutex> lock(conn_mutex_);
+        for (auto& [ptr, conn] : connections_) {
+            conn->close();
         }
         connections_.clear();
+    }
+    {
+        std::lock_guard<std::mutex> lock(reply_mutex_);
         pending_replies_.clear();
     }
 
-    if (listening_fd_ >= 0) {
-        loop_.clear_read_handler(listening_fd_);
-        loop_.remove_fd(listening_fd_);
-        close(listening_fd_);
-        listening_fd_ = -1;
+    if (listen_fd_ >= 0) {
+        loop_.clear_read_handler(listen_fd_);
+        loop_.remove_fd(listen_fd_);
+        ::close(listen_fd_);
+        listen_fd_ = -1;
     }
-}
-
-void HttpServer::stop() {
-    if (!running_.load(std::memory_order_acquire)) return;
-    running_.store(false, std::memory_order_release);
     loop_.stop();
-    // Cleanup (connections_, pending_replies_, listening_fd_) happens in
-    // listen() after the event loop exits — on the background thread.
 }
 
-void HttpServer::on_read(int client_fd) {
-    auto it = connections_.find(client_fd);
-    if (it == connections_.end()) return;
+bool HTTPServerActor::run_once() {
+    loop_.wait(100);
+    loop_.process_completions();
 
-    auto& ctx = it->second;
-    uint8_t buf[8192];
-    ssize_t n = read(client_fd, buf, sizeof(buf));
-
-    if (n <= 0) {
-        close_connection(client_fd);
-        return;
+    // Drain reply queue — enqueued by ReplyAdapter from scheduler threads.
+    // We process replies on the daemon thread to avoid races on
+    // HTTPConnection's internal write_buffer_ / is_sending_ state.
+    for (;;) {
+        TypedMessage msg;
+        {
+            std::lock_guard<std::mutex> lock(reply_queue_mutex_);
+            if (reply_queue_.empty()) break;
+            msg = std::move(reply_queue_.front());
+            reply_queue_.pop();
+        }
+        on_reply(std::move(msg));
     }
 
-    if (ctx->read_buf.size() + static_cast<size_t>(n) > max_request_size_) {
-        send_error(client_fd, HttpStatusCode::PayloadTooLarge,
-                   "Request entity too large");
-        return;
+    return true;
+}
+
+void HTTPServerActor::on_deactivate() {
+    loop_.stop();  // Unblock loop_.wait() so daemon loop can exit cleanly
+    DaemonActor::on_deactivate();  // Sets running_=false, joins daemon thread
+}
+
+void HTTPServerActor::on_accept() {
+    struct sockaddr_in client_addr{};
+    socklen_t client_len = sizeof(client_addr);
+    int client_fd = ::accept(listen_fd_, reinterpret_cast<struct sockaddr*>(&client_addr), &client_len);
+    if (client_fd < 0) return;
+
+    fcntl(client_fd, F_SETFL, O_NONBLOCK);
+
+    {
+        std::lock_guard<std::mutex> lock(conn_mutex_);
+        if (connections_.size() >= max_connections_) {
+            ::close(client_fd);
+            return;
+        }
     }
 
-    ctx->read_buf.append(buf, static_cast<size_t>(n));
-    ctx->parser->execute(
-        std::span<const uint8_t>(ctx->read_buf.data(), ctx->read_buf.size()));
+    auto conn = HTTPConnection::create(client_fd, LocalEndpoint,
+        Ipv4Endpoint{}, &loop_, HTTPConnectionMode::Server);
 
-    auto state = ctx->parser->state();
-    if (state == HttpParseState::Complete || state == HttpParseState::Idle) {
-        ctx->read_buf.clear();
+    conn->set_request_handler([this](HTTPConnection* c, HttpRequest&& req) {
+        on_request(c, std::move(req));
+    });
+    conn->set_error_handler([this](HTTPConnection* c, const error& err) {
+        on_error(c, err);
+    });
+
+    {
+        std::lock_guard<std::mutex> lock(conn_mutex_);
+        connections_[conn.get()] = std::move(conn);
     }
 }
 
-void HttpServer::on_parse_complete(int client_fd, HttpRequest&& request) {
-    auto it = connections_.find(client_fd);
-    if (it == connections_.end()) return;
-
-    auto& ctx = it->second;
-
-    // Parse query string
-    size_t qpos = request.path.find('?');
+void HTTPServerActor::on_request(HTTPConnection* conn, HttpRequest&& req) {
+    // Parse query string (preserved from old code)
+    size_t qpos = req.path.find('?');
     if (qpos != std::string::npos) {
-        std::string query_str = request.path.substr(qpos + 1);
-        request.path = request.path.substr(0, qpos);
-
+        std::string query_str = req.path.substr(qpos + 1);
+        req.path = req.path.substr(0, qpos);
         size_t pos = 0;
         while (pos < query_str.size()) {
             size_t eq = query_str.find('=', pos);
@@ -375,7 +338,7 @@ void HttpServer::on_parse_complete(int client_fd, HttpRequest&& request) {
             if (eq != std::string::npos && (amp == std::string::npos || eq < amp)) {
                 size_t vstart = eq + 1;
                 size_t vend = amp == std::string::npos ? query_str.size() : amp;
-                request.query_params[query_str.substr(pos, eq - pos)] =
+                req.query_params[query_str.substr(pos, eq - pos)] =
                     query_str.substr(vstart, vend - vstart);
             }
             pos = amp == std::string::npos ? query_str.size() : amp + 1;
@@ -383,74 +346,63 @@ void HttpServer::on_parse_complete(int client_fd, HttpRequest&& request) {
     }
 
     // Match route
-    const auto* builder = routes_.match(request.method, request.path, request);
+    const auto* builder = routes_.match(req.method, req.path, req);
     if (!builder) {
-        send_error(client_fd, HttpStatusCode::NotFound,
-                   "No route for " + request.path);
+        StreamBuffer body;
+        conn->send_response(HttpStatusCode::NotFound,
+            {{"Content-Type", "text/plain"}, {"Connection", "close"}},
+            std::move(body));
+        close_connection(conn);
         return;
     }
 
     // Build target + TypedMessage
-    auto [target, msg] = (*builder)(request);
+    auto [target, msg] = (*builder)(req);
+    if (!target) {
+        StreamBuffer body;
+        conn->send_response(HttpStatusCode::InternalError,
+            {{"Content-Type", "text/plain"}, {"Connection", "close"}},
+            std::move(body));
+        close_connection(conn);
+        return;
+    }
 
     // Set up reply tracking with correlation ID
-    uint64_t request_id = next_global_request_id_++;
+    uint64_t request_id = next_request_id_++;
     auto pending = std::make_unique<PendingReply>();
     pending->request_id = request_id;
-    pending->client_fd = client_fd;
+    pending->conn = conn;
     pending->enqueued_at = std::chrono::steady_clock::now();
     {
-        std::lock_guard<std::mutex> lock(map_mutex_);
+        std::lock_guard<std::mutex> lock(reply_mutex_);
         pending_replies_[request_id] = std::move(pending);
     }
 
     // Encode correlation ID into payload prefix (8 bytes BE)
     StreamBuffer correlated;
     for (int i = 7; i >= 0; --i) {
-        correlated.push_back(
-            static_cast<uint8_t>((request_id >> (i * 8)) & 0xFF));
+        correlated.push_back(static_cast<uint8_t>((request_id >> (i * 8)) & 0xFF));
     }
     correlated.append(msg.payload().data(), msg.payload().size());
 
     TypedMessage correlated_msg(msg.type_id(), correlated);
-    // Set reply address to our ReplyAdapter
-    auto reply_addr = reply_adapter_.address();
-    correlated_msg.set_sender_address(reply_addr);
+    // Set sender address to the reply adapter so that the target actor's
+    // context()->reply() routes the reply back to our ReplyAdapter.
+    correlated_msg.set_sender_address(reply_adapter_.address());
 
-    // Synchronous message processing — completely bypass the scheduler.
-    // 1. Deliver message to EchoActor by calling receive() directly
-    auto target_actor = system_->get_actor(target.id);
-    if (target_actor) {
-        target_actor->receive(correlated_msg);
-    }
-
-    // 2. The EchoActor's reply() enqueued a message to the ReplyAdapter's
-    // mailbox. Poll and process it synchronously (scheduler may also try).
-    auto reply_actor = system_->get_actor(reply_addr.id);
-    auto* reply_mbox = system_->get_mailbox(reply_addr.id);
-    if (reply_actor && reply_mbox) {
-        for (int attempt = 0; attempt < 20; ++attempt) {
-            TypedMessage dq;
-            if (reply_mbox->try_pop(dq)) {
-                reply_actor->receive(dq);
-                break;
-            }
-            std::this_thread::sleep_for(std::chrono::milliseconds(20));
-        }
-    }
-
-    // Track keepalive
-    ctx->keepalive = ctx->parser->should_keep_alive();
-    ctx->parser->reset();
+    // Deliver to the target actor's mailbox.
+    // Using system().deliver_local() directly (rather than context()->send())
+    // to avoid the context stamping our own address over the reply_adapter_'s
+    // address — we need replies to reach the ReplyAdapter, not this actor.
+    system().deliver_local(target.id, std::move(correlated_msg));
 
     // Schedule timeout
     int timeout_ms = static_cast<int>(
-        std::chrono::duration_cast<std::chrono::milliseconds>(
-            reply_timeout_).count());
+        std::chrono::duration_cast<std::chrono::milliseconds>(reply_timeout_).count());
     loop_.run_after([this, request_id] { on_timeout(request_id); }, timeout_ms);
 }
 
-void HttpServer::on_reply(TypedMessage&& msg) {
+void HTTPServerActor::on_reply(TypedMessage&& msg) {
     const auto& payload = msg.payload();
     if (payload.size() < 8) return;
 
@@ -459,116 +411,95 @@ void HttpServer::on_reply(TypedMessage&& msg) {
         request_id = (request_id << 8) | payload.data()[i];
     }
 
-    // Lock both maps — on_reply runs on scheduler thread via ReplyAdapter
-    bool should_close = false;
-    int client_fd = -1;
+    HTTPConnection* conn = nullptr;
     {
-        std::lock_guard<std::mutex> lock(map_mutex_);
+        std::lock_guard<std::mutex> lock(reply_mutex_);
         auto it = pending_replies_.find(request_id);
         if (it == pending_replies_.end()) return;
-
-        client_fd = it->second->client_fd;
+        conn = it->second->conn;
         pending_replies_.erase(it);
+    }
 
-        auto conn_it = connections_.find(client_fd);
-        if (conn_it == connections_.end()) return;
+    if (!conn) return;
 
-        should_close = !conn_it->second->keepalive;
+    // Strip 8-byte prefix to get actual reply payload
+    StreamBuffer reply_payload;
+    reply_payload.append(payload.data() + 8, payload.size() - 8);
+    TypedMessage reply_msg(msg.type_id(), reply_payload);
 
-        // Strip 8-byte prefix to get actual reply payload
-        StreamBuffer reply_payload;
-        reply_payload.append(payload.data() + 8, payload.size() - 8);
-        TypedMessage reply_msg(msg.type_id(), reply_payload);
+    auto [body, content_type] = serializer_->serialize_response(
+        reply_msg, "application/json");
 
-        auto [body, content_type] = serializer_->serialize_response(
-            reply_msg, "application/json");
+    std::vector<HttpHeader> headers = {{"Content-Type", content_type}};
 
-        // Build HTTP response wire format
-        std::string status_line = "HTTP/1.1 200 OK\r\n";
-        std::string headers_str;
-        headers_str += "Content-Type: " + content_type + "\r\n";
-        headers_str += "Content-Length: " + std::to_string(body.size()) + "\r\n";
-        if (should_close) {
-            headers_str += "Connection: close\r\n";
-        }
-        headers_str += "\r\n";
+    if (!conn->should_keep_alive()) {
+        headers.push_back({"Connection", "close"});
+    }
 
-        StreamBuffer wire;
-        wire.append(reinterpret_cast<const uint8_t*>(status_line.data()),
-                    status_line.size());
-        wire.append(reinterpret_cast<const uint8_t*>(headers_str.data()),
-                    headers_str.size());
-        wire.append(body.data(), body.size());
+    conn->send_response(HttpStatusCode::OK, std::move(headers), std::move(body));
 
-        ssize_t sent = write(client_fd, wire.data(), wire.size());
-        (void)sent;
-    } // unlock before close_connection
-
-    if (should_close) {
-        close_connection(client_fd);  // acquires its own lock
+    if (!conn->should_keep_alive()) {
+        close_connection(conn);
     }
 }
 
-void HttpServer::on_timeout(uint64_t request_id) {
-    std::lock_guard<std::mutex> lock(map_mutex_);
-    auto it = pending_replies_.find(request_id);
-    if (it == pending_replies_.end()) return;
-
-    send_error(it->second->client_fd, HttpStatusCode::GatewayTimeout,
-               "Upstream actor did not respond in time");
-    pending_replies_.erase(it);
-}
-
-void HttpServer::send_error(int client_fd, HttpStatusCode code,
-                             const std::string& message) {
-    std::string status_line = "HTTP/1.1 ";
-    status_line += std::to_string(static_cast<uint16_t>(code));
-    status_line += " ";
-    status_line += reason_phrase(code);
-    status_line += "\r\n";
-
-    std::string headers_str;
-    if (code != HttpStatusCode::NoContent) {
-        headers_str += "Content-Type: text/plain\r\n";
-        headers_str += "Content-Length: " + std::to_string(message.size()) + "\r\n";
-    }
-    headers_str += "Connection: close\r\n";
-    headers_str += "\r\n";
-
-    StreamBuffer wire;
-    wire.append(reinterpret_cast<const uint8_t*>(status_line.data()),
-                status_line.size());
-    wire.append(reinterpret_cast<const uint8_t*>(headers_str.data()),
-                headers_str.size());
-    if (code != HttpStatusCode::NoContent) {
-        wire.append(reinterpret_cast<const uint8_t*>(message.data()),
-                    message.size());
+void HTTPServerActor::on_error(HTTPConnection* conn, const error& err) {
+    HttpStatusCode code = HttpStatusCode::InternalError;
+    if (err.code() == errors::http_parse_error) {
+        code = HttpStatusCode::BadRequest;
     }
 
-    ssize_t sent = write(client_fd, wire.data(), wire.size());
-    (void)sent;
-    close_connection(client_fd);
+    StreamBuffer body;
+    const auto& msg = err.message();
+    if (!msg.empty()) {
+        body.append(reinterpret_cast<const uint8_t*>(msg.data()), msg.size());
+    }
+
+    conn->send_response(code,
+        {{"Content-Type", "text/plain"}, {"Connection", "close"}},
+        std::move(body));
+    close_connection(conn);
 }
 
-void HttpServer::close_connection(int client_fd) {
-    std::lock_guard<std::mutex> lock(map_mutex_);
+void HTTPServerActor::on_timeout(uint64_t request_id) {
+    HTTPConnection* conn = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(reply_mutex_);
+        auto it = pending_replies_.find(request_id);
+        if (it == pending_replies_.end()) return;
+        conn = it->second->conn;
+        pending_replies_.erase(it);
+    }
 
-    // Remove pending replies for this connection
-    for (auto pit = pending_replies_.begin(); pit != pending_replies_.end(); ) {
-        if (pit->second->client_fd == client_fd) {
-            pit = pending_replies_.erase(pit);
-        } else {
-            ++pit;
+    if (conn) {
+        StreamBuffer body;
+        const char* msg_str = "Upstream actor did not respond in time";
+        body.append(reinterpret_cast<const uint8_t*>(msg_str), strlen(msg_str));
+        conn->send_response(HttpStatusCode::GatewayTimeout,
+            {{"Content-Type", "text/plain"}, {"Connection", "close"}},
+            std::move(body));
+        close_connection(conn);
+    }
+}
+
+void HTTPServerActor::close_connection(HTTPConnection* conn) {
+    {
+        std::lock_guard<std::mutex> lock(reply_mutex_);
+        for (auto it = pending_replies_.begin(); it != pending_replies_.end(); ) {
+            if (it->second->conn == conn) {
+                it = pending_replies_.erase(it);
+            } else {
+                ++it;
+            }
         }
     }
 
-    auto it = connections_.find(client_fd);
-    if (it == connections_.end()) return;
-
-    loop_.clear_read_handler(client_fd);
-    loop_.remove_fd(client_fd);
-    close(client_fd);
-    connections_.erase(it);
+    std::lock_guard<std::mutex> lock(conn_mutex_);
+    auto it = connections_.find(conn);
+    if (it != connections_.end()) {
+        it->second->close();
+        connections_.erase(it);
+    }
 }
 
 } // namespace net

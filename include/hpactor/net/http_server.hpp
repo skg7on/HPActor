@@ -14,7 +14,10 @@
 
 #pragma once
 
+#include <hpactor/actor/daemon_actor.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/http_connection.hpp>
+#include <hpactor/net/http_serializer.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
@@ -25,19 +28,14 @@
 #include <functional>
 #include <memory>
 #include <mutex>
+#include <queue>
 #include <string>
 #include <unordered_map>
 #include <utility>
 #include <vector>
 
 namespace hpactor {
-
-class ActorSystem;
-
 namespace net {
-
-class HttpSerializer;
-class HttpParser;
 
 // ---------------------------------------------------------------------------
 // RouteRegistry — URL pattern matcher for HTTP routing
@@ -65,62 +63,77 @@ class RouteRegistry {
 };
 
 // ---------------------------------------------------------------------------
-// HttpServer — HTTP ingress gateway for actor communication
+// HTTPServerActor — DaemonActor-based HTTP ingress gateway
 // ---------------------------------------------------------------------------
-class HttpServer {
+class HTTPServerActor : public DaemonActor {
   public:
     using MessageBuilder = RouteRegistry::MessageBuilder;
 
-    explicit HttpServer(ActorSystem* system);
-    ~HttpServer();
+    HTTPServerActor(ActorContext* ctx, ActorSystem& sys,
+                    const std::string& bind_host, uint16_t port);
+    ~HTTPServerActor() override;
 
-    HttpServer(const HttpServer&) = delete;
-    HttpServer& operator=(const HttpServer&) = delete;
+    HTTPServerActor(const HTTPServerActor&) = delete;
+    HTTPServerActor& operator=(const HTTPServerActor&) = delete;
 
-    void listen(uint16_t port, std::string host = "0.0.0.0");
-    void stop();
-
+    // Route registration
     void route(HttpMethod method, std::string path_pattern,
                MessageBuilder builder, int priority = 0);
+    void route(HttpMethod method, std::string path_pattern, ActorAddr target);
 
-    void set_reply_timeout(std::chrono::milliseconds timeout) {
-        reply_timeout_ = timeout;
-    }
+    // Configuration
+    void set_reply_timeout(std::chrono::milliseconds t) { reply_timeout_ = t; }
     void set_max_connections(size_t max) { max_connections_ = max; }
-    void set_max_request_size(size_t max_bytes) { max_request_size_ = max_bytes; }
+    void set_max_request_size(size_t max) { max_request_size_ = max; }
 
-    uint16_t port() const { return bound_port_; }
-    bool is_running() const { return running_; }
+    uint16_t port() const { return port_; }
+    bool is_listening() const { return listen_fd_ >= 0; }
+
+    // DaemonActor overrides
+    bool run_once() override;
+
+  protected:
+    void on_daemon_start() override;
+    void on_daemon_stop() override;
+    void on_deactivate() override;
 
   private:
-    struct ConnectionCtx;
-    struct PendingReply;
-
-    void on_read(int client_fd);
-    void on_parse_complete(int client_fd, HttpRequest&& request);
+    void on_accept();
+    void on_request(HTTPConnection* conn, HttpRequest&& req);
     void on_reply(TypedMessage&& msg);
+    void on_error(HTTPConnection* conn, const error& err);
     void on_timeout(uint64_t request_id);
-    void send_error(int client_fd, HttpStatusCode code,
-                    const std::string& message);
-    void close_connection(int client_fd);
+    void close_connection(HTTPConnection* conn);
 
-    ActorSystem* system_;
     EventLoop loop_;
-    std::unique_ptr<HttpSerializer> serializer_;
     RouteRegistry routes_;
-    std::unordered_map<int, std::unique_ptr<ConnectionCtx>> connections_;
+    std::unique_ptr<HttpSerializer> serializer_;
+
+    std::unordered_map<HTTPConnection*, HTTPConnectionPtr> connections_;
+    std::mutex conn_mutex_;
+
+    struct PendingReply {
+        uint64_t request_id;
+        HTTPConnection* conn;
+        std::chrono::steady_clock::time_point enqueued_at;
+    };
     std::unordered_map<uint64_t, std::unique_ptr<PendingReply>> pending_replies_;
-    mutable std::mutex map_mutex_;
+    std::mutex reply_mutex_;
+
+    // Thread-safe reply queue — ReplyAdapter enqueues on scheduler thread,
+    // drained in run_once() on the daemon thread to avoid races on HTTPConnection.
+    std::queue<TypedMessage> reply_queue_;
+    std::mutex reply_queue_mutex_;
+
     Actor reply_adapter_{nullptr};
 
-    int listening_fd_ = -1;
-    uint16_t bound_port_ = 0;
-    std::atomic<bool> running_{false};
-
+    std::string bind_host_;
+    uint16_t port_;
+    int listen_fd_ = -1;
     std::chrono::milliseconds reply_timeout_{5000};
     size_t max_connections_{1000};
     size_t max_request_size_{1048576};
-    uint64_t next_global_request_id_{1};
+    uint64_t next_request_id_{1};
 };
 
 } // namespace net
