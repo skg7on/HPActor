@@ -198,6 +198,7 @@ add_library(hpactor_lib SHARED
     src/mem/memory_config.cpp
     src/mem/memory_tracker.cpp
     src/mem/hibernation_manager.cpp
+    src/mem/guard_page.cpp
     src/sched/edf_queue.cpp
     src/sched/a2ws.cpp
     src/sched/timing_wheel.cpp

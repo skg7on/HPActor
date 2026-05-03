@@ -335,3 +335,7 @@ add_test(NAME test_memory_poisoning COMMAND test_memory_poisoning)
 add_executable(test_hibernation mem/test_hibernation.cpp)
 target_link_libraries(test_hibernation hpactor pthread)
 add_test(NAME test_hibernation COMMAND test_hibernation)
+
+add_executable(test_guard_page mem/test_guard_page.cpp)
+target_link_libraries(test_guard_page hpactor pthread)
+add_test(NAME test_guard_page COMMAND test_guard_page)
