@@ -319,3 +319,7 @@ add_test(NAME test_thread_local_allocator COMMAND test_thread_local_allocator)
 add_executable(test_memory_stress mem/test_memory_stress.cpp)
 target_link_libraries(test_memory_stress hpactor pthread)
 add_test(NAME test_memory_stress COMMAND test_memory_stress)
+
+add_executable(test_memory_tracker mem/test_memory_tracker.cpp)
+target_link_libraries(test_memory_tracker hpactor pthread)
+add_test(NAME test_memory_tracker COMMAND test_memory_tracker)
