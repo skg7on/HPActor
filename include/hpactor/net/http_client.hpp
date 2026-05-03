@@ -14,23 +14,20 @@
 
 #pragma once
 
+#include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
 #include <memory>
-#include <mutex>
 #include <string>
-#include <unordered_map>
 #include <vector>
 
 namespace hpactor {
 namespace net {
 
 class EventLoop;
-class HttpSerializer;
-class HttpKeepAlivePool;
 
 // ---------------------------------------------------------------------------
 // HttpClient — HTTP egress for actor-to-external communication
@@ -69,20 +66,11 @@ class HttpClient {
         default_timeout_ = timeout;
     }
     void set_max_retries(int retries) { max_retries_ = retries; }
-    void set_keepalive(bool enable) { keepalive_enabled_ = enable; }
-    void set_max_connections_per_host(size_t max) {
-        max_conns_per_host_ = max;
-    }
 
   private:
-    // TODO: used when full HttpClient implementation is complete
     [[maybe_unused]] EventLoop* loop_ = nullptr;
-    std::unordered_map<std::string, std::shared_ptr<HttpKeepAlivePool>> pools_;
-    mutable std::mutex mutex_;
     std::chrono::milliseconds default_timeout_{5000};
     int max_retries_{3};
-    bool keepalive_enabled_{true};
-    size_t max_conns_per_host_{4};
 };
 
 } // namespace net
