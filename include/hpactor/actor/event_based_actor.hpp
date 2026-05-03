@@ -226,6 +226,7 @@ class EventBasedActor : public LocalActor {
     // Called by the framework after construction to set up handlers
     void initialize_proto_handlers();
 
+  public:
     void on_activate() override;
     void on_deactivate() override;
 

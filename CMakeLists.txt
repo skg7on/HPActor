@@ -153,6 +153,7 @@ add_library(hpactor_lib SHARED
     src/actor/abstract_actor.cpp
     src/actor/actor_context.cpp
     src/actor/actor_system.cpp
+    src/actor/daemon_actor.cpp
     src/actor/event_based_actor.cpp
     src/actor/local_actor.cpp
 

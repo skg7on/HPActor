@@ -40,6 +40,9 @@ class TypedEventBasedActor : public LocalActor {
         return behavior_.template invoke_msg<T>(std::forward<T>(msg));
     }
 
+    void on_activate() override {}
+    void on_deactivate() override {}
+
   protected:
     virtual behavior_type make_behavior() = 0;
 
@@ -48,9 +51,6 @@ class TypedEventBasedActor : public LocalActor {
 
     TypedEventBasedActor(ActorId id, ActorContext* ctx, ActorSystem& sys)
         : LocalActor(id, ctx, sys) {}
-
-    void on_activate() override {}
-    void on_deactivate() override {}
 
     void receive(TypedMessage& /*msg*/) override {}
 

@@ -42,6 +42,7 @@ class LocalActor : public AbstractActor {
 
     ActorContext* actor_context() override { return ctx_; }
 
+  public:
     virtual void on_activate() {}
     virtual void on_deactivate() {}
 

@@ -53,6 +53,10 @@ add_executable(test_blocking_actor actor/test_blocking_actor.cpp)
 target_link_libraries(test_blocking_actor hpactor)
 add_test(NAME test_blocking_actor COMMAND test_blocking_actor)
 
+add_executable(test_daemon_actor actor/test_daemon_actor.cpp)
+target_link_libraries(test_daemon_actor hpactor)
+add_test(NAME test_daemon_actor COMMAND test_daemon_actor)
+
 add_executable(test_stateful_actor actor/test_stateful_actor.cpp)
 target_link_libraries(test_stateful_actor hpactor)
 add_test(NAME test_stateful_actor COMMAND test_stateful_actor)

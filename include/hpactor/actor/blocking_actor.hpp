@@ -46,12 +46,12 @@ class BlockingActor : public LocalActor {
         fail_state_ = e;
     }
 
+    void on_activate() override;
+    void on_deactivate() override;
+
   protected:
     BlockingActor(ActorContext* ctx, ActorSystem& sys);
     BlockingActor(ActorId id, ActorContext* ctx, ActorSystem& sys);
-
-    virtual void on_activate() override;
-    virtual void on_deactivate() override;
 
   private:
     error fail_state_;

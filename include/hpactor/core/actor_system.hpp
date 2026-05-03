@@ -308,6 +308,9 @@ Actor ActorSystem::spawn(Args&&... args) {
     // Add actor to scheduler's queue so it gets executed
     scheduler_->notify_ready(id, 0, INT64_MAX);
 
+    // Activate the actor (DaemonActor starts its thread here, etc.)
+    actor->on_activate();
+
     return Actor(actor);
 }
 
