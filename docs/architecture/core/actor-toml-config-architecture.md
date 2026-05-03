@@ -7,6 +7,7 @@ This document specifies the architecture for loading actor topologies from TOML 
 **Related documents:**
 - [Actor Core Concept](actor-core-concept.md) — actor type hierarchy and messaging model
 - [Actor TOML Config Core Concept](actor-toml-config-core-concept.md) — philosophy and usage overview
+- [TOML Config Implementation Plan](../../superpowers/plans/2026-05-03-toml-config-topology-impl.md) — phased implementation steps
 
 ---
 
