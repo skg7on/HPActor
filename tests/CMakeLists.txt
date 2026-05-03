@@ -343,3 +343,7 @@ add_test(NAME test_guard_page COMMAND test_guard_page)
 add_executable(test_compaction mem/test_compaction.cpp)
 target_link_libraries(test_compaction hpactor pthread)
 add_test(NAME test_compaction COMMAND test_compaction)
+
+add_executable(test_allocator_benchmark mem/test_allocator_benchmark.cpp)
+target_link_libraries(test_allocator_benchmark hpactor pthread)
+add_test(NAME test_allocator_benchmark COMMAND test_allocator_benchmark)
