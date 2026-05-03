@@ -1,6 +1,6 @@
 # HPActor
 
-A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, and multi-priority queues for mathematically deterministic response times.
+A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, multi-priority queues, and an application-defined two-tier slab memory allocator for deterministic response times without GC pauses.
 
 ## Features
 
@@ -30,6 +30,16 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **MPSCMailbox\<T\>**: Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue)
 - **MPSCActorMailbox\<T\>**: Edge-triggered CAS wakeup — no lost wakeups, no spurious rescheduling
 - **Swap-in Interface**: `IMailbox<T>` allows replacing the mailbox implementation without touching actor code
+
+### Memory Management
+- **Two-Tier Slab Allocator**: mmap-backed SegmentProvider (Tier 0) → per-thread SlabCache with bump+freelist (Tier 1), 8 size classes (32B–4KB)
+- **Typed Memory Regions**: Separate allocation pools for actors, messages, coroutines, network buffers, internal structures, and hibernation
+- **Thread-Local Hot Path**: Bump pointer allocation < 25ns, lock-free CAS freelist recycle < 32ns
+- **Per-Actor Observability**: 64-byte cache-line-aligned atomic counter array indexed by ActorId, lock-free telemetry ring buffer
+- **Debugging**: Memory poisoning (0xAA), canary verification on alloc/free, guard pages with SIGSEGV/SIGBUS handler
+- **Hibernation**: Serialize actor state → `madvise(MADV_PAGEOUT)` to ZRAM → 3-4× effective memory capacity for idle actors
+- **Compaction**: Generation-based slab tracking with 5% fragmentation budget, relocatable actors by ActorId
+- **Zero malloc in hot path**: Custom allocator routes all actor/message/coroutine allocations away from general-purpose `malloc`
 
 ### Actor Lifecycle
 - **ActorState**: Atomic state machine (Idle → Ready → Running → IOWaiting → Terminated) with CAS transitions
@@ -115,6 +125,19 @@ ActorRef (std::variant)
 | `CoroutineTask` | C++20 coroutine handle wrapper for actor coroutines |
 | `CoroutineFramePool` | Lock-free stack pool for coroutine frames |
 
+### Memory Management
+
+| Component | Purpose |
+|-----------|---------|
+| `SegmentProvider` | Tier 0: mmap-based segment acquisition (2MB segments), carves slabs for thread-local caches |
+| `SlabCache` | Tier 1: per-size-class slab with bump allocator + lock-free CAS freelist |
+| `ThreadLocalAllocator` | Per-thread allocator owning 8 SlabCaches (32B–4KB) |
+| `MemoryTracker` | Per-actor shadow counters (64B-aligned atomic array, 1M actor capacity) |
+| `TelemetryRingBuffer` | Lock-free MPSC ring buffer for allocation event sampling |
+| `HibernationRegistry` | Concurrent map of ActorId → serialized hibernation buffers |
+| `CompactionManager` | Generation-based slab tracking with 5% fragmentation budget |
+| `ZramManager` | `madvise(MADV_PAGEOUT/COLD/WILLNEED)` hints for ZRAM integration |
+
 ### Network Layer
 
 | Component | Purpose |
@@ -158,7 +181,7 @@ ActorRef (std::variant)
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (61 tests)
+# Run tests (83 tests)
 ctest --output-on-failure
 
 # Run a single test
@@ -173,6 +196,8 @@ ctest --output-on-failure
 | `-DENABLE_ASAN=ON` | Enable AddressSanitizer |
 | `-DENABLE_EXAMPLES=OFF` | Disable examples (default ON) |
 | `-DENABLE_PROACTOR=ON` | Enable proactor backend (OFF=macOS default, ON=Linux default) |
+| `-DENABLE_MEMORY_TRACKING=OFF` | Disable per-actor memory tracking (default ON) |
+| `-DENABLE_MEMORY_DEBUG=ON` | Enable memory poisoning + canary verification (default OFF) |
 
 ## Design Constraints
 
@@ -215,6 +240,7 @@ include/hpactor/
 ├── sched/          — HybridScheduler, work queues, timing wheel, coroutines
 ├── spawn/          — AsyncActor for non-blocking remote spawn
 ├── supervision/    — OneForOne, AllForOne supervisors
+├── mem/            — Two-tier slab allocator, hibernation, compaction, observability
 ├── types/          — Type system, protobuf serialization, endpoints
 ├── behavior.hpp    — Dynamic behavior with message_handler
 ├── typed_behavior.hpp — Statically typed behavior for typed actors
@@ -228,6 +254,7 @@ src/
 ├── ref/            — ActorRef, ActorProxy implementations
 ├── rpc/            — RpcChannel implementation
 ├── sched/          — HybridScheduler, timing wheel, EDF queue, coroutine pool
+├── mem/            — SegmentProvider, SlabCache, memory tracker, hibernation, guard pages
 ├── spawn.cpp       — AsyncActor implementation
 └── actor_type_registry.cpp — ActorTypeRegistry implementation
 
@@ -237,13 +264,13 @@ protos/hpactor/
 ├── messages.proto  — System message types
 └── registrar.proto — Registrar protocol messages
 
-tests/              — 61 unit tests (actor, core, mailbox, net, ref, rpc, sched, spawn, supervision)
+tests/              — 83 unit tests (actor, core, mailbox, mem, net, ref, rpc, sched, spawn, supervision)
 examples/           — 5 API usage examples
 ```
 
 ## Status
 
-### Complete (61 tests passing)
+### Complete (83 tests passing)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
@@ -252,6 +279,7 @@ examples/           — 5 API usage examples
 - **Scheduling**: HybridScheduler with work-stealing + EDF + timing wheel + coroutine frame pool
 - **Coroutines**: CoroutineTask, MailboxAwaiter, TimerAwaiter, YieldAwaiter
 - **Mailbox**: MPSCMailbox (Vyukov lock-free), MPSCActorMailbox (edge-triggered CAS)
+- **Memory Management**: Two-tier slab allocator (mmap → thread-local slabs), typed regions, hibernation with ZRAM hints, compaction with fragmentation budget, per-actor observability, memory poisoning + canaries + guard pages
 - **Network**: TLS 1.3, connection pooling, UDS support, reactor/proactor backends
 - **Service Discovery**: UDP registrar + TCP registration with protobuf serialization
 - **Remote Spawn**: AsyncActor with spawn_remote(), ActorTypeRegistry
@@ -260,7 +288,8 @@ examples/           — 5 API usage examples
 
 ### Next Steps
 
-- Full proto_actor integration test with end-to-end protobuf message flow
-- Argument deserialization for passing constructor args through spawn
 - Full two-process integration test with TCP transport
+- Argument deserialization for passing constructor args through spawn
 - Typed RPC API (`call<Request, Response>` with serialization)
+- Tiny-block optimization for 32B size class in slab allocator
+- Runtime configuration via environment variables for memory limits
