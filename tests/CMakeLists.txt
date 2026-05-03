@@ -265,6 +265,10 @@ add_executable(test_dedicated_thread_pool sched/test_dedicated_thread_pool.cpp)
 target_link_libraries(test_dedicated_thread_pool hpactor)
 add_test(NAME test_dedicated_thread_pool COMMAND test_dedicated_thread_pool)
 
+add_executable(test_dispatch_policy sched/test_dispatch_policy.cpp)
+target_link_libraries(test_dispatch_policy hpactor)
+add_test(NAME test_dispatch_policy COMMAND test_dispatch_policy)
+
 # =============================================================================
 # HTTP tests
 # =============================================================================
