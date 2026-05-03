@@ -23,6 +23,8 @@ option(ENABLE_ASAN "Enable AddressSanitizer" OFF)
 option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 option(ENABLE_EXAMPLES "Build example programs" ON)
 option(ENABLE_PROACTOR "Use Proactor I/O model (io_uring/GCD)" ON)
+option(ENABLE_MEMORY_TRACKING "Enable per-actor memory tracking and telemetry" ON)
+option(ENABLE_MEMORY_DEBUG "Enable memory poisoning, canaries, and guard pages" OFF)
 
 # Sanitizer mutual exclusivity
 if(ENABLE_ASAN AND ENABLE_TSAN)

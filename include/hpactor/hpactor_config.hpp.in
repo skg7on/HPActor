@@ -38,3 +38,6 @@
 #    define HPACTOR_IF_COROUTINES(...)
 #    define HPACTOR_IF_NO_COROUTINES(...) __VA_ARGS__
 #endif
+
+#cmakedefine01 HPACTOR_ENABLE_MEMORY_TRACKING
+#cmakedefine01 HPACTOR_ENABLE_MEMORY_DEBUG
