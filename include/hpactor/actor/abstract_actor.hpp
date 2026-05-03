@@ -17,6 +17,7 @@
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
+#include <hpactor/sched/dispatch_policy.hpp>
 
 #include <memory>
 
@@ -84,6 +85,15 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     // Type query for safe downcasting without RTTI
     virtual bool is_event_based_actor() const {
         return false;
+    }
+
+    // Dispatch policy — tells the scheduler how to execute this actor.
+    // Default: Cooperative (M:N work-stealing pool).
+    virtual sched::DispatchPolicy dispatch_policy() const {
+        return sched::DispatchPolicy::Cooperative;
+    }
+    virtual sched::DispatchHints dispatch_hints() const {
+        return {};
     }
 
   protected:
