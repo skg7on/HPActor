@@ -24,6 +24,12 @@ class EventBasedActor;
 class BlockingActor;
 class ScopedActor;
 
+class DaemonActor;
+class PollingActor;
+class DenseComputingActor;
+class ExternalMsgGatewayActor;
+class HTTPServerActor;
+
 template <typename... Signatures> class TypedEventBasedActor;
 
 template <typename T> class StatefulActor;
