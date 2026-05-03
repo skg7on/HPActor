@@ -182,6 +182,7 @@ add_library(hpactor_lib SHARED
     src/net/http_parser.cpp
     src/net/http_server.cpp
     src/net/http_client.cpp
+    src/net/http_connection.cpp
     src/sched/scheduler.cpp
     src/sched/worker_thread.cpp
     src/sched/edf_queue.cpp

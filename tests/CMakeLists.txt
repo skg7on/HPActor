@@ -280,6 +280,10 @@ add_executable(test_http_serializer net/test_http_serializer.cpp)
 target_link_libraries(test_http_serializer hpactor)
 add_test(NAME test_http_serializer COMMAND test_http_serializer)
 
+add_executable(test_http_connection net/test_http_connection.cpp)
+target_link_libraries(test_http_connection hpactor)
+add_test(NAME test_http_connection COMMAND test_http_connection)
+
 add_executable(test_http_server net/test_http_server.cpp)
 target_link_libraries(test_http_server hpactor)
 add_test(NAME test_http_server COMMAND test_http_server)
