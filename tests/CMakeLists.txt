@@ -323,3 +323,7 @@ add_test(NAME test_memory_stress COMMAND test_memory_stress)
 add_executable(test_memory_tracker mem/test_memory_tracker.cpp)
 target_link_libraries(test_memory_tracker hpactor pthread)
 add_test(NAME test_memory_tracker COMMAND test_memory_tracker)
+
+add_executable(test_telemetry_ring_buffer mem/test_telemetry_ring_buffer.cpp)
+target_link_libraries(test_telemetry_ring_buffer hpactor pthread)
+add_test(NAME test_telemetry_ring_buffer COMMAND test_telemetry_ring_buffer)
