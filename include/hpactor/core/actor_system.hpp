@@ -70,6 +70,17 @@ struct Config {
     net::PoolConfig pool = {};
     net::RegistrarConfig registrar = {};
 
+    // HTTP subsystem (requires enable_network = true)
+    bool enable_http_server = false;
+    bool enable_http_client = false;
+
+    // HTTP server configuration
+    uint16_t http_port = 8080;
+    std::string http_bind_host = "0.0.0.0";
+    size_t http_max_connections = 1000;
+    size_t http_max_request_size = 1048576;
+    std::chrono::milliseconds http_reply_timeout{5000};
+
     // Coroutine scheduling (requires HPACTOR_SUPPORT_COROUTINES=1 at compile time)
     // When true, actors use coroutine-based execution instead of behavior-based.
     // Default: false (behavior-based scheduling).
@@ -265,6 +276,9 @@ class ActorSystem {
     std::unique_ptr<RpcChannel> rpc_channel_;
     // HTTP client for outbound HTTP calls
     std::unique_ptr<net::HttpClient> http_client_;
+
+    // HTTP server actor (DaemonActor, spawned when enable_http_server = true)
+    Actor http_server_actor_{nullptr};
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
