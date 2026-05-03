@@ -66,7 +66,7 @@ result<ActorRef> AsyncActor::get() {
 
     // Create ActorProxy for the remote actor using stack allocation
     ActorProxy proxy(response_.actor_addr, static_cast<net::Transport*>(nullptr));
-    ActorRef ref(std::move(proxy));
+    ActorRef ref(std::move(proxy));  // NOLINT(performance-move-const-arg)
     return result<ActorRef>::make(std::move(ref));
 }
 

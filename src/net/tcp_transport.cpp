@@ -34,7 +34,7 @@ namespace net {
 TcpTransport::TcpTransport(EndPoint endpoint,
                            const TlsConfig& tls_config,
                            const PoolConfig& pool_config, NodeRegistry* registry)
-    : endpoint_(endpoint), loop_(), acceptor_(&loop_),
+    : endpoint_(endpoint), acceptor_(&loop_),
       tls_context_(TlsContext::from_config(tls_config)),
       pool_config_(pool_config), registry_(registry) {
     // Ensure UDS directory exists
@@ -97,8 +97,7 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
     // Resolve host (simple version - no DNS)
-    struct sockaddr_in addr;
-    std::memset(&addr, 0, sizeof(addr));
+    struct sockaddr_in addr{};
     addr.sin_family = AF_INET;
     addr.sin_port = htons(port);
     addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -151,12 +150,12 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
 }
 
 ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint) {
-    if (!registry_) {
+    if (registry_ == nullptr) {
         return nullptr; // No registry configured
     }
 
     NodeEndpoint* ep = registry_->get(remote_endpoint);
-    if (!ep) {
+    if (ep == nullptr) {
         return nullptr; // Unknown node
     }
 
@@ -184,8 +183,7 @@ TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
-    struct sockaddr_un addr;
-    std::memset(&addr, 0, sizeof(addr));
+    struct sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
     std::strncpy(addr.sun_path, socket_path.c_str(), sizeof(addr.sun_path) - 1);
 

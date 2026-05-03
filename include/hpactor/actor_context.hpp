@@ -79,7 +79,7 @@ class ActorContext {
     void reply(TypeTag tag, const google::protobuf::Message& msg);
     template <typename ProtoMsgT>
     void reply(const ProtoMsgT& msg);
-    void reply_with_error(error err);
+    void reply_with_error(const error& err);
 
     // Get the sender of the current message (for reply routing)
     const ActorAddress& current_sender() const { return current_sender_; }

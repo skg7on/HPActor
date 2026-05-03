@@ -25,18 +25,18 @@ AbstractActor::AbstractActor(ActorId id, ActorType type, ActorSystem& sys)
 
 void AbstractActor::link_to(const ActorAddr& other) {
     auto* ctx = actor_context();
-    if (!ctx) return;
+    if (ctx == nullptr) { return; }
 
     // Reject link-to-self
     if (other == address()) {
         std::cerr << "HPActor: link_to self (" << id().value() << ") ignored"
-                  << std::endl;
+                  << '\n';
         return;
     }
 
     // Idempotency: check if already linked
     for (const auto& linked : ctx->linked_actors()) {
-        if (linked == other) return;
+        if (linked == other) { return; }
     }
 
     ctx->add_linked(other);
@@ -53,7 +53,7 @@ void AbstractActor::link_to(const ActorAddr& other) {
 
 void AbstractActor::unlink_from(const ActorAddr& other) {
     auto* ctx = actor_context();
-    if (!ctx) return;
+    if (ctx == nullptr) { return; }
 
     ctx->remove_linked(other);
 
@@ -69,7 +69,7 @@ void AbstractActor::unlink_from(const ActorAddr& other) {
 
 void AbstractActor::monitor(const ActorAddr& target) {
     auto* ctx = actor_context();
-    if (!ctx) return;
+    if (ctx == nullptr) { return; }
 
     // Send MonitorMsg to target. The target's receive() will add us
     // to its monitored_ list so that on_exit() notifies us on death.
@@ -78,7 +78,7 @@ void AbstractActor::monitor(const ActorAddr& target) {
 
 void AbstractActor::demonitor(const ActorAddr& target) {
     auto* ctx = actor_context();
-    if (!ctx) return;
+    if (ctx == nullptr) { return; }
 
     // Send DemonitorMsg to target. The target's receive() will remove us
     // from its monitored_ list.

@@ -104,11 +104,11 @@ const char* EventLoop::backend_name() const {
 }
 
 bool EventLoop::add_fd(int fd, Event events) {
-    if (!backend_) {
+    if (backend_ == nullptr) {
         return false;
     }
     IoEvent io_events = IoEvent::Read;
-    if (static_cast<uint32_t>(events) & static_cast<uint32_t>(Event::Write)) {
+    if ((static_cast<uint32_t>(events) & static_cast<uint32_t>(Event::Write)) != 0U) {
         io_events = static_cast<IoEvent>(static_cast<uint32_t>(io_events) |
                                          static_cast<uint32_t>(IoEvent::Write));
     }
@@ -209,7 +209,7 @@ void EventLoop::enqueue_completion(OpCompletion completion) {
     }
     if (completion.type == OpType::TimerFired) {
         deliver_timer_completion(completion);
-    } else if (actor_system_) {
+    } else if (actor_system_ != nullptr) {
         actor_system_->enqueue_completion(completion);
     }
 }

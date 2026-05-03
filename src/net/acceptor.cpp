@@ -39,7 +39,7 @@ Acceptor::~Acceptor() {
 
 void Acceptor::close() {
     if (listening_fd_ >= 0) {
-        if (loop_) {
+        if (loop_ != nullptr) {
             loop_->clear_read_handler(listening_fd_);
             loop_->remove_fd(listening_fd_);
         }
@@ -71,8 +71,7 @@ bool TcpAcceptor::listen(uint16_t port, uint16_t port_range,
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
-    struct sockaddr_in addr;
-    std::memset(&addr, 0, sizeof(addr));
+    struct sockaddr_in addr{};
     addr.sin_family = AF_INET;
     if (bind_address == "0.0.0.0") {
         addr.sin_addr.s_addr = INADDR_ANY;
@@ -106,7 +105,7 @@ bool TcpAcceptor::listen(uint16_t port, uint16_t port_range,
     listening_fd_ = fd;
 
     // Register with event loop
-    if (loop_) {
+    if (loop_ != nullptr) {
         loop_->add_fd(listening_fd_, EventLoop::Event::Read);
         loop_->set_read_handler(listening_fd_, [this](int) {
             handle_read();
@@ -117,7 +116,7 @@ bool TcpAcceptor::listen(uint16_t port, uint16_t port_range,
 }
 
 void TcpAcceptor::handle_read() {
-    struct sockaddr_storage client_addr;
+    struct sockaddr_storage client_addr{};
     socklen_t client_len = sizeof(client_addr);
 
     int client_fd =
@@ -143,7 +142,7 @@ void TcpAcceptor::handle_read() {
             endpoint = Ipv4Endpoint{in4->sin_addr.s_addr, in4->sin_port};
         } else if (client_addr.ss_family == AF_INET6) {
             auto* in6 = reinterpret_cast<struct sockaddr_in6*>(&client_addr);
-            std::array<uint8_t, 16> addr;
+            std::array<uint8_t, 16> addr{};
             std::memcpy(addr.data(), &in6->sin6_addr, 16);
             endpoint = Ipv6Endpoint{addr, in6->sin6_port};
         } else {
@@ -173,8 +172,7 @@ bool UnixDomainAcceptor::listen(const std::string& path) {
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
-    struct sockaddr_un addr;
-    std::memset(&addr, 0, sizeof(addr));
+    struct sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
     std::strncpy(addr.sun_path, path.c_str(), sizeof(addr.sun_path) - 1);
 
@@ -192,7 +190,7 @@ bool UnixDomainAcceptor::listen(const std::string& path) {
     listening_fd_ = fd;
     uds_path_ = path;
 
-    if (loop_) {
+    if (loop_ != nullptr) {
         loop_->add_fd(listening_fd_, EventLoop::Event::Read);
         loop_->set_read_handler(listening_fd_, [this](int) {
             handle_read();
@@ -211,7 +209,7 @@ void UnixDomainAcceptor::close() {
 }
 
 void UnixDomainAcceptor::handle_read() {
-    struct sockaddr_un client_addr;
+    struct sockaddr_un client_addr{};
     socklen_t client_len = sizeof(client_addr);
 
     int client_fd =

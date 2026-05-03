@@ -40,9 +40,7 @@ CoroutineFramePool::CoroutineFramePool(size_t num_frames, size_t stack_size)
     free_count_.store(num_frames, std::memory_order_release);
 }
 
-CoroutineFramePool::~CoroutineFramePool() {
-    // Stacks are freed when unique_ptrs in stacks_ are destroyed
-}
+CoroutineFramePool::~CoroutineFramePool() = default;
 
 CoroutineFramePool::Frame* CoroutineFramePool::acquire() {
     // Pop from free stack

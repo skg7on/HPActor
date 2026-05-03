@@ -518,8 +518,12 @@ void UdpRegistrar::start_server_mode_async() {
     udp_addr.sin_family = AF_INET;
     udp_addr.sin_addr.s_addr = INADDR_ANY;
     udp_addr.sin_port = htons(config_.udp_port);
-    bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr),
-         sizeof(udp_addr));
+    if (bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr),
+             sizeof(udp_addr)) < 0) {
+        close(udp_socket_);
+        udp_socket_ = -1;
+        return;
+    }
 
     // Register with EventLoop for read events
     if (loop_) {

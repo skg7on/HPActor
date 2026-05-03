@@ -27,7 +27,7 @@ ActorTypeRegistry::spawn(ActorSystem& system, const std::string& name,
     }
 
     ActorAddress addr = it->second.factory(system);
-    return result<ActorAddress>::make(std::move(addr));
+    return result<ActorAddress>::make(std::move(addr));  // NOLINT(performance-move-const-arg)
 }
 
 bool ActorTypeRegistry::has(const std::string& name) const {

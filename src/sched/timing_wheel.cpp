@@ -73,10 +73,7 @@ void TimingWheel::insert_timer(Timer* timer) {
     int64_t expire = timer->expire_ns;
     int64_t now = current_time_.load(std::memory_order_relaxed);
 
-    if (expire < now) {
-        // Already expired, will be processed on next advance
-        expire = now;
-    }
+    expire = std::max(expire, now);
 
     // Calculate which level and bucket
     int64_t diff = expire - now;
@@ -158,7 +155,7 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
         // Process buckets from start to end (wrapping around)
         uint32_t num_buckets = levels_[level].num_buckets;
         uint32_t count =
-            (end_bucket - start_bucket + num_buckets) % num_buckets + 1;
+            ((end_bucket - start_bucket + num_buckets) % num_buckets) + 1;
 
         for (uint32_t i = 0; i < count; ++i) {
             uint32_t bucket_idx = (start_bucket + i) % num_buckets;

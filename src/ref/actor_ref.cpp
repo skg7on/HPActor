@@ -22,12 +22,12 @@ namespace hpactor {
 void ActorRef::send(const ActorAddress& target, TypedMessage msg) {
     if (is_local()) {
         Actor* actor = get_actor();
-        if (actor) {
+        if (actor != nullptr) {
             actor->get()->system().deliver_local(target.id, std::move(msg));
         }
     } else {
         ActorProxy* proxy = get_proxy();
-        if (proxy) {
+        if (proxy != nullptr) {
             proxy->send(target, std::move(msg));
         }
     }

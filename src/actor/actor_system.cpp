@@ -202,8 +202,9 @@ void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
                                 uint8_t /*priority*/, int64_t /*deadline_ns*/) {
     auto* mailbox = get_mailbox(target);
-    if (!mailbox)
+    if (mailbox == nullptr) {
         return;
+    }
     mailbox->push(std::move(msg));
 }
 

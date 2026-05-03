@@ -36,7 +36,7 @@ int main() {
     // Test 2: move construction
     auto t2 = simple_coro();
     hpactor::sched::CoroutineTask t3(std::move(t2));
-    assert(!t2); // moved-from is nullptr
+    assert(!t2); // NOLINT(bugprone-use-after-move) — testing moved-from state
     assert(t3);
     assert(!t3.done()); // not done until resumed and finishes
 
@@ -45,7 +45,7 @@ int main() {
     t4 = simple_coro();
     hpactor::sched::CoroutineTask t5;
     t5 = std::move(t4);
-    assert(!t4);
+    assert(!t4); // NOLINT(bugprone-use-after-move) — testing moved-from state
     assert(t5);
 
     // Test 4: resume

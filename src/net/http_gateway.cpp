@@ -83,7 +83,8 @@ static bool match_pattern(const std::vector<PatternSegment>& segments,
         }
     }
 
-    size_t pi = 0, si = 0;
+    size_t pi = 0;
+    size_t si = 0;
     while (si < segments.size() && pi < path_segs.size()) {
         const auto& seg = segments[si];
         switch (seg.type) {
@@ -288,7 +289,7 @@ void HTTPGatewayActor::on_accept(int client_fd, EndPoint remote_endpoint) {
     }
 }
 
-void HTTPGatewayActor::on_request(HTTPConnection* conn, HttpRequest&& req) {
+void HTTPGatewayActor::on_request(HTTPConnection* conn, HttpRequest&& req) {  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
     // Parse query string
     size_t qpos = req.path.find('?');
     if (qpos != std::string::npos) {
@@ -359,7 +360,7 @@ void HTTPGatewayActor::on_request(HTTPConnection* conn, HttpRequest&& req) {
     loop_.run_after([this, request_id] { on_timeout(request_id); }, timeout_ms);
 }
 
-void HTTPGatewayActor::on_reply(TypedMessage&& msg) {
+void HTTPGatewayActor::on_reply(TypedMessage&& msg) {  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
     const auto& payload = msg.payload();
     if (payload.size() < 8) return;
 

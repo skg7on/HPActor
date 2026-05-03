@@ -102,8 +102,7 @@ class CounterActor : public hpactor::StatefulActor<CounterState> {
                 int delta = decode_int(msg.payload());
                 if (delta <= 0) delta = 1;
                 state().value += delta;
-                if (state().value > state().max_value)
-                    state().value = state().max_value;
+                state().value = std::min(state().value, state().max_value);
                 std::cout << "  CounterActor [" << id().value()
                           << "]: +" << delta << " → " << state().value
                           << std::endl;
@@ -111,8 +110,7 @@ class CounterActor : public hpactor::StatefulActor<CounterState> {
                 int delta = decode_int(msg.payload());
                 if (delta <= 0) delta = 1;
                 state().value -= delta;
-                if (state().value < state().min_value)
-                    state().value = state().min_value;
+                state().value = std::max(state().value, state().min_value);
                 std::cout << "  CounterActor [" << id().value()
                           << "]: -" << delta << " → " << state().value
                           << std::endl;
@@ -157,17 +155,13 @@ class GaugeActor : public hpactor::StatefulActor<GaugeState> {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             if (msg.type_id() == IncrementTag) {
                 double delta = static_cast<double>(decode_int(msg.payload()));
-                state().value += delta;
-                if (state().value > state().max_value)
-                    state().value = state().max_value;
+                state().value = std::min(state().value + delta, state().max_value);
                 std::cout << "  GaugeActor [" << id().value()
                           << "]: +" << delta << " → " << state().value
                           << std::endl;
             } else if (msg.type_id() == SetValueTag) {
                 double new_val = static_cast<double>(decode_int(msg.payload()));
-                state().value = new_val;
-                if (state().value > state().max_value)
-                    state().value = state().max_value;
+                state().value = std::min(new_val, state().max_value);
                 std::cout << "  GaugeActor [" << id().value()
                           << "]: set → " << state().value << std::endl;
             } else if (msg.type_id() == GetValueTag) {

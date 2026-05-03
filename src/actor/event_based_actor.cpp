@@ -32,7 +32,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
         switch (msg.type_id()) {
             case TypeTag::LinkMsg: {
                 // Bidirectional link handshake: add sender to our linked_ set
-                if (ctx) {
+                if (ctx != nullptr) {
                     const auto& sender = msg.sender_address();
                     bool already_linked = false;
                     for (const auto& linked : ctx->linked_actors()) {
@@ -49,7 +49,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
             }
 
             case TypeTag::UnlinkMsg: {
-                if (ctx) {
+                if (ctx != nullptr) {
                     ctx->remove_linked(msg.sender_address());
                 }
                 return; // System message — fully handled
@@ -58,7 +58,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
             case TypeTag::MonitorMsg: {
                 // Add sender to our monitored_ list (one-way relationship).
                 // The sender wants to be notified when we die.
-                if (ctx) {
+                if (ctx != nullptr) {
                     const auto& sender = msg.sender_address();
                     bool already = false;
                     for (const auto& m : ctx->monitored_actors()) {
@@ -76,7 +76,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
             case TypeTag::DemonitorMsg: {
                 // Remove sender from our monitored_ list.
-                if (ctx) {
+                if (ctx != nullptr) {
                     ctx->remove_monitored(msg.sender_address());
                 }
                 return; // System message — fully handled
@@ -84,7 +84,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
             case TypeTag::DownMsg: {
                 // Clean up linked/monitored entries for the dead actor
-                if (ctx) {
+                if (ctx != nullptr) {
                     ctx->remove_linked(msg.sender_address());
                     ctx->remove_monitored(msg.sender_address());
                 }
@@ -104,7 +104,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
     // Capture sender for reply() tracking
     auto* ctx = context();
-    if (ctx) {
+    if (ctx != nullptr) {
         ctx->set_current_sender(msg.sender_address());
     }
 
@@ -114,7 +114,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
         auto deserialized = it->second.deserialize(msg.payload());
         if (deserialized) {
             StreamBuffer response = it->second.invoke(std::move(deserialized));
-            if (!response.empty() && ctx) {
+            if (!response.empty() && ctx != nullptr) {
                 TypedMessage reply_msg(it->first, response);
                 ctx->reply(std::move(reply_msg));
             }
@@ -158,7 +158,7 @@ void EventBasedActor::on_proto_message(TypeTag tag, const StreamBuffer& payload)
 
     StreamBuffer response = handler.invoke(std::move(msg));
     auto* ctx = context();
-    if (!response.empty() && ctx) {
+    if (!response.empty() && ctx != nullptr) {
         TypedMessage reply_msg(tag, response);
         ctx->reply(std::move(reply_msg));
     }
@@ -175,7 +175,7 @@ void EventBasedActor::on_deactivate() {
 
 void EventBasedActor::on_exit() {
     auto* ctx = context();
-    if (!ctx) return;
+    if (ctx == nullptr) { return; }
 
     // Build DownMessage
     hpactor::DownMessage pb;

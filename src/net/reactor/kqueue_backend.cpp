@@ -19,7 +19,7 @@
     defined(__NetBSD__)
 #    include <cstdlib>
 #    include <cstring>
-#    include <errno.h>
+#    include <cerrno>
 #    include <fcntl.h>
 #    include <sys/event.h>
 #    include <sys/socket.h>
@@ -161,11 +161,11 @@ uint64_t KqueueBackend::encode_user_data(int fd, ActorId actor, uint32_t op_type
            ((static_cast<uint64_t>(op_type) & 0xFFULL) << 56);
 }
 
-void KqueueBackend::decode_user_data(uint64_t ud, int& fd, ActorId& actor,
+void KqueueBackend::decode_user_data(uint64_t user_data, int& fd, ActorId& actor,
                                      uint32_t& op_type) {
-    fd = static_cast<int>(ud & 0xFFFFFFFFULL);
-    actor = ActorId(static_cast<uint32_t>((ud >> 32) & 0xFFFFULL));
-    op_type = static_cast<uint32_t>((ud >> 56) & 0xFFULL);
+    fd = static_cast<int>(user_data & 0xFFFFFFFFULL);
+    actor = ActorId(static_cast<uint32_t>((user_data >> 32) & 0xFFFFULL));
+    op_type = static_cast<uint32_t>((user_data >> 56) & 0xFFULL);
 }
 
 uint64_t KqueueBackend::run_after(ActorId actor, int delay_ms) {

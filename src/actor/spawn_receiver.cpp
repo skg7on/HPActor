@@ -55,7 +55,7 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req,
         response.error_code = result.error().code();
     }
 
-    if (transport_) {
+    if (transport_ != nullptr) {
         // Serialize response using protobuf
         ::hpactor::SpawnResponseMessage pb_resp;
         net::to_proto(pb_resp.mutable_actor_addr(), response.actor_addr);

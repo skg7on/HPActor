@@ -24,9 +24,9 @@ to_proto(::hpactor::PbIpv6Endpoint* pb_ep, const ::hpactor::Ipv6Endpoint& ep) {
 // Helper: convert HPActor EndPoint to protobuf PbActorEndpoint
 static void to_proto(::hpactor::PbActorEndpoint* pb_endpoint,
                      const ::hpactor::EndPoint& ep) {
-    if (auto* ipv4 = std::get_if<::hpactor::Ipv4Endpoint>(&ep)) {
+    if (const auto* ipv4 = std::get_if<::hpactor::Ipv4Endpoint>(&ep)) {
         to_proto(pb_endpoint->mutable_ipv4(), *ipv4);
-    } else if (auto* ipv6 = std::get_if<::hpactor::Ipv6Endpoint>(&ep)) {
+    } else if (const auto* ipv6 = std::get_if<::hpactor::Ipv6Endpoint>(&ep)) {
         to_proto(pb_endpoint->mutable_ipv6(), *ipv6);
     }
 }
@@ -48,10 +48,10 @@ static void fill_global_addr(::hpactor::PbGlobalActorAddress* global,
 
 // Returns true if the endpoint is the default localhost:0 (no real endpoint).
 static bool is_default_local_endpoint(const EndPoint& ep) {
-    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
+    if (const auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
         return ipv4->is_loopback() && ipv4->port() == 0;
     }
-    if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
+    if (const auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
         return ipv6->is_loopback() && ipv6->port() == 0;
     }
     return false;
@@ -86,7 +86,7 @@ static ::hpactor::Ipv4Endpoint from_proto(const ::hpactor::PbIpv4Endpoint& pb_ep
 
 // Helper: convert protobuf PbIpv6Endpoint to HPActor Ipv6Endpoint
 static ::hpactor::Ipv6Endpoint from_proto(const ::hpactor::PbIpv6Endpoint& pb_ep) {
-    std::array<uint8_t, 16> addr;
+    std::array<uint8_t, 16> addr{};
     std::memcpy(addr.data(), pb_ep.addr().data(), 16);
     return ::hpactor::Ipv6Endpoint{addr, static_cast<uint16_t>(pb_ep.port())};
 }
@@ -96,7 +96,8 @@ static ::hpactor::EndPoint
 from_proto(const ::hpactor::PbActorEndpoint& pb_endpoint) {
     if (pb_endpoint.has_ipv4()) {
         return from_proto(pb_endpoint.ipv4());
-    } else if (pb_endpoint.has_ipv6()) {
+    }
+    if (pb_endpoint.has_ipv6()) {
         return from_proto(pb_endpoint.ipv6());
     }
     return ::hpactor::Ipv4Endpoint{};

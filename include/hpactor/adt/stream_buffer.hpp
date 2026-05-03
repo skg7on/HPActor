@@ -151,7 +151,7 @@ public:
     bool operator!=(const StreamBuffer& other) const { return !(*this == other); }
 
 private:
-    void ensure_capacity(size_t total_needed);
+    void ensure_capacity(size_t additional_bytes);
     void maybe_compact();
 
     std::vector<uint8_t> buf_;

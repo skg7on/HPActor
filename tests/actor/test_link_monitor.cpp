@@ -14,11 +14,11 @@ using namespace hpactor;
 
 // Helper: poll until condition is true or timeout expires
 template <typename Fn>
-static bool poll_until(Fn&& condition, int timeout_ms = 2000) {
+static bool poll_until(Fn&& condition, int timeout_ms = 2000) {  // NOLINT(cppcoreguidelines-missing-std-forward)
     auto deadline = std::chrono::steady_clock::now() +
                     std::chrono::milliseconds(timeout_ms);
     while (std::chrono::steady_clock::now() < deadline) {
-        if (condition()) return true;
+        if (condition()) { return true; }
         std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
     return condition();

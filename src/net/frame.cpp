@@ -28,8 +28,8 @@ StreamBuffer WireFrame::encode() const {
     result.reserve(HeaderSize + serialized.size());
 
     // Magic "HPAC"
-    const uint8_t magic[4] = {'H', 'P', 'A', 'C'};
-    result.append(magic, 4);
+    const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'C'};
+    result.append(magic.data(), 4);
 
     // Remaining length in network byte order
     uint32_t payload_len = static_cast<uint32_t>(serialized.size());
@@ -47,13 +47,13 @@ WireFrame WireFrame::decode(const StreamBuffer& data) {
     }
 
     // Validate magic header
-    const uint8_t expected_magic[4] = {'H', 'P', 'A', 'C'};
-    if (std::memcmp(data.data(), expected_magic, 4) != 0) {
+    const std::array<uint8_t, 4> expected_magic = {'H', 'P', 'A', 'C'};
+    if (std::memcmp(data.data(), expected_magic.data(), 4) != 0) {
         return WireFrame{};
     }
 
     // Read remaining length (network byte order)
-    uint32_t net_len;
+    uint32_t net_len = 0;
     std::memcpy(&net_len, data.data() + 4, 4);
     uint32_t payload_len = ntohl(net_len);
 

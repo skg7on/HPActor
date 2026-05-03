@@ -33,8 +33,10 @@ ActorRef ActorContext::resolve(const ActorAddress& target) {
     }
 
     // 2. Resolve system pointer
-    auto system = system_ ? system_ : (owner_ ? &owner_.get()->system() : nullptr);
-    if (!system) {
+    // NOLINTNEXTLINE(readability-avoid-nested-conditional-operator)
+    auto* system = system_ != nullptr ? system_
+        : (owner_ ? &owner_.get()->system() : nullptr);
+    if (system == nullptr) {
         return ActorRef{};
     }
 
@@ -42,9 +44,9 @@ ActorRef ActorContext::resolve(const ActorAddress& target) {
     //    Skip local lookup — actor IDs are only unique within a system.
     if (!(target.endpoint == system->endpoint())) {
         ActorProxy proxy(target, system);
-        ActorRef ref(std::move(proxy));
+        ActorRef ref(proxy);
         // Only cache if transport was resolved successfully
-        if (ref.get_proxy() && ref.get_proxy()->transport()) {
+        if (ref.get_proxy() != nullptr && ref.get_proxy()->transport() != nullptr) {
             ref_cache_.put(target.id, ref);
         }
         return ref;
@@ -52,7 +54,7 @@ ActorRef ActorContext::resolve(const ActorAddress& target) {
 
     // 4. Local endpoint: check local actors
     auto actor = system->get_actor(target.id);
-    if (actor) {
+    if (actor != nullptr) {
         ActorRef ref{Actor(actor)};
         ref_cache_.put(target.id, ref);
         return ref;
@@ -88,15 +90,15 @@ void ActorContext::send(const ActorAddress& target, TypeTag tag,
 void ActorContext::send_with_priority(const ActorAddress& target, TypedMessage msg,
                                       uint8_t priority, int64_t deadline_ns) {
     auto ref = resolve(target);
-    if (!ref) return;
+    if (!ref) { return; }
 
     if (owner_) {
         msg.set_sender_address(owner_.address());
     }
 
     if (ref.is_local()) {
-        auto system = owner_ ? &owner_.get()->system() : system_;
-        if (system) {
+        auto* system = owner_ ? &owner_.get()->system() : system_;
+        if (system != nullptr) {
             system->deliver_local(target.id, std::move(msg), priority, deadline_ns);
         }
     } else {
@@ -115,14 +117,14 @@ void ActorContext::reply(TypeTag tag, const google::protobuf::Message& proto_msg
     reply(std::move(msg));
 }
 
-void ActorContext::reply_with_error(error err) {
-    if (current_sender_.id == ActorId{0}) return;
+void ActorContext::reply_with_error(const error& err) {
+    if (current_sender_.id == ActorId{0}) { return; }
 
     // Wire format: [4 bytes: error code BE][error message string]
     // A protobuf error message can replace this payload later without
     // changing the TypeTag or dispatch path.
     StreamBuffer payload;
-    uint32_t code = err.code();
+    const uint32_t code = err.code();
     payload.push_back(static_cast<uint8_t>((code >> 24) & 0xFF));
     payload.push_back(static_cast<uint8_t>((code >> 16) & 0xFF));
     payload.push_back(static_cast<uint8_t>((code >> 8) & 0xFF));
@@ -134,7 +136,7 @@ void ActorContext::reply_with_error(error err) {
     send(current_sender_, std::move(error_msg));
 }
 
-void ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {
+void ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {  // NOLINT(readability-convert-member-functions-to-static)
     // TODO: schedule message via actor system's clock/alarm mechanism
     (void)delay;
     (void)msg;

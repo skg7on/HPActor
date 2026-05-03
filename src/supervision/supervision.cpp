@@ -23,7 +23,7 @@ namespace hpactor {
 void Supervisor::on_child_stopped(ActorId /*child_id*/) {}
 
 OneForOneSupervisor::OneForOneSupervisor(SupervisionPolicy policy)
-    : policy_(std::move(policy)) {}
+    : policy_(policy) {}
 
 SupervisionDirective
 OneForOneSupervisor::on_child_failure(const ChildFailure& failure) {
@@ -31,7 +31,7 @@ OneForOneSupervisor::on_child_failure(const ChildFailure& failure) {
 }
 
 AllForOneSupervisor::AllForOneSupervisor(SupervisionPolicy policy)
-    : policy_(std::move(policy)) {}
+    : policy_(policy) {}
 
 SupervisionDirective
 AllForOneSupervisor::on_child_failure(const ChildFailure& /*failure*/) {
@@ -112,7 +112,7 @@ void SupervisorActor::restart_all_children() {
 
 SelfSupervisingActor::SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
                                            SupervisionPolicy policy)
-    : EventBasedActor(ctx, sys), policy_(std::move(policy)),
+    : EventBasedActor(ctx, sys), policy_(policy),
       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
 
 void SelfSupervisingActor::add_child(Actor child) {

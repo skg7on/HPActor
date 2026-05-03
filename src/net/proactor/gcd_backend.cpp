@@ -127,7 +127,7 @@ void async_recv_trampoline(void* ctx) {
         };
         c->self->deliver_completion(completion);
     }
-    std::free(buf);
+    std::free(buf);  // NOLINT(cppcoreguidelines-no-malloc)
     delete c;
 }
 

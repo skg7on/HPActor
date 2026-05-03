@@ -108,6 +108,11 @@ else()
     set(HPACTOR_SUPPORT_COROUTINES OFF CACHE BOOL "Compile in C++20 coroutine support" FORCE)
 endif()
 
+find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+if(CLANG_TIDY_EXE)
+    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-config-file=${CMAKE_SOURCE_DIR}/.clang-tidy")
+endif()
+
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_CXX_EXTENSIONS OFF)
 
@@ -235,6 +240,7 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/registrar.proto
 )
 add_library(hpactor_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
+set_target_properties(hpactor_proto PROPERTIES CXX_CLANG_TIDY "")
 target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf ${HPACTOR_PROTO_ABSL_LIBS})
 target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
