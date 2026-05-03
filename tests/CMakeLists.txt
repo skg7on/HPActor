@@ -311,3 +311,7 @@ add_test(NAME test_segment_provider COMMAND test_segment_provider)
 add_executable(test_slab_cache mem/test_slab_cache.cpp)
 target_link_libraries(test_slab_cache hpactor pthread)
 add_test(NAME test_slab_cache COMMAND test_slab_cache)
+
+add_executable(test_thread_local_allocator mem/test_thread_local_allocator.cpp)
+target_link_libraries(test_thread_local_allocator hpactor pthread)
+add_test(NAME test_thread_local_allocator COMMAND test_thread_local_allocator)
