@@ -15,6 +15,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/sched/dedicated_thread_pool.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #if HPACTOR_SUPPORT_COROUTINES
@@ -33,8 +34,7 @@ struct HybridScheduler::DedicatedStorage {
     std::mutex dedicated_mutex_;
 
     // Dedicated thread pools (pool_size -> pool)
-    // Raw pointer until DedicatedThreadPool is complete (Task 5)
-    std::unordered_map<uint32_t, DedicatedThreadPool*> dedicated_pools_;
+    std::unordered_map<uint32_t, std::unique_ptr<DedicatedThreadPool>> dedicated_pools_;
     std::unordered_map<ActorId, uint32_t> actor_pool_map_; // actor -> pool_size
 };
 
@@ -388,16 +388,26 @@ void HybridScheduler::cancel_timer(TimerHandle handle) {
     timer_wheel_.cancel(handle.id);
 }
 
-void HybridScheduler::register_dedicated_thread(ActorId /*actor*/, int /*cpu_affinity*/) {
-    // TODO: implemented in Task 5 (after DedicatedThreadPool exists)
+void HybridScheduler::register_dedicated_thread(ActorId actor, int cpu_affinity) {
+    dedicated_->dedicated_thread_actors_.insert(actor);
+    if (cpu_affinity >= 0) {
+        dedicated_->dedicated_thread_affinity_[actor] = cpu_affinity;
+    }
 }
 
-void HybridScheduler::register_dedicated_pool(ActorId /*actor*/, uint32_t /*pool_size*/) {
-    // TODO: implemented in Task 5
+void HybridScheduler::register_dedicated_pool(ActorId actor, uint32_t pool_size) {
+    auto& pool = dedicated_->dedicated_pools_[pool_size];
+    if (!pool) {
+        pool = std::make_unique<DedicatedThreadPool>(pool_size);
+        pool->start();
+    }
+    dedicated_->actor_pool_map_[actor] = pool_size;
 }
 
-void HybridScheduler::unregister_dedicated(ActorId /*actor*/) {
-    // TODO: implemented in Task 5
+void HybridScheduler::unregister_dedicated(ActorId actor) {
+    dedicated_->dedicated_thread_actors_.erase(actor);
+    dedicated_->dedicated_thread_affinity_.erase(actor);
+    dedicated_->actor_pool_map_.erase(actor);
 }
 
 } // namespace hpactor::sched
