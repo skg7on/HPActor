@@ -192,6 +192,7 @@ add_library(hpactor_lib SHARED
     src/net/http_connection.cpp
     src/sched/scheduler.cpp
     src/sched/worker_thread.cpp
+    src/mem/segment_provider.cpp
     src/sched/edf_queue.cpp
     src/sched/a2ws.cpp
     src/sched/timing_wheel.cpp
