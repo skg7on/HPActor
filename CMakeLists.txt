@@ -195,6 +195,7 @@ add_library(hpactor_lib SHARED
     src/mem/segment_provider.cpp
     src/mem/slab_cache.cpp
     src/mem/thread_local_allocator.cpp
+    src/mem/memory_config.cpp
     src/sched/edf_queue.cpp
     src/sched/a2ws.cpp
     src/sched/timing_wheel.cpp

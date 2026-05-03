@@ -15,6 +15,7 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/worker_thread.hpp>
 #include <hpactor/mem/thread_local_allocator.hpp>
+#include <hpactor/mem/memory_config.hpp>
 
 namespace hpactor::sched {
 
@@ -40,6 +41,9 @@ void WorkerThread::start() {
     thread_ = std::thread([this] {
         if (frame_pool_) {
             tl_frame_pool = frame_pool_;
+        }
+        if (allocator_) {
+            mem::set_thread_allocator(allocator_);
         }
         thread_loop();
     });
