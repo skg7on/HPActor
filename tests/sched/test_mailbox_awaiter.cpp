@@ -47,6 +47,9 @@ struct MockScheduler : public hpactor::sched::IScheduler {
         return true;
     }
     void yield(hpactor::ActorId, uint8_t) override {}
+    void register_dedicated_thread(hpactor::ActorId, int) override {}
+    void register_dedicated_pool(hpactor::ActorId, uint32_t) override {}
+    void unregister_dedicated(hpactor::ActorId) override {}
 };
 
 int main() {

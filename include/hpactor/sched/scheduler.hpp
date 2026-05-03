@@ -27,6 +27,7 @@
 #include <mutex>
 #include <thread>
 #include <unordered_map>
+#include <unordered_set>
 #include <vector>
 
 namespace hpactor {
@@ -37,6 +38,8 @@ class ActorSystem;
 } // namespace hpactor
 
 namespace hpactor::sched {
+
+class DedicatedThreadPool; // forward decl
 
 // -----------------------------------------------------------------------------
 // TimerHandle and timer_callback types
@@ -89,6 +92,17 @@ class IScheduler {
 
     // Check if scheduler is running
     virtual bool is_running() const = 0;
+
+    // Register an actor that needs a dedicated OS thread.
+    // cpu_affinity: -1 = no affinity, >=0 = pin to specific core.
+    virtual void register_dedicated_thread(ActorId actor, int cpu_affinity) = 0;
+
+    // Register an actor that needs a dedicated worker pool.
+    // The scheduler creates or reuses a DedicatedThreadPool of the given size.
+    virtual void register_dedicated_pool(ActorId actor, uint32_t pool_size) = 0;
+
+    // Shutdown a dedicated execution context for an actor.
+    virtual void unregister_dedicated(ActorId actor) = 0;
 };
 
 // -----------------------------------------------------------------------------
@@ -128,6 +142,10 @@ class HybridScheduler : public IScheduler {
     TimerHandle schedule_after(timer_callback cb, int64_t delay_ns) override;
     TimerHandle schedule_every(timer_callback cb, int64_t interval_ns) override;
     void cancel_timer(TimerHandle handle) override;
+
+    void register_dedicated_thread(ActorId actor, int cpu_affinity) override;
+    void register_dedicated_pool(ActorId actor, uint32_t pool_size) override;
+    void unregister_dedicated(ActorId actor) override;
 
     // Try to steal work from another worker (called when local queue is empty)
     bool try_steal(WorkItem& out);
@@ -197,6 +215,11 @@ class HybridScheduler : public IScheduler {
 
     // Timer advancement thread
     std::thread timer_thread_;
+
+    // Dedicated execution storage (PIMPL to avoid incomplete-type-in-container
+    // issue with libc++'s noexcept default constructors)
+    struct DedicatedStorage;
+    std::unique_ptr<DedicatedStorage> dedicated_;
 };
 
 } // namespace hpactor::sched

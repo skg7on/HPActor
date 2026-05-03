@@ -46,6 +46,9 @@ struct MockScheduler : public hpactor::sched::IScheduler {
     bool is_running() const override {
         return true;
     }
+    void register_dedicated_thread(hpactor::ActorId, int) override {}
+    void register_dedicated_pool(hpactor::ActorId, uint32_t) override {}
+    void unregister_dedicated(hpactor::ActorId) override {}
 
     std::atomic<int> notify_ready_count;
     hpactor::ActorId last_actor;

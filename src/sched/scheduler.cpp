@@ -23,13 +23,29 @@
 
 namespace hpactor::sched {
 
+// DedicatedStorage: holds per-actor dedicated execution state.
+// Defined in .cpp to allow DedicatedThreadPool to remain incomplete in the
+// header (libc++ noexcept containers require complete types).
+struct HybridScheduler::DedicatedStorage {
+    // Dedicated thread tracking (thread lifecycle managed by DaemonActor)
+    std::unordered_set<ActorId> dedicated_thread_actors_;
+    std::unordered_map<ActorId, int> dedicated_thread_affinity_;
+    std::mutex dedicated_mutex_;
+
+    // Dedicated thread pools (pool_size -> pool)
+    // Raw pointer until DedicatedThreadPool is complete (Task 5)
+    std::unordered_map<uint32_t, DedicatedThreadPool*> dedicated_pools_;
+    std::unordered_map<ActorId, uint32_t> actor_pool_map_; // actor -> pool_size
+};
+
 // Thread-local pointer to the current worker executing on this thread
 thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                  uint32_t num_priorities)
     : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
-      workers_(num_workers), a2ws_(num_workers), timer_wheel_(1'000'000, 4) {
+      workers_(num_workers), a2ws_(num_workers), timer_wheel_(1'000'000, 4),
+      dedicated_(std::make_unique<DedicatedStorage>()) {
     for (uint32_t i = 0; i < num_workers; ++i) {
         workers_[i].queues =
             std::make_unique<ChaselevDeque<WorkItem>[]>(num_priorities);
@@ -370,6 +386,18 @@ void HybridScheduler::cancel_timer(TimerHandle handle) {
         recurring_cancellations_.erase(it);
     }
     timer_wheel_.cancel(handle.id);
+}
+
+void HybridScheduler::register_dedicated_thread(ActorId /*actor*/, int /*cpu_affinity*/) {
+    // TODO: implemented in Task 5 (after DedicatedThreadPool exists)
+}
+
+void HybridScheduler::register_dedicated_pool(ActorId /*actor*/, uint32_t /*pool_size*/) {
+    // TODO: implemented in Task 5
+}
+
+void HybridScheduler::unregister_dedicated(ActorId /*actor*/) {
+    // TODO: implemented in Task 5
 }
 
 } // namespace hpactor::sched

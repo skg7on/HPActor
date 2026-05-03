@@ -65,6 +65,9 @@ struct MockScheduler : public hpactor::sched::IScheduler {
     bool is_running() const override {
         return true;
     }
+    void register_dedicated_thread(hpactor::ActorId, int) override {}
+    void register_dedicated_pool(hpactor::ActorId, uint32_t) override {}
+    void unregister_dedicated(hpactor::ActorId) override {}
 
     void invoke_timer(uint64_t id) {
         auto it = callbacks_.find(id);
