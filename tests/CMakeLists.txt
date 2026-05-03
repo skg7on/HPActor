@@ -339,3 +339,7 @@ add_test(NAME test_hibernation COMMAND test_hibernation)
 add_executable(test_guard_page mem/test_guard_page.cpp)
 target_link_libraries(test_guard_page hpactor pthread)
 add_test(NAME test_guard_page COMMAND test_guard_page)
+
+add_executable(test_compaction mem/test_compaction.cpp)
+target_link_libraries(test_compaction hpactor pthread)
+add_test(NAME test_compaction COMMAND test_compaction)
