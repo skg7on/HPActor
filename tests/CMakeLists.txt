@@ -257,6 +257,10 @@ add_executable(test_coroutine_scheduling sched/test_coroutine_scheduling.cpp)
 target_link_libraries(test_coroutine_scheduling hpactor)
 add_test(NAME test_coroutine_scheduling COMMAND test_coroutine_scheduling)
 
+add_executable(test_dedicated_thread_pool sched/test_dedicated_thread_pool.cpp)
+target_link_libraries(test_dedicated_thread_pool hpactor)
+add_test(NAME test_dedicated_thread_pool COMMAND test_dedicated_thread_pool)
+
 # =============================================================================
 # HTTP tests
 # =============================================================================
