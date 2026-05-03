@@ -17,7 +17,7 @@
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/http_client.hpp>
-#include <hpactor/net/http_server.hpp>
+#include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -103,14 +103,14 @@ static uint16_t find_available_port() {
 } // namespace
 
 // =============================================================================
-// HttpTestFixture — sets up ActorSystem, HTTPServerActor via DaemonActor spawn
+// HttpTestFixture — sets up ActorSystem, HTTPGatewayActor via DaemonActor spawn
 // =============================================================================
 struct HttpTestFixture {
     ActorSystem system{Config{}};
     Actor echo_actor;
     Actor slow_actor;
     Actor server_actor;
-    net::HTTPServerActor* server = nullptr;
+    net::HTTPGatewayActor* server = nullptr;
     uint16_t port = 0;
 
     HttpTestFixture() {
@@ -118,15 +118,13 @@ struct HttpTestFixture {
         slow_actor = system.spawn<SlowActor>();
         (void)slow_actor;
 
-        // Use port 0 to let the OS assign an available port.
-        // The server's port() will return 0, so we find the actual port
-        // via a test socket on the same port range.
+        // Use port 0 to let the OS assign an available port via TcpAcceptor.
         port = find_available_port();
 
-        // Spawn HTTPServerActor — DaemonActor starts its dedicated thread
+        // Spawn HTTPGatewayActor — DaemonActor starts its dedicated thread
         // automatically via on_activate().
-        server_actor = system.spawn<net::HTTPServerActor>("0.0.0.0", port);
-        server = static_cast<net::HTTPServerActor*>(server_actor.get().get());
+        server_actor = system.spawn<net::HTTPGatewayActor>("0.0.0.0", port);
+        server = static_cast<net::HTTPGatewayActor*>(server_actor.get().get());
 
         // Wait for the daemon to bind and start accepting
         while (!server->is_listening()) {
@@ -137,7 +135,7 @@ struct HttpTestFixture {
     }
 
     ~HttpTestFixture() {
-        // ActorSystem destructor calls on_deactivate() on the HTTPServerActor,
+        // ActorSystem destructor calls on_deactivate() on the HTTPGatewayActor,
         // which stops the event loop and joins the daemon thread cleanly.
     }
 

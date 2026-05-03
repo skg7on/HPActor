@@ -66,9 +66,11 @@ class TcpAcceptor : public Acceptor {
   public:
     using Acceptor::Acceptor;
 
-    // Start listening on the specified port
-    // Returns true on success, false on failure
-    bool listen(uint16_t port, uint16_t port_range = 0);
+    // Start listening on the specified port.
+    // bind_address: IPv4 address to bind to (default "0.0.0.0" = INADDR_ANY).
+    // Returns true on success, false on failure.
+    bool listen(uint16_t port, uint16_t port_range = 0,
+                const std::string& bind_address = "0.0.0.0");
 
     // Get the bound port
     uint16_t port() const {

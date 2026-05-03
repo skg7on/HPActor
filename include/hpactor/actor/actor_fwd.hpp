@@ -28,7 +28,7 @@ class DaemonActor;
 class PollingActor;
 class DenseComputingActor;
 class ExternalMsgGatewayActor;
-class HTTPServerActor;
+class HTTPGatewayActor;
 
 template <typename... Signatures> class TypedEventBasedActor;
 

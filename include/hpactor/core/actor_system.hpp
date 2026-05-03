@@ -71,10 +71,10 @@ struct Config {
     net::RegistrarConfig registrar = {};
 
     // HTTP subsystem (requires enable_network = true)
-    bool enable_http_server = false;
+    bool enable_http_gateway = false;
     bool enable_http_client = false;
 
-    // HTTP server configuration
+    // HTTP gateway configuration
     uint16_t http_port = 8080;
     std::string http_bind_host = "0.0.0.0";
     size_t http_max_connections = 1000;
@@ -277,8 +277,8 @@ class ActorSystem {
     // HTTP client for outbound HTTP calls
     std::unique_ptr<net::HttpClient> http_client_;
 
-    // HTTP server actor (DaemonActor, spawned when enable_http_server = true)
-    Actor http_server_actor_{nullptr};
+    // HTTP gateway actor (DaemonActor, spawned when enable_http_gateway = true)
+    Actor http_gateway_actor_{nullptr};
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;

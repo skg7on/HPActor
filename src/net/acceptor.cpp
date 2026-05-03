@@ -40,6 +40,7 @@ Acceptor::~Acceptor() {
 void Acceptor::close() {
     if (listening_fd_ >= 0) {
         if (loop_) {
+            loop_->clear_read_handler(listening_fd_);
             loop_->remove_fd(listening_fd_);
         }
         ::close(listening_fd_);
@@ -55,7 +56,8 @@ void Acceptor::set_accept_handler(accept_handler handler) {
 // TcpAcceptor
 // -----------------------------------------------------------------------------
 
-bool TcpAcceptor::listen(uint16_t port, uint16_t port_range) {
+bool TcpAcceptor::listen(uint16_t port, uint16_t port_range,
+                          const std::string& bind_address) {
     int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         return false;
@@ -72,7 +74,11 @@ bool TcpAcceptor::listen(uint16_t port, uint16_t port_range) {
     struct sockaddr_in addr;
     std::memset(&addr, 0, sizeof(addr));
     addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
+    if (bind_address == "0.0.0.0") {
+        addr.sin_addr.s_addr = INADDR_ANY;
+    } else {
+        inet_pton(AF_INET, bind_address.c_str(), &addr.sin_addr);
+    }
     addr.sin_port = htons(port);
 
     // Try binding, with port range fallback
@@ -102,6 +108,9 @@ bool TcpAcceptor::listen(uint16_t port, uint16_t port_range) {
     // Register with event loop
     if (loop_) {
         loop_->add_fd(listening_fd_, EventLoop::Event::Read);
+        loop_->set_read_handler(listening_fd_, [this](int) {
+            handle_read();
+        });
     }
 
     return true;
@@ -185,6 +194,9 @@ bool UnixDomainAcceptor::listen(const std::string& path) {
 
     if (loop_) {
         loop_->add_fd(listening_fd_, EventLoop::Event::Read);
+        loop_->set_read_handler(listening_fd_, [this](int) {
+            handle_read();
+        });
     }
 
     return true;

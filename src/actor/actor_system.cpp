@@ -82,9 +82,8 @@ ActorSystem::ActorSystem(const Config& config)
             http_client_ = std::make_unique<net::HttpClient>(network_loop_.get());
         }
 
-        if (config_.enable_http_server) {
-            // HTTPServerActor spawn deferred to Task 3.
-            // For now, the Config flag gates the feature.
+        if (config_.enable_http_gateway) {
+            // HTTPGatewayActor spawn deferred.
         }
 
         transport_->set_rpc_handler(

@@ -13,11 +13,8 @@
 // limitations under the License.
 
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/net/http_server.hpp>
+#include <hpactor/net/http_gateway.hpp>
 
-#include <arpa/inet.h>
-#include <fcntl.h>
-#include <sys/socket.h>
 #include <unistd.h>
 
 #include <algorithm>
@@ -28,7 +25,7 @@ namespace hpactor {
 namespace net {
 
 // =============================================================================
-// RouteRegistry Implementation (PRESERVED VERBATIM from old http_server.cpp)
+// RouteRegistry Implementation
 // =============================================================================
 
 enum class PatternSegmentType { Literal, NamedParam, SingleWildcard, MultiWildcard };
@@ -166,10 +163,10 @@ class ReplyAdapter final : public EventBasedActor {
 } // anonymous namespace
 
 // =============================================================================
-// HTTPServerActor Implementation
+// HTTPGatewayActor Implementation
 // =============================================================================
 
-HTTPServerActor::HTTPServerActor(ActorContext* ctx, ActorSystem& sys,
+HTTPGatewayActor::HTTPGatewayActor(ActorContext* ctx, ActorSystem& sys,
                                  const std::string& bind_host, uint16_t port)
     : DaemonActor(ctx, sys),
       serializer_(std::make_unique<HttpSerializer>()),
@@ -183,20 +180,16 @@ HTTPServerActor::HTTPServerActor(ActorContext* ctx, ActorSystem& sys,
     reply_adapter_ = system().spawn<ReplyAdapter>(std::move(handler));
 }
 
-HTTPServerActor::~HTTPServerActor() {
-    // Signal the daemon loop to stop and join its thread before the vtable
-    // changes during base-class destruction. Without this, the daemon thread
-    // may call virtual functions (on_daemon_stop / run_once) after the vtable
-    // has switched to DaemonActor, where run_once() is pure virtual.
+HTTPGatewayActor::~HTTPGatewayActor() {
     on_deactivate();
 }
 
-void HTTPServerActor::route(HttpMethod method, std::string path_pattern,
+void HTTPGatewayActor::route(HttpMethod method, std::string path_pattern,
                              MessageBuilder builder, int priority) {
     routes_.add(method, std::move(path_pattern), std::move(builder), priority);
 }
 
-void HTTPServerActor::route(HttpMethod method, std::string path_pattern,
+void HTTPGatewayActor::route(HttpMethod method, std::string path_pattern,
                              ActorAddr target) {
     auto serializer = serializer_.get();
     route(method, std::move(path_pattern),
@@ -210,45 +203,28 @@ void HTTPServerActor::route(HttpMethod method, std::string path_pattern,
           });
 }
 
-void HTTPServerActor::on_daemon_start() {
-    listen_fd_ = socket(AF_INET, SOCK_STREAM, 0);
-    if (listen_fd_ < 0) return;
-
-    int opt = 1;
-    setsockopt(listen_fd_, SOL_SOCKET, SO_REUSEADDR, &opt, sizeof(opt));
-    fcntl(listen_fd_, F_SETFL, O_NONBLOCK);
-
-    struct sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port_);
-    if (bind_host_ == "0.0.0.0") {
-        addr.sin_addr.s_addr = INADDR_ANY;
-    } else {
-        inet_pton(AF_INET, bind_host_.c_str(), &addr.sin_addr);
-    }
-
-    if (bind(listen_fd_, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
-        ::close(listen_fd_);
-        listen_fd_ = -1;
-        return;
-    }
-    if (::listen(listen_fd_, SOMAXCONN) < 0) {
-        ::close(listen_fd_);
-        listen_fd_ = -1;
-        return;
-    }
-
+void HTTPGatewayActor::on_daemon_start() {
+    // Start the event loop backend BEFORE registering fds via TcpAcceptor.
+    // KqueueBackend::start() creates a fresh kqueue fd each call; any fds
+    // added before run() would be registered against a kqueue that run()
+    // discards.
     loop_.run();
-    loop_.add_fd(listen_fd_, EventLoop::Event::Read);
-    loop_.set_read_handler(listen_fd_, [this](int) {
-        on_accept();
+
+    acceptor_ = std::make_unique<TcpAcceptor>(&loop_);
+    acceptor_->set_accept_handler([this](int client_fd, EndPoint remote_endpoint) {
+        on_accept(client_fd, remote_endpoint);
     });
+
+    if (!acceptor_->listen(port_, 0, bind_host_)) {
+        acceptor_.reset();
+        return;
+    }
 }
 
-void HTTPServerActor::on_daemon_stop() {
+void HTTPGatewayActor::on_daemon_stop() {
     {
         std::lock_guard<std::mutex> lock(conn_mutex_);
-        for (auto& [ptr, conn] : connections_) {
+        for (auto& conn : connections_) {
             conn->close();
         }
         connections_.clear();
@@ -258,22 +234,16 @@ void HTTPServerActor::on_daemon_stop() {
         pending_replies_.clear();
     }
 
-    if (listen_fd_ >= 0) {
-        loop_.clear_read_handler(listen_fd_);
-        loop_.remove_fd(listen_fd_);
-        ::close(listen_fd_);
-        listen_fd_ = -1;
+    if (acceptor_) {
+        acceptor_->close();
     }
     loop_.stop();
 }
 
-bool HTTPServerActor::run_once() {
+bool HTTPGatewayActor::run_once() {
     loop_.wait(100);
     loop_.process_completions();
 
-    // Drain reply queue — enqueued by ReplyAdapter from scheduler threads.
-    // We process replies on the daemon thread to avoid races on
-    // HTTPConnection's internal write_buffer_ / is_sending_ state.
     for (;;) {
         TypedMessage msg;
         {
@@ -288,19 +258,12 @@ bool HTTPServerActor::run_once() {
     return true;
 }
 
-void HTTPServerActor::on_deactivate() {
-    loop_.stop();  // Unblock loop_.wait() so daemon loop can exit cleanly
-    DaemonActor::on_deactivate();  // Sets running_=false, joins daemon thread
+void HTTPGatewayActor::on_deactivate() {
+    loop_.stop();
+    DaemonActor::on_deactivate();
 }
 
-void HTTPServerActor::on_accept() {
-    struct sockaddr_in client_addr{};
-    socklen_t client_len = sizeof(client_addr);
-    int client_fd = ::accept(listen_fd_, reinterpret_cast<struct sockaddr*>(&client_addr), &client_len);
-    if (client_fd < 0) return;
-
-    fcntl(client_fd, F_SETFL, O_NONBLOCK);
-
+void HTTPGatewayActor::on_accept(int client_fd, EndPoint remote_endpoint) {
     {
         std::lock_guard<std::mutex> lock(conn_mutex_);
         if (connections_.size() >= max_connections_) {
@@ -310,7 +273,7 @@ void HTTPServerActor::on_accept() {
     }
 
     auto conn = HTTPConnection::create(client_fd, LocalEndpoint,
-        Ipv4Endpoint{}, &loop_, HTTPConnectionMode::Server);
+        remote_endpoint, &loop_, HTTPConnectionMode::Server);
 
     conn->set_request_handler([this](HTTPConnection* c, HttpRequest&& req) {
         on_request(c, std::move(req));
@@ -321,12 +284,12 @@ void HTTPServerActor::on_accept() {
 
     {
         std::lock_guard<std::mutex> lock(conn_mutex_);
-        connections_[conn.get()] = std::move(conn);
+        connections_.push_back(std::move(conn));
     }
 }
 
-void HTTPServerActor::on_request(HTTPConnection* conn, HttpRequest&& req) {
-    // Parse query string (preserved from old code)
+void HTTPGatewayActor::on_request(HTTPConnection* conn, HttpRequest&& req) {
+    // Parse query string
     size_t qpos = req.path.find('?');
     if (qpos != std::string::npos) {
         std::string query_str = req.path.substr(qpos + 1);
@@ -386,14 +349,8 @@ void HTTPServerActor::on_request(HTTPConnection* conn, HttpRequest&& req) {
     correlated.append(msg.payload().data(), msg.payload().size());
 
     TypedMessage correlated_msg(msg.type_id(), correlated);
-    // Set sender address to the reply adapter so that the target actor's
-    // context()->reply() routes the reply back to our ReplyAdapter.
     correlated_msg.set_sender_address(reply_adapter_.address());
 
-    // Deliver to the target actor's mailbox.
-    // Using system().deliver_local() directly (rather than context()->send())
-    // to avoid the context stamping our own address over the reply_adapter_'s
-    // address — we need replies to reach the ReplyAdapter, not this actor.
     system().deliver_local(target.id, std::move(correlated_msg));
 
     // Schedule timeout
@@ -402,7 +359,7 @@ void HTTPServerActor::on_request(HTTPConnection* conn, HttpRequest&& req) {
     loop_.run_after([this, request_id] { on_timeout(request_id); }, timeout_ms);
 }
 
-void HTTPServerActor::on_reply(TypedMessage&& msg) {
+void HTTPGatewayActor::on_reply(TypedMessage&& msg) {
     const auto& payload = msg.payload();
     if (payload.size() < 8) return;
 
@@ -443,7 +400,7 @@ void HTTPServerActor::on_reply(TypedMessage&& msg) {
     }
 }
 
-void HTTPServerActor::on_error(HTTPConnection* conn, const error& err) {
+void HTTPGatewayActor::on_error(HTTPConnection* conn, const error& err) {
     HttpStatusCode code = HttpStatusCode::InternalError;
     if (err.code() == errors::http_parse_error) {
         code = HttpStatusCode::BadRequest;
@@ -461,7 +418,7 @@ void HTTPServerActor::on_error(HTTPConnection* conn, const error& err) {
     close_connection(conn);
 }
 
-void HTTPServerActor::on_timeout(uint64_t request_id) {
+void HTTPGatewayActor::on_timeout(uint64_t request_id) {
     HTTPConnection* conn = nullptr;
     {
         std::lock_guard<std::mutex> lock(reply_mutex_);
@@ -482,7 +439,7 @@ void HTTPServerActor::on_timeout(uint64_t request_id) {
     }
 }
 
-void HTTPServerActor::close_connection(HTTPConnection* conn) {
+void HTTPGatewayActor::close_connection(HTTPConnection* conn) {
     {
         std::lock_guard<std::mutex> lock(reply_mutex_);
         for (auto it = pending_replies_.begin(); it != pending_replies_.end(); ) {
@@ -495,9 +452,12 @@ void HTTPServerActor::close_connection(HTTPConnection* conn) {
     }
 
     std::lock_guard<std::mutex> lock(conn_mutex_);
-    auto it = connections_.find(conn);
+    auto it = std::find_if(connections_.begin(), connections_.end(),
+                           [conn](const HTTPConnectionPtr& p) {
+                               return p.get() == conn;
+                           });
     if (it != connections_.end()) {
-        it->second->close();
+        (*it)->close();
         connections_.erase(it);
     }
 }

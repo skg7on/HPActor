@@ -21,9 +21,11 @@
 
 namespace hpactor {
 
-class HTTPServerActor : public ExternalMsgGatewayActor {
+// Legacy skeleton for ExternalMsgGatewayActor-based HTTP gateway.
+// Superseded by net::HTTPGatewayActor (DaemonActor-based, in hpactor/net/http_gateway.hpp).
+class HTTPGatewayActor : public ExternalMsgGatewayActor {
   public:
-    HTTPServerActor(ActorContext* ctx, ActorSystem& sys,
+    HTTPGatewayActor(ActorContext* ctx, ActorSystem& sys,
                     const std::string& bind_addr, uint16_t port)
         : ExternalMsgGatewayActor(ctx, sys),
           bind_addr_(bind_addr), port_(port) {}

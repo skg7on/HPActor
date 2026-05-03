@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/daemon_actor.hpp>
+#include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_serializer.hpp>
@@ -63,18 +64,18 @@ class RouteRegistry {
 };
 
 // ---------------------------------------------------------------------------
-// HTTPServerActor — DaemonActor-based HTTP ingress gateway
+// HTTPGatewayActor — DaemonActor-based HTTP ingress gateway
 // ---------------------------------------------------------------------------
-class HTTPServerActor : public DaemonActor {
+class HTTPGatewayActor : public DaemonActor {
   public:
     using MessageBuilder = RouteRegistry::MessageBuilder;
 
-    HTTPServerActor(ActorContext* ctx, ActorSystem& sys,
+    HTTPGatewayActor(ActorContext* ctx, ActorSystem& sys,
                     const std::string& bind_host, uint16_t port);
-    ~HTTPServerActor() override;
+    ~HTTPGatewayActor() override;
 
-    HTTPServerActor(const HTTPServerActor&) = delete;
-    HTTPServerActor& operator=(const HTTPServerActor&) = delete;
+    HTTPGatewayActor(const HTTPGatewayActor&) = delete;
+    HTTPGatewayActor& operator=(const HTTPGatewayActor&) = delete;
 
     // Route registration
     void route(HttpMethod method, std::string path_pattern,
@@ -86,8 +87,8 @@ class HTTPServerActor : public DaemonActor {
     void set_max_connections(size_t max) { max_connections_ = max; }
     void set_max_request_size(size_t max) { max_request_size_ = max; }
 
-    uint16_t port() const { return port_; }
-    bool is_listening() const { return listen_fd_ >= 0; }
+    uint16_t port() const { return acceptor_ ? acceptor_->port() : port_; }
+    bool is_listening() const { return acceptor_ && acceptor_->is_listening(); }
 
     // DaemonActor overrides
     bool run_once() override;
@@ -98,7 +99,7 @@ class HTTPServerActor : public DaemonActor {
     void on_deactivate() override;
 
   private:
-    void on_accept();
+    void on_accept(int client_fd, EndPoint remote_endpoint);
     void on_request(HTTPConnection* conn, HttpRequest&& req);
     void on_reply(TypedMessage&& msg);
     void on_error(HTTPConnection* conn, const error& err);
@@ -108,8 +109,9 @@ class HTTPServerActor : public DaemonActor {
     EventLoop loop_;
     RouteRegistry routes_;
     std::unique_ptr<HttpSerializer> serializer_;
+    std::unique_ptr<TcpAcceptor> acceptor_;
 
-    std::unordered_map<HTTPConnection*, HTTPConnectionPtr> connections_;
+    std::vector<HTTPConnectionPtr> connections_;
     std::mutex conn_mutex_;
 
     struct PendingReply {
@@ -129,7 +131,6 @@ class HTTPServerActor : public DaemonActor {
 
     std::string bind_host_;
     uint16_t port_;
-    int listen_fd_ = -1;
     std::chrono::milliseconds reply_timeout_{5000};
     size_t max_connections_{1000};
     size_t max_request_size_{1048576};
