@@ -23,6 +23,7 @@
 #include <thread>
 #include <vector>
 
+namespace hpactor::mem { class ThreadLocalAllocator; }
 namespace hpactor::sched {
 
 // Forward declaration
@@ -112,6 +113,9 @@ class WorkerThread {
         owner_ = owner;
     }
 
+    // Per-thread memory allocator accessor
+    mem::ThreadLocalAllocator* allocator() { return allocator_; }
+
     // Try to steal work using A2WS victim selection
     bool try_steal(WorkItem& out);
 
@@ -131,6 +135,9 @@ class WorkerThread {
 
     // Donation counter for adaptive stealing
     std::atomic<uint64_t> donation_count_{0};
+
+    // Per-thread memory allocator
+    mem::ThreadLocalAllocator* allocator_{nullptr};
 
     // Coroutine frame pool
     CoroutineFramePool* frame_pool_{nullptr};

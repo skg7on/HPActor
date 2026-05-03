@@ -14,6 +14,7 @@
 
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/worker_thread.hpp>
+#include <hpactor/mem/thread_local_allocator.hpp>
 
 namespace hpactor::sched {
 
@@ -21,10 +22,13 @@ namespace hpactor::sched {
 thread_local CoroutineFramePool* tl_frame_pool = nullptr;
 
 WorkerThread::WorkerThread(const Config& config)
-    : config_(config), local_queue_(config.priority_levels) {}
+    : config_(config), local_queue_(config.priority_levels) {
+    allocator_ = new mem::ThreadLocalAllocator();
+}
 
 WorkerThread::~WorkerThread() {
     stop();
+    delete allocator_;
 }
 
 void WorkerThread::start() {
