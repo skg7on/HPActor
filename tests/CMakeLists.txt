@@ -331,3 +331,7 @@ add_test(NAME test_telemetry_ring_buffer COMMAND test_telemetry_ring_buffer)
 add_executable(test_memory_poisoning mem/test_memory_poisoning.cpp)
 target_link_libraries(test_memory_poisoning hpactor pthread)
 add_test(NAME test_memory_poisoning COMMAND test_memory_poisoning)
+
+add_executable(test_hibernation mem/test_hibernation.cpp)
+target_link_libraries(test_hibernation hpactor pthread)
+add_test(NAME test_hibernation COMMAND test_hibernation)

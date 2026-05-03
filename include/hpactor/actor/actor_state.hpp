@@ -28,7 +28,8 @@ class ActorState {
     static constexpr uint32_t kRunning = 0x04;
     static constexpr uint32_t kIOWaiting = 0x08;
     static constexpr uint32_t kTerminated = 0x10;
-    static constexpr uint32_t kMask = 0x1F;
+    static constexpr uint32_t kHibernating = 0x20;
+    static constexpr uint32_t kMask = 0x3F;
 
     ActorState() : state_(kIdle) {}
     explicit ActorState(uint32_t initial) : state_(initial) {}
@@ -62,6 +63,9 @@ class ActorState {
     }
     bool is_terminated() const {
         return get() == kTerminated;
+    }
+    bool is_hibernating() const {
+        return get() == kHibernating;
     }
 
   private:
