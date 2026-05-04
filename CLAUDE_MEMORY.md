@@ -12,6 +12,21 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current State
 
+**TOML Config Topology:** ✅ Complete (2026-05-04, 14 commits, ~2700 lines)
+- Declarative actor topology bootstrapping — describe the full actor tree in TOML
+- `TopologyModel` — ActorDef, DispatcherDef, SystemDef, ResourceSpec data structures
+- `ActorFactoryRegistry` — singleton mapping behavior name strings to factory functions
+- `HPACTOR_REGISTER_ACTOR` macro — static registration before main()
+- `TomlParser::parse()` — import resolution (glob), template inheritance (deep merge), validation, topological sort (Kahn's algorithm)
+- `BootstrapEngine` — `spawn_configured()`, dispatcher creation, behavior validation, batch spawn in DAG order
+- `SystemInitTag` (TypeTag 12) — broadcast after full topology spawn to gate external traffic
+- `ConfigurableActor` concept — per-actor `configure_from_args()` interface
+- AOT compiler — C++ executable (`hpactor_toml_compiler`) linking hpactor_lib, shares parsing logic
+- Binary format — custom mmap-friendly format with string table for zero-copy loading
+- `ActorSystem::load_topology()` — end-to-end convenience: parse TOML → spawn → SystemInit
+- 4 new test suites: factory registry (6), parser (13), bootstrap engine (7), binary roundtrip (3)
+- `toml++` v3.4.0 as header-only FetchContent dependency
+
 **Actor Core Framework:** ✅ Complete (Phase A-G, 65 tests passing)
 
 **Link/Monitor:** ✅ Complete (2026-04-29)
@@ -119,7 +134,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue), includes cyclic queue fix when returning last element
 - `execute_actor()` dispatch layer for coroutine resumption with state transitions
 
-**Tests:** ✅ 83 tests passing
+**Tests:** ✅ 87 tests passing
 - Memory: test_size_class, test_alloc_header, test_freelist, test_segment_provider, test_slab_cache, test_thread_local_allocator, test_memory_stress (1M ops), test_memory_tracker, test_telemetry_ring_buffer, test_memory_poisoning, test_guard_page, test_hibernation, test_compaction, test_allocator_benchmark
 - Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 - UDS: test_unix_domain_socket (path derivation, acceptor, fallback), test_uds_integration (connect and data flow)
@@ -143,6 +158,9 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Spec: `docs/superpowers/specs/2026-04-25-registrar-protobuf-async-udp-design.md` (registrar protobuf + async UDP)
 - Plan: `docs/superpowers/plans/2026-04-25-registrar-protobuf-async-udp-plan.md`
 - Spec: `docs/architecture/memory/memory-management-architecture-design.md` (memory management)
+- Spec: `docs/architecture/core/actor-toml-config-core-concept.md` (TOML config philosophy)
+- Spec: `docs/architecture/core/actor-toml-config-architecture.md` (TOML config detailed spec)
+- Plan: `docs/superpowers/plans/2026-05-03-toml-config-topology-impl.md` (TOML config implementation)
 - Plan: `docs/superpowers/plans/2026-05-03-memory-management-impl.md`
 
 ## Key Decisions
@@ -162,7 +180,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Phase 0-10 + Memory Management Complete** (83 tests passing)
+**Phase 0-10 + Memory Management + TOML Config Complete** (87 tests passing)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -201,14 +219,16 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 **Next Steps (Phase 11 - remaining items)**
 - Proactor backend production hardening (GcdBackend, IoUringBackend)
 - Full two-process integration test with TCP transport
-- Argument deserialization (passing constructor args through spawn)
+- Per-actor argument deserialization via `configure_from_args()` (concept defined, integration pending)
 - Typed RPC API (template call<Request, Response> with serialization)
 - Tiny-block optimization for 32B size class (packed out-of-band metadata)
 - Runtime configuration knobs (environment variables / config file)
+- Multi-node TOML topology (remote actor placement via dispatcher name)
 
 **Source Reorganization**
 - `include/hpactor/` — header-only library, organized by architectural group:
   - `actor/` — Actor base classes, behaviors, typed actors, spawn
+  - `config/` — TOML topology config (topology_model, actor_factory, actor_factory_registry, toml_parser, binary_format, binary_serializer, binary_loader, actor_args)
   - `ref/` — Actor references (address, ref, proxy)
   - `net/` — Networking (event loop, TLS, connection pool, transports)
   - `supervision/` — Supervision strategies
@@ -218,6 +238,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `rpc/` — RPC channel (rpc_channel.hpp)
   - `mem/` — Memory management (alloc_header, size_class, freelist, segment_provider, slab_cache, thread_local_allocator, memory_region, memory_config, memory_tracker, telemetry_ring_buffer, hibernation_registry, hibernatable, guard_page, compaction, zram)
 - `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
+- `src/config/` — actor_factory_registry.cpp, toml_parser.cpp, binary_serializer.cpp, binary_loader.cpp
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
 - `src/sched/` — scheduler.cpp, worker_thread.cpp, edf_queue.cpp, a2ws.cpp, timing_wheel.cpp, coroutine_frame_pool.cpp
@@ -226,7 +247,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `src/core/serialization.cpp` — DefaultSerializer implementation
 - `src/rpc/rpc_channel.cpp` — RpcChannel implementation
 - `src/mem/` — segment_provider.cpp, slab_cache.cpp, thread_local_allocator.cpp, memory_config.cpp, memory_tracker.cpp, hibernation_manager.cpp, guard_page.cpp, compaction.cpp, zram.cpp
-- Tests: `tests/{actor,core,mailbox,net,ref,supervision,spawn,sched,rpc,mem}/`
+- `tools/toml-compiler/` — AOT compiler executable (compiler.cpp)
+- Tests: `tests/{actor,config,core,mailbox,net,ref,supervision,spawn,sched,rpc,mem}/`
 
 ## Build Commands
 
