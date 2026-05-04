@@ -170,6 +170,8 @@ add_library(hpactor_lib SHARED
     src/ref/actor_ref.cpp
     src/spawn.cpp
     src/supervision/supervision.cpp
+    src/config/actor_factory_registry.cpp
+    src/config/toml_parser.cpp
     src/core/proto_type_registry.cpp
     src/types/typed_message.cpp
     src/net/event_loop.cpp
@@ -223,6 +225,12 @@ set_source_files_properties(
 )
 target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR} third_party/llhttp)
 
+# Enable exceptions for TOML parser (toml++ requires them)
+set_source_files_properties(
+    src/config/toml_parser.cpp
+    PROPERTIES COMPILE_FLAGS "-fexceptions"
+)
+
 # Protobuf and Abseil detection
 # Protobuf >= 22.0 requires Abseil as a transitive dependency
 find_package(Protobuf REQUIRED)
@@ -243,6 +251,7 @@ else()
 endif()
 
 # Generate protobuf C++ headers/sources
+include(${CMAKE_SOURCE_DIR}/cmake/tomlplusplus.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/protobuf.cmake)
 PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/frame.proto
@@ -256,7 +265,7 @@ target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf ${HPACTOR_PROTO
 target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(OpenSSL REQUIRED)
-target_link_libraries(hpactor_lib PUBLIC OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf ${HPACTOR_ABSL_LIBS} hpactor_proto)
+target_link_libraries(hpactor_lib PUBLIC tomlplusplus::tomlplusplus OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf ${HPACTOR_ABSL_LIBS} hpactor_proto)
 
 if(ENABLE_PROACTOR)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
