@@ -68,12 +68,23 @@ void HttpParser::reset() {
 size_t HttpParser::execute(const StreamBuffer& data) {
     if (state_ == HttpParseState::Error) return 0;
 
-    auto result = llhttp_execute(&parser_,
-                                 reinterpret_cast<const char*>(data.data()),
-                                 data.size());
+    if (state_ == HttpParseState::ParsingBody) {
+        llhttp_resume(&parser_);
+    }
 
-    if (result == HPE_PAUSED) {
+    const char* data_start = reinterpret_cast<const char*>(data.data());
+    size_t data_len = data.size();
+
+    auto result = llhttp_execute(&parser_, data_start, data_len);
+
+    if (result == HPE_PAUSED || result == HPE_PAUSED_UPGRADE) {
         state_ = HttpParseState::ParsingBody;
+        const char* error_pos = llhttp_get_error_pos(&parser_);
+        if (error_pos && error_pos > data_start) {
+            size_t consumed = static_cast<size_t>(error_pos - data_start);
+            return (consumed <= data_len) ? consumed : data_len;
+        }
+        return 0;
     } else if (result != HPE_OK) {
         state_ = HttpParseState::Error;
         if (on_error_) {
@@ -82,7 +93,7 @@ size_t HttpParser::execute(const StreamBuffer& data) {
         return 0;
     }
 
-    return data.size();
+    return data_len;
 }
 
 bool HttpParser::should_keep_alive() const {
