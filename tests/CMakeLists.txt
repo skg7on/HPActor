@@ -231,6 +231,12 @@ add_executable(test_bootstrap_engine config/test_bootstrap_engine.cpp)
 target_link_libraries(test_bootstrap_engine hpactor)
 add_test(NAME test_bootstrap_engine COMMAND test_bootstrap_engine)
 
+add_executable(test_binary_roundtrip config/test_binary_roundtrip.cpp)
+target_link_libraries(test_binary_roundtrip hpactor)
+target_compile_definitions(test_binary_roundtrip PRIVATE
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
+add_test(NAME test_binary_roundtrip COMMAND test_binary_roundtrip)
+
 # =============================================================================
 # Scheduling tests
 # =============================================================================
