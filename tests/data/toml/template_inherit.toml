@@ -1,0 +1,16 @@
+[system]
+version = "1.0"
+
+[template.base_worker]
+behavior = "WorkerActor"
+mailbox_capacity = 4096
+dispatch_policy = "Cooperative"
+  [template.base_worker.args]
+  pool = "default"
+
+[[actor]]
+id = "w1"
+inherits = "base_worker"
+  [actor.args]
+  pool = "gpu"
+  timeout = "30"

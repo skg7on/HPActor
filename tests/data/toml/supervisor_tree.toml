@@ -1,0 +1,16 @@
+[system]
+version = "1.0"
+
+[[actor]]
+id = "parent"
+behavior = "ParentActor"
+
+[[actor]]
+id = "child_1"
+behavior = "ChildActor"
+supervisor = "parent"
+
+[[actor]]
+id = "child_2"
+behavior = "ChildActor"
+supervisor = "parent"

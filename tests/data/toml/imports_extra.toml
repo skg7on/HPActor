@@ -1,0 +1,3 @@
+[[actor]]
+id = "imported_actor"
+behavior = "ImportedActor"
