@@ -21,6 +21,8 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 
+#include <hpactor/mem/std_allocator.hpp>
+
 #include <functional>
 #include <memory>
 #include <string>
@@ -78,13 +80,15 @@ class EventBasedActor : public LocalActor {
     template<typename ProtoMsgT>
     void on(std::function<void(const ProtoMsgT&)> handler) {
         TypeTag tag = type_tag_for<ProtoMsgT>();
-        auto handler_ptr = std::make_shared<
-            std::function<void(const ProtoMsgT&)>>(std::move(handler));
+        auto handler_ptr = mem::allocate_shared<
+            std::function<void(const ProtoMsgT&)>>(
+                id_ptr(), mem::RegionType::kActor, std::move(handler));
 
         ProtoHandler entry;
         entry.type_name = ProtoMsgT().GetTypeName();
         entry.deserialize = [](const StreamBuffer& data) -> std::shared_ptr<void> {
-            auto msg = std::make_shared<ProtoMsgT>();
+            auto msg = mem::allocate_shared<ProtoMsgT>(
+                mem::current_actor_id(), mem::RegionType::kMessage);
             if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
                 return nullptr;
             }
@@ -103,13 +107,15 @@ class EventBasedActor : public LocalActor {
     template<typename ReqT, typename ResT>
     void on_request(std::function<ResT(const ReqT&)> handler) {
         TypeTag tag = type_tag_for<ReqT>();
-        auto handler_ptr = std::make_shared<
-            std::function<ResT(const ReqT&)>>(std::move(handler));
+        auto handler_ptr = mem::allocate_shared<
+            std::function<ResT(const ReqT&)>>(
+                id_ptr(), mem::RegionType::kActor, std::move(handler));
 
         ProtoHandler entry;
         entry.type_name = ReqT().GetTypeName();
         entry.deserialize = [](const StreamBuffer& data) -> std::shared_ptr<void> {
-            auto msg = std::make_shared<ReqT>();
+            auto msg = mem::allocate_shared<ReqT>(
+                mem::current_actor_id(), mem::RegionType::kMessage);
             if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
                 return nullptr;
             }
@@ -255,7 +261,15 @@ class EventBasedActor : public LocalActor {
     sched::IScheduler* scheduler_ = nullptr;
 
     bool handlers_initialized_ = false;
-    std::unordered_map<TypeTag, ProtoHandler> proto_handlers_;
+
+    using ProtoHandlerMap =
+        std::unordered_map<TypeTag, ProtoHandler, std::hash<TypeTag>,
+                           std::equal_to<>,
+                           mem::MemStdAllocator<std::pair<const TypeTag,
+                                                          ProtoHandler>>>;
+    ProtoHandlerMap proto_handlers_{
+        mem::MemStdAllocator<std::pair<const TypeTag, ProtoHandler>>(
+            id_ptr(), mem::RegionType::kActor)};
 };
 
 } // namespace hpactor

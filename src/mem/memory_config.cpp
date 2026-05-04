@@ -17,5 +17,6 @@
 namespace hpactor::mem {
 
 thread_local ThreadLocalAllocator* t_tla = nullptr;
+thread_local ActorId t_current_actor_id{};
 
 } // namespace hpactor::mem

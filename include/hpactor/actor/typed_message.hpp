@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <hpactor/mem/memory_config.hpp>
+#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -94,7 +96,8 @@ public:
         if (payload_.empty()) {
             return nullptr;
         }
-        auto msg = std::make_shared<T>();
+        auto msg = mem::allocate_shared<T>(
+            mem::current_actor_id(), mem::RegionType::kMessage);
         if (!msg->ParseFromArray(payload_.data(),
                                  static_cast<int>(payload_.size()))) {
             return nullptr;

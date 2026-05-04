@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
@@ -42,7 +43,7 @@ class TimingWheel {
   public:
     using TimerCallback = std::function<void()>;
 
-    struct Timer {
+    struct Timer : mem::SlabAllocated<Timer> {
         int64_t expire_ns;      // absolute expiration time
         uint64_t id;            // unique timer id
         TimerCallback callback; // called when timer fires

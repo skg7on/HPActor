@@ -18,6 +18,7 @@
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/tcp_transport.hpp>
@@ -364,7 +365,8 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     }
 
     // Spawn actors in topological order; track numeric IDs for SystemInit
-    std::vector<ActorId> spawned_ids;
+    std::vector<ActorId, mem::MemStdAllocator<ActorId>> spawned_ids(
+        mem::MemStdAllocator<ActorId>(system_actor_.id(), mem::RegionType::kInternal));
     for (const auto& actor_def : model.actors) {
         auto factory = registry.get_factory(actor_def.behavior);
         auto actor_ptr = factory(nullptr, *this);

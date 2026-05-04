@@ -15,11 +15,13 @@
 #pragma once
 
 #include <hpactor/actor/external_msg_gateway.hpp>
+#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_serializer.hpp>
 #include <hpactor/net/http_types.hpp>
 
 #include <chrono>
+#include <deque>
 #include <memory>
 #include <mutex>
 #include <queue>
@@ -74,15 +76,28 @@ class HTTPGatewayActor : public ExternalMsgGatewayActor {
     RouteRegistry routes_;
     std::unique_ptr<HttpSerializer> serializer_;
 
-    struct PendingReply {
+    struct PendingReply : mem::SlabAllocated<PendingReply> {
         uint64_t request_id;
         HTTPConnection* conn;
         std::chrono::steady_clock::time_point enqueued_at;
     };
-    std::unordered_map<uint64_t, std::unique_ptr<PendingReply>> pending_replies_;
+
+    using PendingReplyMap =
+        std::unordered_map<uint64_t, std::unique_ptr<PendingReply>,
+                           std::hash<uint64_t>, std::equal_to<>,
+                           mem::MemStdAllocator<std::pair<const uint64_t,
+                                                          std::unique_ptr<PendingReply>>>>;
+    PendingReplyMap pending_replies_{
+        mem::MemStdAllocator<std::pair<const uint64_t,
+                                       std::unique_ptr<PendingReply>>>(
+            id_ptr(), mem::RegionType::kActor)};
     std::mutex reply_mutex_;
 
-    std::queue<TypedMessage> reply_queue_;
+    using ReplyDeque =
+        std::deque<TypedMessage, mem::MemStdAllocator<TypedMessage>>;
+    std::queue<TypedMessage, ReplyDeque> reply_queue_{
+        ReplyDeque(mem::MemStdAllocator<TypedMessage>(
+            id_ptr(), mem::RegionType::kActor))};
     std::mutex reply_queue_mutex_;
 
     Actor reply_adapter_{nullptr};

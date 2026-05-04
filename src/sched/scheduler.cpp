@@ -214,6 +214,10 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     }
     auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
 
+    // Set thread-local current actor ID so SlabAllocated::operator new and
+    // mem::current_actor_id() can attribute allocations to the correct actor.
+    mem::set_current_actor_id(item.actor);
+
 #if HPACTOR_SUPPORT_COROUTINES
     if (system_.use_coroutines()) {
         // C++20 coroutine path (runtime opt-in via Config::use_coroutines)

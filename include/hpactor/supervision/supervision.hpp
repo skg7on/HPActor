@@ -16,6 +16,7 @@
 #include <chrono>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_context.hpp>
+#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
@@ -65,8 +66,19 @@ class SupervisorActor : public EventBasedActor {
     void restart_all_children();
 
     Supervisor& strategy_;
-    std::vector<Actor> children_;
-    std::unordered_map<ActorId, uint32_t> restart_counts_;
+
+  public:
+    using ActorVec = std::vector<Actor, mem::MemStdAllocator<Actor>>;
+    using RestartCountMap =
+        std::unordered_map<ActorId, uint32_t, std::hash<ActorId>,
+                           std::equal_to<>,
+                           mem::MemStdAllocator<std::pair<const ActorId, uint32_t>>>;
+
+  protected:
+    ActorVec children_;
+    RestartCountMap restart_counts_{
+        mem::MemStdAllocator<std::pair<const ActorId, uint32_t>>(
+            id_ptr(), mem::RegionType::kActor)};
     std::chrono::steady_clock::time_point first_failure_time_;
 
   private:
@@ -76,6 +88,16 @@ class SupervisorActor : public EventBasedActor {
 // SelfSupervisingActor - EventBasedActor that manages its own children
 class SelfSupervisingActor : public EventBasedActor {
   public:
+    // Container type aliases with MemStdAllocator
+    using ActorVec = std::vector<Actor, mem::MemStdAllocator<Actor>>;
+    using ActorRefVec = std::vector<ActorRef, mem::MemStdAllocator<ActorRef>>;
+    using ActorAddrVec =
+        std::vector<ActorAddress, mem::MemStdAllocator<ActorAddress>>;
+    using RestartCountMap =
+        std::unordered_map<ActorId, uint32_t, std::hash<ActorId>,
+                           std::equal_to<>,
+                           mem::MemStdAllocator<std::pair<const ActorId, uint32_t>>>;
+
     SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
                          SupervisionPolicy policy = SupervisionPolicy{});
 
@@ -87,7 +109,7 @@ class SelfSupervisingActor : public EventBasedActor {
     bool has_remote_child(const ActorAddress& addr) const;
     ActorRef get_remote_child(const ActorAddress& addr) const;
     void remove_remote_child(const ActorAddress& addr);
-    const std::vector<ActorRef>& remote_children() const {
+    const ActorRefVec& remote_children() const {
         return remote_children_;
     }
 
@@ -97,12 +119,15 @@ class SelfSupervisingActor : public EventBasedActor {
 
   private:
     SupervisionDirective decide_restart(ActorId child_id, const error& err);
-    std::vector<Actor> children_;
+
+    ActorVec children_;
     SupervisionPolicy policy_;
-    std::unordered_map<ActorId, uint32_t> restart_counts_;
+    RestartCountMap restart_counts_{
+        mem::MemStdAllocator<std::pair<const ActorId, uint32_t>>(
+            id_ptr(), mem::RegionType::kActor)};
     std::chrono::steady_clock::time_point first_failure_time_;
-    std::vector<ActorRef> remote_children_; // remote child references
-    std::vector<ActorAddress> remote_child_addresses_; // for persistence
+    ActorRefVec remote_children_;
+    ActorAddrVec remote_child_addresses_;
 };
 
 } // namespace hpactor

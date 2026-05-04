@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <google/protobuf/message.h>
@@ -45,7 +46,8 @@ public:
                       "ProtoMsgT must be a protobuf message type");
         Entry entry;
         entry.type_name = type_name;
-        entry.prototype = std::make_shared<ProtoMsgT>();
+        entry.prototype = mem::allocate_shared<ProtoMsgT>(
+            ActorId{}, mem::RegionType::kInternal);
         registry_[tag] = std::move(entry);
     }
 

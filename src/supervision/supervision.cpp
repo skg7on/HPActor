@@ -41,8 +41,12 @@ AllForOneSupervisor::on_child_failure(const ChildFailure& /*failure*/) {
 SupervisorActor::SupervisorActor(ActorContext* ctx, ActorSystem& sys,
                                  Supervisor& strategy, std::vector<Actor> children)
     : EventBasedActor(ctx, sys), strategy_(strategy),
-      children_(std::move(children)),
+      children_(mem::MemStdAllocator<Actor>(id_ptr(), mem::RegionType::kActor)),
       first_failure_time_(std::chrono::steady_clock::time_point::min()) {
+    children_.reserve(children.size());
+    for (auto& child : children) {
+        children_.push_back(std::move(child));
+    }
     become(make_behavior());
 }
 
@@ -55,7 +59,8 @@ Behavior SupervisorActor::make_behavior() {
 }
 
 void SupervisorActor::handle_child_down(TypeTag /*tag*/, const StreamBuffer& payload) {
-    auto pb = std::make_shared<::hpactor::DownMessage>();
+    auto pb = mem::allocate_shared<::hpactor::DownMessage>(
+        id(), mem::RegionType::kActor);
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
         return;
     }
@@ -167,7 +172,8 @@ SelfSupervisingActor::on_failure(ActorId child_id, const error& err) {
 }
 
 void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/, const StreamBuffer& payload) {
-    auto pb = std::make_shared<::hpactor::DownMessage>();
+    auto pb = mem::allocate_shared<::hpactor::DownMessage>(
+        id(), mem::RegionType::kActor);
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
         return;
     }

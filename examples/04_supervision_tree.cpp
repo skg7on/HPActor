@@ -152,7 +152,9 @@ class RestartingSupervisor : public hpactor::SupervisorActor {
         : hpactor::SupervisorActor(ctx, sys, strategy, std::move(children)),
           factory_(std::move(factory)) {}
 
-    const std::vector<hpactor::Actor>& children() const { return children_; }
+    const hpactor::SupervisorActor::ActorVec& children() const {
+        return children_;
+    }
 
   protected:
     void restart_child(hpactor::ActorId child_id) override {

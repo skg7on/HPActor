@@ -49,12 +49,24 @@ inline constexpr uint32_t kDefaultSampleRate = 128;
 // Set by WorkerThread during init, used by global convenience functions.
 extern thread_local ThreadLocalAllocator* t_tla;
 
+// Current actor ID — set by the scheduler before dispatching actor work.
+// Used by SlabAllocated::operator new to attribute allocations correctly.
+extern thread_local ActorId t_current_actor_id;
+
 inline void set_thread_allocator(ThreadLocalAllocator* tla) {
     t_tla = tla;
 }
 
 inline ThreadLocalAllocator* thread_allocator() {
     return t_tla;
+}
+
+inline void set_current_actor_id(ActorId id) {
+    t_current_actor_id = id;
+}
+
+inline ActorId current_actor_id() {
+    return t_current_actor_id;
 }
 
 // =========================================================================

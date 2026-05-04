@@ -46,6 +46,7 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     ActorId id() const {
         return id_;
     }
+    const ActorId* id_ptr() const { return &id_; }
     ActorType type() const {
         return type_;
     }

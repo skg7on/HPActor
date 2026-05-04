@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/daemon_actor.hpp>
+#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
@@ -22,14 +23,17 @@
 #include <functional>
 #include <string>
 #include <unordered_map>
-#include <vector>
 
 namespace hpactor {
 
 class ExternalMsgGatewayActor : public DaemonActor {
   public:
     ExternalMsgGatewayActor(ActorContext* ctx, ActorSystem& sys)
-        : DaemonActor(ctx, sys) {}
+        : DaemonActor(ctx, sys)
+        , routes_(mem::MemStdAllocator<std::pair<const std::string, ActorAddr>>(
+              id_ptr(), mem::RegionType::kActor))
+        , transforms_(mem::MemStdAllocator<std::pair<const TypeTag, PayloadTransform>>(
+              id_ptr(), mem::RegionType::kActor)) {}
 
     void route(const std::string& path_pattern, ActorAddr target) {
         routes_[path_pattern] = target;
@@ -65,8 +69,18 @@ class ExternalMsgGatewayActor : public DaemonActor {
         return TypedMessage(tag, std::move(payload));
     }
 
-    std::unordered_map<std::string, ActorAddr> routes_;
-    std::unordered_map<TypeTag, PayloadTransform> transforms_;
+    using RouteMap =
+        std::unordered_map<std::string, ActorAddr, std::hash<std::string>,
+                           std::equal_to<>,
+                           mem::MemStdAllocator<std::pair<const std::string,
+                                                          ActorAddr>>>;
+    using TransformMap =
+        std::unordered_map<TypeTag, PayloadTransform, std::hash<TypeTag>,
+                           std::equal_to<>,
+                           mem::MemStdAllocator<std::pair<const TypeTag,
+                                                          PayloadTransform>>>;
+    RouteMap routes_;
+    TransformMap transforms_;
 };
 
 } // namespace hpactor
