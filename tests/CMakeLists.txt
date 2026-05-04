@@ -370,3 +370,7 @@ add_test(NAME test_compaction COMMAND test_compaction)
 add_executable(test_allocator_benchmark mem/test_allocator_benchmark.cpp)
 target_link_libraries(test_allocator_benchmark hpactor pthread)
 add_test(NAME test_allocator_benchmark COMMAND test_allocator_benchmark)
+
+add_executable(test_std_allocator mem/test_std_allocator.cpp)
+target_link_libraries(test_std_allocator hpactor pthread)
+add_test(NAME test_std_allocator COMMAND test_std_allocator)
