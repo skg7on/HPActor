@@ -1,0 +1,30 @@
+# 3-level supervisor hierarchy
+[system]
+version = "1.0"
+scheduler_threads = 4
+
+[[actor]]
+id = "gateway"
+behavior = "GatewayActor"
+dispatcher = "io_pool"
+
+[[actor]]
+id = "auth_worker"
+behavior = "AuthActor"
+supervisor = "gateway"
+dispatcher = "compute_pool"
+
+[[actor]]
+id = "db_worker"
+behavior = "DbActor"
+supervisor = "gateway"
+dispatcher = "compute_pool"
+
+[[dispatcher]]
+name = "io_pool"
+threads = 2
+
+[[dispatcher]]
+name = "compute_pool"
+threads = 4
+cpu_affinity = [0, 1, 2, 3]

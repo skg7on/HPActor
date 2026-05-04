@@ -1,0 +1,38 @@
+# Router with worker pool using template inheritance
+[system]
+version = "1.0"
+scheduler_threads = 8
+
+[[dispatcher]]
+name = "worker_pool"
+threads = 8
+
+[template.pool_worker]
+behavior = "ComputeWorker"
+dispatcher = "worker_pool"
+dispatch_policy = "Cooperative"
+mailbox_capacity = 4096
+
+[[actor]]
+id = "router"
+behavior = "RoundRobinRouter"
+
+[[actor]]
+id = "worker_1"
+inherits = "pool_worker"
+supervisor = "router"
+
+[[actor]]
+id = "worker_2"
+inherits = "pool_worker"
+supervisor = "router"
+
+[[actor]]
+id = "worker_3"
+inherits = "pool_worker"
+supervisor = "router"
+
+[[actor]]
+id = "worker_4"
+inherits = "pool_worker"
+supervisor = "router"

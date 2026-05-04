@@ -1,0 +1,6 @@
+[system]
+version = "1.0"
+
+[[actor]]
+id = "echo_server"
+behavior = "EchoActor"

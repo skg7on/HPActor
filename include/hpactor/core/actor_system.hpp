@@ -27,6 +27,7 @@
 #include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
+#include <hpactor/config/topology_model.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -111,6 +112,14 @@ class ActorSystem {
 
     // Spawn actors at system level
     template <typename T, typename... Args> Actor spawn(Args&&... args);
+
+    // Spawn a pre-constructed actor with configuration from ActorDef.
+    // Used by BootstrapEngine for TOML-based topology bootstrapping.
+    Actor spawn_configured(std::shared_ptr<AbstractActor> actor,
+                           const struct config::ActorDef& def);
+
+    // Load topology from TOML file (convenience entry point)
+    result<void> load_topology(const std::string& toml_path);
 
     // Actor registry
     void register_actor(const std::string& name, Actor actor);

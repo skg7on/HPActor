@@ -215,6 +215,29 @@ target_link_libraries(test_self_supervising_actor hpactor)
 add_test(NAME test_self_supervising_actor COMMAND test_self_supervising_actor)
 
 # =============================================================================
+# Config tests
+# =============================================================================
+add_executable(test_actor_factory_registry config/test_actor_factory_registry.cpp)
+target_link_libraries(test_actor_factory_registry hpactor)
+add_test(NAME test_actor_factory_registry COMMAND test_actor_factory_registry)
+
+add_executable(test_toml_parser config/test_toml_parser.cpp)
+target_link_libraries(test_toml_parser hpactor)
+target_compile_definitions(test_toml_parser PRIVATE
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
+add_test(NAME test_toml_parser COMMAND test_toml_parser)
+
+add_executable(test_bootstrap_engine config/test_bootstrap_engine.cpp)
+target_link_libraries(test_bootstrap_engine hpactor)
+add_test(NAME test_bootstrap_engine COMMAND test_bootstrap_engine)
+
+add_executable(test_binary_roundtrip config/test_binary_roundtrip.cpp)
+target_link_libraries(test_binary_roundtrip hpactor)
+target_compile_definitions(test_binary_roundtrip PRIVATE
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
+add_test(NAME test_binary_roundtrip COMMAND test_binary_roundtrip)
+
+# =============================================================================
 # Scheduling tests
 # =============================================================================
 add_executable(test_chaselev_deque sched/test_chaselev_deque.cpp)

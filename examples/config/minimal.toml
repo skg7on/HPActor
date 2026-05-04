@@ -1,0 +1,10 @@
+# Minimal HPActor topology — single echo actor
+[system]
+version = "1.0"
+scheduler_threads = 2
+default_mailbox_size = 1024
+
+[[actor]]
+id = "echo_server"
+behavior = "EchoActor"
+mailbox_capacity = 4096

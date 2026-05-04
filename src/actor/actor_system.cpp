@@ -12,8 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
+#include <hpactor/config/actor_factory_registry.hpp>
+#include <hpactor/config/toml_parser.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/net/frame.hpp>
@@ -286,6 +289,105 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
                      frame.encode());
 
     return std::move(*pending);
+}
+
+// -----------------------------------------------------------------------------
+// spawn_configured — spawn a pre-constructed actor with ActorDef config
+// -----------------------------------------------------------------------------
+Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
+                                    const config::ActorDef& def) {
+    ActorId id(next_actor_id_.fetch_add(1));
+    actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
+
+    {
+        std::lock_guard<std::mutex> lock(actors_mutex_);
+        actors_.emplace(id, actor);
+    }
+
+    // Create mailbox with capacity from ActorDef
+    {
+        std::lock_guard<std::mutex> lock(mailboxes_mutex_);
+        mailboxes_.emplace(
+            id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
+                    id, scheduler_.get()));
+    }
+
+    // Create actor context and set it on the actor
+    auto* local = static_cast<LocalActor*>(actor.get());
+    auto actor_ctx = std::make_unique<ActorContext>(Actor(actor), this);
+    local->set_context(actor_ctx.get());
+    actor_contexts_.emplace(id, std::move(actor_ctx));
+
+    // Set scheduler and mailbox on actor
+    actor->set_scheduler(scheduler_.get());
+    actor->set_mailbox(mailboxes_[id].get());
+
+    // Register with scheduler based on ActorDef dispatch policy
+    switch (def.dispatch_policy) {
+    case config::DispatchPolicy::Cooperative:
+        scheduler_->notify_ready(id, 0, INT64_MAX);
+        break;
+    case config::DispatchPolicy::DedicatedThread: {
+        int cpu_aff = -1;
+        scheduler_->register_dedicated_thread(id, cpu_aff);
+        break;
+    }
+    case config::DispatchPolicy::DedicatedPool:
+        scheduler_->register_dedicated_pool(id, 1);
+        break;
+    }
+
+    // Activate the actor (DaemonActor starts its thread here, etc.)
+    local->on_activate();
+
+    return Actor(actor);
+}
+
+// -----------------------------------------------------------------------------
+// load_topology — convenience entry point for TOML-based bootstrapping
+// -----------------------------------------------------------------------------
+result<void> ActorSystem::load_topology(const std::string& toml_path) {
+    auto parse_result = config::TomlParser::parse(toml_path);
+    if (!parse_result.has_value()) {
+        return result<void>::make(parse_result.error());
+    }
+
+    auto& model = parse_result.value();
+
+    // Validate all behaviors are registered
+    auto& registry = config::ActorFactoryRegistry::instance();
+    for (const auto& actor_def : model.actors) {
+        if (!registry.has(actor_def.behavior)) {
+            error err(errors::unknown);
+            return result<void>::make(std::move(err));
+        }
+    }
+
+    // Spawn actors in topological order; track numeric IDs for SystemInit
+    std::vector<ActorId> spawned_ids;
+    for (const auto& actor_def : model.actors) {
+        auto factory = registry.get_factory(actor_def.behavior);
+        auto actor_ptr = factory(nullptr, *this);
+
+        Actor actor_handle = spawn_configured(std::move(actor_ptr), actor_def);
+
+        // Register in name registry
+        registry_.put(actor_def.id, actor_handle.address());
+
+        spawned_ids.push_back(actor_handle.id());
+    }
+
+    // Broadcast SystemInit to all spawned actors
+    ActorAddress sys_addr = system_actor_.address();
+    StreamBuffer empty_payload;
+    for (ActorId id : spawned_ids) {
+        TypedMessage init_msg(TypeTag::SystemInitTag, std::move(empty_payload));
+        init_msg.set_sender_address(sys_addr);
+        deliver_local(id, std::move(init_msg));
+        empty_payload = StreamBuffer{};
+    }
+
+    return result<void>::make();
 }
 
 } // namespace hpactor

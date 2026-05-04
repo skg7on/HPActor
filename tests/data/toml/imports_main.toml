@@ -1,0 +1,7 @@
+[system]
+version = "1.0"
+imports = ["imports_extra.toml"]
+
+[[actor]]
+id = "main_actor"
+behavior = "MainActor"
