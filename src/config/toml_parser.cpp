@@ -14,7 +14,7 @@
 
 #include <hpactor/config/toml_parser.hpp>
 
-#include <toml++/toml.hpp>
+#include <toml.hpp>
 
 #include <deque>
 #include <filesystem>
