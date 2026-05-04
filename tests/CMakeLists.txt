@@ -227,6 +227,10 @@ target_compile_definitions(test_toml_parser PRIVATE
     TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
 add_test(NAME test_toml_parser COMMAND test_toml_parser)
 
+add_executable(test_bootstrap_engine config/test_bootstrap_engine.cpp)
+target_link_libraries(test_bootstrap_engine hpactor)
+add_test(NAME test_bootstrap_engine COMMAND test_bootstrap_engine)
+
 # =============================================================================
 # Scheduling tests
 # =============================================================================
