@@ -86,7 +86,7 @@ ActorSystem::ActorSystem(const Config& config)
         }
 
         if (config_.enable_http_gateway) {
-            // HTTPGatewayActor spawn deferred.
+            // net::HTTPGatewayActor spawn deferred.
         }
 
         transport_->set_rpc_handler(

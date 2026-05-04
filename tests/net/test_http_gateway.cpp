@@ -17,7 +17,7 @@
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/http_client.hpp>
-#include <hpactor/net/http_gateway.hpp>
+#include <hpactor/actor/http_gateway_actor.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/types/types.hpp>
 

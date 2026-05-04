@@ -44,8 +44,8 @@ AbstractActor (interface base)
             │       └── ScopedActor (for main/non-actor contexts)
             └── DaemonActor (dedicated thread, run_once() loop)
                     ├── PollingActor (CPU affinity, poll budget)
-                    ├── ExternalMsgGatewayActor (named route table)
-                    └── net::HTTPGatewayActor (production HTTP gateway)
+                    └── ExternalMsgGatewayActor (named route table, message transforms)
+                            └── net::HTTPGatewayActor (HTTP ingress gateway)
 ```
 
 ### Key Components
