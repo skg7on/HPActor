@@ -172,6 +172,8 @@ add_library(hpactor_lib SHARED
     src/supervision/supervision.cpp
     src/config/actor_factory_registry.cpp
     src/config/toml_parser.cpp
+    src/config/binary_serializer.cpp
+    src/config/binary_loader.cpp
     src/core/proto_type_registry.cpp
     src/types/typed_message.cpp
     src/net/event_loop.cpp
@@ -307,6 +309,9 @@ add_library(hpactor ALIAS hpactor_lib)
 # =============================================================================
 # Tests
 # =============================================================================
+# AOT Compiler
+add_subdirectory(tools/toml-compiler)
+
 enable_testing()
 add_subdirectory(tests)
 
