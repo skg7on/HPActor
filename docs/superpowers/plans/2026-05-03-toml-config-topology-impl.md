@@ -23,7 +23,7 @@ Phase 3: Runtime TOML Parser
     │
     ├──────────────────────────────┐
     ▼                              ▼
-Phase 4: Bootstrap Engine      Phase 5: AOT Compiler (Python)
+Phase 4: Bootstrap Engine      Phase 5: AOT Compiler (C++)
     │                              │
     └──────────┬───────────────────┘
                ▼
@@ -592,9 +592,9 @@ Test case:
 
 ---
 
-## Phase 5: AOT Compiler (Python)
+## Phase 5: AOT Compiler (C++)
 
-**Goal:** A build-time tool that compiles TOML topology files into a FlatBuffers binary for zero-copy startup.
+**Goal:** A build-time C++ tool that compiles TOML topology files into a FlatBuffers binary for zero-copy startup. Sharing the same TOML parsing logic as the runtime path (Phase 3), the AOT compiler is a standalone executable built as part of the CMake project.
 
 ### Step 5.1 — FlatBuffers schema
 
@@ -657,28 +657,39 @@ table SystemTopology {
 root_type SystemTopology;
 ```
 
-### Step 5.2 — Compiler script
+### Step 5.2 — AOT Compiler executable
 
-File: `tools/toml-compiler/compiler.py`
+File: `tools/toml-compiler/compiler.cpp`
 
-Dependencies: Python 3.11+ (`tomllib` stdlib), `flatbuffers` pip package, compiled FlatBuffers Python bindings from `flatc`.
+Dependencies: `toml++` (same header-only library as Phase 3), `flatc`-generated C++ headers, libflatbuffers.
+
+The compiler links against the same TOML parsing logic built in Phase 3 (`src/config/toml_parser.cpp`), sharing import resolution, template resolution, validation, and topological sort. The only difference is the final serialization step — FlatBuffers instead of `TopologyModel`.
 
 ```text
-compiler.py phases:
+compiler.cpp phases:
     1. Parse CLI args: --input main.toml --output topology.bin
-    2. Load entrypoint TOML (tomllib.load)
-    3. Resolve imports (glob expansion, DFS traversal)
-    4. Merge all [[actor]], [[dispatcher]], [template.*] sections
-    5. Resolve template inheritance (deep merge)
-    6. Validate (duplicate ids, missing behaviors, circular deps)
-    7. Topological sort (Kahn's algorithm)
-    8. FlatBuffers serialization (bottom-up construction)
-    9. Write topology.bin
+    2. Load and merge TOML (reuses TomlParser merge/validate/sort logic)
+    3. FlatBuffers serialization via FlatBufferBuilder (bottom-up construction)
+    4. Write topology.bin to output path
+```
+
+**File structure:**
+```
+tools/toml-compiler/
+├── CMakeLists.txt             # Builds the hpactor_toml_compiler executable
+├── compiler.cpp               # CLI entry point
+├── flatbuffers_serializer.hpp  # TopologyModel → FlatBuffers binary
+└── flatbuffers_serializer.cpp  # Serialization implementation
 ```
 
 **CLI:**
 ```bash
-python tools/toml-compiler/compiler.py \
+# Built as part of the CMake project:
+cmake -S . -B build -GNinja
+ninja -C build hpactor_toml_compiler
+
+# Run at build time or manually:
+./build/tools/toml-compiler/hpactor_toml_compiler \
     --input config/main.toml \
     --output build/topology.bin
 ```
@@ -706,15 +717,23 @@ result<TopologyModel, LoadError> load_from_binary(const std::string& path) {
 
 File: `cmake/toml_compiler.cmake`
 
+The AOT compiler is built as a CMake executable target. A custom command runs it at build time to produce `topology.bin`. The compiler reuses existing library code (`TomlParser`, `TopologyModel`) from the `hpactor_lib` target.
+
 ```cmake
-# Custom target: compile TOML → FlatBuffers binary
+# Build the AOT compiler executable (links hpactor_lib for shared parsing logic)
+add_executable(hpactor_toml_compiler
+    tools/toml-compiler/compiler.cpp
+    tools/toml-compiler/flatbuffers_serializer.cpp
+)
+target_link_libraries(hpactor_toml_compiler PRIVATE hpactor_lib flatbuffers::flatbuffers)
+
+# Custom target: compile TOML → FlatBuffers binary at build time
 add_custom_command(
     OUTPUT ${CMAKE_BINARY_DIR}/topology.bin
-    COMMAND ${Python3_EXECUTABLE} 
-        ${CMAKE_SOURCE_DIR}/tools/toml-compiler/compiler.py
+    COMMAND hpactor_toml_compiler
         --input ${TOML_ENTRYPOINT}
         --output ${CMAKE_BINARY_DIR}/topology.bin
-    DEPENDS ${TOML_SOURCE_FILES}
+    DEPENDS hpactor_toml_compiler ${TOML_SOURCE_FILES}
     COMMENT "Compiling TOML topology → FlatBuffers binary"
 )
 
@@ -811,7 +830,7 @@ Add `HPACTOR_REGISTER_ACTOR` macros to any actors that should be bootable from T
 | 2. Factory | `actor_factory.hpp`, `actor_factory_registry.hpp` | — | `test_actor_factory_registry.cpp` (5) | Small |
 | 3. Parser | `toml_parser.hpp`, `toml_parser.cpp` | `CMakeLists.txt` | `test_toml_parser.cpp` (13) | Large |
 | 4. Engine | `bootstrap_engine.cpp`, `actor_args.hpp` | `actor_system.hpp`, `actor_system.cpp` | `test_bootstrap_engine.cpp` (7), `test_system_init.cpp` (1) | Large |
-| 5. AOT | `topology.fbs`, `compiler.py`, `flatbuffers_loader.cpp` | `cmake/toml_compiler.cmake` | `test_toml_flatbuffers_roundtrip.cpp` (1) | Medium |
+| 5. AOT | `topology.fbs`, `compiler.cpp`, `flatbuffers_serializer.cpp/.hpp`, `flatbuffers_loader.cpp` | `cmake/toml_compiler.cmake`, `tools/toml-compiler/CMakeLists.txt` | `test_toml_flatbuffers_roundtrip.cpp` (1) | Medium |
 | 6. Integration | Example configs, updated example main | `CLAUDE.md`, memory | — | Small |
 
 **Total estimated new files:** ~12 source/header, 4 test files, 5 example configs
@@ -827,7 +846,7 @@ Add `HPACTOR_REGISTER_ACTOR` macros to any actors that should be bootable from T
 | `toml++` API changes between versions | Build break | Pin exact version tag in FetchContent |
 | `ActorSystem::spawn<T>()` template is not easily refactorable to `spawn_configured()` | Duplication or rework | Extract shared spawn logic into private `spawn_impl()` helper |
 | `configure_from_args()` concept detection fails on some compilers | Build break | Guard with `#ifdef` / feature macro; fall back to runtime detection |
-| AOT compiler requires Python 3.11+ not available in CI | AOT path unavailable | Make AOT compiler optional; runtime path always works |
+| AOT compiler links against `hpactor_lib` — circular dependency risk | `hpactor_lib` doesn't depend on AOT compiler; compiler is a separate executable target | Ensure `hpactor_toml_compiler` only links, not co-compiled |
 | FlatBuffers schema drift from TopologyModel | Roundtrip test fails | Phase 5.5 roundtrip test catches schema/model mismatches immediately |
 
 ---

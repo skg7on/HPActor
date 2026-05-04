@@ -566,16 +566,20 @@ TopologyModel BootstrapEngine::load_from_binary(const std::string& path) {
 
 ### AOT Compiler Tool
 
-The AOT compiler is a separate tool (not part of the C++ build). It lives in `tools/toml-compiler/`.
+The AOT compiler is a standalone C++ executable built as part of the CMake project. It lives in `tools/toml-compiler/` and links against `hpactor_lib` to reuse the same TOML parsing, validation, and topological sort logic from Phase 3.
 
-**Technology options:**
+**Technology selection — C++:**
 
-| Language | Pros | Cons |
-|----------|------|------|
-| **Python** | `tomllib` stdlib (3.11+), FlatBuffers Python bindings from `flatc`, ~300 LOC | Requires Python runtime at build time |
-| **Rust** | `serde` + `toml` crates, type-safe, single binary | Heavier toolchain, more LOC |
+The compiler shares the `toml++` dependency and `TomlParser` merge/validate/sort logic with the runtime path. The only difference is the final output step: runtime produces a `TopologyModel` in memory; the AOT compiler serializes to FlatBuffers and writes a binary file. Using C++ eliminates an external language dependency and ensures the AOT and runtime paths never diverge in behavior.
 
-**Recommended:** Python for initial implementation (simpler CI integration, minimal code).
+**File structure:**
+```
+tools/toml-compiler/
+├── CMakeLists.txt               # Builds hpactor_toml_compiler executable
+├── compiler.cpp                 # CLI entry point
+├── flatbuffers_serializer.hpp   # TopologyModel → FlatBuffers binary
+└── flatbuffers_serializer.cpp   # Bottom-up FlatBufferBuilder serialization
+```
 
 **Compiler phases:**
 ```
