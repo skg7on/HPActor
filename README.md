@@ -68,6 +68,12 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **SpawnReceiver**: System actor for handling spawn requests across the network
 - **Well-Known System IDs**: `SpawnReceiverId`, `SystemActorType` — constexpr initialized
 
+### Declarative Topology Configuration
+- **TOML-Based Topology**: Declare actor trees, supervision hierarchies, and dispatcher bindings in TOML — `ActorSystem::load_topology("config.toml")` bootstraps the entire system
+- **Template System**: Reusable actor templates with argument merging for DRY topology definitions
+- **AOT Compiler**: `tools/toml-compiler/` compiles TOML topology to a compact binary format for production deployment
+- **Binary Format**: mmap-friendly binary topology with string interning — zero-parse bootstrap
+
 ### Serialization
 - **Protobuf Wire Format**: `common.proto` (endpoint types), `frame.proto` (WireFrame transport), `messages.proto` (system messages)
 - **DefaultSerializer**: Protobuf-based encode/decode for all system message types
@@ -221,8 +227,9 @@ Actor types, behaviors, and message definitions are header-only templates — ze
 ### Lock-free mailbox earned through testing
 The mailbox uses a Vyukov MPSC queue with an edge-trigger `CAS` wakeup mechanism. This was designed through iterative testing rather than upfront theory — the "swap-in mailbox interface" means the implementation can be replaced if the lock-free approach proves problematic on new hardware.
 
-### No external dependencies except OpenSSL
-TLS is the only external dependency. All other functionality (event loops, schedulers, actors, serialization, protobuf) is self-contained. This reduces attack surface, simplifies distribution, and eliminates dependency version conflicts. On Linux, liburing is optional for the proactor backend.
+### Minimal dependencies
+
+System packages: **OpenSSL** (TLS), **Protobuf** (serialization). Vendored in `third_party/`: **llhttp** (HTTP parsing), **toml++ v3.4.0** (TOML config parsing). On Linux, **liburing** is optional for the proactor backend.
 
 ### LLVM coding standards
 The codebase uses LLVM style (`clang-format`) with strict warnings (`-Wall -Wextra -Wpedantic`). This ensures the code is clean, portable, and compatible with the clang toolchain used for development.
@@ -232,6 +239,7 @@ The codebase uses LLVM style (`clang-format`) with strict warnings (`-Wall -Wext
 ```
 include/hpactor/
 ├── actor/          — Actor base classes, behaviors, typed actors, proto actors
+├── config/         — TOML config topology parser, binary format, actor factory registry
 ├── core/           — ActorSystem, ActorContext, mailbox, registry, config
 ├── mailbox/        — MPSCMailbox, MPSCActorMailbox (lock-free queues)
 ├── net/            — EventLoop, TLS, connection pool, registrar, reactor/proactor
@@ -249,6 +257,7 @@ include/hpactor/
 
 src/
 ├── actor/          — ActorSystem, EventBasedActor, SpawnReceiver, ProtoActor
+├── config/         — TOML parser, binary serializer/loader, factory registry
 ├── core/           — serialization.cpp (protobuf-based)
 ├── net/            — EventLoop, TcpTransport, TLS, connection pool, frame
 ├── ref/            — ActorRef, ActorProxy implementations
@@ -264,8 +273,11 @@ protos/hpactor/
 ├── messages.proto  — System message types
 └── registrar.proto — Registrar protocol messages
 
-tests/              — 83 unit tests (actor, core, mailbox, mem, net, ref, rpc, sched, spawn, supervision)
-examples/           — 5 API usage examples
+tools/toml-compiler/ — AOT compiler: TOML topology → binary format
+tests/              — 82 unit tests (actor, config, core, mailbox, mem, net, ref, rpc, sched, spawn, supervision)
+examples/           — 9 API usage examples
+third_party/        — Vendored dependencies (llhttp, toml++)
+cmake/              — CMake modules (protobuf codegen, toml++ interface target)
 ```
 
 ## Status
@@ -285,6 +297,7 @@ examples/           — 5 API usage examples
 - **Remote Spawn**: AsyncActor with spawn_remote(), ActorTypeRegistry
 - **RPC**: Async RPC channel with at-least-once delivery, retry, and timeout
 - **Serialization**: Protobuf-based for all system messages (WireFrame, Down, Exit, Link, Unlink, Spawn)
+- **TOML Config Topology**: Declarative topology bootstrapping with templates, imports, AOT binary compilation
 
 ### Next Steps
 
