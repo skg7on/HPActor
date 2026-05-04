@@ -456,6 +456,9 @@ enum class TypeTag : uint32_t {
     HttpRequestTag = 8,
     HttpResponseTag = 9,
 
+    // TOML config bootstrapping
+    SystemInitTag = 12,
+
     // First available user tag
     User = 100,
 };
