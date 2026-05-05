@@ -222,6 +222,8 @@ class EventBasedActor : public LocalActor {
     }
 
   protected:
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
+
     virtual Behavior make_behavior() {
         return {};
     }
@@ -262,7 +264,6 @@ class EventBasedActor : public LocalActor {
 
     bool handlers_initialized_ = false;
     std::unordered_map<TypeTag, ProtoHandler> proto_handlers_;
-    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 };
 
 } // namespace hpactor

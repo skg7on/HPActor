@@ -137,6 +137,13 @@ bool HybridScheduler::try_steal(WorkItem& out) {
         // Try EDF queue first (deadline-ordered work has highest urgency)
         if (victim.edf_queue.pop(out)) {
             a2ws_.record_steal(attempt % num_workers_, victim_idx);
+            if (metrics_ring_buffer_) [[unlikely]] {
+                metrics::MetricEvent evt{};
+                evt.actor_id = out.actor;
+                evt.event_type = metrics::MetricEventType::kSchedulerSteal;
+                evt.value_hi = victim_idx;
+                metrics_ring_buffer_->try_push(evt);
+            }
             return true;
         }
 
@@ -144,6 +151,13 @@ bool HybridScheduler::try_steal(WorkItem& out) {
         for (uint32_t p = 0; p < num_priorities_; ++p) {
             if (victim.queues[p].steal_top(out)) {
                 a2ws_.record_steal(attempt % num_workers_, victim_idx);
+                if (metrics_ring_buffer_) [[unlikely]] {
+                    metrics::MetricEvent evt{};
+                    evt.actor_id = out.actor;
+                    evt.event_type = metrics::MetricEventType::kSchedulerSteal;
+                    evt.value_hi = victim_idx;
+                    metrics_ring_buffer_->try_push(evt);
+                }
                 return true;
             }
         }
@@ -212,6 +226,15 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
         return;
     }
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        metrics::MetricEvent evt{};
+        evt.actor_id = item.actor;
+        evt.event_type = metrics::MetricEventType::kSchedulerDispatch;
+        evt.value_hi = 0;  // worker_id filled by the steal event
+        metrics_ring_buffer_->try_push(evt);
+    }
+
     auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
 
 #if HPACTOR_SUPPORT_COROUTINES

@@ -15,6 +15,7 @@
 #pragma once
 #include <chrono>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>

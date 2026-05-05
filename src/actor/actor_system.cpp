@@ -69,6 +69,7 @@ ActorSystem::ActorSystem(const Config& config)
     if (metrics_config_.enabled) {
         metrics_ring_buffer_ =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
+        scheduler_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
     }
 
     if (config.enable_network) {

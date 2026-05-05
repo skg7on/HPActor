@@ -17,6 +17,7 @@
 #include <hpactor/supervision/supervision.hpp>
 
 #include <hpactor/messages.pb.h>
+#include <hpactor/metrics/metrics_event.hpp>
 
 namespace hpactor {
 
@@ -102,6 +103,14 @@ void SupervisorActor::restart_child(ActorId child_id) {
     }
 
     ++count;
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        metrics::MetricEvent evt{};
+        evt.actor_id = id();
+        evt.event_type = metrics::MetricEventType::kSupervisorRestart;
+        evt.value_hi = static_cast<uint32_t>(child_id.value());
+        metrics_ring_buffer_->try_push(evt);
+    }
 }
 
 void SupervisorActor::restart_all_children() {
