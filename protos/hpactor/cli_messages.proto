@@ -1,0 +1,100 @@
+syntax = "proto3";
+package hpactor.cli;
+
+// ── Actor Inspection ──
+
+message InspectStateRequest {
+    uint64 target_actor_id = 1;
+    bool include_state = 3;
+    bool include_mailbox = 4;
+    bool include_children = 5;
+}
+
+message InspectStateReply {
+    uint64 actor_id = 1;
+    ActorMetadata metadata = 2;
+    bytes state_blob = 3;
+    MailboxSnapshot mailbox = 4;
+    repeated ChildInfo children = 5;
+}
+
+message ActorMetadata {
+    uint64 actor_id = 1;
+    string actor_type = 2;
+    string state = 3;
+    uint64 incarnation = 4;
+    uint64 messages_processed = 5;
+    uint64 uptime_ms = 6;
+    string behavior_name = 7;
+}
+
+message MailboxSnapshot {
+    uint32 depth = 1;
+    uint64 total_enqueued = 2;
+    uint64 total_dequeued = 3;
+    uint64 max_depth = 4;
+    uint32 high_priority_depth = 5;
+}
+
+message ChildInfo {
+    uint64 actor_id = 1;
+    string actor_type = 2;
+    string state = 3;
+}
+
+// ── Actor Termination ──
+
+message KillRequest {
+    uint64 target_actor_id = 1;
+    bool force = 2;
+}
+
+message KillReply {
+    bool success = 1;
+    uint32 error_code = 2;
+    string error_message = 3;
+}
+
+// ── Actor Listing ──
+
+message ListActorsRequest {
+    uint32 shard_index = 1;
+    uint32 offset = 2;
+    uint32 limit = 3;
+    string filter = 4;
+}
+
+message ListActorsReply {
+    repeated ActorMetadata actors = 1;
+    bool has_more = 2;
+    uint32 next_shard_index = 3;
+    uint32 next_offset = 4;
+    uint32 total_count = 5;
+}
+
+// ── System Stats ──
+
+message SystemStatsRequest {}
+
+message SystemStatsReply {
+    uint64 total_actors = 1;
+    uint64 running_actors = 2;
+    uint64 idle_actors = 3;
+    uint32 worker_count = 6;
+    double scheduler_utilization = 7;
+    uint64 memory_active_bytes = 8;
+    uint64 uptime_ms = 10;
+}
+
+// ── System Memory ──
+
+message MemoryStatsRequest {
+    optional uint64 actor_id = 1;
+}
+
+message MemoryStatsReply {
+    uint64 active_bytes = 1;
+    uint64 peak_bytes = 2;
+    uint32 segment_count = 3;
+    double slab_hit_rate = 4;
+}

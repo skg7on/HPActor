@@ -445,7 +445,8 @@ using adt::StreamBuffer;
 //   0x20 – 0x2F   HTTP protocol (HttpRequest, HttpResponse)
 //   0x30 – 0x3F   TOML bootstrap (SystemInit)
 //   0x40 – 0x4F   Metrics (MetricsRequest, MetricsResponse)
-//   0x50 – 0xFF   Reserved for future system use
+//   0x50 – 0x5F   CLI interactive (Inspect, Kill, List, Stats)
+//   0x60 – 0xFF   Reserved for future system use
 //
 // Application sub-ranges (examples):
 //   0x00001000 – 0x00001FFF   Auth subsystem
@@ -480,6 +481,22 @@ enum class TypeTag : uint32_t {
     // Metrics subsystem (0x40 – 0x4F)
     MetricsRequestTag  = 0x40,
     MetricsResponseTag = 0x41,
+
+    // CLI interactive subsystem (0x50 – 0x5F)
+    InspectStateRequestTag   = 0x50,
+    InspectStateResponseTag  = 0x51,
+    KillRequestTag           = 0x52,
+    KillResponseTag          = 0x53,
+    ListActorsRequestTag     = 0x54,
+    ListActorsResponseTag    = 0x55,
+    SystemStatsRequestTag    = 0x56,
+    SystemStatsResponseTag   = 0x57,
+    MemoryStatsRequestTag    = 0x58,
+    MemoryStatsResponseTag   = 0x59,
+    TopologyShowRequestTag   = 0x5A,
+    TopologyShowResponseTag  = 0x5B,
+    TopologyRestartRequestTag = 0x5C,
+    TopologyRestartResponseTag = 0x5D,
 
     // ---- Application range ---------------------------------------------------
     User = 0x00001000,
