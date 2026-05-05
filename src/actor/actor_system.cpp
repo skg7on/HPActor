@@ -362,6 +362,14 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     auto& model = parse_result.value();
 
+    // Apply system-level metrics config from topology
+    if (model.system.metrics_enabled) {
+        metrics_config_.enabled = model.system.metrics_enabled;
+        metrics_config_.ring_buffer_capacity =
+            model.system.metrics_ring_buffer_capacity;
+        metrics_config_.metrics_path = model.system.metrics_path;
+    }
+
     // Validate all behaviors are registered
     auto& registry = config::ActorFactoryRegistry::instance();
     for (const auto& actor_def : model.actors) {
