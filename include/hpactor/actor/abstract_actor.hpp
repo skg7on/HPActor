@@ -101,6 +101,8 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     virtual std::string_view type_name() const { return type_name_; }
     void set_type_name(std::string name) { type_name_ = std::move(name); }
 
+    virtual void set_metrics_ring_buffer(void* /*buf*/) {}
+
   protected:
     AbstractActor(ActorId id, ActorType type, ActorSystem& sys);
 

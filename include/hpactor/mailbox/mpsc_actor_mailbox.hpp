@@ -16,6 +16,8 @@
 
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
 #include <hpactor/mem/memory_config.hpp>
+#include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <atomic>
@@ -40,6 +42,13 @@ template <typename T> class MPSCActorMailbox {
     void enqueue(T* node) noexcept {
         bool was_empty = empty();
         mailbox_.enqueue(node);
+        if (metrics_ring_buffer_) [[unlikely]] {
+            metrics::MetricEvent evt{};
+            evt.actor_id = actor_id_;
+            evt.event_type = metrics::MetricEventType::kMailboxEnqueue;
+            evt.value_hi = 1;
+            metrics_ring_buffer_->try_push(evt);
+        }
         if (was_empty) {
             bool expected = true;
             if (mailbox_was_empty_.compare_exchange_strong(
@@ -69,6 +78,13 @@ template <typename T> class MPSCActorMailbox {
         if (node != nullptr && empty()) {
             mailbox_was_empty_.store(true, std::memory_order_release);
         }
+        if (metrics_ring_buffer_) [[unlikely]] {
+            metrics::MetricEvent evt{};
+            evt.actor_id = actor_id_;
+            evt.event_type = metrics::MetricEventType::kMailboxDequeue;
+            evt.value_hi = 1;
+            metrics_ring_buffer_->try_push(evt);
+        }
         return node;
     }
 
@@ -97,6 +113,11 @@ template <typename T> class MPSCActorMailbox {
         mailbox_was_empty_.store(val, std::memory_order_release);
     }
 
+    void set_metrics_ring_buffer(
+        metrics::MpscRingBuffer<metrics::MetricEvent>* buf) noexcept {
+        metrics_ring_buffer_ = buf;
+    }
+
     // Inject a message for testing (bypasses scheduler notify_ready)
     void inject_for_test(T* node) noexcept {
         mailbox_.enqueue(node);
@@ -109,6 +130,7 @@ template <typename T> class MPSCActorMailbox {
     MPSCMailbox<T> mailbox_;
     std::atomic<bool> mailbox_was_empty_{true};
     ActorContinuationCallback continuation_callback_;
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 };
 
 } // namespace hpactor::mailbox

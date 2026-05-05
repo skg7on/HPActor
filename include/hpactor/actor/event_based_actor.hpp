@@ -20,6 +20,7 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 
 #include <functional>
 #include <memory>
@@ -215,6 +216,11 @@ class EventBasedActor : public LocalActor {
         mailbox_ = mailbox;
     }
 
+    void set_metrics_ring_buffer(void* buf) noexcept override {
+        metrics_ring_buffer_ =
+            static_cast<metrics::MpscRingBuffer<metrics::MetricEvent>*>(buf);
+    }
+
   protected:
     virtual Behavior make_behavior() {
         return {};
@@ -256,6 +262,7 @@ class EventBasedActor : public LocalActor {
 
     bool handlers_initialized_ = false;
     std::unordered_map<TypeTag, ProtoHandler> proto_handlers_;
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 };
 
 } // namespace hpactor

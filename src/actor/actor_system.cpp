@@ -65,6 +65,12 @@ ActorSystem::ActorSystem(const Config& config)
 
     scheduler_->start();
 
+    // Initialize metrics subsystem (before actors so instrumentation is ready)
+    if (metrics_config_.enabled) {
+        metrics_ring_buffer_ =
+            std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
+    }
+
     if (config.enable_network) {
         network_loop_ = std::make_unique<net::EventLoop>();
         network_loop_->set_actor_system(this);

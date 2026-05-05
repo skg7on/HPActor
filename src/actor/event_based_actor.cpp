@@ -17,6 +17,9 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/messages.pb.h>
+#include <hpactor/metrics/metrics_event.hpp>
+
+#include <chrono>
 
 namespace hpactor {
 
@@ -108,6 +111,10 @@ void EventBasedActor::receive(TypedMessage& msg) {
         ctx->set_current_sender(msg.sender_address());
     }
 
+    auto t0 = metrics_ring_buffer_
+        ? std::chrono::steady_clock::now()
+        : std::chrono::steady_clock::time_point{};
+
     // Try proto handler dispatch by TypeTag first
     auto it = proto_handlers_.find(msg.type_id());
     if (it != proto_handlers_.end()) {
@@ -119,12 +126,31 @@ void EventBasedActor::receive(TypedMessage& msg) {
                 ctx->reply(std::move(reply_msg));
             }
         }
+        if (metrics_ring_buffer_) [[unlikely]] {
+            auto t1 = std::chrono::steady_clock::now();
+            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+            metrics::MetricEvent evt{};
+            evt.actor_id = id();
+            evt.event_type = metrics::MetricEventType::kMessageProcessed;
+            evt.value_hi = static_cast<uint32_t>(ns > UINT32_MAX ? UINT32_MAX : ns);
+            metrics_ring_buffer_->try_push(evt);
+        }
         return;
     }
 
     // Fall through to Behavior-based handling
     if (behavior_) {
         behavior_(msg);
+    }
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        auto t1 = std::chrono::steady_clock::now();
+        auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        metrics::MetricEvent evt{};
+        evt.actor_id = id();
+        evt.event_type = metrics::MetricEventType::kMessageProcessed;
+        evt.value_hi = static_cast<uint32_t>(ns > UINT32_MAX ? UINT32_MAX : ns);
+        metrics_ring_buffer_->try_push(evt);
     }
 }
 
@@ -176,6 +202,14 @@ void EventBasedActor::on_deactivate() {
 void EventBasedActor::on_exit() {
     auto* ctx = context();
     if (ctx == nullptr) { return; }
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        metrics::MetricEvent evt{};
+        evt.actor_id = id();
+        evt.event_type = metrics::MetricEventType::kActorTerminated;
+        evt.value_hi = static_cast<uint32_t>(exit_reason_);
+        metrics_ring_buffer_->try_push(evt);
+    }
 
     // Build DownMessage
     hpactor::DownMessage pb;

@@ -28,6 +28,9 @@
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/config/topology_model.hpp>
+#include <hpactor/metrics/metrics_config.hpp>
+#include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -187,6 +190,9 @@ class ActorSystem {
     // Internal actor lookup (used by scheduler)
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
 
+    // Get metrics ring buffer (nullptr if metrics disabled)
+    auto* metrics_ring_buffer() const { return metrics_ring_buffer_.get(); }
+
     // Get actor's mailbox (used by scheduler)
     mailbox::MPSCActorMailbox<TypedMessage>* get_mailbox(ActorId id);
 
@@ -289,6 +295,10 @@ class ActorSystem {
     // HTTP gateway actor (DaemonActor, spawned when enable_http_gateway = true)
     Actor http_gateway_actor_{nullptr};
 
+    // Metrics configuration and ring buffer
+    metrics::MetricsConfig metrics_config_;
+    std::shared_ptr<metrics::MpscRingBuffer<metrics::MetricEvent>> metrics_ring_buffer_;
+
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
 
@@ -334,6 +344,13 @@ Actor ActorSystem::spawn(Args&&... args) {
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mailboxes_[id].get());
 
+    // Wire metrics ring buffer to actor and mailbox
+    if (metrics_ring_buffer_) [[unlikely]] {
+        auto* mbox = mailboxes_[id].get();
+        mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+        actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    }
+
     // Register with scheduler based on dispatch policy.
     // Cooperative actors go onto the work-stealing pool. Dedicated actors
     // are registered with the scheduler but NOT placed on the cooperative
@@ -354,6 +371,14 @@ Actor ActorSystem::spawn(Args&&... args) {
 
     // Activate the actor (DaemonActor starts its thread here, etc.)
     actor->on_activate();
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        metrics::MetricEvent evt{};
+        evt.actor_id = id;
+        evt.event_type = metrics::MetricEventType::kActorSpawned;
+        evt.value_hi = 1;
+        metrics_ring_buffer_->try_push(evt);
+    }
 
     return Actor(actor);
 }
