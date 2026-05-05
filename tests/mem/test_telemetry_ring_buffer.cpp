@@ -27,7 +27,6 @@ int main() {
     {
         TelemetryRingBuffer<16> rb;
         assert(rb.empty());
-        assert(!rb.full());
 
         AllocationEvent evt{};
         evt.actor_id = 42;
@@ -35,9 +34,11 @@ int main() {
 
         for (int i = 0; i < 10; ++i) {
             evt.block_size = static_cast<uint16_t>(i);
-            assert(rb.try_push(evt));
+            auto* slot = rb.reserve();
+            assert(slot != nullptr);
+            *slot = evt;
         }
-        assert(rb.available() == 10);
+        assert(rb.size() == 10);
 
         // Drain and verify order
         int count = 0;
@@ -55,10 +56,12 @@ int main() {
         TelemetryRingBuffer<16> rb;
         AllocationEvent evt{};
         for (size_t i = 0; i < 16; ++i) {
-            assert(rb.try_push(evt));
+            auto* slot = rb.reserve();
+            assert(slot != nullptr);
+            *slot = evt;
         }
-        assert(rb.full());
-        assert(!rb.try_push(evt)); // should fail when full
+        assert(rb.size() == 16);
+        assert(rb.reserve() == nullptr); // should fail when full
     }
 
     // Concurrent multi-producer with background consumer
@@ -88,7 +91,12 @@ int main() {
                     AllocationEvent evt{};
                     evt.actor_id = static_cast<uint32_t>(t);
                     evt.block_size = static_cast<uint16_t>(i);
-                    while (!rb.try_push(evt)) {
+                    while (true) {
+                        auto* slot = rb.reserve();
+                        if (slot) {
+                            *slot = evt;
+                            break;
+                        }
                         // spin until consumer drains
                     }
                 }

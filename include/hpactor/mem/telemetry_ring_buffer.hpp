@@ -14,8 +14,7 @@
 
 #pragma once
 
-#include <atomic>
-#include <cstddef>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <cstdint>
 
 namespace hpactor::mem {
@@ -31,63 +30,8 @@ struct AllocationEvent {
     uint8_t  _pad[7];     // align to 32B
 };
 
-// Lock-free multi-producer single-consumer ring buffer.
-// Producers (any thread): try_push() — non-blocking, returns false if full.
-// Consumer (telemetry thread): drain() — reads all events since last drain.
+// Alias: reuse the generic MpscRingBuffer
 template <size_t Capacity = 65536>
-class TelemetryRingBuffer {
-  public:
-    static_assert((Capacity & (Capacity - 1)) == 0,
-                  "Capacity must be a power of two");
-
-    // Non-blocking push from any thread. Uses CAS to reserve a slot.
-    // Returns false if buffer is full.
-    bool try_push(const AllocationEvent& event) noexcept {
-        uint64_t w = write_cursor_.load(std::memory_order_relaxed);
-        for (;;) {
-            uint64_t r = read_cursor_.load(std::memory_order_acquire);
-            if (w - r >= Capacity) {
-                return false; // full
-            }
-            if (write_cursor_.compare_exchange_weak(w, w + 1,
-                    std::memory_order_acq_rel, std::memory_order_relaxed)) {
-                buffer_[w & mask_] = event;
-                return true;
-            }
-            // CAS failed — another producer claimed slot, w reloaded, retry
-        }
-    }
-
-    // Drain all pending events. Call from single consumer thread.
-    template <typename F>
-    void drain(F&& callback) {
-        uint64_t r = read_cursor_.load(std::memory_order_relaxed);
-        uint64_t w = write_cursor_.load(std::memory_order_acquire);
-
-        while (r < w) {
-            callback(buffer_[r & mask_]);
-            ++r;
-        }
-
-        read_cursor_.store(r, std::memory_order_release);
-    }
-
-    // Number of pending events
-    uint64_t available() const noexcept {
-        uint64_t w = write_cursor_.load(std::memory_order_acquire);
-        uint64_t r = read_cursor_.load(std::memory_order_acquire);
-        return (w >= r) ? (w - r) : 0;
-    }
-
-    bool empty() const noexcept { return available() == 0; }
-    bool full() const noexcept { return available() >= Capacity; }
-
-  private:
-    static constexpr size_t mask_ = Capacity - 1;
-
-    alignas(64) std::atomic<uint64_t> write_cursor_{0};
-    alignas(64) std::atomic<uint64_t> read_cursor_{0};
-    AllocationEvent buffer_[Capacity];
-};
+using TelemetryRingBuffer = metrics::MpscRingBuffer<AllocationEvent, Capacity>;
 
 } // namespace hpactor::mem
