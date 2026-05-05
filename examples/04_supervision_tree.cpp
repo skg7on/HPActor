@@ -57,9 +57,9 @@
 // Message type tags
 // ---------------------------------------------------------------------------
 
-static const hpactor::TypeTag WorkTag{600};
-static const hpactor::TypeTag CrashTag{601};
-static const hpactor::TypeTag StatusTag{602};
+static const hpactor::TypeTag WorkTag{0x00001000};
+static const hpactor::TypeTag CrashTag{0x00001001};
+static const hpactor::TypeTag StatusTag{0x00001002};
 
 // ---------------------------------------------------------------------------
 // Payload helpers

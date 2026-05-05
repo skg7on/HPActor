@@ -54,12 +54,12 @@
 // Message type tags
 // ---------------------------------------------------------------------------
 
-static const hpactor::TypeTag QueryPidTag{200};
-static const hpactor::TypeTag PidResponseTag{201};
-static const hpactor::TypeTag QueryActorCountTag{202};
-static const hpactor::TypeTag ActorCountResponseTag{203};
-static const hpactor::TypeTag ShutdownMsgTag{204};
-static const hpactor::TypeTag KickTag{199};
+static const hpactor::TypeTag QueryPidTag{0x00001000};
+static const hpactor::TypeTag PidResponseTag{0x00001001};
+static const hpactor::TypeTag QueryActorCountTag{0x00001002};
+static const hpactor::TypeTag ActorCountResponseTag{0x00001003};
+static const hpactor::TypeTag ShutdownMsgTag{0x00001004};
+static const hpactor::TypeTag KickTag{0x00001005};
 
 // ---------------------------------------------------------------------------
 // Serialization helpers (plain C++ structs, no protobuf)

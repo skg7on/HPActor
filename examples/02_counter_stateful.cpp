@@ -43,11 +43,11 @@
 // Message type tags
 // ---------------------------------------------------------------------------
 
-static const hpactor::TypeTag IncrementTag{200};
-static const hpactor::TypeTag DecrementTag{201};
-static const hpactor::TypeTag ResetTag{202};
-static const hpactor::TypeTag GetValueTag{203};
-static const hpactor::TypeTag SetValueTag{204};
+static const hpactor::TypeTag IncrementTag{0x00001000};
+static const hpactor::TypeTag DecrementTag{0x00001001};
+static const hpactor::TypeTag ResetTag{0x00001002};
+static const hpactor::TypeTag GetValueTag{0x00001003};
+static const hpactor::TypeTag SetValueTag{0x00001004};
 
 // ---------------------------------------------------------------------------
 // Payload helpers — encode/decode ints as StreamBuffer

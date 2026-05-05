@@ -51,11 +51,11 @@
 // Message type tags
 // ---------------------------------------------------------------------------
 
-static const hpactor::TypeTag PingTag{500};
-static const hpactor::TypeTag PongTag{501};
-static const hpactor::TypeTag ReverseModeTag{502};
-static const hpactor::TypeTag EchoModeTag{503};
-static const hpactor::TypeTag StartTag{504};
+static const hpactor::TypeTag PingTag{0x00001000};
+static const hpactor::TypeTag PongTag{0x00001001};
+static const hpactor::TypeTag ReverseModeTag{0x00001002};
+static const hpactor::TypeTag EchoModeTag{0x00001003};
+static const hpactor::TypeTag StartTag{0x00001004};
 
 // ---------------------------------------------------------------------------
 // Payload helpers — encode/decode int as StreamBuffer

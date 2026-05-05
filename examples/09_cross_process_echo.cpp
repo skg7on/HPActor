@@ -50,8 +50,8 @@
 // Message type tags
 // ---------------------------------------------------------------------------
 
-static const hpactor::TypeTag EchoMsgTag{100};
-static const hpactor::TypeTag KickTag{99};
+static const hpactor::TypeTag EchoMsgTag{0x00001000};
+static const hpactor::TypeTag KickTag{0x00001001};
 
 // ---------------------------------------------------------------------------
 // String message helpers
