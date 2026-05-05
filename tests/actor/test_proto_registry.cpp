@@ -108,25 +108,19 @@ int main() {
         printf("PASS\n");
     }
 
-    // Test 8: lookup<T>() finds registered type
+    // Test 8: MessageTraits<T> returns correct tag for system messages
     {
-        printf("Test 8: lookup existing type... ");
-        ProtoTypeRegistry reg;
-        reg.register_type<PbActorRef>(TypeTag::User, "hpactor.PbActorRef");
-        TypeTag found = reg.lookup<PbActorRef>();
-        assert(found == TypeTag::User);
+        printf("Test 8: MessageTraits system type... ");
+        TypeTag found = MessageTraits<DownMessage>::tag();
+        assert(found == TypeTag::DownMsg);
         printf("PASS\n");
     }
 
-    // Test 9: lookup<T>() returns Invalid for unregistered type
+    // Test 9: MessageTraits<T> returns Invalid for unregistered type
     {
-        printf("Test 9: lookup unregistered type... ");
-        // Use a different protobuf type that hasn't been registered
-        // (register only PbActorRef, lookup a different type)
-        ProtoTypeRegistry reg;
-        // Don't register anything — verify no false positives
-        auto it = reg.lookup<PbActorRef>();
-        assert(it == TypeTag::Invalid);
+        printf("Test 9: MessageTraits unregistered type... ");
+        TypeTag tag = MessageTraits<PbActorRef>::tag();
+        assert(tag == TypeTag::Invalid);
         printf("PASS\n");
     }
 

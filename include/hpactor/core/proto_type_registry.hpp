@@ -19,6 +19,7 @@
 
 #include <google/protobuf/message.h>
 
+#include <atomic>
 #include <cstring>
 #include <memory>
 #include <string>
@@ -28,18 +29,106 @@
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
-// ProtoTypeRegistry - maps TypeTag values to protobuf message types
+// MessageTraits<T> — compile-time mapping from protobuf type to TypeTag.
+//
+// Primary template returns Invalid. Specializations provide the tag.
+// System messages specialize with constexpr tags; user messages (registered
+// via HPACTOR_MESSAGE) store a runtime-allocated tag in a function-local
+// static.
+//
+// Usage:
+//   TypeTag tag = MessageTraits<MyProtoMsg>::tag();
 // -----------------------------------------------------------------------------
-// Enables automatic serialization and deserialization of protobuf messages
-// using TypeTag identifiers, avoiding RTTI. Supports wire encoding that
-// prepends a 4-byte big-endian TypeTag to the protobuf payload.
+template <typename ProtoMsgT>
+struct MessageTraits {
+    static TypeTag tag() { return TypeTag::Invalid; }
+};
+
+// -----------------------------------------------------------------------------
+// System message MessageTraits specializations.
+// Kept in sync with the TypeTag enum system range (0x00–0xFF).
+// -----------------------------------------------------------------------------
+#define HPACTOR_SYSTEM_MESSAGE(ProtoMsg, TagValue)                             \
+    template <> struct MessageTraits<ProtoMsg> {                               \
+        static constexpr TypeTag tag() { return TagValue; }                    \
+    };
+
+// Forward-declare protobuf-generated types (defined in messages.proto, common.proto).
+class DownMessage;
+class ExitMessage;
+class LinkMessage;
+class UnlinkMessage;
+class SpawnRequestMessage;
+class SpawnResponseMessage;
+class MetricsRequest;
+class MetricsResponse;
+
+HPACTOR_SYSTEM_MESSAGE(::hpactor::DownMessage,            TypeTag::DownMsg)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::ExitMessage,            TypeTag::ExitMsg)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::LinkMessage,            TypeTag::LinkMsg)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::UnlinkMessage,          TypeTag::UnlinkMsg)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::SpawnRequestMessage,    TypeTag::SpawnRequestTag)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::SpawnResponseMessage,   TypeTag::SpawnResponseTag)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::MetricsRequest,         TypeTag::MetricsRequestTag)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::MetricsResponse,        TypeTag::MetricsResponseTag)
+
+#undef HPACTOR_SYSTEM_MESSAGE
+
+// -----------------------------------------------------------------------------
+// MessageRegistry — singleton for allocating user TypeTags.
+// -----------------------------------------------------------------------------
+class MessageRegistry {
+public:
+    static MessageRegistry& instance() {
+        static MessageRegistry reg;
+        return reg;
+    }
+
+    // Allocate the next user TypeTag. Called once per type at static init.
+    TypeTag allocate(const std::string& /*type_name*/) {
+        uint32_t tag_val = next_user_tag_.fetch_add(1, std::memory_order_relaxed);
+        return static_cast<TypeTag>(tag_val);
+    }
+
+private:
+    MessageRegistry() : next_user_tag_(static_cast<uint32_t>(TypeTag::User)) {}
+    std::atomic<uint32_t> next_user_tag_;
+};
+
+// -----------------------------------------------------------------------------
+// HPACTOR_MESSAGE(ProtoMsg) — auto-register a user protobuf message type.
+//
+// Place at global scope alongside the .proto definition or in the actor
+// header. At static init time, allocates a unique TypeTag from the user
+// range (0x1000+) and specializes MessageTraits<ProtoMsg> so that
+// type_tag_for<ProtoMsg>() returns the allocated tag.
+//
+// For wire deserialization support, call
+//   proto_registry().register_type<ProtoMsg>(tag, name)
+// during ActorSystem initialization with the tag from MessageTraits.
+// -----------------------------------------------------------------------------
+#define HPACTOR_MESSAGE(ProtoMsg)                                              \
+    template <> struct ::hpactor::MessageTraits<ProtoMsg> {                    \
+        static ::hpactor::TypeTag tag() {                                      \
+            static const ::hpactor::TypeTag t = [] {                           \
+                return ::hpactor::MessageRegistry::instance()                  \
+                    .allocate(#ProtoMsg);                                       \
+            }();                                                               \
+            return t;                                                          \
+        }                                                                      \
+    };
+
+// -----------------------------------------------------------------------------
+// ProtoTypeRegistry - maps TypeTag values to protobuf message types.
+//
+// Used for the TypeTag → protobuf deserialization direction (wire protocol).
+// For the reverse direction (C++ type → TypeTag), use MessageTraits<T>::tag().
 //
 // NOTE: Not thread-safe. Register all types during single-threaded
 // initialization before any actors begin processing messages.
 // -----------------------------------------------------------------------------
 class ProtoTypeRegistry {
 public:
-    // Register a protobuf message type with a TypeTag.
     template<typename ProtoMsgT>
     void register_type(TypeTag tag, const std::string& type_name) {
         static_assert(std::is_base_of_v<google::protobuf::Message, ProtoMsgT>,
@@ -49,19 +138,6 @@ public:
         entry.prototype = mem::allocate_shared<ProtoMsgT>(
             ActorId{}, mem::RegionType::kInternal);
         registry_[tag] = std::move(entry);
-    }
-
-    // Look up the TypeTag for a registered protobuf message type.
-    // Returns TypeTag::Invalid if the type is not registered.
-    template<typename ProtoMsgT>
-    TypeTag lookup() const {
-        for (const auto& [tag, entry] : registry_) {
-            if (entry.prototype &&
-                entry.prototype->GetTypeName() == ProtoMsgT().GetTypeName()) {
-                return tag;
-            }
-        }
-        return TypeTag::Invalid;
     }
 
     [[nodiscard]] bool has_tag(TypeTag tag) const {
@@ -100,8 +176,6 @@ public:
         return result;
     }
 
-    // Encode TypeTag + payload into a single byte buffer:
-    // [4 bytes: TypeTag big-endian][protobuf payload bytes]
     [[nodiscard]] StreamBuffer encode_wire(TypeTag tag, const google::protobuf::Message& msg) const {
         StreamBuffer payload = serialize(msg);
         StreamBuffer result(payload.size() + 4);
@@ -130,7 +204,6 @@ public:
         return {tag, std::move(msg)};
     }
 
-    // Pre-register all system message types with well-known TypeTags.
     void register_system_types();
 
 private:

@@ -244,10 +244,10 @@ class EventBasedActor : public LocalActor {
     void on_activate() override;
     void on_deactivate() override;
 
-    // Get TypeTag for a protobuf type from the system registry
+    // Get TypeTag for a protobuf type from MessageTraits (compile-time dispatch)
     template<typename ProtoMsgT>
     TypeTag type_tag_for() const {
-        return system().proto_registry().lookup<ProtoMsgT>();
+        return MessageTraits<ProtoMsgT>::tag();
     }
 
   public:
