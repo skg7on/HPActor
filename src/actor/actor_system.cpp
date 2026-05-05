@@ -298,6 +298,7 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
                                     const config::ActorDef& def) {
     ActorId id(next_actor_id_.fetch_add(1));
     actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
+    actor->set_type_name(def.behavior);
 
     {
         std::lock_guard<std::mutex> lock(actors_mutex_);

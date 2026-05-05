@@ -48,3 +48,11 @@ message PbActorAddress {
     PbGlobalActorAddress global_addr = 2;
   }
 }
+
+message MetricsRequest {
+    // Empty — triggers full ring buffer drain + snapshot + reply.
+}
+
+message MetricsResponse {
+    bytes body = 1;  // OpenMetrics formatted text.
+}

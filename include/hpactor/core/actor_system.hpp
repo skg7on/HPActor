@@ -306,6 +306,11 @@ Actor ActorSystem::spawn(Args&&... args) {
     ActorId id(next_actor_id_.fetch_add(1));
     auto actor = std::make_shared<T>(nullptr, *this, std::forward<Args>(args)...);
     actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
+    if constexpr (requires { T::kActorTypeName; }) {
+        actor->set_type_name(T::kActorTypeName);
+    } else {
+        actor->set_type_name("unknown");
+    }
 
     {
         std::lock_guard<std::mutex> lock(actors_mutex_);
