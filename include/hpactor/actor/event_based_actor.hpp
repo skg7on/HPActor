@@ -20,6 +20,7 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 
 #include <hpactor/mem/std_allocator.hpp>
 
@@ -125,8 +126,8 @@ class EventBasedActor : public LocalActor {
             auto& req = *static_cast<ReqT*>(raw.get());
             ResT res = (*handler_ptr)(req);
             StreamBuffer result(res.ByteSizeLong());
-            res.SerializeToArray(result.data(),
-                                 static_cast<int>(result.size()));
+            (void)res.SerializeToArray(result.data(),
+                                        static_cast<int>(result.size()));
             return result;
         };
 
@@ -221,7 +222,14 @@ class EventBasedActor : public LocalActor {
         mailbox_ = mailbox;
     }
 
+    void set_metrics_ring_buffer(void* buf) noexcept override {
+        metrics_ring_buffer_ =
+            static_cast<metrics::MpscRingBuffer<metrics::MetricEvent>*>(buf);
+    }
+
   protected:
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
+
     virtual Behavior make_behavior() {
         return {};
     }

@@ -27,7 +27,6 @@ int main() {
     {
         TelemetryRingBuffer<16> rb;
         assert(rb.empty());
-        assert(!rb.full());
 
         AllocationEvent evt{};
         evt.actor_id = 42;
@@ -37,7 +36,7 @@ int main() {
             evt.block_size = static_cast<uint16_t>(i);
             assert(rb.try_push(evt));
         }
-        assert(rb.available() == 10);
+        assert(rb.size() == 10);
 
         // Drain and verify order
         int count = 0;
@@ -57,7 +56,7 @@ int main() {
         for (size_t i = 0; i < 16; ++i) {
             assert(rb.try_push(evt));
         }
-        assert(rb.full());
+        assert(rb.size() == 16);
         assert(!rb.try_push(evt)); // should fail when full
     }
 

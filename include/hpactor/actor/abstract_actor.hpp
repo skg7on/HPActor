@@ -20,6 +20,8 @@
 #include <hpactor/sched/dispatch_policy.hpp>
 
 #include <memory>
+#include <string>
+#include <string_view>
 
 namespace hpactor {
 
@@ -97,6 +99,11 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
         return {};
     }
 
+    virtual std::string_view type_name() const { return type_name_; }
+    void set_type_name(std::string name) { type_name_ = std::move(name); }
+
+    virtual void set_metrics_ring_buffer(void* /*buf*/) {}
+
   protected:
     AbstractActor(ActorId id, ActorType type, ActorSystem& sys);
 
@@ -109,6 +116,7 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     ActorType type_;
     ActorSystem& system_;
     ActorAddress address_;
+    std::string type_name_;
 };
 
 } // namespace hpactor

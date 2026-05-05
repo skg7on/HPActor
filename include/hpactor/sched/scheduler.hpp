@@ -15,6 +15,8 @@
 #pragma once
 
 #include <hpactor/actor/actor_fwd.hpp>
+#include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/a2ws.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/timing_wheel.hpp>
@@ -59,6 +61,8 @@ using timer_callback = std::function<void()>;
 class IScheduler {
   public:
     virtual ~IScheduler() = default;
+
+    virtual void set_metrics_ring_buffer(void* /*buf*/) {}
 
     // Start the scheduler
     virtual void start() = 0;
@@ -209,9 +213,16 @@ class HybridScheduler : public IScheduler {
     // Timing wheel for timer management
     TimingWheel timer_wheel_;
 
+    void set_metrics_ring_buffer(void* buf) noexcept override {
+        metrics_ring_buffer_ =
+            static_cast<metrics::MpscRingBuffer<metrics::MetricEvent>*>(buf);
+    }
+
     // For recurring timer cancellation: maps timer ID to cancellation flag
     std::unordered_map<uint64_t, std::shared_ptr<std::atomic<bool>>> recurring_cancellations_;
     std::mutex cancellation_mutex_;
+
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 
     // Timer advancement thread
     std::thread timer_thread_;

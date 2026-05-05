@@ -66,6 +66,13 @@ ActorSystem::ActorSystem(const Config& config)
 
     scheduler_->start();
 
+    // Initialize metrics subsystem (before actors so instrumentation is ready)
+    if (metrics_config_.enabled) {
+        metrics_ring_buffer_ =
+            std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
+        scheduler_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    }
+
     if (config.enable_network) {
         network_loop_ = std::make_unique<net::EventLoop>();
         network_loop_->set_actor_system(this);
@@ -299,6 +306,7 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
                                     const config::ActorDef& def) {
     ActorId id(next_actor_id_.fetch_add(1));
     actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
+    actor->set_type_name(def.behavior);
 
     {
         std::lock_guard<std::mutex> lock(actors_mutex_);
@@ -354,6 +362,14 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     }
 
     auto& model = parse_result.value();
+
+    // Apply system-level metrics config from topology
+    if (model.system.metrics_enabled) {
+        metrics_config_.enabled = model.system.metrics_enabled;
+        metrics_config_.ring_buffer_capacity =
+            model.system.metrics_ring_buffer_capacity;
+        metrics_config_.metrics_path = model.system.metrics_path;
+    }
 
     // Validate all behaviors are registered
     auto& registry = config::ActorFactoryRegistry::instance();

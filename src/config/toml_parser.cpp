@@ -238,6 +238,19 @@ static result<FileData> parse_file_data(const std::string& filepath,
         data.system.http_reply_timeout_ms = read_uint32(st, "http_reply_timeout_ms", 5000);
         data.system.use_coroutines = read_bool(st, "use_coroutines");
 
+        // Metrics subsystem
+        if (auto* metrics_node = st.get("metrics")) {
+            if (metrics_node->is_table()) {
+                auto& mt = *metrics_node->as_table();
+                data.system.metrics_enabled =
+                    read_bool(mt, "enabled", true);
+                data.system.metrics_ring_buffer_capacity =
+                    read_uint32(mt, "ring_buffer_capacity", 65536);
+                data.system.metrics_path =
+                    read_string(mt, "metrics_path", "/metrics");
+            }
+        }
+
         if (auto* imp_arr = st.get("imports")) {
             if (imp_arr->is_array()) {
                 for (const auto& v : *imp_arr->as_array()) {

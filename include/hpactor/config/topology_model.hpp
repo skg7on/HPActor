@@ -87,6 +87,9 @@ struct SystemDef {
     uint32_t http_max_request_size{1048576};
     uint32_t http_reply_timeout_ms{5000};
     bool use_coroutines{false};
+    bool metrics_enabled{true};
+    uint32_t metrics_ring_buffer_capacity{65536};
+    std::string metrics_path{"/metrics"};
     std::vector<std::string> imports;
 };
 

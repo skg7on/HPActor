@@ -24,6 +24,7 @@ option(ENABLE_TSAN "Enable ThreadSanitizer" OFF)
 option(ENABLE_EXAMPLES "Build example programs" ON)
 option(ENABLE_PROACTOR "Use Proactor I/O model (io_uring/GCD)" ON)
 option(ENABLE_MEMORY_TRACKING "Enable per-actor memory tracking and telemetry" ON)
+option(ENABLE_ACTOR_METRICS "Enable actor-level metrics subsystem" ON)
 option(ENABLE_MEMORY_DEBUG "Enable memory poisoning, canaries, and guard pages" OFF)
 
 # Sanitizer mutual exclusivity
@@ -212,6 +213,10 @@ add_library(hpactor_lib SHARED
     src/sched/coroutine_frame_pool.cpp
     src/sched/dedicated_thread_pool.cpp
     src/rpc/rpc_channel.cpp
+    src/metrics/metrics_registry.cpp
+    src/metrics/metrics_aggregator.cpp
+    src/metrics/metrics_formatter.cpp
+    src/metrics/metrics_actor.cpp
     src/adt/stream_buffer.cpp
     third_party/llhttp/llhttp.c
     third_party/llhttp/api.c
