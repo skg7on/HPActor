@@ -433,38 +433,56 @@ using adt::StreamBuffer;
 
 // -----------------------------------------------------------------------------
 // TypeTag - type identifier for serialization (replaces RTTI)
-// Each serializable type gets a unique tag. System messages use tags 0-99,
-// user messages use tags 100+.
+//
+// Range layout:
+//   0x00000000 – 0x000000FF   System messages (256 slots)
+//   0x00000100 – 0x00000FFF   Reserved for future system expansion
+//   0x00001000 – 0x00FFFFFF   Application-defined messages (~16M slots)
+//
+// System sub-ranges:
+//   0x00 – 0x0F   Core system (lifecycle: Down, Exit, Link, Unlink, Monitor, Demonitor)
+//   0x10 – 0x1F   Spawn protocol (SpawnRequest, SpawnResponse, Error)
+//   0x20 – 0x2F   HTTP protocol (HttpRequest, HttpResponse)
+//   0x30 – 0x3F   TOML bootstrap (SystemInit)
+//   0x40 – 0x4F   Metrics (MetricsRequest, MetricsResponse)
+//   0x50 – 0xFF   Reserved for future system use
+//
+// Application sub-ranges (examples):
+//   0x00001000 – 0x00001FFF   Auth subsystem
+//   0x00002000 – 0x00002FFF   Chat subsystem
+//   0x00003000 – 0x00003FFF   Database subsystem
+//   ...
 // -----------------------------------------------------------------------------
 enum class TypeTag : uint32_t {
-    Invalid = 0,
+    // ---- System message range ------------------------------------------------
+    Invalid = 0x00000000,
 
-    // System messages (always present)
-    DownMsg = 1,
-    ExitMsg = 2,
-    LinkMsg = 3,
-    UnlinkMsg = 4,
-    MonitorMsg = 10,
-    DemonitorMsg = 11,
+    // Core system (0x00 – 0x0F)
+    DownMsg    = 0x01,
+    ExitMsg    = 0x02,
+    LinkMsg    = 0x03,
+    UnlinkMsg  = 0x04,
+    MonitorMsg = 0x0A,
+    DemonitorMsg = 0x0B,
 
-    // Spawn protocol (Phase 8)
-    SpawnRequestTag = 5,
-    SpawnResponseTag = 6,
-    ErrorMsg = 7,
+    // Spawn protocol (0x10 – 0x1F)
+    SpawnRequestTag  = 0x10,
+    SpawnResponseTag = 0x11,
+    ErrorMsg         = 0x12,
 
-    // HTTP protocol (Phase 11)
-    HttpRequestTag = 8,
-    HttpResponseTag = 9,
+    // HTTP protocol (0x20 – 0x2F)
+    HttpRequestTag  = 0x20,
+    HttpResponseTag = 0x21,
 
-    // TOML config bootstrapping
-    SystemInitTag = 12,
+    // TOML config bootstrapping (0x30 – 0x3F)
+    SystemInitTag = 0x30,
 
-    // Metrics subsystem
-    MetricsRequestTag = 13,
-    MetricsResponseTag = 14,
+    // Metrics subsystem (0x40 – 0x4F)
+    MetricsRequestTag  = 0x40,
+    MetricsResponseTag = 0x41,
 
-    // First available user tag
-    User = 100,
+    // ---- Application range ---------------------------------------------------
+    User = 0x00001000,
 };
 
 } // namespace hpactor
