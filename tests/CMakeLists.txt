@@ -175,6 +175,10 @@ add_executable(test_reactor_dispatcher net/test_reactor_dispatcher.cpp)
 target_link_libraries(test_reactor_dispatcher hpactor)
 add_test(NAME test_reactor_dispatcher COMMAND test_reactor_dispatcher)
 
+add_executable(test_metrics_registry metrics/test_metrics_registry.cpp)
+target_link_libraries(test_metrics_registry hpactor pthread)
+add_test(NAME test_metrics_registry COMMAND test_metrics_registry)
+
 add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)

@@ -212,6 +212,7 @@ add_library(hpactor_lib SHARED
     src/sched/coroutine_frame_pool.cpp
     src/sched/dedicated_thread_pool.cpp
     src/rpc/rpc_channel.cpp
+    src/metrics/metrics_registry.cpp
     src/adt/stream_buffer.cpp
     third_party/llhttp/llhttp.c
     third_party/llhttp/api.c
