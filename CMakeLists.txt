@@ -270,6 +270,7 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
 add_library(hpactor_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 set_target_properties(hpactor_proto PROPERTIES CXX_CLANG_TIDY "")
 target_link_libraries(hpactor_proto PUBLIC protobuf::libprotobuf ${HPACTOR_PROTO_ABSL_LIBS})
+target_compile_options(hpactor_proto PRIVATE -Wno-sign-conversion)
 target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(OpenSSL REQUIRED)
