@@ -119,6 +119,29 @@ private:
     };
 
 // -----------------------------------------------------------------------------
+// HPACTOR_MESSAGE_WITH_ID(ProtoMsg, TagValue) — register with a fixed tag.
+//
+// Use when the TypeTag must be stable across builds (e.g., database-stored
+// type identifiers, cross-service contracts, pre-planned subsystem layouts).
+// TagValue is a uint32_t constant; the specialization is constexpr so it
+// can be used in switch/case.
+//
+// Subsystem layout example:
+//   HPACTOR_MESSAGE_WITH_ID(AuthLoginRequest,  0x00001000)  // Auth: 0x1000+
+//   HPACTOR_MESSAGE_WITH_ID(AuthLogoutRequest, 0x00001001)
+//   HPACTOR_MESSAGE_WITH_ID(ChatSendMessage,   0x00002000)  // Chat: 0x2000+
+//   HPACTOR_MESSAGE_WITH_ID(ChatJoinRoom,      0x00002001)
+// -----------------------------------------------------------------------------
+#define HPACTOR_MESSAGE_WITH_ID(ProtoMsg, TagValue)                            \
+    static_assert((TagValue) >= 0x00001000,                                     \
+                  "User TypeTags must be >= 0x1000 (system range is 0x00-0xFF)");\
+    template <> struct ::hpactor::MessageTraits<ProtoMsg> {                    \
+        static constexpr ::hpactor::TypeTag tag() {                            \
+            return static_cast<::hpactor::TypeTag>(TagValue);                   \
+        }                                                                       \
+    };
+
+// -----------------------------------------------------------------------------
 // ProtoTypeRegistry - maps TypeTag values to protobuf message types.
 //
 // Used for the TypeTag → protobuf deserialization direction (wire protocol).
