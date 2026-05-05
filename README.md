@@ -41,6 +41,14 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **Compaction**: Generation-based slab tracking with 5% fragmentation budget, relocatable actors by ActorId
 - **Zero malloc in hot path**: Custom allocator routes all actor/message/coroutine allocations away from general-purpose `malloc`
 
+### Observability & Metrics
+- **Actor-Level Metrics**: Native OpenMetrics exposition — mailbox depth, message processing latency, actor lifecycle counters, scheduler steals, supervision restarts — served via HTTP `/metrics` endpoint for Prometheus/Grafana
+- **Out-of-Band Instrumentation**: Lock-free `MpscRingBuffer<T>` with CAS-based event writes — zero hot-path overhead for user actors
+- **OpenMetrics Format**: `# HELP`/`# TYPE` metadata, `Counter`/`Gauge`/`Histogram` with exponential bucketing, Prometheus-compatible output
+- **Per-Actor Labeling**: `actor_id` and `actor_type` labels for drill-down debugging, configurable cardinality via `per_actor_labels`
+- **TOML Configurable**: `[system.metrics]` section — enable/disable, ring buffer capacity, scrape path
+- **Compile-Time Disable**: `ENABLE_ACTOR_METRICS=OFF` for zero-overhead deployments
+
 ### Actor Lifecycle
 - **ActorState**: Atomic state machine (Idle → Ready → Running → IOWaiting → Terminated) with CAS transitions
 - **Hierarchical Supervision**: OneForOne (restart failed child) and AllForOne (restart all children) strategies
@@ -187,7 +195,7 @@ ActorRef (std::variant)
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (83 tests)
+# Run tests (90 tests)
 ctest --output-on-failure
 
 # Run a single test
@@ -204,6 +212,7 @@ ctest --output-on-failure
 | `-DENABLE_PROACTOR=ON` | Enable proactor backend (OFF=macOS default, ON=Linux default) |
 | `-DENABLE_MEMORY_TRACKING=OFF` | Disable per-actor memory tracking (default ON) |
 | `-DENABLE_MEMORY_DEBUG=ON` | Enable memory poisoning + canary verification (default OFF) |
+| `-DENABLE_ACTOR_METRICS=OFF` | Disable actor-level metrics subsystem (default ON) |
 
 ## Design Constraints
 
@@ -242,6 +251,7 @@ include/hpactor/
 ├── config/         — TOML config topology parser, binary format, actor factory registry
 ├── core/           — ActorSystem, ActorContext, mailbox, registry, config
 ├── mailbox/        — MPSCMailbox, MPSCActorMailbox (lock-free queues)
+├── metrics/        — MpscRingBuffer, MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
 ├── net/            — EventLoop, TLS, connection pool, registrar, reactor/proactor
 ├── ref/            — Actor references (address, ref, proxy, cache)
 ├── rpc/            — Async RPC channel with retry and timeout
@@ -258,6 +268,7 @@ include/hpactor/
 src/
 ├── actor/          — ActorSystem, EventBasedActor, SpawnReceiver, ProtoActor
 ├── config/         — TOML parser, binary serializer/loader, factory registry
+├── metrics/        — MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
 ├── core/           — serialization.cpp (protobuf-based)
 ├── net/            — EventLoop, TcpTransport, TLS, connection pool, frame
 ├── ref/            — ActorRef, ActorProxy implementations
@@ -274,7 +285,7 @@ protos/hpactor/
 └── registrar.proto — Registrar protocol messages
 
 tools/toml-compiler/ — AOT compiler: TOML topology → binary format
-tests/              — 82 unit tests (actor, config, core, mailbox, mem, net, ref, rpc, sched, spawn, supervision)
+tests/              — 90 unit tests (actor, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision)
 examples/           — 9 API usage examples
 third_party/        — Vendored dependencies (llhttp, toml++)
 cmake/              — CMake modules (protobuf codegen, toml++ interface target)
@@ -282,7 +293,7 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 
 ## Status
 
-### Complete (83 tests passing)
+### Complete (90 tests passing)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
@@ -298,6 +309,7 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **RPC**: Async RPC channel with at-least-once delivery, retry, and timeout
 - **Serialization**: Protobuf-based for all system messages (WireFrame, Down, Exit, Link, Unlink, Spawn)
 - **TOML Config Topology**: Declarative topology bootstrapping with templates, imports, AOT binary compilation
+- **Actor Metrics**: Out-of-band ring buffer instrumentation, OpenMetrics `/metrics` endpoint for Prometheus/Grafana
 
 ### Next Steps
 

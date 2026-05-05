@@ -134,7 +134,21 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `MPSCMailbox<T>` — Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue), includes cyclic queue fix when returning last element
 - `execute_actor()` dispatch layer for coroutine resumption with state transitions
 
-**Tests:** ✅ 87 tests passing
+**Actor Metrics:** ✅ Complete (2026-05-05, 8 commits, 90 tests passing)
+- Out-of-band lock-free ring buffer instrumentation — CAS-based `MpscRingBuffer<T>` (extracted from `TelemetryRingBuffer`)
+- 32-byte `MetricEvent` schema: 10 event types (mailbox enqueue/dequeue, processing latency, lifecycle, scheduler dispatch/steal, supervision restart, memory alloc/free)
+- `MetricRegistry` — Counter, Gauge, Histogram with atomic updates and snapshot
+- `Aggregator` — event-to-metric dispatch with actor_type label caching via `ActorSystem::get_actor()`
+- `OpenMetricsFormatter` — `text/plain; version=1.0.0` with `# HELP`/`# TYPE`/`_bucket`/`_sum`/`_count`/`# EOF`
+- `MetricsActor` — EventBasedActor with `on_request<MetricsRequest, MetricsResponse>`, drains ring buffer on each `/metrics` scrape
+- Integration: MPSCActorMailbox (enqueue/dequeue events), EventBasedActor (processing latency + on_exit terminate), ActorSystem (spawn events, MetricsActor wire-up, ring buffer pass-through), HybridScheduler (dispatch + steal events), SupervisorActor (restart events)
+- `virtual type_name()` on `AbstractActor` for metrics labeling, `virtual set_metrics_ring_buffer(void*)` for pointer pass-through without RTTI
+- TOML `[system.metrics]` config: enabled, ring_buffer_capacity, metrics_path
+- `ENABLE_ACTOR_METRICS` CMake option (default ON)
+- `MetricsRequest`/`MetricsResponse` protobuf messages, `MetricsRequestTag=13`/`MetricsResponseTag=14` TypeTags
+- 2 new test suites: `test_metrics_registry`, `test_metrics_integration`
+
+**Tests:** ✅ 90 tests passing
 - Memory: test_size_class, test_alloc_header, test_freelist, test_segment_provider, test_slab_cache, test_thread_local_allocator, test_memory_stress (1M ops), test_memory_tracker, test_telemetry_ring_buffer, test_memory_poisoning, test_guard_page, test_hibernation, test_compaction, test_allocator_benchmark
 - Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 - UDS: test_unix_domain_socket (path derivation, acceptor, fallback), test_uds_integration (connect and data flow)
@@ -162,6 +176,9 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Spec: `docs/architecture/core/actor-toml-config-architecture.md` (TOML config detailed spec)
 - Plan: `docs/superpowers/plans/2026-05-03-toml-config-topology-impl.md` (TOML config implementation)
 - Plan: `docs/superpowers/plans/2026-05-03-memory-management-impl.md`
+- Architecture: `docs/architecture/actor/actor-metrics-design.md` (metrics core concept)
+- Spec: `docs/superpowers/specs/2026-05-04-actor-metrics-design.md` (metrics detailed spec)
+- Plan: `docs/superpowers/plans/2026-05-04-actor-metrics-impl.md` (metrics implementation plan)
 
 ## Key Decisions
 
@@ -237,7 +254,9 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `types/` — Type system (types, types_fwd, serialization)
   - `rpc/` — RPC channel (rpc_channel.hpp)
   - `mem/` — Memory management (alloc_header, size_class, freelist, segment_provider, slab_cache, thread_local_allocator, memory_region, memory_config, memory_tracker, telemetry_ring_buffer, hibernation_registry, hibernatable, guard_page, compaction, zram)
+  - `metrics/` — Metrics subsystem (metrics_ring_buffer, metrics_event, metrics_config, metrics_registry, metrics_aggregator, metrics_formatter, metrics_actor)
 - `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
+- `src/metrics/` — metrics_registry.cpp, metrics_aggregator.cpp, metrics_formatter.cpp, metrics_actor.cpp
 - `src/config/` — actor_factory_registry.cpp, toml_parser.cpp, binary_serializer.cpp, binary_loader.cpp
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
@@ -248,7 +267,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `src/rpc/rpc_channel.cpp` — RpcChannel implementation
 - `src/mem/` — segment_provider.cpp, slab_cache.cpp, thread_local_allocator.cpp, memory_config.cpp, memory_tracker.cpp, hibernation_manager.cpp, guard_page.cpp, compaction.cpp, zram.cpp
 - `tools/toml-compiler/` — AOT compiler executable (compiler.cpp)
-- Tests: `tests/{actor,config,core,mailbox,net,ref,supervision,spawn,sched,rpc,mem}/`
+- Tests: `tests/{actor,config,core,mailbox,metrics,net,ref,supervision,spawn,sched,rpc,mem}/`
 
 ## Build Commands
 

@@ -23,6 +23,7 @@ cmake -DENABLE_ASAN=ON ..  # AddressSanitizer
 cmake -DENABLE_EXAMPLES=OFF ..    # Disable examples (default ON)
 cmake -DENABLE_PROACTOR=ON ..     # Enable proactor backend
 cmake -DENABLE_MEMORY_DEBUG=ON .. # Enable memory poisoning + canary verification
+cmake -DENABLE_ACTOR_METRICS=OFF .. # Disable actor-level metrics (default ON)
 ```
 
 ## Architecture
@@ -65,6 +66,7 @@ AbstractActor (interface base)
 | `TopologyModel` | `config/topology_model.hpp` | System topology (actors, dispatchers, system config) |
 | `ActorFactoryRegistry` | `config/actor_factory_registry.hpp` | Maps behavior name strings to actor factory functions |
 | `BinaryLoader` / `BinarySerializer` | `config/binary_*.hpp` | mmap-friendly binary topology format |
+| `MetricsActor` / `MpscRingBuffer` | `metrics/*.hpp` | Lock-free ring buffer instrumentation, OpenMetrics /metrics endpoint for Prometheus |
 
 ### Message Flow
 
@@ -106,9 +108,9 @@ Pipeline: TOML file(s) → `TomlParser::parse()` → `TopologyModel` → `Bootst
 
 ## Important Files
 
-- `include/hpactor/` — public headers (actor, config, core, mailbox, mem, net, ref, rpc, sched, spawn, supervision, types)
+- `include/hpactor/` — public headers (actor, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
-- `tests/` — 82 unit tests
+- `tests/` — 90 unit tests
 - `examples/` — 9 API usage examples
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
 - `third_party/` — vendored dependencies (llhttp, toml++)
