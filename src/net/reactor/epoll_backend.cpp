@@ -19,7 +19,7 @@
 #    include <cstdlib>
 #    include <cstring>
 #    include <ctime>
-#    include <errno.h>
+#    include <cerrno>
 #    include <fcntl.h>
 #    include <sys/epoll.h>
 #    include <sys/socket.h>
