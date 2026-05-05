@@ -14,7 +14,6 @@
 
 #include <hpactor/mem/hibernation_registry.hpp>
 #include <hpactor/mem/hibernatable.hpp>
-#include <hpactor/actor/actor_state.hpp>
 
 #include <cassert>
 #include <cstring>
@@ -108,29 +107,6 @@ int main() {
         actor.deserialize_from(buffer);
         assert(actor.state().counter == 99);
         assert(actor.state().values[2] == 30);
-    }
-
-    // Test ActorState kHibernating
-    {
-        hpactor::ActorState state;
-        assert(state.is_idle());
-        assert(!state.is_hibernating());
-
-        state.set(hpactor::ActorState::kHibernating);
-        assert(state.is_hibernating());
-        assert(!state.is_idle());
-        assert(!state.is_running());
-        assert(!state.is_terminated());
-
-        // Verify kMask covers kHibernating
-        assert((hpactor::ActorState::kHibernating & hpactor::ActorState::kMask)
-               == hpactor::ActorState::kHibernating);
-
-        // CAS from Hibernating to Idle
-        bool ok = state.cas(hpactor::ActorState::kHibernating,
-                            hpactor::ActorState::kIdle);
-        assert(ok);
-        assert(state.is_idle());
     }
 
     std::cout << "test_hibernation: PASS\n";

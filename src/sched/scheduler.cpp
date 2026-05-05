@@ -253,9 +253,10 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
 
         auto& promise = coroutine.task().handle().promise();
 
-        // First transition: kIdle → kReady (if needed)
+        // First transition: kIdle/kIOWaiting → kReady (if needed)
         // This handles the case where actor is picked up after suspending
-        if (promise.state.is_idle()) {
+        // on mailbox (kIdle) or on timer/IO (kIOWaiting).
+        if (promise.state.is_idle() || promise.state.is_io_waiting()) {
             promise.state.set(ActorState::kReady);
         }
 
@@ -267,7 +268,7 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
                 actor->set_exit_reason(errors::actor_down);
                 actor->on_exit();
             }
-            // Already running, idle, or IOWaiting — skip
+            // Already running or terminated by another path — skip
             return;
         }
 

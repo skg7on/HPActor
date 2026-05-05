@@ -19,8 +19,8 @@
 
 namespace hpactor {
 
-// ActorState: atomic state encoding for actor lifecycle
-// States: Idle(0) → Ready(1) → Running(2) → IOWaiting(3) / Terminated(4)
+// ActorState: atomic state encoding for coroutine actor lifecycle
+// States: Idle → Ready → Running → IOWaiting / Terminated
 class ActorState {
   public:
     static constexpr uint32_t kIdle = 0x01;
@@ -28,8 +28,7 @@ class ActorState {
     static constexpr uint32_t kRunning = 0x04;
     static constexpr uint32_t kIOWaiting = 0x08;
     static constexpr uint32_t kTerminated = 0x10;
-    static constexpr uint32_t kHibernating = 0x20;
-    static constexpr uint32_t kMask = 0x3F;
+    static constexpr uint32_t kMask = 0x1F;
 
     ActorState() : state_(kIdle) {}
     explicit ActorState(uint32_t initial) : state_(initial) {}
@@ -63,9 +62,6 @@ class ActorState {
     }
     bool is_terminated() const {
         return get() == kTerminated;
-    }
-    bool is_hibernating() const {
-        return get() == kHibernating;
     }
 
   private:
