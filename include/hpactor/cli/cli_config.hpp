@@ -21,7 +21,7 @@ namespace hpactor {
 namespace cli {
 
 struct CliConfig {
-    bool enabled = true;
+    bool enabled = false;  // CLI is opt-in — only enable via TOML or explicit config
     std::string listen_path;          // UDS path; empty = stdin/stdout
     uint16_t tcp_port = 0;           // TCP port; 0 = disabled
     std::string default_format = "pretty";
