@@ -68,7 +68,7 @@ TcpTransport::get_or_create_pool(EndPoint remote_endpoint) {
         return it->second;
     }
     auto pool = std::make_shared<ConnectionPool>(remote_endpoint, pool_config_,
-                                                 &tls_context_, &loop_);
+                                                 &loop_);
     pools_[remote_endpoint] = pool;
     // Set RPC handler if one has been registered
     if (rpc_handler_) {

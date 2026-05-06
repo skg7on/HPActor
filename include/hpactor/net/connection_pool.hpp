@@ -74,7 +74,7 @@ struct PoolStats {
 class ConnectionPool {
   public:
     ConnectionPool(EndPoint remote_endpoint, const PoolConfig& config,
-                   TlsContext* tls_context, EventLoop* loop);
+                   EventLoop* loop);
     ~ConnectionPool();
 
     // Non-copyable
@@ -142,9 +142,6 @@ class ConnectionPool {
     // Get connection via round-robin
     ConnectionPtr get_connection();
 
-    // Create new connection
-    ConnectionPtr create_connection();
-
     // Schedule reconnect with backoff
     void schedule_reconnect();
 
@@ -156,7 +153,6 @@ class ConnectionPool {
 
     EndPoint remote_endpoint_;
     PoolConfig config_;
-    TlsContext* tls_context_;
     EventLoop* loop_;
 
     std::vector<ConnectionPtr> active_connections_;
@@ -167,7 +163,6 @@ class ConnectionPool {
     std::atomic<bool> reconnect_scheduled_{false};
 
     mutable std::mutex mutex_;
-    std::atomic<bool> connecting_{false};
     std::atomic<bool> shutting_down_{false};
 
     rpc_response_handler rpc_handler_;

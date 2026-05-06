@@ -25,9 +25,8 @@ namespace net {
 
 ConnectionPool::ConnectionPool(EndPoint remote_endpoint,
                                const PoolConfig& config,
-                               TlsContext* tls_context, EventLoop* loop)
-    : remote_endpoint_(remote_endpoint), config_(config),
-      tls_context_(tls_context), loop_(loop) {}
+                               EventLoop* loop)
+    : remote_endpoint_(remote_endpoint), config_(config), loop_(loop) {}
 
 ConnectionPool::~ConnectionPool() {
     abort();
@@ -54,12 +53,7 @@ void ConnectionPool::send(const ActorAddress& target, const StreamBuffer& encode
     }
 
     // No connection available, queue pending
-    if (!add_pending(target, encoded)) {
-        return; // Queue full
-    }
-
-    // Create connection
-    create_connection();
+    add_pending(target, encoded);
 }
 
 void ConnectionPool::send(const StreamBuffer& data) {
@@ -121,52 +115,11 @@ void ConnectionPool::set_spawn_handler(spawn_response_handler handler) {
     spawn_handler_ = std::move(handler);
 }
 
-ConnectionPtr ConnectionPool::create_connection() {
-    if (connecting_.load()) {
-        return nullptr;
-    }
-    if (!connecting_.exchange(true)) {
-        // Determine local endpoint from loop (default to LocalEndpoint)
-        EndPoint local_ep = LocalEndpoint;
-
-        ConnectionPtr conn;
-        if (config_.use_tls) {
-            auto tls_conn =
-                TlsConnection::create_client(local_ep, remote_endpoint_,
-                                             tls_context_, loop_);
-            tls_conn->set_ready_handler(
-                [this](ConnectionPtr c) { on_connection_ready(c); });
-            tls_conn->set_error_handler([this](ConnectionPtr c, const error& e) {
-                on_connection_error(c, e);
-            });
-            tls_conn->set_frame_handler(
-                [this](StreamBuffer data) { on_frame_received(std::move(data)); });
-            conn = tls_conn;
-        } else {
-            // WireFrame connection for internal create_connection — fd will be set
-            // after TCP connect. Create with fd=-1 for now.
-            auto plain_conn =
-                WireFrameConnection::create_as_client(-1, local_ep, remote_endpoint_, loop_);
-            plain_conn->set_ready_handler(
-                [this](ConnectionPtr c) { on_connection_ready(c); });
-            plain_conn->set_error_handler([this](ConnectionPtr c, const error& e) {
-                on_connection_error(c, e);
-            });
-            plain_conn->set_frame_handler(
-                [this](StreamBuffer data) { on_frame_received(std::move(data)); });
-            conn = plain_conn;
-        }
-        return conn;
-    }
-    return nullptr;
-}
-
 void ConnectionPool::on_connection_ready(ConnectionPtr conn) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         active_connections_.push_back(conn);
     }
-    connecting_.store(false);
     flush_pending();
 }
 
@@ -241,10 +194,6 @@ void ConnectionPool::schedule_reconnect() {
     loop_->run_after(
         [this]() {
             reconnect_scheduled_.store(false);
-            connecting_.store(false);
-            if (!shutting_down_.load()) {
-                create_connection();
-            }
         },
         static_cast<int>(backoff.count()));
 }
