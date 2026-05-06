@@ -410,4 +410,8 @@ if(ENABLE_CLI)
     add_executable(test_cli_integration cli/test_cli_integration.cpp)
     target_link_libraries(test_cli_integration hpactor)
     add_test(NAME test_cli_integration COMMAND test_cli_integration)
+
+    add_executable(test_line_editor cli/test_line_editor.cpp)
+    target_link_libraries(test_line_editor hpactor)
+    add_test(NAME test_line_editor COMMAND test_line_editor)
 endif()
