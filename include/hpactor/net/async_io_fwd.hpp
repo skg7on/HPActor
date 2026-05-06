@@ -34,6 +34,11 @@ struct OpCompletion {
 // The callback owns the read: it must ::read() from the fd directly.
 using read_callback = std::function<void(int fd)>;
 
+// Write handler callback type - called when fd is writable.
+// Used for non-blocking connect completion: callback checks SO_ERROR
+// and transitions the connection to Connected on success.
+using write_callback = std::function<void(int fd)>;
+
 // Encode actor, fd, and op_type into a single uint64_t for user_data field.
 // Format: bits 0-31 = fd, bits 32-47 = actor_id, bits 48-55 = reserved,
 // bits 56-63 = op_type

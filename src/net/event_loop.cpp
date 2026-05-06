@@ -144,6 +144,22 @@ bool EventLoop::supports_read_handler() const {
     return backend_ && backend_->supports_read_handler();
 }
 
+void EventLoop::set_write_handler(int fd, write_callback handler) {
+    if (backend_) {
+        backend_->set_write_handler(fd, std::move(handler));
+    }
+}
+
+void EventLoop::clear_write_handler(int fd) {
+    if (backend_) {
+        backend_->clear_write_handler(fd);
+    }
+}
+
+bool EventLoop::supports_write_handler() const {
+    return backend_ && backend_->supports_write_handler();
+}
+
 int EventLoop::wait(int timeout_ms) {
     if (!backend_) {
         return -1;

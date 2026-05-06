@@ -79,6 +79,11 @@ class TcpTransport : public Transport {
     void register_connection(ConnectionPtr conn, int fd);
     void unregister_connection(int fd);
 
+    // Wait for non-blocking connect via EventLoop write_handler, then
+    // complete post-connect setup (SO_ERROR check, read registration,
+    // TLS handshake start). Returns true on success.
+    bool complete_connect(int fd, bool use_tls);
+
     // Derive UDS socket path from node identifier string
     // /tmp/hpactor/<sanitized_node_id>.sock
     std::string derive_uds_path(const std::string& node_id) const;

@@ -140,6 +140,7 @@ bool KqueueBackend::remove_fd(int fd) {
     kevent(kqueue_fd_, ev, nevents, nullptr, 0, nullptr);
     fd_events_.erase(fd);
     read_handlers_.erase(fd);
+    write_handlers_.erase(fd);
     return true;
 }
 
@@ -657,6 +658,9 @@ void KqueueBackend::dispatch_event(int ident, int filter) {
     if (filter == EVFILT_READ) {
         service_read_handler(ident);
     }
+    if (filter == EVFILT_WRITE) {
+        service_write_handler(ident);
+    }
 }
 
 // --- Simplified wait() ---
@@ -709,6 +713,31 @@ void KqueueBackend::service_read_handler(int fd) {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = read_handlers_.find(fd);
         if (it == read_handlers_.end()) return;
+        cb = it->second;
+    }
+    cb(fd);
+}
+
+void KqueueBackend::set_write_handler(int fd, write_callback handler) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (handler) {
+        write_handlers_[fd] = std::move(handler);
+    } else {
+        write_handlers_.erase(fd);
+    }
+}
+
+void KqueueBackend::clear_write_handler(int fd) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    write_handlers_.erase(fd);
+}
+
+void KqueueBackend::service_write_handler(int fd) {
+    write_callback cb;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = write_handlers_.find(fd);
+        if (it == write_handlers_.end()) return;
         cb = it->second;
     }
     cb(fd);

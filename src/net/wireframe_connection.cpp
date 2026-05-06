@@ -57,6 +57,36 @@ WireFrameConnection::create_as_client(int fd, EndPoint local_endpoint,
 }
 
 WireFrameConnectionPtr
+WireFrameConnection::create_connecting_client(int fd, EndPoint local_endpoint,
+                                              EndPoint remote_endpoint,
+                                              EventLoop* loop) {
+    auto conn = std::shared_ptr<WireFrameConnection>(
+        new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));
+    conn->set_state(ConnectionState::Connecting);
+    // Event loop registration deferred — caller must verify connect and call
+    // setup_after_connect().
+    return conn;
+}
+
+void WireFrameConnection::setup_after_connect(WireFrameConnectionPtr conn) {
+    conn->set_state(ConnectionState::Connected);
+
+    auto* loop = conn->event_loop();
+    int fd = conn->fd();
+    if (loop && fd >= 0) {
+        loop->add_fd(fd, EventLoop::Event::Read);
+        if (loop->supports_read_handler()) {
+            std::weak_ptr<WireFrameConnection> weak_conn = conn;
+            loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
+                if (auto self = weak_conn.lock()) {
+                    self->handle_read();
+                }
+            });
+        }
+    }
+}
+
+WireFrameConnectionPtr
 WireFrameConnection::create_as_server(int fd, EndPoint local_endpoint,
                                       EndPoint remote_endpoint, EventLoop* loop) {
     auto conn = std::shared_ptr<WireFrameConnection>(

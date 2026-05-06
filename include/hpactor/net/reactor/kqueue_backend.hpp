@@ -87,6 +87,12 @@ class KqueueBackend : public IReactorBackend {
 
     bool supports_read_handler() const override { return true; }
 
+    // Write handler management — kqueue dispatches writable events via callback
+    void set_write_handler(int fd, write_callback handler) override;
+    void clear_write_handler(int fd) override;
+
+    bool supports_write_handler() const override { return true; }
+
     // Set the EventLoop pointer for routing completions
     void set_loop(net::EventLoop* loop) {
         loop_ = loop;
@@ -180,6 +186,12 @@ class KqueueBackend : public IReactorBackend {
 
     // Read data from fd and dispatch to registered read handler
     void service_read_handler(int fd);
+
+    // Write handler callbacks for non-blocking connect completion
+    std::unordered_map<int, write_callback> write_handlers_;
+
+    // Dispatch writable event to registered write handler
+    void service_write_handler(int fd);
 };
 
 } // namespace net

@@ -98,6 +98,10 @@ class TlsConnection : public Connection,
     set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
     void set_send_completion_handler(std::function<void(int result)> handler);
 
+    // Complete post-connect setup: registers for Read events and establishes
+    // the read handler. Static to avoid shared_from_this issues.
+    static void setup_after_connect(TlsConnectionPtr conn);
+
     // Initiate client handshake (called after connection established)
     void start_client_handshake();
 

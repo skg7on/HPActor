@@ -58,6 +58,12 @@ public:
     // from wait(). Reactor backends (epoll, kqueue) return true.
     // Proactor backends (io_uring, GCD) return false.
     virtual bool supports_read_handler() const = 0;
+
+    // Write handler management — reactor backends dispatch writable events
+    // via callback. Used for non-blocking connect completion.
+    virtual void set_write_handler(int fd, write_callback handler) = 0;
+    virtual void clear_write_handler(int fd) = 0;
+    virtual bool supports_write_handler() const = 0;
 };
 
 } // namespace net

@@ -135,13 +135,20 @@ void TlsConnection::set_send_completion_handler(std::function<void(int result)> 
 
 void TlsConnection::set_fd(int fd) {
     fd_ = fd;
-    // Register fd with event loop for read events
-    if (loop_ && fd >= 0) {
-        loop_->add_fd(fd, EventLoop::Event::Read);
-        if (loop_->supports_read_handler()) {
-            std::weak_ptr<TlsConnection> weak_conn =
-                std::enable_shared_from_this<TlsConnection>::shared_from_this();
-            loop_->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
+    // Event loop registration is deferred — the caller must verify the
+    // non-blocking connect completed, then call setup_after_connect().
+}
+
+void TlsConnection::setup_after_connect(TlsConnectionPtr conn) {
+    conn->set_state(ConnectionState::Connected);
+
+    auto* loop = conn->event_loop();
+    int fd = conn->fd();
+    if (loop && fd >= 0) {
+        loop->add_fd(fd, EventLoop::Event::Read);
+        if (loop->supports_read_handler()) {
+            std::weak_ptr<TlsConnection> weak_conn = conn;
+            loop->set_read_handler(fd, [weak_conn](int /*event_fd*/) {
                 if (auto self = weak_conn.lock()) {
                     self->handle_read();
                 }

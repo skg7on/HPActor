@@ -41,15 +41,28 @@ using WireFrameConnectionPtr = std::shared_ptr<WireFrameConnection>;
 class WireFrameConnection : public Connection,
                             public std::enable_shared_from_this<WireFrameConnection> {
   public:
-    // Create client-side connection with existing connected fd
+    // Create client-side connection with existing connected fd.
+    // Sets state to Connected and registers for Read events.
     static WireFrameConnectionPtr
     create_as_client(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                      EventLoop* loop);
+
+    // Create client-side connection for a non-blocking connect in progress.
+    // Sets state to Connecting and does NOT register with the event loop —
+    // the caller must complete the connect and then call setup_after_connect().
+    static WireFrameConnectionPtr
+    create_connecting_client(int fd, EndPoint local_endpoint,
+                             EndPoint remote_endpoint, EventLoop* loop);
 
     // Create server-side connection (from accepted socket)
     static WireFrameConnectionPtr
     create_as_server(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                      EventLoop* loop);
+
+    // Complete post-connect setup: transitions to Connected, registers for
+    // Read events, establishes the read handler, and fires the ready handler.
+    // Static to avoid shared_from_this issues with dual enable_shared_from_this.
+    static void setup_after_connect(WireFrameConnectionPtr conn);
 
     ~WireFrameConnection();
 

@@ -91,6 +91,17 @@ class IoUringBackend : public IReactorBackend {
 
     bool supports_read_handler() const override { return false; }
 
+    // Write handler management - no-op (proactor uses async_connect)
+    void set_write_handler(int fd, write_callback handler) override {
+        (void)fd;
+        (void)handler;
+    }
+    void clear_write_handler(int fd) override {
+        (void)fd;
+    }
+
+    bool supports_write_handler() const override { return false; }
+
     // Called by completions to deliver to actor
     void deliver_completion(OpCompletion completion);
 

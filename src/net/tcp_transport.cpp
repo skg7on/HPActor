@@ -83,7 +83,32 @@ TcpTransport::get_or_create_pool(EndPoint remote_endpoint) {
 
 ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
                                     const std::string& /*host*/, uint16_t port) {
-    int fd = ::socket(AF_INET, SOCK_STREAM, 0);
+    // Build sockaddr from remote_endpoint — supports both IPv4 and IPv6
+    struct sockaddr_storage addr_storage{};
+    socklen_t addr_len = 0;
+    int family = 0;
+
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&remote_endpoint)) {
+        family = AF_INET;
+        auto* sa = reinterpret_cast<struct sockaddr_in*>(&addr_storage);
+        sa->sin_family = AF_INET;
+        sa->sin_port = htons(port);
+        sa->sin_addr.s_addr = ipv4->addr;
+        addr_len = sizeof(struct sockaddr_in);
+    } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&remote_endpoint)) {
+        family = AF_INET6;
+        auto* sa = reinterpret_cast<struct sockaddr_in6*>(&addr_storage);
+        sa->sin6_family = AF_INET6;
+        sa->sin6_port = htons(port);
+        std::memcpy(sa->sin6_addr.s6_addr, ipv6->addr.data(), 16);
+        sa->sin6_flowinfo = 0;
+        sa->sin6_scope_id = 0;
+        addr_len = sizeof(struct sockaddr_in6);
+    } else {
+        return nullptr;
+    }
+
+    int fd = ::socket(family, SOCK_STREAM, 0);
     if (fd < 0) {
         return nullptr;
     }
@@ -96,28 +121,22 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
-    // Resolve host (simple version - no DNS)
-    struct sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    addr.sin_port = htons(port);
-    addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-    int result =
-        ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    int result = ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr_storage),
+                           addr_len);
     if (result < 0 && errno != EINPROGRESS) {
         ::close(fd);
         return nullptr;
     }
 
-    // Get or create the pool
     auto pool = get_or_create_pool(remote_endpoint);
-
+    bool use_tls = pool_config_.use_tls;
     ConnectionPtr conn;
-    if (pool_config_.use_tls) {
-        // Create TLS connection
-        auto tls_conn =
-            TlsConnection::create_client(endpoint_, remote_endpoint,
-                                         &tls_context_, &loop_);
+
+    // Create connection in Connecting state — event loop registration is
+    // deferred until the non-blocking connect completes.
+    if (use_tls) {
+        auto tls_conn = TlsConnection::create_client(endpoint_, remote_endpoint,
+                                                     &tls_context_, &loop_);
         tls_conn->set_fd(fd);
         tls_conn->set_ready_handler(
             [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
@@ -127,11 +146,9 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
         tls_conn->set_frame_handler(
             [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
         conn = tls_conn;
-        tls_conn->start_client_handshake();
     } else {
-        // Create plain connection with connected fd
-        auto plain_conn =
-            WireFrameConnection::create_as_client(fd, endpoint_, remote_endpoint, &loop_);
+        auto plain_conn = WireFrameConnection::create_connecting_client(
+            fd, endpoint_, remote_endpoint, &loop_);
         plain_conn->set_ready_handler(
             [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
@@ -142,9 +159,27 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
         conn = plain_conn;
     }
 
-    // Add to pool and track by fd for completion routing
+    // Add to pool and track early so the write_handler can find the connection
     pool->add_connection(conn);
     register_connection(conn, fd);
+
+    // Handle non-blocking connect completion
+    if (result < 0 && errno == EINPROGRESS) {
+        if (!complete_connect(fd, use_tls)) {
+            unregister_connection(fd);
+            return nullptr;
+        }
+    } else {
+        // Connected immediately (e.g. localhost) — set up read handler directly
+        if (use_tls) {
+            TlsConnection::setup_after_connect(
+                std::static_pointer_cast<TlsConnection>(conn));
+            static_cast<TlsConnection*>(conn.get())->start_client_handshake();
+        } else {
+            WireFrameConnection::setup_after_connect(
+                std::static_pointer_cast<WireFrameConnection>(conn));
+        }
+    }
 
     return conn;
 }
@@ -195,10 +230,10 @@ TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
     }
 
     // Note: TLS over UDS is not supported per design decision.
-    // use_tls config only applies to TCP connections.
     // UDS connections always use WireFrameConnection.
     auto pool = get_or_create_pool(remote_endpoint);
-    auto plain_conn = WireFrameConnection::create_as_client(fd, endpoint_, remote_endpoint, &loop_);
+    auto plain_conn = WireFrameConnection::create_connecting_client(
+        fd, endpoint_, remote_endpoint, &loop_);
     plain_conn->set_ready_handler(
         [pool](ConnectionPtr c) { pool->on_connection_ready(c); });
     plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
@@ -210,7 +245,80 @@ TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
     pool->add_connection(plain_conn);
     register_connection(plain_conn, fd);
 
+    // Handle non-blocking connect completion
+    if (result < 0 && errno == EINPROGRESS) {
+        if (!complete_connect(fd, /*use_tls=*/false)) {
+            unregister_connection(fd);
+            return nullptr;
+        }
+    } else {
+        WireFrameConnection::setup_after_connect(plain_conn);
+    }
+
     return plain_conn;
+}
+
+bool TcpTransport::complete_connect(int fd, bool use_tls) {
+    // Ensure event loop backend is started
+    if (!loop_.is_running()) {
+        loop_.run();
+    }
+
+    // Shared flag to coordinate between write_handler and timeout —
+    // whichever fires first wins; the other becomes a no-op.
+    auto done = std::make_shared<bool>(false);
+
+    // Register for Write events — the fd becomes writable when the
+    // non-blocking TCP handshake completes (success or error).
+    loop_.add_fd(fd, EventLoop::Event::Write);
+
+    loop_.set_write_handler(fd, [this, fd, use_tls, done](int event_fd) {
+        (void)event_fd;
+        if (*done) return;
+        *done = true;
+
+        loop_.clear_write_handler(fd);
+
+        int so_error = 0;
+        socklen_t len = sizeof(so_error);
+        ::getsockopt(fd, SOL_SOCKET, SO_ERROR, &so_error, &len);
+
+        auto it = connections_.find(fd);
+        if (it == connections_.end()) return;
+
+        if (so_error != 0) {
+            it->second->set_state(ConnectionState::Error);
+            return;
+        }
+
+        // Connect succeeded — complete the per-type setup
+        if (use_tls) {
+            TlsConnection::setup_after_connect(
+                std::static_pointer_cast<TlsConnection>(it->second));
+            static_cast<TlsConnection*>(it->second.get())
+                ->start_client_handshake();
+        } else {
+            WireFrameConnection::setup_after_connect(
+                std::static_pointer_cast<WireFrameConnection>(it->second));
+        }
+    });
+
+    // Timeout via event loop timer — fires after 5s if the connect
+    // hasn't completed, preventing a stale write_handler leak.
+    loop_.run_after([this, fd, done]() {
+        if (*done) return;
+        *done = true;
+
+        loop_.clear_write_handler(fd);
+
+        auto it = connections_.find(fd);
+        if (it != connections_.end() &&
+            it->second->state() == ConnectionState::Connecting) {
+            it->second->set_state(ConnectionState::Error);
+        }
+    }, 5000);
+
+    return true;
 }
 
 void TcpTransport::listen(uint16_t port) {

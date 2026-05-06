@@ -126,6 +126,7 @@ bool EpollBackend::remove_fd(int fd) {
     fd_events_.erase(fd);
     pending_ops_.erase(fd);
     read_handlers_.erase(fd);
+    write_handlers_.erase(fd);
     return true;
 }
 
@@ -388,8 +389,13 @@ void EpollBackend::dispatch_event(int fd, uint32_t events) {
     } else if (fd >= 0) {
         if (pending_ops_.find(fd) != pending_ops_.end()) {
             process_pending_op(fd, events);
-        } else if (events & EPOLLIN) {
-            service_read_handler(fd);
+        } else {
+            if (events & EPOLLIN) {
+                service_read_handler(fd);
+            }
+            if (events & EPOLLOUT) {
+                service_write_handler(fd);
+            }
         }
     }
 }
@@ -868,6 +874,31 @@ void EpollBackend::service_read_handler(int fd) {
     cb(fd);
 }
 
+void EpollBackend::set_write_handler(int fd, write_callback handler) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (handler) {
+        write_handlers_[fd] = std::move(handler);
+    } else {
+        write_handlers_.erase(fd);
+    }
+}
+
+void EpollBackend::clear_write_handler(int fd) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    write_handlers_.erase(fd);
+}
+
+void EpollBackend::service_write_handler(int fd) {
+    write_callback cb;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = write_handlers_.find(fd);
+        if (it == write_handlers_.end()) return;
+        cb = it->second;
+    }
+    cb(fd);
+}
+
 void EpollBackend::process_events() {
     std::vector<OpCompletion> completions;
     {
@@ -1013,6 +1044,17 @@ void EpollBackend::process_events() {}
 
 void EpollBackend::deliver_completion(OpCompletion completion) {
     (void)completion;
+}
+
+void EpollBackend::set_write_handler(int fd, write_callback handler) {
+    (void)fd;
+    (void)handler;
+}
+void EpollBackend::clear_write_handler(int fd) {
+    (void)fd;
+}
+void EpollBackend::service_write_handler(int fd) {
+    (void)fd;
 }
 
 #endif // defined(__linux__)

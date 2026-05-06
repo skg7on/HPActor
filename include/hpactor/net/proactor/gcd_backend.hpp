@@ -97,6 +97,17 @@ class GcdBackend : public IReactorBackend {
 
     bool supports_read_handler() const override { return false; }
 
+    // Write handler management - no-op (proactor uses async_connect)
+    void set_write_handler(int fd, write_callback handler) override {
+        (void)fd;
+        (void)handler;
+    }
+    void clear_write_handler(int fd) override {
+        (void)fd;
+    }
+
+    bool supports_write_handler() const override { return false; }
+
     // Deliver completion to actor (public for trampoline access)
     void deliver_completion(OpCompletion completion);
 
