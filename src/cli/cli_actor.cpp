@@ -3,6 +3,11 @@
 
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/command_context.hpp>
+#include <hpactor/cli/commands/show_command.hpp>
+#include <hpactor/cli/commands/kill_command.hpp>
+#include <hpactor/cli/commands/list_command.hpp>
+#include <hpactor/cli/commands/system_stats_command.hpp>
+#include <hpactor/cli/commands/system_memory_command.hpp>
 #include <hpactor/cli/lexer.hpp>
 #include <hpactor/core/actor_system.hpp>
 
@@ -47,50 +52,21 @@ void CliActor::build_command_tree() {
     auto* actor_id = actor->add_child("<id>", "Target actor ID", /*is_param=*/true);
 
     actor_id->add_child("show", "Display actor metadata, state, mailbox, and children")
-        ->execute = [](CommandContext& ctx) -> result<void> {
-        auto id_str = ctx.get_param("<id>");
-        if (!id_str) {
-            ctx.output->error("Missing actor ID (usage: /actor <id> show)");
-            return result<void>::make();
-        }
-        ctx.output->header("Actor " + *id_str);
-        ctx.output->key_value({{"Status", "pending..."}});
-        return result<void>::make();
-    };
+        ->execute = commands::execute_show;
 
     actor_id->add_child("kill", "Terminate actor")
-        ->execute = [](CommandContext& ctx) -> result<void> {
-        auto id_str = ctx.get_param("<id>");
-        if (!id_str) {
-            ctx.output->error("Missing actor ID");
-            return result<void>::make();
-        }
-        ctx.output->raw("kill " + *id_str + " — not yet implemented");
-        return result<void>::make();
-    };
+        ->execute = commands::execute_kill;
 
     // /actor list
     actor->add_child("list", "List all actors")
-        ->execute = [](CommandContext& ctx) -> result<void> {
-        ctx.output->header("Actor List");
-        ctx.output->raw("list — not yet implemented");
-        return result<void>::make();
-    };
+        ->execute = commands::execute_list;
 
     // /system ...
     auto* sys = root->add_child("system", "System operations");
     sys->add_child("stats", "System statistics")
-        ->execute = [](CommandContext& ctx) -> result<void> {
-        ctx.output->header("System Statistics");
-        ctx.output->raw("stats — not yet implemented");
-        return result<void>::make();
-    };
+        ->execute = commands::execute_system_stats;
     sys->add_child("memory", "Memory subsystem stats")
-        ->execute = [](CommandContext& ctx) -> result<void> {
-        ctx.output->header("System Memory");
-        ctx.output->raw("memory — not yet implemented");
-        return result<void>::make();
-    };
+        ->execute = commands::execute_system_memory;
     sys->add_child("list", "List system actors")
         ->execute = [](CommandContext& ctx) -> result<void> {
         ctx.output->header("System Actors");
