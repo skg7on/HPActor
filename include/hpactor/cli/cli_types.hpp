@@ -20,7 +20,12 @@
 namespace hpactor {
 namespace cli {
 
-struct ActorMetadata {
+// Lightweight introspection structs (no protobuf dependency).
+// Named distinctly from the protobuf-generated classes in cli_messages.pb.h
+// (ActorMetadata, MailboxSnapshot, ChildInfo) to avoid ODR collisions when
+// both headers are included in the same translation unit.
+
+struct ActorMeta {
     uint64_t actor_id = 0;
     std::string actor_type;
     std::string state;
@@ -30,7 +35,7 @@ struct ActorMetadata {
     std::string behavior_name;
 };
 
-struct MailboxSnapshot {
+struct MboxSnapshot {
     uint32_t depth = 0;
     uint64_t total_enqueued = 0;
     uint64_t total_dequeued = 0;
@@ -38,7 +43,7 @@ struct MailboxSnapshot {
     uint32_t high_priority_depth = 0;
 };
 
-struct ChildInfo {
+struct ChildEntry {
     uint64_t actor_id = 0;
     std::string actor_type;
     std::string state;

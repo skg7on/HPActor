@@ -14,12 +14,14 @@
 
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/messages.pb.h>
 #include <hpactor/metrics/metrics_event.hpp>
 
 #include <chrono>
+#include <cstring>
 
 namespace hpactor {
 
@@ -110,6 +112,68 @@ void EventBasedActor::receive(TypedMessage& msg) {
     if (ctx != nullptr) {
         ctx->set_current_sender(msg.sender_address());
     }
+
+    // -- CLI introspection dispatch --
+    {
+        // InspectStateRequest: gather metadata + optional state/mailbox/children
+        if (msg.type_id() == TypeTag::InspectStateRequestTag) {
+            cli::InspectStateRequest req;
+            if (!req.ParseFromArray(msg.payload().data(),
+                                    static_cast<int>(msg.payload().size()))) {
+                return;
+            }
+
+            cli::InspectStateReply reply;
+            auto meta = to_metadata();
+            auto* pb_meta = reply.mutable_metadata();
+            pb_meta->set_actor_id(meta.actor_id);
+            pb_meta->set_actor_type(meta.actor_type);
+            pb_meta->set_state(meta.state);
+            pb_meta->set_incarnation(meta.incarnation);
+
+            if (req.include_mailbox()) {
+                auto ms = mailbox_snapshot();
+                auto* pb_mbox = reply.mutable_mailbox();
+                pb_mbox->set_depth(ms.depth);
+            }
+
+            if (req.include_state()) {
+                auto blob = serialize_state();
+                reply.set_state_blob(
+                    std::string(reinterpret_cast<const char*>(blob.data()),
+                                blob.size()));
+            }
+
+            std::string reply_data = reply.SerializeAsString();
+            StreamBuffer payload(reply_data.begin(), reply_data.end());
+            ctx->reply(TypedMessage(TypeTag::InspectStateResponseTag,
+                                    std::move(payload)));
+            return;
+        }
+
+        // KillRequest: terminate this actor
+        if (msg.type_id() == TypeTag::KillRequestTag) {
+            cli::KillRequest req;
+            if (!req.ParseFromArray(msg.payload().data(),
+                                    static_cast<int>(msg.payload().size()))) {
+                return;
+            }
+
+            cli::KillReply reply;
+            reply.set_success(true);
+            reply.set_error_code(0);
+
+            std::string reply_data = reply.SerializeAsString();
+            StreamBuffer payload(reply_data.begin(), reply_data.end());
+            ctx->reply(TypedMessage(TypeTag::KillResponseTag,
+                                    std::move(payload)));
+
+            // Schedule termination with normal exit code
+            set_exit_reason(0);
+            return;
+        }
+    }
+    // -- End CLI dispatch --
 
     auto t0 = metrics_ring_buffer_
         ? std::chrono::steady_clock::now()
@@ -231,6 +295,11 @@ void EventBasedActor::on_exit() {
         ctx->send(addr, std::move(down_msg));
     }
     // linked_ and monitored_ vectors will be destroyed with the context
+}
+
+cli::MboxSnapshot EventBasedActor::mailbox_snapshot() const {
+    if (mailbox_) return mailbox_->snapshot();
+    return {};
 }
 
 } // namespace hpactor

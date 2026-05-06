@@ -134,6 +134,10 @@ template <typename T> class MPSCMailbox {
         return count_.load(std::memory_order_acquire) == 0;
     }
 
+    int64_t count() const noexcept {
+        return count_.load(std::memory_order_acquire);
+    }
+
   private:
     struct Stub : public T {
         Stub() : T() {}

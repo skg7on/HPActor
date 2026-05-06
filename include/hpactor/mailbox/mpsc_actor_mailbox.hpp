@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/cli/cli_types.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -122,6 +123,13 @@ template <typename T> class MPSCActorMailbox {
     void inject_for_test(T* node) noexcept {
         mailbox_.enqueue(node);
         mailbox_was_empty_.store(false, std::memory_order_release);
+    }
+
+    // Return a snapshot of current mailbox stats.
+    cli::MboxSnapshot snapshot() const {
+        cli::MboxSnapshot s;
+        s.depth = static_cast<uint32_t>(mailbox_.count());
+        return s;
     }
 
   private:
