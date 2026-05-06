@@ -126,6 +126,40 @@ void test_root_children() {
     assert(found_actor && found_system && found_help && found_quit);
 }
 
+void test_prefix_match_intermediate_token() {
+    // Simulates "/act" — "act" is an intermediate token that should
+    // prefix-match "actor" at the root level.
+    auto root = build_test_tree();
+    auto* n = root->find_child_prefix("act");
+    assert(n != nullptr);
+    assert(n->keyword == "actor");
+}
+
+void test_prefix_match_last_token() {
+    // Simulates "actor l" — "l" should prefix-match "list" under /actor
+    auto root = build_test_tree();
+    std::string param;
+    auto* actor = root->find_child("actor", param);
+    assert(actor != nullptr);
+
+    std::vector<std::string> completions;
+    actor->collect_completions("l", completions);
+    assert(completions.size() == 1);
+    assert(completions[0] == "list");
+}
+
+void test_prefix_match_ambiguous_shows_all() {
+    CommandNode root{"", "root"};
+    root.add_child("show", "Display");
+    root.add_child("stats", "Statistics");
+    root.add_child("stop", "Stop");
+
+    // "s" prefix — three matches
+    std::vector<std::string> out;
+    root.collect_completions("s", out);
+    assert(out.size() == 3);
+}
+
 void test_suggest_levenshtein() {
     CommandNode root{"", "root"};
     root.add_child("show", "Display");
@@ -152,6 +186,9 @@ int main() {
     test_completion_matches();
     test_prefix_match_for_completion();
     test_root_children();
+    test_prefix_match_intermediate_token();
+    test_prefix_match_last_token();
+    test_prefix_match_ambiguous_shows_all();
     test_suggest_levenshtein();
     test_help_text();
 

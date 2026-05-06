@@ -62,6 +62,28 @@ static int levenshtein(const std::string& a, const std::string& b) {
     return d[m][n];
 }
 
+CommandNode* CommandNode::find_child_prefix(const std::string& prefix) const {
+    CommandNode* found = nullptr;
+    for (auto& child : children) {
+        if (child->is_parameter) continue;
+        if (child->keyword.starts_with(prefix)) {
+            if (found) return nullptr; // ambiguous — multiple matches
+            found = child.get();
+        }
+    }
+    return found;
+}
+
+void CommandNode::collect_completions(const std::string& prefix,
+                                      std::vector<std::string>& out) const {
+    for (auto& child : children) {
+        if (child->is_parameter) continue;
+        if (prefix.empty() || child->keyword.starts_with(prefix)) {
+            out.push_back(child->keyword);
+        }
+    }
+}
+
 std::string CommandNode::suggest(const std::string& token) const {
     std::string best;
     int best_dist = 999;

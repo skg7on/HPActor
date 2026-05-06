@@ -92,6 +92,60 @@ void test_suggest() {
     assert(sug2 == "list");
 }
 
+void test_find_child_prefix_single_match() {
+    CommandNode root{"", "root"};
+    root.add_child("actor", "Actor operations");
+    root.add_child("system", "System operations");
+
+    auto* n = root.find_child_prefix("ac");
+    assert(n != nullptr);
+    assert(n->keyword == "actor");
+}
+
+void test_find_child_prefix_ambiguous() {
+    CommandNode root{"", "root"};
+    root.add_child("actor", "Actor operations");
+    root.add_child("action", "Action operations");
+
+    auto* n = root.find_child_prefix("act");
+    assert(n == nullptr); // ambiguous
+}
+
+void test_find_child_prefix_no_match() {
+    CommandNode root{"", "root"};
+    root.add_child("actor", "Actor operations");
+
+    auto* n = root.find_child_prefix("xyz");
+    assert(n == nullptr);
+}
+
+void test_collect_completions() {
+    CommandNode root{"", "root"};
+    root.add_child("show", "Display");
+    root.add_child("list", "List");
+    root.add_child("kill", "Kill");
+
+    std::vector<std::string> out;
+    root.collect_completions("s", out);
+    assert(out.size() == 1);
+    assert(out[0] == "show");
+
+    out.clear();
+    root.collect_completions("", out);
+    assert(out.size() == 3);
+}
+
+void test_collect_completions_skips_parameters() {
+    CommandNode root{"", "root"};
+    root.add_child("actor", "Actor");
+    root.add_child("<id>", "param", true);
+
+    std::vector<std::string> out;
+    root.collect_completions("", out);
+    assert(out.size() == 1);
+    assert(out[0] == "actor");
+}
+
 void test_help_text() {
     CommandNode root{"", "root"};
     root.add_child("actor", "Actor operations");
@@ -111,6 +165,11 @@ int main() {
     test_parameter_node_matches_any_non_keyword();
     test_nested_commands();
     test_suggest();
+    test_find_child_prefix_single_match();
+    test_find_child_prefix_ambiguous();
+    test_find_child_prefix_no_match();
+    test_collect_completions();
+    test_collect_completions_skips_parameters();
     test_help_text();
     printf("test_command_node: PASSED\n");
     return 0;

@@ -97,12 +97,26 @@ void LineEditor::on_completion(const char* buf,
     // Skip leading "/"
     if (i < words.size() && words[i] == "/") ++i;
 
-    // Consume fully-typed tokens (all but the last when not space-terminated)
+    // Consume fully-typed tokens (all but the last when not space-terminated).
+    // For each token, try exact match first, then prefix match — this lets
+    // partial commands like "/act" complete to "/actor".
     size_t words_to_consume = ends_with_space ? words.size() : (words.size() > 0 ? words.size() - 1 : 0);
     for (; i < words_to_consume; ++i) {
         std::string param;
         auto* child = node->find_child(words[i], param);
-        if (!child) return;  // unknown token, can't complete
+        if (!child) {
+            // No exact match — try prefix match for intermediate tokens
+            child = node->find_child_prefix(words[i]);
+            if (!child) {
+                // Ambiguous or no prefix match — show matching options
+                std::vector<std::string> matches;
+                node->collect_completions(words[i], matches);
+                for (auto& m : matches) {
+                    linenoiseAddCompletion(lc, m.c_str());
+                }
+                return;
+            }
+        }
         node = child;
     }
 
@@ -133,11 +147,10 @@ void LineEditor::on_completion(const char* buf,
     // Skip if we already handled an exact match (the space-completion is
     // sufficient; children appear on the next Tab after the space).
     if (!exact_match_found) {
-        for (auto& child : node->children) {
-            if (child->is_parameter) continue;
-            if (partial.empty() || child->keyword.starts_with(partial)) {
-                linenoiseAddCompletion(lc, child->keyword.c_str());
-            }
+        std::vector<std::string> matches;
+        node->collect_completions(partial, matches);
+        for (auto& m : matches) {
+            linenoiseAddCompletion(lc, m.c_str());
         }
     }
 }
@@ -158,12 +171,16 @@ char* LineEditor::on_hints(const char* buf,
     // Skip leading "/"
     if (i < words.size() && words[i] == "/") ++i;
 
-    // Consume fully-typed tokens
+    // Consume fully-typed tokens, using prefix match as fallback so
+    // partial commands like "/act" show hints for "/actor".
     size_t words_to_consume = ends_with_space ? words.size() : (words.size() > 0 ? words.size() - 1 : 0);
     for (; i < words_to_consume; ++i) {
         std::string param;
         auto* child = node->find_child(words[i], param);
-        if (!child) return nullptr;  // unknown token, no hint possible
+        if (!child) {
+            child = node->find_child_prefix(words[i]);
+            if (!child) return nullptr; // no match, no hint possible
+        }
         node = child;
     }
 

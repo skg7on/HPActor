@@ -47,6 +47,14 @@ struct CommandNode {
     // Generate help text for this node's children.
     std::string help(int indent = 0) const;
 
+    // Find a non-parameter child by prefix match.
+    // Returns the child if exactly one matches, nullptr if zero or multiple.
+    CommandNode* find_child_prefix(const std::string& prefix) const;
+
+    // Collect all non-parameter children whose keyword starts with prefix.
+    void collect_completions(const std::string& prefix,
+                             std::vector<std::string>& out) const;
+
     // Suggest closest match for typos (Levenshtein distance <= 2).
     std::string suggest(const std::string& token) const;
 };
