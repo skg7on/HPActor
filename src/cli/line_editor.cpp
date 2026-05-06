@@ -126,32 +126,23 @@ void LineEditor::on_completion(const char* buf,
         partial = words.back();
     }
 
-    // When the partial is an exact keyword match, offer "keyword " so
-    // linenoise adds a space instead of replacing the keyword with a
-    // child completion. On the next Tab, the user gets sub-commands.
-    bool exact_match_found = false;
+    // If partial is an exact keyword match, the user has already typed a
+    // complete command.  Don't offer children — linenoise would replace
+    // the keyword with a child (e.g. /actor<tab> → /list).  The user must
+    // type a space before Tab can complete sub-commands.
     if (!partial.empty()) {
         for (auto& child : node->children) {
             if (!child->is_parameter && child->keyword == partial) {
-                std::string with_space = child->keyword + " ";
-                linenoiseAddCompletion(lc, with_space.c_str());
-                node = child.get();
-                partial.clear();
-                exact_match_found = true;
-                break;
+                return;  // exact match — nothing to complete
             }
         }
     }
 
-    // Collect matching non-parameter children.
-    // Skip if we already handled an exact match (the space-completion is
-    // sufficient; children appear on the next Tab after the space).
-    if (!exact_match_found) {
-        std::vector<std::string> matches;
-        node->collect_completions(partial, matches);
-        for (auto& m : matches) {
-            linenoiseAddCompletion(lc, m.c_str());
-        }
+    // Collect matching non-parameter children
+    std::vector<std::string> matches;
+    node->collect_completions(partial, matches);
+    for (auto& m : matches) {
+        linenoiseAddCompletion(lc, m.c_str());
     }
 }
 
