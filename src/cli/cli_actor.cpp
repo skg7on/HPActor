@@ -4,25 +4,43 @@
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/lexer.hpp>
+#include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 
 #include <chrono>
 #include <cstdio>
+#include <cstdlib>
 #include <iostream>
 #include <thread>
 
 namespace hpactor {
 namespace cli {
 
+std::string CliActor::get_history_path(const CliConfig& config) {
+    if (!config.history_path.empty()) return config.history_path;
+    const char* home = getenv("HOME");
+    if (!home) home = "/tmp";
+    return std::string(home) + "/.hpactor_history";
+}
+
 CliActor::CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& config)
     : DaemonActor(ctx, system)
     , system_(system)
     , config_(config)
+    , line_editor_(
+          LineEditorConfig{
+              get_history_path(config),
+              config.history_max,
+              /*multiline=*/false
+          },
+          /*root=*/nullptr)
 {
     formatter_ = OutputFormatter::create(config.default_format);
     pager_ = std::make_unique<Pager>(config.page_size);
     build_command_tree();
+    line_editor_.set_root(command_tree_.get());
+    line_editor_.load_history();
 }
 
 void CliActor::on_daemon_start() {
@@ -30,16 +48,12 @@ void CliActor::on_daemon_start() {
 }
 
 void CliActor::on_daemon_stop() {
+    line_editor_.save_history();
     printf("\n[CLI session ended]\n");
 }
 
 void CliActor::print_greeting() {
     printf("HPActor CLI v1.0 — Type /help for available commands. /quit to exit.\n\n");
-}
-
-void CliActor::print_prompt() {
-    printf("hpactor> ");
-    fflush(stdout);
 }
 
 // ---------------------------------------------------------------------------
@@ -440,20 +454,15 @@ bool CliActor::run_once() {
         return false;
     }
 
-    print_prompt();
-
-    std::string line;
-    if (!std::getline(std::cin, line)) {
+    std::string line = line_editor_.readline("hpactor> ");
+    if (line.empty()) {
         printf("\nGoodbye.\n");
         return false;
     }
 
-    if (line.empty()) {
-        return true;
-    }
-
     auto tokens = Lexer::tokenize(line);
     execute_tokens(tokens);
+    line_editor_.add_history(line);
     return true;
 }
 

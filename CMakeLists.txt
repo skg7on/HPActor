@@ -242,6 +242,7 @@ if(ENABLE_CLI)
     target_sources(hpactor_lib PRIVATE
         src/cli/lexer.cpp
         src/cli/command_node.cpp
+        src/cli/line_editor.cpp
         src/cli/pretty_formatter.cpp
         src/cli/json_formatter.cpp
         src/cli/tabular_formatter.cpp
@@ -278,6 +279,21 @@ else()
     set(HPACTOR_ABSL_LIBS "")
 endif()
 
+# linenoise — vendored line editing library for CLI subsystem
+add_library(linenoise STATIC
+    third_party/linenoise/linenoise.c
+)
+target_include_directories(linenoise PUBLIC third_party/linenoise)
+target_compile_options(linenoise PRIVATE
+    -Wno-error
+    -Wno-sign-conversion
+    -Wno-implicit-int-conversion
+    -Wno-sign-compare
+    -Wno-unused-parameter
+    -Wno-shorten-64-to-32
+    -Wno-extra-semi-stmt
+)
+
 # Generate protobuf C++ headers/sources
 include(${CMAKE_SOURCE_DIR}/cmake/tomlplusplus.cmake)
 include(${CMAKE_SOURCE_DIR}/cmake/protobuf.cmake)
@@ -296,6 +312,10 @@ target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 
 find_package(OpenSSL REQUIRED)
 target_link_libraries(hpactor_lib PUBLIC tomlplusplus::tomlplusplus OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf ${HPACTOR_ABSL_LIBS} hpactor_proto)
+
+if(ENABLE_CLI)
+    target_link_libraries(hpactor_lib PRIVATE linenoise)
+endif()
 
 # ARM64 and some RISC-V platforms require explicit -latomic for std::atomic
 # operations (e.g., std::atomic<uint64_t> in CalendarQueue).

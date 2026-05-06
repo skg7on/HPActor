@@ -6,6 +6,7 @@
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/cli/command_node.hpp>
+#include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/cli/pager.hpp>
 #include <hpactor/cli/token.hpp>
@@ -70,8 +71,8 @@ public:
 private:
     void build_command_tree();
     void execute_tokens(const std::vector<Token>& tokens);
-    void print_prompt();
     void print_greeting();
+    static std::string get_history_path(const CliConfig& config);
 
     // Poll mailbox for a message with the given TypeTag, ignoring all others.
     // Returns the raw StreamBuffer payload if found before timeout.
@@ -81,6 +82,7 @@ private:
 
     ActorSystem& system_;
     CliConfig config_;
+    LineEditor line_editor_;
     std::unique_ptr<CommandNode> command_tree_;
     std::unique_ptr<OutputFormatter> formatter_;
     std::unique_ptr<Pager> pager_;
