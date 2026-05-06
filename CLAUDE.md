@@ -24,6 +24,7 @@ cmake -DENABLE_EXAMPLES=OFF ..    # Disable examples (default ON)
 cmake -DENABLE_PROACTOR=ON ..     # Enable proactor backend
 cmake -DENABLE_MEMORY_DEBUG=ON .. # Enable memory poisoning + canary verification
 cmake -DENABLE_ACTOR_METRICS=OFF .. # Disable actor-level metrics (default ON)
+cmake -DENABLE_CLI=OFF ..       # Disable interactive CLI subsystem (default ON)
 ```
 
 ## Architecture
@@ -45,8 +46,9 @@ AbstractActor (interface base)
             │       └── ScopedActor (for main/non-actor contexts)
             └── DaemonActor (dedicated thread, run_once() loop)
                     ├── PollingActor (CPU affinity, poll budget)
-                    └── ExternalMsgGatewayActor (named route table, message transforms)
-                            └── net::HTTPGatewayActor (HTTP ingress gateway)
+                    ├── ExternalMsgGatewayActor (named route table, message transforms)
+                    │       └── net::HTTPGatewayActor (HTTP ingress gateway)
+                    └── cli::CliActor (stdin/socket I/O, command tree, InspectState requests)
 ```
 
 ### Key Components
@@ -67,6 +69,7 @@ AbstractActor (interface base)
 | `ActorFactoryRegistry` | `config/actor_factory_registry.hpp` | Maps behavior name strings to actor factory functions |
 | `BinaryLoader` / `BinarySerializer` | `config/binary_*.hpp` | mmap-friendly binary topology format |
 | `MetricsActor` / `MpscRingBuffer` | `metrics/*.hpp` | Lock-free ring buffer instrumentation, OpenMetrics /metrics endpoint for Prometheus |
+| `CliActor` / `CommandNode` | `cli/*.hpp` | Interactive CLI with trie-based command tree, InspectState introspection, paged output |
 
 ### Message Flow
 
@@ -108,7 +111,7 @@ Pipeline: TOML file(s) → `TomlParser::parse()` → `TopologyModel` → `Bootst
 
 ## Important Files
 
-- `include/hpactor/` — public headers (actor, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
+- `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
 - `tests/` — 90 unit tests
 - `examples/` — 9 API usage examples

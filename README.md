@@ -76,6 +76,17 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **SpawnReceiver**: System actor for handling spawn requests across the network
 - **Well-Known System IDs**: `SpawnReceiverId`, `SystemActorType` — constexpr initialized
 
+### Interactive CLI
+- **Hierarchical Command Tree**: Trie-based `CommandNode` registry — `/actor <id> show`, `/system stats`, `/metrics show` with tab-completion-ready traversal
+- **Thread-Safe Introspection**: `InspectStateRequest`/`InspectStateReply` message pair — CLI never reads actor memory directly, target actor handles request on its own thread
+- **Dedicated I/O Thread**: `CliActor` extends `DaemonActor` with its own OS thread, blocks on stdin without disrupting compute workers
+- **Pluggable Output Formats**: `PrettyFormatter` (ANSI box-drawing), `JsonFormatter` (machine-readable), `TabularFormatter` (grep/awk-friendly)
+- **Interactive Paging**: Cursor-based `/actor list` with n/p/q/search/goto navigation, 50 actors per page
+- **Virtual `to_metadata()` Interface**: Every actor exposes lightweight inspectable summary — no CLI knowledge of specific actor types needed
+- **Remote Attach Ready**: Configurable UDS/TCP listener for `hpactor attach` from separate process (future frontend)
+- **TOML Configurable**: `[system.cli]` section — enable/disable, listen path, default format, page size
+- **Compile-Time Disable**: `ENABLE_CLI=OFF` for zero-overhead deployments
+
 ### Declarative Topology Configuration
 - **TOML-Based Topology**: Declare actor trees, supervision hierarchies, and dispatcher bindings in TOML — `ActorSystem::load_topology("config.toml")` bootstraps the entire system
 - **Template System**: Reusable actor templates with argument merging for DRY topology definitions
@@ -213,6 +224,7 @@ ctest --output-on-failure
 | `-DENABLE_MEMORY_TRACKING=OFF` | Disable per-actor memory tracking (default ON) |
 | `-DENABLE_MEMORY_DEBUG=ON` | Enable memory poisoning + canary verification (default OFF) |
 | `-DENABLE_ACTOR_METRICS=OFF` | Disable actor-level metrics subsystem (default ON) |
+| `-DENABLE_CLI=OFF` | Disable interactive CLI subsystem (default ON) |
 
 ## Design Constraints
 
@@ -248,6 +260,7 @@ The codebase uses LLVM style (`clang-format`) with strict warnings (`-Wall -Wext
 ```
 include/hpactor/
 ├── actor/          — Actor base classes, behaviors, typed actors, proto actors
+├── cli/            — CLI subsystem (CliActor, CommandNode, Lexer, OutputFormatter, Pager, commands)
 ├── config/         — TOML config topology parser, binary format, actor factory registry
 ├── core/           — ActorSystem, ActorContext, mailbox, registry, config
 ├── mailbox/        — MPSCMailbox, MPSCActorMailbox (lock-free queues)
@@ -267,6 +280,7 @@ include/hpactor/
 
 src/
 ├── actor/          — ActorSystem, EventBasedActor, SpawnReceiver, ProtoActor
+├── cli/            — CliActor, lexer, command_node, formatters (pretty/json/tabular), pager
 ├── config/         — TOML parser, binary serializer/loader, factory registry
 ├── metrics/        — MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
 ├── core/           — serialization.cpp (protobuf-based)
@@ -279,13 +293,14 @@ src/
 └── actor_type_registry.cpp — ActorTypeRegistry implementation
 
 protos/hpactor/
+├── cli_messages.proto — CLI inspect/kill/list/stats/memory messages
 ├── common.proto    — Shared endpoint types
 ├── frame.proto     — WireFrame transport format
 ├── messages.proto  — System message types
 └── registrar.proto — Registrar protocol messages
 
 tools/toml-compiler/ — AOT compiler: TOML topology → binary format
-tests/              — 90 unit tests (actor, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision)
+tests/              — 95 unit tests (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision)
 examples/           — 9 API usage examples
 third_party/        — Vendored dependencies (llhttp, toml++)
 cmake/              — CMake modules (protobuf codegen, toml++ interface target)
@@ -293,7 +308,7 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 
 ## Status
 
-### Complete (90 tests passing)
+### Complete (94 tests passing)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
@@ -310,6 +325,7 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Serialization**: Protobuf-based for all system messages (WireFrame, Down, Exit, Link, Unlink, Spawn)
 - **TOML Config Topology**: Declarative topology bootstrapping with templates, imports, AOT binary compilation
 - **Actor Metrics**: Out-of-band ring buffer instrumentation, OpenMetrics `/metrics` endpoint for Prometheus/Grafana
+- **CLI Interactive**: Trie-based command tree with InspectState introspection, paged output, pluggable formatters (Pretty/JSON/Tabular)
 
 ### Next Steps
 
