@@ -1,13 +1,13 @@
 # Calendar Queue Timer Manager — Design Specification
 
 **Date:** 2026-05-06
-**Status:** Draft
+**Status:** Draft (revised after spec review)
 
 ---
 
 ## 1. Overview
 
-Replace the existing `TimingWheel` as the default timer backend with a new `CalendarQueue` implementing the classic Brown '88 hierarchical calendar queue algorithm. The `TimingWheel` is preserved — `HybridScheduler` selects the backend at construction time via a `TimerBackend` enum.
+Replace the existing `TimingWheel` as the default timer backend with a new `CalendarQueue` implementing a hierarchical calendar queue algorithm. The `TimingWheel` is preserved — `HybridScheduler` selects the backend at construction time via a `TimerBackend` enum.
 
 **Goal:** O(1) insert, cancel, and per-timer tick cost across a wide range of timer durations (sub-millisecond to hours).
 
@@ -24,71 +24,125 @@ The CalendarQueue fixes both with:
 
 ## 3. Algorithm
 
-### 3.1 Two-Level Hierarchical Calendar
+### 3.1 Three-Level Hierarchical Calendar
+
+Three levels provide coverage from 1ms to ~4.5 hours without the O(n) cascade problem
+that single-last-bucket clamping would cause for bulk long-lived timers.
 
 ```
 Fine wheel (near-term, high resolution):
   bucket_width = 1ms
-  num_buckets  = 256
+  num_buckets  = 256      (power of 2)
   total range  = 256ms
 
-Coarse wheel (far-future, low resolution):
-  bucket_width = 256ms  (fine bucket_width × fine buckets)
+Coarse wheel (mid-term):
+  bucket_width = 256ms    (fine_bucket_width × fine_buckets)
   num_buckets  = 256
   total range  = ~65s
+
+Remote wheel (far-future, low resolution):
+  bucket_width = 65s      (coarse_bucket_width × coarse_buckets)
+  num_buckets  = 256
+  total range  = ~4.6 hours
 ```
 
-**Insert timeline:**
-```
-timer T relative to now:
+**Insert (bucket = absolute time / bucket_width & mask):**
 
-  T < now + 256ms?
-    ──yes──> Fine:   bucket = (T / 1ms) % 256
-    ──no───> Coarse: bucket = (T / 256ms) % 256
-              (beyond 65s → clamped to last coarse bucket)
 ```
+expire relative to now:
 
-**Tick (advance fine pointer by one fine bucket):**
-```
-1. Process all timers in fine_wheel[current_fine_bucket]:
-     for each timer:
-       if timer.expired: fire callback, delete
-       else: keep in list (handled on next rotation)
-2. If current_fine_bucket wrapped to 0:
-     Cascade one coarse bucket into the fine wheel:
-       for each timer in coarse_wheel[current_coarse_bucket]:
-         if T < now + 256ms → insert into fine wheel
-         else → re-insert into coarse wheel (closer bucket)
-     current_coarse_bucket = (current_coarse_bucket + 1) % 256
+  expire < now + 256ms?
+    ──yes──> Fine:   bucket = (expire / fine_width) & fine_mask
+
+  expire < now + 65s?
+    ──yes──> Coarse: bucket = (expire / coarse_width) & coarse_mask
+
+  else ──> Remote:   bucket = (expire / remote_width) & remote_mask
 ```
 
-**Timers beyond coarse range** (e.g., 5 minutes) sit in the last coarse bucket. Each 65s cycle they cascade one step closer, eventually reaching the fine wheel. This is amortized O(1) since long timers are rare.
+Timers use the natural modulo of their absolute expiration time against the
+appropriate wheel size. A timer at `now + 70s` maps to `(T / 65s) & 255` in the
+remote wheel — not clamped to a single bucket. This distributes long timers
+across all 256 remote buckets, so each coarse-cycle cascade processes at most
+`total_timers / 256` timers rather than all of them.
 
-### 3.2 Cancel
+### 3.2 Tick (advance)
 
-`std::unordered_map<uint64_t, Timer*>` provides O(1) id-to-node lookup. Cancel unlinks the node from its intrusive linked list and frees it immediately — no lazy sweeping, no deferred cleanup.
+`advance()` processes **all** fine buckets from `last_advance_ns_` to `now_ns`,
+handling arbitrary time deltas (system suspend, scheduler lag). Pseudocode:
 
-### 3.3 Recurring Timers
+```
+while (last_advance_ns_ + fine_bucket_ns <= now_ns):
+    // 1. Fire all expired timers in current fine bucket
+    for timer in fine_wheel[current_fine_]:
+        unlink from bucket
+        remove from timer_map_
+        if not cancelled:
+            fire callback         // with lock HELD (recursive_mutex)
+        delete timer
 
-Handled identically to the current `TimingWheel`: the callback re-schedules itself via `schedule()`. The `HybridScheduler::schedule_every()` wrapper (cancellation flag + self-rescheduling lambda) is backend-agnostic and unchanged.
+    // 2. Advance fine pointer
+    last_advance_ns_ += fine_bucket_ns
+    current_fine_ = (current_fine_ + 1) & fine_mask
+
+    // 3. On fine wrap: cascade one coarse bucket
+    if current_fine_ == 0:
+        for timer in coarse_wheel[current_coarse_]:
+            unlink from bucket
+            if T < now + fine_range → insert into fine wheel
+            else → re-insert into coarse wheel (closer bucket)
+        current_coarse_ = (current_coarse_ + 1) & coarse_mask
+
+        // 4. On coarse wrap: cascade one remote bucket
+        if current_coarse_ == 0:
+            for timer in remote_wheel[current_remote_]:
+                unlink from bucket
+                if T < now + coarse_range → insert into coarse wheel
+                else → re-insert into remote wheel (closer bucket)
+            current_remote_ = (current_remote_ + 1) & remote_mask
+```
+
+Each cascade step re-evaluates the timer against the now-current time and places
+it in the appropriate (closer) wheel. A 5-minute timer in the remote wheel is
+re-examined once per ~65s — after ~4 cascades it reaches the fine wheel and
+fires within 256ms accuracy.
+
+**Capping:** To avoid unbounded mutex hold time under extreme time jumps
+(e.g., system suspend for hours), `advance()` processes at most 4096 fine
+buckets (~4 seconds) per call. If more buckets need processing, the timer thread
+will pick them up on the next 1ms wakeup.
+
+### 3.3 Cancel
+
+`std::unordered_map<uint64_t, Timer*>` provides O(1) id-to-node lookup. Cancel
+unlinks the node from its intrusive linked list, removes it from the map, and
+frees it immediately — no lazy sweeping, no deferred cleanup.
+
+### 3.4 Recurring Timers
+
+Handled identically to the current `TimingWheel`: the callback re-schedules
+itself via `schedule()`. The `HybridScheduler::schedule_every()` wrapper
+(cancellation flag + self-rescheduling lambda) is backend-agnostic and unchanged.
 
 ## 4. Data Structures
 
 ### 4.1 Timer Node
 
 ```cpp
-struct Timer {
+struct Timer : mem::SlabAllocated<Timer> {
     int64_t expire_ns;       // absolute expiration
     uint64_t id;             // unique, assigned by CalendarQueue
     TimerCallback callback;
-    Timer* next = nullptr;   // intrusive linked list
+    Timer* next = nullptr;   // intrusive doubly-linked list
     Timer* prev = nullptr;
-
-    // Which bucket does this timer live in (for debug assertions)
-    uint32_t bucket_idx = 0;
-    bool is_fine = true;
+    uint32_t bucket_idx = 0; // for debug assertions
+    uint8_t wheel_level = 0; // 0=fine, 1=coarse, 2=remote
 };
 ```
+
+Uses `mem::SlabAllocated<Timer>` for consistency with the existing
+`TimingWheel::Timer`, routing allocations through the framework's two-tier slab
+allocator.
 
 ### 4.2 Buckets
 
@@ -99,7 +153,7 @@ struct BucketList {
     uint32_t count = 0;
 
     void push_back(Timer* t);
-    void unlink(Timer* t);   // O(1) — doubly-linked
+    void unlink(Timer* t);    // O(1) — doubly-linked
     Timer* pop_front();
 };
 ```
@@ -108,48 +162,67 @@ struct BucketList {
 
 ```cpp
 class CalendarQueue {
-    BucketList* fine_wheel_;     // [fine_buckets_]
-    BucketList* coarse_wheel_;   // [coarse_buckets_]
+public:
+    struct Config {
+        int64_t fine_bucket_ns = 1'000'000;    // 1ms
+        uint32_t fine_buckets = 256;            // power of 2
+        uint32_t coarse_buckets = 256;          // power of 2
+        uint32_t remote_buckets = 256;          // power of 2
+        uint32_t max_advance_buckets = 4096;    // ~4s cap per advance() call
+    };
+
+private:
+    std::vector<BucketList> fine_wheel_;    // [fine_buckets]
+    std::vector<BucketList> coarse_wheel_;  // [coarse_buckets]
+    std::vector<BucketList> remote_wheel_;  // [remote_buckets]
     std::unordered_map<uint64_t, Timer*> timer_map_;
 
     int64_t fine_bucket_ns_;
-    uint32_t fine_buckets_;
-    uint32_t coarse_buckets_;
-    uint32_t fine_mask_;          // fine_buckets_ - 1
-    uint32_t coarse_mask_;        // coarse_buckets_ - 1
+    int64_t coarse_bucket_ns_;   // fine_bucket_ns * fine_buckets
+    int64_t remote_bucket_ns_;   // coarse_bucket_ns * coarse_buckets
+    uint32_t fine_mask_;
+    uint32_t coarse_mask_;
+    uint32_t remote_mask_;
+    uint32_t max_advance_buckets_;
 
     uint32_t current_fine_ = 0;
     uint32_t current_coarse_ = 0;
+    uint32_t current_remote_ = 0;
     int64_t last_advance_ns_ = 0;
 
     std::atomic<uint64_t> next_id_{1};
+
+    // Recursive: advance() fires callbacks that may call schedule()/cancel()
+    mutable std::recursive_mutex mutex_;
 };
 ```
+
+`std::vector<BucketList>` provides RAII for bucket arrays. Bucket counts are
+enforced as powers of 2 via `static_assert` in the constructor (the defaults
+256/256/256 satisfy this). Bucket index is always computed via `& mask`, never
+`%`.
 
 ## 5. Interface
 
 ```cpp
-struct CalendarConfig {
-    int64_t fine_bucket_ns = 1'000'000;   // 1ms
-    uint32_t fine_buckets = 256;
-    uint32_t coarse_buckets = 256;
-};
-
 using TimerCallback = std::function<void()>;
 
-CalendarQueue(const CalendarConfig& cfg = {});
-~CalendarQueue();
+explicit CalendarQueue(const Config& cfg = {});
+~CalendarQueue();   // frees all remaining Timer nodes, callbacks NOT fired
 
-uint64_t schedule(int64_t delay_ns, TimerCallback cb);
-uint64_t schedule_at(int64_t expire_ns, TimerCallback cb);
-bool cancel(uint64_t timer_id);
-uint32_t advance(int64_t now_ns);   // returns number fired
+[[nodiscard]] uint64_t schedule(int64_t delay_ns, TimerCallback cb);
+[[nodiscard]] uint64_t schedule_at(int64_t expire_ns, TimerCallback cb);
+bool cancel(uint64_t timer_id);    // true if found and cancelled
+uint32_t advance(int64_t now_ns);  // returns number fired this call
 
 bool empty() const;
-size_t size() const;                // timer_map_.size()
+size_t size() const;               // timer_map_.size()
 ```
 
-Same signatures as `TimingWheel`, so `HybridScheduler` dispatches through `std::variant`.
+Timer IDs are always >= 1. ID 0 is reserved (matches `TimerHandle::valid()`).
+`TimerCallback` is a standalone type alias — identical to `sched::timer_callback`
+in `scheduler.hpp` line 56. Both `TimingWheel::TimerCallback` and
+`CalendarQueue::TimerCallback` are compatible with `std::visit` generic lambdas.
 
 ## 6. Scheduler Integration
 
@@ -164,6 +237,7 @@ enum class TimerBackend : uint8_t { TimingWheel = 0, CalendarQueue = 1 };
 - Constructor takes `TimerBackend` parameter (default `TimingWheel`).
 - Private member: `std::variant<TimingWheel, CalendarQueue> timer_backend_`.
 - `schedule_after`, `schedule_every`, `cancel_timer`, `advance_time` dispatch via `std::visit`.
+- `schedule_timer()` (used by `TimerAwaiter` in coroutine_awaiters.hpp): parameter type changed from `TimingWheel::TimerCallback` to the standalone `sched::timer_callback`. Dispatches through `std::visit`.
 - `IScheduler` interface is unchanged.
 
 ### 6.3 ActorSystem Config
@@ -177,25 +251,41 @@ struct Config {
 
 ## 7. Concurrency
 
-The CalendarQueue is **single-threaded** — same constraint as `TimingWheel`. All operations happen on the timer advancement thread. `HybridScheduler::schedule_after()` calls `timer_backend_.schedule()` from potentially arbitrary threads, but this is serialized by the scheduler's internal design (timer inserts are queued or the calendar itself is only accessed under the scheduler's lock).
+### 7.1 Thread Model
 
-Actually — the current `TimingWheel` is called directly from `HybridScheduler::schedule_after()`, which can be called from any actor thread. This is a pre-existing concurrency concern. For the `CalendarQueue`, we apply the same approach: `schedule()` and `cancel()` are thread-safe via a simple `std::mutex` protecting bucket mutations and the timer map. The `advance()` method runs on the timer thread and acquires the same mutex.
+- **Timer thread** (owned by `HybridScheduler`): calls `advance()` once per ~1ms.
+  Fires callbacks synchronously while holding the mutex.
+- **Actor threads** (worker pool): may call `schedule()` / `cancel()` from any
+  thread. These calls acquire the same mutex.
 
-```cpp
-mutable std::mutex mutex_;
-```
+### 7.2 Recursive Mutex
+
+`std::recursive_mutex` is used because `advance()` holds the lock while firing
+callbacks, and those callbacks may call `schedule()` (e.g., recurring timer
+self-reschedule in `HybridScheduler::schedule_every()`) or `cancel()`. Without
+recursive locking, this is a self-deadlock.
+
+### 7.3 Lifecycle Guarantee
+
+`HybridScheduler::stop()` joins all worker threads **before** joining the timer
+thread (existing behavior, `scheduler.cpp:82-94`). This means after `stop()`
+completes, no actor threads can call `schedule()` or `cancel()`, and the timer
+thread is the sole owner of the CalendarQueue. No use-after-free is possible.
 
 ## 8. Edge Cases
 
 | Scenario | Handling |
 |----------|----------|
-| Timer with 0 or negative delay | Clamp to now + 1 fine bucket |
-| Timer beyond coarse range | Place in last coarse bucket, cascade on each coarse cycle |
+| Timer with 0 or negative delay | Clamp to `now + fine_bucket_ns` |
+| Timer beyond remote range (>4.6h) | Natural modulo into remote wheel; cascaded on each 65s coarse cycle, reaches fine wheel after ~4 coarse cycles |
 | Cancel non-existent id | Return false, no-op |
-| Cancel already-fired timer | Timer removed from map during fire before callback; cancel returns false |
-| Advance called with time going backwards | No-op, return 0 |
+| Cancel already-fired timer | Timer removed from map before callback fires; cancel returns false |
+| Advance with `now_ns < last_advance_ns_` | No-op, return 0 |
 | Empty queue on advance | No-op, return 0 |
+| Advance after large time jump (>4s) | Process at most `max_advance_buckets_` (4096) fine buckets; remaining deferred to subsequent calls |
 | Callback throws (shouldn't happen — `-fno-exceptions`) | Undefined; callbacks are assumed noexcept |
+| `schedule()` called during `advance()` callback | Safe: recursive_mutex allows re-acquire |
+| `cancel()` called during `advance()` callback | Safe: unlinks from bucket, removes from map, marks deleted; `advance()` loop skips already-removed timers |
 
 ## 9. Test Plan
 
@@ -203,14 +293,19 @@ mutable std::mutex mutex_;
 |------|-------------------|
 | `test_calendar_basic_schedule` | Schedule one-shot, advance past it, callback fires |
 | `test_calendar_cancel` | Schedule then cancel, advance past, callback does not fire |
+| `test_calendar_cancel_during_advance` | Callback cancels another timer; no deadlock, correct behavior |
 | `test_calendar_fine_coarse_split` | Schedule timer at 300ms (coarse), advance in 1ms steps, fires at correct time |
+| `test_calendar_fine_coarse_remote` | Schedule timer at 70s (remote), verify cascade path, fires at correct time |
 | `test_calendar_cascade` | Fill one coarse bucket, verify cascade into fine on wrap |
-| `test_calendar_beyond_coarse` | Schedule 5-minute timer, advance through multiple coarse cycles |
+| `test_calendar_remote_cascade` | Fill one remote bucket, verify cascade into coarse on coarse wrap |
 | `test_calendar_recurring` | Schedule recurring, verify periodic firing, cancel stops it |
+| `test_calendar_recurring_no_deadlock` | Recurring timer self-reschedules; advance does not deadlock |
 | `test_calendar_many_timers` | 10k timers, fire all, verify count and no leaks |
+| `test_calendar_time_jump` | Advance by 5s in one call; all intermediate timers fire correctly |
 | `test_calendar_empty_advance` | Advance on empty queue, no-op |
 | `test_calendar_time_backwards` | Advance with now < previous, no-op |
 | `test_calendar_size_and_empty` | Verify size() and empty() after insert/cancel/fire |
+| `test_calendar_id_zero_invalid` | Schedule returns id >= 1; TimerHandle(id=0).valid() is false |
 
 ## 10. File Changes
 
@@ -218,8 +313,9 @@ mutable std::mutex mutex_;
 |------|--------|---------|
 | `include/hpactor/sched/calendar_queue.hpp` | Create | CalendarQueue class |
 | `src/sched/calendar_queue.cpp` | Create | Implementation |
-| `include/hpactor/sched/scheduler.hpp` | Modify | Add `TimerBackend` enum, variant member |
+| `include/hpactor/sched/scheduler.hpp` | Modify | Add `TimerBackend` enum, variant member, fix `schedule_timer` callback type |
 | `src/sched/scheduler.cpp` | Modify | Dispatch through variant, pass backend to constructor |
 | `include/hpactor/core/actor_system.hpp` | Modify | Add `timer_backend` to `Config` |
+| `include/hpactor/sched/coroutine_awaiters.hpp` | Modify | Update `schedule_timer` callback type reference |
 | `tests/sched/test_calendar_queue.cpp` | Create | Unit tests |
 | `tests/sched/CMakeLists.txt` | Modify | Add test target |
