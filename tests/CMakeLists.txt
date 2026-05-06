@@ -402,4 +402,8 @@ if(ENABLE_CLI)
     add_executable(test_pager cli/test_pager.cpp)
     target_link_libraries(test_pager hpactor)
     add_test(NAME test_pager COMMAND test_pager)
+
+    add_executable(test_cli_integration cli/test_cli_integration.cpp)
+    target_link_libraries(test_cli_integration hpactor)
+    add_test(NAME test_cli_integration COMMAND test_cli_integration)
 endif()
