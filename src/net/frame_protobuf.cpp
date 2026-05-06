@@ -21,8 +21,8 @@ to_proto(::hpactor::PbIpv6Endpoint* pb_ep, const ::hpactor::Ipv6Endpoint& ep) {
     pb_ep->set_port(ep.port_nw);
 }
 
-// Helper: convert HPActor EndPoint to protobuf PbActorEndpoint
-static void to_proto(::hpactor::PbActorEndpoint* pb_endpoint,
+// Helper: convert HPActor EndPoint to protobuf PbEndpoint
+static void to_proto(::hpactor::PbEndpoint* pb_endpoint,
                      const ::hpactor::EndPoint& ep) {
     if (const auto* ipv4 = std::get_if<::hpactor::Ipv4Endpoint>(&ep)) {
         to_proto(pb_endpoint->mutable_ipv4(), *ipv4);
@@ -91,9 +91,9 @@ static ::hpactor::Ipv6Endpoint from_proto(const ::hpactor::PbIpv6Endpoint& pb_ep
     return ::hpactor::Ipv6Endpoint{addr, static_cast<uint16_t>(pb_ep.port())};
 }
 
-// Helper: convert protobuf PbActorEndpoint to HPActor EndPoint
+// Helper: convert protobuf PbEndpoint to HPActor EndPoint
 static ::hpactor::EndPoint
-from_proto(const ::hpactor::PbActorEndpoint& pb_endpoint) {
+from_proto(const ::hpactor::PbEndpoint& pb_endpoint) {
     if (pb_endpoint.has_ipv4()) {
         return from_proto(pb_endpoint.ipv4());
     }

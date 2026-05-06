@@ -17,7 +17,7 @@ message PbIpv6Endpoint {
   uint32 port = 2;
 }
 
-message PbActorEndpoint {
+message PbEndpoint {
   oneof type {
     PbIpv4Endpoint ipv4 = 1;
     PbIpv6Endpoint ipv6 = 2;
@@ -31,7 +31,7 @@ message PbLocalActorAddress {
 }
 
 message PbGlobalActorAddress {
-  PbActorEndpoint endpoint = 1;
+  PbEndpoint endpoint = 1;
   PbLocalActorAddress local_addr = 2;
 }
 

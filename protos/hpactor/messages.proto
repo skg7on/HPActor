@@ -9,24 +9,24 @@ import "hpactor/common.proto";
 // These messages are serialized into frames for transport
 
 message DownMessage {
-  PbActorEndpoint endpoint = 1;
+  PbEndpoint endpoint = 1;
   uint64 actor_id = 2;
   uint32 reason_code = 3;
 }
 
 message ExitMessage {
-  PbActorEndpoint sender = 1;
+  PbEndpoint sender = 1;
   uint64 actor_id = 2;
   uint32 reason_code = 3;
 }
 
 message LinkMessage {
-  PbActorEndpoint target = 1;
+  PbEndpoint target = 1;
   uint64 actor_id = 2;
 }
 
 message UnlinkMessage {
-  PbActorEndpoint target = 1;
+  PbEndpoint target = 1;
   uint64 actor_id = 2;
 }
 
