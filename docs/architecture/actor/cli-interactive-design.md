@@ -7,7 +7,8 @@ This document specifies an interactive CLI subsystem for introspecting, debuggin
 **Key Design Decisions:**
 - **Trie-based Command Registry**: Multi-level commands (`/actor 0x123 show`, `/system stats`) are dispatched through a tree of command nodes, not a flat `if-else` block. This yields natural tab-completion, per-node help text, and extensibility without modifying a central dispatch table.
 - **Inspect Message pattern**: The CLI never reads another actor's memory directly. It sends an `InspectStateRequest` system message; the target actor handles it on its own thread, serializes internal state, and replies with an `InspectStateReply`. This eliminates race conditions and memory safety concerns inherent in direct inspection.
-- **Dedicated I/O thread**: `std::getline(stdin)` is a blocking operation. The CLI Actor runs on a dedicated OS thread (via `DaemonActor` or `BlockingActor` semantics), isolating blocking I/O from compute workers.
+- **Dedicated I/O thread**: Raw terminal I/O is a blocking operation. The CLI Actor runs on a dedicated OS thread (via `DaemonActor` semantic), isolating blocking I/O from compute workers.
+- **Raw-terminal Line Editor**: Input is handled by a vendored linenoise-based `LineEditor` wrapping raw `termios` stdin. This provides Tab completion, grayed auto-suggestions, syntax highlighting, command history (up/down arrows, Ctrl-R search), and line editing (cursor movement, word navigation) — all without external runtime dependencies.
 - **Paged/streamed list output**: For systems with millions of actors, commands like `/actor list` cannot materialize the full list. The system Registry (already sharded) provides a cursor-based paging API, and the CLI renders 50 actors at a time.
 - **Virtual `to_metadata()` interface**: Every actor exposes a `to_metadata()` method returning a lightweight, publicly-inspectable summary. The CLI formats this generically — no knowledge of specific actor types required.
 
@@ -23,22 +24,22 @@ This document specifies an interactive CLI subsystem for introspecting, debuggin
 │  hpactor> /actor 5 kill                                           │
 │  hpactor> /system stats                                           │
 └────────────────────────────────┬─────────────────────────────────┘
-                                 │ stdin/stdout (local) or
+                                 │ raw termios stdin/stdout (local) or
                                  │ UDS/TCP socket (remote attach)
                                  ▼
 ┌──────────────────────────────────────────────────────────────────┐
 │                        CLI Actor                                    │
 │  ┌──────────────┐   ┌──────────────┐   ┌────────────────────┐    │
-│  │ Input Thread │   │ Command Tree │   │ Output Formatter   │    │
-│  │ (dedicated)  │   │ (Trie-based) │   │ (JSON, pretty,     │    │
+│  │ LineEditor   │──▶│ Command Tree │   │ Output Formatter   │    │
+│  │ (linenoise)  │   │ (Trie-based) │   │ (JSON, pretty,     │    │
 │  │              │   │              │   │  tabular, yaml)    │    │
-│  │ blocks on    │   │ /actor       │   │                    │    │
-│  │ stdin/socket │   │  └─ <id>     │   │ stdout or reply    │    │
-│  │              │   │      ├─ show │   │                    │    │
-│  │ lexer/token  │   │      ├─ kill │   │                    │    │
-│  │ parser       │   │      └─ dump │   │                    │    │
-│  └──────┬───────┘   │ /system      │   └────────▲───────────┘    │
-│         │           │  ├─ list     │            │                 │
+│  │ Tab complete │   │ /actor       │   │                    │    │
+│  │ Gray hints   │   │  └─ <id>     │   │ stdout or reply    │    │
+│  │ ANSI color   │   │      ├─ show │   │                    │    │
+│  │ History ↑↓   │   │      ├─ kill │   │                    │    │
+│  │ Ctrl-R search│   │      └─ dump │   │                    │    │
+│  │ Lexer/token  │   │ /system      │   └────────▲───────────┘    │
+│  └──────┬───────┘   │  ├─ list     │            │                 │
 │         │           │  ├─ stats    │            │                 │
 │         └───────────┤  └─ config   │            │                 │
 │                     └──────┬───────┘            │                 │
@@ -69,9 +70,10 @@ This document specifies an interactive CLI subsystem for introspecting, debuggin
 ```
 ActorSystem
   ├── owns CliActor (spawned as system actor, before topology)
+  │     ├── owns LineEditor (linenoise wrapper, raw terminal I/O)
   │     ├── owns CommandTree (root node + children)
-  │     ├── owns InputThread (dedicated thread, blocks on stdin/socket)
-  │     └── owns OutputFormatter (JSON, pretty, tabular renderers)
+  │     ├── owns OutputFormatter (JSON, pretty, tabular renderers)
+  │     └── owns Pager (interactive paging state machine)
   └── ActorContext (per-actor)
         └── holds CliActor* (set during spawn, null for non-CLI actors)
 ```
@@ -309,12 +311,17 @@ The `--no-pager` flag disables interactive paging. Machine-readable formats (`--
 
 ## 6. Input Processing
 
-### 6.1 Lexer → Tokenizer → Command Tree Traversal
+### 6.1 LineEditor → Lexer → Tokenizer → Command Tree Traversal
+
+The `LineEditor` (linenoise wrapper) reads raw terminal input one keystroke at a time, providing line editing (cursor movement, word navigation), Tab completion, grayed auto-suggestions, and ANSI syntax highlighting. On Enter, the completed line is passed to the lexer.
 
 ```
-User input:  /actor 0x123 show --detail --format json
+User types:  /act<Tab> 0x123 sh<Tab> --d<Tab> --format json<Enter>
 
-Lexer produces tokens:
+LineEditor produces completed line:
+  "/actor 0x123 show --detail --format json"
+
+Lexer tokenizes into:
   [/] [actor] [0x123] [show] [--detail] [--format] [json]
 
 Parser walks command tree:
@@ -328,7 +335,19 @@ Parser walks command tree:
 Execute node "show" with populated CommandContext.
 ```
 
-### 6.2 Lexer Rules
+### 6.2 Line Editing Features
+
+| Feature | Trigger | Behavior |
+|---------|---------|----------|
+| Tab completion | Tab | Walks `CommandNode` tree from root with current tokens; returns matching child keywords |
+| Auto-suggestion | Each keystroke | First matching completion shown as gray text after cursor |
+| Syntax highlighting | Each keystroke | Known commands (bold cyan), parameters (green), flags (yellow), errors (red) |
+| History navigation | Up/Down arrows | Recall previous/next commands from in-memory ring buffer |
+| Reverse search | Ctrl-R | Incremental search through command history |
+| Line editing | Left/Right, Ctrl-A/E/W/K, Alt-B/F | Standard Emacs-style keybindings |
+| History persistence | On command execution + on exit | Saved to `~/.hpactor_history`, loaded on startup |
+
+### 6.3 Lexer Rules
 
 - Tokens are whitespace-separated.
 - Parameter nodes (`<id>`, `<filter>`) match any non-keyword token.
@@ -342,22 +361,26 @@ Execute node "show" with populated CommandContext.
 
 ### 7.1 Thread Model
 
-The CLI Actor uses a dedicated I/O thread for blocking input:
+The CLI Actor runs on a single dedicated OS thread (via `DaemonActor`). Both input and command execution happen on the same thread — linenoise blocks on raw stdin, and on Enter the line is lexed, parsed, and executed inline. The InspectStateRequest/Reply message exchange with target actors runs on the scheduler's worker threads.
 
 ```
-Thread 1 (CLI I/O):    blocks on stdin/socket read
+Thread 1 (CLI Daemon): line_editor_.readline("hpactor> ")  ← blocks on raw stdin
                        │
-                       ▼ tokenized input
-Thread 2 (CLI Logic):  CommandTree traversal + message dispatch
+                       ▼ completed line
+                       Lexer::tokenize() → CommandTree traversal → command handler
                        │
-                       ▼ InspectStateRequest via ActorContext::send()
-Target Thread (any):   handles InspectStateRequest on its own mailbox thread
+                       ▼ send_and_wait_inspect() via ActorContext::send()
+Thread 2-N (Workers):  target actor receives InspectStateRequest in mailbox
                        │
-                       ▼ InspectStateReply
-Thread 2 (CLI Logic):  formats output, writes to stdout
+                       ▼ EventBasedActor::receive() handles request, ctx->reply()
+Thread 1 (CLI Daemon): poll_for_response() drains CliActor mailbox
+                       │
+                       ▼ formats output, writes to stdout, add_history(line)
+                       │
+                       loop back to readline()
 ```
 
-The I/O thread never touches actor state directly. It parses input and enqueues a lightweight token list to the CLI Logic thread (or, for simplicity, the CLI Actor could be a single-threaded `BlockingActor` that blocks on stdin in its `run_once()` loop).
+The CLI thread never touches actor state directly. The `LineEditor` callbacks (completion, hints, highlight) traverse the `CommandNode` tree read-only during idle input — no actor interaction until the user presses Enter.
 
 ### 7.2 Remote Attach
 
@@ -370,12 +393,44 @@ struct CliConfig {
     uint16_t tcp_port = 0;                     // optional TCP port (0 = disabled)
     std::string default_format = "pretty";     // pretty, json, yaml
     uint32_t page_size = 50;
+    std::string history_path = "";             // empty = ~/.hpactor_history
+    uint32_t history_max = 1000;              // max history entries
 };
 ```
 
 When `listen_path` is set, the CLI Actor creates a UDS listener. Remote clients (`hpactor attach --socket /tmp/hpactor/system.sock`) connect and interact identically to local stdin/stdout mode.
 
-### 7.3 Actor System Integration
+### 7.3 LineEditor Component
+
+The `LineEditor` class wraps the vendored linenoise C library into the HPActor CLI subsystem:
+
+```cpp
+class LineEditor {
+public:
+    LineEditor(const LineEditorConfig& cfg, const CommandNode* root);
+    std::string readline(const std::string& prompt);  // blocks until Enter/Ctrl-D
+    void add_history(const std::string& line);
+    void load_history();
+    void save_history();
+private:
+    // Callbacks invoked by linenoise during idle input
+    static void on_completion(const char* buf, vector<string>& completions, void* ctx);
+    static char* on_hints(const char* buf, const char** color, void* ctx);
+    static void on_highlight(const char* buf, string& out, void* ctx);
+};
+```
+
+**Completion callback** — walks the `CommandNode` trie from root using the tokenized partial input. At the current node, enumerates children whose keyword starts with the incomplete token. Populates `completions` for linenoise to display.
+
+**Hints callback** — on each keystroke, finds the first matching completion for the partial token and returns the remaining characters as a gray hint.
+
+**Highlight callback** — tokenizes the full buffer and applies ANSI colors: known command keywords (bold cyan), parameters (green), flags (yellow), unknown tokens (red).
+
+**History** — managed by linenoise internally. `add_history()` appends after each successful command. `load_history()`/`save_history()` persist to `~/.hpactor_history`. Duplicates suppressed.
+
+**Pipe/non-TTY fallback** — linenoise auto-detects whether stdin is a TTY. For piped input, it falls back to `fgets()`, preserving the existing `echo "/quit" | example` scripting behavior.
+
+### 7.4 Actor System Integration
 
 ```cpp
 class ActorSystem {
@@ -525,7 +580,15 @@ hpactor> /actor 5 show
 - `std::getline(stdin)` is a blocking syscall. If the CLI Actor is scheduled on a shared worker thread, it blocks that worker for potentially minutes while waiting for input.
 - A dedicated thread isolates blocking I/O from compute. The CLI thread does nothing but read input and enqueue tokens — zero CPU overhead on compute workers.
 
-### 10.4 Why `to_metadata()` on the Base Class?
+### 10.4 Why linenoise Instead of readline/libedit?
+
+- **Size**: linenoise is ~1,500 lines of C — small enough to vendor, audit, and understand. GNU readline is ~30,000 lines with GPL licensing concerns.
+- **API**: Callback-based (completion, hints, highlight) — maps naturally to the `CommandNode` trie. readline requires global state registration.
+- **License**: Apache 2.0 fork — compatible with HPActor's Apache 2.0 license.
+- **Fallback**: Auto-detects non-TTY stdin and falls back to `fgets()`, preserving piped/scripted usage without any code changes.
+- **No runtime dependency**: Compiled as a static library from vendored sources. No `apt install libreadline-dev` required.
+
+### 10.5 Why `to_metadata()` on the Base Class?
 
 - The CLI should not need to know about every actor type. `to_metadata()` provides a common interface that every actor implements.
 - Actor-type-specific details go into `serialize_state()`, which the CLI renders as an opaque blob or pretty-prints via a registered formatter for that type.
@@ -547,6 +610,8 @@ listen_path = "/tmp/hpactor/system.sock"
 tcp_port = 0
 default_format = "pretty"
 page_size = 50
+history_path = ""          # empty = ~/.hpactor_history
+history_max = 1000         # max in-memory history entries
 ```
 
 ### C++ Config
@@ -558,6 +623,8 @@ struct CliConfig {
     uint16_t tcp_port = 0;        // TCP port, 0 = disabled
     std::string default_format = "pretty";
     uint32_t page_size = 50;
+    std::string history_path;      // empty = ~/.hpactor_history
+    uint32_t history_max = 1000;  // max history entries
 };
 ```
 
@@ -569,6 +636,5 @@ If `enabled = false`, no CLI Actor is spawned and no listening sockets are creat
 
 1. **Command authorization**: Should certain commands (kill, restart) require authentication? A simple shared-secret token in the attach handshake would suffice for initial implementation.
 2. **Streaming commands**: `/metrics watch` and `/monitor start` imply long-lived streaming responses. Should these use a separate connection or an in-band streaming protocol (SSE-style)?
-3. **History and line editing**: Should the CLI bundle GNU readline or libedit for history, or rely on the invoking shell's readline when attached locally?
-4. **Multi-system attach**: Should a single CLI instance attach to multiple ActorSystems simultaneously? The `system` selector would be needed at the prompt level.
-5. **State blob formatter registry**: Should actor types be able to register a custom pretty-printer for their `serialize_state()` blob, or is raw hex/protobuf-debug-string sufficient?
+3. **Multi-system attach**: Should a single CLI instance attach to multiple ActorSystems simultaneously? The `system` selector would be needed at the prompt level.
+4. **State blob formatter registry**: Should actor types be able to register a custom pretty-printer for their `serialize_state()` blob, or is raw hex/protobuf-debug-string sufficient?
