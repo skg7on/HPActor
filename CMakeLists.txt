@@ -136,7 +136,10 @@ add_compile_options(
 
 # Suppress linker warnings for dylibs built for newer macOS versions
 # (homebrew protobuf/abseil/openssl are built for macOS 26.0+)
-add_link_options(-Wl,-w)
+# GNU ld does not support -w; Apple ld does.
+if(APPLE)
+  add_link_options(-Wl,-w)
+endif()
 
 # Suppress abseil logging dependency in protobuf
 add_compile_definitions(GOOGLE_PROTOBUF_SUPPRESS_ABSL_LOG)
