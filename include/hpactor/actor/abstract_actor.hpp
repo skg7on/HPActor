@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/typed_message.hpp>
+#include <hpactor/cli/cli_types.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
@@ -22,6 +23,7 @@
 #include <memory>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace hpactor {
 
@@ -103,6 +105,16 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     void set_type_name(std::string name) { type_name_ = std::move(name); }
 
     virtual void set_metrics_ring_buffer(void* /*buf*/) {}
+
+    // CLI introspection interface.
+    // Returns lightweight inspectable metadata. Called from actor's own thread.
+    virtual cli::ActorMeta to_metadata() const;
+
+    // Returns opaque serialized state blob. Default empty.
+    virtual std::vector<uint8_t> serialize_state() const { return {}; }
+
+    // Returns mailbox snapshot. Default empty. Override in mailbox-owning actors.
+    virtual cli::MboxSnapshot mailbox_snapshot() const { return {}; }
 
   protected:
     AbstractActor(ActorId id, ActorType type, ActorSystem& sys);

@@ -163,7 +163,7 @@ int main() {
     // ---- Runtime: spawn and direct typed dispatch ----
     std::cout << "\n--- Runtime typed dispatch ---" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 1, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn the calculator

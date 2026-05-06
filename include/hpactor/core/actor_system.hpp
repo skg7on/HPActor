@@ -28,6 +28,8 @@
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/config/topology_model.hpp>
+#include <hpactor/cli/cli_config.hpp>
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
@@ -45,6 +47,12 @@ namespace hpactor {
 // Forward declarations
 class AsyncActor;
 class ActorTypeRegistry;
+
+#if HPACTOR_ENABLE_CLI
+namespace cli {
+class CliActor;
+} // namespace cli
+#endif
 
 
 // Scheduler interface forward declaration
@@ -89,6 +97,9 @@ struct Config {
     // When true, actors use coroutine-based execution instead of behavior-based.
     // Default: false (behavior-based scheduling).
     bool use_coroutines = false;
+
+    // CLI configuration
+    cli::CliConfig cli;
 };
 
 // -----------------------------------------------------------------------------
@@ -193,6 +204,11 @@ class ActorSystem {
     // Get metrics ring buffer (nullptr if metrics disabled)
     auto* metrics_ring_buffer() const { return metrics_ring_buffer_.get(); }
 
+#if HPACTOR_ENABLE_CLI
+    // Get CLI actor (nullptr if CLI disabled or not yet spawned)
+    cli::CliActor* cli_actor() const;
+#endif
+
     // Get actor's mailbox (used by scheduler)
     mailbox::MPSCActorMailbox<TypedMessage>* get_mailbox(ActorId id);
 
@@ -294,6 +310,11 @@ class ActorSystem {
 
     // HTTP gateway actor (DaemonActor, spawned when enable_http_gateway = true)
     Actor http_gateway_actor_{nullptr};
+
+#if HPACTOR_ENABLE_CLI
+    // CLI actor (DaemonActor, spawned when cli.enabled = true)
+    std::shared_ptr<cli::CliActor> cli_actor_;
+#endif
 
     // Metrics configuration and ring buffer
     metrics::MetricsConfig metrics_config_;

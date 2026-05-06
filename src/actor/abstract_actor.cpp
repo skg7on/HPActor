@@ -85,6 +85,15 @@ void AbstractActor::demonitor(const ActorAddr& target) {
     ctx->send(target, TypedMessage(TypeTag::DemonitorMsg, StreamBuffer{}));
 }
 
+cli::ActorMeta AbstractActor::to_metadata() const {
+    cli::ActorMeta m;
+    m.actor_id = id().value();
+    m.actor_type = std::string(type_name());
+    m.state = "unknown";
+    m.incarnation = address().incarnation;
+    return m;
+}
+
 void AbstractActor::set_scheduler(sched::IScheduler* /*scheduler*/) {
     // Default no-op; EventBasedActor overrides this
 }

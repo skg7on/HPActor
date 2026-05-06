@@ -285,7 +285,7 @@ int main() {
               << std::endl;
 
     // Create actor system with 4 scheduler threads
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024, .cli = {}};
 
     hpactor::ActorSystem system(config);
 

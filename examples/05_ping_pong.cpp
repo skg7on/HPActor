@@ -196,7 +196,7 @@ int main() {
     std::cout << "=== HPActor Example 05: Ping-Pong Communication ==="
               << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn PongActor — the shared target

@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <hpactor/cli/cli_config.hpp>
+
 #include <cstdint>
 #include <string>
 #include <unordered_map>
@@ -90,6 +92,7 @@ struct SystemDef {
     bool metrics_enabled{true};
     uint32_t metrics_ring_buffer_capacity{65536};
     std::string metrics_path{"/metrics"};
+    hpactor::cli::CliConfig cli;
     std::vector<std::string> imports;
 };
 

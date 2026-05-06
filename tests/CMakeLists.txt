@@ -382,3 +382,28 @@ add_test(NAME test_allocator_benchmark COMMAND test_allocator_benchmark)
 add_executable(test_std_allocator mem/test_std_allocator.cpp)
 target_link_libraries(test_std_allocator hpactor pthread)
 add_test(NAME test_std_allocator COMMAND test_std_allocator)
+
+# =============================================================================
+# CLI tests
+# =============================================================================
+if(ENABLE_CLI)
+    add_executable(test_lexer cli/test_lexer.cpp)
+    target_link_libraries(test_lexer hpactor)
+    add_test(NAME test_lexer COMMAND test_lexer)
+
+    add_executable(test_command_node cli/test_command_node.cpp)
+    target_link_libraries(test_command_node hpactor)
+    add_test(NAME test_command_node COMMAND test_command_node)
+
+    add_executable(test_formatters cli/test_formatters.cpp)
+    target_link_libraries(test_formatters hpactor)
+    add_test(NAME test_formatters COMMAND test_formatters)
+
+    add_executable(test_pager cli/test_pager.cpp)
+    target_link_libraries(test_pager hpactor)
+    add_test(NAME test_pager COMMAND test_pager)
+
+    add_executable(test_cli_integration cli/test_cli_integration.cpp)
+    target_link_libraries(test_cli_integration hpactor)
+    add_test(NAME test_cli_integration COMMAND test_cli_integration)
+endif()

@@ -18,6 +18,11 @@
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/hpactor_config.hpp>
+
+#if HPACTOR_ENABLE_CLI
+#include <hpactor/cli/cli_actor.hpp>
+#endif
 #include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/net/frame.hpp>
@@ -137,6 +142,14 @@ ActorSystem::ActorSystem(const Config& config)
                     SpawnReceiverId, scheduler_.get()));
         }
     }
+
+    // Spawn CLI actor
+#if HPACTOR_ENABLE_CLI
+    if (config_.cli.enabled) {
+        auto spawned = spawn<cli::CliActor>(config_.cli);
+        cli_actor_ = std::static_pointer_cast<cli::CliActor>(spawned.get());
+    }
+#endif
 }
 
 ActorSystem::~ActorSystem() {
@@ -205,6 +218,12 @@ size_t ActorSystem::actor_count() const {
     std::lock_guard<std::mutex> lock(actors_mutex_);
     return actors_.size();
 }
+
+#if HPACTOR_ENABLE_CLI
+cli::CliActor* ActorSystem::cli_actor() const {
+    return cli_actor_.get();
+}
+#endif
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
     deliver_local(target, std::move(msg), 0, INT64_MAX);

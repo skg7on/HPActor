@@ -26,6 +26,7 @@ option(ENABLE_PROACTOR "Use Proactor I/O model (io_uring/GCD)" ON)
 option(ENABLE_MEMORY_TRACKING "Enable per-actor memory tracking and telemetry" ON)
 option(ENABLE_ACTOR_METRICS "Enable actor-level metrics subsystem" ON)
 option(ENABLE_MEMORY_DEBUG "Enable memory poisoning, canaries, and guard pages" OFF)
+option(ENABLE_CLI "Enable interactive CLI subsystem" ON)
 
 # Sanitizer mutual exclusivity
 if(ENABLE_ASAN AND ENABLE_TSAN)
@@ -233,6 +234,21 @@ set_source_files_properties(
 )
 target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR} third_party/llhttp)
 
+if(ENABLE_CLI)
+    target_sources(hpactor_lib PRIVATE
+        src/cli/lexer.cpp
+        src/cli/command_node.cpp
+        src/cli/pretty_formatter.cpp
+        src/cli/json_formatter.cpp
+        src/cli/tabular_formatter.cpp
+        src/cli/pager.cpp
+        src/cli/cli_actor.cpp
+    )
+    set(HPACTOR_ENABLE_CLI 1)
+else()
+    set(HPACTOR_ENABLE_CLI 0)
+endif()
+
 # Enable exceptions for TOML parser (toml++ requires them)
 set_source_files_properties(
     src/config/toml_parser.cpp
@@ -266,6 +282,7 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/common.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/messages.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/registrar.proto
+    ${CMAKE_SOURCE_DIR}/protos/hpactor/cli_messages.proto
 )
 add_library(hpactor_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
 set_target_properties(hpactor_proto PROPERTIES CXX_CLANG_TIDY "")

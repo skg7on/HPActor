@@ -227,6 +227,8 @@ class EventBasedActor : public LocalActor {
             static_cast<metrics::MpscRingBuffer<metrics::MetricEvent>*>(buf);
     }
 
+    cli::MboxSnapshot mailbox_snapshot() const override;
+
   protected:
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 
