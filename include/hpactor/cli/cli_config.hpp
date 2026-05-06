@@ -26,6 +26,8 @@ struct CliConfig {
     uint16_t tcp_port = 0;           // TCP port; 0 = disabled
     std::string default_format = "pretty";
     uint32_t page_size = 50;
+    std::string history_path;       // empty = ~/.hpactor_history
+    uint32_t history_max = 1000;    // max in-memory history entries
 };
 
 }  // namespace cli

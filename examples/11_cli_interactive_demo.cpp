@@ -674,7 +674,9 @@ int main() {
         .listen_path = "",
         .tcp_port = 0,
         .default_format = "pretty",
-        .page_size = 20
+        .page_size = 20,
+        .history_path = "",
+        .history_max = 1000
     };
 
     hpactor::ActorSystem system(config);
