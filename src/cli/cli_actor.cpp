@@ -13,6 +13,7 @@
 #include <cstdlib>
 #include <iostream>
 #include <thread>
+#include <charconv>
 
 namespace hpactor {
 namespace cli {
