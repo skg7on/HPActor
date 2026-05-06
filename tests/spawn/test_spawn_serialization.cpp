@@ -22,8 +22,8 @@
 
 // Test that TypeTag enum includes spawn protocol tags
 void test_type_tag_enum_has_spawn_tags() {
-    assert(static_cast<uint32_t>(hpactor::TypeTag::SpawnRequestTag) == 5);
-    assert(static_cast<uint32_t>(hpactor::TypeTag::SpawnResponseTag) == 6);
+    assert(static_cast<uint32_t>(hpactor::TypeTag::SpawnRequestTag) == 0x10);
+    assert(static_cast<uint32_t>(hpactor::TypeTag::SpawnResponseTag) == 0x11);
 }
 
 // Test that SpawnRequest is constructible

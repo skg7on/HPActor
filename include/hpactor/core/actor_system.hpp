@@ -215,6 +215,11 @@ class ActorSystem {
     // Get the number of live actors in this system
     size_t actor_count() const;
 
+    // Enumerate all actors. Callback receives (ActorId, AbstractActor&).
+    // The callback must not spawn or kill actors (lock is held).
+    void for_each_actor(
+        std::function<void(ActorId, AbstractActor&)> callback) const;
+
     // Deliver message to local actor
     void deliver_local(ActorId target, TypedMessage msg);
 

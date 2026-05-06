@@ -219,6 +219,14 @@ size_t ActorSystem::actor_count() const {
     return actors_.size();
 }
 
+void ActorSystem::for_each_actor(
+    std::function<void(ActorId, AbstractActor&)> callback) const {
+    std::lock_guard<std::mutex> lock(actors_mutex_);
+    for (auto& [id, actor] : actors_) {
+        callback(id, *actor);
+    }
+}
+
 #if HPACTOR_ENABLE_CLI
 cli::CliActor* ActorSystem::cli_actor() const {
     return cli_actor_.get();
