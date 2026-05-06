@@ -251,6 +251,21 @@ static result<FileData> parse_file_data(const std::string& filepath,
             }
         }
 
+        // CLI subsystem
+        if (auto* cli_node = st.get("cli")) {
+            if (cli_node->is_table()) {
+                auto& ct = *cli_node->as_table();
+                data.system.cli.enabled = read_bool(ct, "enabled", true);
+                data.system.cli.listen_path = read_string(ct, "listen_path", "");
+                data.system.cli.tcp_port =
+                    static_cast<uint16_t>(read_uint32(ct, "tcp_port", 0));
+                data.system.cli.default_format =
+                    read_string(ct, "default_format", "pretty");
+                data.system.cli.page_size =
+                    read_uint32(ct, "page_size", 50);
+            }
+        }
+
         if (auto* imp_arr = st.get("imports")) {
             if (imp_arr->is_array()) {
                 for (const auto& v : *imp_arr->as_array()) {

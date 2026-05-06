@@ -112,7 +112,7 @@ class EchoActor : public hpactor::EventBasedActor {
 void demo_single_actor() {
     std::cout << "\n=== Demo 1: Single Actor Spawn ===" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024, .cli = {}};
     hpactor::ActorSystem system(config);
 
     std::cout << "Scheduler state:\n";
@@ -149,7 +149,7 @@ void demo_multi_actor() {
     g_context_switches = 0;
     g_done = false;
 
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024};
+    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024, .cli = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn actors

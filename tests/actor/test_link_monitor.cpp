@@ -95,7 +95,7 @@ class ShortLivedActor : public EventBasedActor {
 // Test: A links to B. B exits. A receives DownMsg.
 void test_link_to_down_notification() {
     Config config{.scheduler_threads = 1, .max_queue_depth = 1024,
-                  .use_coroutines = true};
+                  .use_coroutines = true, .cli = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -127,7 +127,7 @@ void test_link_to_down_notification() {
 // Test: monitor is one-way — A monitors B, B exits, A gets DownMsg
 void test_monitor_down_notification() {
     Config config{.scheduler_threads = 1, .max_queue_depth = 1024,
-                  .use_coroutines = true};
+                  .use_coroutines = true, .cli = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -147,7 +147,7 @@ void test_monitor_down_notification() {
 // Test: unlink_from removes the link, no DownMsg after unlink
 void test_unlink_from_stops_notification() {
     Config config{.scheduler_threads = 1, .max_queue_depth = 1024,
-                  .use_coroutines = true};
+                  .use_coroutines = true, .cli = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -174,7 +174,7 @@ void test_unlink_from_stops_notification() {
 // Test: demonitor stops monitoring
 void test_demonitor_stops_notification() {
     Config config{.scheduler_threads = 1, .max_queue_depth = 1024,
-                  .use_coroutines = true};
+                  .use_coroutines = true, .cli = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -194,7 +194,7 @@ void test_demonitor_stops_notification() {
 // Test: link to self is rejected
 void test_link_to_dead_or_self() {
     Config config{.scheduler_threads = 1, .max_queue_depth = 1024,
-                  .use_coroutines = true};
+                  .use_coroutines = true, .cli = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -227,7 +227,7 @@ void test_demonitor_stops_notification() {
     std::cout << "SKIP: coroutines not available" << std::endl;
 }
 void test_link_to_dead_or_self() {
-    Config config{.scheduler_threads = 1, .max_queue_depth = 1024};
+    Config config{.scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}};
     ActorSystem system(config);
     auto a = system.spawn<DownRecordingActor>();
     a.get()->link_to(a.get()->address());
@@ -247,7 +247,7 @@ void test_link_to_dead_or_self() {
 
 // Test: link_to is idempotent
 void test_link_to_idempotent() {
-    Config config{.scheduler_threads = 1, .max_queue_depth = 1024};
+    Config config{.scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -267,7 +267,7 @@ void test_link_to_idempotent() {
 
 // Test: link_to sends LinkMsg, which adds bidirectional entry on receiver
 void test_link_to_sends_link_msg() {
-    Config config{.scheduler_threads = 1, .max_queue_depth = 1024};
+    Config config{.scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();

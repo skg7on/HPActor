@@ -26,6 +26,7 @@ option(ENABLE_PROACTOR "Use Proactor I/O model (io_uring/GCD)" ON)
 option(ENABLE_MEMORY_TRACKING "Enable per-actor memory tracking and telemetry" ON)
 option(ENABLE_ACTOR_METRICS "Enable actor-level metrics subsystem" ON)
 option(ENABLE_MEMORY_DEBUG "Enable memory poisoning, canaries, and guard pages" OFF)
+option(ENABLE_CLI "Enable interactive CLI subsystem" ON)
 
 # Sanitizer mutual exclusivity
 if(ENABLE_ASAN AND ENABLE_TSAN)
@@ -217,13 +218,6 @@ add_library(hpactor_lib SHARED
     src/metrics/metrics_aggregator.cpp
     src/metrics/metrics_formatter.cpp
     src/metrics/metrics_actor.cpp
-    src/cli/lexer.cpp
-    src/cli/command_node.cpp
-    src/cli/pretty_formatter.cpp
-    src/cli/json_formatter.cpp
-    src/cli/tabular_formatter.cpp
-    src/cli/pager.cpp
-    src/cli/cli_actor.cpp
     src/adt/stream_buffer.cpp
     third_party/llhttp/llhttp.c
     third_party/llhttp/api.c
@@ -239,6 +233,21 @@ set_source_files_properties(
         COMPILE_FLAGS "-Wno-error -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
 )
 target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR} third_party/llhttp)
+
+if(ENABLE_CLI)
+    target_sources(hpactor_lib PRIVATE
+        src/cli/lexer.cpp
+        src/cli/command_node.cpp
+        src/cli/pretty_formatter.cpp
+        src/cli/json_formatter.cpp
+        src/cli/tabular_formatter.cpp
+        src/cli/pager.cpp
+        src/cli/cli_actor.cpp
+    )
+    set(HPACTOR_ENABLE_CLI 1)
+else()
+    set(HPACTOR_ENABLE_CLI 0)
+endif()
 
 # Enable exceptions for TOML parser (toml++ requires them)
 set_source_files_properties(
