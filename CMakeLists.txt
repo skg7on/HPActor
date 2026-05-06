@@ -297,6 +297,13 @@ target_include_directories(hpactor_proto PUBLIC ${CMAKE_CURRENT_BINARY_DIR})
 find_package(OpenSSL REQUIRED)
 target_link_libraries(hpactor_lib PUBLIC tomlplusplus::tomlplusplus OpenSSL::SSL OpenSSL::Crypto protobuf::libprotobuf ${HPACTOR_ABSL_LIBS} hpactor_proto)
 
+# ARM64 and some RISC-V platforms require explicit -latomic for std::atomic
+# operations (e.g., std::atomic<uint64_t> in CalendarQueue).
+# On x86_64 and macOS this is a no-op.
+if(UNIX AND NOT APPLE)
+  target_link_libraries(hpactor_lib PUBLIC atomic)
+endif()
+
 if(ENABLE_PROACTOR)
     if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
         if(liburing_FOUND)
