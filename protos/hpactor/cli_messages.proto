@@ -89,7 +89,7 @@ message SystemStatsReply {
 // ── System Memory ──
 
 message MemoryStatsRequest {
-    optional uint64 actor_id = 1;
+    uint64 actor_id = 1;  // 0 = system-wide
 }
 
 message MemoryStatsReply {
