@@ -642,13 +642,6 @@ static void send_to_actor(hpactor::ActorSystem& system,
 // Utility: format ActorId as hex string
 // =============================================================================
 
-static std::string hex_id(hpactor::ActorId id) {
-    char buf[16];
-    snprintf(buf, sizeof(buf), "0x%04llX",
-             static_cast<unsigned long long>(id.value()));
-    return buf;
-}
-
 // =============================================================================
 // Main
 // =============================================================================
@@ -656,12 +649,12 @@ static std::string hex_id(hpactor::ActorId id) {
 int main() {
     std::cout << "=== HPActor Example 11: CLI Interactive Demo ===" << std::endl;
     std::cout << "\nArchitecture:" << std::endl;
-    std::cout << "  12 actors: 4×Worker, Aggregator, HealthCheck, Broadcast,"
+    std::cout << "  12 actors: 4xWorker, Aggregator, HealthCheck, Broadcast,"
               << std::endl;
     std::cout << "             Clock, Log, SystemMonitor, CliActor"
               << std::endl;
     std::cout << "  4 scheduler threads with A2WS work-stealing" << std::endl;
-    std::cout << "  CLI interactive mode enabled — type commands below"
+    std::cout << "  CLI: Tab completion, hints, history, syntax highlighting"
               << std::endl;
     std::cout << std::endl;
 
@@ -679,53 +672,27 @@ int main() {
         .history_max = 1000
     };
 
+    // IMPORTANT: ActorSystem construction starts the CliActor daemon thread
+    // which takes over stdin/stdout. All diagnostic output must happen BEFORE
+    // this point, or be routed through the CLI formatter. We print setup info
+    // first, then spawn actors silently.
     hpactor::ActorSystem system(config);
 
-    std::cout << "ActorSystem created:" << std::endl;
-    std::cout << "  Scheduler threads: 4" << std::endl;
-    std::cout << "  Work-stealing: A2WS (Adaptive Two-Level)" << std::endl;
-    std::cout << "  CLI: enabled" << std::endl;
-    std::cout << std::endl;
+    // ── Spawn all actors (silently — CliActor owns stdout now) ─────────
 
-    // ── Spawn all actors ─────────────────────────────────────────────
-
-    // 1. LogActor — shared logging sink
     auto log_actor = system.spawn<LogActor>();
-    std::cout << "Spawned LogActor " << hex_id(log_actor.id()) << std::endl;
-
-    // 2. ClockActor — logical time
     auto clock = system.spawn<ClockActor>();
-    std::cout << "Spawned ClockActor " << hex_id(clock.id()) << std::endl;
-
-    // 3. AggregatorActor — collects worker results
     auto aggregator = system.spawn<AggregatorActor>();
-    std::cout << "Spawned AggregatorActor " << hex_id(aggregator.id())
-              << std::endl;
-
-    // 4. SystemMonitorActor — system-wide stats
     auto monitor = system.spawn<SystemMonitorActor>();
-    std::cout << "Spawned SystemMonitorActor " << hex_id(monitor.id())
-              << std::endl;
-
-    // 5. HealthCheckActor — pings workers
     auto health_check = system.spawn<HealthCheckActor>();
-    std::cout << "Spawned HealthCheckActor " << hex_id(health_check.id())
-              << std::endl;
-
-    // 6. BroadcastActor — config broadcasts
     auto broadcast = system.spawn<BroadcastActor>();
-    std::cout << "Spawned BroadcastActor " << hex_id(broadcast.id())
-              << std::endl;
 
-    // 7-10. Four WorkerActors
     std::vector<std::shared_ptr<WorkerActor>> workers;
     for (uint32_t w = 0; w < 4; ++w) {
         auto worker = system.spawn<WorkerActor>(
             w + 1, aggregator.id(), log_actor.id());
         workers.push_back(std::static_pointer_cast<WorkerActor>(
             system.get_actor(worker.id())));
-        std::cout << "Spawned WorkerActor-" << (w + 1) << " "
-                  << hex_id(worker.id()) << std::endl;
     }
 
     // ── Wire up addresses (set after spawn so addresses are known) ──
@@ -749,57 +716,16 @@ int main() {
 
     // ── Kick off periodic work ───────────────────────────────────────
 
-    std::cout << "\nStarting periodic work..." << std::endl;
-
-    // Start workers
     for (auto& w : workers) {
         send_to_actor(system, w->id(), StartTag);
     }
-    // Start health checker
     send_to_actor(system, health_check.id(), StartTag);
-    // Start broadcaster
     send_to_actor(system, broadcast.id(), StartTag);
-    // Start system monitor
     send_to_actor(system, monitor.id(), StartTag);
-    // Start clock ticks
     send_to_actor(system, clock.id(), PeriodicTickTag);
 
-    std::cout << "All actors started. Periodic messaging active." << std::endl;
-    std::cout << "\n  Worker → Aggregator:  every 100ms" << std::endl;
-    std::cout << "  HealthCheck → Workers: every 500ms" << std::endl;
-    std::cout << "  Broadcast → Workers:   every 1s" << std::endl;
-    std::cout << "  SystemMonitor:         every 2s" << std::endl;
-    std::cout << std::endl;
-
-    // Let the system run for a moment to accumulate some stats
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
-    // ── Note on CLI interaction ──────────────────────────────────────
-    //
-    // The CLI Actor is spawned by the ActorSystem (because CliConfig::enabled
-    // is true). It runs on its own dedicated thread, blocking on stdin.
-    //
-    // From here, you can type CLI commands.  The main thread will sleep
-    // while the CliActor and workers run on their respective threads.
-    //
-    // Try these commands to explore the system:
-    //
-    //   /help              — show available commands
-    //   /actor list        — list all actors
-    //   /actor <id> show   — inspect a specific actor
-    //   /system stats      — system-wide statistics
-    //   /system memory     — memory subsystem status
-    //   /actor <id> kill   — terminate an actor
-    //   /quit              — exit the CLI
-    //
-    // ──────────────────────────────────────────────────────────────────
-
-    std::cout << "System running. The CLI is active on stdin." << std::endl;
-    std::cout << "(The CliActor runs on its own thread — the main thread"
-              << std::endl;
-    std::cout << " will keep the system alive until /quit is issued.)"
-              << std::endl;
-    std::cout << std::endl;
+    // Let the actors initialize before the user starts typing
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Keep the main thread alive. The CliActor's DaemonActor thread
     // handles stdin. When the user types /quit or sends EOF, the CLI
