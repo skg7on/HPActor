@@ -300,6 +300,10 @@ add_executable(test_dispatch_policy sched/test_dispatch_policy.cpp)
 target_link_libraries(test_dispatch_policy hpactor)
 add_test(NAME test_dispatch_policy COMMAND test_dispatch_policy)
 
+add_executable(test_calendar_queue sched/test_calendar_queue.cpp)
+target_link_libraries(test_calendar_queue hpactor)
+add_test(NAME test_calendar_queue COMMAND test_calendar_queue)
+
 # =============================================================================
 # HTTP tests
 # =============================================================================

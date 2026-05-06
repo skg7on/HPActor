@@ -20,16 +20,18 @@
 #include <hpactor/sched/a2ws.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/timing_wheel.hpp>
+#include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
 #include <cstdint>
-#include <memory>
 #include <functional>
+#include <memory>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
 #include <unordered_set>
+#include <variant>
 #include <vector>
 
 namespace hpactor {
@@ -54,6 +56,11 @@ struct TimerHandle {
 };
 
 using timer_callback = std::function<void()>;
+
+enum class TimerBackend : uint8_t {
+    TimingWheel = 0,
+    CalendarQueue = 1
+};
 
 // -----------------------------------------------------------------------------
 // IScheduler: interface for actor schedulers
@@ -124,7 +131,8 @@ class HybridScheduler : public IScheduler {
     // num_priorities: number of priority levels (default 4, priorities 0..N-1)
     // ActorSystem reference is held for processing actors
     explicit HybridScheduler(ActorSystem& system, uint32_t num_workers,
-                             uint32_t num_priorities = 4);
+                             uint32_t num_priorities = 4,
+                             TimerBackend timer_backend = TimerBackend::TimingWheel);
     ~HybridScheduler() override;
 
     HybridScheduler(const HybridScheduler&) = delete;
@@ -165,7 +173,7 @@ class HybridScheduler : public IScheduler {
     // Timing wheel integration
     // Schedule a timer to fire after delay_ns (in nanoseconds)
     // Returns timer ID that can be used to cancel
-    uint64_t schedule_timer(int64_t delay_ns, TimingWheel::TimerCallback callback);
+    uint64_t schedule_timer(int64_t delay_ns, timer_callback callback);
 
     // Advance time - processes expired timers
     void advance_time(int64_t now_ns);
@@ -210,8 +218,8 @@ class HybridScheduler : public IScheduler {
     // Adaptive two-level work stealing
     A2WS a2ws_;
 
-    // Timing wheel for timer management
-    TimingWheel timer_wheel_;
+    // Timer backend (TimingWheel or CalendarQueue via variant dispatch)
+    std::variant<TimingWheel, CalendarQueue> timer_backend_;
 
     void set_metrics_ring_buffer(void* buf) noexcept override {
         metrics_ring_buffer_ =

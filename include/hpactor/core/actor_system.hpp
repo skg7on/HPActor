@@ -33,6 +33,7 @@
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
+#include <hpactor/sched/scheduler.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -100,6 +101,9 @@ struct Config {
 
     // CLI configuration
     cli::CliConfig cli;
+
+    // Timer backend selection
+    sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
 };
 
 // -----------------------------------------------------------------------------
