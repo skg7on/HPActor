@@ -218,6 +218,7 @@ add_library(hpactor_lib SHARED
     src/metrics/metrics_formatter.cpp
     src/metrics/metrics_actor.cpp
     src/cli/lexer.cpp
+    src/cli/command_node.cpp
     src/adt/stream_buffer.cpp
     third_party/llhttp/llhttp.c
     third_party/llhttp/api.c

@@ -389,3 +389,7 @@ add_test(NAME test_std_allocator COMMAND test_std_allocator)
 add_executable(test_lexer cli/test_lexer.cpp)
 target_link_libraries(test_lexer hpactor)
 add_test(NAME test_lexer COMMAND test_lexer)
+
+add_executable(test_command_node cli/test_command_node.cpp)
+target_link_libraries(test_command_node hpactor)
+add_test(NAME test_command_node COMMAND test_command_node)
