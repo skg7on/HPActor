@@ -223,6 +223,7 @@ add_library(hpactor_lib SHARED
     src/cli/json_formatter.cpp
     src/cli/tabular_formatter.cpp
     src/cli/pager.cpp
+    src/cli/cli_actor.cpp
     src/adt/stream_buffer.cpp
     third_party/llhttp/llhttp.c
     third_party/llhttp/api.c
