@@ -112,6 +112,18 @@ void LineEditor::on_completion(const char* buf,
         partial = words.back();
     }
 
+    // If the partial exactly matches a child keyword, the user typed a
+    // complete token — advance into it and show grandchildren instead.
+    if (!partial.empty()) {
+        for (auto& child : node->children) {
+            if (!child->is_parameter && child->keyword == partial) {
+                node = child.get();
+                partial.clear();
+                break;
+            }
+        }
+    }
+
     // Collect matching non-parameter children
     for (auto& child : node->children) {
         if (child->is_parameter) continue;
@@ -150,6 +162,17 @@ char* LineEditor::on_hints(const char* buf,
     std::string partial;
     if (!ends_with_space && !words.empty()) {
         partial = words.back();
+    }
+
+    // If the partial exactly matches a child keyword, advance into it.
+    if (!partial.empty()) {
+        for (auto& child : node->children) {
+            if (!child->is_parameter && child->keyword == partial) {
+                node = child.get();
+                partial.clear();
+                break;
+            }
+        }
     }
 
     // Find first non-parameter child whose keyword starts with partial
