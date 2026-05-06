@@ -112,23 +112,32 @@ void LineEditor::on_completion(const char* buf,
         partial = words.back();
     }
 
-    // If the partial exactly matches a child keyword, the user typed a
-    // complete token — advance into it and show grandchildren instead.
+    // When the partial is an exact keyword match, offer "keyword " so
+    // linenoise adds a space instead of replacing the keyword with a
+    // child completion. On the next Tab, the user gets sub-commands.
+    bool exact_match_found = false;
     if (!partial.empty()) {
         for (auto& child : node->children) {
             if (!child->is_parameter && child->keyword == partial) {
+                std::string with_space = child->keyword + " ";
+                linenoiseAddCompletion(lc, with_space.c_str());
                 node = child.get();
                 partial.clear();
+                exact_match_found = true;
                 break;
             }
         }
     }
 
-    // Collect matching non-parameter children
-    for (auto& child : node->children) {
-        if (child->is_parameter) continue;
-        if (partial.empty() || child->keyword.starts_with(partial)) {
-            linenoiseAddCompletion(lc, child->keyword.c_str());
+    // Collect matching non-parameter children.
+    // Skip if we already handled an exact match (the space-completion is
+    // sufficient; children appear on the next Tab after the space).
+    if (!exact_match_found) {
+        for (auto& child : node->children) {
+            if (child->is_parameter) continue;
+            if (partial.empty() || child->keyword.starts_with(partial)) {
+                linenoiseAddCompletion(lc, child->keyword.c_str());
+            }
         }
     }
 }
@@ -164,7 +173,8 @@ char* LineEditor::on_hints(const char* buf,
         partial = words.back();
     }
 
-    // If the partial exactly matches a child keyword, advance into it.
+    // If the partial exactly matches a child keyword, the user typed a
+    // complete token — advance to show hints from the next level.
     if (!partial.empty()) {
         for (auto& child : node->children) {
             if (!child->is_parameter && child->keyword == partial) {
