@@ -18,6 +18,8 @@
 #include <hpactor/sched/dedicated_thread_pool.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
+#include <variant>
+
 #if HPACTOR_SUPPORT_COROUTINES
 #    include <hpactor/sched/coroutine_task.hpp>
 #endif
@@ -42,14 +44,20 @@ struct HybridScheduler::DedicatedStorage {
 thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
-                                 uint32_t num_priorities)
+                                 uint32_t num_priorities,
+                                 TimerBackend timer_backend)
     : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
-      workers_(num_workers), a2ws_(num_workers), timer_wheel_(1'000'000, 4),
+      workers_(num_workers), a2ws_(num_workers),
+      timer_backend_(std::in_place_type<TimingWheel>, 1'000'000, 4),
       dedicated_(std::make_unique<DedicatedStorage>()) {
     for (uint32_t i = 0; i < num_workers; ++i) {
         workers_[i].queues =
             std::make_unique<ChaselevDeque<WorkItem>[]>(num_priorities);
         workers_[i].index = i;
+    }
+
+    if (timer_backend == TimerBackend::CalendarQueue) {
+        timer_backend_.emplace<CalendarQueue>();
     }
 }
 
@@ -69,7 +77,9 @@ void HybridScheduler::start() {
     timer_thread_ = std::thread([this] {
         while (running_.load(std::memory_order_acquire)) {
             auto now = std::chrono::steady_clock::now().time_since_epoch().count();
-            timer_wheel_.advance(now);
+            std::visit([&](auto& backend) {
+                backend.advance(now);
+            }, timer_backend_);
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
@@ -360,16 +370,22 @@ void HybridScheduler::backoff() {
 }
 
 uint64_t HybridScheduler::schedule_timer(int64_t delay_ns,
-                                         TimingWheel::TimerCallback callback) {
-    return timer_wheel_.schedule(delay_ns, std::move(callback));
+                                          timer_callback callback) {
+    return std::visit([&](auto& backend) {
+        return backend.schedule(delay_ns, std::move(callback));
+    }, timer_backend_);
 }
 
 void HybridScheduler::advance_time(int64_t now_ns) {
-    timer_wheel_.advance(now_ns);
+    std::visit([&](auto& backend) {
+        backend.advance(now_ns);
+    }, timer_backend_);
 }
 
 TimerHandle HybridScheduler::schedule_after(timer_callback cb, int64_t delay_ns) {
-    auto id = timer_wheel_.schedule(delay_ns, [cb = std::move(cb)]() { cb(); });
+    auto id = std::visit([&](auto& backend) {
+        return backend.schedule(delay_ns, cb);
+    }, timer_backend_);
     return TimerHandle{id};
 }
 
@@ -390,12 +406,16 @@ HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
         if (running_.load(std::memory_order_acquire)) {
             (*callback)();
             if (!cancelled->load(std::memory_order_acquire)) {
-                timer_wheel_.schedule(*interval, recurring);
+                std::visit([&](auto& backend) {
+                    static_cast<void>(backend.schedule(*interval, recurring));
+                }, timer_backend_);
             }
         }
     };
 
-    auto id = timer_wheel_.schedule(*interval, recurring);
+    auto id = std::visit([&](auto& backend) {
+        return backend.schedule(*interval, recurring);
+    }, timer_backend_);
     {
         std::lock_guard<std::mutex> lock(cancellation_mutex_);
         recurring_cancellations_[id] = cancelled;
@@ -413,7 +433,9 @@ void HybridScheduler::cancel_timer(TimerHandle handle) {
         it->second->store(true, std::memory_order_release);
         recurring_cancellations_.erase(it);
     }
-    timer_wheel_.cancel(handle.id);
+    std::visit([&](auto& backend) {
+        backend.cancel(handle.id);
+    }, timer_backend_);
 }
 
 void HybridScheduler::register_dedicated_thread(ActorId actor, int cpu_affinity) {
