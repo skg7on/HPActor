@@ -92,58 +92,56 @@ void LineEditor::on_completion(const char* buf,
     size_t len = strlen(buf);
     bool ends_with_space = (len > 0 && buf[len - 1] == ' ');
 
+    // consumed tracks tokens already matched (exact or prefix-expanded).
+    // linenoise replaces the ENTIRE buffer with the completion string,
+    // so every completion must include the full prefix.
     const CommandNode* node = self->root_;
+    std::vector<std::string> consumed;
     size_t i = 0;
-    // Skip leading "/"
     if (i < words.size() && words[i] == "/") ++i;
 
-    // Consume fully-typed tokens (all but the last when not space-terminated).
-    // For each token, try exact match first, then prefix match — this lets
-    // partial commands like "/act" complete to "/actor".
     size_t words_to_consume = ends_with_space ? words.size() : (words.size() > 0 ? words.size() - 1 : 0);
     for (; i < words_to_consume; ++i) {
         std::string param;
         auto* child = node->find_child(words[i], param);
+        if (!child) child = node->find_child_prefix(words[i]);
         if (!child) {
-            // No exact match — try prefix match for intermediate tokens
-            child = node->find_child_prefix(words[i]);
-            if (!child) {
-                // Ambiguous or no prefix match — show matching options
-                std::vector<std::string> matches;
-                node->collect_completions(words[i], matches);
-                for (auto& m : matches) {
-                    linenoiseAddCompletion(lc, m.c_str());
-                }
-                return;
-            }
+            std::vector<std::string> matches;
+            node->collect_completions(words[i], matches);
+            std::string prefix = "/";
+            for (auto& w : consumed) prefix += w + " ";
+            for (auto& m : matches) linenoiseAddCompletion(lc, (prefix + m).c_str());
+            return;
         }
+        // Use the matched keyword for prefix matches (e.g. "act"→"actor"),
+        // user input for parameter tokens (e.g. "0x123"→"<id>").
+        consumed.push_back(child->is_parameter ? words[i] : child->keyword);
         node = child;
     }
 
-    // Determine partial token to complete
     std::string partial;
-    if (!ends_with_space && !words.empty()) {
-        partial = words.back();
-    }
+    if (!ends_with_space && !words.empty()) partial = words.back();
 
-    // If partial is an exact keyword match, the user has already typed a
-    // complete command.  Don't offer children — linenoise would replace
-    // the keyword with a child (e.g. /actor<tab> → /list).  The user must
-    // type a space before Tab can complete sub-commands.
+    // Exact keyword match: advance into the node so sub-commands appear.
+    // Include the matched keyword in the prefix.
     if (!partial.empty()) {
         for (auto& child : node->children) {
             if (!child->is_parameter && child->keyword == partial) {
-                return;  // exact match — nothing to complete
+                consumed.push_back(partial);
+                node = child.get();
+                partial.clear();
+                break;
             }
         }
     }
 
-    // Collect matching non-parameter children
+    // Build full prefix: leading "/" + consumed tokens with trailing space.
+    std::string prefix = "/";
+    for (auto& w : consumed) prefix += w + " ";
+
     std::vector<std::string> matches;
     node->collect_completions(partial, matches);
-    for (auto& m : matches) {
-        linenoiseAddCompletion(lc, m.c_str());
-    }
+    for (auto& m : matches) linenoiseAddCompletion(lc, (prefix + m).c_str());
 }
 
 char* LineEditor::on_hints(const char* buf,
