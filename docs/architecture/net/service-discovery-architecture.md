@@ -64,7 +64,176 @@ public:
 } // namespace hpactor::net
 ```
 
-## 2. ActorLocationCache
+## 2. Deployment Scenarios and Backend Selection
+
+### 2.1 The Two Scenarios
+
+The same `UdpRegistrar::start()` behaves fundamentally differently depending on
+whether nodes share a kernel or not:
+
+**Scenario A: Single server, multiple processes**
+
+```
+Server 10.0.1.1
+┌─────────────────────────────────────────────┐
+│  Process 1 (starts first)                   │
+│    bind(0.0.0.0:5353) → SUCCESS            │
+│    UdpRegistrar → SERVER mode               │
+│    RegistrarServer + NodeRegistry           │
+│                                             │
+│  Process 2 (starts second)                  │
+│    bind(0.0.0.0:5353) → EADDRINUSE         │
+│    UdpRegistrar → CLIENT mode               │
+│    RegistrarClient → connects to Process 1  │
+│                                             │
+│  Process 3 (starts third)                   │
+│    bind(0.0.0.0:5353) → EADDRINUSE         │
+│    UdpRegistrar → CLIENT mode               │
+│    RegistrarClient → connects to Process 1  │
+└─────────────────────────────────────────────┘
+
+All three processes discover each other through Process 1's NodeRegistry.
+Cross-process discovery works. ✓
+```
+
+On a single machine, `bind()` on the same `(addr, port)` fails for everyone after
+the first. The first process becomes the authoritative server. The rest become
+clients and connect to it. One registry, one source of truth. This is the design
+the embedded `UdpRegistrar` was built for.
+
+**Scenario B: Multiple servers**
+
+```
+Server A (10.0.1.1)          Server B (10.0.1.2)          Server C (10.0.1.3)
+┌──────────────────┐    ┌──────────────────┐    ┌──────────────────┐
+│ bind(:5353) → OK │    │ bind(:5353) → OK │    │ bind(:5353) → OK │
+│ SERVER mode      │    │ SERVER mode      │    │ SERVER mode      │
+│ NodeRegistry:    │    │ NodeRegistry:    │    │ NodeRegistry:    │
+│   {A}            │    │   {B}            │    │   {C}            │
+└──────────────────┘    └──────────────────┘    └──────────────────┘
+        ↑                       ↑                       ↑
+        │                       │                       │
+   Isolated               Isolated               Isolated
+   "I know only A"        "I know only B"        "I know only C"
+```
+
+Every server has its own kernel, its own port namespace. `bind(0.0.0.0:5353)`
+succeeds everywhere because no other process on that kernel holds the port.
+Every UdpRegistrar starts in server mode with an isolated `NodeRegistry`
+containing only itself.
+
+A UDP `ResolveQuery` from A asking about C reaches C's `RegistrarServer`, but
+C's registry only knows about C — if C is a pure compute node that doesn't
+happen to run the registrar server (no TCP clients connected), the query returns
+nothing. Even when the query succeeds, there is no shared membership table: no
+node can enumerate the full cluster.
+
+### 2.2 Why the Bind Test Doesn't Cross Servers
+
+The `bind()` test in `UdpRegistrar::start()` tests for a *kernel-level* port
+conflict. Two processes on the same kernel cannot both bind the same
+`(0.0.0.0, 5353)` — the kernel rejects the second with `EADDRINUSE`. But two
+processes on different kernels bind independently because their kernels are
+separate namespaces. The test is a kernel-scoped mutex, not a cluster-scoped one.
+
+### 2.3 Backend Selection Matrix
+
+| Deployment | Same-host processes per server | Servers | Recommended backend |
+|------------|-------------------------------|---------|---------------------|
+| Dev / laptop | 1 | 1 | UdpRegistrar (default) |
+| Single server | 2–10 | 1 | UdpRegistrar (default) |
+| Small cluster | 1 | 3–10 | Gossip |
+| Small cluster + multiprocess | 2–5 | 3–10 | Gossip + UdpRegistrar (hybrid) |
+| Medium cluster | 1–10 | 10–50 | Gossip |
+| Large cluster | any | 50+ | etcd / Consul (future) |
+| Firewalled / static | 1 | 1–10 | StaticDiscovery |
+
+### 2.4 Hybrid Mode: UdpRegistrar + Gossip
+
+For deployments with multiple processes per server and multiple servers, the two
+backends can be composed:
+
+```
+Server A (10.0.1.1)                  Server B (10.0.1.2)
+┌──────────────────────────┐    ┌──────────────────────────┐
+│ Process A1 (registrar    │    │ Process B1 (registrar    │
+│   server)                │    │   server)                │
+│   NodeRegistry:          │    │   NodeRegistry:          │
+│     A1, A2, A3           │    │     B1, B2               │
+│                          │    │                          │
+│ Process A2 (registrar    │    │ Process B2 (registrar    │
+│   client → A1)           │    │   client → B1)           │
+│                          │    │                          │
+│ Process A3 (registrar    │    │                          │
+│   client → A1)           │    │                          │
+│                          │    │                          │
+│ GossipMembership ◄═══════┼════┼══► GossipMembership      │
+│   (cross-server)         │    │   (cross-server)         │
+└──────────────────────────┘    └──────────────────────────┘
+
+Same-host discovery: UdpRegistrar (server/client within each server)
+Cross-host discovery: GossipMembership (peer-to-peer between servers)
+```
+
+In this mode:
+- **Within a server**: The UdpRegistrar server on each machine holds the
+  registry of all local processes. Processes on the same machine discover each
+  other via the existing TCP/UDP registrar protocol.
+- **Across servers**: The GossipMembership on each server announces that
+  server's aggregate member list. When Server A's gossip announces it hosts
+  processes A1, A2, A3 running `WorkerActor`, Server B's gossip table reflects
+  that. Cross-server actor messages flow via the normal TcpTransport path,
+  using the gossip-discovered endpoints.
+
+The hybrid mode is implemented by giving `GossipMembership` a reference to the
+local `UdpRegistrar`'s `NodeRegistry`. During each gossip round, the local
+member list from the registrar is piggybacked as Metadata entries. When the
+registrar fires `node_callback` (join/leave), the gossip layer immediately
+propagates the change rather than waiting for the next round.
+
+```
+GossipMembership.announce(local_state):
+    local_state.actor_types = aggregate from local NodeRegistry
+    local_state.acceptors   = aggregate from local NodeRegistry
+    piggyback all local members as Metadata entries
+```
+
+### 2.5 Configuring the Backend
+
+```toml
+# Scenario A: Single server, multiple processes (current default)
+[system]
+enable_network = true
+udp_port = 5353
+# → Creates UdpRegistrar internally. Same-host discovery works automatically.
+
+# Scenario B: Multiple servers, one process per server
+[system]
+enable_network = true
+
+[system.discovery]
+backend = "gossip"
+
+[system.discovery.gossip]
+seeds = ["10.0.1.1:5354", "10.0.1.2:5354"]
+
+# Scenario B variant: Multiple servers, multiple processes per server
+[system]
+enable_network = true
+
+[system.discovery]
+backend = "hybrid"   # UdpRegistrar (same-host) + Gossip (cross-host)
+
+[system.discovery.gossip]
+seeds = ["10.0.1.1:5354", "10.0.1.2:5354"]
+
+[system.registrar]
+tcp_port = 5353
+udp_port = 5353
+# → UdpRegistrar handles same-host processes; GossipMembership handles cross-host.
+```
+
+## 3. ActorLocationCache
 
 A local TTL cache mapping `ActorId` → `EndPoint`. This is NOT part of
 IServiceDiscovery — it's an ActorSystem-level facility that uses discovery to
@@ -118,9 +287,9 @@ send(actor_addr, msg):
     return result
 ```
 
-## 3. GossipMembership Design
+## 4. GossipMembership Design
 
-### 3.1 SWIM Protocol Adaptation
+### 4.1 SWIM Protocol Adaptation
 
 The standard SWIM protocol has three components:
 
@@ -144,7 +313,7 @@ HPActor's adaptation:
 - Piggyback format is a compact binary encoding, not protobuf (low latency,
   1500-byte MTU-friendly).
 
-### 3.2 Configuration
+### 4.2 Configuration
 
 ```cpp
 struct GossipConfig {
@@ -169,7 +338,7 @@ struct GossipConfig {
 };
 ```
 
-### 3.3 Gossip Message Format
+### 4.3 Gossip Message Format
 
 All messages fit in a single UDP datagram (padded to MTU for piggyback space):
 
@@ -214,7 +383,7 @@ All messages fit in a single UDP datagram (padded to MTU for piggyback space):
 | Dead | Node confirms another is dead |
 | Metadata | Actor types, load, or other metadata update |
 
-### 3.4 Protocol Round
+### 4.4 Protocol Round
 
 ```cpp
 void GossipMembership::protocol_round() {
@@ -258,7 +427,7 @@ void GossipMembership::protocol_round() {
 }
 ```
 
-### 3.5 State Machine
+### 4.5 State Machine
 
 ```
                     ┌─────────┐
@@ -300,14 +469,14 @@ message with a lower incarnation, they reject it. This means a restarted node
 reinforces its Alive status even if stale Suspicious markers exist for its old
 incarnation.
 
-### 3.6 Thread Safety
+### 4.6 Thread Safety
 
 `GossipMembership` uses the EventLoop timer for protocol rounds, `handle_udp_read_ready`
 for inbound messages (EventLoop read handler), and shared-mutex protection for the
 membership table (read-heavy via `discover_all`/`discover`, write-rare via protocol
 rounds). Member change callbacks are invoked from the EventLoop thread.
 
-## 4. StaticDiscovery
+## 5. StaticDiscovery
 
 Trivial implementation for fixed topologies. Configured via TOML or code.
 
@@ -321,7 +490,7 @@ class StaticDiscovery : public IServiceDiscovery {
 };
 ```
 
-## 5. UdpRegistrar Refactored as IServiceDiscovery
+## 6. UdpRegistrar Refactored as IServiceDiscovery
 
 The existing `UdpRegistrar` already provides `discover`, `get_all_endpoints`,
 and a `node_callback`. The refactoring is mechanical:
@@ -341,7 +510,7 @@ This preserves backward compatibility — existing users who construct
 `ActorSystem` without setting `service_discovery` get the UdpRegistrar backend
 by default.
 
-## 6. ActorSystem Integration
+## 7. ActorSystem Integration
 
 ```cpp
 // include/hpactor/core/actor_system.hpp — Config changes
@@ -377,7 +546,7 @@ ActorSystem::ActorSystem(config):
     location_cache_ = make_shared<ActorLocationCache>()
 ```
 
-## 7. Configuration (TOML)
+## 8. Configuration (TOML)
 
 ```toml
 [system]
@@ -413,7 +582,7 @@ seeds = [
 # actor_types = ["WorkerActor"]
 ```
 
-## 8. Failure Scenarios and Recovery
+## 9. Failure Scenarios and Recovery
 
 ### Scenario 1: Single node crash (server B dies)
 
@@ -483,7 +652,7 @@ invisible to membership.
   E bootstraps with the full cluster view
 ```
 
-## 9. Migration Path
+## 10. Migration Path
 
 The existing `UdpRegistrar` path is preserved. Migration from embedded registrar
 to gossip is a TOML config change — no code changes:
@@ -509,7 +678,7 @@ Actors continue to use `context()->send(addr, msg)` unchanged. The location
 cache, ActorProxy re-resolution, and ConnectionPool proactive connections all
 work transparently regardless of which `IServiceDiscovery` backend is active.
 
-## 10. New Files
+## 11. New Files
 
 | File | Purpose |
 |------|---------|
@@ -523,7 +692,7 @@ work transparently regardless of which `IServiceDiscovery` backend is active.
 | `tests/net/test_gossip_membership.cpp` | SWIM protocol tests |
 | `tests/net/test_service_discovery.cpp` | Interface + integration tests |
 
-## 11. Existing Files Modified
+## 12. Existing Files Modified
 
 | File | Change |
 |------|--------|
