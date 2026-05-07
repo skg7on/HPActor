@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/http_gateway_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
@@ -25,6 +26,7 @@
 #endif
 #include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
+#include <hpactor/net/async_io_fwd.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/sched/scheduler.hpp>
@@ -99,7 +101,8 @@ ActorSystem::ActorSystem(const Config& config)
         }
 
         if (config_.enable_http_gateway) {
-            // net::HTTPGatewayActor spawn deferred.
+            http_gateway_actor_ = spawn<net::HTTPGatewayActor>(
+                config_.http_bind_host, config_.http_port);
         }
 
         transport_->set_rpc_handler(
@@ -257,9 +260,15 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
-    // Convert I/O completion to a TypedMessage using a system tag placeholder.
-    // TODO: define completion_msg in protobuf or use a dedicated internal path.
-    (void)completion;
+    // Pack the completion into a StreamBuffer for mailbox delivery.
+    // The binary layout is a flat memcpy of the OpCompletion struct —
+    // it is local-only (same process, same address space), so no
+    // endianness or portability concerns.
+    StreamBuffer payload(sizeof(net::OpCompletion));
+    std::memcpy(payload.data(), &completion, sizeof(net::OpCompletion));
+
+    TypedMessage msg(TypeTag::IoCompletionTag, std::move(payload));
+    deliver_local(completion.actor, std::move(msg));
 }
 
 net::Transport*

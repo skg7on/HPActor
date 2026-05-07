@@ -446,7 +446,8 @@ using adt::StreamBuffer;
 //   0x30 – 0x3F   TOML bootstrap (SystemInit)
 //   0x40 – 0x4F   Metrics (MetricsRequest, MetricsResponse)
 //   0x50 – 0x5F   CLI interactive (Inspect, Kill, List, Stats)
-//   0x60 – 0xFF   Reserved for future system use
+//   0x60 – 0x6F   Async I/O (IoCompletion)
+//   0x70 – 0xFF   Reserved for future system use
 //
 // Application sub-ranges (examples):
 //   0x00001000 – 0x00001FFF   Auth subsystem
@@ -497,6 +498,9 @@ enum class TypeTag : uint32_t {
     TopologyShowResponseTag  = 0x5B,
     TopologyRestartRequestTag = 0x5C,
     TopologyRestartResponseTag = 0x5D,
+
+    // Async I/O (0x60 – 0x6F)
+    IoCompletionTag = 0x60,
 
     // ---- Application range ---------------------------------------------------
     User = 0x00001000,

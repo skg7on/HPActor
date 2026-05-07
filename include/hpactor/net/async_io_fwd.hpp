@@ -56,5 +56,14 @@ inline void decode_user_data(uint64_t user_data, int& fd, ActorId& actor,
     op_type = static_cast<uint32_t>((user_data >> 56) & 0xFFULL);
 }
 
+// Unpack an OpCompletion from a StreamBuffer previously packed by
+// ActorSystem::enqueue_completion.  Returns false if the payload size
+// does not match sizeof(OpCompletion).
+inline bool unpack_completion(const StreamBuffer& payload, OpCompletion& out) {
+    if (payload.size() != sizeof(OpCompletion)) return false;
+    std::memcpy(&out, payload.data(), sizeof(OpCompletion));
+    return true;
+}
+
 } // namespace net
 } // namespace hpactor
