@@ -427,10 +427,38 @@ UdpRegistrar::~UdpRegistrar() {
 }
 
 void UdpRegistrar::start() {
-    // Try to bind TCP port to determine if we can be server
+    if (loop_) {
+        // Event-driven path — use the EventLoop-integrated async methods.
+        // Probe server vs client mode by attempting to bind the TCP port.
+        int test_sock = socket(AF_INET, SOCK_STREAM, 0);
+        if (test_sock < 0) {
+            start_client_mode_async();
+            return;
+        }
+
+        int reuse = 1;
+        setsockopt(test_sock, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
+        struct sockaddr_in addr;
+        memset(&addr, 0, sizeof(addr));
+        addr.sin_family = AF_INET;
+        addr.sin_addr.s_addr = INADDR_ANY;
+        addr.sin_port = htons(config_.tcp_port);
+
+        if (bind(test_sock, reinterpret_cast<struct sockaddr*>(&addr),
+                 sizeof(addr)) == 0) {
+            close(test_sock);
+            start_server_mode_async();
+        } else {
+            close(test_sock);
+            start_client_mode_async();
+        }
+        return;
+    }
+
+    // Legacy path — no EventLoop available, use blocking socket I/O.
     int test_sock = socket(AF_INET, SOCK_STREAM, 0);
     if (test_sock < 0) {
-        // Can't create socket - try client mode
         start_client_mode();
         return;
     }
@@ -446,11 +474,9 @@ void UdpRegistrar::start() {
 
     if (bind(test_sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) ==
         0) {
-        // Success - we can be server
         close(test_sock);
         start_server_mode();
     } else {
-        // Port taken - be client
         close(test_sock);
         start_client_mode();
     }
@@ -462,6 +488,10 @@ void UdpRegistrar::stop() {
     client_registry_.reset();
 
     if (udp_socket_ >= 0) {
+        if (loop_) {
+            loop_->clear_read_handler(udp_socket_);
+            loop_->remove_fd(udp_socket_);
+        }
         close(udp_socket_);
         udp_socket_ = -1;
     }
@@ -471,8 +501,7 @@ void UdpRegistrar::start_server_mode() {
     server_ = std::make_unique<RegistrarServer>(config_, local_endpoint_, loop_);
     server_->start();
 
-    // Create UDP socket for sending resolution responses
-    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
+    setup_udp_socket();
 }
 
 void UdpRegistrar::start_client_mode() {
@@ -495,24 +524,21 @@ void UdpRegistrar::start_client_mode() {
         server_endpoint = config_.static_routes[0].endpoint;
     }
 
-    // Create UDP socket for resolution queries
-    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
+    setup_udp_socket();
 
     client_ = std::make_unique<RegistrarClient>(
         config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
+    client_->set_failover_callback([this]() { failover(); });
     client_->start();
 }
 
-void UdpRegistrar::start_server_mode_async() {
-    server_ = std::make_unique<RegistrarServer>(config_, local_endpoint_, loop_);
-    server_->start();
-
-    // Create UDP socket
+void UdpRegistrar::setup_udp_socket() {
     udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udp_socket_ < 0)
-        return;
+    if (udp_socket_ < 0) return;
 
-    // Bind to UDP port
+    int reuse = 1;
+    setsockopt(udp_socket_, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
+
     struct sockaddr_in udp_addr;
     memset(&udp_addr, 0, sizeof(udp_addr));
     udp_addr.sin_family = AF_INET;
@@ -525,15 +551,22 @@ void UdpRegistrar::start_server_mode_async() {
         return;
     }
 
-    // Register with EventLoop for read events
     if (loop_) {
         loop_->add_fd(udp_socket_, EventLoop::Event::Read);
+        loop_->set_read_handler(udp_socket_, [this](int /*fd*/) {
+            handle_udp_read_ready();
+        });
     }
+}
 
-    // Allocate receive buffer
+void UdpRegistrar::start_server_mode_async() {
+    server_ = std::make_unique<RegistrarServer>(config_, local_endpoint_, loop_);
+    server_->start();
+
+    setup_udp_socket();
+    if (udp_socket_ < 0) return;
+
     udp_recv_buffer_.resize(kUdpRecvBufferSize);
-
-    // Issue first async recvfrom
     issue_async_recvfrom();
 }
 
@@ -557,16 +590,15 @@ void UdpRegistrar::start_client_mode_async() {
         server_endpoint = config_.static_routes[0].endpoint;
     }
 
-    // Create UDP socket
-    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udp_socket_ >= 0 && loop_) {
-        loop_->add_fd(udp_socket_, EventLoop::Event::Read);
+    setup_udp_socket();
+    if (udp_socket_ >= 0) {
         udp_recv_buffer_.resize(kUdpRecvBufferSize);
         issue_async_recvfrom();
     }
 
     client_ = std::make_unique<RegistrarClient>(
         config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
+    client_->set_failover_callback([this]() { failover(); });
     client_->start();
 }
 
@@ -580,15 +612,10 @@ void UdpRegistrar::issue_async_recvfrom() {
 }
 
 void UdpRegistrar::handle_udp_read_ready() {
-    if (udp_socket_ < 0 || !loop_)
-        return;
+    if (udp_socket_ < 0) return;
 
-    // Check if UDP socket is readable (edge-triggered)
-    if (!loop_->has_event(udp_socket_, EventLoop::Event::Read)) {
-        return;
-    }
-
-    // Do non-blocking recvfrom
+    // Non-blocking recvfrom — the EventLoop only calls this callback
+    // when the fd is readable (edge-triggered epoll/kqueue).
     char buffer[kUdpRecvBufferSize];
     struct sockaddr_in src_addr;
     socklen_t src_addr_len = sizeof(src_addr);

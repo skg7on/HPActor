@@ -93,18 +93,17 @@ The receiving side creates 4 receive queues per TCP connection. A 3-connection p
 
 Once a connection exists, messages flow through encoding and framing.
 
-### Protocol Buffer Support
-// TODO: 
+Messages are serialized via protobuf into `WireFrame` objects, framed with a
+magic+length header (4 bytes "HPAC" + 4 bytes big-endian length), and sent
+over TCP connections in the connection pool.
 
-### TCP
+See `include/hpactor/net/frame.hpp` for wire format details and
+`src/net/wireframe_connection.cpp` for the read/write implementation.
 
-### UDP
+## Service Discovery Details
 
-### HTTP
-
-### SSL
-
-### DPDK dataplane protocol
+For the embedded registrar architecture (UdpRegistrar, RegistrarServer,
+RegistrarClient), see [udp-registrar.md](udp-registrar.md).
 
 ## Network Transparency in Practice
 

@@ -237,8 +237,8 @@ void RegistrarClient::attempt_connection() {
     // Set up disconnect handler
     server_connection_->set_disconnect_handler([this]() { handle_disconnect(); });
 
-    // Connection successful - will send registration after receiving connection
-    // ready
+    // Connection successful — reset failover counter
+    reconnect_attempts_ = 0;
     connected_.store(true);
 
     // Send registration
@@ -340,6 +340,12 @@ void RegistrarClient::handle_disconnect() {
     if (server_connection_) {
         server_connection_->close();
         server_connection_.reset();
+    }
+
+    reconnect_attempts_++;
+    if (reconnect_attempts_ >= kMaxReconnectAttempts && failover_callback_) {
+        failover_callback_();
+        return;
     }
 
     // Schedule reconnect if still running

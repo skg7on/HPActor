@@ -86,7 +86,8 @@ ActorSystem::ActorSystem(const Config& config)
 
         if (config.udp_port > 0) {
             registrar_ =
-                std::make_unique<net::UdpRegistrar>(config.registrar, endpoint_);
+                std::make_unique<net::UdpRegistrar>(config.registrar, endpoint_,
+                                                   network_loop_.get());
             registrar_->start();
         }
 

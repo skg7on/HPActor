@@ -4,6 +4,52 @@
 
 The UDP Registrar provides **service discovery** for the HPActor distributed actor framework via UDP broadcast/unicast. It enables nodes to discover each other on a local network without centralized coordination, inspired by mDNS/SPDZ conventions.
 
+## Architecture
+
+```
+┌─────────────────────────────────────────────────────────┐
+│ UdpRegistrar (mode-switching facade)                    │
+│                                                         │
+│ start() probes TCP port → server or client mode         │
+│                                                         │
+│ ┌─ Server mode ──────────────────────────────────────┐ │
+│ │ RegistrarServer (TCP: config_.tcp_port)             │ │
+│ │   ├── Acceptor — TCP listener                      │ │
+│ │   ├── NodeRegistry — authoritative copy             │ │
+│ │   └── RegistrarConnection × N — per-client conns   │ │
+│ │                                                     │ │
+│ │ UDP socket (UdpRegistrar-owned, config_.udp_port)   │ │
+│ │   └── set_read_handler → handle_udp_read_ready()   │ │
+│ └─────────────────────────────────────────────────────┘ │
+│                                                         │
+│ ┌─ Client mode ──────────────────────────────────────┐ │
+│ │ RegistrarClient (TCP → server)                      │ │
+│ │   ├── RegistrarConnection × 1 — to server          │ │
+│ │   └── failover_callback → failover() after 5 retries│ │
+│ │                                                     │ │
+│ │ NodeRegistry (client_registry_) — seeded from       │ │
+│ │   static_routes, updated via NodeJoin/NodeLeave     │ │
+│ │                                                     │ │
+│ │ UDP socket (UdpRegistrar-owned, config_.udp_port)   │ │
+│ │   └── set_read_handler → handle_udp_read_ready()   │ │
+│ └─────────────────────────────────────────────────────┘ │
+└─────────────────────────────────────────────────────────┘
+```
+
+**UDP socket ownership**: UdpRegistrar owns the single UDP socket in both modes.
+It creates, binds, and registers the read handler via `setup_udp_socket()`. RegistrarServer
+does NOT create a UDP socket — it is purely a TCP registration authority.
+
+**EventLoop integration**: When an EventLoop is available, `start()` uses the async
+path (`start_server_mode_async()` / `start_client_mode_async()`) which registers
+`handle_udp_read_ready()` as the read handler. The EventLoop invokes it on
+edge-triggered readability; it performs a non-blocking `recvfrom()` loop and
+routes packets to `handle_udp_packet()`.
+
+**Failover**: In client mode, `RegistrarClient` tracks consecutive reconnect
+attempts. After 5 failures, it invokes `failover()`, which probes the TCP port
+and promotes the node to server mode if the port is free.
+
 ## Components
 
 ### 1. RegistrarConfig
@@ -12,21 +58,25 @@ Configuration for the UDP registrar:
 
 ```cpp
 struct RegistrarConfig {
-    uint16_t udp_port = 5353;                     // Default mDNS-style port
+    uint16_t udp_port = 5353;
+    uint16_t tcp_port = 5353;
     std::chrono::milliseconds heartbeat_interval{5000};
     std::chrono::milliseconds expiration_timeout{15000};
+    std::chrono::milliseconds probe_interval{30000};
     std::vector<StaticRouteConfig> static_routes;
-    bool enable_broadcast = true;
+    bool disable_server = false;
 };
 ```
 
 | Field | Default | Description |
 |-------|---------|-------------|
 | `udp_port` | 5353 | UDP port for discovery traffic |
-| `heartbeat_interval` | 5000ms | How often to broadcast NodeAnnounce |
+| `tcp_port` | 5353 | TCP port for registration server |
+| `heartbeat_interval` | 5000ms | How often to send heartbeat |
 | `expiration_timeout` | 15000ms | Time before a node is considered offline |
+| `probe_interval` | 30000ms | Interval for static route liveness probes |
 | `static_routes` | empty | Pre-configured static node routes |
-| `enable_broadcast` | true | Whether to send broadcast announcements |
+| `disable_server` | false | Force client mode (never become server) |
 
 ### 2. StaticRouteConfig
 
@@ -154,45 +204,44 @@ struct NodeProbePayload {
 
 ### Startup (start)
 
-1. Create UDP socket with SO_BROADCAST
-2. Bind to configured UDP port
-3. Add static routes to registry
-4. Send initial NodeAnnounce broadcast
-5. Start periodic broadcast timer (every heartbeat_interval)
+1. Probe TCP port via `bind()` to determine server vs. client mode
+2. **When EventLoop is available**: use async path (`start_server_mode_async` / `start_client_mode_async`)
+3. **Without EventLoop**: use sync path (`start_server_mode` / `start_client_mode`)
+4. Both paths call `setup_udp_socket()` which creates, binds, and registers the read handler
+5. Add static routes to registry (client mode)
+6. Connect to server and send registration (client mode)
 
 ### Node Discovery Flow
 
-1. **Broadcast Announce**: Every heartbeat_interval, broadcast NodeAnnounce to 255.255.255.255
-2. **Receive Announce**: When receiving announce from new node, add to registry and invoke node_callback(online=true)
-3. **Static Route Probe**: Periodically probe static route nodes to verify liveness
-4. **Expiration**: Nodes without announcements within expiration_timeout are removed
+1. **TCP Registration**: Clients connect to the server, send `Register` with endpoint info
+2. **Heartbeat**: Clients send periodic `Heartbeat` messages via TCP to maintain presence
+3. **Broadcast**: Server broadcasts `NodeJoin`/`NodeLeave` to all connected clients
+4. **UDP Resolution**: `ResolveQuery` is handled via the UDP socket read handler; server looks up the endpoint and sends `ResolveResponse`
+5. **Expiration**: Nodes without heartbeats within `expiration_timeout` are removed
 
 ### Message Handling
 
-**handle_packet():**
-1. Validate magic and version
-2. Extract sender NodeId (ignore if local)
-3. Route to appropriate handler by type
+**handle_udp_read_ready():**
+1. Called by EventLoop when UDP socket is readable (edge-triggered)
+2. Non-blocking `recvfrom()` loop until EAGAIN
+3. Routes to `handle_udp_packet()` for parsing and dispatch
 
-**handle_announce():**
-- Update registry with sender info
-- Invoke node_callback(online=true) if new node
+**handle_udp_packet():**
+1. Validates magic and version
+2. Routes to `ResolveQuery` or `ResolveResponse` handler
 
-**handle_leave():**
-- Remove node from registry
-- Invoke node_callback(online=false)
+### Failover
 
-**handle_probe():**
-- Respond with NodeProbeAck
-
-**handle_probe_ack():**
-- Remove probe from pending
-- Update endpoint last_seen
+In client mode, `RegistrarClient` tracks consecutive reconnect failures. After 5
+consecutive disconnects without a successful reconnection, it invokes
+`failover()`, which re-probes the TCP port — if now free, the node promotes
+itself to server mode.
 
 ### Shutdown (stop)
 
-1. Set running_ = false
-2. Close UDP socket
+1. Stop server or client
+2. Clear EventLoop read handler and fd registration
+3. Close UDP socket
 
 ## Thread Safety
 

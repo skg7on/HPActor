@@ -68,30 +68,6 @@ void RegistrarServer::start() {
         handle_accept(fd, remote_ep);
     });
     acceptor_.listen(config_.tcp_port);
-
-    // Create UDP socket for resolution queries
-    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udp_socket_ >= 0) {
-        int reuse = 1;
-        setsockopt(udp_socket_, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-
-        struct sockaddr_in udp_addr;
-        memset(&udp_addr, 0, sizeof(udp_addr));
-        udp_addr.sin_family = AF_INET;
-        udp_addr.sin_addr.s_addr = INADDR_ANY;
-        udp_addr.sin_port = htons(config_.udp_port);
-        if (bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&udp_addr),
-             sizeof(udp_addr)) < 0) {
-            // Bind failed - close socket and set to -1
-            close(udp_socket_);
-            udp_socket_ = -1;
-        }
-
-        // Register UDP socket with EventLoop if we have one
-        if (loop_) {
-            loop_->add_fd(udp_socket_, EventLoop::Event::Read);
-        }
-    }
 }
 
 void RegistrarServer::stop() {
@@ -114,15 +90,6 @@ void RegistrarServer::stop() {
 
     // Close acceptor
     acceptor_.close();
-
-    // Close UDP socket
-    if (udp_socket_ >= 0) {
-        if (loop_) {
-            loop_->remove_fd(udp_socket_);
-        }
-        close(udp_socket_);
-        udp_socket_ = -1;
-    }
 }
 
 void RegistrarServer::handle_accept(int client_fd,

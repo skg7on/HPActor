@@ -334,7 +334,6 @@ class RegistrarServer {
     EventLoop* loop_ = nullptr;
     TcpAcceptor acceptor_;
 
-    int udp_socket_ = -1;
     std::atomic<bool> running_{false};
 
     // Connected clients (endpoint -> connection)
@@ -385,6 +384,7 @@ class UdpRegistrar {
     void start_client_mode();
     void start_server_mode_async();
     void start_client_mode_async();
+    void setup_udp_socket();
     void issue_async_recvfrom();
     void handle_udp_read_ready();
     void handle_udp_recv_completion(const StreamBuffer& data, const std::string& from_host,
@@ -441,6 +441,11 @@ class RegistrarClient {
     // Set acceptors for registration announcement
     void set_acceptors(std::vector<AcceptorInfo> acceptors);
 
+    // Set callback invoked after repeated reconnect failures (for failover)
+    void set_failover_callback(std::function<void()> cb) {
+        failover_callback_ = std::move(cb);
+    }
+
     // Reconnect to server (used after disconnection)
     void reconnect();
 
@@ -475,6 +480,11 @@ class RegistrarClient {
 
     // Acceptors announced during registration
     std::vector<AcceptorInfo> acceptors_;
+
+    // Failover support
+    static constexpr int kMaxReconnectAttempts = 5;
+    int reconnect_attempts_ = 0;
+    std::function<void()> failover_callback_;
 };
 
 } // namespace net
