@@ -19,22 +19,29 @@ This entire pipeline is invisible to your code. You call `Send`, and the framewo
 
 ## Service Discovery
 
-Before connecting to a remote node, the framework needs to know where that node is. Service discovery translates logical node names (`worker@example.com`) into connection parameters (IP, port, TLS, protocol versions).
+Before connecting to a remote node, the framework needs to know where that node
+is — its IP, ports, TLS requirements, protocol versions, and what actor types it
+hosts. Service discovery translates logical identities into concrete connection
+parameters.
 
-The embedded registrar provides basic discovery:
+### Pluggable Backends
 
-* One node per host runs a registrar server (whoever started first)
-* Other nodes connect as clients
-* Same-host discovery is direct (no network)
-* Cross-host discovery uses UDP queries
-* Automatic failover if the server node dies
+Service discovery is abstracted behind the `IServiceDiscovery` interface,
+allowing the backend to be chosen per deployment without changing application
+code:
 
-For production clusters, external registrars provide more features:
+| Backend | Use case | See |
+|---------|----------|-----|
+| **Gossip (SWIM)** | 3-50 nodes, zero-dependency, self-contained | [Architecture](service-discovery-architecture.md) |
+| **Embedded registrar** | Dev, single-server, backward compatibility | [UDP Registrar](udp-registrar.md) |
+| **Static routes** | Fixed topologies, firewalled networks, edge | [Architecture](service-discovery-architecture.md#4-staticdiscovery) |
+| **etcd / Consul** (future) | 50+ nodes, existing infrastructure | — |
 
-* **etcd** - Centralized discovery, application routing, configuration storage, HTTP polling for registration
-* **Saturn** - Purpose-built for Ergo, immediate event propagation, efficient at scale
+### Design Philosophy
 
-The embedded registrar works for development and small deployments. For larger clusters or dynamic topologies, use etcd or Saturn. The choice is transparent to your code - you specify the registrar at node startup, and everything else works identically.
+See [Service Discovery — Core Concept](service-discovery-core-concept.md) for
+the problem statement, trade-off analysis, and why a hybrid approach was chosen
+over a single backend.
 
 
 ## Static Routes
@@ -99,11 +106,6 @@ over TCP connections in the connection pool.
 
 See `include/hpactor/net/frame.hpp` for wire format details and
 `src/net/wireframe_connection.cpp` for the read/write implementation.
-
-## Service Discovery Details
-
-For the embedded registrar architecture (UdpRegistrar, RegistrarServer,
-RegistrarClient), see [udp-registrar.md](udp-registrar.md).
 
 ## Network Transparency in Practice
 
