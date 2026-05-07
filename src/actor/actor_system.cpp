@@ -105,17 +105,16 @@ ActorSystem::ActorSystem(const Config& config)
                 config_.http_bind_host, config_.http_port);
         }
 
-        transport_->set_rpc_handler(
-            [this](hpactor::MessageId id, const hpactor::StreamBuffer& data) {
-                rpc_channel_->on_response(id, data);
-            });
+        if (config.tcp_port > 0) {
+            transport_->set_rpc_handler(
+                [this](hpactor::MessageId id, const hpactor::StreamBuffer& data) {
+                    rpc_channel_->on_response(id, data);
+                });
 
-        transport_->set_actor_message_handler(
-            [this](const net::WireFrame& frame) {
+            transport_->set_actor_message_handler([this](const net::WireFrame& frame) {
                 this->deliver_remote(frame);
             });
 
-        if (config.tcp_port > 0) {
             transport_->listen(config.tcp_port);
         }
 
