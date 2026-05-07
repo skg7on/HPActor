@@ -95,7 +95,7 @@ std::vector<uint8_t> serialize_topology(const TopologyModel& model) {
     bsys.default_mailbox_size = model.system.default_mailbox_size;
     bsys.enable_network = model.system.enable_network ? 1 : 0;
     bsys.tcp_port = model.system.tcp_port;
-    bsys.udp_port = model.system.udp_port;
+    bsys.reserved_pad = 0;
     bsys.spawn_timeout_ms = model.system.spawn_timeout_ms;
     bsys.enable_http_gateway = model.system.enable_http_gateway ? 1 : 0;
     bsys.http_port = model.system.http_port;

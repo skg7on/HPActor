@@ -46,7 +46,7 @@ struct BinarySystemDef {
     uint32_t default_mailbox_size;
     uint32_t enable_network;   // bool as uint32_t
     uint16_t tcp_port;
-    uint16_t udp_port;
+    uint16_t reserved_pad;   // was udp_port (now in RegistrarConfig)
     uint32_t spawn_timeout_ms;
     uint32_t enable_http_gateway;
     uint16_t http_port;

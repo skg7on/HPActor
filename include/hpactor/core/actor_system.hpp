@@ -72,8 +72,7 @@ struct Config {
 
     // Network configuration
     bool enable_network = false;
-    uint16_t tcp_port = 0;    // TCP port to listen on (0 = don't listen)
-    uint16_t udp_port = 5353; // UDP discovery port
+    uint16_t tcp_port = 0;    // Transport TCP port (0 = don't listen)
 
     // Remote spawn configuration
     std::chrono::milliseconds spawn_timeout{5000};

@@ -228,7 +228,6 @@ static result<FileData> parse_file_data(const std::string& filepath,
         data.system.default_mailbox_size = read_uint32(st, "default_mailbox_size", 1024);
         data.system.enable_network = read_bool(st, "enable_network");
         data.system.tcp_port = static_cast<uint16_t>(read_uint32(st, "tcp_port"));
-        data.system.udp_port = static_cast<uint16_t>(read_uint32(st, "udp_port", 5353));
         data.system.spawn_timeout_ms = read_uint32(st, "spawn_timeout_ms", 5000);
         data.system.enable_http_gateway = read_bool(st, "enable_http_gateway");
         data.system.http_bind_host = read_string(st, "http_bind_host", "0.0.0.0");

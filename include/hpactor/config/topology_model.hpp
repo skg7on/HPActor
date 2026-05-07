@@ -80,7 +80,6 @@ struct SystemDef {
     uint32_t default_mailbox_size{1024};
     bool enable_network{false};
     uint16_t tcp_port{0};
-    uint16_t udp_port{5353};
     uint32_t spawn_timeout_ms{5000};
     bool enable_http_gateway{false};
     std::string http_bind_host{"0.0.0.0"};

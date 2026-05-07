@@ -46,7 +46,7 @@ struct RawSystemDef {
     uint32_t default_mailbox_size;
     uint32_t enable_network;
     uint16_t tcp_port;
-    uint16_t udp_port;
+    uint16_t reserved_pad;
     uint32_t spawn_timeout_ms;
     uint32_t enable_http_gateway;
     uint16_t http_port;
@@ -132,7 +132,6 @@ result<TopologyModel> load_binary_topology(const std::string& path) {
     model.system.default_mailbox_size = rsys->default_mailbox_size;
     model.system.enable_network = rsys->enable_network != 0;
     model.system.tcp_port = rsys->tcp_port;
-    model.system.udp_port = rsys->udp_port;
     model.system.spawn_timeout_ms = rsys->spawn_timeout_ms;
     model.system.enable_http_gateway = rsys->enable_http_gateway != 0;
     model.system.http_bind_host = str_at(str_table, rsys->http_bind_host_offset);
