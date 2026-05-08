@@ -92,6 +92,7 @@ struct SystemDef {
     uint32_t metrics_ring_buffer_capacity{65536};
     std::string metrics_path{"/metrics"};
     hpactor::cli::CliConfig cli;
+    std::string discovery_backend;
     std::vector<std::string> imports;
 };
 

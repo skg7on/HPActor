@@ -265,6 +265,12 @@ static result<FileData> parse_file_data(const std::string& filepath,
             }
         }
 
+        // ── Service discovery ────────────────────────────────────
+        if (auto dt = st["discovery"]; dt.is_table()) {
+            data.system.discovery_backend =
+                read_string(*dt.as_table(), "backend", "");
+        }
+
         if (auto* imp_arr = st.get("imports")) {
             if (imp_arr->is_array()) {
                 for (const auto& v : *imp_arr->as_array()) {

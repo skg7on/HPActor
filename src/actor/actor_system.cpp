@@ -84,11 +84,36 @@ ActorSystem::ActorSystem(const Config& config)
         network_loop_ = std::make_unique<net::EventLoop>();
         network_loop_->set_actor_system(this);
 
-        if (config.registrar.udp_port > 0) {
-            registrar_ =
-                std::make_unique<net::UdpRegistrar>(config.registrar, endpoint_,
-                                                   network_loop_.get());
-            registrar_->start();
+        // ── Service discovery backend ────────────────────────────
+        if (config.service_discovery) {
+            discovery_ = config.service_discovery;
+        } else if (config.registrar.udp_port > 0) {
+            auto reg = std::make_shared<net::UdpRegistrar>(
+                config.registrar, endpoint_, network_loop_.get());
+            discovery_ = reg;
+            registrar_ = reg;  // shared ownership for registrar() accessor
+        } else {
+            discovery_ = std::make_shared<net::StaticDiscovery>(
+                std::vector<net::Member>{});
+        }
+
+        discovery_->start();
+
+        discovery_->on_member_change([this](const net::Member& m, bool joined) {
+            if (!joined) {
+                on_node_dead(m.endpoint);
+            }
+            // Note: proactive connection pool warming (prewarm_pool) will be
+            // integrated in a follow-up task when ConnectionPool is updated.
+        });
+
+        location_cache_ = std::make_shared<net::ActorLocationCache>();
+        if (network_loop_) {
+            cache_purge_timer_ = network_loop_->run_every(
+                [this]() {
+                    if (location_cache_) location_cache_->purge_expired();
+                },
+                60000);
         }
 
         transport_ = std::make_unique<net::TcpTransport>(endpoint_, config.tls,
@@ -163,11 +188,30 @@ ActorSystem::~ActorSystem() {
         if (transport_) {
             transport_->stop_listening();
         }
-        if (registrar_) {
-            registrar_->stop();
+        if (discovery_) {
+            discovery_->stop();
         }
     }
     scheduler_->stop();
+}
+
+void ActorSystem::on_node_dead(EndPoint dead_ep) {
+    // Find all actors linked to or monitoring actors on the dead endpoint.
+    // Uses the internal actor_contexts_ map directly (actor_context() is
+    // a protected member of AbstractActor, not accessible from ActorSystem).
+    std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
+    for (const auto& [id, ctx] : actor_contexts_) {
+        if (!ctx) continue;
+        for (const auto& addr : ctx->linked_actors()) {
+            if (addr.endpoint == dead_ep) {
+                TypedMessage down(TypeTag::DownMsg, StreamBuffer{});
+                down.set_sender_address(ActorAddress{dead_ep, 0, ActorId(0), 0});
+                deliver_local(id, std::move(down));
+                break;
+            }
+        }
+    }
+    if (location_cache_) location_cache_->evict_node(dead_ep);
 }
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {

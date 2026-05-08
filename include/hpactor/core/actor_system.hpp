@@ -21,6 +21,10 @@
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/registrar.hpp>
+#include <hpactor/net/service_discovery.hpp>
+#include <hpactor/net/static_discovery.hpp>
+#include <hpactor/net/gossip_membership.hpp>
+#include <hpactor/net/actor_location_cache.hpp>
 #include <hpactor/net/http_client.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
@@ -100,6 +104,13 @@ struct Config {
 
     // CLI configuration
     cli::CliConfig cli;
+
+    // Service discovery backend. nullptr = auto-select based on enable_network
+    // and registrar config (backward compatible).
+    std::shared_ptr<net::IServiceDiscovery> service_discovery = nullptr;
+
+    // Gossip configuration. Used when creating GossipMembership internally.
+    net::GossipConfig gossip = {};
 
     // Timer backend selection
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
@@ -236,6 +247,10 @@ class ActorSystem {
     // Bridges the transport layer to the unified deliver_local() sink.
     void deliver_remote(const net::WireFrame& frame);
 
+    // Called by IServiceDiscovery when a remote node becomes unreachable.
+    // Finds all actors linked to the dead endpoint and delivers DownMsg.
+    void on_node_dead(EndPoint dead_ep);
+
     // Enqueue an I/O completion to be delivered to an actor
     // Called by EventLoop when async operations complete
     void enqueue_completion(net::OpCompletion completion);
@@ -303,7 +318,10 @@ class ActorSystem {
 
     // Network components (owned)
     std::unique_ptr<net::TcpTransport> transport_;
-    std::unique_ptr<net::UdpRegistrar> registrar_;
+    std::shared_ptr<net::UdpRegistrar> registrar_;
+    std::shared_ptr<net::IServiceDiscovery> discovery_;
+    std::shared_ptr<net::ActorLocationCache> location_cache_;
+    uint64_t cache_purge_timer_ = 0;
     std::unique_ptr<net::EventLoop> network_loop_;
     std::thread network_thread_;
 
