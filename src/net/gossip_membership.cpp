@@ -14,6 +14,9 @@
 
 #include <hpactor/net/gossip_membership.hpp>
 
+#include <hpactor/gossip.pb.h>
+#include <hpactor/net/registrar.hpp>  // for endpoint_ops, HostResolver
+
 #include <arpa/inet.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -26,303 +29,154 @@
 namespace hpactor::net {
 
 // =============================================================================
-// Internal wire-format helpers (anonymous namespace)
+// Internal helpers (anonymous namespace)
 // =============================================================================
 namespace {
 
-// ---- Write helpers (big-endian, append to StreamBuffer) ----
+// ---- Endpoint conversion to/from string (reuses endpoint_ops) ----
 
-void write_u8(StreamBuffer& buf, uint8_t v) {
-    buf.push_back(v);
+std::string ep_to_string(const EndPoint& ep) {
+    return endpoint_ops::to_string(ep);
 }
 
-void write_u16_be(StreamBuffer& buf, uint16_t v) {
-    uint16_t be = htons(v);
-    buf.append(reinterpret_cast<const uint8_t*>(&be), sizeof(be));
+EndPoint ep_from_string(const std::string& s) {
+    return endpoint_ops::parse_endpoint(s);
 }
 
-void write_u32_be(StreamBuffer& buf, uint32_t v) {
-    uint32_t be = htonl(v);
-    buf.append(reinterpret_cast<const uint8_t*>(&be), sizeof(be));
-}
+// ---- Piggyback entry conversion to/from protobuf ----
 
-void write_u64_be(StreamBuffer& buf, uint64_t v) {
-    // Manual big-endian encoding (portable, no htonll dependency)
-    for (int i = 7; i >= 0; --i) {
-        buf.push_back(static_cast<uint8_t>(v >> (static_cast<unsigned>(i) * 8)));
+void to_pb_piggyback(PbPiggybackEntry* pb, const PiggybackEntry& entry) {
+    pb->set_type(static_cast<PbPiggybackType>(entry.type));
+    pb->set_endpoint(ep_to_string(entry.endpoint));
+    pb->set_incarnation(entry.incarnation);
+    for (const auto& s : entry.actor_types) pb->add_actor_types(s);
+    pb->set_load(entry.load);
+    for (const auto& acc : entry.acceptors) {
+        auto* a = pb->add_acceptors();
+        a->set_port(acc.port);
+        a->set_handshake_version(acc.handshake_version);
+        a->set_protocol_version(acc.protocol_version);
+        a->set_tls_required(acc.tls_required);
     }
 }
 
-void write_bytes(StreamBuffer& buf, const uint8_t* data, size_t len) {
-    buf.append(data, len);
-}
-
-// ---- Read helpers (big-endian, from raw buffer, return false on underrun) ----
-
-bool read_u8(const uint8_t* data, size_t data_len, size_t& pos, uint8_t& out) {
-    if (pos + 1 > data_len) return false;
-    out = data[pos];
-    pos += 1;
-    return true;
-}
-
-bool read_u16_be(const uint8_t* data, size_t data_len, size_t& pos, uint16_t& out) {
-    if (pos + 2 > data_len) return false;
-    uint16_t be;
-    std::memcpy(&be, data + pos, sizeof(be));
-    out = ntohs(be);
-    pos += 2;
-    return true;
-}
-
-bool read_u32_be(const uint8_t* data, size_t data_len, size_t& pos, uint32_t& out) {
-    if (pos + 4 > data_len) return false;
-    uint32_t be;
-    std::memcpy(&be, data + pos, sizeof(be));
-    out = ntohl(be);
-    pos += 4;
-    return true;
-}
-
-bool read_u64_be(const uint8_t* data, size_t data_len, size_t& pos, uint64_t& out) {
-    if (pos + 8 > data_len) return false;
-    // Manual big-endian decode
-    out = 0;
-    for (int i = 0; i < 8; ++i) {
-        out = (out << 8) | static_cast<uint64_t>(data[pos + static_cast<size_t>(i)]);
+PiggybackEntry from_pb_piggyback(const PbPiggybackEntry& pb) {
+    PiggybackEntry entry;
+    entry.type = static_cast<PiggybackType>(pb.type());
+    entry.endpoint = ep_from_string(pb.endpoint());
+    entry.incarnation = pb.incarnation();
+    for (const auto& s : pb.actor_types()) entry.actor_types.push_back(s);
+    entry.load = pb.load();
+    for (const auto& a : pb.acceptors()) {
+        AcceptorInfo acc;
+        acc.port = static_cast<uint16_t>(a.port());
+        acc.handshake_version = static_cast<uint8_t>(a.handshake_version());
+        acc.protocol_version = static_cast<uint8_t>(a.protocol_version());
+        acc.tls_required = a.tls_required();
+        entry.acceptors.push_back(acc);
     }
-    pos += 8;
-    return true;
+    return entry;
 }
 
-// ---- Endpoint encode/decode ----
-//
-// Wire format for an endpoint (with length prefix):
-//   len (1B) | addr_family (1B) | address | port (2B BE)
-//   addr_family: 0x04 = IPv4, 0x06 = IPv6
-//   len = 1 + addr_bytes + 2  (i.e., 7 for IPv4, 19 for IPv6)
+// ---- Member conversion to/from protobuf ----
 
-void encode_endpoint_with_len(StreamBuffer& buf, const EndPoint& ep) {
-    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
-        write_u8(buf, 7);            // len: 1(af) + 4(addr) + 2(port)
-        write_u8(buf, 0x04);         // AF_INET
-        write_u32_be(buf, ipv4->addr);
-        write_u16_be(buf, ipv4->port_nw);
+void to_pb_member(PbGossipMember* pb, const Member& m) {
+    pb->set_endpoint(ep_to_string(m.endpoint));
+    pb->set_host(m.host);
+    pb->set_tcp_port(m.tcp_port);
+    pb->set_uds_path(m.uds_path);
+    pb->set_incarnation(m.incarnation);
+    pb->set_status(static_cast<uint32_t>(m.status));
+    for (const auto& s : m.actor_types) pb->add_actor_types(s);
+    for (const auto& acc : m.acceptors) {
+        auto* a = pb->add_acceptors();
+        a->set_port(acc.port);
+        a->set_handshake_version(acc.handshake_version);
+        a->set_protocol_version(acc.protocol_version);
+        a->set_tls_required(acc.tls_required);
+    }
+}
+
+Member from_pb_member(const PbGossipMember& pb) {
+    Member m;
+    m.endpoint = ep_from_string(pb.endpoint());
+    m.host = pb.host();
+    m.tcp_port = static_cast<uint16_t>(pb.tcp_port());
+    m.uds_path = pb.uds_path();
+    m.incarnation = pb.incarnation();
+    m.status = static_cast<MemberStatus>(pb.status());
+    for (const auto& s : pb.actor_types()) m.actor_types.push_back(s);
+    for (const auto& a : pb.acceptors()) {
+        AcceptorInfo acc;
+        acc.port = static_cast<uint16_t>(a.port());
+        acc.handshake_version = static_cast<uint8_t>(a.handshake_version());
+        acc.protocol_version = static_cast<uint8_t>(a.protocol_version());
+        acc.tls_required = a.tls_required();
+        m.acceptors.push_back(acc);
+    }
+    return m;
+}
+
+// ---- Async UDP send via EventLoop ----
+// Uses the EventLoop's async_sendto (non-blocking, completion-driven).
+// Falls back to blocking sendto when no EventLoop is available.
+
+void async_udp_send(EventLoop* loop, int sock, const StreamBuffer& data,
+                    const EndPoint& dest) {
+    if (sock < 0 || data.empty()) return;
+
+    if (loop) {
+        struct iovec iov;
+        iov.iov_base = const_cast<uint8_t*>(data.data());
+        iov.iov_len = data.size();
+
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&dest)) {
+            addr.sin_addr.s_addr = ipv4->addr;
+            addr.sin_port = ipv4->port_nw;
+        }
+
+        loop->backend()->async_sendto(
+            sock, &iov, 1, reinterpret_cast<const sockaddr*>(&addr),
+            sizeof(addr), ActorId(0), static_cast<uint32_t>(OpType::SendTo));
     } else {
-        auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep);
-        write_u8(buf, 19);           // len: 1(af) + 16(addr) + 2(port)
-        write_u8(buf, 0x06);         // AF_INET6
-        write_bytes(buf, ipv6->addr.data(), 16);
-        write_u16_be(buf, ipv6->port_nw);
+        // Legacy fallback: blocking sendto
+        sockaddr_in addr{};
+        addr.sin_family = AF_INET;
+        if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&dest)) {
+            addr.sin_addr.s_addr = ipv4->addr;
+            addr.sin_port = ipv4->port_nw;
+        }
+        sendto(sock, data.data(), data.size(), 0,
+               reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
     }
 }
 
-bool decode_endpoint_with_len(const uint8_t* data, size_t data_len, size_t& pos,
-                               EndPoint& out) {
-    uint8_t ep_len;
-    if (!read_u8(data, data_len, pos, ep_len)) return false;
-    if (pos + ep_len > data_len) return false;
-
-    uint8_t af;
-    if (!read_u8(data, data_len, pos, af)) return false;
-
-    if (af == 0x04) {
-        // IPv4
-        uint32_t addr;
-        uint16_t port_nw;
-        if (!read_u32_be(data, data_len, pos, addr)) return false;
-        if (!read_u16_be(data, data_len, pos, port_nw)) return false;
-        out = Ipv4Endpoint{addr, port_nw};
-        return true;
-    } else if (af == 0x06) {
-        // IPv6
-        if (pos + 16 + 2 > data_len) return false;
-        std::array<uint8_t, 16> addr;
-        std::memcpy(addr.data(), data + pos, 16);
-        pos += 16;
-        uint16_t port_nw;
-        if (!read_u16_be(data, data_len, pos, port_nw)) return false;
-        out = Ipv6Endpoint{addr, port_nw};
-        return true;
-    }
-    return false; // Unknown address family
-}
-
-// ---- Piggyback entry encode/decode ----
-
-void encode_piggyback(StreamBuffer& buf, const PiggybackEntry& entry) {
-    write_u8(buf, static_cast<uint8_t>(entry.type));
-    encode_endpoint_with_len(buf, entry.endpoint);
-    write_u64_be(buf, entry.incarnation);
-
-    // Metadata fields (PiggybackType::Metadata)
-    // Encode metadata only when present (non-empty actor_types, non-zero load, or
-    // non-empty acceptors). Write a field count byte even for non-Metadata entries
-    // (0 fields) to keep the format regular.
-    size_t field_count_pos = buf.size();
-    write_u8(buf, 0); // Field count placeholder
-    uint8_t field_count = 0;
-
-    // actor_types (tag 0x01): null-separated strings
-    if (!entry.actor_types.empty()) {
-        ++field_count;
-        write_u8(buf, 0x01); // tag: actor_types
-        // Compute payload length
-        size_t payload = 0;
-        for (const auto& s : entry.actor_types) {
-            payload += s.size() + 1; // string + null terminator
-        }
-        write_u16_be(buf, static_cast<uint16_t>(payload));
-        for (const auto& s : entry.actor_types) {
-            write_bytes(buf, reinterpret_cast<const uint8_t*>(s.data()), s.size());
-            write_u8(buf, 0); // null separator
-        }
-    }
-
-    // load (tag 0x02): uint32_t BE
-    if (entry.load != 0) {
-        ++field_count;
-        write_u8(buf, 0x02); // tag: load
-        write_u16_be(buf, 4); // length
-        write_u32_be(buf, entry.load);
-    }
-
-    // acceptors (tag 0x03): repeated (port 2B BE | handshake 1B | protocol 1B | tls 1B)
-    if (!entry.acceptors.empty()) {
-        ++field_count;
-        write_u8(buf, 0x03); // tag: acceptors
-        uint16_t payload = static_cast<uint16_t>(entry.acceptors.size() * 5);
-        write_u16_be(buf, payload);
-        for (const auto& acc : entry.acceptors) {
-            write_u16_be(buf, acc.port);
-            write_u8(buf, acc.handshake_version);
-            write_u8(buf, acc.protocol_version);
-            write_u8(buf, acc.tls_required ? 1 : 0);
-        }
-    }
-
-    // Patch field count
-    if (field_count <= 0xff && buf.size() > field_count_pos) {
-        // We need to write to buf[field_count_pos]. The field count pos is relative
-        // to the logical start, but the buffer may have consumed data. Since we
-        // haven't consumed anything in this function, the logical index equals the
-        // absolute index.
-        buf[field_count_pos] = field_count;
-    }
-}
-
-bool decode_piggyback(const uint8_t* data, size_t data_len, size_t& pos,
-                       PiggybackEntry& out) {
-    uint8_t type_byte;
-    if (!read_u8(data, data_len, pos, type_byte)) return false;
-    out.type = static_cast<PiggybackType>(type_byte);
-
-    if (!decode_endpoint_with_len(data, data_len, pos, out.endpoint)) return false;
-    if (!read_u64_be(data, data_len, pos, out.incarnation)) return false;
-
-    // Metadata fields
-    uint8_t field_count;
-    if (!read_u8(data, data_len, pos, field_count)) return false;
-
-    for (uint8_t f = 0; f < field_count; ++f) {
-        uint8_t tag;
-        uint16_t field_len;
-        if (!read_u8(data, data_len, pos, tag)) return false;
-        if (!read_u16_be(data, data_len, pos, field_len)) return false;
-        if (pos + field_len > data_len) return false;
-
-        if (tag == 0x01) {
-            // actor_types: null-separated strings
-            const uint8_t* field_start = data + pos;
-            size_t remaining = field_len;
-            while (remaining > 0) {
-                const char* str_start = reinterpret_cast<const char*>(field_start);
-                size_t str_len = strnlen(str_start, remaining);
-                if (str_len > 0) {
-                    out.actor_types.emplace_back(str_start, str_len);
-                }
-                size_t consumed = str_len + 1; // string + null
-                consumed = std::min(consumed, remaining);
-                field_start += consumed;
-                remaining -= consumed;
-            }
-        } else if (tag == 0x02) {
-            // load: uint32_t BE
-            if (field_len >= 4) {
-                uint32_t be;
-                std::memcpy(&be, data + pos, sizeof(be));
-                out.load = ntohl(be);
-            }
-        } else if (tag == 0x03) {
-            // acceptors: repeated (port 2B | handshake 1B | protocol 1B | tls 1B)
-            if (field_len >= 5) {
-                size_t count = field_len / 5;
-                for (size_t i = 0; i < count; ++i) {
-                    AcceptorInfo acc;
-                    uint16_t port_be;
-                    std::memcpy(&port_be, data + pos, sizeof(port_be));
-                    acc.port = ntohs(port_be);
-                    pos += 2;
-                    acc.handshake_version = data[pos++];
-                    acc.protocol_version = data[pos++];
-                    acc.tls_required = (data[pos++] != 0);
-                    out.acceptors.push_back(acc);
-                }
-                continue; // pos already advanced, skip the pos += field_len below
-            }
-        }
-        pos += field_len;
-    }
-
-    return true;
-}
-
-// ---- Instance extras (per-instance state not in the header) ----
-// This avoids modifying gossip_membership.hpp while supporting the full protocol.
+// ---- Per-instance state (RNG, join retry, forwarded pings) ----
 
 struct InstanceExtras {
-    std::mt19937 rng{std::random_device{}()};
+    std::mt19937 rng;
+    bool rng_seeded = false;
     size_t join_seed_index = 0;
     uint64_t join_retry_timer = 0;
-    // Map: ping_target -> original_requester (for PingReq -> IndirectAck bridging)
     std::unordered_map<EndPoint, EndPoint> forwarded_pings;
-    // Piggyback entries to include in next outgoing message
-    std::vector<PiggybackEntry> pending_piggyback;
 };
 
-// Per-instance extended state keyed by GossipMembership pointer.
 static std::unordered_map<const GossipMembership*, InstanceExtras> s_extras;
 
 static InstanceExtras& extras_for(const GossipMembership* self) {
-    return s_extras[self];
+    auto& extras = s_extras[self];
+    if (!extras.rng_seeded) {
+        std::random_device rd;
+        extras.rng.seed(rd());
+        extras.rng_seeded = true;
+    }
+    return extras;
 }
 
 static void cleanup_extras(const GossipMembership* self) {
     s_extras.erase(self);
-}
-
-// ---- Sockaddr helpers ----
-
-/// Build a sockaddr_in from an IPv4Endpoint and UDP port.
-/// The port in the endpoint is used directly.
-sockaddr_in make_sockaddr(const EndPoint& ep) {
-    sockaddr_in addr{};
-    addr.sin_family = AF_INET;
-    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
-        addr.sin_addr.s_addr = ipv4->addr;
-        addr.sin_port = ipv4->port_nw;
-    }
-    // IPv6 not yet supported for gossip transport
-    return addr;
-}
-
-/// Send a pre-built buffer to a destination endpoint via UDP.
-bool udp_sendto(int sock, const StreamBuffer& data, const EndPoint& dest) {
-    if (sock < 0) return false;
-    sockaddr_in addr = make_sockaddr(dest);
-    ssize_t sent = sendto(sock, data.data(), data.size(), 0,
-                          reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
-    return sent == static_cast<ssize_t>(data.size());
 }
 
 } // anonymous namespace
@@ -489,33 +343,73 @@ void GossipMembership::on_member_change(MemberChangeCallback cb) {
 
 StreamBuffer GossipMembership::encode_message(GossipMessageType type, uint64_t inc,
     uint32_t seq, EndPoint ping_target, const std::vector<PiggybackEntry>& pb) const {
-    StreamBuffer buf;
+    PbGossipEnvelope env;
+    env.set_magic(GossipMagic);
+    env.set_version(GossipVersion);
+    env.set_type(static_cast<PbGossipMessageType>(type));
+    env.set_flags(0);
 
-    // Fixed header: magic + version + type + flags
-    write_u32_be(buf, GossipMagic);          // 4B
-    write_u8(buf, GossipVersion);            // 1B
-    write_u8(buf, static_cast<uint8_t>(type)); // 1B
-    write_u16_be(buf, 0);                    // 2B flags (reserved)
-
-    // Sender endpoint (our local state endpoint)
-    encode_endpoint_with_len(buf, config_.local_state.endpoint);
-
-    // Incarnation + sequence number
-    write_u64_be(buf, inc);  // 8B
-    write_u32_be(buf, seq);  // 4B
-
-    // Ping target (PingReq only)
-    if (type == GossipMessageType::PingReq) {
-        encode_endpoint_with_len(buf, ping_target);
+    // Build per-type payload
+    switch (type) {
+    case GossipMessageType::Ping: {
+        auto* ping = env.mutable_ping();
+        ping->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        ping->set_incarnation(inc);
+        ping->set_seq_no(seq);
+        for (const auto& e : pb) to_pb_piggyback(ping->add_piggyback(), e);
+        break;
+    }
+    case GossipMessageType::Ack: {
+        auto* ack = env.mutable_ack();
+        ack->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        ack->set_incarnation(inc);
+        for (const auto& e : pb) to_pb_piggyback(ack->add_piggyback(), e);
+        break;
+    }
+    case GossipMessageType::PingReq: {
+        auto* pr = env.mutable_ping_req();
+        pr->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        pr->set_target_endpoint(ep_to_string(ping_target));
+        pr->set_incarnation(inc);
+        break;
+    }
+    case GossipMessageType::IndirectAck: {
+        auto* ia = env.mutable_indirect_ack();
+        ia->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        ia->set_original_requester(ep_to_string(ping_target));
+        ia->set_incarnation(inc);
+        break;
+    }
+    case GossipMessageType::Join: {
+        auto* join = env.mutable_join();
+        join->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        join->set_incarnation(inc);
+        join->set_host(config_.local_state.host);
+        join->set_tcp_port(config_.local_state.tcp_port);
+        join->set_uds_path(config_.local_state.uds_path);
+        for (const auto& s : config_.local_state.actor_types)
+            join->add_actor_types(s);
+        for (const auto& acc : config_.local_state.acceptors) {
+            auto* a = join->add_acceptors();
+            a->set_port(acc.port);
+            a->set_handshake_version(acc.handshake_version);
+            a->set_protocol_version(acc.protocol_version);
+            a->set_tls_required(acc.tls_required);
+        }
+        break;
+    }
+    case GossipMessageType::Leave: {
+        auto* leave = env.mutable_leave();
+        leave->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        leave->set_incarnation(inc);
+        break;
+    }
+    default:
+        break;
     }
 
-    // Piggyback entries
-    write_u16_be(buf, static_cast<uint16_t>(pb.size()));
-    for (const auto& entry : pb) {
-        encode_piggyback(buf, entry);
-    }
-
-    return buf;
+    std::string serialized = env.SerializeAsString();
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
 // =============================================================================
@@ -525,111 +419,95 @@ StreamBuffer GossipMembership::encode_message(GossipMessageType type, uint64_t i
 bool GossipMembership::decode_message(const StreamBuffer& data, GossipMessageType& type,
     EndPoint& sender, uint64_t& inc, uint32_t& seq, EndPoint& ping_target,
     std::vector<PiggybackEntry>& pb) const {
-    const uint8_t* raw = data.data();
-    size_t len = data.size();
-    size_t pos = 0;
+    PbGossipEnvelope env;
+    if (!env.ParseFromArray(data.data(), static_cast<int>(data.size()))) return false;
+    if (env.magic() != GossipMagic || env.version() != GossipVersion) return false;
 
-    // Magic
-    uint32_t magic;
-    if (!read_u32_be(raw, len, pos, magic)) return false;
-    if (magic != GossipMagic) return false;
-
-    // Version
-    uint8_t version;
-    if (!read_u8(raw, len, pos, version)) return false;
-    if (version != GossipVersion) return false;
-
-    // Type
-    uint8_t type_byte;
-    if (!read_u8(raw, len, pos, type_byte)) return false;
-    type = static_cast<GossipMessageType>(type_byte);
-
-    // Flags (skip for now)
-    uint16_t flags;
-    if (!read_u16_be(raw, len, pos, flags)) return false;
-    (void)flags;
-
-    // Sender endpoint
-    if (!decode_endpoint_with_len(raw, len, pos, sender)) return false;
-
-    // Incarnation
-    if (!read_u64_be(raw, len, pos, inc)) return false;
-
-    // Sequence number
-    if (!read_u32_be(raw, len, pos, seq)) return false;
-
-    // Ping target (PingReq only)
-    if (type == GossipMessageType::PingReq) {
-        if (!decode_endpoint_with_len(raw, len, pos, ping_target)) return false;
-    }
-
-    // Piggyback entries
-    uint16_t pb_count;
-    if (!read_u16_be(raw, len, pos, pb_count)) return false;
-
+    type = static_cast<GossipMessageType>(env.type());
     pb.clear();
-    pb.reserve(pb_count);
-    for (uint16_t i = 0; i < pb_count; ++i) {
-        PiggybackEntry entry;
-        if (!decode_piggyback(raw, len, pos, entry)) return false;
-        pb.push_back(std::move(entry));
+
+    switch (type) {
+    case GossipMessageType::Ping:
+        if (!env.has_ping()) return false;
+        sender = ep_from_string(env.ping().sender_endpoint());
+        inc = env.ping().incarnation();
+        seq = env.ping().seq_no();
+        for (const auto& e : env.ping().piggyback())
+            pb.push_back(from_pb_piggyback(e));
+        break;
+    case GossipMessageType::Ack:
+        if (!env.has_ack()) return false;
+        sender = ep_from_string(env.ack().sender_endpoint());
+        inc = env.ack().incarnation();
+        seq = 0;
+        for (const auto& e : env.ack().piggyback())
+            pb.push_back(from_pb_piggyback(e));
+        break;
+    case GossipMessageType::PingReq:
+        if (!env.has_ping_req()) return false;
+        sender = ep_from_string(env.ping_req().sender_endpoint());
+        ping_target = ep_from_string(env.ping_req().target_endpoint());
+        inc = env.ping_req().incarnation();
+        seq = 0;
+        break;
+    case GossipMessageType::IndirectAck:
+        if (!env.has_indirect_ack()) return false;
+        sender = ep_from_string(env.indirect_ack().sender_endpoint());
+        ping_target = ep_from_string(env.indirect_ack().original_requester());
+        inc = env.indirect_ack().incarnation();
+        seq = 0;
+        break;
+    case GossipMessageType::Join:
+        if (!env.has_join()) return false;
+        sender = ep_from_string(env.join().sender_endpoint());
+        inc = env.join().incarnation();
+        seq = 0;
+        break;
+    case GossipMessageType::SyncRsp:
+        // SyncRsp is handled by decode_sync_rsp(), not this path
+        return false;
+    case GossipMessageType::Leave:
+        if (!env.has_leave()) return false;
+        sender = ep_from_string(env.leave().sender_endpoint());
+        inc = env.leave().incarnation();
+        seq = 0;
+        break;
     }
 
-    // We don't require exact consumption (future extensions may append fields)
     return true;
 }
 
 // =============================================================================
-// Wire protocol — encode_sync_rsp
+// Wire protocol — encode_sync_rsp (protobuf)
 // =============================================================================
-//
-// Binary format:
-//   Count (4B BE) | Member[0..N]
-//   Member: endpoint (var, len-prefixed) | incarnation (8B BE) | flags (1B: status)
 
 StreamBuffer GossipMembership::encode_sync_rsp(const std::vector<Member>& members) const {
-    StreamBuffer buf;
-
-    write_u32_be(buf, static_cast<uint32_t>(members.size()));
-
+    PbGossipSyncRsp rsp;
+    rsp.set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+    rsp.set_incarnation(incarnation_);
     for (const auto& m : members) {
-        encode_endpoint_with_len(buf, m.endpoint);
-        write_u64_be(buf, m.incarnation);
-        write_u8(buf, static_cast<uint8_t>(m.status));
+        to_pb_member(rsp.add_members(), m);
     }
-
-    return buf;
+    std::string serialized = rsp.SerializeAsString();
+    return StreamBuffer(serialized.begin(), serialized.end());
 }
 
 // =============================================================================
-// Wire protocol — decode_sync_rsp
+// Wire protocol — decode_sync_rsp (protobuf)
 // =============================================================================
 
 bool GossipMembership::decode_sync_rsp(const StreamBuffer& data,
                                         std::vector<Member>& members) const {
-    const uint8_t* raw = data.data();
-    size_t len = data.size();
-    size_t pos = 0;
-
-    uint32_t count;
-    if (!read_u32_be(raw, len, pos, count)) return false;
+    PbGossipSyncRsp rsp;
+    if (!rsp.ParseFromArray(data.data(), static_cast<int>(data.size()))) return false;
 
     members.clear();
-    members.reserve(count);
-
-    for (uint32_t i = 0; i < count; ++i) {
-        Member m;
-        if (!decode_endpoint_with_len(raw, len, pos, m.endpoint)) return false;
-        if (!read_u64_be(raw, len, pos, m.incarnation)) return false;
-
-        uint8_t status_byte;
-        if (!read_u8(raw, len, pos, status_byte)) return false;
-        m.status = static_cast<MemberStatus>(status_byte);
-
+    members.reserve(static_cast<size_t>(rsp.members_size()));
+    for (const auto& pb_m : rsp.members()) {
+        Member m = from_pb_member(pb_m);
         m.last_seen = std::chrono::steady_clock::now();
         members.push_back(std::move(m));
     }
-
     return true;
 }
 
@@ -715,7 +593,7 @@ void GossipMembership::protocol_round() {
             for (const auto& target : targets) {
                 StreamBuffer msg = encode_message(GossipMessageType::Ping,
                     incarnation_, seq_no_++, config_.local_state.endpoint, pb);
-                udp_sendto(udp_socket_, msg, target);
+                async_udp_send(loop_, udp_socket_,msg, target);
 
                 // Record pending ping.
                 // pending_pings_ is protected by members_mutex_ in our design.
@@ -909,7 +787,7 @@ void GossipMembership::handle_ping(EndPoint sender, uint64_t inc, uint32_t /*seq
     // Send Ack with piggyback.
     StreamBuffer ack_msg = encode_message(GossipMessageType::Ack,
         incarnation_, seq_no_++, config_.local_state.endpoint, ack_pb);
-    udp_sendto(udp_socket_, ack_msg, sender);
+    async_udp_send(loop_, udp_socket_,ack_msg, sender);
 }
 
 void GossipMembership::handle_ack(EndPoint sender, uint64_t inc,
@@ -968,7 +846,7 @@ void GossipMembership::handle_ping_req(EndPoint sender, EndPoint target) {
 
     StreamBuffer msg = encode_message(GossipMessageType::Ping,
         incarnation_, seq_no_++, config_.local_state.endpoint, pb);
-    udp_sendto(udp_socket_, msg, target);
+    async_udp_send(loop_, udp_socket_,msg, target);
 }
 
 void GossipMembership::handle_indirect_ack(EndPoint sender, EndPoint target) {
@@ -1074,13 +952,13 @@ void GossipMembership::send_ping(EndPoint target) {
     }
     StreamBuffer msg = encode_message(GossipMessageType::Ping,
         incarnation_, seq_no_++, config_.local_state.endpoint, pb);
-    udp_sendto(udp_socket_, msg, target);
+    async_udp_send(loop_, udp_socket_,msg, target);
 }
 
 void GossipMembership::send_ack(EndPoint target, std::vector<PiggybackEntry> pb) {
     StreamBuffer msg = encode_message(GossipMessageType::Ack,
         incarnation_, seq_no_++, config_.local_state.endpoint, pb);
-    udp_sendto(udp_socket_, msg, target);
+    async_udp_send(loop_, udp_socket_,msg, target);
 }
 
 void GossipMembership::send_ping_req(EndPoint proxy, EndPoint target) {
@@ -1093,7 +971,7 @@ void GossipMembership::send_ping_req(EndPoint proxy, EndPoint target) {
     }
     StreamBuffer msg = encode_message(GossipMessageType::PingReq,
         incarnation_, seq_no_++, target, pb);
-    udp_sendto(udp_socket_, msg, proxy);
+    async_udp_send(loop_, udp_socket_,msg, proxy);
 }
 
 void GossipMembership::send_indirect_ack(EndPoint target, EndPoint orig_target) {
@@ -1101,7 +979,7 @@ void GossipMembership::send_indirect_ack(EndPoint target, EndPoint orig_target) 
     std::vector<PiggybackEntry> pb; // empty piggyback for indirect ack
     StreamBuffer msg = encode_message(GossipMessageType::IndirectAck,
         incarnation_, seq_no_++, orig_target, pb);
-    udp_sendto(udp_socket_, msg, target);
+    async_udp_send(loop_, udp_socket_,msg, target);
 }
 
 void GossipMembership::send_join(EndPoint seed) {
@@ -1118,7 +996,7 @@ void GossipMembership::send_join(EndPoint seed) {
     }
     StreamBuffer msg = encode_message(GossipMessageType::Join,
         incarnation_, seq_no_++, config_.local_state.endpoint, pb);
-    udp_sendto(udp_socket_, msg, seed);
+    async_udp_send(loop_, udp_socket_,msg, seed);
 }
 
 void GossipMembership::send_sync_rsp(EndPoint target) {
@@ -1134,14 +1012,14 @@ void GossipMembership::send_sync_rsp(EndPoint target) {
         }
     }
     StreamBuffer data = encode_sync_rsp(table);
-    udp_sendto(udp_socket_, data, target);
+    async_udp_send(loop_, udp_socket_,data, target);
 }
 
 void GossipMembership::send_leave(EndPoint target) {
     std::vector<PiggybackEntry> pb; // empty piggyback for leave
     StreamBuffer msg = encode_message(GossipMessageType::Leave,
         incarnation_, seq_no_++, config_.local_state.endpoint, pb);
-    udp_sendto(udp_socket_, msg, target);
+    async_udp_send(loop_, udp_socket_,msg, target);
 }
 
 // =============================================================================

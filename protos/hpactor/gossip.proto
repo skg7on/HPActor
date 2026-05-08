@@ -1,0 +1,115 @@
+// protos/hpactor/gossip.proto
+syntax = "proto3";
+
+package hpactor;
+
+option optimize_for = SPEED;
+
+import "hpactor/registrar.proto";  // for PbAcceptorInfo
+
+// ── Gossip protocol message types ──────────────────────────────────────
+enum PbGossipMessageType {
+    GOSSIP_PING         = 0;
+    GOSSIP_ACK          = 1;
+    GOSSIP_PING_REQ     = 2;
+    GOSSIP_INDIRECT_ACK = 3;
+    GOSSIP_JOIN         = 4;
+    GOSSIP_SYNC_RSP     = 5;
+    GOSSIP_LEAVE        = 6;
+}
+
+// ── Piggyback entry types ──────────────────────────────────────────────
+enum PbPiggybackType {
+    PB_ALIVE      = 0;
+    PB_SUSPICIOUS = 1;
+    PB_DEAD       = 2;
+    PB_METADATA   = 3;
+}
+
+// ── Wire envelope (magic + version validated at recv) ──────────────────
+message PbGossipEnvelope {
+    fixed32 magic     = 1;  // 0x48504743 ("HPGC")
+    uint32  version   = 2;  // 0x01
+    PbGossipMessageType type = 3;
+    uint32  flags     = 4;
+
+    oneof payload {
+        PbGossipPing         ping          = 10;
+        PbGossipAck          ack           = 11;
+        PbGossipPingReq      ping_req      = 12;
+        PbGossipIndirectAck  indirect_ack  = 13;
+        PbGossipJoin         join          = 14;
+        PbGossipSyncRsp      sync_rsp      = 15;
+        PbGossipLeave        leave         = 16;
+    }
+}
+
+// ── Piggyback entry ────────────────────────────────────────────────────
+message PbPiggybackEntry {
+    PbPiggybackType type        = 1;
+    string          endpoint    = 2;  // endpoint_ops::to_string()
+    uint64          incarnation = 3;
+    // Metadata fields (only meaningful when type == PB_METADATA)
+    repeated string actor_types = 4;
+    uint32          load        = 5;
+    repeated PbAcceptorInfo acceptors = 6;
+}
+
+// ── Per-message payloads ───────────────────────────────────────────────
+
+message PbGossipPing {
+    string  sender_endpoint = 1;  // endpoint_ops::to_string()
+    uint64  incarnation     = 2;
+    uint32  seq_no          = 3;
+    repeated PbPiggybackEntry piggyback = 4;
+}
+
+message PbGossipAck {
+    string  sender_endpoint = 1;
+    uint64  incarnation     = 2;
+    repeated PbPiggybackEntry piggyback = 3;
+}
+
+message PbGossipPingReq {
+    string  sender_endpoint = 1;  // who is requesting
+    string  target_endpoint = 2;  // who to probe
+    uint64  incarnation     = 3;
+}
+
+message PbGossipIndirectAck {
+    string  sender_endpoint      = 1;  // who performed the indirect probe
+    string  original_requester   = 2;  // who originally sent the PingReq
+    uint64  incarnation          = 3;
+}
+
+message PbGossipJoin {
+    string  sender_endpoint = 1;
+    uint64  incarnation     = 2;
+    string  host            = 3;
+    uint32  tcp_port        = 4;
+    string  uds_path        = 5;
+    repeated string         actor_types   = 6;
+    repeated PbAcceptorInfo acceptors     = 7;
+}
+
+message PbGossipMember {
+    string  endpoint    = 1;
+    string  host        = 2;
+    uint32  tcp_port    = 3;
+    string  uds_path    = 4;
+    uint64  incarnation = 5;
+    uint32  status      = 6;  // 0=Alive, 1=Suspicious, 2=Dead, 3=Left
+    repeated string         actor_types = 7;
+    repeated PbAcceptorInfo acceptors   = 8;
+}
+
+message PbGossipSyncRsp {
+    string  sender_endpoint = 1;
+    uint64  incarnation     = 2;
+    repeated PbGossipMember members = 3;
+}
+
+message PbGossipLeave {
+    string  sender_endpoint = 1;
+    uint64  incarnation     = 2;
+}

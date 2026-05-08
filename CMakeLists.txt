@@ -306,6 +306,7 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/common.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/messages.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/registrar.proto
+    ${CMAKE_SOURCE_DIR}/protos/hpactor/gossip.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/cli_messages.proto
 )
 add_library(hpactor_proto SHARED ${PROTO_SRCS} ${PROTO_HDRS})
