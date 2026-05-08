@@ -24,7 +24,7 @@ cmake -DENABLE_EXAMPLES=OFF ..    # Disable examples (default ON)
 cmake -DENABLE_PROACTOR=ON ..     # Enable proactor backend
 cmake -DENABLE_MEMORY_DEBUG=ON .. # Enable memory poisoning + canary verification
 cmake -DENABLE_ACTOR_METRICS=OFF .. # Disable actor-level metrics (default ON)
-cmake -DENABLE_CLI=OFF ..       # Disable interactive CLI subsystem (default ON)
+cmake -DENABLE_CLI=OFF ..       # Disable interactive CLI subsystem (default ON, runtime opt-in via cli.enabled)
 ```
 
 ## Architecture

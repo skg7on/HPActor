@@ -91,7 +91,7 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **Virtual `to_metadata()` Interface**: Every actor exposes lightweight inspectable summary — no CLI knowledge of specific actor types needed
 - **Remote Attach Ready**: Configurable UDS/TCP listener for `hpactor attach` from separate process (future frontend)
 - **TOML Configurable**: `[system.cli]` section — enable/disable, listen path, default format, page size
-- **Compile-Time Disable**: `ENABLE_CLI=OFF` for zero-overhead deployments
+- **Runtime Opt-In**: CLI actor spawned only when `cli.enabled = true` in config (default: false)
 
 ### Declarative Topology Configuration
 - **TOML-Based Topology**: Declare actor trees, supervision hierarchies, and dispatcher bindings in TOML — `ActorSystem::load_topology("config.toml")` bootstraps the entire system

@@ -242,21 +242,17 @@ set_source_files_properties(
 )
 target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR} third_party/llhttp)
 
-if(ENABLE_CLI)
-    target_sources(hpactor_lib PRIVATE
-        src/cli/lexer.cpp
-        src/cli/command_node.cpp
-        src/cli/line_editor.cpp
-        src/cli/pretty_formatter.cpp
-        src/cli/json_formatter.cpp
-        src/cli/tabular_formatter.cpp
-        src/cli/pager.cpp
-        src/cli/cli_actor.cpp
-    )
-    set(HPACTOR_ENABLE_CLI 1)
-else()
-    set(HPACTOR_ENABLE_CLI 0)
-endif()
+target_sources(hpactor_lib PRIVATE
+    src/cli/lexer.cpp
+    src/cli/command_node.cpp
+    src/cli/line_editor.cpp
+    src/cli/pretty_formatter.cpp
+    src/cli/json_formatter.cpp
+    src/cli/tabular_formatter.cpp
+    src/cli/pager.cpp
+    src/cli/cli_actor.cpp
+)
+set(HPACTOR_ENABLE_CLI 1)
 
 # Enable exceptions for TOML parser (toml++ requires them)
 set_source_files_properties(

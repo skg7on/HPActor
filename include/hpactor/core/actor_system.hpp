@@ -53,11 +53,9 @@ namespace hpactor {
 class AsyncActor;
 class ActorTypeRegistry;
 
-#if HPACTOR_ENABLE_CLI
 namespace cli {
 class CliActor;
 } // namespace cli
-#endif
 
 
 // Scheduler interface forward declaration
@@ -218,10 +216,8 @@ class ActorSystem {
     // Get metrics ring buffer (nullptr if metrics disabled)
     auto* metrics_ring_buffer() const { return metrics_ring_buffer_.get(); }
 
-#if HPACTOR_ENABLE_CLI
     // Get CLI actor (nullptr if CLI disabled or not yet spawned)
     cli::CliActor* cli_actor() const;
-#endif
 
     // Get actor's mailbox (used by scheduler)
     mailbox::MPSCActorMailbox<TypedMessage>* get_mailbox(ActorId id);
@@ -337,10 +333,8 @@ class ActorSystem {
     // HTTP gateway actor (DaemonActor, spawned when enable_http_gateway = true)
     Actor http_gateway_actor_{nullptr};
 
-#if HPACTOR_ENABLE_CLI
     // CLI actor (DaemonActor, spawned when cli.enabled = true)
     std::shared_ptr<cli::CliActor> cli_actor_;
-#endif
 
     // Metrics configuration and ring buffer
     metrics::MetricsConfig metrics_config_;
