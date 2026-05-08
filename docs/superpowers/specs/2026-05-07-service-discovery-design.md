@@ -191,7 +191,34 @@ private:
   `entry.endpoint == ep`. N bounded by cache size (typically dozens, not
   thousands).
 - `purge_expired()` — exclusive lock. Removes all expired entries. Called
-  periodically (every 60s via EventLoop timer) and on `discover_all()`.
+  on every `discover_all()` (amortized cleanup). For periodic cleanup,
+  `ActorSystem` creates a 60s EventLoop timer that calls `purge_expired()`.
+  The timer handle is stored on `ActorSystem` and cancelled in `~ActorSystem()`.
+  `ActorLocationCache` itself has no timer — it is a passive data structure.
+
+**How `discovery_` and `location_cache_` reach `ActorProxy`:**
+
+`ActorProxy` currently holds `address_` (ActorAddress) and `transport_`
+(TcpTransport*). Two new pointer members are added:
+
+```cpp
+// actor_proxy.hpp — changes
+class ActorProxy {
+    // ... existing members ...
+    IServiceDiscovery* discovery_ = nullptr;   // set by ActorSystem on construction
+    ActorLocationCache* location_cache_ = nullptr;
+};
+```
+
+These are set by `ActorSystem` when it creates the proxy. ActorProxy does not
+own them — it holds raw pointers to ActorSystem-owned objects. This avoids
+ownership cycles: ActorSystem owns discovery_ and location_cache_ (shared_ptr),
+ActorProxy references them (raw ptr, valid for process lifetime).
+
+Alternatively (lower-overhead): store the pointers on `TcpTransport` and pass
+them in `send()` as additional arguments to avoid touching ActorProxy's
+constructor signature. The planner should pick the approach that minimizes
+diff to the existing `actor_proxy.hpp` header.
 
 **Integration with `ActorProxy::send()`** (`src/ref/actor_proxy.cpp`, ~15 lines):
 
@@ -276,7 +303,6 @@ private:
     void handle_indirect_ack(EndPoint sender, EndPoint target);
     void handle_join(EndPoint sender, uint64_t incarnation,
                      std::vector<PiggybackEntry> piggyback);
-    void handle_sync_req(EndPoint sender);
     void handle_sync_rsp(std::vector<Member> members);
     void handle_leave(EndPoint sender, uint64_t incarnation);
 
@@ -286,7 +312,6 @@ private:
     void send_ping_req(EndPoint proxy, EndPoint target);
     void send_indirect_ack(EndPoint target, EndPoint original_target);
     void send_join(EndPoint seed);
-    void send_sync_req(EndPoint target);
     void send_sync_rsp(EndPoint target);
     void send_leave(EndPoint target);
 
@@ -335,6 +360,8 @@ struct PendingPing {
     std::chrono::steady_clock::time_point expires_at;
     bool indirect_requested = false;
     std::chrono::steady_clock::time_point indirect_expires_at;
+    // Note: indirect_expires_at = expires_at + ping_timeout (same timeout).
+    // Indirect probes reuse ping_timeout — there is no separate config field.
 };
 ```
 
@@ -378,10 +405,9 @@ Ethernet MTU after IP/UDP headers).
 | Ack | 0x02 | Response to Ping |
 | PingReq | 0x03 | Request indirect probe |
 | IndirectAck | 0x04 | Indirect probe response |
-| Join | 0x05 | Bootstrap: request membership table |
-| SyncReq | 0x06 | Request full membership table |
-| SyncRsp | 0x07 | Full membership table response |
-| Leave | 0x08 | Graceful departure |
+| Join | 0x05 | Bootstrap: request membership table from seed |
+| SyncRsp | 0x06 | Response to Join — full membership table |
+| Leave | 0x07 | Graceful departure |
 
 **Piggyback entry types:**
 | Type | Value | Description |
@@ -393,8 +419,15 @@ Ethernet MTU after IP/UDP headers).
 
 ### 6.4 Bootstrap Sequence (`start()`)
 
-1. Set `incarnation_` = `Clock::now().time_since_epoch().count()` (wall-clock
-   monotonic — survives restart, won't wrap for 585 years).
+1. Initialize `incarnation_`: compute `Clock::now().time_since_epoch().count()`
+   using `std::chrono::system_clock` (wall-clock nanoseconds). On restart, time
+   has advanced, so the new incarnation is higher than any previous incarnation
+   from this node. Acceptable risk: NTP adjustments can jump backwards by small
+   amounts (typically milliseconds). If incarnation regresses, the node loses
+   conflict resolution for one protocol round — peers reject its messages as
+   stale, mark it Suspicious, then the node self-corrects by issuing a new
+   `announce()` with `incarnation_ = max(previous, previously_seen + 1)`. This
+   is a documented edge case in section 10.
 2. `setup_udp_socket()` — create, `SO_REUSEADDR`, bind to `config_.gossip_port`,
    `add_fd` + `set_read_handler` on EventLoop.
 3. Add self to `members_` with status `Alive`.
@@ -416,7 +449,9 @@ Ethernet MTU after IP/UDP headers).
      peers, send `PingReq(target)` to each. Set `indirect_requested = true`.
    - Expired + indirect was requested → `mark_suspicious(target)`.
 4. Check all suspicious members: if `now - last_seen > suspicion_timeout`,
-   `mark_dead(target)`.
+   `mark_dead(target)`. No confirmation counter is needed — the
+   suspicion_timeout alone gates the transition (standard SWIM design: other
+   nodes independently confirm via their own ping failures).
 5. `purge_dead_tombstones()` — remove dead entries where
    `now - last_seen > dead_timeout`.
 
@@ -426,20 +461,21 @@ Ethernet MTU after IP/UDP headers).
      ┌─────────┐
      │  None   │  (never seen this endpoint)
      └────┬────┘
-          │ Join/Ping/Ack with higher incarnation
+          │ Join/Ping/Ack with any incarnation
+          │ (first contact — accept unconditionally)
           ▼
      ┌─────────┐
-┌────│  Alive  │◄────┐
-│    └────┬────┘     │ higher incarnation from same endpoint
-│         │          │
-│   direct│          │
-│   ping  │          │
-│   fails │          │
-│         ▼          │
-│    ┌───────────┐   │
-│    │ Suspicious │───┘ (timeout elapsed, no confirmation)
+┌────│  Alive  │◄──────────────────┐
+│    └────┬────┘                   │
+│         │                        │ higher-incarnation message
+│   direct│                        │ arrives from this endpoint
+│   ping  │                        │ (Alive, Ack, or piggyback Alive entry)
+│   fails │                        │
+│         ▼                        │
+│    ┌───────────┐                 │
+│    │ Suspicious │────────────────┘
 │    └─────┬─────┘
-│          │ k nodes confirm + suspicion_timeout elapsed
+│          │ suspicion_timeout elapsed
 │          ▼
 │    ┌─────────┐
 │    │  Dead   │
@@ -452,6 +488,23 @@ Ethernet MTU after IP/UDP headers).
 │  Left   │
 └─────────┘
 ```
+
+Transitions:
+- **None → Alive**: First contact — accept any incarnation.
+- **Alive → Suspicious**: Direct ping fails (no Ack within `ping_timeout`) AND
+  indirect probes via `indirect_probes` peers also fail.
+- **Suspicious → Alive**: A higher-incarnation message arrives from this
+  endpoint. The node recovered or the suspicion was wrong.
+- **Suspicious → Dead**: `suspicion_timeout` elapsed without a
+  higher-incarnation message. No confirmation counter needed (standard SWIM).
+- **Alive → Alive**: Higher incarnation message — accept new state.
+- **Alive → Left**: Graceful `Leave` message received.
+- **Dead → tombstone**: Purged after `dead_timeout`.
+
+Incarnation numbers resolve conflicts: when a restarted node announces with a
+higher incarnation, peers accept the new Alive state even if stale Suspicious
+markers exist for the old incarnation. If NTP causes a brief incarnation
+regression (rare), the node self-corrects on the next protocol round.```
 
 ### 6.7 Thread Safety
 
@@ -504,6 +557,7 @@ private:
 
     UdpRegistrar registrar_;
     GossipMembership gossip_;
+    EndPoint local_ep_;
     MemberChangeCallback user_callback_;
 };
 ```
@@ -646,7 +700,7 @@ udp_port = 5353
 |------|----------|
 | Gossip with zero seeds | Solo cluster. `members_` = {self}. Protocol round no-ops (no peers). When another node with this node as seed joins, cluster grows. |
 | UDP port conflict | `setup_udp_socket()` bind fails → `udp_socket_ = -1` → log warning → protocol round no-ops. Node operates solo. |
-| Incarnation wraparound | `uint64_t` from wall clock — 585 years to wrap. Not a concern. |
+| Incarnation regression (NTP) | `system_clock` can jump backwards. If incarnation regresses, peers reject this node's messages for one protocol round (stale incarnation). Node detects the rejections, self-corrects with `announce(incarnation = max(previous, peers_seen + 1))`. Recovers within 2 protocol rounds. |
 | Empty `announce()` | Valid. Updates self member's `last_seen` and incarnation. Can be used as explicit heartbeat from application code. |
 | `discover()` stale pointer | The `const Member*` points into internal map. Valid until next mutation on that backend. Documented constraint. |
 | `on_member_change` callback throws | Undefined behavior. Callback must not throw (HPActor is `-fno-exceptions`). |
