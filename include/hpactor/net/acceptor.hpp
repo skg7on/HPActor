@@ -17,6 +17,7 @@
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
@@ -24,6 +25,16 @@
 namespace hpactor {
 
 namespace net {
+
+// -----------------------------------------------------------------------------
+// AcceptorInfo - information about a server acceptor
+// -----------------------------------------------------------------------------
+struct AcceptorInfo {
+    uint16_t port = 0;
+    uint8_t handshake_version = 0;
+    uint8_t protocol_version = 0;
+    bool tls_required = false;
+};
 
 // -----------------------------------------------------------------------------
 // Acceptor - abstract base for server socket listeners

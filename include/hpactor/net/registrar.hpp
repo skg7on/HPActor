@@ -16,6 +16,7 @@
 
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/service_discovery.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -31,16 +32,6 @@
 namespace hpactor {
 
 namespace net {
-
-// -----------------------------------------------------------------------------
-// AcceptorInfo - information about a server acceptor
-// -----------------------------------------------------------------------------
-struct AcceptorInfo {
-    uint16_t port = 0;
-    uint8_t handshake_version = 0;
-    uint8_t protocol_version = 0;
-    bool tls_required = false;
-};
 
 // -----------------------------------------------------------------------------
 // RegistrarConfig - configuration for registrar
@@ -346,7 +337,7 @@ class RegistrarServer {
 // -----------------------------------------------------------------------------
 // UdpRegistrar - Dual-mode registrar (server or client)
 // -----------------------------------------------------------------------------
-class UdpRegistrar {
+class UdpRegistrar : public IServiceDiscovery {
   public:
     UdpRegistrar(const RegistrarConfig& config,
                  EndPoint local_endpoint, EventLoop* loop = nullptr);
@@ -362,8 +353,8 @@ class UdpRegistrar {
     }
 
     // Start listening - determines server vs client mode based on bind result
-    void start();
-    void stop();
+    void start() override;
+    void stop() override;
 
     // Query endpoint
     NodeEndpoint* get_endpoint(EndPoint endpoint);
@@ -378,6 +369,16 @@ class UdpRegistrar {
     // Handle incoming UDP packet (for resolution)
     void handle_udp_packet(const StreamBuffer& data, const std::string& from_host,
                            uint16_t from_port);
+
+    // ── IServiceDiscovery overrides ────────────────────────────────────
+    std::vector<Member> discover_all() const override;
+    const Member* discover(EndPoint ep) const override;
+    void announce(Member m) override;
+    void on_member_change(MemberChangeCallback cb) override;
+    std::string backend_name() const override { return "udp-registrar"; }
+    const std::unordered_map<EndPoint, Member>* raw_members() const override {
+        return &endpoint_to_member_;
+    }
 
   private:
     void start_server_mode();
@@ -413,6 +414,11 @@ class UdpRegistrar {
     int udp_socket_ = -1;
 
     node_callback node_callback_;
+
+    // IServiceDiscovery state
+    static Member to_member(const NodeEndpoint& ep);
+    mutable std::unordered_map<EndPoint, Member> endpoint_to_member_;
+    MemberChangeCallback member_change_cb_;
 };
 
 // -----------------------------------------------------------------------------

@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/types/types.hpp>
-#include <hpactor/net/registrar.hpp>
+#include <hpactor/net/acceptor.hpp>
 
 #include <chrono>
 #include <cstdint>

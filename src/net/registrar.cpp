@@ -846,5 +846,66 @@ void UdpRegistrar::handle_udp_packet(const StreamBuffer& data, const std::string
     }
 }
 
+// ── IServiceDiscovery overrides ────────────────────────────────────────────
+
+Member UdpRegistrar::to_member(const NodeEndpoint& ep) {
+    Member m;
+    m.endpoint = ep.endpoint;
+    m.host = ep.host;
+    m.tcp_port = ep.tcp_port;
+    m.uds_path = ep.uds_path;
+    m.acceptors = ep.acceptors;
+    m.last_seen = ep.last_seen;
+    return m;
+}
+
+std::vector<Member> UdpRegistrar::discover_all() const {
+    std::vector<Member> result;
+
+    // Collect from server registry
+    auto eps = get_all_endpoints();
+    result.reserve(eps.size());
+    for (const auto& ep : eps) result.push_back(to_member(ep));
+
+    // Also collect from client registry (static routes)
+    if (client_registry_) {
+        auto client_eps = client_registry_->all();
+        result.reserve(result.size() + client_eps.size());
+        for (const auto& ep : client_eps) result.push_back(to_member(ep));
+    }
+
+    return result;
+}
+
+const Member* UdpRegistrar::discover(EndPoint ep) const {
+    // Check server registry first
+    if (server_) {
+        auto* node_ep = server_->registry()->get(ep);
+        if (node_ep) {
+            endpoint_to_member_[ep] = to_member(*node_ep);
+            return &endpoint_to_member_[ep];
+        }
+    }
+
+    // Check client registry
+    if (client_registry_) {
+        auto* node_ep = client_registry_->get(ep);
+        if (node_ep) {
+            endpoint_to_member_[ep] = to_member(*node_ep);
+            return &endpoint_to_member_[ep];
+        }
+    }
+
+    return nullptr;
+}
+
+void UdpRegistrar::announce(Member) {
+    // No-op: registrar server handles membership via Register/Heartbeat.
+}
+
+void UdpRegistrar::on_member_change(MemberChangeCallback cb) {
+    member_change_cb_ = std::move(cb);
+}
+
 } // namespace net
 } // namespace hpactor
