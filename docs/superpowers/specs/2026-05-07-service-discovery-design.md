@@ -31,6 +31,7 @@ struct Member {
     std::vector<std::string> actor_types;
     MemberStatus status = MemberStatus::Alive;
     uint64_t incarnation = 0;
+    // Not transmitted on wire — receivers set to steady_clock::now() on receipt.
     std::chrono::steady_clock::time_point last_seen;
 };
 
@@ -183,8 +184,10 @@ private:
 };
 ```
 
-- `get()` — shared lock. Returns `nullopt` if not cached or expired. Purges
-  expired entries on read (amortized cleanup).
+- `get()` — shared lock. Returns `nullopt` if not cached or expired. Does NOT
+  erase expired entries from the map (shared lock cannot upgrade). Deferred
+  eviction happens via the timer-driven `purge_expired()`, which holds the
+  exclusive lock. Callers that need immediate eviction call `evict()`.
 - `put()` — exclusive lock. Overwrites existing entry.
 - `evict()` — exclusive lock. Removes specific entry.
 - `evict_node()` — exclusive lock. O(N) scan and remove all entries where
@@ -351,6 +354,7 @@ private:
     std::unordered_map<EndPoint, PendingPing> pending_pings_;
     MemberChangeCallback member_change_cb_;
     uint64_t protocol_timer_ = 0;
+    bool needs_dissemination_ = false;  // set by announce(), checked by protocol_round()
     std::vector<uint8_t> recv_buffer_;  // 64KB
 
     mutable std::shared_mutex members_mutex_;
@@ -415,7 +419,24 @@ Ethernet MTU after IP/UDP headers).
 | Alive | 0x01 | Node is alive (new incarnation) |
 | Suspicious | 0x02 | Node is suspected dead |
 | Dead | 0x03 | Node is confirmed dead |
-| Metadata | 0x04 | Actor types, load, acceptors |
+| Metadata | 0x04 | Actor types, load, acceptors (see below) |
+
+**Metadata piggyback encoding** (compact binary, field-tag format):
+
+```
+Field Count (1B) | Field[0..N]
+Field: Tag (1B) | Length (2B, big-endian) | Value (Length bytes)
+
+Tags: 0x01 = actor_types, 0x02 = load, 0x03 = acceptors
+```
+
+- `actor_types`: null-separated strings (e.g., "WorkerActor\0HTTPGatewayActor\0")
+- `load`: single uint32_t (big-endian), application-defined
+- `acceptors`: repeated entries of `port(2B BE) | handshake_version(1B) | protocol_version(1B) | tls_required(1B)`
+
+Fields are optional — any subset may be present. Unknown tags are skipped
+(forward-compatible). Total Metadata section must fit within the remaining
+piggyback space after the Endpoint + Incarnation header.
 
 ### 6.4 Bootstrap Sequence (`start()`)
 
@@ -441,12 +462,16 @@ Ethernet MTU after IP/UDP headers).
 
 ### 6.5 Protocol Round (`protocol_round()`)
 
-1. Pick `config_.fanout` random alive peers (excluding self) via
-   `pick_random_peers()`.
+1. Pick up to `config_.fanout` random alive peers (excluding self) via
+   `pick_random_peers()`. If fewer peers exist than `fanout`, all available
+   peers are selected. If zero alive peers exist (solo cluster), the round
+   no-ops.
 2. Send `Ping` to each. Record `PendingPing` with `expires_at`.
 3. Check all pending pings:
-   - Expired + no indirect requested → pick `config_.indirect_probes` other
-     peers, send `PingReq(target)` to each. Set `indirect_requested = true`.
+   - Expired + no indirect requested → pick up to `config_.indirect_probes`
+     other peers, send `PingReq(target)` to each. If zero other peers are
+     available (2-node cluster), skip indirect probes and immediately
+     `mark_suspicious(target)`. Set `indirect_requested = true`.
    - Expired + indirect was requested → `mark_suspicious(target)`.
 4. Check all suspicious members: if `now - last_seen > suspicion_timeout`,
    `mark_dead(target)`. No confirmation counter is needed — the
@@ -516,7 +541,10 @@ regression (rare), the node self-corrects on the next protocol round.```
   thread (actor threads, main thread). Protected by `shared_mutex` — shared
   lock for reads.
 - `announce()` can be called from any thread. Acquires exclusive lock on
-  `members_mutex_`, updates self entry.
+  `members_mutex_`, updates self entry, increments `incarnation_`, sets
+  `needs_dissemination_ = true`. The updated metadata is piggybacked on the
+  next timer-driven `protocol_round()` (no out-of-band send — piggyback is
+  sufficient for metadata propagation).
 - `on_member_change()` callback is invoked under the exclusive lock. Callback
   must not call back into `GossipMembership`.
 
@@ -634,14 +662,28 @@ ActorSystem::ActorSystem(config):
     location_cache_ = make_shared<ActorLocationCache>()
 ```
 
-### 8.3 New Members
+### 8.3 `prewarm_pool()` (ConnectionPool integration)
+
+```cpp
+// Called from on_member_change(joined=true). Proactively establishes a
+// connection pool entry for the remote endpoint so the first send() avoids
+// DNS + TCP handshake + TLS latency. Delegates to the existing
+// TcpTransport::get_or_create_pool(). Non-blocking — connect happens
+// asynchronously via EventLoop. Failures are silent: the pool entry exists
+// but has zero active connections; the first send() triggers a retry.
+// Signature added to ConnectionPool (src/net/connection_pool.cpp, ~20 lines).
+void prewarm_pool(EndPoint ep, const std::vector<AcceptorInfo>& acceptors);
+```
+
+### 8.4 New Members
 
 ```cpp
 std::shared_ptr<net::IServiceDiscovery> discovery_;
 std::shared_ptr<net::ActorLocationCache> location_cache_;
+uint64_t cache_purge_timer_ = 0;  // 60s EventLoop timer for purge_expired()
 ```
 
-### 8.4 `on_node_dead(EndPoint)`
+### 8.5 `on_node_dead(EndPoint)`
 
 Called from `on_member_change(joined=false)`. Iterates all actors via
 `for_each_actor()`. For each actor with links or monitors to actors on the dead
