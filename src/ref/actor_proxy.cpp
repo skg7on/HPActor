@@ -15,7 +15,9 @@
 // ActorProxy implementation - see actor_proxy.hpp
 
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/net/actor_location_cache.hpp>
 #include <hpactor/net/frame.hpp>
+#include <hpactor/net/service_discovery.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 
@@ -32,20 +34,40 @@ void ActorProxy::send(const ActorAddress& target, TypedMessage msg) {
     if (transport_ == nullptr) {
         return;  // Silently drop; matches fire-and-forget semantics
     }
+
+    // Resolve via location cache or discovery
+    ActorAddress resolved_target = target;
+    if (location_cache_) {
+        auto cached = location_cache_->get(target.id);
+        if (cached) {
+            resolved_target.endpoint = *cached;
+        }
+    }
+    if (discovery_) {
+        auto* member = discovery_->discover(resolved_target.endpoint);
+        if (!member) {
+            return;  // Unreachable, silently drop (fire-and-forget)
+        }
+        resolved_target.endpoint = member->endpoint;
+        if (location_cache_) {
+            location_cache_->put(target.id, resolved_target.endpoint);
+        }
+    }
+
     net::WireFrame frame;
     // Use msg.sender_address() if present, fall back to the proxy address
     const auto& sender_addr = msg.sender_address().id != ActorId{0}
                             ? msg.sender_address()
                             : address_;
     net::to_proto(frame.pb_frame.mutable_sender(), sender_addr);
-    net::to_proto(frame.pb_frame.mutable_receiver(), target);
+    net::to_proto(frame.pb_frame.mutable_receiver(), resolved_target);
     frame.pb_frame.set_message_id(MessageId::generate().value());
     frame.pb_frame.set_type_tag(static_cast<uint32_t>(msg.type_id()));
     frame.pb_frame.set_payload(
         reinterpret_cast<const char*>(msg.payload().data()),
         msg.payload().size());
 
-    transport_->send(target, frame.encode());
+    transport_->send(resolved_target, frame.encode());
 }
 
 } // namespace hpactor

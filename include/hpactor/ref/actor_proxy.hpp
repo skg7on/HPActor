@@ -24,6 +24,8 @@ namespace hpactor {
 class ActorSystem;
 namespace net {
 class Transport;
+class IServiceDiscovery;
+class ActorLocationCache;
 }
 
 // -----------------------------------------------------------------------------
@@ -52,6 +54,14 @@ class ActorProxy {
     EndPoint endpoint() const {
         return address_.endpoint;
     }
+
+    // Service discovery for address resolution (set by ActorSystem, may be null).
+    net::IServiceDiscovery* discovery_ = nullptr;
+    // Location cache for ActorId→EndPoint caching (set by ActorSystem, may be null).
+    net::ActorLocationCache* location_cache_ = nullptr;
+
+    void set_discovery(net::IServiceDiscovery* d) { discovery_ = d; }
+    void set_location_cache(net::ActorLocationCache* c) { location_cache_ = c; }
 
     // Check if this is a local actor (always false for proxy)
     bool is_local() const {

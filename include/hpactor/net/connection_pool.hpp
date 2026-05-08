@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/net/tls_connection.hpp>
@@ -138,6 +139,12 @@ class ConnectionPool {
     // Add an externally-created connection to the pool
     void add_connection(ConnectionPtr conn);
 
+    // Proactively ensure the pool structure exists for an endpoint.
+    // The actual connection is established asynchronously on first use.
+    // This just ensures the pool is ready so the first send() doesn't pay
+    // discovery cost.
+    void prewarm_pool(EndPoint ep, const std::vector<AcceptorInfo>& acceptors);
+
   private:
     // Get connection via round-robin
     ConnectionPtr get_connection();
@@ -168,6 +175,9 @@ class ConnectionPool {
     rpc_response_handler rpc_handler_;
     spawn_response_handler spawn_handler_;
     actor_message_handler actor_message_handler_;
+
+    // Acceptor info for future connection establishment (set via prewarm_pool).
+    std::vector<AcceptorInfo> acceptors_;
 };
 
 } // namespace net

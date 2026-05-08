@@ -226,5 +226,15 @@ void ConnectionPool::add_connection(ConnectionPtr conn) {
     active_connections_.push_back(conn);
 }
 
+void ConnectionPool::prewarm_pool(EndPoint ep,
+                                  const std::vector<AcceptorInfo>& acceptors) {
+    (void)ep;  // Pool already bound to remote_endpoint_ from constructor
+    std::lock_guard<std::mutex> lock(mutex_);
+    acceptors_ = acceptors;
+    // The actual connection is established asynchronously on first use.
+    // This just ensures the pool is ready so the first send() doesn't pay
+    // discovery cost.
+}
+
 } // namespace net
 } // namespace hpactor
