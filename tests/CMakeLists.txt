@@ -187,6 +187,14 @@ add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)
 
+add_executable(test_gossip_membership net/test_gossip_membership.cpp)
+target_link_libraries(test_gossip_membership hpactor)
+add_test(NAME test_gossip_membership COMMAND test_gossip_membership)
+
+add_executable(test_service_discovery net/test_service_discovery.cpp)
+target_link_libraries(test_service_discovery hpactor)
+add_test(NAME test_service_discovery COMMAND test_service_discovery)
+
 # =============================================================================
 # Spawn tests - remote actor spawn
 # =============================================================================
