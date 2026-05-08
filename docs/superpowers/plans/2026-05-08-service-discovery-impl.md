@@ -349,7 +349,6 @@ Member UdpRegistrar::to_member(const NodeEndpoint& ep) {
     m.host = ep.host;
     m.tcp_port = ep.tcp_port;
     m.acceptors = ep.acceptors;
-    m.is_static_route = ep.is_static_route;
     m.last_seen = std::chrono::steady_clock::now();
     return m;
 }
@@ -505,7 +504,44 @@ private:
     void protocol_round();
     void handle_packet(const StreamBuffer& data, const std::string& from_host,
                        uint16_t from_port);
-    // ... handlers declared in spec section 6.2 ...
+
+    // Message handlers (dispatched from handle_packet)
+    void handle_ping(EndPoint sender, uint64_t inc, uint32_t seq,
+                     std::vector<PiggybackEntry> pb, const std::string& host, uint16_t port);
+    void handle_ack(EndPoint sender, uint64_t inc, std::vector<PiggybackEntry> pb);
+    void handle_ping_req(EndPoint sender, EndPoint target);
+    void handle_indirect_ack(EndPoint sender, EndPoint target);
+    void handle_join(EndPoint sender, uint64_t inc, std::vector<PiggybackEntry> pb);
+    void handle_sync_rsp(std::vector<Member> members);
+    void handle_leave(EndPoint sender, uint64_t inc);
+
+    // Message sending
+    void send_ping(EndPoint target);
+    void send_ack(EndPoint target, std::vector<PiggybackEntry> pb);
+    void send_ping_req(EndPoint proxy, EndPoint target);
+    void send_indirect_ack(EndPoint target, EndPoint orig_target);
+    void send_join(EndPoint seed);
+    void send_sync_rsp(EndPoint target);
+    void send_leave(EndPoint target);
+
+    // Wire protocol
+    StreamBuffer encode_message(GossipMessageType type, uint64_t inc, uint32_t seq,
+        EndPoint ping_target, const std::vector<PiggybackEntry>& pb) const;
+    bool decode_message(const StreamBuffer& data, GossipMessageType& type,
+        EndPoint& sender, uint64_t& inc, uint32_t& seq, EndPoint& ping_target,
+        std::vector<PiggybackEntry>& pb) const;
+    StreamBuffer encode_sync_rsp(const std::vector<Member>& members) const;
+    bool decode_sync_rsp(const StreamBuffer& data, std::vector<Member>& members) const;
+
+    // State
+    void mark_suspicious(EndPoint ep);
+    void mark_dead(EndPoint ep);
+    void merge_member(const Member& remote);
+    void apply_piggyback(const std::vector<PiggybackEntry>& entries);
+    void purge_dead_tombstones();
+    std::vector<EndPoint> pick_random_peers(size_t count,
+        std::unordered_set<EndPoint> exclude = {});
+
     void setup_udp_socket();
     void teardown_udp_socket();
 
@@ -817,8 +853,10 @@ git commit -m "feat(core): integrate pluggable IServiceDiscovery into ActorSyste
 ### Task 9: ActorProxy + ConnectionPool Integration
 
 **Files:**
-- Modify: `src/ref/actor_proxy.cpp`
-- Modify: `src/net/connection_pool.cpp`
+- Modify: `include/hpactor/ref/actor_proxy.hpp` (+5)
+- Modify: `src/ref/actor_proxy.cpp` (+15)
+- Modify: `include/hpactor/net/connection_pool.hpp` (+1)
+- Modify: `src/net/connection_pool.cpp` (+20)
 
 - [ ] **Step 1: Add location cache + discovery to ActorProxy**
 
@@ -852,10 +890,8 @@ result<void> ActorProxy::send(StreamBuffer payload) {
     auto result = transport_->send(target_ep, std::move(payload));
     if (!result.has_value() && location_cache_) {
         location_cache_->evict(address_.id());
-        if (discovery_) {
-            auto* member = discovery_->discover(address_.endpoint());
-            if (member) return transport_->send(member->endpoint, /* retry */);
-        }
+        // Do not retry with moved payload — sender must re-serialize and retry.
+        // The eviction ensures the next send() call re-resolves via discovery.
     }
     return result;
 }
@@ -879,7 +915,8 @@ ninja -C build && ctest --test-dir build --output-on-failure
 - [ ] **Step 4: Commit**
 
 ```bash
-git add src/ref/actor_proxy.cpp src/net/connection_pool.cpp
+git add include/hpactor/ref/actor_proxy.hpp src/ref/actor_proxy.cpp \
+        include/hpactor/net/connection_pool.hpp src/net/connection_pool.cpp
 git commit -m "feat(net): integrate ActorLocationCache into ActorProxy and add prewarm_pool"
 ```
 
