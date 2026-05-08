@@ -1116,9 +1116,6 @@ void GossipMembership::merge_member(const Member& remote) {
     if (!remote.actor_types.empty()) {
         existing.actor_types = remote.actor_types;
     }
-    if (remote.tcp_port != 0) {
-        existing.tcp_port = remote.tcp_port;
-    }
     if (!remote.host.empty()) {
         existing.host = remote.host;
     }

@@ -29,9 +29,8 @@ namespace hpactor::net {
 enum class MemberStatus : uint8_t { Alive, Suspicious, Dead, Left };
 
 struct Member {
-    EndPoint endpoint;
+    EndPoint endpoint;   // identity (IP + port in network byte order)
     std::string host;
-    uint16_t tcp_port = 0;
     std::string uds_path;
     std::vector<AcceptorInfo> acceptors;
     std::vector<std::string> actor_types;

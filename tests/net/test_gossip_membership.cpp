@@ -114,14 +114,12 @@ int main() {
         Member ann;
         ann.endpoint = self_ep;
         ann.host = "updated-host";
-        ann.tcp_port = 9001;
         gm.announce(std::move(ann));
 
         assert(gm.incarnation_ > 100);               // incarnation bumped
         assert(gm.needs_dissemination_ == true);      // dissemination flag set
         assert(gm.config_.local_state.incarnation == gm.incarnation_);
         assert(gm.config_.local_state.host == "updated-host");
-        assert(gm.config_.local_state.tcp_port == 9001);
     }
 
     // ---- Test 4: discover_all() returns a copy, not a reference -----------

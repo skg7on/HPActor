@@ -64,12 +64,10 @@ int main() {
         Member m1;
         m1.endpoint = ep1;
         m1.host = "host-a";
-        m1.tcp_port = 9000;
         members.push_back(m1);
         Member m2;
         m2.endpoint = ep2;
         m2.host = "host-b";
-        m2.tcp_port = 9001;
         members.push_back(m2);
 
         StaticDiscovery sd(std::move(members));
@@ -77,7 +75,7 @@ int main() {
         assert(found != nullptr);
         assert(found->endpoint == ep1);
         assert(found->host == "host-a");
-        assert(found->tcp_port == 9000);
+        // tcp_port removed — port is in endpoint
     }
 
     // ---- Test 3: StaticDiscovery discover() returns nullptr for unknown ----

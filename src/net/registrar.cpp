@@ -852,7 +852,6 @@ Member UdpRegistrar::to_member(const NodeEndpoint& ep) {
     Member m;
     m.endpoint = ep.endpoint;
     m.host = ep.host;
-    m.tcp_port = ep.tcp_port;
     m.uds_path = ep.uds_path;
     m.acceptors = ep.acceptors;
     m.last_seen = ep.last_seen;
