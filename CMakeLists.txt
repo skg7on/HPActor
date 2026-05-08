@@ -197,6 +197,7 @@ add_library(hpactor_lib SHARED
     src/net/registrar_server.cpp
     src/net/registrar_client.cpp
     src/net/static_discovery.cpp
+    src/net/actor_location_cache.cpp
     src/net/http_parser.cpp
     src/net/http_gateway.cpp
     src/net/http_client.cpp
