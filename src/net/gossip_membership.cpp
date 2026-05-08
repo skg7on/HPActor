@@ -33,21 +33,41 @@ namespace hpactor::net {
 // =============================================================================
 namespace {
 
-// ---- Endpoint conversion to/from string (reuses endpoint_ops) ----
+// ---- Endpoint conversion to/from PbEndpoint ----
 
-std::string ep_to_string(const EndPoint& ep) {
-    return endpoint_ops::to_string(ep);
+void ep_to_pb_endpoint(PbEndpoint* pb, const EndPoint& ep) {
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
+        auto* pb4 = pb->mutable_ipv4();
+        pb4->set_addr(ipv4->addr);
+        pb4->set_port(ipv4->port());
+    } else if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&ep)) {
+        auto* pb6 = pb->mutable_ipv6();
+        pb6->set_addr(std::string(reinterpret_cast<const char*>(ipv6->addr.data()), 16));
+        pb6->set_port(ipv6->port());
+    }
 }
 
-EndPoint ep_from_string(const std::string& s) {
-    return endpoint_ops::parse_endpoint(s);
+EndPoint pb_endpoint_to_ep(const PbEndpoint& pb) {
+    if (pb.has_ipv4()) {
+        const auto& pb4 = pb.ipv4();
+        return Ipv4Endpoint{pb4.addr(), htons(static_cast<uint16_t>(pb4.port()))};
+    }
+    if (pb.has_ipv6()) {
+        const auto& pb6 = pb.ipv6();
+        std::array<uint8_t, 16> addr{};
+        if (pb6.addr().size() == 16) {
+            std::memcpy(addr.data(), pb6.addr().data(), 16);
+        }
+        return Ipv6Endpoint{addr, htons(static_cast<uint16_t>(pb6.port()))};
+    }
+    return Ipv4Endpoint{0, 0};
 }
 
 // ---- Piggyback entry conversion to/from protobuf ----
 
 void to_pb_piggyback(PbPiggybackEntry* pb, const PiggybackEntry& entry) {
     pb->set_type(static_cast<PbPiggybackType>(entry.type));
-    pb->set_endpoint(ep_to_string(entry.endpoint));
+    ep_to_pb_endpoint(pb->mutable_endpoint(), entry.endpoint);
     pb->set_incarnation(entry.incarnation);
     for (const auto& s : entry.actor_types) pb->add_actor_types(s);
     pb->set_load(entry.load);
@@ -63,7 +83,7 @@ void to_pb_piggyback(PbPiggybackEntry* pb, const PiggybackEntry& entry) {
 PiggybackEntry from_pb_piggyback(const PbPiggybackEntry& pb) {
     PiggybackEntry entry;
     entry.type = static_cast<PiggybackType>(pb.type());
-    entry.endpoint = ep_from_string(pb.endpoint());
+    entry.endpoint = pb_endpoint_to_ep(pb.endpoint());
     entry.incarnation = pb.incarnation();
     for (const auto& s : pb.actor_types()) entry.actor_types.push_back(s);
     entry.load = pb.load();
@@ -81,9 +101,8 @@ PiggybackEntry from_pb_piggyback(const PbPiggybackEntry& pb) {
 // ---- Member conversion to/from protobuf ----
 
 void to_pb_member(PbGossipMember* pb, const Member& m) {
-    pb->set_endpoint(ep_to_string(m.endpoint));
+    ep_to_pb_endpoint(pb->mutable_endpoint(), m.endpoint);
     pb->set_host(m.host);
-    pb->set_tcp_port(m.tcp_port);
     pb->set_uds_path(m.uds_path);
     pb->set_incarnation(m.incarnation);
     pb->set_status(static_cast<uint32_t>(m.status));
@@ -99,9 +118,8 @@ void to_pb_member(PbGossipMember* pb, const Member& m) {
 
 Member from_pb_member(const PbGossipMember& pb) {
     Member m;
-    m.endpoint = ep_from_string(pb.endpoint());
+    m.endpoint = pb_endpoint_to_ep(pb.endpoint());
     m.host = pb.host();
-    m.tcp_port = static_cast<uint16_t>(pb.tcp_port());
     m.uds_path = pb.uds_path();
     m.incarnation = pb.incarnation();
     m.status = static_cast<MemberStatus>(pb.status());
@@ -353,7 +371,7 @@ StreamBuffer GossipMembership::encode_message(GossipMessageType type, uint64_t i
     switch (type) {
     case GossipMessageType::Ping: {
         auto* ping = env.mutable_ping();
-        ping->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        ep_to_pb_endpoint(ping->mutable_sender_endpoint(), config_.local_state.endpoint);
         ping->set_incarnation(inc);
         ping->set_seq_no(seq);
         for (const auto& e : pb) to_pb_piggyback(ping->add_piggyback(), e);
@@ -361,31 +379,30 @@ StreamBuffer GossipMembership::encode_message(GossipMessageType type, uint64_t i
     }
     case GossipMessageType::Ack: {
         auto* ack = env.mutable_ack();
-        ack->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        ep_to_pb_endpoint(ack->mutable_sender_endpoint(), config_.local_state.endpoint);
         ack->set_incarnation(inc);
         for (const auto& e : pb) to_pb_piggyback(ack->add_piggyback(), e);
         break;
     }
     case GossipMessageType::PingReq: {
         auto* pr = env.mutable_ping_req();
-        pr->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
-        pr->set_target_endpoint(ep_to_string(ping_target));
+        ep_to_pb_endpoint(pr->mutable_sender_endpoint(), config_.local_state.endpoint);
+        ep_to_pb_endpoint(pr->mutable_target_endpoint(), ping_target);
         pr->set_incarnation(inc);
         break;
     }
     case GossipMessageType::IndirectAck: {
         auto* ia = env.mutable_indirect_ack();
-        ia->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
-        ia->set_original_requester(ep_to_string(ping_target));
+        ep_to_pb_endpoint(ia->mutable_sender_endpoint(), config_.local_state.endpoint);
+        ep_to_pb_endpoint(ia->mutable_original_requester(), ping_target);
         ia->set_incarnation(inc);
         break;
     }
     case GossipMessageType::Join: {
         auto* join = env.mutable_join();
-        join->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        ep_to_pb_endpoint(join->mutable_sender_endpoint(), config_.local_state.endpoint);
         join->set_incarnation(inc);
         join->set_host(config_.local_state.host);
-        join->set_tcp_port(config_.local_state.tcp_port);
         join->set_uds_path(config_.local_state.uds_path);
         for (const auto& s : config_.local_state.actor_types)
             join->add_actor_types(s);
@@ -400,7 +417,7 @@ StreamBuffer GossipMembership::encode_message(GossipMessageType type, uint64_t i
     }
     case GossipMessageType::Leave: {
         auto* leave = env.mutable_leave();
-        leave->set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+        ep_to_pb_endpoint(leave->mutable_sender_endpoint(), config_.local_state.endpoint);
         leave->set_incarnation(inc);
         break;
     }
@@ -429,7 +446,7 @@ bool GossipMembership::decode_message(const StreamBuffer& data, GossipMessageTyp
     switch (type) {
     case GossipMessageType::Ping:
         if (!env.has_ping()) return false;
-        sender = ep_from_string(env.ping().sender_endpoint());
+        sender = pb_endpoint_to_ep(env.ping().sender_endpoint());
         inc = env.ping().incarnation();
         seq = env.ping().seq_no();
         for (const auto& e : env.ping().piggyback())
@@ -437,7 +454,7 @@ bool GossipMembership::decode_message(const StreamBuffer& data, GossipMessageTyp
         break;
     case GossipMessageType::Ack:
         if (!env.has_ack()) return false;
-        sender = ep_from_string(env.ack().sender_endpoint());
+        sender = pb_endpoint_to_ep(env.ack().sender_endpoint());
         inc = env.ack().incarnation();
         seq = 0;
         for (const auto& e : env.ack().piggyback())
@@ -445,21 +462,21 @@ bool GossipMembership::decode_message(const StreamBuffer& data, GossipMessageTyp
         break;
     case GossipMessageType::PingReq:
         if (!env.has_ping_req()) return false;
-        sender = ep_from_string(env.ping_req().sender_endpoint());
-        ping_target = ep_from_string(env.ping_req().target_endpoint());
+        sender = pb_endpoint_to_ep(env.ping_req().sender_endpoint());
+        ping_target = pb_endpoint_to_ep(env.ping_req().target_endpoint());
         inc = env.ping_req().incarnation();
         seq = 0;
         break;
     case GossipMessageType::IndirectAck:
         if (!env.has_indirect_ack()) return false;
-        sender = ep_from_string(env.indirect_ack().sender_endpoint());
-        ping_target = ep_from_string(env.indirect_ack().original_requester());
+        sender = pb_endpoint_to_ep(env.indirect_ack().sender_endpoint());
+        ping_target = pb_endpoint_to_ep(env.indirect_ack().original_requester());
         inc = env.indirect_ack().incarnation();
         seq = 0;
         break;
     case GossipMessageType::Join:
         if (!env.has_join()) return false;
-        sender = ep_from_string(env.join().sender_endpoint());
+        sender = pb_endpoint_to_ep(env.join().sender_endpoint());
         inc = env.join().incarnation();
         seq = 0;
         break;
@@ -468,7 +485,7 @@ bool GossipMembership::decode_message(const StreamBuffer& data, GossipMessageTyp
         return false;
     case GossipMessageType::Leave:
         if (!env.has_leave()) return false;
-        sender = ep_from_string(env.leave().sender_endpoint());
+        sender = pb_endpoint_to_ep(env.leave().sender_endpoint());
         inc = env.leave().incarnation();
         seq = 0;
         break;
@@ -483,7 +500,7 @@ bool GossipMembership::decode_message(const StreamBuffer& data, GossipMessageTyp
 
 StreamBuffer GossipMembership::encode_sync_rsp(const std::vector<Member>& members) const {
     PbGossipSyncRsp rsp;
-    rsp.set_sender_endpoint(ep_to_string(config_.local_state.endpoint));
+    ep_to_pb_endpoint(rsp.mutable_sender_endpoint(), config_.local_state.endpoint);
     rsp.set_incarnation(incarnation_);
     for (const auto& m : members) {
         to_pb_member(rsp.add_members(), m);

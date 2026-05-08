@@ -5,6 +5,7 @@ package hpactor;
 
 option optimize_for = SPEED;
 
+import "hpactor/common.proto";     // for PbEndpoint
 import "hpactor/registrar.proto";  // for PbAcceptorInfo
 
 // ── Gossip protocol message types ──────────────────────────────────────
@@ -47,9 +48,9 @@ message PbGossipEnvelope {
 // ── Piggyback entry ────────────────────────────────────────────────────
 message PbPiggybackEntry {
     PbPiggybackType type        = 1;
-    string          endpoint    = 2;  // endpoint_ops::to_string()
+    PbEndpoint      endpoint    = 2;
     uint64          incarnation = 3;
-    // Metadata fields (only meaningful when type == PB_METADATA)
+    // Metadata (only meaningful when type == PB_METADATA)
     repeated string actor_types = 4;
     uint32          load        = 5;
     repeated PbAcceptorInfo acceptors = 6;
@@ -58,58 +59,56 @@ message PbPiggybackEntry {
 // ── Per-message payloads ───────────────────────────────────────────────
 
 message PbGossipPing {
-    string  sender_endpoint = 1;  // endpoint_ops::to_string()
-    uint64  incarnation     = 2;
-    uint32  seq_no          = 3;
+    PbEndpoint sender_endpoint = 1;
+    uint64     incarnation     = 2;
+    uint32     seq_no          = 3;
     repeated PbPiggybackEntry piggyback = 4;
 }
 
 message PbGossipAck {
-    string  sender_endpoint = 1;
-    uint64  incarnation     = 2;
+    PbEndpoint sender_endpoint = 1;
+    uint64     incarnation     = 2;
     repeated PbPiggybackEntry piggyback = 3;
 }
 
 message PbGossipPingReq {
-    string  sender_endpoint = 1;  // who is requesting
-    string  target_endpoint = 2;  // who to probe
-    uint64  incarnation     = 3;
+    PbEndpoint sender_endpoint = 1;  // who is requesting
+    PbEndpoint target_endpoint = 2;  // who to probe
+    uint64     incarnation     = 3;
 }
 
 message PbGossipIndirectAck {
-    string  sender_endpoint      = 1;  // who performed the indirect probe
-    string  original_requester   = 2;  // who originally sent the PingReq
-    uint64  incarnation          = 3;
+    PbEndpoint sender_endpoint    = 1;  // who performed the indirect probe
+    PbEndpoint original_requester = 2;  // who sent the PingReq
+    uint64     incarnation        = 3;
 }
 
 message PbGossipJoin {
-    string  sender_endpoint = 1;
-    uint64  incarnation     = 2;
-    string  host            = 3;
-    uint32  tcp_port        = 4;
-    string  uds_path        = 5;
-    repeated string         actor_types   = 6;
-    repeated PbAcceptorInfo acceptors     = 7;
+    PbEndpoint sender_endpoint = 1;
+    uint64     incarnation     = 2;
+    string     host            = 3;
+    string     uds_path        = 4;
+    repeated string         actor_types = 5;
+    repeated PbAcceptorInfo acceptors   = 6;
 }
 
 message PbGossipMember {
-    string  endpoint    = 1;
-    string  host        = 2;
-    uint32  tcp_port    = 3;
-    string  uds_path    = 4;
-    uint64  incarnation = 5;
-    uint32  status      = 6;  // 0=Alive, 1=Suspicious, 2=Dead, 3=Left
-    repeated string         actor_types = 7;
-    repeated PbAcceptorInfo acceptors   = 8;
+    PbEndpoint endpoint    = 1;  // identity (IP + transport port)
+    string     host        = 2;
+    string     uds_path    = 3;
+    uint64     incarnation = 4;
+    uint32     status      = 5;  // 0=Alive, 1=Suspicious, 2=Dead, 3=Left
+    repeated string         actor_types = 6;
+    repeated PbAcceptorInfo acceptors   = 7;
 }
 
 message PbGossipSyncRsp {
-    string  sender_endpoint = 1;
-    uint64  incarnation     = 2;
+    PbEndpoint sender_endpoint = 1;
+    uint64     incarnation     = 2;
     repeated PbGossipMember members = 3;
 }
 
 message PbGossipLeave {
-    string  sender_endpoint = 1;
-    uint64  incarnation     = 2;
+    PbEndpoint sender_endpoint = 1;
+    uint64     incarnation     = 2;
 }
