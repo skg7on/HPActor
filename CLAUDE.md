@@ -70,6 +70,9 @@ AbstractActor (interface base)
 | `BinaryLoader` / `BinarySerializer` | `config/binary_*.hpp` | mmap-friendly binary topology format |
 | `MetricsActor` / `MpscRingBuffer` | `metrics/*.hpp` | Lock-free ring buffer instrumentation, OpenMetrics /metrics endpoint for Prometheus |
 | `CliActor` / `CommandNode` | `cli/*.hpp` | Interactive CLI with trie-based command tree, InspectState introspection, paged output |
+| `IServiceDiscovery` | `net/service_discovery.hpp` | Pluggable discovery interface (UdpRegistrar, Gossip, Static, Hybrid) |
+| `GossipMembership` | `net/gossip_membership.hpp` | SWIM protocol for decentralized cross-server discovery |
+| `ActorLocationCache` | `net/actor_location_cache.hpp` | TTL cache for ActorId → EndPoint resolution |
 
 ### Message Flow
 
@@ -113,7 +116,7 @@ Pipeline: TOML file(s) → `TomlParser::parse()` → `TopologyModel` → `Bootst
 
 - `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
-- `tests/` — 90 unit tests
+- `tests/` — 99 unit tests
 - `examples/` — 9 API usage examples
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
 - `third_party/` — vendored dependencies (llhttp, toml++)

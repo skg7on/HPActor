@@ -66,9 +66,15 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **Async RPC**: `RpcChannel` with at-least-once delivery, retry on timeout, `RpcFuture<bytes>`
 
 ### Service Discovery
-- **Registrar**: UDP discovery + TCP registration with heartbeat, failover, and protobuf serialization
+- **Pluggable Architecture**: `IServiceDiscovery` interface with 4 backends — swap without changing actor code
+- **Embedded Registrar**: UDP discovery + TCP registration with heartbeat, failover, and protobuf serialization (single-server / same-host multi-process)
+- **Gossip (SWIM)**: Decentralized membership for multi-server clusters — direct + indirect ping probes, incarnation-based conflict resolution, suspicion → dead state machine, ~4.4s failure detection
+- **Hybrid Mode**: Composes UdpRegistrar (same-host) + GossipMembership (cross-server) for multi-process multi-server deployments
+- **Static Routes**: Fixed-topology discovery for firewalled / edge deployments
+- **ActorLocationCache**: TTL cache for `ActorId` → `EndPoint` resolution, integrated into `ActorProxy::send()`
 - **HostResolver**: DNS resolution with caching
 - **NodeRegistry**: Registry of known nodes with static routes
+- **TOML Configurable**: `[system.discovery]` section — backend selection, gossip parameters, static members
 
 ### Remote Actor Spawn
 - **AsyncActor**: Non-blocking spawn handle with `get()`, `ready()`, `cancel()`
@@ -177,6 +183,9 @@ ActorRef (std::variant)
 | `PlainConnection` | Raw TCP with 4-byte length-prefixed framing |
 | `TlsConnection` | AES-256-CBC encryption, RSA key exchange |
 | `ConnectionPool` | Dynamic pooling with exponential backoff |
+| `IServiceDiscovery` | Pluggable discovery interface (UdpRegistrar, Gossip, Static, Hybrid) |
+| `GossipMembership` | SWIM protocol for decentralized cross-server discovery |
+| `ActorLocationCache` | TTL cache for ActorId → EndPoint resolution |
 | `Registrar` | UDP discovery + TCP registration with heartbeat |
 | `HostResolver` | DNS resolution with caching |
 | `RpcChannel` | Async RPC with at-least-once delivery and retry |
@@ -206,7 +215,7 @@ ActorRef (std::variant)
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (90 tests)
+# Run tests (99 tests)
 ctest --output-on-failure
 
 # Run a single test
@@ -296,6 +305,7 @@ protos/hpactor/
 ├── cli_messages.proto — CLI inspect/kill/list/stats/memory messages
 ├── common.proto    — Shared endpoint types
 ├── frame.proto     — WireFrame transport format
+├── gossip.proto    — GossipMembership protocol (SWIM messages, piggyback, SyncRsp)
 ├── messages.proto  — System message types
 └── registrar.proto — Registrar protocol messages
 
@@ -308,7 +318,7 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 
 ## Status
 
-### Complete (94 tests passing)
+### Complete (99 tests passing)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
@@ -319,7 +329,7 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Mailbox**: MPSCMailbox (Vyukov lock-free), MPSCActorMailbox (edge-triggered CAS)
 - **Memory Management**: Two-tier slab allocator (mmap → thread-local slabs), typed regions, hibernation with ZRAM hints, compaction with fragmentation budget, per-actor observability, memory poisoning + canaries + guard pages
 - **Network**: TLS 1.3, connection pooling, UDS support, reactor/proactor backends
-- **Service Discovery**: UDP registrar + TCP registration with protobuf serialization
+- **Service Discovery**: Pluggable IServiceDiscovery with 4 backends (Gossip SWIM, UdpRegistrar, Hybrid, Static) + ActorLocationCache
 - **Remote Spawn**: AsyncActor with spawn_remote(), ActorTypeRegistry
 - **RPC**: Async RPC channel with at-least-once delivery, retry, and timeout
 - **Serialization**: Protobuf-based for all system messages (WireFrame, Down, Exit, Link, Unlink, Spawn)

@@ -12,6 +12,16 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current State
 
+**Service Discovery:** ✅ Complete (2026-05-08, 15 commits, ~2000 lines)
+- Pluggable `IServiceDiscovery` interface — 4 backends: `UdpRegistrar` (same-host, refactored), `GossipMembership` (cross-server SWIM protocol), `HybridDiscovery` (composes both), `StaticDiscovery` (fixed topology)
+- `ActorLocationCache` — TTL cache for ActorId → EndPoint resolution, integrated into `ActorProxy::send()`
+- `GossipMembership` — SWIM protocol (ping/ack/PingReq/indirect probes), suspicion/death state machine, incarnation-based conflict resolution, protobuf wire format (`gossip.proto`), async UDP via EventLoop
+- `GossipConfig` — gossip_port, protocol_period (1s), ping_timeout (200ms), suspicion_timeout (3s), dead_timeout (30s), fanout=3, indirect_probes=3, seeds
+- ActorSystem integration — backend selection in constructor, `on_node_dead()` death propagation, cache purge timer
+- TOML `[system.discovery]` parsing — backend selection + gossip config
+- 2 new test suites: test_gossip_membership (15 tests), test_service_discovery (13 tests)
+- Design docs: core concept, architecture, deployment scenarios, detailed spec, implementation plan
+
 **TOML Config Topology:** ✅ Complete (2026-05-04, 14 commits, ~2700 lines)
 - Declarative actor topology bootstrapping — describe the full actor tree in TOML
 - `TopologyModel` — ActorDef, DispatcherDef, SystemDef, ResourceSpec data structures
@@ -161,9 +171,10 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - TOML `[system.cli]` config: enabled, listen_path, tcp_port, default_format, page_size
 - `ENABLE_CLI` CMake option (default ON), `HPACTOR_ENABLE_CLI` compile-time guard
 - 5 new test suites: test_lexer, test_command_node, test_formatters, test_pager, test_cli_integration
+- 2 new test suites: test_gossip_membership, test_service_discovery
 - CLI is opt-in at runtime (`CliConfig::enabled = false` by default) — explicit enable via TOML or Config
 
-**Tests:** ✅ 94 tests passing
+**Tests:** ✅ 99 tests passing
 - Memory: test_size_class, test_alloc_header, test_freelist, test_segment_provider, test_slab_cache, test_thread_local_allocator, test_memory_stress (1M ops), test_memory_tracker, test_telemetry_ring_buffer, test_memory_poisoning, test_guard_page, test_hibernation, test_compaction, test_allocator_benchmark
 - Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
 - UDS: test_unix_domain_socket (path derivation, acceptor, fallback), test_uds_integration (connect and data flow)
@@ -204,8 +215,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Explicit lifecycle with optional hibernation
 - Both statically and dynamically typed actors
 - Hierarchical supervision (OneForOne, AllForOne)
-- Swap-in mailbox interface (earned lock-free through testing)
-- Application-defined memory management: two-tier slab allocator (mmap → thread-local slabs), no malloc in hot path
+- Pluggable service discovery: IServiceDiscovery interface with 4 backends (gossip, registrar, static, hybrid)
+- Decentralized membership via SWIM gossip protocol — no single point of failure
 - Typed memory regions with per-region back-pressure and observability
 - Hibernation via serialization + madvise(MADV_PAGEOUT) to ZRAM for cold storage
 - Actors are relocatable by ActorId, enabling slab compaction without dangling pointers
