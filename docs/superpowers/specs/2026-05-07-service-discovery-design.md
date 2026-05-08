@@ -525,6 +525,10 @@ Transitions:
 - **Alive → Alive**: Higher incarnation message — accept new state.
 - **Alive → Left**: Graceful `Leave` message received.
 - **Dead → tombstone**: Purged after `dead_timeout`.
+- **Dead → Alive**: If a higher-incarnation message arrives before `dead_timeout`
+  expires, `merge_member()` promotes the entry back to Alive. This is the
+  standard SWIM "reincarnation" path — handled by incarnation comparison,
+  not an explicit state transition in the diagram.
 
 Incarnation numbers resolve conflicts: when a restarted node announces with a
 higher incarnation, peers accept the new Alive state even if stale Suspicious
