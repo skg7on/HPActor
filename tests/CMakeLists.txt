@@ -195,6 +195,10 @@ add_executable(test_log_config log/test_log_config.cpp)
 target_link_libraries(test_log_config hpactor)
 add_test(NAME test_log_config COMMAND test_log_config)
 
+add_executable(test_log_ring_buffer log/test_log_ring_buffer.cpp)
+target_link_libraries(test_log_ring_buffer hpactor pthread)
+add_test(NAME test_log_ring_buffer COMMAND test_log_ring_buffer)
+
 add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)
