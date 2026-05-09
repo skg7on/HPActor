@@ -86,6 +86,11 @@ ActorSystem::ActorSystem(const Config& config)
         logger_ = &log_manager_->logger();
     }
 
+    // Wire logger to scheduler for scheduler-event logs
+    if (logger_) [[unlikely]] {
+        scheduler_->set_logger(logger_);
+    }
+
     if (config.enable_network) {
         network_loop_ = std::make_unique<net::EventLoop>();
         network_loop_->set_actor_system(this);

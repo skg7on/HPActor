@@ -18,9 +18,9 @@
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/a2ws.hpp>
+#include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/timing_wheel.hpp>
-#include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
@@ -38,6 +38,10 @@ namespace hpactor {
 
 // Forward declare ActorSystem to avoid circular include
 class ActorSystem;
+
+namespace log {
+class Logger;
+} // namespace log
 
 } // namespace hpactor
 
@@ -57,10 +61,7 @@ struct TimerHandle {
 
 using timer_callback = std::function<void()>;
 
-enum class TimerBackend : uint8_t {
-    TimingWheel = 0,
-    CalendarQueue = 1
-};
+enum class TimerBackend : uint8_t { TimingWheel = 0, CalendarQueue = 1 };
 
 // -----------------------------------------------------------------------------
 // IScheduler: interface for actor schedulers
@@ -70,6 +71,7 @@ class IScheduler {
     virtual ~IScheduler() = default;
 
     virtual void set_metrics_ring_buffer(void* /*buf*/) {}
+    virtual void set_logger(void* /*logger*/) noexcept {}
 
     // Start the scheduler
     virtual void start() = 0;
@@ -226,11 +228,17 @@ class HybridScheduler : public IScheduler {
             static_cast<metrics::MpscRingBuffer<metrics::MetricEvent>*>(buf);
     }
 
+    void set_logger(void* logger) noexcept override {
+        logger_ = static_cast<log::Logger*>(logger);
+    }
+
     // For recurring timer cancellation: maps timer ID to cancellation flag
     std::unordered_map<uint64_t, std::shared_ptr<std::atomic<bool>>> recurring_cancellations_;
     std::mutex cancellation_mutex_;
 
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
+
+    log::Logger* logger_{nullptr};
 
     // Timer advancement thread
     std::thread timer_thread_;
