@@ -25,6 +25,8 @@
 
 #include <cstring>
 
+#include <hpactor/log/logger.hpp>
+
 namespace hpactor {
 
 namespace net {
@@ -782,6 +784,8 @@ void UdpRegistrar::handle_udp_packet(const StreamBuffer& data,
     // [Reserved: 2][Payload...]
     UdpPacketView packet;
     if (!parse_udp_packet(data, packet)) {
+        HPACTOR_LOG_ERROR(log::LogCategory::kRegistrar, ActorId{0}, 0,
+                          "malformed registrar packet");
         return;
     }
 
@@ -815,6 +819,10 @@ void UdpRegistrar::handle_resolve_query(const StreamBuffer& payload,
     EndPoint target_endpoint = endpoint_ops::parse_endpoint(msg.target_endpoint());
     NodeEndpoint* ep = server_->registry()->get(target_endpoint);
     if (ep == nullptr) {
+        HPACTOR_LOG_WARNING(
+            log::LogCategory::kRegistrar, ActorId{0},
+            static_cast<uint32_t>(log::LogEventId::kRegistrarResolveMiss),
+            "registrar resolve miss");
         return;
     }
 
