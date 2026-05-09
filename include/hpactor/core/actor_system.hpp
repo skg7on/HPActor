@@ -406,8 +406,10 @@ Actor ActorSystem::spawn(Args&&... args) {
         actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
     }
 
-    // Wire logger to actor
+    // Wire logger to actor and mailbox
     if (logger_) [[unlikely]] {
+        auto* mbox = mailboxes_[id].get();
+        mbox->set_logger(logger_);
         actor->set_logger(logger_);
     }
 
