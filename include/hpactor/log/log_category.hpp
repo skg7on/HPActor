@@ -61,6 +61,7 @@ enum class LogEventId : uint32_t {
 };
 
 [[nodiscard]] const char* to_string(LogCategory category) noexcept;
+[[nodiscard]] const char* to_string(LogEventId id) noexcept;
 [[nodiscard]] result<LogCategory> parse_category(std::string_view value) noexcept;
 
 } // namespace hpactor::log

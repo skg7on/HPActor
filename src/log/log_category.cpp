@@ -52,6 +52,44 @@ namespace hpactor::log {
     return "unknown";
 }
 
+[[nodiscard]] const char* to_string(LogEventId id) noexcept {
+    switch (id) {
+        case LogEventId::kActorSpawned:
+            return "actor_spawned";
+        case LogEventId::kActorTerminated:
+            return "actor_terminated";
+        case LogEventId::kActorStateTransfer:
+            return "actor_state_transfer";
+        case LogEventId::kActorLinkRejected:
+            return "actor_link_rejected";
+        case LogEventId::kMailboxDepthHigh:
+            return "mailbox_depth_high";
+        case LogEventId::kMemoryAlloc:
+            return "memory_alloc";
+        case LogEventId::kMemoryFree:
+            return "memory_free";
+        case LogEventId::kMemoryCorruption:
+            return "memory_corruption";
+        case LogEventId::kRegistrarRegister:
+            return "registrar_register";
+        case LogEventId::kRegistrarResolveMiss:
+            return "registrar_resolve_miss";
+        case LogEventId::kDiscoveryNodeJoined:
+            return "discovery_node_joined";
+        case LogEventId::kDiscoveryNodeDead:
+            return "discovery_node_dead";
+        case LogEventId::kNetworkFrameReceived:
+            return "network_frame_received";
+        case LogEventId::kNetworkFrameDecodeFailed:
+            return "network_frame_decode_failed";
+        case LogEventId::kSchedulerDispatch:
+            return "scheduler_dispatch";
+        case LogEventId::kSchedulerSteal:
+            return "scheduler_steal";
+    }
+    return "unknown_event";
+}
+
 [[nodiscard]] result<LogCategory> parse_category(std::string_view value) noexcept {
     if (value == "actor")
         return result<LogCategory>::make(LogCategory::kActor);
