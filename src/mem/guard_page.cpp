@@ -35,7 +35,8 @@ void* guarded_alloc(size_t user_bytes) noexcept {
 
     void* base = mmap(nullptr, total, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-    if (base == MAP_FAILED) return nullptr;
+    if (base == MAP_FAILED)
+        return nullptr;
 
     // Protect leading guard page
     mprotect(base, ps, PROT_NONE);
@@ -48,7 +49,8 @@ void* guarded_alloc(size_t user_bytes) noexcept {
 }
 
 void guarded_free(void* user_ptr, size_t user_bytes) noexcept {
-    if (!user_ptr) return;
+    if (!user_ptr)
+        return;
     size_t ps = page_size();
     size_t user_pages = ((user_bytes + ps - 1) / ps) * ps;
     void* base = static_cast<std::byte*>(user_ptr) - ps;
@@ -65,6 +67,10 @@ namespace {
 struct sigaction g_prev_action;
 bool g_handler_installed = false;
 
+// Pre-opened fd for signal-safe logging. Use write() instead of the logger
+// in signal context — logger CAS atomics may deadlock.
+int g_guard_page_fd = -1;
+
 void corruption_sigaction(int sig, siginfo_t* info, void* ctx) {
     if (!info || !info->si_addr) {
         // Chain to previous handler
@@ -80,15 +86,16 @@ void corruption_sigaction(int sig, siginfo_t* info, void* ctx) {
     auto seg_info = SegmentProvider::instance().lookup(fault_addr);
     if (seg_info.base != nullptr) {
         // This is our memory — corruption detected
-        // Log the event (via telemetry in the future)
-        // For now: terminate cleanly with an error message
-        const char* msg = "HPActor: guard page violation at %p (segment base %p, "
-                          "size %zu) — memory corruption detected\n";
-        // We cannot safely use fprintf in a signal handler, so use write()
-        char buf[256];
-        int len = snprintf(buf, sizeof(buf), msg, fault_addr, seg_info.base,
-                           seg_info.size);
-        write(STDERR_FILENO, buf, static_cast<size_t>(len));
+        // Use direct write() to pre-opened fd — never use the logger in
+        // signal context (CAS atomics may deadlock).
+        if (g_guard_page_fd >= 0) {
+            const char* msg = "HPActor: guard page violation at %p (segment "
+                              "base %p, size %zu) — memory corruption\n";
+            char buf[256];
+            int len = snprintf(buf, sizeof(buf), msg, fault_addr, seg_info.base,
+                               seg_info.size);
+            write(g_guard_page_fd, buf, static_cast<size_t>(len));
+        }
         _exit(EXIT_FAILURE);
     }
 
@@ -103,8 +110,13 @@ void corruption_sigaction(int sig, siginfo_t* info, void* ctx) {
 }
 } // namespace
 
+void set_guard_page_log_fd(int fd) noexcept {
+    g_guard_page_fd = fd;
+}
+
 void install_corruption_handler() noexcept {
-    if (g_handler_installed) return;
+    if (g_handler_installed)
+        return;
 
     struct sigaction sa;
     std::memset(&sa, 0, sizeof(sa));
@@ -116,7 +128,8 @@ void install_corruption_handler() noexcept {
 }
 
 void remove_corruption_handler() noexcept {
-    if (!g_handler_installed) return;
+    if (!g_handler_installed)
+        return;
 
     sigaction(SIGSEGV, &g_prev_action, nullptr);
     g_handler_installed = false;

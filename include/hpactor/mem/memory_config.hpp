@@ -14,10 +14,12 @@
 
 #pragma once
 
-#include <hpactor/mem/thread_local_allocator.hpp>
+#include <hpactor/hpactor_config.hpp>
+#include <hpactor/log/log_field.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/mem/memory_region.hpp>
 #include <hpactor/mem/size_class.hpp>
-#include <hpactor/hpactor_config.hpp>
+#include <hpactor/mem/thread_local_allocator.hpp>
 
 #include <cstddef>
 #include <cstdlib>
@@ -78,6 +80,10 @@ inline void* allocate(RegionType /*region*/, size_t user_bytes, ActorId owner) {
     if (t_tla) {
         return t_tla->allocate_bytes(user_bytes, owner);
     }
+    HPACTOR_LOG_WARNING(log::LogCategory::kMemory, ActorId{0},
+                        static_cast<uint32_t>(log::LogEventId::kMemoryAlloc),
+                        "allocation fallback to malloc",
+                        log::field("size", static_cast<uint64_t>(user_bytes)));
     return std::malloc(user_bytes); // NOLINT: intentional fallback
 }
 
@@ -86,12 +92,18 @@ inline void* allocate_class(SizeClass sc, ActorId owner) {
     if (t_tla) {
         return t_tla->allocate(sc, owner);
     }
+    HPACTOR_LOG_WARNING(
+        log::LogCategory::kMemory, ActorId{0},
+        static_cast<uint32_t>(log::LogEventId::kMemoryAlloc),
+        "allocation fallback to malloc",
+        log::field("size", static_cast<uint64_t>(size_for_class(sc))));
     return std::malloc(size_for_class(sc)); // NOLINT: intentional fallback
 }
 
 // Deallocate memory previously allocated via allocate() or allocate_class().
 inline void deallocate(void* user_ptr) {
-    if (!user_ptr) return;
+    if (!user_ptr)
+        return;
     if (t_tla) {
         t_tla->deallocate(user_ptr);
         return;
