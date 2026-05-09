@@ -125,13 +125,9 @@ RegistrarConnection::connecting(int fd, EndPoint remote_endpoint, EventLoop* loo
 }
 
 void RegistrarConnection::register_with_loop() {
-    // Note: We do NOT set loop_->set_completion_callback() here
-    // because that would overwrite the server's callback.
-    // Instead, the server sets ONE completion callback that routes
-    // completions via a static fd->connection map.
-    // This connection registers itself in that map.
     if (loop_ && fd_ >= 0) {
         loop_->add_fd(fd_, EventLoop::Event::Read);
+        loop_->set_read_handler(fd_, [this](int /*fd*/) { handle_read_event(); });
     }
 }
 
@@ -591,8 +587,6 @@ void UdpRegistrar::start_client_mode() {
         server_endpoint = config_.static_routes[0].endpoint;
     }
 
-    setup_udp_socket();
-
     client_ = std::make_unique<RegistrarClient>(
         config_, local_endpoint_, server_endpoint, client_registry_.get(), loop_);
     client_->set_failover_callback([this]() { failover(); });
@@ -656,12 +650,6 @@ void UdpRegistrar::start_client_mode_async() {
     EndPoint server_endpoint;
     if (!config_.static_routes.empty()) {
         server_endpoint = config_.static_routes[0].endpoint;
-    }
-
-    setup_udp_socket();
-    if (udp_socket_ >= 0) {
-        udp_recv_buffer_.resize(kUdpRecvBufferSize);
-        issue_async_recvfrom();
     }
 
     client_ = std::make_unique<RegistrarClient>(
