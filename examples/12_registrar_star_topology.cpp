@@ -31,24 +31,23 @@
 // Optional:
 //   --host 127.0.0.1
 //   --registrar-host 127.0.0.1
-//   --registrar-port 5353
-//
-// If port 5353 is busy on your machine, pass the same override to all modes:
 //   --registrar-port 19053
+//
+// Default registrar port is 19053 (not 5353). Port 5353 is commonly used by
+// mDNS (Bonjour) on macOS and Linux, preventing the UDP resolver socket from
+// binding. Override with --registrar-port if 19053 is also in use on your
+// machine.
 //
 // Demo transcript:
 //
 // Terminal 1:
-//   ./12_registrar_star_topology --server --actor-port 17000 \
-//     --registrar-port 19053
+//   ./12_registrar_star_topology --server --actor-port 17000
 //
 // Terminal 2:
-//   ./12_registrar_star_topology --worker worker-a --actor-port 17001 \
-//     --registrar-port 19053
+//   ./12_registrar_star_topology --worker worker-a --actor-port 17001
 //
 // Terminal 3:
-//   ./12_registrar_star_topology --query --target 127.0.0.1:17001 \
-//     --registrar-port 19053
+//   ./12_registrar_star_topology --query --target 127.0.0.1:17001
 //
 // Expected query output:
 //   RESOLVED
@@ -85,7 +84,7 @@ struct Options {
     std::string registrar_host = "127.0.0.1";
     std::string target;
     uint16_t actor_port = 17000;
-    uint16_t registrar_port = 5353;
+    uint16_t registrar_port = 19053;
 };
 
 std::atomic<bool> shutdown_requested{false};
@@ -97,11 +96,11 @@ void sigint_handler(int) {
 void print_usage(const char* argv0) {
     std::cout << "Usage:\n"
               << "  " << argv0 << " --server --actor-port 17000 "
-              << "[--registrar-port 5353]\n"
+              << "[--registrar-port 19053]\n"
               << "  " << argv0 << " --worker worker-a --actor-port 17001 "
-              << "[--registrar-host 127.0.0.1] [--registrar-port 5353]\n"
+              << "[--registrar-host 127.0.0.1] [--registrar-port 19053]\n"
               << "  " << argv0 << " --query --target 127.0.0.1:17001 "
-              << "[--registrar-host 127.0.0.1] [--registrar-port 5353]\n";
+              << "[--registrar-host 127.0.0.1] [--registrar-port 19053]\n";
 }
 
 bool parse_port(const std::string& value, uint16_t& port, std::string& error) {
