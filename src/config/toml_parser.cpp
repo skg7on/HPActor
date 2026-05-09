@@ -15,6 +15,7 @@
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/log/log_category.hpp>
 #include <hpactor/log/log_level.hpp>
+#include <hpactor/log/logger.hpp>
 
 #include <toml.hpp>
 
@@ -212,6 +213,9 @@ parse_file_data(const std::string& filepath, bool is_entrypoint) {
         root = toml::parse_file(filepath);
     } catch (const toml::parse_error&) {
         error err(errors::unknown);
+        HPACTOR_LOG_ERROR(log::LogCategory::kConfig, ActorId{0}, 0,
+                          "topology parse error",
+                          log::field_lit("error", err.message().c_str()));
         return result<FileData>::make(std::move(err));
     }
 
@@ -646,6 +650,9 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     if (!sorted_result.has_value())
         return result<TopologyModel>::make(sorted_result.error());
     model.actors = std::move(sorted_result.value());
+
+    HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0, "topology loaded",
+                     log::field_lit("path", entrypoint_path.c_str()));
 
     return result<TopologyModel>::make(std::move(model));
 }

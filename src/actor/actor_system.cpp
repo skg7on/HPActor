@@ -24,6 +24,7 @@
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/log/log_manager.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/net/async_io_fwd.hpp>
 #include <hpactor/net/frame.hpp>
@@ -460,6 +461,9 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     // Apply system-level logging config from topology
     logging_config_ = model.system.logging;
+
+    HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
+                     "topology bootstrap complete");
 
     // Validate all behaviors are registered
     auto& registry = config::ActorFactoryRegistry::instance();
