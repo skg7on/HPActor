@@ -16,27 +16,28 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/cli/cli_config.hpp>
+#include <hpactor/config/topology_model.hpp>
 #include <hpactor/core/actor_registry.hpp>
 #include <hpactor/core/mailbox.hpp>
-#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
-#include <hpactor/net/frame.hpp>
-#include <hpactor/net/registrar.hpp>
-#include <hpactor/net/service_discovery.hpp>
-#include <hpactor/net/static_discovery.hpp>
-#include <hpactor/net/gossip_membership.hpp>
-#include <hpactor/net/actor_location_cache.hpp>
-#include <hpactor/net/http_client.hpp>
-#include <hpactor/net/tcp_transport.hpp>
-#include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
-#include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/rpc/rpc_channel.hpp>
-#include <hpactor/config/topology_model.hpp>
-#include <hpactor/cli/cli_config.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/log/log_config.hpp>
+#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
+#include <hpactor/net/actor_location_cache.hpp>
+#include <hpactor/net/frame.hpp>
+#include <hpactor/net/gossip_membership.hpp>
+#include <hpactor/net/http_client.hpp>
+#include <hpactor/net/registrar.hpp>
+#include <hpactor/net/service_discovery.hpp>
+#include <hpactor/net/static_discovery.hpp>
+#include <hpactor/net/tcp_transport.hpp>
+#include <hpactor/ref/actor_ref.hpp>
+#include <hpactor/rpc/rpc_channel.hpp>
+#include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -53,10 +54,14 @@ namespace hpactor {
 class AsyncActor;
 class ActorTypeRegistry;
 
+namespace log {
+class LogManager;
+class Logger;
+} // namespace log
+
 namespace cli {
 class CliActor;
 } // namespace cli
-
 
 // Scheduler interface forward declaration
 namespace sched {
@@ -74,7 +79,7 @@ struct Config {
 
     // Network configuration
     bool enable_network = false;
-    uint16_t tcp_port = 0;    // Transport TCP port (0 = don't listen)
+    uint16_t tcp_port = 0; // Transport TCP port (0 = don't listen)
 
     // Remote spawn configuration
     std::chrono::milliseconds spawn_timeout{5000};
@@ -95,9 +100,9 @@ struct Config {
     size_t http_max_request_size = 1048576;
     std::chrono::milliseconds http_reply_timeout{5000};
 
-    // Coroutine scheduling (requires HPACTOR_SUPPORT_COROUTINES=1 at compile time)
-    // When true, actors use coroutine-based execution instead of behavior-based.
-    // Default: false (behavior-based scheduling).
+    // Coroutine scheduling (requires HPACTOR_SUPPORT_COROUTINES=1 at compile
+    // time) When true, actors use coroutine-based execution instead of
+    // behavior-based. Default: false (behavior-based scheduling).
     bool use_coroutines = false;
 
     // CLI configuration
@@ -194,8 +199,8 @@ class ActorSystem {
         return scheduler_.get();
     }
 
-    // Runtime coroutine toggle (requires HPACTOR_SUPPORT_COROUTINES=1 at compile
-    // time). Default: false (behavior-based scheduling).
+    // Runtime coroutine toggle (requires HPACTOR_SUPPORT_COROUTINES=1 at
+    // compile time). Default: false (behavior-based scheduling).
     bool use_coroutines() const {
         return config_.use_coroutines;
     }
@@ -214,7 +219,9 @@ class ActorSystem {
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
 
     // Get metrics ring buffer (nullptr if metrics disabled)
-    auto* metrics_ring_buffer() const { return metrics_ring_buffer_.get(); }
+    auto* metrics_ring_buffer() const {
+        return metrics_ring_buffer_.get();
+    }
 
     // Get CLI actor (nullptr if CLI disabled or not yet spawned)
     cli::CliActor* cli_actor() const;
@@ -227,8 +234,7 @@ class ActorSystem {
 
     // Enumerate all actors. Callback receives (ActorId, AbstractActor&).
     // The callback must not spawn or kill actors (lock is held).
-    void for_each_actor(
-        std::function<void(ActorId, AbstractActor&)> callback) const;
+    void for_each_actor(std::function<void(ActorId, AbstractActor&)> callback) const;
 
     // Deliver message to local actor
     void deliver_local(ActorId target, TypedMessage msg);
@@ -268,11 +274,13 @@ class ActorSystem {
     }
 
     // Remote actor spawning (main/non-actor context only)
-    result<ActorRef> spawn_remote(const std::string& node_name,
-                                  const std::string& actor_type, const StreamBuffer& args);
+    result<ActorRef>
+    spawn_remote(const std::string& node_name, const std::string& actor_type,
+                 const StreamBuffer& args);
 
-    AsyncActor spawn_remote_async(const std::string& node_name,
-                                  const std::string& actor_type, const StreamBuffer& args);
+    AsyncActor
+    spawn_remote_async(const std::string& node_name,
+                       const std::string& actor_type, const StreamBuffer& args);
 
     // Actor type registry for remote spawning
     ActorTypeRegistry& actor_type_registry() {
@@ -295,8 +303,7 @@ class ActorSystem {
     mutable std::mutex actors_mutex_;
 
     // Actor mailboxes - maps ActorId to mailbox
-    std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<TypedMessage>>>
-        mailboxes_;
+    std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<TypedMessage>>> mailboxes_;
     std::mutex mailboxes_mutex_;
 
     // Actor contexts - maps ActorId to context
@@ -339,6 +346,11 @@ class ActorSystem {
     // Metrics configuration and ring buffer
     metrics::MetricsConfig metrics_config_;
     std::shared_ptr<metrics::MpscRingBuffer<metrics::MetricEvent>> metrics_ring_buffer_;
+
+    // Logging subsystem
+    log::LogConfig logging_config_;
+    std::unique_ptr<log::LogManager> log_manager_;
+    log::Logger* logger_ = nullptr;
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
@@ -397,17 +409,16 @@ Actor ActorSystem::spawn(Args&&... args) {
     // are registered with the scheduler but NOT placed on the cooperative
     // pool — they manage their own threads or use DedicatedThreadPool.
     switch (actor->dispatch_policy()) {
-    case sched::DispatchPolicy::Cooperative:
-        scheduler_->notify_ready(id, 0, INT64_MAX);
-        break;
-    case sched::DispatchPolicy::DedicatedThread:
-        scheduler_->register_dedicated_thread(id,
-            actor->dispatch_hints().cpu_affinity);
-        break;
-    case sched::DispatchPolicy::DedicatedPool:
-        scheduler_->register_dedicated_pool(id,
-            actor->dispatch_hints().pool_size);
-        break;
+        case sched::DispatchPolicy::Cooperative:
+            scheduler_->notify_ready(id, 0, INT64_MAX);
+            break;
+        case sched::DispatchPolicy::DedicatedThread:
+            scheduler_->register_dedicated_thread(
+                id, actor->dispatch_hints().cpu_affinity);
+            break;
+        case sched::DispatchPolicy::DedicatedPool:
+            scheduler_->register_dedicated_pool(id, actor->dispatch_hints().pool_size);
+            break;
     }
 
     // Activate the actor (DaemonActor starts its thread here, etc.)
