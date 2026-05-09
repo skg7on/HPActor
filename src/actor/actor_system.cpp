@@ -22,8 +22,8 @@
 #include <hpactor/hpactor_config.hpp>
 
 #include <hpactor/cli/cli_actor.hpp>
-#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
+#include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/net/async_io_fwd.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/tcp_transport.hpp>
@@ -39,8 +39,7 @@ namespace hpactor {
 // -----------------------------------------------------------------------------
 // actor_registry implementation
 // -----------------------------------------------------------------------------
-actor_registry::actor_registry(EndPoint endpoint)
-    : endpoint_(endpoint) {}
+actor_registry::actor_registry(EndPoint endpoint) : endpoint_(endpoint) {}
 
 void actor_registry::put(const std::string& name, ActorAddress addr) {
     actors_[name] = addr;
@@ -89,10 +88,10 @@ ActorSystem::ActorSystem(const Config& config)
             auto reg = std::make_shared<net::UdpRegistrar>(
                 config.registrar, endpoint_, network_loop_.get());
             discovery_ = reg;
-            registrar_ = reg;  // shared ownership for registrar() accessor
+            registrar_ = reg; // shared ownership for registrar() accessor
         } else {
-            discovery_ = std::make_shared<net::StaticDiscovery>(
-                std::vector<net::Member>{});
+            discovery_ =
+                std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
         }
 
         discovery_->start();
@@ -109,7 +108,8 @@ ActorSystem::ActorSystem(const Config& config)
         if (network_loop_) {
             cache_purge_timer_ = network_loop_->run_every(
                 [this]() {
-                    if (location_cache_) location_cache_->purge_expired();
+                    if (location_cache_)
+                        location_cache_->purge_expired();
                 },
                 60000);
         }
@@ -177,7 +177,11 @@ ActorSystem::ActorSystem(const Config& config)
 }
 
 ActorSystem::~ActorSystem() {
+    running_.store(false);
     if (config_.enable_network) {
+        if (network_loop_) {
+            network_loop_->stop();
+        }
         if (network_thread_.joinable()) {
             network_thread_.join();
         }
@@ -197,7 +201,8 @@ void ActorSystem::on_node_dead(EndPoint dead_ep) {
     // a protected member of AbstractActor, not accessible from ActorSystem).
     std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
     for (const auto& [id, ctx] : actor_contexts_) {
-        if (!ctx) continue;
+        if (!ctx)
+            continue;
         for (const auto& addr : ctx->linked_actors()) {
             if (addr.endpoint == dead_ep) {
                 TypedMessage down(TypeTag::DownMsg, StreamBuffer{});
@@ -207,7 +212,8 @@ void ActorSystem::on_node_dead(EndPoint dead_ep) {
             }
         }
     }
-    if (location_cache_) location_cache_->evict_node(dead_ep);
+    if (location_cache_)
+        location_cache_->evict_node(dead_ep);
 }
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
@@ -247,8 +253,7 @@ std::shared_ptr<AbstractActor> ActorSystem::get_actor(ActorId id) {
     return nullptr;
 }
 
-mailbox::MPSCActorMailbox<TypedMessage>*
-ActorSystem::get_mailbox(ActorId id) {
+mailbox::MPSCActorMailbox<TypedMessage>* ActorSystem::get_mailbox(ActorId id) {
     std::lock_guard<std::mutex> lock(mailboxes_mutex_);
     auto it = mailboxes_.find(id);
     if (it != mailboxes_.end()) {
@@ -293,8 +298,7 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     TypedMessage msg(static_cast<TypeTag>(frame.pb_frame.type_tag()),
                      std::move(payload));
     msg.set_sender_address(net::from_proto(frame.pb_frame.sender()));
-    deliver_local(net::from_proto(frame.pb_frame.receiver()).id,
-                  std::move(msg));
+    deliver_local(net::from_proto(frame.pb_frame.receiver()).id, std::move(msg));
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
@@ -309,8 +313,7 @@ void ActorSystem::enqueue_completion(net::OpCompletion completion) {
     deliver_local(completion.actor, std::move(msg));
 }
 
-net::Transport*
-ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
+net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
     // TcpTransport already handles per-endpoint routing via its internal pools_
     // map — TcpTransport::send() calls get_or_create_pool(target.endpoint)
     // internally. Return the single transport_ for all remote endpoints.
@@ -320,9 +323,9 @@ ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
     return transport_.get();
 }
 
-result<ActorRef>
-ActorSystem::spawn_remote(const std::string& node_name,
-                          const std::string& actor_type, const StreamBuffer& /*args*/) {
+result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
+                                           const std::string& actor_type,
+                                           const StreamBuffer& /*args*/) {
     return spawn_remote_async(node_name, actor_type, StreamBuffer{}).get();
 }
 
@@ -351,13 +354,13 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
 
     net::WireFrame frame;
     net::to_proto(frame.pb_frame.mutable_sender(), system_actor_.address());
-    net::to_proto(frame.pb_frame.mutable_receiver(),
-                  ActorAddress{remote_endpoint, SystemActorType, SpawnReceiverId, 0});
+    net::to_proto(
+        frame.pb_frame.mutable_receiver(),
+        ActorAddress{remote_endpoint, SystemActorType, SpawnReceiverId, 0});
     frame.pb_frame.set_message_id(msg_id);
     frame.pb_frame.set_flags(net::WireFrame::RpcRequest);
-    frame.pb_frame.set_payload(
-        reinterpret_cast<const char*>(request_bytes.data()),
-        request_bytes.size());
+    frame.pb_frame.set_payload(reinterpret_cast<const char*>(request_bytes.data()),
+                               request_bytes.size());
 
     auto pending = std::make_shared<AsyncActor>(std::move(handle));
     pending->set_message_id(msg_id);
@@ -367,8 +370,7 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
         pending_spawns_.emplace(msg_id, pending);
     }
 
-    transport_->send(net::from_proto(frame.pb_frame.receiver()),
-                     frame.encode());
+    transport_->send(net::from_proto(frame.pb_frame.receiver()), frame.encode());
 
     return std::move(*pending);
 }
@@ -407,17 +409,17 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
 
     // Register with scheduler based on ActorDef dispatch policy
     switch (def.dispatch_policy) {
-    case config::DispatchPolicy::Cooperative:
-        scheduler_->notify_ready(id, 0, INT64_MAX);
-        break;
-    case config::DispatchPolicy::DedicatedThread: {
-        int cpu_aff = -1;
-        scheduler_->register_dedicated_thread(id, cpu_aff);
-        break;
-    }
-    case config::DispatchPolicy::DedicatedPool:
-        scheduler_->register_dedicated_pool(id, 1);
-        break;
+        case config::DispatchPolicy::Cooperative:
+            scheduler_->notify_ready(id, 0, INT64_MAX);
+            break;
+        case config::DispatchPolicy::DedicatedThread: {
+            int cpu_aff = -1;
+            scheduler_->register_dedicated_thread(id, cpu_aff);
+            break;
+        }
+        case config::DispatchPolicy::DedicatedPool:
+            scheduler_->register_dedicated_pool(id, 1);
+            break;
     }
 
     // Activate the actor (DaemonActor starts its thread here, etc.)
@@ -456,7 +458,8 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     // Spawn actors in topological order; track numeric IDs for SystemInit
     std::vector<ActorId, mem::MemStdAllocator<ActorId>> spawned_ids(
-        mem::MemStdAllocator<ActorId>(system_actor_.id(), mem::RegionType::kInternal));
+        mem::MemStdAllocator<ActorId>(system_actor_.id(),
+                                      mem::RegionType::kInternal));
     for (const auto& actor_def : model.actors) {
         auto factory = registry.get_factory(actor_def.behavior);
         auto actor_ptr = factory(nullptr, *this);
