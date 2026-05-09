@@ -229,6 +229,7 @@ add_library(hpactor_lib SHARED
     src/metrics/metrics_formatter.cpp
     src/metrics/metrics_actor.cpp
     src/log/log_level.cpp
+    src/log/log_category.cpp
     src/adt/stream_buffer.cpp
     third_party/llhttp/llhttp.c
     third_party/llhttp/api.c
