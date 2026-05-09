@@ -191,6 +191,10 @@ add_executable(test_log_category log/test_log_category.cpp)
 target_link_libraries(test_log_category hpactor)
 add_test(NAME test_log_category COMMAND test_log_category)
 
+add_executable(test_log_config log/test_log_config.cpp)
+target_link_libraries(test_log_config hpactor)
+add_test(NAME test_log_config COMMAND test_log_config)
+
 add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)
