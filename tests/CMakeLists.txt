@@ -183,6 +183,10 @@ add_executable(test_metrics_integration metrics/test_metrics_integration.cpp)
 target_link_libraries(test_metrics_integration hpactor pthread)
 add_test(NAME test_metrics_integration COMMAND test_metrics_integration)
 
+add_executable(test_log_level log/test_log_level.cpp)
+target_link_libraries(test_log_level hpactor)
+add_test(NAME test_log_level COMMAND test_log_level)
+
 add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)
