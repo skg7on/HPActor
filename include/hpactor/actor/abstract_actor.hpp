@@ -17,8 +17,8 @@
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/types/types.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <memory>
 #include <string>
@@ -50,7 +50,9 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     ActorId id() const {
         return id_;
     }
-    const ActorId* id_ptr() const { return &id_; }
+    const ActorId* id_ptr() const {
+        return &id_;
+    }
     ActorType type() const {
         return type_;
     }
@@ -73,8 +75,7 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
 
     // Set scheduler and mailbox (called by ActorSystem during spawn)
     virtual void set_scheduler(sched::IScheduler* scheduler);
-    virtual void
-    set_mailbox(mailbox::MPSCActorMailbox<TypedMessage>* mailbox);
+    virtual void set_mailbox(mailbox::MPSCActorMailbox<TypedMessage>* mailbox);
 
     // Linking - death sharing
     void link_to(const ActorAddr& other);
@@ -101,27 +102,39 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
         return {};
     }
 
-    virtual std::string_view type_name() const { return type_name_; }
-    void set_type_name(std::string name) { type_name_ = std::move(name); }
+    virtual std::string_view type_name() const {
+        return type_name_;
+    }
+    void set_type_name(std::string name) {
+        type_name_ = std::move(name);
+    }
 
     virtual void set_metrics_ring_buffer(void* /*buf*/) {}
+    virtual void set_logger(void* /*logger*/) noexcept {}
 
     // CLI introspection interface.
     // Returns lightweight inspectable metadata. Called from actor's own thread.
     virtual cli::ActorMeta to_metadata() const;
 
     // Returns opaque serialized state blob. Default empty.
-    virtual std::vector<uint8_t> serialize_state() const { return {}; }
+    virtual std::vector<uint8_t> serialize_state() const {
+        return {};
+    }
 
-    // Returns mailbox snapshot. Default empty. Override in mailbox-owning actors.
-    virtual cli::MboxSnapshot mailbox_snapshot() const { return {}; }
+    // Returns mailbox snapshot. Default empty. Override in mailbox-owning
+    // actors.
+    virtual cli::MboxSnapshot mailbox_snapshot() const {
+        return {};
+    }
 
   protected:
     AbstractActor(ActorId id, ActorType type, ActorSystem& sys);
 
     // Overridden by LocalActor to return the ActorContext.
     // Returns nullptr for actors without a context (e.g., system actor).
-    virtual ActorContext* actor_context() { return nullptr; }
+    virtual ActorContext* actor_context() {
+        return nullptr;
+    }
 
   private:
     ActorId id_;

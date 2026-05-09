@@ -23,6 +23,8 @@
 #include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_config.hpp>
+#include <hpactor/log/log_field.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -404,6 +406,11 @@ Actor ActorSystem::spawn(Args&&... args) {
         actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
     }
 
+    // Wire logger to actor
+    if (logger_) [[unlikely]] {
+        actor->set_logger(logger_);
+    }
+
     // Register with scheduler based on dispatch policy.
     // Cooperative actors go onto the work-stealing pool. Dedicated actors
     // are registered with the scheduler but NOT placed on the cooperative
@@ -423,6 +430,11 @@ Actor ActorSystem::spawn(Args&&... args) {
 
     // Activate the actor (DaemonActor starts its thread here, etc.)
     actor->on_activate();
+
+    HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
+                     static_cast<uint32_t>(log::LogEventId::kActorSpawned),
+                     "actor spawned",
+                     log::field_lit("type", actor->type_name().data()));
 
     if (metrics_ring_buffer_) [[unlikely]] {
         metrics::MetricEvent evt{};

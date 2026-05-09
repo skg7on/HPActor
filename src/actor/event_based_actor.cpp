@@ -17,6 +17,8 @@
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/log/log_field.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/messages.pb.h>
 #include <hpactor/metrics/metrics_event.hpp>
 
@@ -115,7 +117,8 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
     // -- CLI introspection dispatch --
     {
-        // InspectStateRequest: gather metadata + optional state/mailbox/children
+        // InspectStateRequest: gather metadata + optional
+        // state/mailbox/children
         if (msg.type_id() == TypeTag::InspectStateRequestTag) {
             cli::InspectStateRequest req;
             if (!req.ParseFromArray(msg.payload().data(),
@@ -139,9 +142,8 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
             if (req.include_state()) {
                 auto blob = serialize_state();
-                reply.set_state_blob(
-                    std::string(reinterpret_cast<const char*>(blob.data()),
-                                blob.size()));
+                reply.set_state_blob(std::string(
+                    reinterpret_cast<const char*>(blob.data()), blob.size()));
             }
 
             std::string reply_data = reply.SerializeAsString();
@@ -165,8 +167,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
             std::string reply_data = reply.SerializeAsString();
             StreamBuffer payload(reply_data.begin(), reply_data.end());
-            ctx->reply(TypedMessage(TypeTag::KillResponseTag,
-                                    std::move(payload)));
+            ctx->reply(TypedMessage(TypeTag::KillResponseTag, std::move(payload)));
 
             // Schedule termination with normal exit code
             set_exit_reason(0);
@@ -175,9 +176,8 @@ void EventBasedActor::receive(TypedMessage& msg) {
     }
     // -- End CLI dispatch --
 
-    auto t0 = metrics_ring_buffer_
-        ? std::chrono::steady_clock::now()
-        : std::chrono::steady_clock::time_point{};
+    auto t0 = metrics_ring_buffer_ ? std::chrono::steady_clock::now()
+                                   : std::chrono::steady_clock::time_point{};
 
     // Try proto handler dispatch by TypeTag first
     auto it = proto_handlers_.find(msg.type_id());
@@ -192,7 +192,8 @@ void EventBasedActor::receive(TypedMessage& msg) {
         }
         if (metrics_ring_buffer_) [[unlikely]] {
             auto t1 = std::chrono::steady_clock::now();
-            auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+            auto ns =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
             metrics::MetricEvent evt{};
             evt.actor_id = id();
             evt.event_type = metrics::MetricEventType::kMessageProcessed;
@@ -209,7 +210,8 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
     if (metrics_ring_buffer_) [[unlikely]] {
         auto t1 = std::chrono::steady_clock::now();
-        auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        auto ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
         metrics::MetricEvent evt{};
         evt.actor_id = id();
         evt.event_type = metrics::MetricEventType::kMessageProcessed;
@@ -227,7 +229,8 @@ void EventBasedActor::become_empty() {
 }
 
 void EventBasedActor::initialize_proto_handlers() {
-    if (handlers_initialized_) return;
+    if (handlers_initialized_)
+        return;
     register_handlers();
     handlers_initialized_ = true;
 }
@@ -244,7 +247,8 @@ void EventBasedActor::on_proto_message(TypeTag tag, const StreamBuffer& payload)
 
     ProtoHandler& handler = it->second;
     auto msg = handler.deserialize(payload);
-    if (!msg) return;
+    if (!msg)
+        return;
 
     StreamBuffer response = handler.invoke(std::move(msg));
     auto* ctx = context();
@@ -265,7 +269,13 @@ void EventBasedActor::on_deactivate() {
 
 void EventBasedActor::on_exit() {
     auto* ctx = context();
-    if (ctx == nullptr) { return; }
+    if (ctx == nullptr) {
+        return;
+    }
+
+    HPACTOR_LOG_INFO(log::LogCategory::kActor, id(),
+                     static_cast<uint32_t>(log::LogEventId::kActorTerminated),
+                     "actor terminated");
 
     if (metrics_ring_buffer_) [[unlikely]] {
         metrics::MetricEvent evt{};
@@ -298,7 +308,8 @@ void EventBasedActor::on_exit() {
 }
 
 cli::MboxSnapshot EventBasedActor::mailbox_snapshot() const {
-    if (mailbox_) return mailbox_->snapshot();
+    if (mailbox_)
+        return mailbox_->snapshot();
     return {};
 }
 
