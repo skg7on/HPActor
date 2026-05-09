@@ -40,11 +40,11 @@ class MemorySink : public ILogSink {
     result<void> write(std::string_view line) noexcept override {
         std::lock_guard<std::mutex> lock(mutex_);
         lines_.emplace_back(line);
-        return {};
+        return result<void>::make();
     }
 
     result<void> flush() noexcept override {
-        return {};
+        return result<void>::make();
     }
 
     std::vector<std::string> lines() const {

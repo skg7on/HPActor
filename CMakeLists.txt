@@ -232,6 +232,7 @@ add_library(hpactor_lib SHARED
     src/log/log_category.cpp
     src/log/log_formatter.cpp
     src/log/logger.cpp
+    src/log/log_drain.cpp
     src/adt/stream_buffer.cpp
     third_party/llhttp/llhttp.c
     third_party/llhttp/api.c
