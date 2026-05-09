@@ -14,6 +14,8 @@
 
 #include <hpactor/net/frame.hpp>
 
+#include <hpactor/log/logger.hpp>
+
 #include <arpa/inet.h>
 #include <cstring>
 
@@ -49,6 +51,10 @@ WireFrame WireFrame::decode(const StreamBuffer& data) {
     // Validate magic header
     const std::array<uint8_t, 4> expected_magic = {'H', 'P', 'A', 'C'};
     if (std::memcmp(data.data(), expected_magic.data(), 4) != 0) {
+        HPACTOR_LOG_ERROR(
+            log::LogCategory::kNetwork, ActorId{0},
+            static_cast<uint32_t>(log::LogEventId::kNetworkFrameDecodeFailed),
+            "network frame decode failed");
         return WireFrame{};
     }
 
@@ -66,8 +72,17 @@ WireFrame WireFrame::decode(const StreamBuffer& data) {
     std::string serialized(data.begin() + HeaderSize,
                            data.begin() + HeaderSize + payload_len);
     if (!frame.pb_frame.ParseFromString(serialized)) {
+        HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "protobuf parse failure");
         return WireFrame{};
     }
+
+    HPACTOR_LOG_TRACE(
+        log::LogCategory::kNetwork, ActorId{0},
+        static_cast<uint32_t>(log::LogEventId::kNetworkFrameReceived),
+        "network frame received",
+        log::field("bytes", static_cast<uint64_t>(data.size())),
+        log::field("tag", static_cast<uint64_t>(frame.pb_frame.type_tag())));
     return frame;
 }
 

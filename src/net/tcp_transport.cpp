@@ -14,6 +14,8 @@
 
 #include <hpactor/net/tcp_transport.hpp>
 
+#include <hpactor/log/logger.hpp>
+
 #include <cstring>
 #include <fcntl.h>
 #include <netinet/in.h>
@@ -31,8 +33,7 @@ namespace net {
 // TcpTransport implementation
 // -----------------------------------------------------------------------------
 
-TcpTransport::TcpTransport(EndPoint endpoint,
-                           const TlsConfig& tls_config,
+TcpTransport::TcpTransport(EndPoint endpoint, const TlsConfig& tls_config,
                            const PoolConfig& pool_config, NodeRegistry* registry)
     : endpoint_(endpoint), acceptor_(&loop_),
       tls_context_(TlsContext::from_config(tls_config)),
@@ -67,8 +68,8 @@ TcpTransport::get_or_create_pool(EndPoint remote_endpoint) {
     if (it != pools_.end()) {
         return it->second;
     }
-    auto pool = std::make_shared<ConnectionPool>(remote_endpoint, pool_config_,
-                                                 &loop_);
+    auto pool =
+        std::make_shared<ConnectionPool>(remote_endpoint, pool_config_, &loop_);
     pools_[remote_endpoint] = pool;
     // Set RPC handler if one has been registered
     if (rpc_handler_) {
@@ -143,8 +144,9 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
         tls_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
-        tls_conn->set_frame_handler(
-            [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
+        tls_conn->set_frame_handler([pool](StreamBuffer data) {
+            pool->on_frame_received(std::move(data));
+        });
         conn = tls_conn;
     } else {
         auto plain_conn = WireFrameConnection::create_connecting_client(
@@ -154,8 +156,9 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint,
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
-        plain_conn->set_frame_handler(
-            [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
+        plain_conn->set_frame_handler([pool](StreamBuffer data) {
+            pool->on_frame_received(std::move(data));
+        });
         conn = plain_conn;
     }
 
@@ -206,9 +209,8 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint) {
     return connect(remote_endpoint, ip, ep->tcp_port);
 }
 
-ConnectionPtr
-TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
-                                  const std::string& socket_path) {
+ConnectionPtr TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
+                                                const std::string& socket_path) {
     int fd = ::socket(AF_UNIX, SOCK_STREAM, 0);
     if (fd < 0) {
         return nullptr;
@@ -239,8 +241,9 @@ TcpTransport::connect_unix_domain(EndPoint remote_endpoint,
     plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
         pool->on_connection_error(c, e);
     });
-    plain_conn->set_frame_handler(
-        [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
+    plain_conn->set_frame_handler([pool](StreamBuffer data) {
+        pool->on_frame_received(std::move(data));
+    });
 
     pool->add_connection(plain_conn);
     register_connection(plain_conn, fd);
@@ -274,7 +277,8 @@ bool TcpTransport::complete_connect(int fd, bool use_tls) {
 
     loop_.set_write_handler(fd, [this, fd, use_tls, done](int event_fd) {
         (void)event_fd;
-        if (*done) return;
+        if (*done)
+            return;
         *done = true;
 
         loop_.clear_write_handler(fd);
@@ -284,10 +288,13 @@ bool TcpTransport::complete_connect(int fd, bool use_tls) {
         ::getsockopt(fd, SOL_SOCKET, SO_ERROR, &so_error, &len);
 
         auto it = connections_.find(fd);
-        if (it == connections_.end()) return;
+        if (it == connections_.end())
+            return;
 
         if (so_error != 0) {
             it->second->set_state(ConnectionState::Error);
+            HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0,
+                              "connection error");
             return;
         }
 
@@ -295,8 +302,7 @@ bool TcpTransport::complete_connect(int fd, bool use_tls) {
         if (use_tls) {
             TlsConnection::setup_after_connect(
                 std::static_pointer_cast<TlsConnection>(it->second));
-            static_cast<TlsConnection*>(it->second.get())
-                ->start_client_handshake();
+            static_cast<TlsConnection*>(it->second.get())->start_client_handshake();
         } else {
             WireFrameConnection::setup_after_connect(
                 std::static_pointer_cast<WireFrameConnection>(it->second));
@@ -305,26 +311,28 @@ bool TcpTransport::complete_connect(int fd, bool use_tls) {
 
     // Timeout via event loop timer — fires after 5s if the connect
     // hasn't completed, preventing a stale write_handler leak.
-    loop_.run_after([this, fd, done]() {
-        if (*done) return;
-        *done = true;
+    loop_.run_after(
+        [this, fd, done]() {
+            if (*done)
+                return;
+            *done = true;
 
-        loop_.clear_write_handler(fd);
+            loop_.clear_write_handler(fd);
 
-        auto it = connections_.find(fd);
-        if (it != connections_.end() &&
-            it->second->state() == ConnectionState::Connecting) {
-            it->second->set_state(ConnectionState::Error);
-        }
-    }, 5000);
+            auto it = connections_.find(fd);
+            if (it != connections_.end() &&
+                it->second->state() == ConnectionState::Connecting) {
+                it->second->set_state(ConnectionState::Error);
+            }
+        },
+        5000);
 
     return true;
 }
 
 void TcpTransport::listen(uint16_t port) {
-    acceptor_.set_accept_handler([this](int client_fd, EndPoint ep) {
-        handle_accept(client_fd, ep);
-    });
+    acceptor_.set_accept_handler(
+        [this](int client_fd, EndPoint ep) { handle_accept(client_fd, ep); });
     acceptor_.listen(port);
 }
 
@@ -369,27 +377,27 @@ void TcpTransport::unregister_connection(int fd) {
     connections_.erase(fd);
 }
 
-void TcpTransport::handle_accept(int client_fd,
-                                 EndPoint remote_endpoint) {
+void TcpTransport::handle_accept(int client_fd, EndPoint remote_endpoint) {
     // Get or create pool for the connecting endpoint
     auto pool = get_or_create_pool(remote_endpoint);
 
     ConnectionPtr conn;
     if (pool_config_.use_tls) {
-        auto tls_conn = TlsConnection::create_server(client_fd, endpoint_,
-                                                     remote_endpoint,
-                                                     &tls_context_, &loop_);
-        tls_conn->set_frame_handler(
-            [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
+        auto tls_conn = TlsConnection::create_server(
+            client_fd, endpoint_, remote_endpoint, &tls_context_, &loop_);
+        tls_conn->set_frame_handler([pool](StreamBuffer data) {
+            pool->on_frame_received(std::move(data));
+        });
         tls_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });
         conn = tls_conn;
     } else {
-        auto plain_conn = WireFrameConnection::create_as_server(client_fd, endpoint_,
-                                                               remote_endpoint, &loop_);
-        plain_conn->set_frame_handler(
-            [pool](StreamBuffer data) { pool->on_frame_received(std::move(data)); });
+        auto plain_conn = WireFrameConnection::create_as_server(
+            client_fd, endpoint_, remote_endpoint, &loop_);
+        plain_conn->set_frame_handler([pool](StreamBuffer data) {
+            pool->on_frame_received(std::move(data));
+        });
         plain_conn->set_error_handler([pool](ConnectionPtr c, const error& e) {
             pool->on_connection_error(c, e);
         });

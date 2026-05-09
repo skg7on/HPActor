@@ -14,6 +14,7 @@
 
 #include <hpactor/net/wireframe_connection.hpp>
 
+#include <hpactor/log/logger.hpp>
 #include <hpactor/net/event_loop.hpp>
 
 #include <cstring>
@@ -40,6 +41,9 @@ WireFrameConnection::create_as_client(int fd, EndPoint local_endpoint,
     auto conn = std::shared_ptr<WireFrameConnection>(
         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));
     conn->set_state(ConnectionState::Connected);
+
+    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                      "connection opened");
 
     if (loop && fd >= 0) {
         loop->add_fd(fd, EventLoop::Event::Read);
@@ -71,6 +75,9 @@ WireFrameConnection::create_connecting_client(int fd, EndPoint local_endpoint,
 void WireFrameConnection::setup_after_connect(WireFrameConnectionPtr conn) {
     conn->set_state(ConnectionState::Connected);
 
+    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                      "connection opened");
+
     auto* loop = conn->event_loop();
     int fd = conn->fd();
     if (loop && fd >= 0) {
@@ -92,6 +99,9 @@ WireFrameConnection::create_as_server(int fd, EndPoint local_endpoint,
     auto conn = std::shared_ptr<WireFrameConnection>(
         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));
     conn->set_state(ConnectionState::Connected);
+
+    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                      "connection opened");
 
     if (loop && fd >= 0) {
         loop->add_fd(fd, EventLoop::Event::Read);
@@ -130,6 +140,11 @@ void WireFrameConnection::send(const StreamBuffer& frame_data) {
     if (state_ != ConnectionState::Connected) {
         return;
     }
+
+    HPACTOR_LOG_TRACE(
+        log::LogCategory::kNetwork, ActorId{0}, 0, "network frame sent",
+        log::field("bytes", static_cast<uint64_t>(frame_data.size())));
+
     send_raw(frame_data);
 }
 
@@ -143,6 +158,8 @@ void WireFrameConnection::close() {
         fd_ = -1;
     }
     set_state(ConnectionState::Disconnected);
+    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                      "connection closed");
 }
 
 void WireFrameConnection::handle_read() {
@@ -159,7 +176,8 @@ void WireFrameConnection::handle_read() {
             read_buffer_.clear(); // EOF — discard incomplete header
             return;
         } else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                return;
             read_buffer_.clear(); // Error — discard partial data
             return;
         }
@@ -194,7 +212,8 @@ void WireFrameConnection::handle_read() {
             read_buffer_.clear(); // EOF mid-frame — discard incomplete frame
             return;
         } else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) return;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                return;
             read_buffer_.clear(); // Error — discard partial data
             return;
         }
