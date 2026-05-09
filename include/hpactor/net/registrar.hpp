@@ -211,7 +211,8 @@ class RegistrarConnection
     friend class RegistrarServer;
 
   public:
-    using message_handler = std::function<void(TcpMessageType, const StreamBuffer&)>;
+    using message_handler =
+        std::function<void(TcpMessageType, const StreamBuffer&)>;
     using disconnect_handler = std::function<void()>;
     using send_complete_handler = std::function<void(int result)>;
 
@@ -249,8 +250,7 @@ class RegistrarConnection
   private:
     enum class ReadState { ReadingHeader, ReadingPayload };
 
-    RegistrarConnection(EndPoint remote_endpoint, EventLoop* loop,
-                        int fd);
+    RegistrarConnection(EndPoint remote_endpoint, EventLoop* loop, int fd);
 
     void register_with_loop();
     void handle_read_event();
@@ -283,8 +283,7 @@ class RegistrarConnection
 // -----------------------------------------------------------------------------
 class RegistrarServer {
   public:
-    RegistrarServer(const RegistrarConfig& config,
-                    EndPoint local_endpoint,
+    RegistrarServer(const RegistrarConfig& config, EndPoint local_endpoint,
                     EventLoop* loop = nullptr);
     ~RegistrarServer();
 
@@ -310,8 +309,7 @@ class RegistrarServer {
     void handle_accept(int client_fd, EndPoint remote_endpoint);
 
     // Broadcast event to all connected clients
-    void
-    broadcast_node_joined(EndPoint endpoint, const NodeEndpoint& ep);
+    void broadcast_node_joined(EndPoint endpoint, const NodeEndpoint& ep);
     void broadcast_node_left(EndPoint endpoint);
 
   private:
@@ -339,8 +337,8 @@ class RegistrarServer {
 // -----------------------------------------------------------------------------
 class UdpRegistrar : public IServiceDiscovery {
   public:
-    UdpRegistrar(const RegistrarConfig& config,
-                 EndPoint local_endpoint, EventLoop* loop = nullptr);
+    UdpRegistrar(const RegistrarConfig& config, EndPoint local_endpoint,
+                 EventLoop* loop = nullptr);
     ~UdpRegistrar();
 
     // Non-copyable
@@ -367,15 +365,17 @@ class UdpRegistrar : public IServiceDiscovery {
     void set_node_callback(node_callback cb);
 
     // Handle incoming UDP packet (for resolution)
-    void handle_udp_packet(const StreamBuffer& data, const std::string& from_host,
-                           uint16_t from_port);
+    void handle_udp_packet(const StreamBuffer& data,
+                           const std::string& from_host, uint16_t from_port);
 
     // ── IServiceDiscovery overrides ────────────────────────────────────
     std::vector<Member> discover_all() const override;
     const Member* discover(EndPoint ep) const override;
     void announce(Member m) override;
     void on_member_change(MemberChangeCallback cb) override;
-    std::string backend_name() const override { return "udp-registrar"; }
+    std::string backend_name() const override {
+        return "udp-registrar";
+    }
     const std::unordered_map<EndPoint, Member>* raw_members() const override {
         return &endpoint_to_member_;
     }
@@ -388,9 +388,17 @@ class UdpRegistrar : public IServiceDiscovery {
     void setup_udp_socket();
     void issue_async_recvfrom();
     void handle_udp_read_ready();
-    void handle_udp_recv_completion(const StreamBuffer& data, const std::string& from_host,
-                                    uint16_t from_port);
-    void send_udp_response(const StreamBuffer& data, const struct sockaddr_in& dest);
+    void
+    handle_udp_recv_completion(const StreamBuffer& data,
+                               const std::string& from_host, uint16_t from_port);
+    void
+    send_udp_response(const StreamBuffer& data, const struct sockaddr_in& dest);
+    void handle_resolve_query(const StreamBuffer& payload,
+                              const std::string& from_host, uint16_t from_port);
+    void handle_resolve_response(const StreamBuffer& payload);
+    void send_resolve_response(const NodeEndpoint& endpoint,
+                               const std::string& from_host,
+                               uint16_t from_port) const;
     void failover();
 
     // UDP receive state
@@ -426,10 +434,9 @@ class UdpRegistrar : public IServiceDiscovery {
 // -----------------------------------------------------------------------------
 class RegistrarClient {
   public:
-    RegistrarClient(const RegistrarConfig& config,
-                    EndPoint local_endpoint,
-                    EndPoint server_endpoint,
-                    NodeRegistry* shared_registry, EventLoop* loop = nullptr);
+    RegistrarClient(const RegistrarConfig& config, EndPoint local_endpoint,
+                    EndPoint server_endpoint, NodeRegistry* shared_registry,
+                    EventLoop* loop = nullptr);
     ~RegistrarClient();
 
     // Non-copyable
