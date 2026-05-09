@@ -27,6 +27,8 @@ option(ENABLE_MEMORY_TRACKING "Enable per-actor memory tracking and telemetry" O
 option(ENABLE_ACTOR_METRICS "Enable actor-level metrics subsystem" ON)
 option(ENABLE_MEMORY_DEBUG "Enable memory poisoning, canaries, and guard pages" OFF)
 option(ENABLE_CLI "Enable interactive CLI subsystem" ON)
+option(ENABLE_ACTOR_LOGGING "Enable structured actor logging subsystem" ON)
+set(HPACTOR_ENABLE_ACTOR_LOGGING ${ENABLE_ACTOR_LOGGING})
 
 # Sanitizer mutual exclusivity
 if(ENABLE_ASAN AND ENABLE_TSAN)
