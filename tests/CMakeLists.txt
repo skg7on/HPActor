@@ -203,6 +203,10 @@ add_executable(test_log_formatter log/test_log_formatter.cpp)
 target_link_libraries(test_log_formatter hpactor)
 add_test(NAME test_log_formatter COMMAND test_log_formatter)
 
+add_executable(test_log_integration log/test_log_integration.cpp)
+target_link_libraries(test_log_integration hpactor pthread)
+add_test(NAME test_log_integration COMMAND test_log_integration)
+
 add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)
