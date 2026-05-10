@@ -244,6 +244,7 @@ class ActorSystem {
     }
 
     // Distributed tracing
+#if HPACTOR_ENABLE_ACTOR_TRACING
     tracing::TraceManager* trace_manager() noexcept {
         return trace_manager_.get();
     }
@@ -251,6 +252,14 @@ class ActorSystem {
     const tracing::TraceManager* trace_manager() const noexcept {
         return trace_manager_.get();
     }
+#else
+    tracing::TraceManager* trace_manager() noexcept {
+        return nullptr;
+    }
+    const tracing::TraceManager* trace_manager() const noexcept {
+        return nullptr;
+    }
+#endif
 
     void apply_tracing_config(const tracing::TraceConfig& config);
 
@@ -421,7 +430,9 @@ class ActorSystem {
 
     // Tracing subsystem
     tracing::TraceConfig tracing_config_;
+#if HPACTOR_ENABLE_ACTOR_TRACING
     std::unique_ptr<tracing::TraceManager> trace_manager_;
+#endif
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;

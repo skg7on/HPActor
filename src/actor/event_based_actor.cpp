@@ -29,6 +29,7 @@
 
 namespace hpactor {
 
+#if HPACTOR_ENABLE_ACTOR_TRACING
 namespace {
 
 class ReceiveSpanGuard {
@@ -53,6 +54,7 @@ class ReceiveSpanGuard {
 };
 
 } // namespace
+#endif // HPACTOR_ENABLE_ACTOR_TRACING
 
 EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
     : LocalActor(ctx, sys) {}
@@ -60,11 +62,12 @@ EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
 void EventBasedActor::on_activate() {}
 
 void EventBasedActor::receive(TypedMessage& msg) {
+    auto* ctx = context();
+#if HPACTOR_ENABLE_ACTOR_TRACING
     auto* trace_manager = system().trace_manager();
     tracing::SpanHandle receive_span;
     std::unique_ptr<ActorContext::TraceScope> trace_scope;
 
-    auto* ctx = context();
     if (trace_manager != nullptr && trace_manager->enabled() &&
         trace_manager->config().record_actor_receive_spans) {
         tracing::SpanStart start;
@@ -86,6 +89,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
     }
 
     ReceiveSpanGuard span_guard(trace_manager, &receive_span);
+#endif
     // -- System message interception (link / monitor / death) --
     {
         switch (msg.type_id()) {
