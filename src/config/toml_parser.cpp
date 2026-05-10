@@ -13,6 +13,9 @@
 // limitations under the License.
 
 #include <hpactor/config/toml_parser.hpp>
+#include <hpactor/log/log_category.hpp>
+#include <hpactor/log/log_level.hpp>
+#include <hpactor/log/logger.hpp>
 
 #include <toml.hpp>
 
@@ -30,8 +33,10 @@ namespace {
 // DispatchPolicy string parsing
 // ---------------------------------------------------------------------------
 static DispatchPolicy parse_dispatch_policy(const std::string& s) {
-    if (s == "DedicatedThread") return DispatchPolicy::DedicatedThread;
-    if (s == "DedicatedPool") return DispatchPolicy::DedicatedPool;
+    if (s == "DedicatedThread")
+        return DispatchPolicy::DedicatedThread;
+    if (s == "DedicatedPool")
+        return DispatchPolicy::DedicatedPool;
     return DispatchPolicy::Cooperative;
 }
 
@@ -48,12 +53,14 @@ static std::vector<std::string> expand_glob(const std::string& pattern) {
     }
 
     fs::path parent = p.parent_path();
-    if (parent.empty()) parent = ".";
+    if (parent.empty())
+        parent = ".";
     std::string fname = p.filename().string();
 
     auto star_pos = fname.find('*');
     if (star_pos == std::string::npos) {
-        if (fs::exists(p)) results.push_back(p.string());
+        if (fs::exists(p))
+            results.push_back(p.string());
         return results;
     }
 
@@ -62,11 +69,11 @@ static std::vector<std::string> expand_glob(const std::string& pattern) {
 
     std::error_code ec;
     for (const auto& entry : fs::directory_iterator(parent, ec)) {
-        if (ec) break;
+        if (ec)
+            break;
         std::string entry_name = entry.path().filename().string();
         if (entry_name.size() >= prefix.size() + suffix.size() &&
-            entry_name.starts_with(prefix) &&
-            entry_name.ends_with(suffix)) {
+            entry_name.starts_with(prefix) && entry_name.ends_with(suffix)) {
             results.push_back(entry.path().string());
         }
     }
@@ -84,18 +91,19 @@ static std::string read_string(const toml::table& tbl, const char* key,
     return default_val;
 }
 
-static uint32_t read_uint32(const toml::table& tbl, const char* key,
-                            uint32_t default_val = 0) {
+static uint32_t
+read_uint32(const toml::table& tbl, const char* key, uint32_t default_val = 0) {
     auto node = tbl.get(key);
     if (node && node->is_integer()) {
         auto val = node->value<int64_t>();
-        if (val && *val >= 0) return static_cast<uint32_t>(*val);
+        if (val && *val >= 0)
+            return static_cast<uint32_t>(*val);
     }
     return default_val;
 }
 
-static bool read_bool(const toml::table& tbl, const char* key,
-                      bool default_val = false) {
+static bool
+read_bool(const toml::table& tbl, const char* key, bool default_val = false) {
     auto node = tbl.get(key);
     if (node && node->is_boolean())
         return node->value<bool>().value_or(default_val);
@@ -134,14 +142,14 @@ static ActorDef parse_actor(const toml::table& tbl) {
     def.supervisor = read_string(tbl, "supervisor");
     def.dispatcher = read_string(tbl, "dispatcher");
     def.mailbox_capacity = read_uint32(tbl, "mailbox_capacity");
-    def.dispatch_policy = parse_dispatch_policy(
-        read_string(tbl, "dispatch_policy", "Cooperative"));
+    def.dispatch_policy =
+        parse_dispatch_policy(read_string(tbl, "dispatch_policy", "Cooperative"));
 
     if (auto* res = tbl.get("resources")) {
         if (res->is_table()) {
             auto& rt = *res->as_table();
-            def.resources.slab_class_bytes =
-                read_uint32(rt, "slab_class_bytes");
+            def.resources.slab_class_bytes = read_uint32(rt, "slab_class_"
+                                                             "bytes");
             def.resources.max_memory_kb = read_uint32(rt, "max_memory_kb");
         }
     }
@@ -196,8 +204,8 @@ struct FileData {
     std::unordered_map<std::string, ActorDef> templates;
 };
 
-static result<FileData> parse_file_data(const std::string& filepath,
-                                        bool is_entrypoint) {
+static result<FileData>
+parse_file_data(const std::string& filepath, bool is_entrypoint) {
     FileData data;
 
     toml::table root;
@@ -205,6 +213,9 @@ static result<FileData> parse_file_data(const std::string& filepath,
         root = toml::parse_file(filepath);
     } catch (const toml::parse_error&) {
         error err(errors::unknown);
+        HPACTOR_LOG_ERROR(log::LogCategory::kConfig, ActorId{0}, 0,
+                          "topology parse error",
+                          log::field_lit("error", err.message().c_str()));
         return result<FileData>::make(std::move(err));
     }
 
@@ -225,28 +236,124 @@ static result<FileData> parse_file_data(const std::string& filepath,
         data.system.version = read_string(st, "version", "1.0");
         data.system.scheduler_threads = read_uint32(st, "scheduler_threads", 4);
         data.system.max_queue_depth = read_uint32(st, "max_queue_depth", 1024);
-        data.system.default_mailbox_size = read_uint32(st, "default_mailbox_size", 1024);
+        data.system.default_mailbox_size =
+            read_uint32(st, "default_mailbox_size", 1024);
         data.system.enable_network = read_bool(st, "enable_network");
-        data.system.tcp_port = static_cast<uint16_t>(read_uint32(st, "tcp_port"));
+        data.system.tcp_port = static_cast<uint16_t>(read_uint32(st, "tcp_"
+                                                                     "port"));
         data.system.spawn_timeout_ms = read_uint32(st, "spawn_timeout_ms", 5000);
         data.system.enable_http_gateway = read_bool(st, "enable_http_gateway");
         data.system.http_bind_host = read_string(st, "http_bind_host", "0.0.0.0");
-        data.system.http_port = static_cast<uint16_t>(read_uint32(st, "http_port", 8080));
-        data.system.http_max_connections = read_uint32(st, "http_max_connections", 1000);
-        data.system.http_max_request_size = read_uint32(st, "http_max_request_size", 1048576);
-        data.system.http_reply_timeout_ms = read_uint32(st, "http_reply_timeout_ms", 5000);
+        data.system.http_port =
+            static_cast<uint16_t>(read_uint32(st, "http_port", 8080));
+        data.system.http_max_connections =
+            read_uint32(st, "http_max_connections", 1000);
+        data.system.http_max_request_size =
+            read_uint32(st, "http_max_request_size", 1048576);
+        data.system.http_reply_timeout_ms =
+            read_uint32(st, "http_reply_timeout_ms", 5000);
         data.system.use_coroutines = read_bool(st, "use_coroutines");
 
         // Metrics subsystem
         if (auto* metrics_node = st.get("metrics")) {
             if (metrics_node->is_table()) {
                 auto& mt = *metrics_node->as_table();
-                data.system.metrics_enabled =
-                    read_bool(mt, "enabled", true);
+                data.system.metrics_enabled = read_bool(mt, "enabled", true);
                 data.system.metrics_ring_buffer_capacity =
                     read_uint32(mt, "ring_buffer_capacity", 65536);
                 data.system.metrics_path =
                     read_string(mt, "metrics_path", "/metrics");
+            }
+        }
+
+        // Logging subsystem
+        if (auto* log_node = st.get("logging")) {
+            if (log_node->is_table()) {
+                auto& lt = *log_node->as_table();
+                data.system.logging.enabled = read_bool(lt, "enabled", true);
+
+                // default_level (string → LogLevel)
+                std::string lvl_str = read_string(lt, "default_level", "info");
+                if (auto parsed = log::parse_level(lvl_str); parsed.has_value())
+                    data.system.logging.default_level = parsed.value();
+
+                // format (string → LogFormat)
+                std::string fmt_str = read_string(lt, "format", "json");
+                if (fmt_str == "text")
+                    data.system.logging.format = log::LogFormat::kText;
+                else
+                    data.system.logging.format = log::LogFormat::kJson;
+
+                data.system.logging.ring_buffer_capacity =
+                    read_uint32(lt, "ring_buffer_capacity", 65536);
+
+                // flush_on_level (string → LogLevel)
+                std::string flush_str = read_string(lt, "flush_on_level", "error");
+                if (auto parsed = log::parse_level(flush_str); parsed.has_value())
+                    data.system.logging.flush_on_level = parsed.value();
+
+                data.system.logging.file_path = read_string(lt, "file_path", "");
+
+                // drop_policy (string → DropPolicy)
+                std::string drop_str =
+                    read_string(lt, "drop_policy", "drop_newest");
+                if (drop_str == "drop_newest")
+                    data.system.logging.drop_policy = log::DropPolicy::kDropNewest;
+
+                // sinks (array of strings → vector<LogSinkKind>)
+                if (auto* sinks_arr = lt.get("sinks")) {
+                    if (sinks_arr->is_array()) {
+                        for (const auto& v : *sinks_arr->as_array()) {
+                            if (v.is_string()) {
+                                std::string s = std::string{
+                                    v.value<std::string>().value_or("")};
+                                if (s == "stderr")
+                                    data.system.logging.sinks.push_back(
+                                        log::LogSinkKind::kStderr);
+                                else if (s == "file")
+                                    data.system.logging.sinks.push_back(
+                                        log::LogSinkKind::kFile);
+                                else if (s == "rotating_file")
+                                    data.system.logging.sinks.push_back(
+                                        log::LogSinkKind::kRotatingFile);
+                            }
+                        }
+                    }
+                }
+
+                // [system.logging.levels] sub-table
+                if (auto* levels_node = lt.get("levels")) {
+                    if (levels_node->is_table()) {
+                        for (const auto& [key, val] : *levels_node->as_table()) {
+                            if (!val.is_string())
+                                continue;
+                            auto cat =
+                                log::parse_category(std::string_view{key.str()});
+                            if (!cat.has_value())
+                                continue;
+                            auto lvl = log::parse_level(std::string_view{
+                                val.value<std::string>().value_or("")});
+                            if (!lvl.has_value())
+                                continue;
+                            auto idx = static_cast<size_t>(cat.value());
+                            data.system.logging.levels[idx] = lvl.value();
+                        }
+                    }
+                }
+
+                // [system.logging.rotating_file] sub-table
+                if (auto* rf_node = lt.get("rotating_file")) {
+                    if (rf_node->is_table()) {
+                        auto& rft = *rf_node->as_table();
+                        data.system.logging.rotating_file.path =
+                            read_string(rft, "path", "");
+                        data.system.logging.rotating_file.max_bytes =
+                            static_cast<uint64_t>(
+                                read_uint32(rft, "max_bytes", 104857600));
+                        data.system.logging.rotating_file.max_files =
+                            read_uint32(rft, "max_files", 5);
+                    }
+                }
             }
         }
 
@@ -260,8 +367,7 @@ static result<FileData> parse_file_data(const std::string& filepath,
                     static_cast<uint16_t>(read_uint32(ct, "tcp_port", 0));
                 data.system.cli.default_format =
                     read_string(ct, "default_format", "pretty");
-                data.system.cli.page_size =
-                    read_uint32(ct, "page_size", 50);
+                data.system.cli.page_size = read_uint32(ct, "page_size", 50);
             }
         }
 
@@ -287,8 +393,7 @@ static result<FileData> parse_file_data(const std::string& filepath,
         if (disp_arr->is_array()) {
             for (const auto& elem : *disp_arr->as_array()) {
                 if (elem.is_table())
-                    data.dispatchers.push_back(
-                        parse_dispatcher(*elem.as_table()));
+                    data.dispatchers.push_back(parse_dispatcher(*elem.as_table()));
             }
         }
     }
@@ -309,8 +414,7 @@ static result<FileData> parse_file_data(const std::string& filepath,
         if (act_arr->is_array()) {
             for (const auto& elem : *act_arr->as_array()) {
                 if (elem.is_table())
-                    data.actors.push_back(
-                        parse_raw_actor(*elem.as_table()));
+                    data.actors.push_back(parse_raw_actor(*elem.as_table()));
             }
         }
     }
@@ -322,9 +426,12 @@ static result<FileData> parse_file_data(const std::string& filepath,
 // Deep merge overrides into base
 // ---------------------------------------------------------------------------
 static void deep_merge(ActorDef& base, const ActorDef& overrides) {
-    if (!overrides.behavior.empty()) base.behavior = overrides.behavior;
-    if (!overrides.dispatcher.empty()) base.dispatcher = overrides.dispatcher;
-    if (!overrides.supervisor.empty()) base.supervisor = overrides.supervisor;
+    if (!overrides.behavior.empty())
+        base.behavior = overrides.behavior;
+    if (!overrides.dispatcher.empty())
+        base.dispatcher = overrides.dispatcher;
+    if (!overrides.supervisor.empty())
+        base.supervisor = overrides.supervisor;
     if (overrides.mailbox_capacity != 0)
         base.mailbox_capacity = overrides.mailbox_capacity;
     base.dispatch_policy = overrides.dispatch_policy;
@@ -399,8 +506,7 @@ static bool validate(const TopologyModel& model, std::string& error_msg) {
     for (const auto& actor : model.actors) {
         if (!actor.dispatcher.empty() &&
             disp_names.find(actor.dispatcher) == disp_names.end()) {
-            error_msg = "actor '" + actor.id +
-                        "' references unknown dispatcher '" +
+            error_msg = "actor '" + actor.id + "' references unknown dispatcher '" +
                         actor.dispatcher + "'";
             return false;
         }
@@ -436,7 +542,8 @@ topological_sort(std::vector<ActorDef> actors) {
 
     std::deque<size_t> queue;
     for (size_t i = 0; i < actors.size(); ++i)
-        if (in_degree[i] == 0) queue.push_back(i);
+        if (in_degree[i] == 0)
+            queue.push_back(i);
 
     std::vector<ActorDef> sorted;
     sorted.reserve(actors.size());
@@ -471,7 +578,8 @@ topological_sort(std::vector<ActorDef> actors) {
 result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     fs::path entry_fs(entrypoint_path);
     fs::path base_dir = entry_fs.parent_path();
-    if (base_dir.empty()) base_dir = ".";
+    if (base_dir.empty())
+        base_dir = ".";
 
     // Phase 1: Parse entrypoint
     auto entry_parse = parse_file_data(entrypoint_path, true);
@@ -542,6 +650,9 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     if (!sorted_result.has_value())
         return result<TopologyModel>::make(sorted_result.error());
     model.actors = std::move(sorted_result.value());
+
+    HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0, "topology loaded",
+                     log::field_lit("path", entrypoint_path.c_str()));
 
     return result<TopologyModel>::make(std::move(model));
 }

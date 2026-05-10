@@ -16,9 +16,9 @@
 
 #include <hpactor/mem/segment_provider.hpp>
 
+#include <csignal>
 #include <cstddef>
 #include <cstdint>
-#include <csignal>
 
 namespace hpactor::mem {
 
@@ -47,6 +47,11 @@ void guarded_free(void* user_ptr, size_t user_bytes) noexcept;
 // SegmentProvider::lookup() on the fault address) and records a corruption
 // event rather than crashing the process.
 void install_corruption_handler() noexcept;
+
+// Set a pre-opened file descriptor for signal-safe logging of guard page
+// violations. The handler uses write() — never the async-unsafe logger —
+// to avoid CAS atomics deadlock in signal context.
+void set_guard_page_log_fd(int fd) noexcept;
 
 // Restore the previous signal handler.
 void remove_corruption_handler() noexcept;

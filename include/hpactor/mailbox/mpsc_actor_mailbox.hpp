@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -43,6 +44,17 @@ template <typename T> class MPSCActorMailbox {
     void enqueue(T* node) noexcept {
         bool was_empty = empty();
         mailbox_.enqueue(node);
+
+        // Check mailbox depth and warn if too deep
+        int64_t depth = mailbox_.count();
+        if (depth > 1024) [[unlikely]] {
+            HPACTOR_LOG_WARNING(
+                log::LogCategory::kMailbox, actor_id_,
+                static_cast<uint32_t>(log::LogEventId::kMailboxDepthHigh),
+                "mailbox depth high",
+                log::field("depth", static_cast<uint64_t>(depth)));
+        }
+
         if (metrics_ring_buffer_) [[unlikely]] {
             metrics::MetricEvent evt{};
             evt.actor_id = actor_id_;
@@ -66,7 +78,8 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
-    // Convenience: enqueue from a Message<T> rvalue (heap-allocates via custom allocator)
+    // Convenience: enqueue from a Message<T> rvalue (heap-allocates via custom
+    // allocator)
     void push(T&& msg) noexcept {
         void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
         auto* node = new (raw) T(std::move(msg));
@@ -114,9 +127,13 @@ template <typename T> class MPSCActorMailbox {
         mailbox_was_empty_.store(val, std::memory_order_release);
     }
 
-    void set_metrics_ring_buffer(
-        metrics::MpscRingBuffer<metrics::MetricEvent>* buf) noexcept {
+    void
+    set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf) noexcept {
         metrics_ring_buffer_ = buf;
+    }
+
+    void set_logger(log::Logger* logger) noexcept {
+        logger_ = logger;
     }
 
     // Inject a message for testing (bypasses scheduler notify_ready)
@@ -139,6 +156,7 @@ template <typename T> class MPSCActorMailbox {
     std::atomic<bool> mailbox_was_empty_{true};
     ActorContinuationCallback continuation_callback_;
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
+    log::Logger* logger_ = nullptr;
 };
 
 } // namespace hpactor::mailbox

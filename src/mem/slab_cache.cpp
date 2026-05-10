@@ -12,8 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/mem/slab_cache.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/log/log_field.hpp>
+#include <hpactor/log/logger.hpp>
+#include <hpactor/mem/slab_cache.hpp>
 
 #include <cstring>
 
@@ -39,6 +41,11 @@ void* SlabCache::allocate(ActorId owner) noexcept {
         // Verify canary was not corrupted while block was freed
         size_t bs = block_size(size_class_);
         if (!CanaryFooter::verify(block, bs)) {
+            HPACTOR_LOG_ERROR(
+                log::LogCategory::kMemory, ActorId{0},
+                static_cast<uint32_t>(log::LogEventId::kMemoryCorruption),
+                "memory corruption detected (canary mismatch in allocate)",
+                log::field_ptr("block", block));
             stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
             live_count_.fetch_add(1, std::memory_order_relaxed);
             return nullptr; // corruption detected, refuse allocation
@@ -49,6 +56,11 @@ void* SlabCache::allocate(ActorId owner) noexcept {
         for (size_t i = 0; i < usz && i < 16; ++i) {
             if (user[i] != kPoisonByte) {
                 // use-after-free detected
+                HPACTOR_LOG_ERROR(
+                    log::LogCategory::kMemory, ActorId{0},
+                    static_cast<uint32_t>(log::LogEventId::kMemoryCorruption),
+                    "use-after-free detected (poison byte violated)",
+                    log::field_ptr("block", block));
                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
                 live_count_.fetch_add(1, std::memory_order_relaxed);
                 return nullptr;
@@ -92,7 +104,13 @@ void SlabCache::deallocate(void* user_ptr) noexcept {
 #if HPACTOR_ENABLE_MEMORY_DEBUG
     size_t bs = block_size(size_class_);
     // Verify canary before freeing (catch buffer overflow)
-    CanaryFooter::verify(hdr, bs);
+    if (!CanaryFooter::verify(hdr, bs)) {
+        HPACTOR_LOG_ERROR(log::LogCategory::kMemory, ActorId{0},
+                          static_cast<uint32_t>(log::LogEventId::kMemoryCorruption),
+                          "memory corruption detected (canary mismatch in "
+                          "deallocate)",
+                          log::field_ptr("ptr", user_ptr));
+    }
     // Poison user data to catch use-after-free
     std::memset(user_ptr, kPoisonByte, user_size(bs));
 #endif

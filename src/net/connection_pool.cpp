@@ -17,6 +17,7 @@
 #include <hpactor/spawn.hpp>
 
 #include <hpactor/common.pb.h>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/messages.pb.h>
 
 namespace hpactor {
@@ -24,8 +25,7 @@ namespace hpactor {
 namespace net {
 
 ConnectionPool::ConnectionPool(EndPoint remote_endpoint,
-                               const PoolConfig& config,
-                               EventLoop* loop)
+                               const PoolConfig& config, EventLoop* loop)
     : remote_endpoint_(remote_endpoint), config_(config), loop_(loop) {}
 
 ConnectionPool::~ConnectionPool() {
@@ -131,6 +131,7 @@ void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
                                               active_connections_.end(), conn),
                                   active_connections_.end());
     }
+    HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0, "connection error");
     schedule_reconnect();
 }
 
@@ -140,10 +141,12 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
     // Check for RPC response
     if (frame.pb_frame.flags() & WireFrame::RpcResponse) {
         // Try to decode as spawn response first
-        if (static_cast<TypeTag>(frame.pb_frame.type_tag()) == TypeTag::SpawnResponseTag) {
+        if (static_cast<TypeTag>(frame.pb_frame.type_tag()) ==
+            TypeTag::SpawnResponseTag) {
             ::hpactor::SpawnResponseMessage pb_resp;
-            if (pb_resp.ParseFromArray(frame.pb_frame.payload().data(),
-                                       static_cast<int>(frame.pb_frame.payload().size()))) {
+            if (pb_resp.ParseFromArray(
+                    frame.pb_frame.payload().data(),
+                    static_cast<int>(frame.pb_frame.payload().size()))) {
                 if (spawn_handler_) {
                     SpawnResponse resp;
                     resp.actor_addr = net::from_proto(pb_resp.actor_addr());
@@ -191,11 +194,8 @@ void ConnectionPool::schedule_reconnect() {
     }
 
     reconnect_attempts_.fetch_add(1);
-    loop_->run_after(
-        [this]() {
-            reconnect_scheduled_.store(false);
-        },
-        static_cast<int>(backoff.count()));
+    loop_->run_after([this]() { reconnect_scheduled_.store(false); },
+                     static_cast<int>(backoff.count()));
 }
 
 void ConnectionPool::flush_pending() {
@@ -212,7 +212,8 @@ void ConnectionPool::flush_pending() {
     }
 }
 
-bool ConnectionPool::add_pending(const ActorAddress& target, const StreamBuffer& data) {
+bool ConnectionPool::add_pending(const ActorAddress& target,
+                                 const StreamBuffer& data) {
     std::lock_guard<std::mutex> lock(mutex_);
     if (pending_messages_.size() >= config_.max_pending) {
         return false;
@@ -228,7 +229,7 @@ void ConnectionPool::add_connection(ConnectionPtr conn) {
 
 void ConnectionPool::prewarm_pool(EndPoint ep,
                                   const std::vector<AcceptorInfo>& acceptors) {
-    (void)ep;  // Pool already bound to remote_endpoint_ from constructor
+    (void)ep; // Pool already bound to remote_endpoint_ from constructor
     std::lock_guard<std::mutex> lock(mutex_);
     acceptors_ = acceptors;
     // The actual connection is established asynchronously on first use.

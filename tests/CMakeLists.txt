@@ -183,6 +183,30 @@ add_executable(test_metrics_integration metrics/test_metrics_integration.cpp)
 target_link_libraries(test_metrics_integration hpactor pthread)
 add_test(NAME test_metrics_integration COMMAND test_metrics_integration)
 
+add_executable(test_log_level log/test_log_level.cpp)
+target_link_libraries(test_log_level hpactor)
+add_test(NAME test_log_level COMMAND test_log_level)
+
+add_executable(test_log_category log/test_log_category.cpp)
+target_link_libraries(test_log_category hpactor)
+add_test(NAME test_log_category COMMAND test_log_category)
+
+add_executable(test_log_config log/test_log_config.cpp)
+target_link_libraries(test_log_config hpactor)
+add_test(NAME test_log_config COMMAND test_log_config)
+
+add_executable(test_log_ring_buffer log/test_log_ring_buffer.cpp)
+target_link_libraries(test_log_ring_buffer hpactor pthread)
+add_test(NAME test_log_ring_buffer COMMAND test_log_ring_buffer)
+
+add_executable(test_log_formatter log/test_log_formatter.cpp)
+target_link_libraries(test_log_formatter hpactor)
+add_test(NAME test_log_formatter COMMAND test_log_formatter)
+
+add_executable(test_log_integration log/test_log_integration.cpp)
+target_link_libraries(test_log_integration hpactor pthread)
+add_test(NAME test_log_integration COMMAND test_log_integration)
+
 add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)

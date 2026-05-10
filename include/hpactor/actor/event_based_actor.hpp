@@ -39,6 +39,9 @@ namespace hpactor {
 
 // Forward declarations
 class ProtoTypeRegistry;
+namespace log {
+class Logger;
+} // namespace log
 
 // Internal handler storage — type-erased to avoid template bloat in the map
 struct ProtoHandler {
@@ -50,7 +53,8 @@ struct ProtoHandler {
     ProtoHandler(const ProtoHandler&) = delete;
     ProtoHandler& operator=(const ProtoHandler&) = delete;
 
-    // Deserialize bytes into a shared_ptr<void> holding the concrete protobuf type
+    // Deserialize bytes into a shared_ptr<void> holding the concrete protobuf
+    // type
     std::function<std::shared_ptr<void>(const StreamBuffer&)> deserialize;
 
     // Invoke the handler with a deserialized message.
@@ -78,18 +82,18 @@ class EventBasedActor : public LocalActor {
     // Users override register_handlers() and call these in the override.
 
     // Register a fire-and-forget handler for a protobuf message type
-    template<typename ProtoMsgT>
+    template <typename ProtoMsgT>
     void on(std::function<void(const ProtoMsgT&)> handler) {
         TypeTag tag = type_tag_for<ProtoMsgT>();
-        auto handler_ptr = mem::allocate_shared<
-            std::function<void(const ProtoMsgT&)>>(
+        auto handler_ptr =
+            mem::allocate_shared<std::function<void(const ProtoMsgT&)>>(
                 id_ptr(), mem::RegionType::kActor, std::move(handler));
 
         ProtoHandler entry;
         entry.type_name = ProtoMsgT().GetTypeName();
         entry.deserialize = [](const StreamBuffer& data) -> std::shared_ptr<void> {
-            auto msg = mem::allocate_shared<ProtoMsgT>(
-                mem::current_actor_id(), mem::RegionType::kMessage);
+            auto msg = mem::allocate_shared<ProtoMsgT>(mem::current_actor_id(),
+                                                       mem::RegionType::kMessage);
             if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
                 return nullptr;
             }
@@ -105,18 +109,17 @@ class EventBasedActor : public LocalActor {
     }
 
     // Register a request-response handler for protobuf types
-    template<typename ReqT, typename ResT>
+    template <typename ReqT, typename ResT>
     void on_request(std::function<ResT(const ReqT&)> handler) {
         TypeTag tag = type_tag_for<ReqT>();
-        auto handler_ptr = mem::allocate_shared<
-            std::function<ResT(const ReqT&)>>(
-                id_ptr(), mem::RegionType::kActor, std::move(handler));
+        auto handler_ptr = mem::allocate_shared<std::function<ResT(const ReqT&)>>(
+            id_ptr(), mem::RegionType::kActor, std::move(handler));
 
         ProtoHandler entry;
         entry.type_name = ReqT().GetTypeName();
         entry.deserialize = [](const StreamBuffer& data) -> std::shared_ptr<void> {
-            auto msg = mem::allocate_shared<ReqT>(
-                mem::current_actor_id(), mem::RegionType::kMessage);
+            auto msg = mem::allocate_shared<ReqT>(mem::current_actor_id(),
+                                                  mem::RegionType::kMessage);
             if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
                 return nullptr;
             }
@@ -127,7 +130,7 @@ class EventBasedActor : public LocalActor {
             ResT res = (*handler_ptr)(req);
             StreamBuffer result(res.ByteSizeLong());
             (void)res.SerializeToArray(result.data(),
-                                        static_cast<int>(result.size()));
+                                       static_cast<int>(result.size()));
             return result;
         };
 
@@ -166,8 +169,7 @@ class EventBasedActor : public LocalActor {
     }
 
     sched::MailboxAwaiter<TypedMessage> make_mailbox_awaiter() {
-        return sched::MailboxAwaiter<TypedMessage>{
-            coro_handle_.promise(), mailbox_};
+        return sched::MailboxAwaiter<TypedMessage>{coro_handle_.promise(), mailbox_};
     }
 
     void ensure_coroutine_started() {
@@ -195,7 +197,7 @@ class EventBasedActor : public LocalActor {
         }
     }
 
-#else // !HPACTOR_SUPPORT_COROUTINES
+#else  // !HPACTOR_SUPPORT_COROUTINES
     void ensure_coroutine_started() {}
 #endif // HPACTOR_SUPPORT_COROUTINES
 
@@ -217,8 +219,7 @@ class EventBasedActor : public LocalActor {
     void set_scheduler(sched::IScheduler* scheduler) override {
         scheduler_ = scheduler;
     }
-    void
-    set_mailbox(mailbox::MPSCActorMailbox<TypedMessage>* mailbox) override {
+    void set_mailbox(mailbox::MPSCActorMailbox<TypedMessage>* mailbox) override {
         mailbox_ = mailbox;
     }
 
@@ -227,10 +228,15 @@ class EventBasedActor : public LocalActor {
             static_cast<metrics::MpscRingBuffer<metrics::MetricEvent>*>(buf);
     }
 
+    void set_logger(void* logger) noexcept override {
+        logger_ = static_cast<log::Logger*>(logger);
+    }
+
     cli::MboxSnapshot mailbox_snapshot() const override;
 
   protected:
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
+    log::Logger* logger_{nullptr};
 
     virtual Behavior make_behavior() {
         return {};
@@ -246,17 +252,21 @@ class EventBasedActor : public LocalActor {
     void on_activate() override;
     void on_deactivate() override;
 
-    // Get TypeTag for a protobuf type from MessageTraits (compile-time dispatch)
-    template<typename ProtoMsgT>
-    TypeTag type_tag_for() const {
+    // Get TypeTag for a protobuf type from MessageTraits (compile-time
+    // dispatch)
+    template <typename ProtoMsgT> TypeTag type_tag_for() const {
         return MessageTraits<ProtoMsgT>::tag();
     }
 
   public:
     virtual void on_exit();
 
-    void set_exit_reason(uint32_t code) { exit_reason_ = code; }
-    uint32_t exit_reason() const { return exit_reason_; }
+    void set_exit_reason(uint32_t code) {
+        exit_reason_ = code;
+    }
+    uint32_t exit_reason() const {
+        return exit_reason_;
+    }
 
     EventBasedActor(ActorContext* ctx, ActorSystem& sys);
 
@@ -273,10 +283,8 @@ class EventBasedActor : public LocalActor {
     bool handlers_initialized_ = false;
 
     using ProtoHandlerMap =
-        std::unordered_map<TypeTag, ProtoHandler, std::hash<TypeTag>,
-                           std::equal_to<>,
-                           mem::MemStdAllocator<std::pair<const TypeTag,
-                                                          ProtoHandler>>>;
+        std::unordered_map<TypeTag, ProtoHandler, std::hash<TypeTag>, std::equal_to<>,
+                           mem::MemStdAllocator<std::pair<const TypeTag, ProtoHandler>>>;
     ProtoHandlerMap proto_handlers_{
         mem::MemStdAllocator<std::pair<const TypeTag, ProtoHandler>>(
             id_ptr(), mem::RegionType::kActor)};

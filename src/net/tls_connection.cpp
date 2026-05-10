@@ -14,6 +14,7 @@
 
 #include <hpactor/net/tls_connection.hpp>
 
+#include <hpactor/log/logger.hpp>
 #include <hpactor/net/event_loop.hpp>
 
 #include <cstring>
@@ -62,8 +63,8 @@ StreamBuffer parse_tls_payload(const uint8_t* data, size_t len, size_t& consumed
 } // anonymous namespace
 
 TlsConnection::TlsConnection(int fd, EndPoint local_endpoint,
-                             EndPoint remote_endpoint,
-                             TlsContext* tls_context, EventLoop* loop)
+                             EndPoint remote_endpoint, TlsContext* tls_context,
+                             EventLoop* loop)
     : Connection(fd, local_endpoint, remote_endpoint, loop),
       tls_context_(tls_context) {
     read_buffer_.reserve(kReadChunkSize);
@@ -77,11 +78,10 @@ TlsConnection::~TlsConnection() {
 }
 
 TlsConnectionPtr
-TlsConnection::create_client(EndPoint local_endpoint,
-                             EndPoint remote_endpoint,
+TlsConnection::create_client(EndPoint local_endpoint, EndPoint remote_endpoint,
                              TlsContext* tls_context, EventLoop* loop) {
-    auto conn = std::shared_ptr<TlsConnection>(
-        new TlsConnection(-1, local_endpoint, remote_endpoint, tls_context, loop));
+    auto conn = std::shared_ptr<TlsConnection>(new TlsConnection(
+        -1, local_endpoint, remote_endpoint, tls_context, loop));
     conn->set_state(ConnectionState::Connecting);
     conn->is_server_ = false;
     return conn;
@@ -89,11 +89,10 @@ TlsConnection::create_client(EndPoint local_endpoint,
 
 TlsConnectionPtr
 TlsConnection::create_server(int socket_fd, EndPoint local_endpoint,
-                             EndPoint remote_endpoint,
-                             TlsContext* tls_context, EventLoop* loop) {
-    auto conn = std::shared_ptr<TlsConnection>(
-        new TlsConnection(socket_fd, local_endpoint, remote_endpoint,
-                          tls_context, loop));
+                             EndPoint remote_endpoint, TlsContext* tls_context,
+                             EventLoop* loop) {
+    auto conn = std::shared_ptr<TlsConnection>(new TlsConnection(
+        socket_fd, local_endpoint, remote_endpoint, tls_context, loop));
     conn->set_state(ConnectionState::Connected);
     conn->is_server_ = true;
     // Server waits for client hello
@@ -190,7 +189,8 @@ void TlsConnection::handle_read() {
         } else if (n == 0) {
             break;
         } else {
-            if (errno == EAGAIN || errno == EWOULDBLOCK) break;
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                break;
             break;
         }
     }
@@ -202,8 +202,8 @@ void TlsConnection::process_buffer() {
     // Process complete messages in buffer
     while (read_buffer_.size() >= 4) {
         size_t consumed = 0;
-        StreamBuffer payload = parse_tls_payload(read_buffer_.data(),
-                                          read_buffer_.size(), consumed);
+        StreamBuffer payload =
+            parse_tls_payload(read_buffer_.data(), read_buffer_.size(), consumed);
         if (consumed == 0) {
             break; // Wait for more data
         }
@@ -249,6 +249,9 @@ void TlsConnection::process_buffer() {
 
 void TlsConnection::send(const StreamBuffer& frame_data) {
     if (session_state_ == TlsSessionState::Encrypted) {
+        HPACTOR_LOG_TRACE(
+            log::LogCategory::kNetwork, ActorId{0}, 0, "network frame sent",
+            log::field("bytes", static_cast<uint64_t>(frame_data.size())));
         StreamBuffer encrypted = encrypt_aes(frame_data);
         send_raw(format_tls_message(TlsMessageType::Finished, encrypted));
     }
@@ -264,6 +267,8 @@ void TlsConnection::close() {
         fd_ = -1;
     }
     set_state(ConnectionState::Disconnected);
+    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                      "connection closed");
 }
 
 StreamBuffer TlsConnection::build_client_hello() {
@@ -311,7 +316,8 @@ StreamBuffer TlsConnection::build_certificate_verify(const Nonce& challenge) {
     StreamBuffer signature = tls_context_->sign_data(data_to_sign);
     payload.insert(payload.end(), signature.begin(), signature.end());
 
-    StreamBuffer msg = format_tls_message(TlsMessageType::CertificateVerify, payload);
+    StreamBuffer msg =
+        format_tls_message(TlsMessageType::CertificateVerify, payload);
     handshake_messages_.insert(handshake_messages_.end(), msg.begin(), msg.end());
     return msg;
 }
@@ -319,7 +325,8 @@ StreamBuffer TlsConnection::build_certificate_verify(const Nonce& challenge) {
 StreamBuffer TlsConnection::build_finished() {
     StreamBuffer payload;
     // Compute verify_data using PRF
-    StreamBuffer verify_data = prf_sha256(master_secret_, "finished", handshake_messages_);
+    StreamBuffer verify_data =
+        prf_sha256(master_secret_, "finished", handshake_messages_);
     payload.insert(payload.end(), verify_data.begin(), verify_data.end());
 
     return format_tls_message(TlsMessageType::Finished, payload);
@@ -402,6 +409,9 @@ void TlsConnection::handle_finished(const StreamBuffer& data) {
     set_session_state(TlsSessionState::Encrypted);
     set_state(ConnectionState::Connected);
 
+    HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,
+                      "connection opened");
+
     // Notify ready handler
     if (ready_handler_) {
         TlsConnectionPtr self =
@@ -421,7 +431,8 @@ void TlsConnection::derive_session_keys(const StreamBuffer& pre_master_secret,
     random_data.clear();
     random_data.insert(random_data.end(), server_nonce.begin(), server_nonce.end());
     random_data.insert(random_data.end(), client_nonce.begin(), client_nonce.end());
-    StreamBuffer key_block = prf_sha256(master_secret_, "key expansion", random_data);
+    StreamBuffer key_block =
+        prf_sha256(master_secret_, "key expansion", random_data);
 
     session_key_.assign(key_block.begin(), key_block.begin() + 32);
     session_iv_.assign(key_block.begin() + 32, key_block.begin() + 48);
@@ -446,7 +457,7 @@ StreamBuffer hmac_sha256(const StreamBuffer& key, const StreamBuffer& data) {
 } // anonymous namespace
 
 StreamBuffer TlsConnection::prf_sha256(const StreamBuffer& secret, const char* label,
-                                const StreamBuffer& data) {
+                                       const StreamBuffer& data) {
     StreamBuffer result;
     StreamBuffer label_seed;
     label_seed.insert(label_seed.end(), label, label + std::strlen(label));
@@ -521,6 +532,8 @@ void TlsConnection::set_handshake_state(TlsHandshakeState new_state) {
     if (new_state == TlsHandshakeState::Error) {
         session_state_ = TlsSessionState::Error;
         set_state(ConnectionState::Error);
+        HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0,
+                          "TLS handshake failure");
     }
 }
 

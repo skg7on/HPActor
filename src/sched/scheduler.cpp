@@ -15,6 +15,8 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/log/log_field.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/sched/dedicated_thread_pool.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
@@ -44,10 +46,9 @@ struct HybridScheduler::DedicatedStorage {
 thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
-                                 uint32_t num_priorities,
-                                 TimerBackend timer_backend)
-    : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
-      workers_(num_workers), a2ws_(num_workers),
+                                 uint32_t num_priorities, TimerBackend timer_backend)
+    : system_(system), num_workers_(num_workers),
+      num_priorities_(num_priorities), workers_(num_workers), a2ws_(num_workers),
       timer_backend_(std::in_place_type<TimingWheel>, 1'000'000, 4),
       dedicated_(std::make_unique<DedicatedStorage>()) {
     for (uint32_t i = 0; i < num_workers; ++i) {
@@ -77,9 +78,7 @@ void HybridScheduler::start() {
     timer_thread_ = std::thread([this] {
         while (running_.load(std::memory_order_acquire)) {
             auto now = std::chrono::steady_clock::now().time_since_epoch().count();
-            std::visit([&](auto& backend) {
-                backend.advance(now);
-            }, timer_backend_);
+            std::visit([&](auto& backend) { backend.advance(now); }, timer_backend_);
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
@@ -154,6 +153,15 @@ bool HybridScheduler::try_steal(WorkItem& out) {
                 evt.value_hi = victim_idx;
                 metrics_ring_buffer_->try_push(evt);
             }
+            if (logger_) [[unlikely]] {
+                HPACTOR_LOG_DEBUG(
+                    log::LogCategory::kScheduler, out.actor,
+                    static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
+                    "work stolen",
+                    log::field("from_worker", static_cast<uint64_t>(victim_idx)),
+                    log::field("to_worker",
+                               static_cast<uint64_t>(tl_current_worker_id)));
+            }
             return true;
         }
 
@@ -167,6 +175,15 @@ bool HybridScheduler::try_steal(WorkItem& out) {
                     evt.event_type = metrics::MetricEventType::kSchedulerSteal;
                     evt.value_hi = victim_idx;
                     metrics_ring_buffer_->try_push(evt);
+                }
+                if (logger_) [[unlikely]] {
+                    HPACTOR_LOG_DEBUG(
+                        log::LogCategory::kScheduler, out.actor,
+                        static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
+                        "work stolen",
+                        log::field("from_worker", static_cast<uint64_t>(victim_idx)),
+                        log::field("to_worker",
+                                   static_cast<uint64_t>(tl_current_worker_id)));
                 }
                 return true;
             }
@@ -241,8 +258,16 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         metrics::MetricEvent evt{};
         evt.actor_id = item.actor;
         evt.event_type = metrics::MetricEventType::kSchedulerDispatch;
-        evt.value_hi = 0;  // worker_id filled by the steal event
+        evt.value_hi = 0; // worker_id filled by the steal event
         metrics_ring_buffer_->try_push(evt);
+    }
+
+    if (logger_) [[unlikely]] {
+        HPACTOR_LOG_DEBUG(
+            log::LogCategory::kScheduler, item.actor,
+            static_cast<uint32_t>(log::LogEventId::kSchedulerDispatch),
+            "actor dispatched",
+            log::field("worker_id", static_cast<uint64_t>(tl_current_worker_id)));
     }
 
     auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
@@ -288,12 +313,14 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         // Post-resume: coroutine suspended (Idle/IOWaiting) or terminated.
         // Note: cannot access promise after resume() returns if coroutine
         // terminated — the promise is destroyed with the coroutine frame. Use
-        // coroutine.done() which checks internal handle state (not the promise).
+        // coroutine.done() which checks internal handle state (not the
+        // promise).
         if (coroutine.done()) {
             actor->on_exit();
         }
         // If idle or IOWaiting, the actor will be re-woken by:
-        // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue → notify_ready)
+        // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue →
+        // notify_ready)
         // - TimerAwaiter callback (EventLoop → notify_ready)
         // Nothing to do here for suspended actors
         return;
@@ -324,6 +351,12 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
 
 void HybridScheduler::worker_loop(uint32_t worker_id) {
     tl_current_worker_id = worker_id; // set thread-local
+
+    if (logger_) [[unlikely]] {
+        HPACTOR_LOG_DEBUG(
+            log::LogCategory::kScheduler, ActorId{0}, 0, "worker started",
+            log::field("worker_id", static_cast<uint64_t>(worker_id)));
+    }
 
     while (running_.load(std::memory_order_acquire)) {
         WorkItem item;
@@ -369,23 +402,23 @@ void HybridScheduler::backoff() {
     }
 }
 
-uint64_t HybridScheduler::schedule_timer(int64_t delay_ns,
-                                          timer_callback callback) {
-    return std::visit([&](auto& backend) {
-        return backend.schedule(delay_ns, std::move(callback));
-    }, timer_backend_);
+uint64_t
+HybridScheduler::schedule_timer(int64_t delay_ns, timer_callback callback) {
+    return std::visit(
+        [&](auto& backend) {
+            return backend.schedule(delay_ns, std::move(callback));
+        },
+        timer_backend_);
 }
 
 void HybridScheduler::advance_time(int64_t now_ns) {
-    std::visit([&](auto& backend) {
-        backend.advance(now_ns);
-    }, timer_backend_);
+    std::visit([&](auto& backend) { backend.advance(now_ns); }, timer_backend_);
 }
 
 TimerHandle HybridScheduler::schedule_after(timer_callback cb, int64_t delay_ns) {
-    auto id = std::visit([&](auto& backend) {
-        return backend.schedule(delay_ns, cb);
-    }, timer_backend_);
+    auto id =
+        std::visit([&](auto& backend) { return backend.schedule(delay_ns, cb); },
+                   timer_backend_);
     return TimerHandle{id};
 }
 
@@ -406,16 +439,18 @@ HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
         if (running_.load(std::memory_order_acquire)) {
             (*callback)();
             if (!cancelled->load(std::memory_order_acquire)) {
-                std::visit([&](auto& backend) {
-                    static_cast<void>(backend.schedule(*interval, recurring));
-                }, timer_backend_);
+                std::visit(
+                    [&](auto& backend) {
+                        static_cast<void>(backend.schedule(*interval, recurring));
+                    },
+                    timer_backend_);
             }
         }
     };
 
-    auto id = std::visit([&](auto& backend) {
-        return backend.schedule(*interval, recurring);
-    }, timer_backend_);
+    auto id = std::visit(
+        [&](auto& backend) { return backend.schedule(*interval, recurring); },
+        timer_backend_);
     {
         std::lock_guard<std::mutex> lock(cancellation_mutex_);
         recurring_cancellations_[id] = cancelled;
@@ -433,9 +468,7 @@ void HybridScheduler::cancel_timer(TimerHandle handle) {
         it->second->store(true, std::memory_order_release);
         recurring_cancellations_.erase(it);
     }
-    std::visit([&](auto& backend) {
-        backend.cancel(handle.id);
-    }, timer_backend_);
+    std::visit([&](auto& backend) { backend.cancel(handle.id); }, timer_backend_);
 }
 
 void HybridScheduler::register_dedicated_thread(ActorId actor, int cpu_affinity) {

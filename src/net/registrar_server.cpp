@@ -23,6 +23,8 @@
 
 #include <cstring>
 
+#include <hpactor/log/logger.hpp>
+
 namespace hpactor {
 
 namespace net {
@@ -32,8 +34,7 @@ namespace net {
 // -----------------------------------------------------------------------------
 
 RegistrarServer::RegistrarServer(const RegistrarConfig& config,
-                                 EndPoint local_endpoint,
-                                 EventLoop* loop)
+                                 EndPoint local_endpoint, EventLoop* loop)
     : config_(config), local_endpoint_(local_endpoint), registry_(config),
       loop_(loop), acceptor_(loop) {
     // Set completion callback for send routing - must be done before
@@ -61,12 +62,14 @@ void RegistrarServer::start() {
 
     running_.store(true);
 
+    HPACTOR_LOG_INFO(log::LogCategory::kRegistrar, ActorId{0}, 0,
+                     "registrar server started");
+
     // Use Acceptor for TCP listening (async)
     // The Acceptor uses the EventLoop to monitor the listening socket
     // and invokes our accept handler when connections arrive
-    acceptor_.set_accept_handler([this](int fd, EndPoint remote_ep) {
-        handle_accept(fd, remote_ep);
-    });
+    acceptor_.set_accept_handler(
+        [this](int fd, EndPoint remote_ep) { handle_accept(fd, remote_ep); });
     acceptor_.listen(config_.tcp_port);
 }
 
@@ -76,6 +79,9 @@ void RegistrarServer::stop() {
     }
 
     running_.store(false);
+
+    HPACTOR_LOG_INFO(log::LogCategory::kRegistrar, ActorId{0}, 0,
+                     "registrar server stopped");
 
     // Close all client connections
     {
@@ -92,8 +98,7 @@ void RegistrarServer::stop() {
     acceptor_.close();
 }
 
-void RegistrarServer::handle_accept(int client_fd,
-                                    EndPoint remote_endpoint) {
+void RegistrarServer::handle_accept(int client_fd, EndPoint remote_endpoint) {
     // Set TCP_NODELAY for lower latency
     int nodelay = 1;
     setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &nodelay, sizeof(nodelay));
@@ -101,9 +106,10 @@ void RegistrarServer::handle_accept(int client_fd,
     auto conn = RegistrarConnection::accepted(client_fd, remote_endpoint, loop_);
 
     // Set message handler to process incoming messages
-    conn->set_message_handler([this, conn](TcpMessageType type, const StreamBuffer& payload) {
-        handle_tcp_message(conn, type, payload);
-    });
+    conn->set_message_handler(
+        [this, conn](TcpMessageType type, const StreamBuffer& payload) {
+            handle_tcp_message(conn, type, payload);
+        });
 
     // Set disconnect handler
     conn->set_disconnect_handler([this, conn]() { handle_disconnect(conn); });
@@ -120,7 +126,8 @@ void RegistrarServer::handle_accept(int client_fd,
 }
 
 void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
-                                         TcpMessageType type, const StreamBuffer& data) {
+                                         TcpMessageType type,
+                                         const StreamBuffer& data) {
     switch (type) {
         case TcpMessageType::Register: {
             PbRegisterPayload msg;
@@ -130,8 +137,7 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
 
             const auto& ep_info = msg.endpoint_info();
             std::string endpoint_str = ep_info.endpoint();
-            EndPoint node_endpoint =
-                endpoint_ops::parse_endpoint(endpoint_str);
+            EndPoint node_endpoint = endpoint_ops::parse_endpoint(endpoint_str);
 
             if (std::holds_alternative<Ipv4Endpoint>(node_endpoint) &&
                 std::get<Ipv4Endpoint>(node_endpoint).is_unspecified()) {

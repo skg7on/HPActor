@@ -23,6 +23,8 @@
 
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
+#include <hpactor/log/log_manager.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/net/async_io_fwd.hpp>
 #include <hpactor/net/frame.hpp>
@@ -75,6 +77,18 @@ ActorSystem::ActorSystem(const Config& config)
         metrics_ring_buffer_ =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
         scheduler_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+    }
+
+    // Initialize logging subsystem
+    if (logging_config_.enabled) {
+        log_manager_ = std::make_unique<log::LogManager>(logging_config_);
+        log_manager_->start();
+        logger_ = &log_manager_->logger();
+    }
+
+    // Wire logger to scheduler for scheduler-event logs
+    if (logger_) [[unlikely]] {
+        scheduler_->set_logger(logger_);
     }
 
     if (config.enable_network) {
@@ -191,6 +205,9 @@ ActorSystem::~ActorSystem() {
         if (discovery_) {
             discovery_->stop();
         }
+    }
+    if (log_manager_) {
+        log_manager_->stop();
     }
     scheduler_->stop();
 }
@@ -446,6 +463,12 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
             model.system.metrics_ring_buffer_capacity;
         metrics_config_.metrics_path = model.system.metrics_path;
     }
+
+    // Apply system-level logging config from topology
+    logging_config_ = model.system.logging;
+
+    HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
+                     "topology bootstrap complete");
 
     // Validate all behaviors are registered
     auto& registry = config::ActorFactoryRegistry::instance();

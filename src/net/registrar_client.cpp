@@ -25,6 +25,8 @@
 
 #include <cstring>
 
+#include <hpactor/log/logger.hpp>
+
 namespace hpactor {
 
 namespace net {
@@ -75,8 +77,7 @@ void RegistrarClient::set_acceptors(std::vector<AcceptorInfo> acceptors) {
 }
 
 RegistrarClient::RegistrarClient(const RegistrarConfig& config,
-                                 EndPoint local_endpoint,
-                                 EndPoint server_endpoint,
+                                 EndPoint local_endpoint, EndPoint server_endpoint,
                                  NodeRegistry* shared_registry, EventLoop* loop)
     : config_(config), local_endpoint_(local_endpoint),
       server_endpoint_(server_endpoint), shared_registry_(shared_registry),
@@ -265,7 +266,8 @@ void RegistrarClient::send_registration() {
     server_connection_->send_message(TcpMessageType::Register, payload);
 }
 
-void RegistrarClient::handle_server_message(TcpMessageType type, const StreamBuffer& data) {
+void RegistrarClient::handle_server_message(TcpMessageType type,
+                                            const StreamBuffer& data) {
     switch (type) {
         case TcpMessageType::Accept: {
             // Registration accepted - server acknowledges our registration
@@ -275,6 +277,10 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const StreamBuf
                 if (error_code == 0) {
                     // Success - we're registered
                     last_heartbeat_sent_ = std::chrono::steady_clock::now();
+                    HPACTOR_LOG_INFO(log::LogCategory::kRegistrar, ActorId{0},
+                                     static_cast<uint32_t>(
+                                         log::LogEventId::kRegistrarRegister),
+                                     "registrar client registered");
                 }
             }
             break;
@@ -288,8 +294,7 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const StreamBuf
 
             const auto& ep_info = msg.endpoint_info();
             std::string endpoint_str = ep_info.endpoint();
-            EndPoint endpoint =
-                endpoint_ops::parse_endpoint(endpoint_str);
+            EndPoint endpoint = endpoint_ops::parse_endpoint(endpoint_str);
 
             std::string host = ep_info.host();
             uint16_t tcp_port = static_cast<uint16_t>(ep_info.tcp_port());
@@ -310,8 +315,7 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const StreamBuf
             }
 
             std::string endpoint_str = msg.endpoint();
-            EndPoint endpoint =
-                endpoint_ops::parse_endpoint(endpoint_str);
+            EndPoint endpoint = endpoint_ops::parse_endpoint(endpoint_str);
             shared_registry_->remove_endpoint(endpoint);
             break;
         }
@@ -335,6 +339,9 @@ void RegistrarClient::handle_server_message(TcpMessageType type, const StreamBuf
 
 void RegistrarClient::handle_disconnect() {
     connected_.store(false);
+
+    HPACTOR_LOG_WARNING(log::LogCategory::kRegistrar, ActorId{0}, 0,
+                        "registrar heartbeat timeout");
 
     // Close existing connection
     if (server_connection_) {

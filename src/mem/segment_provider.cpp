@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/log/log_field.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/mem/segment_provider.hpp>
 #include <hpactor/platform.hpp>
 
@@ -69,8 +71,7 @@ SegmentProvider::SegmentInfo SegmentProvider::lookup(void* ptr) const {
 
     // Linear scan for interior pointers
     for (const auto& seg : segments_) {
-        if (ptr >= seg.base
-            && ptr < static_cast<std::byte*>(seg.base) + seg.size) {
+        if (ptr >= seg.base && ptr < static_cast<std::byte*>(seg.base) + seg.size) {
             return {seg.base, seg.size};
         }
     }
@@ -80,10 +81,10 @@ SegmentProvider::SegmentInfo SegmentProvider::lookup(void* ptr) const {
 size_t SegmentProvider::slab_size(SizeClass sc) const {
     // Multiplier per size class (base = 64KB)
     static constexpr uint8_t kMultiplier[kNumSizeClasses] = {
-        1, 1, 1,   // 32B, 64B, 128B → 64KB
-        2,          // 256B → 128KB
-        4, 4,       // 512B, 1KB → 256KB
-        8, 8        // 2KB, 4KB → 512KB
+        1, 1, 1, // 32B, 64B, 128B → 64KB
+        2,       // 256B → 128KB
+        4, 4,    // 512B, 1KB → 256KB
+        8, 8     // 2KB, 4KB → 512KB
     };
     return kBaseSlabSize * kMultiplier[static_cast<uint8_t>(sc)];
 }
@@ -119,6 +120,10 @@ void* SegmentProvider::allocate_new_segment(size_t size) {
                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
 
     if (base == MAP_FAILED) {
+        HPACTOR_LOG_WARNING(log::LogCategory::kMemory, ActorId{0},
+                            static_cast<uint32_t>(log::LogEventId::kMemoryAlloc),
+                            "segment allocation failed (mmap)",
+                            log::field("size", static_cast<uint64_t>(alloc_size)));
         return nullptr;
     }
 

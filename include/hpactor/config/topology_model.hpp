@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/cli/cli_config.hpp>
+#include <hpactor/log/log_config.hpp>
 
 #include <cstdint>
 #include <string>
@@ -91,6 +92,7 @@ struct SystemDef {
     bool metrics_enabled{true};
     uint32_t metrics_ring_buffer_capacity{65536};
     std::string metrics_path{"/metrics"};
+    hpactor::log::LogConfig logging;
     hpactor::cli::CliConfig cli;
     std::string discovery_backend;
     std::vector<std::string> imports;

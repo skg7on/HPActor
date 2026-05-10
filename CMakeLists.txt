@@ -27,6 +27,8 @@ option(ENABLE_MEMORY_TRACKING "Enable per-actor memory tracking and telemetry" O
 option(ENABLE_ACTOR_METRICS "Enable actor-level metrics subsystem" ON)
 option(ENABLE_MEMORY_DEBUG "Enable memory poisoning, canaries, and guard pages" OFF)
 option(ENABLE_CLI "Enable interactive CLI subsystem" ON)
+option(ENABLE_ACTOR_LOGGING "Enable structured actor logging subsystem" ON)
+set(HPACTOR_ENABLE_ACTOR_LOGGING ${ENABLE_ACTOR_LOGGING})
 
 # Sanitizer mutual exclusivity
 if(ENABLE_ASAN AND ENABLE_TSAN)
@@ -226,6 +228,15 @@ add_library(hpactor_lib SHARED
     src/metrics/metrics_aggregator.cpp
     src/metrics/metrics_formatter.cpp
     src/metrics/metrics_actor.cpp
+    src/log/log_level.cpp
+    src/log/log_category.cpp
+    src/log/log_formatter.cpp
+    src/log/logger.cpp
+    src/log/log_drain.cpp
+    src/log/log_manager.cpp
+    src/log/stderr_sink.cpp
+    src/log/file_sink.cpp
+    src/log/rotating_file_sink.cpp
     src/adt/stream_buffer.cpp
     third_party/llhttp/llhttp.c
     third_party/llhttp/api.c
