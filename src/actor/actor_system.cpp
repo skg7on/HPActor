@@ -151,8 +151,8 @@ ActorSystem::ActorSystem(const Config& config)
 
         if (config.tcp_port > 0) {
             transport_->set_rpc_handler(
-                [this](hpactor::MessageId id, const hpactor::StreamBuffer& data) {
-                    rpc_channel_->on_response(id, data);
+                [this](const hpactor::RpcResponseFrame& response) {
+                    rpc_channel_->on_response(response);
                 });
 
             transport_->set_actor_message_handler([this](const net::WireFrame& frame) {

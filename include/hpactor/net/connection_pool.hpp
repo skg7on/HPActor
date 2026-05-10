@@ -21,6 +21,7 @@
 #include <hpactor/net/transport.hpp>
 #include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/rpc/rpc_types.hpp>
 #include <hpactor/spawn.hpp>
 
 #include <atomic>
@@ -114,8 +115,7 @@ class ConnectionPool {
     }
 
     // Set handler for RPC responses (called when RpcResponse frame is received)
-    using rpc_response_handler =
-        std::function<void(MessageId, const StreamBuffer&)>;
+    using rpc_response_handler = std::function<void(const RpcResponseFrame&)>;
     void set_rpc_handler(rpc_response_handler handler);
 
     // Set handler for spawn responses (called when SpawnResponse frame is

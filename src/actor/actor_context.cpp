@@ -260,7 +260,10 @@ void ActorContext::monitor(const ActorAddress& target) {
 RpcFuture<StreamBuffer> ActorContext::rpc(const ActorAddress& target,
                                           const StreamBuffer& encoded_request,
                                           std::chrono::milliseconds timeout_ms) {
-    return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms);
+    const TraceContext* trace =
+        has_current_trace_context() ? &current_trace_context() : nullptr;
+    return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms,
+                                           trace);
 }
 
 RpcFuture<StreamBuffer>
