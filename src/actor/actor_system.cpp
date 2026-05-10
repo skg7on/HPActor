@@ -72,6 +72,10 @@ ActorSystem::ActorSystem(const Config& config)
 
     scheduler_->start();
 
+    // Initialize dead-letter queue
+    dead_letters_ =
+        std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
+
     // Initialize metrics subsystem (before actors so instrumentation is ready)
     if (metrics_config_.enabled) {
         metrics_ring_buffer_ =
@@ -297,6 +301,30 @@ cli::CliActor* ActorSystem::cli_actor() const {
 }
 
 // -----------------------------------------------------------------------------
+// Dead-letter queue
+// -----------------------------------------------------------------------------
+bool ActorSystem::dead_letter(mailbox::DeadLetterRecord record) noexcept {
+    if (!dead_letters_) {
+        return false;
+    }
+    return dead_letters_->try_push(std::move(record));
+}
+
+mailbox::DeadLetterQueueSnapshot ActorSystem::dead_letter_snapshot() const noexcept {
+    if (!dead_letters_) {
+        return {};
+    }
+    return dead_letters_->snapshot();
+}
+
+bool ActorSystem::pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept {
+    if (!dead_letters_) {
+        return false;
+    }
+    return dead_letters_->try_pop(out);
+}
+
+// -----------------------------------------------------------------------------
 // Mailbox config helpers
 // -----------------------------------------------------------------------------
 mailbox::MailboxConfig ActorSystem::mailbox_config_for_spawn() const {
@@ -329,6 +357,22 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                mailbox::DeliveryOptions options) {
     auto* mailbox = get_mailbox(target);
     if (mailbox == nullptr) {
+        // Capture dead letter for missing actor
+        if (dead_letters_) {
+            mailbox::DeadLetterRecord dl;
+            dl.reason = mailbox::DeadLetterReason::ActorNotFound;
+            dl.source = mailbox::DeadLetterSource::LocalDelivery;
+            dl.sender = msg.sender_address();
+            dl.target = ActorAddress{endpoint_, ActorType{0}, target, 0};
+            dl.type_tag = msg.type_id();
+            dl.message_id = options.message_id;
+            dl.frame_flags = options.flags;
+            dl.priority = priority;
+            dl.deadline_ns = deadline_ns;
+            dl.payload_sample = msg.payload();
+            (void)dead_letter(std::move(dl));
+        }
+
         mailbox::EnqueueResult r;
         r.code = mailbox::EnqueueResultCode::ActorNotFound;
         r.target = target;
@@ -346,7 +390,29 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
         meta.flags |= net::WireFrame::NoDrop;
     }
 
-    return mailbox->try_push(std::move(msg), meta);
+    auto result = mailbox->try_push(std::move(msg), meta);
+
+    // Capture dead letter when mailbox rejects and policy is DeadLetter
+    if (!result.accepted() && mailbox->config().overflow_policy ==
+                                  mailbox::OverflowPolicy::DeadLetter) {
+        if (dead_letters_) {
+            mailbox::DeadLetterRecord dl;
+            dl.reason = mailbox::DeadLetterReason::OverflowPolicy;
+            dl.source = mailbox::DeadLetterSource::MailboxAdmission;
+            dl.sender = meta.sender;
+            dl.target = ActorAddress{endpoint_, ActorType{0}, target, 0};
+            dl.type_tag = meta.type_tag;
+            dl.message_id = meta.message_id;
+            dl.frame_flags = meta.flags;
+            dl.priority = meta.priority;
+            dl.deadline_ns = meta.deadline_ns;
+            dl.mailbox_depth = result.depth;
+            dl.mailbox_capacity = result.capacity;
+            (void)dead_letter(std::move(dl));
+        }
+    }
+
+    return result;
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {

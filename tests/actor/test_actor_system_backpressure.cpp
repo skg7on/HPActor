@@ -14,6 +14,7 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 
 #include <cassert>
@@ -41,6 +42,18 @@ int main() {
         ActorId{99999}, TypedMessage(TypeTag::User, StreamBuffer{3}));
     assert(!missing.accepted());
     assert(missing.code == mailbox::EnqueueResultCode::ActorNotFound);
+
+    // Verify dead-letter was captured for ActorNotFound
+    auto dl_snap = system.dead_letter_snapshot();
+    assert(dl_snap.depth == 1);
+
+    mailbox::DeadLetterRecord dl;
+    assert(system.pop_dead_letter(dl));
+    assert(dl.reason == mailbox::DeadLetterReason::ActorNotFound);
+    assert(dl.type_tag == TypeTag::User);
+
+    // No more dead letters
+    assert(!system.pop_dead_letter(dl));
 
     TypedMessage popped;
     auto* mailbox = system.get_mailbox(actor.id());

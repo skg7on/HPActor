@@ -25,6 +25,7 @@
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -133,6 +134,9 @@ struct Config {
 
     // Mailbox defaults — applied to every actor spawned via this system
     MailboxDefaults mailbox;
+
+    // Dead-letter queue configuration
+    mailbox::DeadLetterConfig dead_letters;
 
     // Timer backend selection
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
@@ -272,6 +276,11 @@ class ActorSystem {
                       int64_t deadline_ns = INT64_MAX,
                       mailbox::DeliveryOptions options = {});
 
+    // Dead-letter queue
+    bool dead_letter(mailbox::DeadLetterRecord record) noexcept;
+    mailbox::DeadLetterQueueSnapshot dead_letter_snapshot() const noexcept;
+    bool pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept;
+
     // Build a MailboxConfig from system-wide defaults in Config::mailbox.
     mailbox::MailboxConfig mailbox_config_for_spawn() const;
 
@@ -386,6 +395,9 @@ class ActorSystem {
     log::LogConfig logging_config_;
     std::unique_ptr<log::LogManager> log_manager_;
     log::Logger* logger_ = nullptr;
+
+    // Dead-letter queue
+    std::unique_ptr<mailbox::DeadLetterQueue> dead_letters_;
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;

@@ -97,7 +97,9 @@ class ActorProxy {
 
   private:
     ActorAddress address_;
-    net::Transport* transport_; // Non-owning pointer to the transport
+    net::Transport* transport_;     // Non-owning pointer to the transport
+    ActorSystem* system_ = nullptr; // Non-owning pointer for dead-letter
+                                    // capture
 };
 
 } // namespace hpactor

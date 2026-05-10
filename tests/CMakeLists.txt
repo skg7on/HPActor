@@ -128,6 +128,10 @@ add_executable(test_actor_proxy ref/test_actor_proxy.cpp)
 target_link_libraries(test_actor_proxy hpactor)
 add_test(NAME test_actor_proxy COMMAND test_actor_proxy)
 
+add_executable(test_actor_proxy_dead_letters ref/test_actor_proxy_dead_letters.cpp)
+target_link_libraries(test_actor_proxy_dead_letters hpactor)
+add_test(NAME test_actor_proxy_dead_letters COMMAND test_actor_proxy_dead_letters)
+
 # =============================================================================
 # Net tests - network transport, connection, framing
 # =============================================================================
