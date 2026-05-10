@@ -9,8 +9,18 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 | Architectural Decisions | `architectural_decisions.md` | Actor model, type system, supervision strategy |
 | Implemented Features | `implemented_features.md` | Complete implementation - what's built |
 | Project Status | `project_status.md` | Current phase, next steps, build commands |
+| Production Reliability Architecture | `docs/architecture/production/production-reliability-plane.md` | 24x7 reliability roadmap and production architecture backlog |
 
 ## Current State
+
+**Production Reliability Architecture:** ✅ Design Docs Complete (2026-05-10)
+- New production architecture area: `docs/architecture/production/`
+- Top-level roadmap: `production-reliability-plane.md`, organizing the next evolution into data plane, control plane, and operations plane.
+- Summary backlog: `architecture-requirement-backlog.md`.
+- Refined feature-gap backlog: `feature-gap-refined-requirement-backlog.md`, with requirement cards by subsystem covering gap, architecture requirement, runtime contract, dependencies, acceptance evidence, observability, and tests.
+- Missing design docs added: actor delivery semantics, cluster failure model, dead-letter queue, cluster sharding/placement, reliable messaging, durable actor state, graceful shutdown/rolling upgrade, security, operations/SRE, dynamic config/parser IoC, and chaos/reliability testing.
+- Recommended production milestone: Production Reliability Plane foundation, starting with delivery semantics, bounded mailboxes/backpressure, DLQ, tracing, health, and graceful shutdown.
+- Status: architecture and backlog only; runtime implementation is still pending.
 
 **Service Discovery:** ✅ Complete (2026-05-08, 15 commits, ~2000 lines)
 - Pluggable `IServiceDiscovery` interface — 4 backends: `UdpRegistrar` (same-host, refactored), `GossipMembership` (cross-server SWIM protocol), `HybridDiscovery` (composes both), `StaticDiscovery` (fixed topology)
@@ -180,6 +190,20 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - UDS: test_unix_domain_socket (path derivation, acceptor, fallback), test_uds_integration (connect and data flow)
 
 **Documentation:** ✅ Complete
+- Architecture: `docs/architecture/production/production-reliability-plane.md` (24x7 production reliability roadmap)
+- Architecture: `docs/architecture/production/architecture-requirement-backlog.md` (summary production requirement backlog)
+- Architecture: `docs/architecture/production/feature-gap-refined-requirement-backlog.md` (detailed feature-gap requirement backlog)
+- Architecture: `docs/architecture/production/actor-delivery-semantics-design.md` (delivery result, TTL, retry, duplicate semantics)
+- Architecture: `docs/architecture/production/dead-letter-queue-design.md` (DLQ retention, replay, observability)
+- Architecture: `docs/architecture/production/cluster-failure-model-design.md` (node state, partitions, quarantine, fencing)
+- Architecture: `docs/architecture/production/cluster-sharding-placement-design.md` (shards, placement, handoff)
+- Architecture: `docs/architecture/production/reliable-messaging-design.md` (ACK/NACK, retry, dedup, durable outbox/inbox)
+- Architecture: `docs/architecture/production/durable-actor-state-design.md` (snapshot, event sourcing, recovery)
+- Architecture: `docs/architecture/production/graceful-shutdown-rolling-upgrade-design.md` (drain, leave, compatibility)
+- Architecture: `docs/architecture/production/security-architecture-design.md` (mTLS, authorization, audit)
+- Architecture: `docs/architecture/production/operations-sre-design.md` (health, admin API, incident timeline)
+- Architecture: `docs/architecture/production/dynamic-config-parser-ioc-design.md` (subsystem-owned TOML parsing and reload classes)
+- Architecture: `docs/architecture/production/chaos-reliability-testing-design.md` (fault injection, chaos, soak, fuzz, compatibility)
 - Tutorial: `docs/superpowers/tutorials/actor-framework-tutorial.md`
 - Spec: `docs/superpowers/specs/2026-04-11-actor-design.md`
 - Plan: `docs/superpowers/plans/2026-04-11-actor-core-impl.md`
@@ -217,6 +241,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Hierarchical supervision (OneForOne, AllForOne)
 - Pluggable service discovery: IServiceDiscovery interface with 4 backends (gossip, registrar, static, hybrid)
 - Decentralized membership via SWIM gossip protocol — no single point of failure
+- Production reliability roadmap is organized into data plane, control plane, and operations plane.
+- Production backlog priority begins with explicit delivery semantics, bounded mailboxes, dead-letter queues, tracing correlation, health checks, and graceful shutdown.
 - Typed memory regions with per-region back-pressure and observability
 - Hibernation via serialization + madvise(MADV_PAGEOUT) to ZRAM for cold storage
 - Actors are relocatable by ActorId, enabling slab compaction without dangling pointers
@@ -263,6 +289,22 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Performance: bump alloc 25 ns/op, freelist recycle 32 ns/op, 1M ops in 650ms
 
 **Next Steps (Phase 11 - remaining items)**
+- Production Reliability Plane foundation:
+  - delivery semantics and structured delivery results
+  - bounded mailbox implementation and backpressure signals
+  - dead-letter queue implementation
+  - distributed tracing implementation and trace/log/metric/DLQ correlation
+  - health/readiness/liveness endpoints
+  - graceful shutdown and node drain protocol
+- Cluster control follow-up:
+  - cluster failure model with quarantine/fencing
+  - protocol/feature negotiation for rolling upgrades
+  - sharding, placement, and rebalance protocol
+- Production operations follow-up:
+  - security architecture implementation (mTLS identity, authorization, audit)
+  - authenticated admin API
+  - dynamic config validation/diff/reload
+  - chaos, soak, fuzz, and compatibility test lanes
 - Proactor backend production hardening (GcdBackend, IoUringBackend)
 - Full two-process integration test with TCP transport
 - Per-actor argument deserialization via `configure_from_args()` (concept defined, integration pending)

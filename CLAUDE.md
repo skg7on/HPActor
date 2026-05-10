@@ -31,6 +31,24 @@ cmake -DENABLE_CLI=OFF ..       # Disable interactive CLI subsystem (default ON,
 
 HPActor is a C++20 event-based actor framework inspired by CAF (C++ Actor Framework).
 
+### Production Reliability Direction
+
+The current architecture roadmap is organized around a production reliability
+plane for 24x7 distributed actor operation. The primary entry point is
+`docs/architecture/production/production-reliability-plane.md`, with a refined
+feature-gap backlog in
+`docs/architecture/production/feature-gap-refined-requirement-backlog.md`.
+
+When adding production-facing actor-system features, align the design with these
+planes:
+
+- **Data plane**: delivery semantics, mailbox admission, DLQ, reliable
+  messaging, tracing, actor lifecycle.
+- **Control plane**: cluster failure model, node identity, sharding, placement,
+  rebalancing, graceful shutdown, rolling upgrades.
+- **Operations plane**: health, admin API, security, audit, config reload,
+  incident timelines, chaos/soak/fuzz testing.
+
 ### Actor Type Hierarchy
 
 ```
@@ -73,6 +91,24 @@ AbstractActor (interface base)
 | `IServiceDiscovery` | `net/service_discovery.hpp` | Pluggable discovery interface (UdpRegistrar, Gossip, Static, Hybrid) |
 | `GossipMembership` | `net/gossip_membership.hpp` | SWIM protocol for decentralized cross-server discovery |
 | `ActorLocationCache` | `net/actor_location_cache.hpp` | TTL cache for ActorId → EndPoint resolution |
+
+### Production Architecture Backlog
+
+The production reliability docs are architecture requirements, not implemented
+runtime features yet. Key files:
+
+| Document | Purpose |
+|----------|---------|
+| `docs/architecture/production/production-reliability-plane.md` | Top-level 24x7 reliability roadmap |
+| `docs/architecture/production/architecture-requirement-backlog.md` | Summary production requirement backlog |
+| `docs/architecture/production/feature-gap-refined-requirement-backlog.md` | Detailed subsystem requirement cards |
+| `docs/architecture/production/actor-delivery-semantics-design.md` | Delivery results, TTL, retry, duplicate semantics |
+| `docs/architecture/production/dead-letter-queue-design.md` | Dead-letter record, retention, replay, observability |
+| `docs/architecture/production/cluster-failure-model-design.md` | Node state, partition, quarantine, fencing model |
+| `docs/architecture/production/cluster-sharding-placement-design.md` | Shards, placement, handoff, route invalidation |
+| `docs/architecture/production/security-architecture-design.md` | mTLS, authorization, audit, secret handling |
+| `docs/architecture/production/operations-sre-design.md` | Health, admin API, incident timeline, SLO signals |
+| `docs/architecture/production/chaos-reliability-testing-design.md` | Fault injection, chaos, soak, fuzz, compatibility tests |
 
 ### Message Flow
 
@@ -121,5 +157,6 @@ Pipeline: TOML file(s) → `TomlParser::parse()` → `TopologyModel` → `Bootst
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
 - `third_party/` — vendored dependencies (llhttp, toml++)
 - `cmake/` — CMake modules (protobuf codegen, toml++ interface target)
+- `docs/architecture/production/` — production reliability plane, missing design docs, and refined requirement backlog
 - `docs/superpowers/tutorials/actor-framework-tutorial.md` — usage guide
 - `.claude/projects/*/memory/` — persistent project memory
