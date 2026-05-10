@@ -492,6 +492,14 @@ if(ENABLE_ACTOR_TRACING)
     add_executable(test_trace_manager tracing/test_trace_manager.cpp)
     target_link_libraries(test_trace_manager hpactor pthread)
     add_test(NAME test_trace_manager COMMAND test_trace_manager)
+
+    add_executable(test_trace_actor_system tracing/test_trace_actor_system.cpp)
+    target_link_libraries(test_trace_actor_system hpactor pthread)
+    add_test(NAME test_trace_actor_system COMMAND test_trace_actor_system)
+
+    add_executable(test_trace_actor_context tracing/test_trace_actor_context.cpp)
+    target_link_libraries(test_trace_actor_context hpactor pthread)
+    add_test(NAME test_trace_actor_context COMMAND test_trace_actor_context)
 endif()
 
 # =============================================================================

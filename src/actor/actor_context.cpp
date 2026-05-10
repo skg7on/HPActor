@@ -15,6 +15,7 @@
 #include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
+#include <hpactor/tracing/trace_manager.hpp>
 
 #include <google/protobuf/message.h>
 
@@ -24,6 +25,27 @@ ActorContext::ActorContext(Actor owner, ActorSystem* system)
     : owner_(std::move(owner)), system_(system) {}
 
 ActorContext::~ActorContext() = default;
+
+ActorContext::TraceScope::TraceScope(ActorContext* ctx, const TraceContext& next) noexcept
+    : ctx_(ctx) {
+    if (ctx_ == nullptr) {
+        return;
+    }
+    previous_ = ctx_->current_trace_context_;
+    previous_valid_ = ctx_->has_current_trace_context_;
+    ctx_->set_current_trace_context(next);
+}
+
+ActorContext::TraceScope::~TraceScope() {
+    if (ctx_ == nullptr) {
+        return;
+    }
+    if (previous_valid_) {
+        ctx_->set_current_trace_context(previous_);
+    } else {
+        ctx_->clear_current_trace_context();
+    }
+}
 
 ActorRef ActorContext::resolve(const ActorAddress& target) {
     // 1. Check cache (hot path)
@@ -70,6 +92,15 @@ void ActorContext::send(ActorRef& target, TypedMessage msg) {
         msg.set_sender_address(owner_.address());
     }
 
+    auto* system = system_ != nullptr
+                       ? system_
+                       : (owner_ ? &owner_.get()->system() : nullptr);
+    if (system != nullptr && system->trace_manager() != nullptr) {
+        system->trace_manager()->inject_message_context(
+            msg, this,
+            system->trace_manager()->config().create_roots_for_actor_context_sends);
+    }
+
     target.send(target.address(), std::move(msg));
 }
 
@@ -100,6 +131,13 @@ ActorContext::try_send(const ActorAddress& target, TypedMessage msg,
         msg.set_sender_address(owner_.address());
     }
 
+    auto* system = owner_ ? &owner_.get()->system() : system_;
+    if (system != nullptr && system->trace_manager() != nullptr) {
+        system->trace_manager()->inject_message_context(
+            msg, this,
+            system->trace_manager()->config().create_roots_for_actor_context_sends);
+    }
+
     return ref.try_send(ref.address(), std::move(msg), options);
 }
 
@@ -116,8 +154,14 @@ ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage ms
         msg.set_sender_address(owner_.address());
     }
 
+    auto* system = owner_ ? &owner_.get()->system() : system_;
+    if (system != nullptr && system->trace_manager() != nullptr) {
+        system->trace_manager()->inject_message_context(
+            msg, this,
+            system->trace_manager()->config().create_roots_for_actor_context_sends);
+    }
+
     if (ref.is_local()) {
-        auto* system = owner_ ? &owner_.get()->system() : system_;
         if (system != nullptr) {
             return system->try_deliver_local(target.id, std::move(msg),
                                              priority, deadline_ns, options);

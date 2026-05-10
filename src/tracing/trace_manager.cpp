@@ -1,4 +1,5 @@
 #include <hpactor/actor/typed_message.hpp>
+#include <hpactor/actor_context.hpp>
 #include <hpactor/tracing/memory_exporter.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 
@@ -144,9 +145,10 @@ void TraceManager::inject_message_context(TypedMessage& msg, const ActorContext*
     if (!config_.enabled || msg.has_trace_context()) {
         return;
     }
-    // ActorContext trace scope wiring happens in Task 5.
-    // For now, only root creation is active.
-    (void)ctx;
+    if (ctx != nullptr && ctx->has_current_trace_context()) {
+        msg.set_trace_context(ctx->current_trace_context());
+        return;
+    }
     if (allow_root) {
         msg.set_trace_context(create_root_context("hpactor.message"));
     }

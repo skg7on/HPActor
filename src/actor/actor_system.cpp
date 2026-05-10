@@ -72,6 +72,8 @@ ActorSystem::ActorSystem(const Config& config)
 
     scheduler_->start();
 
+    apply_tracing_config(config_.tracing);
+
     // Initialize dead-letter queue
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
@@ -213,7 +215,23 @@ ActorSystem::~ActorSystem() {
     if (log_manager_) {
         log_manager_->stop();
     }
+    if (trace_manager_) {
+        trace_manager_->stop();
+    }
     scheduler_->stop();
+}
+
+void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
+    tracing_config_ = config;
+    if (!tracing_config_.enabled) {
+        if (trace_manager_) {
+            trace_manager_->stop();
+            trace_manager_.reset();
+        }
+        return;
+    }
+    trace_manager_ = std::make_unique<tracing::TraceManager>(tracing_config_, this);
+    trace_manager_->start();
 }
 
 void ActorSystem::on_node_dead(EndPoint dead_ep) {

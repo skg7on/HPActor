@@ -167,6 +167,28 @@ class ActorContext {
     http_request(net::HttpMethod method, const std::string& url,
                  std::vector<net::HttpHeader> headers = {}, StreamBuffer body = {});
 
+    // Current trace context for send/reply propagation
+    bool has_current_trace_context() const noexcept {
+        return has_current_trace_context_;
+    }
+
+    const TraceContext& current_trace_context() const noexcept {
+        return current_trace_context_;
+    }
+
+    class TraceScope {
+      public:
+        TraceScope(ActorContext* ctx, const TraceContext& next) noexcept;
+        ~TraceScope();
+        TraceScope(const TraceScope&) = delete;
+        TraceScope& operator=(const TraceScope&) = delete;
+
+      private:
+        ActorContext* ctx_{nullptr};
+        TraceContext previous_{};
+        bool previous_valid_{false};
+    };
+
     // Backpressure signal handling
     using BackpressureHandler =
         std::function<void(const mailbox::BackpressureSignal&)>;
@@ -182,9 +204,21 @@ class ActorContext {
     std::vector<ActorAddress> linked_;
     std::vector<ActorAddress> monitored_;
 
+    void set_current_trace_context(const TraceContext& context) noexcept {
+        current_trace_context_ = context;
+        has_current_trace_context_ = context.valid();
+    }
+
+    void clear_current_trace_context() noexcept {
+        current_trace_context_.clear();
+        has_current_trace_context_ = false;
+    }
+
     ActorRefCache ref_cache_;
     ActorAddress current_sender_;
     BackpressureHandler backpressure_handler_;
+    TraceContext current_trace_context_;
+    bool has_current_trace_context_{false};
 };
 
 } // namespace hpactor

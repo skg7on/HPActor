@@ -42,6 +42,8 @@
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/tracing/trace_config.hpp>
+#include <hpactor/tracing/trace_manager.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -140,6 +142,9 @@ struct Config {
 
     // Timer backend selection
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
+
+    // Distributed tracing configuration
+    tracing::TraceConfig tracing;
 };
 
 // -----------------------------------------------------------------------------
@@ -237,6 +242,17 @@ class ActorSystem {
     net::HttpClient& http_client() {
         return *http_client_;
     }
+
+    // Distributed tracing
+    tracing::TraceManager* trace_manager() noexcept {
+        return trace_manager_.get();
+    }
+
+    const tracing::TraceManager* trace_manager() const noexcept {
+        return trace_manager_.get();
+    }
+
+    void apply_tracing_config(const tracing::TraceConfig& config);
 
     // Internal actor lookup (used by scheduler)
     std::shared_ptr<AbstractActor> get_actor(ActorId id);
@@ -402,6 +418,10 @@ class ActorSystem {
 
     // Dead-letter queue
     std::unique_ptr<mailbox::DeadLetterQueue> dead_letters_;
+
+    // Tracing subsystem
+    tracing::TraceConfig tracing_config_;
+    std::unique_ptr<tracing::TraceManager> trace_manager_;
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
