@@ -285,6 +285,8 @@ if(ENABLE_ACTOR_TRACING)
         src/tracing/trace_context_parser.cpp
         src/tracing/sampler.cpp
         src/tracing/memory_exporter.cpp
+        src/tracing/json_exporter.cpp
+        src/tracing/otlp_exporter.cpp
         src/tracing/trace_manager.cpp
     )
 else()

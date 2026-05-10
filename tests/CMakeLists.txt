@@ -512,6 +512,10 @@ if(ENABLE_ACTOR_TRACING)
     add_executable(test_trace_rpc tracing/test_trace_rpc.cpp)
     target_link_libraries(test_trace_rpc hpactor pthread)
     add_test(NAME test_trace_rpc COMMAND test_trace_rpc)
+
+    add_executable(test_trace_exporters tracing/test_trace_exporters.cpp)
+    target_link_libraries(test_trace_exporters hpactor pthread)
+    add_test(NAME test_trace_exporters COMMAND test_trace_exporters)
 endif()
 
 # =============================================================================

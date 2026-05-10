@@ -1,6 +1,8 @@
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
+#include <hpactor/tracing/json_exporter.hpp>
 #include <hpactor/tracing/memory_exporter.hpp>
+#include <hpactor/tracing/otlp_exporter.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 
 #include <chrono>
@@ -12,7 +14,20 @@ TraceManager::TraceManager(TraceConfig config, ActorSystem* system,
     : config_(std::move(config)), system_(system), sampler_(make_sampler()),
       exporter_(std::move(exporter)) {
     if (!exporter_) {
-        exporter_ = std::make_unique<MemoryExporter>();
+        switch (config_.exporter) {
+            case TraceExporterKind::kNoop:
+            case TraceExporterKind::kMemory:
+                exporter_ = std::make_unique<MemoryExporter>();
+                break;
+            case TraceExporterKind::kJsonFile:
+                exporter_ =
+                    std::make_unique<JsonFileExporter>(config_.json_file_path);
+                break;
+            case TraceExporterKind::kOtlpHttp:
+                exporter_ =
+                    std::make_unique<OtlpHttpExporter>(config_.otlp_endpoint);
+                break;
+        }
     }
 }
 
