@@ -14,8 +14,10 @@
 
 #pragma once
 
+#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -24,6 +26,7 @@
 
 #include <atomic>
 #include <functional>
+#include <type_traits>
 
 namespace hpactor::mailbox {
 
@@ -32,20 +35,85 @@ using ActorContinuationCallback = std::function<void()>;
 
 template <typename T> class MPSCActorMailbox {
   public:
-    MPSCActorMailbox(ActorId actor_id, sched::IScheduler* scheduler) noexcept
-        : actor_id_(actor_id), scheduler_(scheduler) {}
+    MPSCActorMailbox(ActorId actor_id, sched::IScheduler* scheduler,
+                     MailboxConfig config = {}) noexcept
+        : actor_id_(actor_id), scheduler_(scheduler), config_(config) {
+        if (config_.capacity.max_messages == 0) {
+            config_.capacity.max_messages = 1024;
+        }
+    }
 
     // Set the continuation callback to resume the actor's coroutine
     void set_continuation_callback(ActorContinuationCallback callback) {
         continuation_callback_ = std::move(callback);
     }
 
-    // Producer: enqueue message and potentially wake actor (edge-trigger)
+    // Runtime config updates.
+    // Not safe to call concurrently with try_push/enqueue.
+    void set_config(const MailboxConfig& cfg) noexcept {
+        config_ = cfg;
+        if (config_.capacity.max_messages == 0) {
+            config_.capacity.max_messages = 1024;
+        }
+    }
+    const MailboxConfig& config() const noexcept {
+        return config_;
+    }
+
+    // Bounded admission: try to enqueue with full feedback.
+    //
+    // Reserves a slot via CAS, allocates and enqueues the node, then returns
+    // an EnqueueResult describing the outcome.  Returns Rejected when the
+    // mailbox is at hard capacity.
+    EnqueueResult try_push(T&& msg, MailboxEnvelopeMeta meta = {}) noexcept {
+        if (meta.estimated_bytes == 0) {
+            meta.estimated_bytes = estimate_node_bytes(msg);
+        }
+
+        if (!try_reserve(meta.estimated_bytes)) {
+            total_rejected_.fetch_add(1, std::memory_order_relaxed);
+            return make_result(EnqueueResultCode::Rejected);
+        }
+
+        void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+        auto* node = new (raw) T(std::move(msg));
+        enqueue_reserved(node, meta);
+
+        return make_result(pressure_code_after_accept());
+    }
+
+    // Convenience: enqueue from a Message<T> rvalue (heap-allocates via custom
+    // allocator).  Delegates to try_push so bounded admission is always
+    // applied; the result is discarded for callers that don't need feedback.
+    void push(T&& msg) noexcept {
+        (void)try_push(std::move(msg));
+    }
+
+    // Low-level: enqueue an already-allocated node.
+    //
+    // Attempts reservation before enqueuing.  If the mailbox is at hard
+    // capacity the node is NOT enqueued (caller is responsible for the
+    // memory).  Prefer try_push() for new code.
     void enqueue(T* node) noexcept {
+        uint64_t bytes = estimate_node_bytes(*node);
+        if (!try_reserve(bytes)) {
+            total_rejected_.fetch_add(1, std::memory_order_relaxed);
+            return;
+        }
+        MailboxEnvelopeMeta meta;
+        meta.estimated_bytes = bytes;
+        enqueue_reserved(node, meta);
+    }
+
+    // Enqueue an already-reserved node (reservation was done externally).
+    void enqueue_reserved(T* node, const MailboxEnvelopeMeta& meta) noexcept {
         bool was_empty = empty();
         mailbox_.enqueue(node);
+        total_enqueued_.fetch_add(1, std::memory_order_relaxed);
+        queued_bytes_.fetch_add(meta.estimated_bytes, std::memory_order_relaxed);
+        update_max_depth();
+        update_pressure_state();
 
-        // Check mailbox depth and warn if too deep
         int64_t depth = mailbox_.count();
         if (depth > 1024) [[unlikely]] {
             HPACTOR_LOG_WARNING(
@@ -73,24 +141,20 @@ template <typename T> class MPSCActorMailbox {
                     continuation_callback_();
                 }
                 // Also notify scheduler for bookkeeping and potential requeue
-                scheduler_->notify_ready(actor_id_, 0, INT64_MAX);
+                scheduler_->notify_ready(actor_id_, meta.priority, meta.deadline_ns);
             }
         }
-    }
-
-    // Convenience: enqueue from a Message<T> rvalue (heap-allocates via custom
-    // allocator)
-    void push(T&& msg) noexcept {
-        void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
-        auto* node = new (raw) T(std::move(msg));
-        enqueue(node);
     }
 
     // Consumer: dequeue one message
     T* dequeue() noexcept {
         T* node = mailbox_.dequeue();
-        if (node != nullptr && empty()) {
-            mailbox_was_empty_.store(true, std::memory_order_release);
+        if (node != nullptr) {
+            release_reservation(estimate_node_bytes(*node));
+            total_dequeued_.fetch_add(1, std::memory_order_relaxed);
+            if (empty()) {
+                mailbox_was_empty_.store(true, std::memory_order_release);
+            }
         }
         if (metrics_ring_buffer_) [[unlikely]] {
             metrics::MetricEvent evt{};
@@ -136,8 +200,11 @@ template <typename T> class MPSCActorMailbox {
         logger_ = logger;
     }
 
-    // Inject a message for testing (bypasses scheduler notify_ready)
+    // Inject a message for testing (bypasses scheduler notify_ready).
+    // Must update reservation counters to keep dequeue accounting consistent.
     void inject_for_test(T* node) noexcept {
+        reserved_messages_.fetch_add(1, std::memory_order_relaxed);
+        total_enqueued_.fetch_add(1, std::memory_order_relaxed);
         mailbox_.enqueue(node);
         mailbox_was_empty_.store(false, std::memory_order_release);
     }
@@ -146,14 +213,142 @@ template <typename T> class MPSCActorMailbox {
     cli::MboxSnapshot snapshot() const {
         cli::MboxSnapshot s;
         s.depth = static_cast<uint32_t>(mailbox_.count());
+        s.capacity = config_.capacity.max_messages;
+        s.queued_bytes = queued_bytes_.load(std::memory_order_acquire);
+        s.byte_capacity = config_.capacity.max_bytes;
+
+        if (s.capacity > 0) {
+            double ratio =
+                static_cast<double>(s.depth) / static_cast<double>(s.capacity);
+            s.pressure_ratio_ppm = static_cast<uint32_t>(ratio * 1'000'000.0);
+        }
+
+        s.total_enqueued = total_enqueued_.load(std::memory_order_acquire);
+        s.total_dequeued = total_dequeued_.load(std::memory_order_acquire);
+        s.total_rejected = total_rejected_.load(std::memory_order_acquire);
+        s.total_dropped = total_dropped_.load(std::memory_order_acquire);
+        s.total_dead_letters = total_dead_letters_.load(std::memory_order_acquire);
+        s.max_depth = max_depth_.load(std::memory_order_acquire);
+        s.high_priority_depth = 0;
+        s.pressure_state =
+            to_string(pressure_state_.load(std::memory_order_acquire));
+        s.overflow_policy = to_string(config_.overflow_policy);
         return s;
     }
 
   private:
+    // Try to reserve one message slot via CAS.
+    // Byte budget tracking is deferred; bytes param reserved for future use.
+    // Returns false when at hard capacity.
+    bool try_reserve(uint64_t /*bytes*/) noexcept {
+        uint32_t cap = config_.capacity.max_messages;
+        if (cap == 0)
+            return true; // unlimited
+
+        uint32_t current = reserved_messages_.load(std::memory_order_acquire);
+        while (true) {
+            if (current >= cap) {
+                return false;
+            }
+            if (reserved_messages_.compare_exchange_weak(
+                    current, current + 1, std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
+                return true;
+            }
+        }
+    }
+
+    // Release a previously reserved slot + bytes.
+    void release_reservation(uint64_t bytes) noexcept {
+        reserved_messages_.fetch_sub(1, std::memory_order_release);
+        if (bytes > 0) {
+            queued_bytes_.fetch_sub(bytes, std::memory_order_release);
+        }
+    }
+
+    // Determine the result code after accepting a message, based on current
+    // watermarks.
+    EnqueueResultCode pressure_code_after_accept() const noexcept {
+        uint32_t cap = config_.capacity.max_messages;
+        if (cap == 0)
+            return EnqueueResultCode::Accepted;
+        uint32_t depth = static_cast<uint32_t>(mailbox_.count());
+        double ratio = static_cast<double>(depth) / static_cast<double>(cap);
+        if (ratio >= config_.high_watermark) {
+            return EnqueueResultCode::AcceptedWithSoftPressure;
+        }
+        return EnqueueResultCode::Accepted;
+    }
+
+    // Fill an EnqueueResult from the given code and current state.
+    EnqueueResult make_result(EnqueueResultCode code) const noexcept {
+        EnqueueResult r;
+        r.code = code;
+        r.target = actor_id_;
+        r.depth = static_cast<uint32_t>(mailbox_.count());
+        r.capacity = config_.capacity.max_messages;
+        if (r.capacity > 0) {
+            r.pressure_ratio =
+                static_cast<double>(r.depth) / static_cast<double>(r.capacity);
+        }
+        return r;
+    }
+
+    // Update max_depth_ tracking via CAS.
+    void update_max_depth() noexcept {
+        uint64_t depth = static_cast<uint64_t>(mailbox_.count());
+        uint64_t prev = max_depth_.load(std::memory_order_acquire);
+        while (depth > prev) {
+            if (max_depth_.compare_exchange_weak(prev, depth, std::memory_order_acq_rel,
+                                                 std::memory_order_acquire)) {
+                break;
+            }
+        }
+    }
+
+    // Update pressure state based on current depth vs watermarks.
+    void update_pressure_state() noexcept {
+        uint32_t cap = config_.capacity.max_messages;
+        if (cap == 0) {
+            pressure_state_.store(MailboxPressureState::Normal,
+                                  std::memory_order_release);
+            return;
+        }
+        uint32_t depth = static_cast<uint32_t>(mailbox_.count());
+        double ratio = static_cast<double>(depth) / static_cast<double>(cap);
+        if (ratio >= config_.high_watermark) {
+            pressure_state_.store(MailboxPressureState::SoftPressure,
+                                  std::memory_order_release);
+        } else {
+            pressure_state_.store(MailboxPressureState::Normal,
+                                  std::memory_order_release);
+        }
+    }
+
+    // Estimate bytes for a node.  Uses the TypedMessage-specific helper when T
+    // is TypedMessage, otherwise falls back to sizeof(T).
+    static uint64_t estimate_node_bytes(const T& node) noexcept {
+        if constexpr (std::is_same_v<T, TypedMessage>) {
+            return estimate_message_bytes(node);
+        } else {
+            return sizeof(T);
+        }
+    }
+
     ActorId actor_id_;
     sched::IScheduler* scheduler_;
     MPSCMailbox<T> mailbox_;
+    MailboxConfig config_;
     std::atomic<bool> mailbox_was_empty_{true};
+    std::atomic<uint32_t> reserved_messages_{0};
+    std::atomic<uint64_t> queued_bytes_{0};
+    std::atomic<uint64_t> total_enqueued_{0};
+    std::atomic<uint64_t> total_dequeued_{0};
+    std::atomic<uint64_t> total_rejected_{0};
+    std::atomic<uint64_t> total_dropped_{0};
+    std::atomic<uint64_t> total_dead_letters_{0};
+    std::atomic<uint64_t> max_depth_{0};
+    std::atomic<MailboxPressureState> pressure_state_{MailboxPressureState::Normal};
     ActorContinuationCallback continuation_callback_;
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
     log::Logger* logger_ = nullptr;

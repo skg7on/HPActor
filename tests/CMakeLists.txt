@@ -42,6 +42,10 @@ add_executable(test_mailbox_policy mailbox/test_mailbox_policy.cpp)
 target_link_libraries(test_mailbox_policy hpactor)
 add_test(NAME test_mailbox_policy COMMAND test_mailbox_policy)
 
+add_executable(test_bounded_mailbox mailbox/test_bounded_mailbox.cpp)
+target_link_libraries(test_bounded_mailbox hpactor)
+add_test(NAME test_bounded_mailbox COMMAND test_bounded_mailbox)
+
 # =============================================================================
 # Actor tests
 # =============================================================================
