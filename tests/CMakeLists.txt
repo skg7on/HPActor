@@ -50,6 +50,10 @@ add_executable(test_dead_letter_queue mailbox/test_dead_letter_queue.cpp)
 target_link_libraries(test_dead_letter_queue hpactor)
 add_test(NAME test_dead_letter_queue COMMAND test_dead_letter_queue)
 
+add_executable(test_mailbox_overflow_policies mailbox/test_mailbox_overflow_policies.cpp)
+target_link_libraries(test_mailbox_overflow_policies hpactor)
+add_test(NAME test_mailbox_overflow_policies COMMAND test_mailbox_overflow_policies)
+
 # =============================================================================
 # Actor tests
 # =============================================================================

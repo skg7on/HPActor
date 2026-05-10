@@ -70,9 +70,48 @@ template <typename T> class MPSCActorMailbox {
             meta.estimated_bytes = estimate_node_bytes(msg);
         }
 
+        // Primary reservation attempt through normal capacity pool.
         if (!try_reserve(meta.estimated_bytes)) {
-            total_rejected_.fetch_add(1, std::memory_order_relaxed);
-            return make_result(EnqueueResultCode::Rejected);
+            // System messages get a second chance through the protected
+            // reserve.
+            bool sys_reserved = false;
+            if (is_system_message(meta.type_tag)) {
+                sys_reserved = try_reserve_system(meta.estimated_bytes);
+            }
+
+            if (!sys_reserved) {
+                // Apply overflow policy when both pools are exhausted.
+                switch (config_.overflow_policy) {
+                    case OverflowPolicy::DropNewest:
+                        total_dropped_.fetch_add(1, std::memory_order_relaxed);
+                        return make_result(EnqueueResultCode::DroppedNewest);
+
+                    case OverflowPolicy::DropOldest:
+                        if (drop_one_oldest()) {
+                            // Freed a slot — retry normal reservation.
+                            if (!try_reserve(meta.estimated_bytes)) {
+                                total_rejected_.fetch_add(
+                                    1, std::memory_order_relaxed);
+                                return make_result(EnqueueResultCode::Rejected);
+                            }
+                            // Fall through to enqueue below.
+                            break;
+                        }
+                        total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                        return make_result(EnqueueResultCode::Rejected);
+
+                    case OverflowPolicy::DeadLetter:
+                        total_dead_letters_.fetch_add(1, std::memory_order_relaxed);
+                        return make_result(EnqueueResultCode::ReroutedToDeadLetter);
+
+                    default:
+                        // RejectNewest, DropLowestPriority,
+                        // SpillToOverflowQueue, SignalOnly,
+                        // BlockWhenAllowed
+                        total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                        return make_result(EnqueueResultCode::Rejected);
+                }
+            }
         }
 
         void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
@@ -150,7 +189,17 @@ template <typename T> class MPSCActorMailbox {
     T* dequeue() noexcept {
         T* node = mailbox_.dequeue();
         if (node != nullptr) {
-            release_reservation(estimate_node_bytes(*node));
+            // Release from the correct reservation pool.
+            if constexpr (std::is_same_v<T, TypedMessage>) {
+                if (is_system_message(node->type_id()) &&
+                    reserved_system_messages_.load(std::memory_order_acquire) > 0) {
+                    release_system_reservation(estimate_node_bytes(*node));
+                } else {
+                    release_reservation(estimate_node_bytes(*node));
+                }
+            } else {
+                release_reservation(estimate_node_bytes(*node));
+            }
             total_dequeued_.fetch_add(1, std::memory_order_relaxed);
             if (empty()) {
                 mailbox_was_empty_.store(true, std::memory_order_release);
@@ -266,6 +315,66 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    // Try to reserve a system message slot via CAS on the protected reserve.
+    // Only used when the normal capacity pool is exhausted.
+    bool try_reserve_system(uint64_t /*bytes*/) noexcept {
+        uint32_t limit = config_.protected_system_messages;
+        if (limit == 0)
+            return false;
+
+        uint32_t current =
+            reserved_system_messages_.load(std::memory_order_acquire);
+        while (true) {
+            if (current >= limit) {
+                return false;
+            }
+            if (reserved_system_messages_.compare_exchange_weak(
+                    current, current + 1, std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
+                return true;
+            }
+        }
+    }
+
+    // Release a previously reserved system slot + bytes.
+    void release_system_reservation(uint64_t bytes) noexcept {
+        reserved_system_messages_.fetch_sub(1, std::memory_order_release);
+        if (bytes > 0 && config_.capacity.max_bytes > 0) {
+            queued_bytes_.fetch_sub(bytes, std::memory_order_release);
+        }
+    }
+
+    // Drop the oldest message from the mailbox to free a slot.
+    // Returns true if a message was successfully dropped.
+    bool drop_one_oldest() noexcept {
+        T* node = mailbox_.dequeue();
+        if (!node)
+            return false;
+
+        // Release from the correct pool and update drop counter.
+        if constexpr (std::is_same_v<T, TypedMessage>) {
+            if (is_system_message(node->type_id()) &&
+                reserved_system_messages_.load(std::memory_order_acquire) > 0) {
+                release_system_reservation(estimate_node_bytes(*node));
+            } else {
+                release_reservation(estimate_node_bytes(*node));
+            }
+        } else {
+            release_reservation(estimate_node_bytes(*node));
+        }
+
+        total_dropped_.fetch_add(1, std::memory_order_relaxed);
+
+        node->~T();
+        mem::deallocate(node);
+
+        if (empty()) {
+            mailbox_was_empty_.store(true, std::memory_order_release);
+        }
+
+        return true;
+    }
+
     // Determine the result code after accepting a message, based on current
     // watermarks.
     EnqueueResultCode pressure_code_after_accept() const noexcept {
@@ -341,6 +450,7 @@ template <typename T> class MPSCActorMailbox {
     MailboxConfig config_;
     std::atomic<bool> mailbox_was_empty_{true};
     std::atomic<uint32_t> reserved_messages_{0};
+    std::atomic<uint32_t> reserved_system_messages_{0};
     std::atomic<uint64_t> queued_bytes_{0};
     std::atomic<uint64_t> total_enqueued_{0};
     std::atomic<uint64_t> total_dequeued_{0};
