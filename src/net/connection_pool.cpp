@@ -56,6 +56,22 @@ void ConnectionPool::send(const ActorAddress& target, const StreamBuffer& encode
     add_pending(target, encoded);
 }
 
+bool ConnectionPool::try_send(const ActorAddress& target,
+                              const StreamBuffer& encoded) {
+    if (shutting_down_.load()) {
+        return false;
+    }
+
+    ConnectionPtr conn = get_connection();
+    if (conn) {
+        conn->send(encoded);
+        return true;
+    }
+
+    // No connection available — try to queue; fail if pending queue is full
+    return add_pending(target, encoded);
+}
+
 void ConnectionPool::send(const StreamBuffer& data) {
     // Create a minimal actor address using the remote endpoint
     ActorAddress target;

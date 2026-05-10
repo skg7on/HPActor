@@ -17,11 +17,11 @@
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
+#include <hpactor/net/wireframe_connection.hpp>
 
 #include <unordered_map>
 
@@ -39,20 +39,20 @@ class TcpTransport : public Transport {
     ~TcpTransport() override;
 
     // Transport interface
-    ConnectionPtr connect(EndPoint remote_endpoint,
-                          const std::string& host, uint16_t port) override;
+    ConnectionPtr connect(EndPoint remote_endpoint, const std::string& host,
+                          uint16_t port) override;
 
     ConnectionPtr connect(EndPoint remote_endpoint) override;
 
     // Connect via UNIX domain socket
     // Returns ConnectionPtr on success, nullptr on failure
-    ConnectionPtr connect_unix_domain(EndPoint remote_endpoint,
-                                      const std::string& socket_path);
+    ConnectionPtr
+    connect_unix_domain(EndPoint remote_endpoint, const std::string& socket_path);
 
     void listen(uint16_t port) override;
     void stop_listening() override;
 
-    void send(const ActorAddress& target, const StreamBuffer& encoded) override;
+    bool try_send(const ActorAddress& target, const StreamBuffer& encoded) override;
 
     bool is_connected(EndPoint remote_endpoint) const override;
     EndPoint endpoint() const override {
@@ -73,8 +73,7 @@ class TcpTransport : public Transport {
     void handle_accept(int client_fd, EndPoint remote_endpoint);
 
     // Get or create a connection pool for a remote node
-    std::shared_ptr<ConnectionPool>
-    get_or_create_pool(EndPoint remote_endpoint);
+    std::shared_ptr<ConnectionPool> get_or_create_pool(EndPoint remote_endpoint);
 
     void register_connection(ConnectionPtr conn, int fd);
     void unregister_connection(int fd);

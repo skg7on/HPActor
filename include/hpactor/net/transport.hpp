@@ -76,11 +76,21 @@ class Connection : public std::enable_shared_from_this<Connection> {
                EventLoop* loop);
     virtual ~Connection();
 
-    int fd() const { return fd_; }
-    EndPoint local_endpoint() const { return local_endpoint_; }
-    EndPoint remote_endpoint() const { return remote_endpoint_; }
-    EventLoop* event_loop() const { return loop_; }
-    ConnectionState state() const { return state_; }
+    int fd() const {
+        return fd_;
+    }
+    EndPoint local_endpoint() const {
+        return local_endpoint_;
+    }
+    EndPoint remote_endpoint() const {
+        return remote_endpoint_;
+    }
+    EventLoop* event_loop() const {
+        return loop_;
+    }
+    ConnectionState state() const {
+        return state_;
+    }
 
     // Send data on this connection
     virtual void send(const StreamBuffer& data) = 0;
@@ -121,8 +131,8 @@ class Transport {
 
     // Connect to a remote node using explicit host/port (blocking)
     // Returns a Connection pointer on success, nullptr on failure
-    virtual ConnectionPtr connect(EndPoint remote_endpoint,
-                                  const std::string& host, uint16_t port) = 0;
+    virtual ConnectionPtr
+    connect(EndPoint remote_endpoint, const std::string& host, uint16_t port) = 0;
 
     // Connect to a remote node using registry lookup (DNS resolution if needed)
     // Returns ConnectionPtr on success, nullptr on failure
@@ -134,9 +144,20 @@ class Transport {
     // Stop listening
     virtual void stop_listening() = 0;
 
-    // Send a message to a remote actor
-    // The encoded parameter contains the serialized message
-    virtual void send(const ActorAddress& target, const StreamBuffer& encoded) = 0;
+    // Try to send a message to a remote actor.
+    // Returns true if the message was accepted by the transport layer
+    // (either sent immediately or queued for later delivery).
+    // Returns false if the transport cannot accept the message
+    // (no connection, queue full, shutting down).
+    virtual bool
+    try_send(const ActorAddress& target, const StreamBuffer& encoded) = 0;
+
+    // Send a message to a remote actor (fire-and-forget).
+    // Default implementation calls try_send() and discards the result.
+    // The encoded parameter contains the serialized message.
+    virtual void send(const ActorAddress& target, const StreamBuffer& encoded) {
+        (void)try_send(target, encoded);
+    }
 
     // Check if connected to a specific node
     virtual bool is_connected(EndPoint remote_endpoint) const = 0;
@@ -148,7 +169,8 @@ class Transport {
     virtual void close_connection(EndPoint remote_endpoint) = 0;
 
     // Set RPC response handler - called when RPC response frames are received
-    using rpc_response_handler = std::function<void(MessageId, const StreamBuffer&)>;
+    using rpc_response_handler =
+        std::function<void(MessageId, const StreamBuffer&)>;
     virtual void set_rpc_handler(rpc_response_handler handler) = 0;
 };
 

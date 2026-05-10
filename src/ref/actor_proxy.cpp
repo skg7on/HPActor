@@ -100,7 +100,22 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
     frame.pb_frame.set_payload(reinterpret_cast<const char*>(msg.payload().data()),
                                msg.payload().size());
 
-    transport_->send(resolved_target, frame.encode());
+    if (!transport_->try_send(resolved_target, frame.encode())) {
+        // Capture dead letter: transport refused the message
+        if (system_) {
+            mailbox::DeadLetterRecord dl;
+            dl.reason = mailbox::DeadLetterReason::TransportSendFailed;
+            dl.source = mailbox::DeadLetterSource::Transport;
+            dl.sender = msg.sender_address().id != ActorId{0}
+                            ? msg.sender_address()
+                            : address_;
+            dl.target = target;
+            dl.type_tag = msg.type_id();
+            dl.payload_sample = msg.payload();
+            (void)system_->dead_letter(std::move(dl));
+        }
+        return {mailbox::EnqueueResultCode::Rejected, target.id};
+    }
     return {mailbox::EnqueueResultCode::Accepted, target.id};
 }
 
