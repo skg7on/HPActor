@@ -271,7 +271,8 @@ int main() {
                            .max_queue_depth = 1024,
                            .cli = {},
                            .mailbox = {},
-                           .dead_letters = {}};
+                           .dead_letters = {},
+                           .tracing = {}};
     // config.use_coroutines = true;  // uncomment to enable C++20 coroutine
     // dispatch
     hpactor::ActorSystem system(config);

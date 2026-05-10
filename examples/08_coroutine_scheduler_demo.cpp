@@ -117,7 +117,8 @@ void demo_single_actor() {
                            .max_queue_depth = 1024,
                            .cli = {},
                            .mailbox = {},
-                           .dead_letters = {}};
+                           .dead_letters = {},
+                           .tracing = {}};
     hpactor::ActorSystem system(config);
 
     std::cout << "Scheduler state:\n";
@@ -158,7 +159,8 @@ void demo_multi_actor() {
                            .max_queue_depth = 1024,
                            .cli = {},
                            .mailbox = {},
-                           .dead_letters = {}};
+                           .dead_letters = {},
+                           .tracing = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn actors

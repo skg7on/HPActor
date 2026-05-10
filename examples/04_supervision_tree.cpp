@@ -232,7 +232,8 @@ int main() {
                            .max_queue_depth = 1024,
                            .cli = {},
                            .mailbox = {},
-                           .dead_letters = {}};
+                           .dead_letters = {},
+                           .tracing = {}};
     hpactor::ActorSystem system(config);
 
     // ---- Setup: OneForOne Supervisor with 3 workers ----
