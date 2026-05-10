@@ -236,4 +236,14 @@ ActorContext::http_request(net::HttpMethod method, const std::string& url,
                                           std::move(body));
 }
 
+void ActorContext::on_backpressure(BackpressureHandler handler) {
+    backpressure_handler_ = std::move(handler);
+}
+
+void ActorContext::handle_backpressure(const mailbox::BackpressureSignal& signal) {
+    if (backpressure_handler_) {
+        backpressure_handler_(signal);
+    }
+}
+
 } // namespace hpactor

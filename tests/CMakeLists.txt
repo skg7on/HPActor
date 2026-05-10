@@ -97,6 +97,10 @@ add_executable(test_actor_mailbox actor/test_actor_mailbox.cpp)
 target_link_libraries(test_actor_mailbox hpactor)
 add_test(NAME test_actor_mailbox COMMAND test_actor_mailbox)
 
+add_executable(test_backpressure_signals actor/test_backpressure_signals.cpp)
+target_link_libraries(test_backpressure_signals hpactor)
+add_test(NAME test_backpressure_signals COMMAND test_backpressure_signals)
+
 add_executable(test_proto_stateful_actor actor/test_proto_stateful_actor.cpp)
 target_link_libraries(test_proto_stateful_actor hpactor)
 add_test(NAME test_proto_stateful_actor COMMAND test_proto_stateful_actor)

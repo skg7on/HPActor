@@ -237,6 +237,17 @@ void ActorSystem::on_node_dead(EndPoint dead_ep) {
         location_cache_->evict_node(dead_ep);
 }
 
+void ActorSystem::signal_backpressure(const mailbox::BackpressureSignal& signal) {
+    if (signal.sender.id == ActorId{0})
+        return; // no sender
+
+    std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
+    auto it = actor_contexts_.find(signal.sender.id);
+    if (it != actor_contexts_.end() && it->second) {
+        it->second->handle_backpressure(signal);
+    }
+}
+
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
     registry_.put(name, actor.address());
 }
@@ -410,6 +421,20 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
             dl.mailbox_capacity = result.capacity;
             (void)dead_letter(std::move(dl));
         }
+    }
+
+    // Emit backpressure signal when target mailbox is under soft pressure
+    if (result.code == mailbox::EnqueueResultCode::AcceptedWithSoftPressure &&
+        options.emit_backpressure) {
+        mailbox::BackpressureSignal signal;
+        signal.target = ActorAddress{endpoint_, ActorType{0}, target, 0};
+        signal.sender = meta.sender;
+        signal.reason = mailbox::BackpressureReason::HighWatermark;
+        signal.depth = result.depth;
+        signal.capacity = result.capacity;
+        signal.pressure_ratio = result.pressure_ratio;
+        signal.retry_after = result.retry_after;
+        signal_backpressure(signal);
     }
 
     return result;

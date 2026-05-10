@@ -297,6 +297,10 @@ class ActorSystem {
     // Finds all actors linked to the dead endpoint and delivers DownMsg.
     void on_node_dead(EndPoint dead_ep);
 
+    // Emit a backpressure signal to the sender actor, delivered through
+    // the sender's ActorContext::handle_backpressure() handler.
+    void signal_backpressure(const mailbox::BackpressureSignal& signal);
+
     // Enqueue an I/O completion to be delivered to an actor
     // Called by EventLoop when async operations complete
     void enqueue_completion(net::OpCompletion completion);

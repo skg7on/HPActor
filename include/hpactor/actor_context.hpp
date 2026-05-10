@@ -27,6 +27,7 @@
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -166,6 +167,13 @@ class ActorContext {
     http_request(net::HttpMethod method, const std::string& url,
                  std::vector<net::HttpHeader> headers = {}, StreamBuffer body = {});
 
+    // Backpressure signal handling
+    using BackpressureHandler =
+        std::function<void(const mailbox::BackpressureSignal&)>;
+
+    void on_backpressure(BackpressureHandler handler);
+    void handle_backpressure(const mailbox::BackpressureSignal& signal);
+
   private:
     Actor owner_;
     ActorSystem* system_ = nullptr;
@@ -176,6 +184,7 @@ class ActorContext {
 
     ActorRefCache ref_cache_;
     ActorAddress current_sender_;
+    BackpressureHandler backpressure_handler_;
 };
 
 } // namespace hpactor
