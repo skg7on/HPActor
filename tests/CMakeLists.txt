@@ -466,6 +466,15 @@ target_link_libraries(test_std_allocator hpactor pthread)
 add_test(NAME test_std_allocator COMMAND test_std_allocator)
 
 # =============================================================================
+# Tracing tests
+# =============================================================================
+if(ENABLE_ACTOR_TRACING)
+    add_executable(test_trace_config_smoke tracing/test_trace_config_smoke.cpp)
+    target_link_libraries(test_trace_config_smoke hpactor)
+    add_test(NAME test_trace_config_smoke COMMAND test_trace_config_smoke)
+endif()
+
+# =============================================================================
 # CLI tests
 # =============================================================================
 if(ENABLE_CLI)

@@ -28,6 +28,7 @@ option(ENABLE_ACTOR_METRICS "Enable actor-level metrics subsystem" ON)
 option(ENABLE_MEMORY_DEBUG "Enable memory poisoning, canaries, and guard pages" OFF)
 option(ENABLE_CLI "Enable interactive CLI subsystem" ON)
 option(ENABLE_ACTOR_LOGGING "Enable structured actor logging subsystem" ON)
+option(ENABLE_ACTOR_TRACING "Enable distributed tracing subsystem" ON)
 set(HPACTOR_ENABLE_ACTOR_LOGGING ${ENABLE_ACTOR_LOGGING})
 
 # Sanitizer mutual exclusivity
@@ -275,6 +276,16 @@ target_sources(hpactor_lib PRIVATE
     src/cli/cli_actor.cpp
 )
 set(HPACTOR_ENABLE_CLI 1)
+
+# Tracing subsystem
+if(ENABLE_ACTOR_TRACING)
+    set(HPACTOR_ENABLE_ACTOR_TRACING 1)
+    target_sources(hpactor_lib PRIVATE
+        src/tracing/trace_manager.cpp
+    )
+else()
+    set(HPACTOR_ENABLE_ACTOR_TRACING 0)
+endif()
 
 # Enable exceptions for TOML adapter sources (toml++ requires them)
 set(HPACTOR_TOML_EXCEPTION_SOURCES
