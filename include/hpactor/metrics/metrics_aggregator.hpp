@@ -27,7 +27,7 @@ class ActorSystem;
 namespace hpactor::metrics {
 
 class Aggregator {
-public:
+  public:
     Aggregator(MetricRegistry& registry, ActorSystem& system);
 
     void on_event(const MetricEvent& e);
@@ -35,18 +35,23 @@ public:
     void begin_drain();
     void end_drain();
 
-private:
+  private:
     MetricRegistry& registry_;
-    ActorSystem&    system_;
+    ActorSystem& system_;
 
-    MetricFamily* mailbox_depth_family_      = nullptr;
-    MetricFamily* mailbox_messages_family_   = nullptr;
+    MetricFamily* mailbox_depth_family_ = nullptr;
+    MetricFamily* mailbox_messages_family_ = nullptr;
     MetricFamily* processing_latency_family_ = nullptr;
-    MetricFamily* lifecycle_family_          = nullptr;
+    MetricFamily* lifecycle_family_ = nullptr;
     MetricFamily* scheduler_dispatch_family_ = nullptr;
-    MetricFamily* scheduler_steal_family_    = nullptr;
+    MetricFamily* scheduler_steal_family_ = nullptr;
     MetricFamily* supervisor_restart_family_ = nullptr;
-    MetricFamily* memory_bytes_family_       = nullptr;
+    MetricFamily* memory_bytes_family_ = nullptr;
+    MetricFamily* mailbox_rejected_family_ = nullptr;
+    MetricFamily* mailbox_dropped_family_ = nullptr;
+    MetricFamily* mailbox_dead_letter_family_ = nullptr;
+    MetricFamily* backpressure_signal_family_ = nullptr;
+    MetricFamily* dead_letter_lost_family_ = nullptr;
 
     int64_t active_actors_{0};
 

@@ -84,6 +84,14 @@ template <typename T> class MPSCActorMailbox {
                 switch (config_.overflow_policy) {
                     case OverflowPolicy::DropNewest:
                         total_dropped_.fetch_add(1, std::memory_order_relaxed);
+                        if (metrics_ring_buffer_) [[unlikely]] {
+                            metrics::MetricEvent evt{};
+                            evt.actor_id = actor_id_;
+                            evt.event_type =
+                                metrics::MetricEventType::kMailboxDropped;
+                            evt.value_hi = 1;
+                            metrics_ring_buffer_->try_push(evt);
+                        }
                         return make_result(EnqueueResultCode::DroppedNewest);
 
                     case OverflowPolicy::DropOldest:
@@ -92,16 +100,40 @@ template <typename T> class MPSCActorMailbox {
                             if (!try_reserve(meta.estimated_bytes)) {
                                 total_rejected_.fetch_add(
                                     1, std::memory_order_relaxed);
+                                if (metrics_ring_buffer_) [[unlikely]] {
+                                    metrics::MetricEvent evt{};
+                                    evt.actor_id = actor_id_;
+                                    evt.event_type =
+                                        metrics::MetricEventType::kMailboxRejected;
+                                    evt.value_hi = 1;
+                                    metrics_ring_buffer_->try_push(evt);
+                                }
                                 return make_result(EnqueueResultCode::Rejected);
                             }
                             // Fall through to enqueue below.
                             break;
                         }
                         total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                        if (metrics_ring_buffer_) [[unlikely]] {
+                            metrics::MetricEvent evt{};
+                            evt.actor_id = actor_id_;
+                            evt.event_type =
+                                metrics::MetricEventType::kMailboxRejected;
+                            evt.value_hi = 1;
+                            metrics_ring_buffer_->try_push(evt);
+                        }
                         return make_result(EnqueueResultCode::Rejected);
 
                     case OverflowPolicy::DeadLetter:
                         total_dead_letters_.fetch_add(1, std::memory_order_relaxed);
+                        if (metrics_ring_buffer_) [[unlikely]] {
+                            metrics::MetricEvent evt{};
+                            evt.actor_id = actor_id_;
+                            evt.event_type =
+                                metrics::MetricEventType::kMailboxDeadLetter;
+                            evt.value_hi = 1;
+                            metrics_ring_buffer_->try_push(evt);
+                        }
                         return make_result(EnqueueResultCode::ReroutedToDeadLetter);
 
                     default:
@@ -109,6 +141,14 @@ template <typename T> class MPSCActorMailbox {
                         // SpillToOverflowQueue, SignalOnly,
                         // BlockWhenAllowed
                         total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                        if (metrics_ring_buffer_) [[unlikely]] {
+                            metrics::MetricEvent evt{};
+                            evt.actor_id = actor_id_;
+                            evt.event_type =
+                                metrics::MetricEventType::kMailboxRejected;
+                            evt.value_hi = 1;
+                            metrics_ring_buffer_->try_push(evt);
+                        }
                         return make_result(EnqueueResultCode::Rejected);
                 }
             }
@@ -137,6 +177,13 @@ template <typename T> class MPSCActorMailbox {
         uint64_t bytes = estimate_node_bytes(*node);
         if (!try_reserve(bytes)) {
             total_rejected_.fetch_add(1, std::memory_order_relaxed);
+            if (metrics_ring_buffer_) [[unlikely]] {
+                metrics::MetricEvent evt{};
+                evt.actor_id = actor_id_;
+                evt.event_type = metrics::MetricEventType::kMailboxRejected;
+                evt.value_hi = 1;
+                metrics_ring_buffer_->try_push(evt);
+            }
             return;
         }
         MailboxEnvelopeMeta meta;
@@ -364,6 +411,13 @@ template <typename T> class MPSCActorMailbox {
         }
 
         total_dropped_.fetch_add(1, std::memory_order_relaxed);
+        if (metrics_ring_buffer_) [[unlikely]] {
+            metrics::MetricEvent evt{};
+            evt.actor_id = actor_id_;
+            evt.event_type = metrics::MetricEventType::kMailboxDropped;
+            evt.value_hi = 1;
+            metrics_ring_buffer_->try_push(evt);
+        }
 
         node->~T();
         mem::deallocate(node);

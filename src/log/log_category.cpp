@@ -64,6 +64,26 @@ namespace hpactor::log {
             return "actor_link_rejected";
         case LogEventId::kMailboxDepthHigh:
             return "mailbox_depth_high";
+        case LogEventId::kMailboxHighWatermark:
+            return "mailbox_high_watermark";
+        case LogEventId::kMailboxLowWatermarkRecovered:
+            return "mailbox_low_watermark_recovered";
+        case LogEventId::kMailboxFull:
+            return "mailbox_full";
+        case LogEventId::kMailboxMessageRejected:
+            return "mailbox_message_rejected";
+        case LogEventId::kMailboxMessageDropped:
+            return "mailbox_message_dropped";
+        case LogEventId::kMailboxOverflowRerouted:
+            return "mailbox_overflow_rerouted";
+        case LogEventId::kBackpressureSignalSent:
+            return "backpressure_signal_sent";
+        case LogEventId::kSystemReserveExhausted:
+            return "system_reserve_exhausted";
+        case LogEventId::kDeadLetterQueued:
+            return "dead_letter_queued";
+        case LogEventId::kDeadLetterLost:
+            return "dead_letter_lost";
         case LogEventId::kMemoryAlloc:
             return "memory_alloc";
         case LogEventId::kMemoryFree:
