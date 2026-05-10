@@ -850,6 +850,86 @@ Sub-files define domain actors as children of these roots.
 
 ---
 
+## Extensible Parser Registry
+
+`TomlParser` owns document loading and topology assembly. Subsystems own their
+own section parsers and self-register them through file-scope static registrar
+objects. There is no public `register_*` API — adding a parser means adding a
+source file to the build.
+
+### Parser Categories
+
+Two parser interfaces service different parse scopes:
+
+- **`ITomlSystemConfigParser`** — receives the entrypoint `[system]` table and
+  mutates `SystemDef`. Used for `[system.metrics]`, `[system.logging]`,
+  `[system.cli]`, `[system.discovery]`, `[system.mailbox]`, and
+  `[system.dead_letters]`.
+- **`ITomlDocumentConfigParser`** — receives each TOML document root and appends
+  dispatchers, templates, or actors to `TomlFileData`. Used for
+  `[[dispatcher]]`, `[template.*]`, and `[[actor]]`.
+
+### Built-in Parsers
+
+| Parser | Category | Order | Source |
+|--------|----------|-------|--------|
+| `system.core` | System | 0 | `src/config/parsers/system_core_config_parser.cpp` |
+| `system.mailbox` | System | 90 | `src/config/parsers/mailbox_config_parser.cpp` |
+| `system.dead_letters` | System | 95 | `src/config/parsers/dead_letters_config_parser.cpp` |
+| `system.metrics` | System | 100 | `src/config/parsers/metrics_config_parser.cpp` |
+| `system.logging` | System | 110 | `src/config/parsers/logging_config_parser.cpp` |
+| `system.cli` | System | 120 | `src/config/parsers/cli_config_parser.cpp` |
+| `system.discovery` | System | 130 | `src/config/parsers/discovery_config_parser.cpp` |
+| `topology.document` | Document | 0 | `src/config/parsers/topology_config_parser.cpp` |
+
+### Static Self-Registration
+
+Each parser translation unit owns a file-scope registrar object:
+
+```cpp
+namespace {
+
+class MetricsConfigParser final : public ITomlSystemConfigParser {
+  public:
+    static constexpr std::string_view kName = "system.metrics";
+    static constexpr int kOrder = 100;
+
+    std::string_view name() const noexcept override { return kName; }
+    int order() const noexcept override { return kOrder; }
+
+    result<void> parse(const TomlTableView& system,
+                       SystemDef& out,
+                       TomlParseContext& ctx) const override;
+};
+
+const TomlSystemParserRegistration<MetricsConfigParser>
+    kRegisterMetricsConfigParser;
+
+} // namespace
+```
+
+Registrars run before `main()`. The registry sorts parsers by `order()` then
+`name()`, so parse order is independent of static initialization order across
+translation units.
+
+### TOML Adapter Isolation
+
+Parser interfaces do not include `toml.hpp`. An opaque `TomlTableView` wraps
+`toml::table*` and is implemented in `src/config/toml_table_view.cpp` — one of
+only two translation units compiled with `-fexceptions`. Subsystem parsers are
+compiled with `-fno-exceptions` and never see toml++ types.
+
+### Adding a New Subsystem Parser
+
+1. Create a parser source file in `src/config/parsers/`.
+2. Implement `ITomlSystemConfigParser` or `ITomlDocumentConfigParser`.
+3. Add a file-scope `TomlSystemParserRegistration<T>` or
+   `TomlDocumentParserRegistration<T>` object.
+4. Add the source to `CMakeLists.txt`.
+
+No edits to `parse_file_data` or `TomlParser` are needed.
+
+---
 ## Open Questions
 
 1. **Should `actor.args` support typed values?** Currently all values are strings. Typed args (int, bool, float) would require a tagged union in the schema. Recommendation: start string-only; add typed args if demand arises.

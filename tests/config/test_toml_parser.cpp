@@ -22,15 +22,14 @@
 using namespace hpactor::config;
 
 #ifndef TEST_DATA_DIR
-#define TEST_DATA_DIR "tests/data/toml"
+#    define TEST_DATA_DIR "tests/data/toml"
 #endif
 static const std::string DATA_DIR = TEST_DATA_DIR;
 
 // ---------------------------------------------------------------------------
 // Helper: write inline TOML to a temp file
 // ---------------------------------------------------------------------------
-static std::string write_temp(const std::string& content,
-                              const std::string& name) {
+static std::string write_temp(const std::string& content, const std::string& name) {
     std::string path = "/tmp/hpactor_test_" + name + ".toml";
     std::ofstream f(path);
     f << content;
@@ -134,8 +133,10 @@ void test_import() {
 
     bool found_main = false, found_imported = false;
     for (const auto& a : model.actors) {
-        if (a.id == "main_actor") found_main = true;
-        if (a.id == "imported_actor") found_imported = true;
+        if (a.id == "main_actor")
+            found_main = true;
+        if (a.id == "imported_actor")
+            found_imported = true;
     }
     assert(found_main && found_imported);
     std::cout << "[PASS] test_import\n";
@@ -174,8 +175,10 @@ supervisor = "B"
     // B before C (or C after B)
     size_t b_pos = 0, c_pos = 0;
     for (size_t i = 0; i < model.actors.size(); ++i) {
-        if (model.actors[i].id == "B") b_pos = i;
-        if (model.actors[i].id == "C") c_pos = i;
+        if (model.actors[i].id == "B")
+            b_pos = i;
+        if (model.actors[i].id == "C")
+            c_pos = i;
     }
     assert(b_pos < c_pos);
     std::cout << "[PASS] test_sort_linear\n";
@@ -224,10 +227,14 @@ supervisor = "C"
     // B before D, C before E
     size_t b_pos = 0, d_pos = 0, c_pos = 0, e_pos = 0;
     for (size_t i = 0; i < model.actors.size(); ++i) {
-        if (model.actors[i].id == "B") b_pos = i;
-        if (model.actors[i].id == "D") d_pos = i;
-        if (model.actors[i].id == "C") c_pos = i;
-        if (model.actors[i].id == "E") e_pos = i;
+        if (model.actors[i].id == "B")
+            b_pos = i;
+        if (model.actors[i].id == "D")
+            d_pos = i;
+        if (model.actors[i].id == "C")
+            c_pos = i;
+        if (model.actors[i].id == "E")
+            e_pos = i;
     }
     assert(b_pos < d_pos);
     assert(c_pos < e_pos);
@@ -350,6 +357,96 @@ void test_glob_import() {
 }
 
 // ---------------------------------------------------------------------------
+// Test 14: All subsystem fields via system_subsystems.toml
+// ---------------------------------------------------------------------------
+void test_system_subsystems() {
+    std::string path = DATA_DIR + "/system_subsystems.toml";
+    auto result = TomlParser::parse(path);
+    assert(result.has_value());
+
+    auto& m = result.value();
+
+    // [system] core
+    assert(m.system.version == "1.0");
+    assert(m.system.scheduler_threads == 8);
+    assert(m.system.max_queue_depth == 2048);
+    assert(m.system.default_mailbox_size == 4096);
+    assert(m.system.enable_network == true);
+    assert(m.system.tcp_port == 9555);
+    assert(m.system.spawn_timeout_ms == 9000);
+    assert(m.system.enable_http_gateway == true);
+    assert(m.system.http_bind_host == "127.0.0.1");
+    assert(m.system.http_port == 18080);
+    assert(m.system.http_max_connections == 77);
+    assert(m.system.http_max_request_size == 123456);
+    assert(m.system.http_reply_timeout_ms == 4567);
+    assert(m.system.use_coroutines == true);
+
+    // [system.metrics]
+    assert(m.system.metrics_enabled == false);
+    assert(m.system.metrics_ring_buffer_capacity == 8192);
+    assert(m.system.metrics_path == "/internal/metrics");
+
+    // [system.logging]
+    assert(m.system.logging.enabled == true);
+    assert(m.system.logging.format == hpactor::log::LogFormat::kText);
+    assert(m.system.logging.ring_buffer_capacity == 4096);
+    assert(m.system.logging.file_path == "/tmp/hpactor.log");
+    assert(m.system.logging.rotating_file.path == "/tmp/hpactor-rotating.log");
+    assert(m.system.logging.rotating_file.max_bytes == 1048576);
+    assert(m.system.logging.rotating_file.max_files == 3);
+    assert(m.system.logging.sinks.size() == 3);
+
+    // [system.cli]
+    assert(m.system.cli.enabled == true);
+    assert(m.system.cli.listen_path == "/tmp/hpactor-cli.sock");
+    assert(m.system.cli.tcp_port == 7001);
+    assert(m.system.cli.default_format == "json");
+    assert(m.system.cli.page_size == 25);
+
+    // [system.discovery]
+    assert(m.system.discovery_backend == "gossip");
+
+    // [[dispatcher]] + [[actor]]
+    assert(m.dispatchers.size() == 1);
+    assert(m.dispatchers[0].name == "io");
+    assert(m.dispatchers[0].threads == 2);
+    assert(m.actors.size() == 1);
+    assert(m.actors[0].id == "echo");
+    assert(m.actors[0].behavior == "EchoActor");
+    assert(m.actors[0].dispatcher == "io");
+    assert(m.actors[0].mailbox_capacity == 99);
+
+    std::cout << "[PASS] test_system_subsystems\n";
+}
+
+// ---------------------------------------------------------------------------
+// Test 15: Imported file containing [system] is rejected
+// ---------------------------------------------------------------------------
+void test_import_rejects_system_table() {
+    // Write an imported file that illegally contains [system]
+    std::string imported = R"(
+[system]
+version = "1.0"
+[[actor]]
+id = "bad"
+behavior = "X"
+)";
+    std::string import_path = write_temp(imported, "bad_import");
+
+    std::string main_toml = std::string("[system]\nversion = \"1.0\"\n\n"
+                                        "imports = [\"") +
+                            import_path +
+                            "\"]\n\n"
+                            "[[actor]]\nid = \"main\"\nbehavior = \"M\"\n";
+    std::string main_path = write_temp(main_toml, "reject_import_sys");
+
+    auto result = TomlParser::parse(main_path);
+    assert(!result.has_value());
+    std::cout << "[PASS] test_import_rejects_system_table\n";
+}
+
+// ---------------------------------------------------------------------------
 // Main
 // ---------------------------------------------------------------------------
 int main() {
@@ -368,6 +465,8 @@ int main() {
     test_unknown_dispatcher_error();
     test_missing_template_error();
     test_glob_import();
+    test_system_subsystems();
+    test_import_rejects_system_table();
 
     std::cout << "\nAll tests passed!\n";
     return 0;
