@@ -106,7 +106,8 @@ void test_link_to_down_notification() {
                   .max_queue_depth = 1024,
                   .use_coroutines = true,
                   .cli = {},
-                  .mailbox = {}};
+                  .mailbox = {},
+                  .dead_letters = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -144,7 +145,8 @@ void test_monitor_down_notification() {
                   .max_queue_depth = 1024,
                   .use_coroutines = true,
                   .cli = {},
-                  .mailbox = {}};
+                  .mailbox = {},
+                  .dead_letters = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -167,7 +169,8 @@ void test_unlink_from_stops_notification() {
                   .max_queue_depth = 1024,
                   .use_coroutines = true,
                   .cli = {},
-                  .mailbox = {}};
+                  .mailbox = {},
+                  .dead_letters = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -197,7 +200,8 @@ void test_demonitor_stops_notification() {
                   .max_queue_depth = 1024,
                   .use_coroutines = true,
                   .cli = {},
-                  .mailbox = {}};
+                  .mailbox = {},
+                  .dead_letters = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -220,7 +224,8 @@ void test_link_to_dead_or_self() {
                   .max_queue_depth = 1024,
                   .use_coroutines = true,
                   .cli = {},
-                  .mailbox = {}};
+                  .mailbox = {},
+                  .dead_letters = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -254,8 +259,11 @@ void test_demonitor_stops_notification() {
     std::cout << "SKIP: coroutines not available" << std::endl;
 }
 void test_link_to_dead_or_self() {
-    Config config{
-        .scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
+    Config config{.scheduler_threads = 1,
+                  .max_queue_depth = 1024,
+                  .cli = {},
+                  .mailbox = {},
+                  .dead_letters = {}};
     ActorSystem system(config);
     auto a = system.spawn<DownRecordingActor>();
     a.get()->link_to(a.get()->address());
@@ -276,8 +284,11 @@ void test_link_to_dead_or_self() {
 
 // Test: link_to is idempotent
 void test_link_to_idempotent() {
-    Config config{
-        .scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
+    Config config{.scheduler_threads = 1,
+                  .max_queue_depth = 1024,
+                  .cli = {},
+                  .mailbox = {},
+                  .dead_letters = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -298,8 +309,11 @@ void test_link_to_idempotent() {
 
 // Test: link_to sends LinkMsg, which adds bidirectional entry on receiver
 void test_link_to_sends_link_msg() {
-    Config config{
-        .scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
+    Config config{.scheduler_threads = 1,
+                  .max_queue_depth = 1024,
+                  .cli = {},
+                  .mailbox = {},
+                  .dead_letters = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();

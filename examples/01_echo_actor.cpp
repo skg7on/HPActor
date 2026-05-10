@@ -267,8 +267,11 @@ static void send_from_main(hpactor::ActorSystem& system, hpactor::ActorId target
 int main() {
     std::cout << "=== HPActor Example 01: Echo Actor ===" << std::endl;
 
-    hpactor::Config config{
-        .scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
+    hpactor::Config config{.scheduler_threads = 2,
+                           .max_queue_depth = 1024,
+                           .cli = {},
+                           .mailbox = {},
+                           .dead_letters = {}};
     // config.use_coroutines = true;  // uncomment to enable C++20 coroutine
     // dispatch
     hpactor::ActorSystem system(config);

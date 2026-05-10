@@ -228,8 +228,11 @@ static void send_from_main(hpactor::ActorSystem& system, hpactor::ActorId target
 int main() {
     std::cout << "=== HPActor Example 04: Supervision Tree ===" << std::endl;
 
-    hpactor::Config config{
-        .scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
+    hpactor::Config config{.scheduler_threads = 2,
+                           .max_queue_depth = 1024,
+                           .cli = {},
+                           .mailbox = {},
+                           .dead_letters = {}};
     hpactor::ActorSystem system(config);
 
     // ---- Setup: OneForOne Supervisor with 3 workers ----

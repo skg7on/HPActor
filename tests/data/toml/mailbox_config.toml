@@ -1,0 +1,28 @@
+[system]
+version = "1.0"
+scheduler_threads = 2
+
+[system.mailbox]
+default_capacity = 64
+default_policy = "dead_letter"
+high_watermark = 0.75
+low_watermark = 0.25
+protected_system_messages = 8
+backpressure = "local_and_remote"
+
+[system.dead_letters]
+enabled = true
+capacity = 16
+max_payload_sample_bytes = 12
+overflow_policy = "metadata_only"
+store_payload = false
+
+[[actor]]
+id = "worker"
+behavior = "WorkerActor"
+mailbox_capacity = 7
+
+[actor.mailbox]
+policy = "drop_newest"
+priority_aware = true
+max_overflow_depth = 3

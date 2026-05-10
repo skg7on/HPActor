@@ -16,6 +16,8 @@
 #include <hpactor/log/log_category.hpp>
 #include <hpactor/log/log_level.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/mailbox/mailbox_policy.hpp>
 
 #include <toml.hpp>
 
@@ -38,6 +40,54 @@ static DispatchPolicy parse_dispatch_policy(const std::string& s) {
     if (s == "DedicatedPool")
         return DispatchPolicy::DedicatedPool;
     return DispatchPolicy::Cooperative;
+}
+
+// ---------------------------------------------------------------------------
+// OverflowPolicy string parsing
+// ---------------------------------------------------------------------------
+static hpactor::mailbox::OverflowPolicy
+parse_overflow_policy(const std::string& s) {
+    if (s == "drop_newest")
+        return hpactor::mailbox::OverflowPolicy::DropNewest;
+    if (s == "drop_oldest")
+        return hpactor::mailbox::OverflowPolicy::DropOldest;
+    if (s == "drop_lowest_priority")
+        return hpactor::mailbox::OverflowPolicy::DropLowestPriority;
+    if (s == "dead_letter")
+        return hpactor::mailbox::OverflowPolicy::DeadLetter;
+    if (s == "spill_to_overflow_queue")
+        return hpactor::mailbox::OverflowPolicy::SpillToOverflowQueue;
+    if (s == "signal_only")
+        return hpactor::mailbox::OverflowPolicy::SignalOnly;
+    if (s == "block_when_allowed")
+        return hpactor::mailbox::OverflowPolicy::BlockWhenAllowed;
+    return hpactor::mailbox::OverflowPolicy::RejectNewest;
+}
+
+// ---------------------------------------------------------------------------
+// BackpressureMode string parsing
+// ---------------------------------------------------------------------------
+static hpactor::mailbox::BackpressureMode
+parse_backpressure_mode(const std::string& s) {
+    if (s == "disabled")
+        return hpactor::mailbox::BackpressureMode::Disabled;
+    if (s == "local")
+        return hpactor::mailbox::BackpressureMode::LocalSignal;
+    if (s == "remote")
+        return hpactor::mailbox::BackpressureMode::RemoteSignal;
+    return hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal;
+}
+
+// ---------------------------------------------------------------------------
+// DeadLetterOverflowPolicy string parsing
+// ---------------------------------------------------------------------------
+static hpactor::mailbox::DeadLetterOverflowPolicy
+parse_dl_overflow_policy(const std::string& s) {
+    if (s == "drop_newest_record")
+        return hpactor::mailbox::DeadLetterOverflowPolicy::DropNewestRecord;
+    if (s == "metadata_only")
+        return hpactor::mailbox::DeadLetterOverflowPolicy::MetadataOnly;
+    return hpactor::mailbox::DeadLetterOverflowPolicy::DropOldestRecord;
 }
 
 // ---------------------------------------------------------------------------
@@ -110,6 +160,20 @@ read_bool(const toml::table& tbl, const char* key, bool default_val = false) {
     return default_val;
 }
 
+static double
+read_double(const toml::table& tbl, const char* key, double default_val = 0.0) {
+    auto node = tbl.get(key);
+    if (node && node->is_floating_point()) {
+        return node->value<double>().value_or(default_val);
+    }
+    if (node && node->is_integer()) {
+        auto val = node->value<int64_t>();
+        if (val)
+            return static_cast<double>(*val);
+    }
+    return default_val;
+}
+
 // ---------------------------------------------------------------------------
 // Parse [[dispatcher]]
 // ---------------------------------------------------------------------------
@@ -151,6 +215,17 @@ static ActorDef parse_actor(const toml::table& tbl) {
             def.resources.slab_class_bytes = read_uint32(rt, "slab_class_"
                                                              "bytes");
             def.resources.max_memory_kb = read_uint32(rt, "max_memory_kb");
+        }
+    }
+
+    if (auto* mb = tbl.get("mailbox")) {
+        if (mb->is_table()) {
+            auto& mt = *mb->as_table();
+            def.mailbox.policy =
+                parse_overflow_policy(read_string(mt, "policy", "reject_newest"));
+            def.mailbox.priority_aware = read_bool(mt, "priority_aware", false);
+            def.mailbox.max_overflow_depth =
+                read_uint32(mt, "max_overflow_depth", 0);
         }
     }
 
@@ -371,6 +446,49 @@ parse_file_data(const std::string& filepath, bool is_entrypoint) {
             }
         }
 
+        // Mailbox subsystem [system.mailbox]
+        if (auto* mb_node = st.get("mailbox")) {
+            if (mb_node->is_table()) {
+                auto& mt = *mb_node->as_table();
+                data.system.mailbox.default_capacity =
+                    read_uint32(mt, "default_capacity", 1024);
+                data.system.mailbox.default_byte_capacity =
+                    read_uint32(mt, "default_byte_capacity", 0);
+                data.system.mailbox.default_policy = parse_overflow_policy(
+                    read_string(mt, "default_policy", "reject_newest"));
+                data.system.mailbox.high_watermark =
+                    read_double(mt, "high_watermark", 0.80);
+                data.system.mailbox.low_watermark =
+                    read_double(mt, "low_watermark", 0.50);
+                data.system.mailbox.protected_system_messages =
+                    read_uint32(mt, "protected_system_messages", 32);
+                data.system.mailbox.backpressure = parse_backpressure_mode(
+                    read_string(mt, "backpressure", "local_and_remote"));
+            }
+        }
+
+        // Dead letters subsystem [system.dead_letters]
+        if (auto* dl_node = st.get("dead_letters")) {
+            if (dl_node->is_table()) {
+                auto& dt = *dl_node->as_table();
+                data.system.dead_letters.enabled = read_bool(dt, "enabled", true);
+                data.system.dead_letters.capacity =
+                    read_uint32(dt, "capacity", 4096);
+                data.system.dead_letters.byte_capacity =
+                    read_uint32(dt, "byte_capacity", 0);
+                data.system.dead_letters.max_payload_sample_bytes =
+                    read_uint32(dt, "max_payload_sample_bytes", 512);
+                data.system.dead_letters.overflow_policy = parse_dl_overflow_policy(
+                    read_string(dt, "overflow_policy", "drop_oldest_record"));
+                data.system.dead_letters.store_payload =
+                    read_bool(dt, "store_payload", true);
+                data.system.dead_letters.alert_on_first_failure =
+                    read_bool(dt, "alert_on_first_failure", false);
+                data.system.dead_letters.alert_threshold_per_minute =
+                    read_uint32(dt, "alert_threshold_per_minute", 100);
+            }
+        }
+
         // ── Service discovery ────────────────────────────────────
         if (auto dt = st["discovery"]; dt.is_table()) {
             data.system.discovery_backend =
@@ -440,6 +558,12 @@ static void deep_merge(ActorDef& base, const ActorDef& overrides) {
         base.resources.slab_class_bytes = overrides.resources.slab_class_bytes;
     if (overrides.resources.max_memory_kb != 0)
         base.resources.max_memory_kb = overrides.resources.max_memory_kb;
+
+    if (overrides.mailbox.policy != hpactor::mailbox::OverflowPolicy::RejectNewest)
+        base.mailbox.policy = overrides.mailbox.policy;
+    base.mailbox.priority_aware = overrides.mailbox.priority_aware;
+    if (overrides.mailbox.max_overflow_depth != 0)
+        base.mailbox.max_overflow_depth = overrides.mailbox.max_overflow_depth;
 
     for (const auto& [k, v] : overrides.args) {
         base.args[k] = v;

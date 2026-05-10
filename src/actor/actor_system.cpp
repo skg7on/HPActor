@@ -356,6 +356,11 @@ ActorSystem::mailbox_config_for_actor_def(const config::ActorDef& def) const {
     if (def.mailbox_capacity != 0) {
         cfg.capacity.max_messages = def.mailbox_capacity;
     }
+    if (def.mailbox.policy != mailbox::OverflowPolicy::RejectNewest) {
+        cfg.overflow_policy = def.mailbox.policy;
+    }
+    cfg.priority_aware = def.mailbox.priority_aware;
+    cfg.max_overflow_depth = def.mailbox.max_overflow_depth;
     return cfg;
 }
 
@@ -606,6 +611,20 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     // Apply system-level logging config from topology
     logging_config_ = model.system.logging;
+
+    // Apply mailbox defaults from topology
+    config_.mailbox.default_capacity = model.system.mailbox.default_capacity;
+    config_.mailbox.default_byte_capacity =
+        model.system.mailbox.default_byte_capacity;
+    config_.mailbox.default_policy = model.system.mailbox.default_policy;
+    config_.mailbox.high_watermark = model.system.mailbox.high_watermark;
+    config_.mailbox.low_watermark = model.system.mailbox.low_watermark;
+    config_.mailbox.protected_system_messages =
+        model.system.mailbox.protected_system_messages;
+    config_.mailbox.backpressure_mode = model.system.mailbox.backpressure;
+    config_.dead_letters = model.system.dead_letters;
+    dead_letters_ =
+        std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
 
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
                      "topology bootstrap complete");

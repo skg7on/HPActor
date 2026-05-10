@@ -34,7 +34,8 @@ int main() {
         Config config{.scheduler_threads = 4,
                       .max_queue_depth = 1024,
                       .cli = {},
-                      .mailbox = {}};
+                      .mailbox = {},
+                      .dead_letters = {}};
         ActorSystem system(config);
         assert(system.scheduler() != nullptr);
         assert(system.scheduler()->worker_count() == 4);
@@ -49,7 +50,8 @@ int main() {
         Config config{.scheduler_threads = 2,
                       .max_queue_depth = 1024,
                       .cli = {},
-                      .mailbox = {}};
+                      .mailbox = {},
+                      .dead_letters = {}};
         ActorSystem system(config);
 
         ActorId actors[] = {ActorId{1}, ActorId{2}, ActorId{3}, ActorId{4}};
@@ -70,7 +72,8 @@ int main() {
         Config config{.scheduler_threads = 2,
                       .max_queue_depth = 1024,
                       .cli = {},
-                      .mailbox = {}};
+                      .mailbox = {},
+                      .dead_letters = {}};
         ActorSystem system(config);
 
         ActorId actors[] = {ActorId{101}, ActorId{102}, ActorId{103}};
@@ -90,7 +93,8 @@ int main() {
         Config config{.scheduler_threads = 1,
                       .max_queue_depth = 1024,
                       .cli = {},
-                      .mailbox = {}};
+                      .mailbox = {},
+                      .dead_letters = {}};
         ActorSystem system(config);
         assert(system.is_running() == true);
         std::cout << "  PASS: is_running returns true" << std::endl;

@@ -20,24 +20,31 @@
 namespace hpactor::metrics {
 
 enum class MetricEventType : uint8_t {
-    kMailboxEnqueue    = 0,
-    kMailboxDequeue    = 1,
-    kMessageProcessed  = 2,
-    kActorSpawned      = 3,
-    kActorTerminated   = 4,
+    kMailboxEnqueue = 0,
+    kMailboxDequeue = 1,
+    kMessageProcessed = 2,
+    kActorSpawned = 3,
+    kActorTerminated = 4,
     kSchedulerDispatch = 5,
-    kSchedulerSteal    = 6,
+    kSchedulerSteal = 6,
     kSupervisorRestart = 7,
-    kMemoryAlloc       = 8,
-    kMemoryFree        = 9,
+    kMemoryAlloc = 8,
+    kMemoryFree = 9,
+    kMailboxRejected = 10,
+    kMailboxDropped = 11,
+    kMailboxDeadLetter = 12,
+    kBackpressureSignal = 13,
+    kDeadLetterLost = 14,
 };
 
 struct alignas(32) MetricEvent {
-    uint64_t        timestamp_ns;
-    ActorId         actor_id;
+    uint64_t timestamp_ns;
+    ActorId actor_id;
     MetricEventType event_type;
-    uint8_t         _pad[3];
-    uint32_t        value_hi;
+    uint8_t code; // rejection reason, drop reason, policy code
+    uint8_t aux;  // auxiliary data
+    uint8_t _pad[1];
+    uint32_t value_hi;
 };
 
 static_assert(sizeof(MetricEvent) == 32, "MetricEvent must be 32 bytes");

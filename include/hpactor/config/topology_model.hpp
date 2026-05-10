@@ -16,6 +16,8 @@
 
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/log/log_config.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/mailbox/mailbox_policy.hpp>
 
 #include <cstdint>
 #include <string>
@@ -55,6 +57,16 @@ struct DispatcherDef {
 };
 
 // -----------------------------------------------------------------------------
+// MailboxPolicyDef — per-actor mailbox overflow policy configuration
+// -----------------------------------------------------------------------------
+struct MailboxPolicyDef {
+    hpactor::mailbox::OverflowPolicy policy =
+        hpactor::mailbox::OverflowPolicy::RejectNewest;
+    bool priority_aware{false};
+    uint32_t max_overflow_depth{0};
+};
+
+// -----------------------------------------------------------------------------
 // ActorDef — defines a single actor instance within the topology
 // -----------------------------------------------------------------------------
 struct ActorDef {
@@ -65,7 +77,23 @@ struct ActorDef {
     DispatchPolicy dispatch_policy{DispatchPolicy::Cooperative};
     uint32_t mailbox_capacity{0};
     ResourceSpec resources;
+    MailboxPolicyDef mailbox;
     std::unordered_map<std::string, std::string> args;
+};
+
+// -----------------------------------------------------------------------------
+// SystemMailboxDef — system-wide mailbox defaults from [system.mailbox]
+// -----------------------------------------------------------------------------
+struct SystemMailboxDef {
+    uint32_t default_capacity{1024};
+    uint64_t default_byte_capacity{0};
+    hpactor::mailbox::OverflowPolicy default_policy =
+        hpactor::mailbox::OverflowPolicy::RejectNewest;
+    double high_watermark{0.80};
+    double low_watermark{0.50};
+    uint32_t protected_system_messages{32};
+    hpactor::mailbox::BackpressureMode backpressure =
+        hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal;
 };
 
 // -----------------------------------------------------------------------------
@@ -94,6 +122,8 @@ struct SystemDef {
     std::string metrics_path{"/metrics"};
     hpactor::log::LogConfig logging;
     hpactor::cli::CliConfig cli;
+    SystemMailboxDef mailbox;
+    hpactor::mailbox::DeadLetterConfig dead_letters;
     std::string discovery_backend;
     std::vector<std::string> imports;
 };
