@@ -1,0 +1,85 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+      - "codex/**"
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch:
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    name: ${{ matrix.name }}
+    runs-on: ubuntu-24.04
+    timeout-minutes: 45
+
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - name: gcc-debug
+            cc: gcc
+            cxx: g++
+            build_type: Debug
+          - name: clang-release
+            cc: clang
+            cxx: clang++
+            build_type: Release
+
+    env:
+      BUILD_DIR: build/${{ matrix.name }}
+      CC: ${{ matrix.cc }}
+      CXX: ${{ matrix.cxx }}
+      CTEST_OUTPUT_ON_FAILURE: "1"
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Install dependencies
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends \
+            build-essential \
+            clang \
+            cmake \
+            libabsl-dev \
+            libprotobuf-dev \
+            libssl-dev \
+            ninja-build \
+            pkg-config \
+            protobuf-compiler
+
+      - name: Configure
+        run: >
+          cmake
+          -S .
+          -B "$BUILD_DIR"
+          -G Ninja
+          -DCMAKE_BUILD_TYPE=${{ matrix.build_type }}
+          -DENABLE_EXAMPLES=ON
+          -DENABLE_PROACTOR=OFF
+
+      - name: Build
+        run: cmake --build "$BUILD_DIR" --parallel
+
+      - name: Test
+        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 120
+
+      - name: Upload CTest logs
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: ctest-logs-${{ matrix.name }}
+          path: |
+            ${{ env.BUILD_DIR }}/Testing/Temporary/LastTest.log
+            ${{ env.BUILD_DIR }}/CMakeFiles/CMakeOutput.log
+            ${{ env.BUILD_DIR }}/CMakeFiles/CMakeError.log
+          if-no-files-found: ignore

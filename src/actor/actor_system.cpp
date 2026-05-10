@@ -603,18 +603,33 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mailboxes_[id].get());
 
-    // Register with scheduler based on ActorDef dispatch policy
-    switch (def.dispatch_policy) {
-        case config::DispatchPolicy::Cooperative:
+    // Register with scheduler. Actor class policy is authoritative for
+    // specialized actors such as DaemonActor and DenseComputingActor; TOML can
+    // only upgrade otherwise-cooperative actors.
+    auto policy = actor->dispatch_policy();
+    auto hints = actor->dispatch_hints();
+    if (policy == sched::DispatchPolicy::Cooperative) {
+        switch (def.dispatch_policy) {
+            case config::DispatchPolicy::Cooperative:
+                break;
+            case config::DispatchPolicy::DedicatedThread:
+                policy = sched::DispatchPolicy::DedicatedThread;
+                break;
+            case config::DispatchPolicy::DedicatedPool:
+                policy = sched::DispatchPolicy::DedicatedPool;
+                break;
+        }
+    }
+
+    switch (policy) {
+        case sched::DispatchPolicy::Cooperative:
             scheduler_->notify_ready(id, 0, INT64_MAX);
             break;
-        case config::DispatchPolicy::DedicatedThread: {
-            int cpu_aff = -1;
-            scheduler_->register_dedicated_thread(id, cpu_aff);
+        case sched::DispatchPolicy::DedicatedThread:
+            scheduler_->register_dedicated_thread(id, hints.cpu_affinity);
             break;
-        }
-        case config::DispatchPolicy::DedicatedPool:
-            scheduler_->register_dedicated_pool(id, 1);
+        case sched::DispatchPolicy::DedicatedPool:
+            scheduler_->register_dedicated_pool(id, hints.pool_size);
             break;
     }
 

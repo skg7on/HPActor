@@ -28,6 +28,8 @@ class ActorSystem;
 
 namespace net {
 
+class ProactorDispatcher;
+
 // -----------------------------------------------------------------------------
 // EventLoop - async I/O backend wrapper
 // -----------------------------------------------------------------------------
@@ -155,6 +157,7 @@ class EventLoop {
     void deliver_timer_completion(OpCompletion completion);
 
     std::unique_ptr<IReactorBackend> backend_;
+    std::unique_ptr<ProactorDispatcher> proactor_dispatcher_;
     std::atomic<bool> running_{false};
     const char* backend_name_ = "unknown";
 

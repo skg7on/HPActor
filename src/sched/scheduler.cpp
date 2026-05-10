@@ -108,12 +108,36 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
         return;
     }
 
+    WorkItem item{actor, deadline_ns, 0};
+
+    DedicatedThreadPool* dedicated_pool = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(dedicated_->dedicated_mutex_);
+
+        if (dedicated_->dedicated_thread_actors_.find(actor) !=
+            dedicated_->dedicated_thread_actors_.end()) {
+            return;
+        }
+
+        auto actor_pool = dedicated_->actor_pool_map_.find(actor);
+        if (actor_pool != dedicated_->actor_pool_map_.end()) {
+            auto pool = dedicated_->dedicated_pools_.find(actor_pool->second);
+            if (pool != dedicated_->dedicated_pools_.end()) {
+                dedicated_pool = pool->second.get();
+            }
+        }
+    }
+
+    if (dedicated_pool != nullptr) {
+        dedicated_pool->enqueue(actor, [this, item]() { execute_actor(item); });
+        return;
+    }
+
     // Round-robin across workers for fair initial placement.
     // The atomic counter avoids the stale hint issue where get_victim always
     // returns the same value because record_attempt is only called on steals.
     static std::atomic<uint32_t> rr_counter{0};
     uint32_t victim = rr_counter.fetch_add(1, std::memory_order_relaxed);
-    WorkItem item{actor, deadline_ns, 0};
 
     // If deadline is INT64_MAX, use priority queue; otherwise use EDF queue
     if (deadline_ns == INT64_MAX) {
@@ -472,6 +496,7 @@ void HybridScheduler::cancel_timer(TimerHandle handle) {
 }
 
 void HybridScheduler::register_dedicated_thread(ActorId actor, int cpu_affinity) {
+    std::lock_guard<std::mutex> lock(dedicated_->dedicated_mutex_);
     dedicated_->dedicated_thread_actors_.insert(actor);
     if (cpu_affinity >= 0) {
         dedicated_->dedicated_thread_affinity_[actor] = cpu_affinity;
@@ -479,6 +504,7 @@ void HybridScheduler::register_dedicated_thread(ActorId actor, int cpu_affinity)
 }
 
 void HybridScheduler::register_dedicated_pool(ActorId actor, uint32_t pool_size) {
+    std::lock_guard<std::mutex> lock(dedicated_->dedicated_mutex_);
     auto& pool = dedicated_->dedicated_pools_[pool_size];
     if (!pool) {
         pool = std::make_unique<DedicatedThreadPool>(pool_size);
@@ -488,6 +514,7 @@ void HybridScheduler::register_dedicated_pool(ActorId actor, uint32_t pool_size)
 }
 
 void HybridScheduler::unregister_dedicated(ActorId actor) {
+    std::lock_guard<std::mutex> lock(dedicated_->dedicated_mutex_);
     dedicated_->dedicated_thread_actors_.erase(actor);
     dedicated_->dedicated_thread_affinity_.erase(actor);
     dedicated_->actor_pool_map_.erase(actor);

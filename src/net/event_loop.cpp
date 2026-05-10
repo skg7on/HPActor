@@ -15,6 +15,7 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/proactor_dispatcher.hpp>
 
 #if defined(__APPLE__)
 #    include <hpactor/net/reactor/kqueue_backend.hpp>
@@ -32,7 +33,15 @@ namespace hpactor {
 
 namespace net {
 
-EventLoop::EventLoop() {
+EventLoop::EventLoop()
+    : proactor_dispatcher_(std::make_unique<ProactorDispatcher>()) {
+    proactor_dispatcher_->set_timer_handler([this](uint64_t user_data) {
+        OpCompletion completion{};
+        completion.type = OpType::TimerFired;
+        completion.user_data = user_data;
+        deliver_timer_completion(completion);
+    });
+
 #if defined(__APPLE__)
     // Try kqueue first (for sync I/O testing)
     auto kqueue_backend = std::make_unique<KqueueBackend>();
@@ -40,7 +49,7 @@ EventLoop::EventLoop() {
         backend_name_ = "kqueue";
         static_cast<KqueueBackend*>(kqueue_backend.get())->set_loop(this);
         backend_ = std::move(kqueue_backend);
-#if HPACTOR_ENABLE_PROACTOR
+#    if HPACTOR_ENABLE_PROACTOR
     } else {
         // Fall back to GCD only when Proactor mode is enabled
         auto gcd_backend = std::make_unique<GcdBackend>();
@@ -49,10 +58,10 @@ EventLoop::EventLoop() {
             static_cast<GcdBackend*>(gcd_backend.get())->set_loop(this);
             backend_ = std::move(gcd_backend);
         }
-#endif
+#    endif
     }
 #elif defined(__linux__)
-#if HPACTOR_ENABLE_PROACTOR
+#    if HPACTOR_ENABLE_PROACTOR
     // Try io_uring first (preferred on Linux)
     auto iouring_backend = std::make_unique<IoUringBackend>();
     if (iouring_backend->start()) {
@@ -67,7 +76,7 @@ EventLoop::EventLoop() {
             backend_ = std::move(epoll_backend);
         }
     }
-#else
+#    else
     // Reactor mode: use epoll directly
     auto epoll_backend = std::make_unique<EpollBackend>();
     if (epoll_backend->start()) {
@@ -75,7 +84,7 @@ EventLoop::EventLoop() {
         static_cast<EpollBackend*>(epoll_backend.get())->set_loop(this);
         backend_ = std::move(epoll_backend);
     }
-#endif
+#    endif
 #endif
 }
 
@@ -223,10 +232,8 @@ void EventLoop::enqueue_completion(OpCompletion completion) {
         completion_callback_(completion);
         return;
     }
-    if (completion.type == OpType::TimerFired) {
-        deliver_timer_completion(completion);
-    } else if (actor_system_ != nullptr) {
-        actor_system_->enqueue_completion(completion);
+    if (proactor_dispatcher_) {
+        proactor_dispatcher_->on_completion(completion);
     }
 }
 
@@ -249,6 +256,9 @@ void EventLoop::deliver_timer_completion(OpCompletion completion) {
 
 void EventLoop::set_actor_system(ActorSystem* actor_system) {
     actor_system_ = actor_system;
+    if (proactor_dispatcher_) {
+        proactor_dispatcher_->set_actor_system(actor_system);
+    }
 }
 
 } // namespace net

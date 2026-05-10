@@ -2,6 +2,7 @@
 #include <hpactor/net/reactor_dispatcher.hpp>
 
 #include <cassert>
+#include <cerrno>
 #include <cstdio>
 #include <cstring>
 #include <optional>
@@ -60,8 +61,7 @@ int main() {
         printf("Test 4: on_readiness triggers recv... ");
         ReactorDispatcher disp;
         std::optional<OpCompletion> captured;
-        disp.set_completion_handler(
-            [&captured](OpCompletion c) { captured = c; });
+        disp.set_completion_handler([&captured](OpCompletion c) { captured = c; });
 
         int fds[2];
         int r = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
@@ -85,8 +85,8 @@ int main() {
         assert(captured->type == OpType::Recv && "should be Recv completion");
         assert(captured->actor == ActorId(7) && "actor should match");
         assert(captured->result == 14 && "should have read 14 StreamBuffer");
-        assert(memcmp(recv_buf, "hello reactor", 14) == 0 &&
-               "data should match");
+        assert(memcmp(recv_buf, "hello reactor", 14) == 0 && "data should "
+                                                             "match");
 
         close(fds[0]);
         close(fds[1]);
@@ -98,8 +98,7 @@ int main() {
         printf("Test 5: on_readiness triggers send... ");
         ReactorDispatcher disp;
         std::optional<OpCompletion> captured;
-        disp.set_completion_handler(
-            [&captured](OpCompletion c) { captured = c; });
+        disp.set_completion_handler([&captured](OpCompletion c) { captured = c; });
 
         int fds[2];
         int r = socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
@@ -135,8 +134,7 @@ int main() {
         printf("Test 6: error on closed fd... ");
         ReactorDispatcher disp;
         std::optional<OpCompletion> captured;
-        disp.set_completion_handler(
-            [&captured](OpCompletion c) { captured = c; });
+        disp.set_completion_handler([&captured](OpCompletion c) { captured = c; });
 
         int fds[2];
         socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
@@ -165,8 +163,7 @@ int main() {
         printf("Test 7: no-op for unregistered fd... ");
         ReactorDispatcher disp;
         bool called = false;
-        disp.set_completion_handler(
-            [&called](OpCompletion) { called = true; });
+        disp.set_completion_handler([&called](OpCompletion) { called = true; });
 
         disp.on_readiness(99, IoEvent::Read);
         assert(!called && "handler should not be called for unknown fd");
@@ -194,8 +191,7 @@ int main() {
         printf("Test 9: accept readiness... ");
         ReactorDispatcher disp;
         std::optional<OpCompletion> captured;
-        disp.set_completion_handler(
-            [&captured](OpCompletion c) { captured = c; });
+        disp.set_completion_handler([&captured](OpCompletion c) { captured = c; });
 
         // Create a listening socket
         int listen_fd = socket(AF_UNIX, SOCK_STREAM, 0);
@@ -204,39 +200,53 @@ int main() {
         struct sockaddr_un addr;
         memset(&addr, 0, sizeof(addr));
         addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, "/tmp/hpactor_test_accept", sizeof(addr.sun_path) - 1);
+        snprintf(addr.sun_path, sizeof(addr.sun_path),
+                 "/tmp/hpactor_test_accept_%ld", static_cast<long>(getpid()));
         unlink(addr.sun_path);
 
-        int r = bind(listen_fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
-        assert(r == 0 && "bind should succeed");
+        int r = bind(listen_fd, reinterpret_cast<struct sockaddr*>(&addr),
+                     sizeof(addr));
+        if (r != 0 && (errno == EPERM || errno == EACCES)) {
+            close(listen_fd);
+            unlink(addr.sun_path);
+            printf("SKIP (AF_UNIX bind not permitted)\n");
+        } else {
+            if (r != 0) {
+                perror("bind");
+            }
+            assert(r == 0 && "bind should succeed");
 
-        r = listen(listen_fd, 1);
-        assert(r == 0 && "listen should succeed");
+            r = listen(listen_fd, 1);
+            assert(r == 0 && "listen should succeed");
 
-        disp.register_accept(listen_fd, ActorId(10));
+            disp.register_accept(listen_fd, ActorId(10));
 
-        // Connect a client to trigger readiness
-        int client_fd = socket(AF_UNIX, SOCK_STREAM, 0);
-        assert(client_fd >= 0);
-        connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+            // Connect a client to trigger readiness
+            int client_fd = socket(AF_UNIX, SOCK_STREAM, 0);
+            assert(client_fd >= 0);
+            connect(client_fd, reinterpret_cast<struct sockaddr*>(&addr),
+                    sizeof(addr));
 
-        // Wait briefly for connection to establish
-        usleep(50000);
+            // Wait briefly for connection to establish
+            usleep(50000);
 
-        // Trigger readiness
-        disp.on_readiness(listen_fd, IoEvent::Read);
+            // Trigger readiness
+            disp.on_readiness(listen_fd, IoEvent::Read);
 
-        assert(captured.has_value() && "accept completion should be captured");
-        assert(captured->type == OpType::Accept && "should be Accept completion");
-        assert(captured->result >= 0 && "accept should succeed");
+            assert(captured.has_value() && "accept completion should be "
+                                           "captured");
+            assert(captured->type == OpType::Accept && "should be Accept "
+                                                       "completion");
+            assert(captured->result >= 0 && "accept should succeed");
 
-        if (captured->result >= 0) {
-            close(captured->result); // close accepted fd
+            if (captured->result >= 0) {
+                close(captured->result); // close accepted fd
+            }
+            close(client_fd);
+            close(listen_fd);
+            unlink(addr.sun_path);
+            printf("PASS\n");
         }
-        close(client_fd);
-        close(listen_fd);
-        unlink(addr.sun_path);
-        printf("PASS\n");
     }
 
     // Test 10: register_sendto and on_readiness
@@ -244,8 +254,7 @@ int main() {
         printf("Test 10: register_sendto... ");
         ReactorDispatcher disp;
         std::optional<OpCompletion> captured;
-        disp.set_completion_handler(
-            [&captured](OpCompletion c) { captured = c; });
+        disp.set_completion_handler([&captured](OpCompletion c) { captured = c; });
 
         int fds[2];
         socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
@@ -259,10 +268,9 @@ int main() {
         memset(&dummy, 0, sizeof(dummy));
         dummy.sun_family = AF_UNIX;
 
-        disp.register_sendto(fds[0], ActorId(4), OpType::SendTo,
-                              &iov, 1,
-                              reinterpret_cast<struct sockaddr*>(&dummy),
-                              sizeof(dummy));
+        disp.register_sendto(fds[0], ActorId(4), OpType::SendTo, &iov, 1,
+                             reinterpret_cast<struct sockaddr*>(&dummy),
+                             sizeof(dummy));
 
         disp.on_readiness(fds[0], IoEvent::Write);
 
@@ -280,8 +288,7 @@ int main() {
         printf("Test 11: unregister_io cancels pending accept... ");
         ReactorDispatcher disp;
         bool called = false;
-        disp.set_completion_handler(
-            [&called](OpCompletion) { called = true; });
+        disp.set_completion_handler([&called](OpCompletion) { called = true; });
 
         disp.register_accept(50, ActorId(99));
         disp.unregister_io(50);
