@@ -281,6 +281,7 @@ set(HPACTOR_ENABLE_CLI 1)
 if(ENABLE_ACTOR_TRACING)
     set(HPACTOR_ENABLE_ACTOR_TRACING 1)
     target_sources(hpactor_lib PRIVATE
+        src/tracing/trace_context_parser.cpp
         src/tracing/trace_manager.cpp
     )
 else()

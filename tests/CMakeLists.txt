@@ -472,6 +472,14 @@ if(ENABLE_ACTOR_TRACING)
     add_executable(test_trace_config_smoke tracing/test_trace_config_smoke.cpp)
     target_link_libraries(test_trace_config_smoke hpactor)
     add_test(NAME test_trace_config_smoke COMMAND test_trace_config_smoke)
+
+    add_executable(test_trace_context tracing/test_trace_context.cpp)
+    target_link_libraries(test_trace_context hpactor)
+    add_test(NAME test_trace_context COMMAND test_trace_context)
+
+    add_executable(test_w3c_trace_context tracing/test_w3c_trace_context.cpp)
+    target_link_libraries(test_w3c_trace_context hpactor)
+    add_test(NAME test_w3c_trace_context COMMAND test_w3c_trace_context)
 endif()
 
 # =============================================================================
