@@ -134,7 +134,7 @@ add_compile_options(
     -Wextra
     -Wshadow
     -Wconversion
-    -Wold-style-cast
+    $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
 )
 
 # Suppress linker warnings for dylibs built for newer macOS versions
@@ -329,12 +329,14 @@ add_library(linenoise STATIC
 target_include_directories(linenoise PUBLIC third_party/linenoise)
 target_compile_options(linenoise PRIVATE
     -Wno-error
+    -Wno-conversion
     -Wno-sign-conversion
-    -Wno-implicit-int-conversion
     -Wno-sign-compare
     -Wno-unused-parameter
-    -Wno-shorten-64-to-32
-    -Wno-extra-semi-stmt
+    # Clang-specific suppressions (GCC does not recognize these)
+    $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-implicit-int-conversion>
+    $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-shorten-64-to-32>
+    $<$<C_COMPILER_ID:Clang,AppleClang>:-Wno-extra-semi-stmt>
 )
 
 # Generate protobuf C++ headers/sources
