@@ -192,6 +192,7 @@ add_library(hpactor_lib SHARED
     src/config/parsers/topology_config_parser.cpp
     src/config/parsers/mailbox_config_parser.cpp
     src/config/parsers/dead_letters_config_parser.cpp
+    src/config/parsers/tracing_config_parser.cpp
     src/config/binary_serializer.cpp
     src/config/binary_loader.cpp
     src/core/proto_type_registry.cpp

@@ -652,6 +652,8 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
 
+    apply_tracing_config(model.system.tracing);
+
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
                      "topology bootstrap complete");
 

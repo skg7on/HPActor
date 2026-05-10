@@ -18,6 +18,7 @@
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/tracing/trace_config.hpp>
 
 #include <cstdint>
 #include <string>
@@ -126,6 +127,7 @@ struct SystemDef {
     hpactor::mailbox::DeadLetterConfig dead_letters;
     std::string discovery_backend;
     std::vector<std::string> imports;
+    hpactor::tracing::TraceConfig tracing;
 };
 
 // -----------------------------------------------------------------------------

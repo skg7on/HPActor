@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/config/binary_serializer.hpp>
 #include <hpactor/config/binary_format.hpp>
+#include <hpactor/config/binary_serializer.hpp>
 
 #include <cstring>
 #include <unordered_map>
@@ -31,9 +31,11 @@ class BinaryWriter {
     }
 
     uint32_t add_string(const std::string& s) {
-        if (s.empty()) return 0;
+        if (s.empty())
+            return 0;
         auto it = string_map_.find(s);
-        if (it != string_map_.end()) return it->second;
+        if (it != string_map_.end())
+            return it->second;
         uint32_t offset = static_cast<uint32_t>(string_table_.size());
         string_table_.insert(string_table_.end(), s.begin(), s.end());
         string_table_.push_back('\0');
@@ -41,8 +43,7 @@ class BinaryWriter {
         return offset;
     }
 
-    template <typename T>
-    uint32_t write(const T& val) {
+    template <typename T> uint32_t write(const T& val) {
         uint32_t offset = static_cast<uint32_t>(buf_.size());
         const uint8_t* ptr = reinterpret_cast<const uint8_t*>(&val);
         buf_.insert(buf_.end(), ptr, ptr + sizeof(T));
@@ -105,6 +106,26 @@ std::vector<uint8_t> serialize_topology(const TopologyModel& model) {
     bsys.use_coroutines = model.system.use_coroutines ? 1 : 0;
     bsys.version_offset = w.add_string(model.system.version);
     bsys.http_bind_host_offset = w.add_string(model.system.http_bind_host);
+    // Tracing
+    bsys.tracing_enabled = model.system.tracing.enabled ? 1 : 0;
+    bsys.tracing_propagate_unsampled =
+        model.system.tracing.propagate_unsampled ? 1 : 0;
+    bsys.tracing_ring_buffer_capacity = model.system.tracing.ring_buffer_capacity;
+    bsys.tracing_sampler = static_cast<uint32_t>(model.system.tracing.sampler);
+    bsys.tracing_exporter = static_cast<uint32_t>(model.system.tracing.exporter);
+    bsys.tracing_sample_ratio = model.system.tracing.sample_ratio;
+    bsys.tracing_export_interval_ms =
+        static_cast<uint32_t>(model.system.tracing.export_interval.count());
+    bsys.tracing_max_export_batch_size = model.system.tracing.max_export_batch_size;
+    bsys.tracing_max_tracestate_len = model.system.tracing.max_tracestate_len;
+    bsys.tracing_pad = 0;
+    bsys.tracing_flags = 0;
+    bsys.tracing_service_name_offset =
+        w.add_string(model.system.tracing.service_name);
+    bsys.tracing_otlp_endpoint_offset =
+        w.add_string(model.system.tracing.otlp_endpoint);
+    bsys.tracing_json_file_path_offset =
+        w.add_string(model.system.tracing.json_file_path);
     uint32_t system_offset = w.write(bsys);
 
     // Dispatchers
@@ -117,8 +138,8 @@ std::vector<uint8_t> serialize_topology(const TopologyModel& model) {
         bd.threads = d.threads;
         bd.cpu_affinity_count = static_cast<uint16_t>(d.cpu_affinity.size());
         if (!d.cpu_affinity.empty()) {
-            bd.cpu_affinity_offset = w.write_bytes(
-                d.cpu_affinity.data(), d.cpu_affinity.size());
+            bd.cpu_affinity_offset =
+                w.write_bytes(d.cpu_affinity.data(), d.cpu_affinity.size());
         }
         w.write(bd);
     }
@@ -139,8 +160,10 @@ std::vector<uint8_t> serialize_topology(const TopologyModel& model) {
         ba.max_memory_kb = a.resources.max_memory_kb;
         ba.args_count = static_cast<uint16_t>(a.args.size());
         // args table follows immediately after this actor def
-        ba.args_offset = a.args.empty() ? 0
-            : w.current_offset() + static_cast<uint32_t>(sizeof(BinaryActorDef));
+        ba.args_offset = a.args.empty()
+                             ? 0
+                             : w.current_offset() +
+                                   static_cast<uint32_t>(sizeof(BinaryActorDef));
         w.write(ba);
         // Write args table right after the actor def
         for (const auto& [k, v] : a.args) {
