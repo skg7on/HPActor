@@ -484,6 +484,14 @@ if(ENABLE_ACTOR_TRACING)
     add_executable(test_trace_typed_message tracing/test_trace_typed_message.cpp)
     target_link_libraries(test_trace_typed_message hpactor)
     add_test(NAME test_trace_typed_message COMMAND test_trace_typed_message)
+
+    add_executable(test_sampler tracing/test_sampler.cpp)
+    target_link_libraries(test_sampler hpactor)
+    add_test(NAME test_sampler COMMAND test_sampler)
+
+    add_executable(test_trace_manager tracing/test_trace_manager.cpp)
+    target_link_libraries(test_trace_manager hpactor pthread)
+    add_test(NAME test_trace_manager COMMAND test_trace_manager)
 endif()
 
 # =============================================================================

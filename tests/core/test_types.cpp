@@ -83,10 +83,13 @@ int main() {
     assert(handle2.id() == 42);
 
     // Test 13: TraceContext
-    hpactor::TraceContext ctx(1, 2, 3);
-    assert(ctx.trace_id() == 1);
-    assert(ctx.span_id() == 2);
-    assert(ctx.flags() == 3);
+    hpactor::TraceContext ctx;
+    ctx.trace_id.bytes[15] = 1;
+    ctx.span_id.bytes[7] = 2;
+    ctx.flags.value = 3;
+    assert(ctx.trace_id.valid());
+    assert(ctx.span_id.valid());
+    assert(ctx.flags.value == 3);
 
     // Test 14: StreamBuffer
     hpactor::StreamBuffer data = {1, 2, 3, 4, 5};

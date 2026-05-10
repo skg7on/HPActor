@@ -282,6 +282,8 @@ if(ENABLE_ACTOR_TRACING)
     set(HPACTOR_ENABLE_ACTOR_TRACING 1)
     target_sources(hpactor_lib PRIVATE
         src/tracing/trace_context_parser.cpp
+        src/tracing/sampler.cpp
+        src/tracing/memory_exporter.cpp
         src/tracing/trace_manager.cpp
     )
 else()
