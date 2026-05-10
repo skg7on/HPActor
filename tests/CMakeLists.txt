@@ -480,6 +480,10 @@ if(ENABLE_ACTOR_TRACING)
     add_executable(test_w3c_trace_context tracing/test_w3c_trace_context.cpp)
     target_link_libraries(test_w3c_trace_context hpactor)
     add_test(NAME test_w3c_trace_context COMMAND test_w3c_trace_context)
+
+    add_executable(test_trace_typed_message tracing/test_trace_typed_message.cpp)
+    target_link_libraries(test_trace_typed_message hpactor)
+    add_test(NAME test_trace_typed_message COMMAND test_trace_typed_message)
 endif()
 
 # =============================================================================

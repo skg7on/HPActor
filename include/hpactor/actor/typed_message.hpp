@@ -40,7 +40,7 @@ namespace hpactor {
 //   Lazy parse:  msg.as<ConcreteProtoMsg>() on first access
 
 class TypedMessage {
-public:
+  public:
     TypedMessage() = default;
 
     // Copy is disabled (atomic member deletes it).
@@ -49,10 +49,11 @@ public:
 
     // Move is allowed.
     TypedMessage(TypedMessage&& other) noexcept
-        : tag_(other.tag_),
-          payload_(std::move(other.payload_)),
+        : tag_(other.tag_), payload_(std::move(other.payload_)),
           parsed_(std::move(other.parsed_)),
-          sender_address_(other.sender_address_) {
+          sender_address_(other.sender_address_),
+          trace_context_(other.trace_context_),
+          has_trace_context_(other.has_trace_context_) {
         // mpsc_next is left default-initialized in the moved-from object
     }
     TypedMessage& operator=(TypedMessage&& other) noexcept {
@@ -60,6 +61,8 @@ public:
         payload_ = std::move(other.payload_);
         parsed_ = std::move(other.parsed_);
         sender_address_ = other.sender_address_;
+        trace_context_ = other.trace_context_;
+        has_trace_context_ = other.has_trace_context_;
         // mpsc_next intentionally not touched — ownership transferred
         return *this;
     }
@@ -67,8 +70,7 @@ public:
     // Local send: carries both parsed form (zero-copy) and pre-serialized form.
     TypedMessage(TypeTag tag, std::shared_ptr<google::protobuf::Message> msg,
                  StreamBuffer serialized)
-        : tag_(tag), payload_(std::move(serialized)),
-          parsed_(std::move(msg)) {}
+        : tag_(tag), payload_(std::move(serialized)), parsed_(std::move(msg)) {}
 
     // Remote receive / serialized only: payload is present, parsed is lazily
     // populated via as<T>().
@@ -78,8 +80,12 @@ public:
     // Convenience: construct from a protobuf message, serializing eagerly.
     TypedMessage(TypeTag tag, const google::protobuf::Message& msg);
 
-    TypeTag type_id() const noexcept { return tag_; }
-    const StreamBuffer& payload() const noexcept { return payload_; }
+    TypeTag type_id() const noexcept {
+        return tag_;
+    }
+    const StreamBuffer& payload() const noexcept {
+        return payload_;
+    }
 
     // Non-null when the message is available in parsed form (local fast path).
     std::shared_ptr<google::protobuf::Message> parsed() const noexcept {
@@ -88,16 +94,15 @@ public:
 
     // Lazy deserialize into a concrete protobuf type. Caches result in parsed_.
     // Returns nullptr if payload_ is empty or parsing fails.
-    template <typename T>
-    std::shared_ptr<T> as() const {
+    template <typename T> std::shared_ptr<T> as() const {
         if (parsed_) {
             return std::static_pointer_cast<T>(parsed_);
         }
         if (payload_.empty()) {
             return nullptr;
         }
-        auto msg = mem::allocate_shared<T>(
-            mem::current_actor_id(), mem::RegionType::kMessage);
+        auto msg = mem::allocate_shared<T>(mem::current_actor_id(),
+                                           mem::RegionType::kMessage);
         if (!msg->ParseFromArray(payload_.data(),
                                  static_cast<int>(payload_.size()))) {
             return nullptr;
@@ -106,19 +111,45 @@ public:
         return msg;
     }
 
-    // Sender address — set by ActorContext::send() (local) or deliver_remote() (remote).
-    // Read by EventBasedActor::receive() to populate current_sender_ for reply().
-    const ActorAddress& sender_address() const noexcept { return sender_address_; }
-    void set_sender_address(const ActorAddress& addr) { sender_address_ = addr; }
+    // Sender address — set by ActorContext::send() (local) or deliver_remote()
+    // (remote). Read by EventBasedActor::receive() to populate current_sender_
+    // for reply().
+    const ActorAddress& sender_address() const noexcept {
+        return sender_address_;
+    }
+    void set_sender_address(const ActorAddress& addr) {
+        sender_address_ = addr;
+    }
+
+    // Trace context sidecar — set by ActorContext::send() or deliver_remote().
+    bool has_trace_context() const noexcept {
+        return has_trace_context_;
+    }
+
+    const TraceContext& trace_context() const noexcept {
+        return trace_context_;
+    }
+
+    void set_trace_context(const TraceContext& ctx) noexcept {
+        trace_context_ = ctx;
+        has_trace_context_ = ctx.valid();
+    }
+
+    void clear_trace_context() noexcept {
+        trace_context_.clear();
+        has_trace_context_ = false;
+    }
 
     // MPSC mailbox intrusive link. Must be named mpsc_next for MPSCMailbox<T>.
     std::atomic<TypedMessage*> mpsc_next{nullptr};
 
-private:
+  private:
     TypeTag tag_ = TypeTag::Invalid;
     StreamBuffer payload_;
     mutable std::shared_ptr<google::protobuf::Message> parsed_;
     ActorAddress sender_address_;
+    TraceContext trace_context_;
+    bool has_trace_context_ = false;
 };
 
 } // namespace hpactor
