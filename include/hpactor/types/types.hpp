@@ -309,6 +309,7 @@ constexpr uint32_t actor_down = 2;
 constexpr uint32_t actor_not_found = 3;
 constexpr uint32_t mailbox_full = 4;
 constexpr uint32_t timeout = 5;
+constexpr uint32_t invalid_argument = 6;
 
 // HTTP protocol errors
 constexpr uint32_t http_parse_error = 2001;

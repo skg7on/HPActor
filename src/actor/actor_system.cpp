@@ -478,6 +478,14 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     TypedMessage msg(static_cast<TypeTag>(frame.pb_frame.type_tag()),
                      std::move(payload));
     msg.set_sender_address(net::from_proto(frame.pb_frame.sender()));
+    if (frame.pb_frame.has_trace_context()) {
+        uint16_t max_state = tracing_config_.max_tracestate_len;
+        auto parsed = net::trace_context_from_proto(
+            frame.pb_frame.trace_context(), max_state);
+        if (parsed.has_value()) {
+            msg.set_trace_context(parsed.value());
+        }
+    }
     deliver_local(net::from_proto(frame.pb_frame.receiver()).id, std::move(msg));
 }
 

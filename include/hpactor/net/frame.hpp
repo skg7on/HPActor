@@ -15,10 +15,10 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/ref/actor_address.hpp>
-#include <hpactor/types/types.hpp>
 #include <hpactor/common.pb.h>
 #include <hpactor/frame.pb.h>
+#include <hpactor/ref/actor_address.hpp>
+#include <hpactor/types/types.hpp>
 #include <span>
 
 namespace hpactor {
@@ -36,7 +36,8 @@ namespace net {
 // -----------------------------------------------------------------------------
 struct WireFrame {
     // Magic header identifying HPACTOR framework messages
-    static constexpr uint32_t MagicHeader = 0x43415048; // "HPAC" (little-endian)
+    static constexpr uint32_t MagicHeader = 0x43415048; // "HPAC"
+                                                        // (little-endian)
     static constexpr size_t HeaderSize = 8; // 4 bytes magic + 4 bytes length
 
     uint32_t magic_hdr = MagicHeader;
@@ -75,6 +76,12 @@ void to_proto(::hpactor::PbActorAddress* pb_addr, const ActorAddress& addr);
 void to_proto(::hpactor::PbActorRef* pb_ref, const ActorAddress& addr);
 ActorAddress from_proto(const ::hpactor::PbActorAddress& pb_addr);
 ActorAddress from_proto(const ::hpactor::PbActorRef& pb_ref);
+
+void to_proto(::hpactor::net::PbTraceContext* pb, const TraceContext& context);
+
+result<TraceContext>
+trace_context_from_proto(const ::hpactor::net::PbTraceContext& pb,
+                         uint16_t max_tracestate_len);
 
 } // namespace net
 } // namespace hpactor

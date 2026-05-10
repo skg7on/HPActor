@@ -504,6 +504,10 @@ if(ENABLE_ACTOR_TRACING)
     add_executable(test_trace_message_propagation tracing/test_trace_message_propagation.cpp)
     target_link_libraries(test_trace_message_propagation hpactor pthread)
     add_test(NAME test_trace_message_propagation COMMAND test_trace_message_propagation)
+
+    add_executable(test_trace_wire_propagation tracing/test_trace_wire_propagation.cpp)
+    target_link_libraries(test_trace_wire_propagation hpactor hpactor_proto pthread)
+    add_test(NAME test_trace_wire_propagation COMMAND test_trace_wire_propagation)
 endif()
 
 # =============================================================================

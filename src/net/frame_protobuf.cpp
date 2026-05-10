@@ -22,8 +22,8 @@ to_proto(::hpactor::PbIpv6Endpoint* pb_ep, const ::hpactor::Ipv6Endpoint& ep) {
 }
 
 // Helper: convert HPActor EndPoint to protobuf PbEndpoint
-static void to_proto(::hpactor::PbEndpoint* pb_endpoint,
-                     const ::hpactor::EndPoint& ep) {
+static void
+to_proto(::hpactor::PbEndpoint* pb_endpoint, const ::hpactor::EndPoint& ep) {
     if (const auto* ipv4 = std::get_if<::hpactor::Ipv4Endpoint>(&ep)) {
         to_proto(pb_endpoint->mutable_ipv4(), *ipv4);
     } else if (const auto* ipv6 = std::get_if<::hpactor::Ipv6Endpoint>(&ep)) {
@@ -32,8 +32,8 @@ static void to_proto(::hpactor::PbEndpoint* pb_endpoint,
 }
 
 // Helper: fill PbLocalActorAddress from C++ ActorAddress fields
-static void fill_local_addr(::hpactor::PbLocalActorAddress* local,
-                            const ActorAddress& addr) {
+static void
+fill_local_addr(::hpactor::PbLocalActorAddress* local, const ActorAddress& addr) {
     local->set_actor_type(addr.type);
     local->set_actor_id(addr.id.value());
     local->set_incarnation(addr.incarnation);
@@ -92,8 +92,7 @@ static ::hpactor::Ipv6Endpoint from_proto(const ::hpactor::PbIpv6Endpoint& pb_ep
 }
 
 // Helper: convert protobuf PbEndpoint to HPActor EndPoint
-static ::hpactor::EndPoint
-from_proto(const ::hpactor::PbEndpoint& pb_endpoint) {
+static ::hpactor::EndPoint from_proto(const ::hpactor::PbEndpoint& pb_endpoint) {
     if (pb_endpoint.has_ipv4()) {
         return from_proto(pb_endpoint.ipv4());
     }
@@ -105,21 +104,18 @@ from_proto(const ::hpactor::PbEndpoint& pb_endpoint) {
 
 // Helper: build ActorAddress from PbLocalActorAddress fields
 static ActorAddress from_local_addr(const ::hpactor::PbLocalActorAddress& local) {
-    return ActorAddress{
-        Ipv4Endpoint{0x7F000001, 0},
-        static_cast<ActorType>(local.actor_type()),
-        ActorId{local.actor_id()},
-        local.incarnation()};
+    return ActorAddress{Ipv4Endpoint{0x7F000001, 0},
+                        static_cast<ActorType>(local.actor_type()),
+                        ActorId{local.actor_id()}, local.incarnation()};
 }
 
 // Helper: build ActorAddress from PbGlobalActorAddress fields
-static ActorAddress from_global_addr(const ::hpactor::PbGlobalActorAddress& global) {
+static ActorAddress
+from_global_addr(const ::hpactor::PbGlobalActorAddress& global) {
     const auto& local = global.local_addr();
-    return ActorAddress{
-        from_proto(global.endpoint()),
-        static_cast<ActorType>(local.actor_type()),
-        ActorId{local.actor_id()},
-        local.incarnation()};
+    return ActorAddress{from_proto(global.endpoint()),
+                        static_cast<ActorType>(local.actor_type()),
+                        ActorId{local.actor_id()}, local.incarnation()};
 }
 
 // Helper: convert protobuf PbActorAddress to HPActor ActorAddress
@@ -142,6 +138,47 @@ ActorAddress from_proto(const ::hpactor::PbActorRef& pb_ref) {
         return from_global_addr(pb_ref.global_addr());
     }
     return ActorAddress{};
+}
+
+void to_proto(::hpactor::net::PbTraceContext* pb, const TraceContext& context) {
+    pb->set_trace_id(reinterpret_cast<const char*>(context.trace_id.bytes.data()),
+                     context.trace_id.bytes.size());
+    pb->set_span_id(reinterpret_cast<const char*>(context.span_id.bytes.data()),
+                    context.span_id.bytes.size());
+    pb->set_flags(context.flags.value);
+    if (context.tracestate_len > 0) {
+        pb->set_tracestate(context.tracestate.data(), context.tracestate_len);
+    }
+}
+
+result<TraceContext>
+trace_context_from_proto(const ::hpactor::net::PbTraceContext& pb,
+                         uint16_t max_tracestate_len) {
+    TraceContext ctx;
+    if (pb.trace_id().size() != ctx.trace_id.bytes.size()) {
+        return result<TraceContext>::make(error(errors::invalid_argument));
+    }
+    if (pb.span_id().size() != ctx.span_id.bytes.size()) {
+        return result<TraceContext>::make(error(errors::invalid_argument));
+    }
+    std::memcpy(ctx.trace_id.bytes.data(), pb.trace_id().data(),
+                ctx.trace_id.bytes.size());
+    std::memcpy(ctx.span_id.bytes.data(), pb.span_id().data(),
+                ctx.span_id.bytes.size());
+    if (!ctx.trace_id.valid() || !ctx.span_id.valid()) {
+        return result<TraceContext>::make(error(errors::invalid_argument));
+    }
+    ctx.flags.value = static_cast<uint8_t>(pb.flags() & 0xFF);
+    if (pb.tracestate().size() > max_tracestate_len ||
+        pb.tracestate().size() > ctx.tracestate.size()) {
+        return result<TraceContext>::make(error(errors::invalid_argument));
+    }
+    if (!pb.tracestate().empty()) {
+        std::memcpy(ctx.tracestate.data(), pb.tracestate().data(),
+                    pb.tracestate().size());
+        ctx.tracestate_len = static_cast<uint16_t>(pb.tracestate().size());
+    }
+    return result<TraceContext>::make(std::move(ctx));
 }
 
 } // namespace net
