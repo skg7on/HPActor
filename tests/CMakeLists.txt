@@ -500,6 +500,10 @@ if(ENABLE_ACTOR_TRACING)
     add_executable(test_trace_actor_context tracing/test_trace_actor_context.cpp)
     target_link_libraries(test_trace_actor_context hpactor pthread)
     add_test(NAME test_trace_actor_context COMMAND test_trace_actor_context)
+
+    add_executable(test_trace_message_propagation tracing/test_trace_message_propagation.cpp)
+    target_link_libraries(test_trace_message_propagation hpactor pthread)
+    add_test(NAME test_trace_message_propagation COMMAND test_trace_message_propagation)
 endif()
 
 # =============================================================================

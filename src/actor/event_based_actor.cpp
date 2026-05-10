@@ -21,11 +21,38 @@
 #include <hpactor/log/logger.hpp>
 #include <hpactor/messages.pb.h>
 #include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/tracing/trace_manager.hpp>
 
 #include <chrono>
 #include <cstring>
+#include <memory>
 
 namespace hpactor {
+
+namespace {
+
+class ReceiveSpanGuard {
+  public:
+    ReceiveSpanGuard(tracing::TraceManager* manager, tracing::SpanHandle* handle) noexcept
+        : manager_(manager), handle_(handle) {}
+
+    ~ReceiveSpanGuard() {
+        if (manager_ != nullptr && handle_ != nullptr) {
+            manager_->finish_span(*handle_, status_);
+        }
+    }
+
+    void set_status(tracing::SpanStatus status) noexcept {
+        status_ = status;
+    }
+
+  private:
+    tracing::TraceManager* manager_{nullptr};
+    tracing::SpanHandle* handle_{nullptr};
+    tracing::SpanStatus status_{tracing::SpanStatus::kOk};
+};
+
+} // namespace
 
 EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
     : LocalActor(ctx, sys) {}
@@ -33,9 +60,34 @@ EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
 void EventBasedActor::on_activate() {}
 
 void EventBasedActor::receive(TypedMessage& msg) {
+    auto* trace_manager = system().trace_manager();
+    tracing::SpanHandle receive_span;
+    std::unique_ptr<ActorContext::TraceScope> trace_scope;
+
+    auto* ctx = context();
+    if (trace_manager != nullptr && trace_manager->enabled() &&
+        trace_manager->config().record_actor_receive_spans) {
+        tracing::SpanStart start;
+        start.name = "hpactor.actor.receive";
+        start.kind = tracing::SpanKind::kConsumer;
+        start.has_parent = msg.has_trace_context();
+        if (msg.has_trace_context()) {
+            start.parent = msg.trace_context();
+        }
+        start.actor_id = id();
+        start.sender_actor_id = msg.sender_address().id;
+        start.type_tag = msg.type_id();
+        start.payload_size = static_cast<uint32_t>(msg.payload().size());
+        receive_span = trace_manager->start_span(start);
+        if (ctx != nullptr && receive_span.context.valid()) {
+            trace_scope = std::make_unique<ActorContext::TraceScope>(
+                ctx, receive_span.context);
+        }
+    }
+
+    ReceiveSpanGuard span_guard(trace_manager, &receive_span);
     // -- System message interception (link / monitor / death) --
     {
-        auto* ctx = context();
         switch (msg.type_id()) {
             case TypeTag::LinkMsg: {
                 // Bidirectional link handshake: add sender to our linked_ set
@@ -110,7 +162,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
     }
 
     // Capture sender for reply() tracking
-    auto* ctx = context();
+    ctx = context();
     if (ctx != nullptr) {
         ctx->set_current_sender(msg.sender_address());
     }
