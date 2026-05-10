@@ -38,6 +38,10 @@ add_executable(test_mailbox_stress mailbox/test_mailbox_stress.cpp)
 target_link_libraries(test_mailbox_stress hpactor)
 add_test(NAME test_mailbox_stress COMMAND test_mailbox_stress)
 
+add_executable(test_mailbox_policy mailbox/test_mailbox_policy.cpp)
+target_link_libraries(test_mailbox_policy hpactor)
+add_test(NAME test_mailbox_policy COMMAND test_mailbox_policy)
+
 # =============================================================================
 # Actor tests
 # =============================================================================
