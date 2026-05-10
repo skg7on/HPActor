@@ -85,6 +85,10 @@ add_executable(test_actor_system_backpressure actor/test_actor_system_backpressu
 target_link_libraries(test_actor_system_backpressure hpactor)
 add_test(NAME test_actor_system_backpressure COMMAND test_actor_system_backpressure)
 
+add_executable(test_actor_context_try_send actor/test_actor_context_try_send.cpp)
+target_link_libraries(test_actor_context_try_send hpactor)
+add_test(NAME test_actor_context_try_send COMMAND test_actor_context_try_send)
+
 add_executable(test_actor_mailbox actor/test_actor_mailbox.cpp)
 target_link_libraries(test_actor_mailbox hpactor)
 add_test(NAME test_actor_mailbox COMMAND test_actor_mailbox)

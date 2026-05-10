@@ -20,16 +20,26 @@
 namespace hpactor {
 
 void ActorRef::send(const ActorAddress& target, TypedMessage msg) {
+    (void)try_send(target, std::move(msg));
+}
+
+mailbox::EnqueueResult
+ActorRef::try_send(const ActorAddress& target, TypedMessage msg,
+                   mailbox::DeliveryOptions options) {
     if (is_local()) {
         Actor* actor = get_actor();
         if (actor != nullptr) {
-            actor->get()->system().deliver_local(target.id, std::move(msg));
+            return actor->get()->system().try_deliver_local(
+                target.id, std::move(msg), /*priority=*/0,
+                /*deadline_ns=*/INT64_MAX, options);
         }
+        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
     } else {
         ActorProxy* proxy = get_proxy();
         if (proxy != nullptr) {
-            proxy->send(target, std::move(msg));
+            return proxy->try_send(target, std::move(msg), options);
         }
+        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
     }
 }
 

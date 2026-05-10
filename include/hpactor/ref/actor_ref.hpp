@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 
@@ -125,6 +126,12 @@ class ActorRef {
 
     // Send a message to this actor
     void send(const ActorAddress& target, TypedMessage msg);
+
+    // Try-send returning an admission result.
+    // For local actors, delegates to ActorSystem::try_deliver_local().
+    // For remote actors, delegates to ActorProxy::try_send() (best-effort).
+    mailbox::EnqueueResult try_send(const ActorAddress& target, TypedMessage msg,
+                                    mailbox::DeliveryOptions options = {});
 
     // Access underlying Actor (for internal use)
     Actor* get_actor() {
