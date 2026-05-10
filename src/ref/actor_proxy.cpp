@@ -15,6 +15,7 @@
 // ActorProxy implementation - see actor_proxy.hpp
 
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/net/actor_location_cache.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/net/service_discovery.hpp>
@@ -28,11 +29,32 @@ ActorProxy::ActorProxy(ActorAddress address, net::Transport* transport)
 
 ActorProxy::ActorProxy(const ActorAddress& addr, ActorSystem* system)
     : address_(addr),
-      transport_(system != nullptr ? system->get_transport_for(addr.endpoint) : nullptr) {}
+      transport_(system != nullptr ? system->get_transport_for(addr.endpoint)
+                                   : nullptr),
+      system_(system) {}
 
 void ActorProxy::send(const ActorAddress& target, TypedMessage msg) {
+    (void)try_send(target, std::move(msg));
+}
+
+mailbox::EnqueueResult
+ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
+                     mailbox::DeliveryOptions /*options*/) {
     if (transport_ == nullptr) {
-        return;  // Silently drop; matches fire-and-forget semantics
+        // Capture dead letter: no transport available
+        if (system_) {
+            mailbox::DeadLetterRecord dl;
+            dl.reason = mailbox::DeadLetterReason::RemoteNodeUnreachable;
+            dl.source = mailbox::DeadLetterSource::ActorProxy;
+            dl.sender = msg.sender_address().id != ActorId{0}
+                            ? msg.sender_address()
+                            : address_;
+            dl.target = target;
+            dl.type_tag = msg.type_id();
+            dl.payload_sample = msg.payload();
+            (void)system_->dead_letter(std::move(dl));
+        }
+        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
     }
 
     // Resolve via location cache or discovery
@@ -46,7 +68,20 @@ void ActorProxy::send(const ActorAddress& target, TypedMessage msg) {
     if (discovery_) {
         auto* member = discovery_->discover(resolved_target.endpoint);
         if (!member) {
-            return;  // Unreachable, silently drop (fire-and-forget)
+            // Capture dead letter: no route to target
+            if (system_) {
+                mailbox::DeadLetterRecord dl;
+                dl.reason = mailbox::DeadLetterReason::MissingRoute;
+                dl.source = mailbox::DeadLetterSource::ServiceDiscovery;
+                dl.sender = msg.sender_address().id != ActorId{0}
+                                ? msg.sender_address()
+                                : address_;
+                dl.target = target;
+                dl.type_tag = msg.type_id();
+                dl.payload_sample = msg.payload();
+                (void)system_->dead_letter(std::move(dl));
+            }
+            return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
         }
         resolved_target.endpoint = member->endpoint;
         if (location_cache_) {
@@ -56,18 +91,32 @@ void ActorProxy::send(const ActorAddress& target, TypedMessage msg) {
 
     net::WireFrame frame;
     // Use msg.sender_address() if present, fall back to the proxy address
-    const auto& sender_addr = msg.sender_address().id != ActorId{0}
-                            ? msg.sender_address()
-                            : address_;
+    const auto& sender_addr =
+        msg.sender_address().id != ActorId{0} ? msg.sender_address() : address_;
     net::to_proto(frame.pb_frame.mutable_sender(), sender_addr);
     net::to_proto(frame.pb_frame.mutable_receiver(), resolved_target);
     frame.pb_frame.set_message_id(MessageId::generate().value());
     frame.pb_frame.set_type_tag(static_cast<uint32_t>(msg.type_id()));
-    frame.pb_frame.set_payload(
-        reinterpret_cast<const char*>(msg.payload().data()),
-        msg.payload().size());
+    frame.pb_frame.set_payload(reinterpret_cast<const char*>(msg.payload().data()),
+                               msg.payload().size());
 
-    transport_->send(resolved_target, frame.encode());
+    if (!transport_->try_send(resolved_target, frame.encode())) {
+        // Capture dead letter: transport refused the message
+        if (system_) {
+            mailbox::DeadLetterRecord dl;
+            dl.reason = mailbox::DeadLetterReason::TransportSendFailed;
+            dl.source = mailbox::DeadLetterSource::Transport;
+            dl.sender = msg.sender_address().id != ActorId{0}
+                            ? msg.sender_address()
+                            : address_;
+            dl.target = target;
+            dl.type_tag = msg.type_id();
+            dl.payload_sample = msg.payload();
+            (void)system_->dead_letter(std::move(dl));
+        }
+        return {mailbox::EnqueueResultCode::Rejected, target.id};
+    }
+    return {mailbox::EnqueueResultCode::Accepted, target.id};
 }
 
 } // namespace hpactor

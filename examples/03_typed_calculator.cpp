@@ -20,7 +20,8 @@
 //
 //   - Typed message structs (no protobuf needed for local messages)
 //   - TypedBehavior<Signatures...> with handler registration via on()
-//   - TypedEventBasedActorRef<Signatures...> handle — statically checked at compile time
+//   - TypedEventBasedActorRef<Signatures...> handle — statically checked at
+//   compile time
 //   - result<T> return values from handlers
 //   - Compile-time prevention of sending wrong message types
 //
@@ -74,12 +75,9 @@ struct ShutdownMessage {};
 // ---------------------------------------------------------------------------
 
 using calculator_handle = hpactor::TypedEventBasedActorRef<
-    hpactor::result<int>(AddMessage),
-    hpactor::result<int>(SubtractMessage),
-    hpactor::result<int>(MultiplyMessage),
-    hpactor::result<int>(DivideMessage),
-    hpactor::result<int>(PowerMessage),
-    hpactor::result<void>(ShutdownMessage)>;
+    hpactor::result<int>(AddMessage), hpactor::result<int>(SubtractMessage),
+    hpactor::result<int>(MultiplyMessage), hpactor::result<int>(DivideMessage),
+    hpactor::result<int>(PowerMessage), hpactor::result<void>(ShutdownMessage)>;
 
 // =============================================================================
 // CalculatorActor — typed actor with arithmetic operations
@@ -87,28 +85,26 @@ using calculator_handle = hpactor::TypedEventBasedActorRef<
 
 class CalculatorActor
     : public hpactor::TypedEventBasedActor<
-          hpactor::result<int>(AddMessage),
-          hpactor::result<int>(SubtractMessage),
-          hpactor::result<int>(MultiplyMessage),
-          hpactor::result<int>(DivideMessage),
-          hpactor::result<int>(PowerMessage),
-          hpactor::result<void>(ShutdownMessage)> {
+          hpactor::result<int>(AddMessage), hpactor::result<int>(SubtractMessage),
+          hpactor::result<int>(MultiplyMessage), hpactor::result<int>(DivideMessage),
+          hpactor::result<int>(PowerMessage), hpactor::result<void>(ShutdownMessage)> {
   public:
     using base_type = hpactor::TypedEventBasedActor<
-        hpactor::result<int>(AddMessage),
-        hpactor::result<int>(SubtractMessage),
-        hpactor::result<int>(MultiplyMessage),
-        hpactor::result<int>(DivideMessage),
-        hpactor::result<int>(PowerMessage),
-        hpactor::result<void>(ShutdownMessage)>;
+        hpactor::result<int>(AddMessage), hpactor::result<int>(SubtractMessage),
+        hpactor::result<int>(MultiplyMessage), hpactor::result<int>(DivideMessage),
+        hpactor::result<int>(PowerMessage), hpactor::result<void>(ShutdownMessage)>;
 
     CalculatorActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : base_type(ctx, sys) {
         become(make_behavior());
     }
 
-    int operation_count() const { return operation_count_; }
-    bool is_shutdown() const { return shutdown_; }
+    int operation_count() const {
+        return operation_count_;
+    }
+    bool is_shutdown() const {
+        return shutdown_;
+    }
 
   protected:
     typename base_type::behavior_type make_behavior() override {
@@ -117,15 +113,14 @@ class CalculatorActor
         bh.on([](SubtractMessage msg) -> int { return msg.a - msg.b; });
         bh.on([](MultiplyMessage msg) -> int { return msg.a * msg.b; });
         bh.on([](DivideMessage msg) -> int {
-            if (msg.b == 0) return 0;
+            if (msg.b == 0)
+                return 0;
             return msg.a / msg.b;
         });
         bh.on([](PowerMessage msg) -> int {
             return static_cast<int>(std::pow(msg.base, msg.exponent));
         });
-        bh.on([this](ShutdownMessage) {
-            shutdown_ = true;
-        });
+        bh.on([this](ShutdownMessage) { shutdown_ = true; });
         return bh;
     }
 
@@ -145,15 +140,14 @@ int main() {
     std::cout << "\n--- Compile-time type verification ---" << std::endl;
 
     // Verify handler types at compile time
-    static_assert(std::is_same_v<
-                  hpactor::handler_type<hpactor::result<int>(AddMessage)>::result,
-                  int>);
-    static_assert(std::is_same_v<
-                  hpactor::handler_type<hpactor::result<int>(AddMessage)>::message,
-                  AddMessage>);
-    static_assert(std::is_same_v<
-                  hpactor::handler_type<hpactor::result<void>(ShutdownMessage)>::result,
-                  void>);
+    static_assert(
+        std::is_same_v<hpactor::handler_type<hpactor::result<int>(AddMessage)>::result, int>);
+    static_assert(
+        std::is_same_v<hpactor::handler_type<hpactor::result<int>(AddMessage)>::message,
+                       AddMessage>);
+    static_assert(
+        std::is_same_v<hpactor::handler_type<hpactor::result<void>(ShutdownMessage)>::result,
+                       void>);
     std::cout << "  handler_type traits verified" << std::endl;
 
     // Verify TypedEventBasedActorRef handle type
@@ -163,7 +157,8 @@ int main() {
     // ---- Runtime: spawn and direct typed dispatch ----
     std::cout << "\n--- Runtime typed dispatch ---" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}};
+    hpactor::Config config{
+        .scheduler_threads = 1, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn the calculator
@@ -174,8 +169,8 @@ int main() {
     // Get a type-safe handle.
     // The TypedEventBasedActorRef handle constrains what messages can be sent —
     // calling calc_handle(WrongType{}) would be a compile error.
-    auto actor_ptr = std::static_pointer_cast<CalculatorActor>(
-        system.get_actor(calc.id()));
+    auto actor_ptr =
+        std::static_pointer_cast<CalculatorActor>(system.get_actor(calc.id()));
     calculator_handle calc_handle(actor_ptr);
 
     // Invoke operations through the typed handle
@@ -205,17 +200,14 @@ int main() {
     // ---- API summary ----
     std::cout << "\n--- Typed actor API reference ---" << std::endl;
     std::cout << "  TypedEventBasedActor<Signatures...>" << std::endl;
-    std::cout << "    make_behavior() → TypedBehavior<Signatures...>"
-              << std::endl;
-    std::cout << "    operator()(T&&) → result<R>  // typed dispatch"
-              << std::endl;
+    std::cout << "    make_behavior() → TypedBehavior<Signatures...>" << std::endl;
+    std::cout << "    operator()(T&&) → result<R>  // typed dispatch" << std::endl;
     std::cout << "  TypedBehavior<Signatures...>" << std::endl;
     std::cout << "    on(F&& handler)  // register handler for message type"
               << std::endl;
     std::cout << "  TypedEventBasedActorRef<Signatures...>  // type-safe handle"
               << std::endl;
-    std::cout << "    operator()(T&&)  // compile-time checked send"
-              << std::endl;
+    std::cout << "    operator()(T&&)  // compile-time checked send" << std::endl;
 
     std::cout << "\n=== Complete ===" << std::endl;
     return 0;

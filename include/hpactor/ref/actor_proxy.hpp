@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -26,7 +27,7 @@ namespace net {
 class Transport;
 class IServiceDiscovery;
 class ActorLocationCache;
-}
+} // namespace net
 
 // -----------------------------------------------------------------------------
 // ActorProxy - reference to a remote actor
@@ -41,8 +42,8 @@ class ActorProxy {
     // The transport pointer must outlive this proxy
     ActorProxy(ActorAddress address, net::Transport* transport);
 
-    // Create an actor proxy from address + system (resolves transport internally).
-    // Used by ActorContext::resolve() for lazy proxy creation.
+    // Create an actor proxy from address + system (resolves transport
+    // internally). Used by ActorContext::resolve() for lazy proxy creation.
     ActorProxy(const ActorAddress& addr, ActorSystem* system);
 
     // Get the actor's address
@@ -55,13 +56,19 @@ class ActorProxy {
         return address_.endpoint;
     }
 
-    // Service discovery for address resolution (set by ActorSystem, may be null).
+    // Service discovery for address resolution (set by ActorSystem, may be
+    // null).
     net::IServiceDiscovery* discovery_ = nullptr;
-    // Location cache for ActorId→EndPoint caching (set by ActorSystem, may be null).
+    // Location cache for ActorId→EndPoint caching (set by ActorSystem, may be
+    // null).
     net::ActorLocationCache* location_cache_ = nullptr;
 
-    void set_discovery(net::IServiceDiscovery* d) { discovery_ = d; }
-    void set_location_cache(net::ActorLocationCache* c) { location_cache_ = c; }
+    void set_discovery(net::IServiceDiscovery* d) {
+        discovery_ = d;
+    }
+    void set_location_cache(net::ActorLocationCache* c) {
+        location_cache_ = c;
+    }
 
     // Check if this is a local actor (always false for proxy)
     bool is_local() const {
@@ -76,6 +83,13 @@ class ActorProxy {
     // Send a message to this actor (fire-and-forget)
     void send(const ActorAddress& target, TypedMessage msg);
 
+    // Try-send returning local proxy admission result.
+    // Returns Accepted if the message was handed to the transport layer,
+    // or ActorNotFound if no transport is available. This is a "best effort"
+    // result — the remote node's admission outcome is not known locally.
+    mailbox::EnqueueResult try_send(const ActorAddress& target, TypedMessage msg,
+                                    mailbox::DeliveryOptions options = {});
+
     // Access the underlying transport (for internal use)
     net::Transport* transport() const {
         return transport_;
@@ -83,7 +97,9 @@ class ActorProxy {
 
   private:
     ActorAddress address_;
-    net::Transport* transport_; // Non-owning pointer to the transport
+    net::Transport* transport_;     // Non-owning pointer to the transport
+    ActorSystem* system_ = nullptr; // Non-owning pointer for dead-letter
+                                    // capture
 };
 
 } // namespace hpactor

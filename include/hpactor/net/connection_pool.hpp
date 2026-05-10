@@ -16,10 +16,10 @@
 
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>
 #include <hpactor/net/transport.hpp>
+#include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/spawn.hpp>
 
@@ -35,7 +35,7 @@ namespace hpactor {
 
 namespace net {
 
-struct WireFrame;  // forward decl, full def in <hpactor/net/frame.hpp>
+struct WireFrame; // forward decl, full def in <hpactor/net/frame.hpp>
 
 // -----------------------------------------------------------------------------
 // PoolConfig - connection pool configuration
@@ -85,6 +85,10 @@ class ConnectionPool {
     // Send message to specific actor on remote node (uses pool)
     void send(const ActorAddress& target, const StreamBuffer& encoded);
 
+    // Try to send message — returns false when no connection is available
+    // and the pending queue is full (or the pool is shutting down).
+    bool try_send(const ActorAddress& target, const StreamBuffer& encoded);
+
     // Send raw bytes to the remote node (uses default target)
     void send(const StreamBuffer& data);
 
@@ -110,7 +114,8 @@ class ConnectionPool {
     }
 
     // Set handler for RPC responses (called when RpcResponse frame is received)
-    using rpc_response_handler = std::function<void(MessageId, const StreamBuffer&)>;
+    using rpc_response_handler =
+        std::function<void(MessageId, const StreamBuffer&)>;
     void set_rpc_handler(rpc_response_handler handler);
 
     // Set handler for spawn responses (called when SpawnResponse frame is

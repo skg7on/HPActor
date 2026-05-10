@@ -60,7 +60,8 @@ static hpactor::StreamBuffer encode_int(int value) {
 }
 
 static int decode_int(const hpactor::StreamBuffer& payload) {
-    if (payload.size() < sizeof(int)) return 0;
+    if (payload.size() < sizeof(int))
+        return 0;
     int value;
     std::memcpy(&value, payload.data(), sizeof(int));
     return value;
@@ -100,20 +101,20 @@ class CounterActor : public hpactor::StatefulActor<CounterState> {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             if (msg.type_id() == IncrementTag) {
                 int delta = decode_int(msg.payload());
-                if (delta <= 0) delta = 1;
+                if (delta <= 0)
+                    delta = 1;
                 state().value += delta;
                 state().value = std::min(state().value, state().max_value);
-                std::cout << "  CounterActor [" << id().value()
-                          << "]: +" << delta << " → " << state().value
-                          << std::endl;
+                std::cout << "  CounterActor [" << id().value() << "]: +"
+                          << delta << " → " << state().value << std::endl;
             } else if (msg.type_id() == DecrementTag) {
                 int delta = decode_int(msg.payload());
-                if (delta <= 0) delta = 1;
+                if (delta <= 0)
+                    delta = 1;
                 state().value -= delta;
                 state().value = std::max(state().value, state().min_value);
-                std::cout << "  CounterActor [" << id().value()
-                          << "]: -" << delta << " → " << state().value
-                          << std::endl;
+                std::cout << "  CounterActor [" << id().value() << "]: -"
+                          << delta << " → " << state().value << std::endl;
             } else if (msg.type_id() == ResetTag) {
                 state().value = 0;
                 std::cout << "  CounterActor [" << id().value()
@@ -156,19 +157,18 @@ class GaugeActor : public hpactor::StatefulActor<GaugeState> {
             if (msg.type_id() == IncrementTag) {
                 double delta = static_cast<double>(decode_int(msg.payload()));
                 state().value = std::min(state().value + delta, state().max_value);
-                std::cout << "  GaugeActor [" << id().value()
-                          << "]: +" << delta << " → " << state().value
-                          << std::endl;
+                std::cout << "  GaugeActor [" << id().value() << "]: +" << delta
+                          << " → " << state().value << std::endl;
             } else if (msg.type_id() == SetValueTag) {
                 double new_val = static_cast<double>(decode_int(msg.payload()));
                 state().value = std::min(new_val, state().max_value);
-                std::cout << "  GaugeActor [" << id().value()
-                          << "]: set → " << state().value << std::endl;
+                std::cout << "  GaugeActor [" << id().value() << "]: set → "
+                          << state().value << std::endl;
             } else if (msg.type_id() == GetValueTag) {
                 std::cout << "  GaugeActor [" << id().value()
                           << "]: value = " << state().value << std::endl;
-                context()->reply(make_msg(GetValueTag,
-                                          static_cast<int>(state().value)));
+                context()->reply(
+                    make_msg(GetValueTag, static_cast<int>(state().value)));
             }
         }};
     }
@@ -178,9 +178,8 @@ class GaugeActor : public hpactor::StatefulActor<GaugeState> {
 // send_from_main — enqueue a message from outside the actor system
 // ---------------------------------------------------------------------------
 
-static void send_from_main(hpactor::ActorSystem& system,
-                           hpactor::ActorId target, hpactor::TypeTag tag,
-                           int value = 0) {
+static void send_from_main(hpactor::ActorSystem& system, hpactor::ActorId target,
+                           hpactor::TypeTag tag, int value = 0) {
     system.deliver_local(target, make_msg(tag, value));
 }
 
@@ -191,7 +190,8 @@ static void send_from_main(hpactor::ActorSystem& system,
 int main() {
     std::cout << "=== HPActor Example 02: Stateful Actor ===" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}};
+    hpactor::Config config{
+        .scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn actors with initial state

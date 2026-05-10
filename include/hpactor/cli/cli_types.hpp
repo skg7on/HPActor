@@ -37,10 +37,19 @@ struct ActorMeta {
 
 struct MboxSnapshot {
     uint32_t depth = 0;
+    uint32_t capacity = 0;
+    uint64_t queued_bytes = 0;
+    uint64_t byte_capacity = 0;
+    uint32_t pressure_ratio_ppm = 0;
     uint64_t total_enqueued = 0;
     uint64_t total_dequeued = 0;
+    uint64_t total_rejected = 0;
+    uint64_t total_dropped = 0;
+    uint64_t total_dead_letters = 0;
     uint64_t max_depth = 0;
     uint32_t high_priority_depth = 0;
+    std::string pressure_state;
+    std::string overflow_policy;
 };
 
 struct ChildEntry {
@@ -49,5 +58,5 @@ struct ChildEntry {
     std::string state;
 };
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor

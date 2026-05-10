@@ -43,7 +43,7 @@
 #include <hpactor/hpactor_config.hpp>
 
 #if HPACTOR_SUPPORT_COROUTINES
-#include <hpactor/sched/coroutine_awaiters.hpp>
+#    include <hpactor/sched/coroutine_awaiters.hpp>
 #endif
 
 #include <algorithm>
@@ -64,8 +64,8 @@ static const hpactor::TypeTag UppercaseMsgTag{0x00001001};
 // String message helpers
 // ---------------------------------------------------------------------------
 
-static hpactor::TypedMessage make_string_msg(hpactor::TypeTag tag,
-                                             const std::string& text) {
+static hpactor::TypedMessage
+make_string_msg(hpactor::TypeTag tag, const std::string& text) {
     hpactor::StreamBuffer payload(text.begin(), text.end());
     return hpactor::TypedMessage(tag, std::move(payload));
 }
@@ -87,23 +87,21 @@ class EchoActor : public hpactor::EventBasedActor {
 
 #if HPACTOR_SUPPORT_COROUTINES
     hpactor::sched::CoroutineTask act() override {
-        std::cout << "  EchoActor [" << id().value() << "]: started"
-                  << std::endl;
+        std::cout << "  EchoActor [" << id().value() << "]: started" << std::endl;
         int count = 0;
         while (count < 4) {
             auto msg = co_await make_mailbox_awaiter();
             if (msg.type_id() == EchoMsgTag) {
                 auto text = extract_string(msg.payload());
-                std::cout << "  EchoActor [" << id().value()
-                          << "]: received \"" << text << "\"" << std::endl;
+                std::cout << "  EchoActor [" << id().value() << "]: received \""
+                          << text << "\"" << std::endl;
                 context()->set_current_sender(msg.sender_address());
-                context()->reply(
-                    make_string_msg(EchoMsgTag, "echo: " + text));
+                context()->reply(make_string_msg(EchoMsgTag, "echo: " + text));
                 ++count;
             }
         }
-        std::cout << "  EchoActor [" << id().value() << "]: done ("
-                  << count << " messages)" << std::endl;
+        std::cout << "  EchoActor [" << id().value() << "]: done (" << count
+                  << " messages)" << std::endl;
         co_return;
     }
 #endif
@@ -112,13 +110,10 @@ class EchoActor : public hpactor::EventBasedActor {
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             if (msg.type_id() == EchoMsgTag) {
-                std::cout << "  EchoActor [" << id().value()
-                          << "]: received \""
-                          << extract_string(msg.payload()) << "\""
-                          << std::endl;
-                context()->reply(
-                    make_string_msg(EchoMsgTag, "echo: " +
-                                     extract_string(msg.payload())));
+                std::cout << "  EchoActor [" << id().value() << "]: received \""
+                          << extract_string(msg.payload()) << "\"" << std::endl;
+                context()->reply(make_string_msg(
+                    EchoMsgTag, "echo: " + extract_string(msg.payload())));
             }
         }};
     }
@@ -138,24 +133,22 @@ class RelayActor : public hpactor::EventBasedActor {
 
 #if HPACTOR_SUPPORT_COROUTINES
     hpactor::sched::CoroutineTask act() override {
-        std::cout << "  RelayActor [" << id().value() << "]: started"
-                  << std::endl;
+        std::cout << "  RelayActor [" << id().value() << "]: started" << std::endl;
         int count = 0;
         while (count < 2) {
             auto msg = co_await make_mailbox_awaiter();
-            if (msg.type_id() == EchoMsgTag
-                && msg.sender_address().id == hpactor::ActorId{0}) {
+            if (msg.type_id() == EchoMsgTag &&
+                msg.sender_address().id == hpactor::ActorId{0}) {
                 auto text = extract_string(msg.payload());
                 std::cout << "  RelayActor [" << id().value()
                           << "]: forwarding \"" << text << "\"" << std::endl;
                 context()->send(target_,
-                                make_string_msg(EchoMsgTag,
-                                                "relayed: " + text));
+                                make_string_msg(EchoMsgTag, "relayed: " + text));
                 ++count;
             }
         }
-        std::cout << "  RelayActor [" << id().value() << "]: done ("
-                  << count << " messages)" << std::endl;
+        std::cout << "  RelayActor [" << id().value() << "]: done (" << count
+                  << " messages)" << std::endl;
         co_return;
     }
 #endif
@@ -171,8 +164,7 @@ class RelayActor : public hpactor::EventBasedActor {
                     std::cout << "  RelayActor [" << id().value()
                               << "]: forwarding \"" << text << "\"" << std::endl;
                     context()->send(
-                        target_,
-                        make_string_msg(EchoMsgTag, "relayed: " + text));
+                        target_, make_string_msg(EchoMsgTag, "relayed: " + text));
                 }
             }
         }};
@@ -208,23 +200,18 @@ class SwitchingActor : public hpactor::EventBasedActor {
                 auto text = extract_string(msg.payload());
                 if (uppercase_mode) {
                     std::string upper = text;
-                    std::transform(upper.begin(), upper.end(), upper.begin(),
-                                   [](unsigned char c) {
-                                       return std::toupper(c);
-                                   });
-                    std::cout << "  SwitchingActor [" << id().value()
-                              << "]: \"" << text << "\" → \""
-                              << upper << "\"" << std::endl;
+                    std::transform(
+                        upper.begin(), upper.end(), upper.begin(),
+                        [](unsigned char c) { return std::toupper(c); });
+                    std::cout << "  SwitchingActor [" << id().value() << "]: \""
+                              << text << "\" → \"" << upper << "\"" << std::endl;
                     context()->set_current_sender(msg.sender_address());
-                    context()->reply(
-                        make_string_msg(EchoMsgTag, "[UPPER] " + upper));
+                    context()->reply(make_string_msg(EchoMsgTag, "[UPPER] " + upper));
                 } else {
                     std::cout << "  SwitchingActor [" << id().value()
-                              << "]: received \"" << text << "\""
-                              << std::endl;
+                              << "]: received \"" << text << "\"" << std::endl;
                     context()->set_current_sender(msg.sender_address());
-                    context()->reply(
-                        make_string_msg(EchoMsgTag, "[echo] " + text));
+                    context()->reply(make_string_msg(EchoMsgTag, "[echo] " + text));
                 }
             }
         }
@@ -243,8 +230,7 @@ class SwitchingActor : public hpactor::EventBasedActor {
                 auto text = extract_string(msg.payload());
                 std::cout << "  SwitchingActor [" << id().value()
                           << "]: received \"" << text << "\"" << std::endl;
-                context()->reply(
-                    make_string_msg(EchoMsgTag, "[echo] " + text));
+                context()->reply(make_string_msg(EchoMsgTag, "[echo] " + text));
             }
         }};
     }
@@ -256,14 +242,10 @@ class SwitchingActor : public hpactor::EventBasedActor {
                 auto text = extract_string(msg.payload());
                 std::string upper = text;
                 std::transform(upper.begin(), upper.end(), upper.begin(),
-                               [](unsigned char c) {
-                                   return std::toupper(c);
-                               });
-                std::cout << "  SwitchingActor [" << id().value()
-                          << "]: \"" << text << "\" → \""
-                          << upper << "\"" << std::endl;
-                context()->reply(
-                    make_string_msg(EchoMsgTag, "[UPPER] " + upper));
+                               [](unsigned char c) { return std::toupper(c); });
+                std::cout << "  SwitchingActor [" << id().value() << "]: \""
+                          << text << "\" → \"" << upper << "\"" << std::endl;
+                context()->reply(make_string_msg(EchoMsgTag, "[UPPER] " + upper));
             }
         }});
     }
@@ -273,9 +255,8 @@ class SwitchingActor : public hpactor::EventBasedActor {
 // send_from_main
 // ---------------------------------------------------------------------------
 
-static void send_from_main(hpactor::ActorSystem& system,
-                           hpactor::ActorId target, hpactor::TypeTag tag,
-                           const std::string& text) {
+static void send_from_main(hpactor::ActorSystem& system, hpactor::ActorId target,
+                           hpactor::TypeTag tag, const std::string& text) {
     system.deliver_local(target, make_string_msg(tag, text));
 }
 
@@ -286,8 +267,10 @@ static void send_from_main(hpactor::ActorSystem& system,
 int main() {
     std::cout << "=== HPActor Example 01: Echo Actor ===" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}};
-    // config.use_coroutines = true;  // uncomment to enable C++20 coroutine dispatch
+    hpactor::Config config{
+        .scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
+    // config.use_coroutines = true;  // uncomment to enable C++20 coroutine
+    // dispatch
     hpactor::ActorSystem system(config);
 
     std::cout << "Dispatch: Behavior callbacks (become/make_behavior)";
@@ -300,8 +283,7 @@ int main() {
 
     // Spawn actors
     auto echo = system.spawn<EchoActor>();
-    std::cout << "Spawned EchoActor (id=" << echo.id().value() << ")"
-              << std::endl;
+    std::cout << "Spawned EchoActor (id=" << echo.id().value() << ")" << std::endl;
 
     auto relay = system.spawn<RelayActor>(echo.address());
     std::cout << "Spawned RelayActor (id=" << relay.id().value()

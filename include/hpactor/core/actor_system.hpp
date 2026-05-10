@@ -25,6 +25,7 @@
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -72,6 +73,20 @@ class HybridScheduler;
 } // namespace sched
 
 // -----------------------------------------------------------------------------
+// MailboxDefaults - system-wide default mailbox configuration
+// -----------------------------------------------------------------------------
+struct MailboxDefaults {
+    uint32_t default_capacity = 1024;
+    uint64_t default_byte_capacity = 0;
+    mailbox::OverflowPolicy default_policy = mailbox::OverflowPolicy::RejectNewest;
+    double high_watermark = 0.80;
+    double low_watermark = 0.50;
+    uint32_t protected_system_messages = 32;
+    mailbox::BackpressureMode backpressure_mode =
+        mailbox::BackpressureMode::LocalAndRemoteSignal;
+};
+
+// -----------------------------------------------------------------------------
 // Config - configuration for ActorSystem
 // -----------------------------------------------------------------------------
 struct Config {
@@ -116,6 +131,12 @@ struct Config {
 
     // Gossip configuration. Used when creating GossipMembership internally.
     net::GossipConfig gossip = {};
+
+    // Mailbox defaults — applied to every actor spawned via this system
+    MailboxDefaults mailbox;
+
+    // Dead-letter queue configuration
+    mailbox::DeadLetterConfig dead_letters;
 
     // Timer backend selection
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
@@ -247,6 +268,27 @@ class ActorSystem {
     void deliver_local(ActorId target, TypedMessage msg, uint8_t priority,
                        int64_t deadline_ns);
 
+    // Bounded admission delivery — returns an EnqueueResult describing the
+    // outcome. Returns ActorNotFound when the target actor does not exist,
+    // Rejected when the mailbox is at hard capacity.
+    mailbox::EnqueueResult
+    try_deliver_local(ActorId target, TypedMessage msg, uint8_t priority = 0,
+                      int64_t deadline_ns = INT64_MAX,
+                      mailbox::DeliveryOptions options = {});
+
+    // Dead-letter queue
+    bool dead_letter(mailbox::DeadLetterRecord record) noexcept;
+    mailbox::DeadLetterQueueSnapshot dead_letter_snapshot() const noexcept;
+    bool pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept;
+
+    // Build a MailboxConfig from system-wide defaults in Config::mailbox.
+    mailbox::MailboxConfig mailbox_config_for_spawn() const;
+
+    // Build a MailboxConfig for a specific ActorDef, falling back to system
+    // defaults when ActorDef fields are zero.
+    mailbox::MailboxConfig
+    mailbox_config_for_actor_def(const config::ActorDef& def) const;
+
     // Deliver a remote message (from WireFrame) to the target actor's mailbox.
     // Bridges the transport layer to the unified deliver_local() sink.
     void deliver_remote(const net::WireFrame& frame);
@@ -254,6 +296,10 @@ class ActorSystem {
     // Called by IServiceDiscovery when a remote node becomes unreachable.
     // Finds all actors linked to the dead endpoint and delivers DownMsg.
     void on_node_dead(EndPoint dead_ep);
+
+    // Emit a backpressure signal to the sender actor, delivered through
+    // the sender's ActorContext::handle_backpressure() handler.
+    void signal_backpressure(const mailbox::BackpressureSignal& signal);
 
     // Enqueue an I/O completion to be delivered to an actor
     // Called by EventLoop when async operations complete
@@ -354,6 +400,9 @@ class ActorSystem {
     std::unique_ptr<log::LogManager> log_manager_;
     log::Logger* logger_ = nullptr;
 
+    // Dead-letter queue
+    std::unique_ptr<mailbox::DeadLetterQueue> dead_letters_;
+
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
 
@@ -387,7 +436,7 @@ Actor ActorSystem::spawn(Args&&... args) {
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
         mailboxes_.emplace(
             id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    id, scheduler_.get()));
+                    id, scheduler_.get(), mailbox_config_for_spawn()));
     }
 
     // Create actor context and set it on the actor

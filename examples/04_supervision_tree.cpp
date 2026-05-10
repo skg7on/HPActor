@@ -42,9 +42,9 @@
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/messages.pb.h>
-#include <hpactor/supervision/supervision.hpp>
-#include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/all_for_one_supervisor.hpp>
+#include <hpactor/supervision/one_for_one_supervisor.hpp>
+#include <hpactor/supervision/supervision.hpp>
 
 #include <cstring>
 #include <functional>
@@ -72,7 +72,8 @@ static hpactor::StreamBuffer encode_int(int value) {
 }
 
 static int decode_int(const hpactor::StreamBuffer& payload) {
-    if (payload.size() < sizeof(int)) return 0;
+    if (payload.size() < sizeof(int))
+        return 0;
     int value;
     std::memcpy(&value, payload.data(), sizeof(int));
     return value;
@@ -86,14 +87,13 @@ static hpactor::TypedMessage make_msg(hpactor::TypeTag tag, int value = 0) {
 // Build a DownMessage protobuf and wrap it as TypeTag::DownMsg
 // ---------------------------------------------------------------------------
 
-static hpactor::TypedMessage make_down_msg(uint64_t actor_id,
-                                           uint32_t reason_code) {
+static hpactor::TypedMessage
+make_down_msg(uint64_t actor_id, uint32_t reason_code) {
     hpactor::DownMessage down;
     down.set_actor_id(actor_id);
     down.set_reason_code(reason_code);
     hpactor::StreamBuffer payload(down.ByteSizeLong());
-    (void)down.SerializeToArray(payload.data(),
-                                 static_cast<int>(payload.size()));
+    (void)down.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
     return hpactor::TypedMessage(hpactor::TypeTag::DownMsg, std::move(payload));
 }
 
@@ -103,14 +103,17 @@ static hpactor::TypedMessage make_down_msg(uint64_t actor_id,
 
 class WorkerActor : public hpactor::EventBasedActor {
   public:
-    WorkerActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
-                int worker_num)
+    WorkerActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys, int worker_num)
         : hpactor::EventBasedActor(ctx, sys), worker_num_(worker_num) {
         become(make_behavior());
     }
 
-    int worker_num() const { return worker_num_; }
-    int work_done() const { return work_done_; }
+    int worker_num() const {
+        return worker_num_;
+    }
+    int work_done() const {
+        return work_done_;
+    }
 
   protected:
     hpactor::Behavior make_behavior() override {
@@ -127,8 +130,7 @@ class WorkerActor : public hpactor::EventBasedActor {
                           << "]: CRASHING (code=" << code << ")" << std::endl;
             } else if (msg.type_id() == StatusTag) {
                 std::cout << "  Worker-" << worker_num_ << " [" << id().value()
-                          << "]: status — work_done=" << work_done_
-                          << std::endl;
+                          << "]: status — work_done=" << work_done_ << std::endl;
             }
         }};
     }
@@ -202,8 +204,7 @@ class SelfSupervisor : public hpactor::SelfSupervisingActor {
     }
 
     hpactor::SupervisionDirective
-    on_failure(hpactor::ActorId child_id,
-               const hpactor::error& err) override {
+    on_failure(hpactor::ActorId child_id, const hpactor::error& err) override {
         std::cout << "  [SelfSupervisor]: child " << child_id.value()
                   << " failed (code=" << err.code() << ")"
                   << " — escalating" << std::endl;
@@ -215,9 +216,8 @@ class SelfSupervisor : public hpactor::SelfSupervisingActor {
 // send_from_main
 // ---------------------------------------------------------------------------
 
-static void send_from_main(hpactor::ActorSystem& system,
-                           hpactor::ActorId target, hpactor::TypeTag tag,
-                           int value = 0) {
+static void send_from_main(hpactor::ActorSystem& system, hpactor::ActorId target,
+                           hpactor::TypeTag tag, int value = 0) {
     system.deliver_local(target, make_msg(tag, value));
 }
 
@@ -228,7 +228,8 @@ static void send_from_main(hpactor::ActorSystem& system,
 int main() {
     std::cout << "=== HPActor Example 04: Supervision Tree ===" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}};
+    hpactor::Config config{
+        .scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
     hpactor::ActorSystem system(config);
 
     // ---- Setup: OneForOne Supervisor with 3 workers ----
@@ -253,9 +254,9 @@ int main() {
     auto supervisor = system.spawn<RestartingSupervisor>(
         one_for_one, std::move(workers), factory);
     std::cout << "Spawned RestartingSupervisor (id=" << supervisor.id().value()
-              << ", OneForOne, 3 workers: ids=" << worker_ids[0].value()
-              << "," << worker_ids[1].value() << "," << worker_ids[2].value()
-              << ")" << std::endl;
+              << ", OneForOne, 3 workers: ids=" << worker_ids[0].value() << ","
+              << worker_ids[1].value() << "," << worker_ids[2].value() << ")"
+              << std::endl;
 
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
 
@@ -273,8 +274,7 @@ int main() {
     std::this_thread::sleep_for(std::chrono::milliseconds(50));
     // Deliver DownMsg to supervisor (framework would do this automatically
     // when failure detection is wired)
-    system.deliver_local(supervisor.id(),
-                         make_down_msg(worker_ids[1].value(), 42));
+    system.deliver_local(supervisor.id(), make_down_msg(worker_ids[1].value(), 42));
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
     // The replacement worker should now be at worker_ids[3]
     if (worker_ids.size() > 3) {
@@ -295,18 +295,16 @@ int main() {
 
     auto worker4 = factory();
     auto worker4_id = worker4.id();
-    std::cout << "  Added Worker-" << worker_counter << " (id="
-              << worker4_id.value() << ")" << std::endl;
+    std::cout << "  Added Worker-" << worker_counter
+              << " (id=" << worker4_id.value() << ")" << std::endl;
     send_from_main(system, worker4_id, WorkTag, 5);
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
     // Simulate rapid failures — SelfSupervisor's decide_restart rate-limits
-    std::cout << "\n  Simulating 3 rapid failures (max_restarts=2)..."
-              << std::endl;
+    std::cout << "\n  Simulating 3 rapid failures (max_restarts=2)..." << std::endl;
     for (int i = 0; i < 3; ++i) {
         std::cout << "  Failure #" << (i + 1) << ": ";
-        system.deliver_local(self_sup.id(),
-                             make_down_msg(worker4_id.value(), 99));
+        system.deliver_local(self_sup.id(), make_down_msg(worker4_id.value(), 99));
         std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -320,8 +318,7 @@ int main() {
     std::cout << "  AllForOneSupervisor  — always returns Restart" << std::endl;
     std::cout << "  SelfSupervisingActor — owns children, virtual on_failure()"
               << std::endl;
-    std::cout << "  SupervisionPolicy{max_restarts, restart_interval}"
-              << std::endl;
+    std::cout << "  SupervisionPolicy{max_restarts, restart_interval}" << std::endl;
 
     std::cout << "\n=== Complete ===" << std::endl;
     return 0;

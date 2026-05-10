@@ -56,7 +56,6 @@ HTTPGatewayActor::HTTPGatewayActor(ActorContext* ctx, ActorSystem& sys,
                                    const std::string& bind_host, uint16_t port)
     : ExternalMsgGatewayActor(ctx, sys),
       serializer_(std::make_unique<HttpSerializer>()) {
-
     auto handler = [this](TypedMessage&& msg) {
         std::lock_guard<std::mutex> lock(reply_queue_mutex_);
         reply_queue_.push(std::move(msg));
@@ -80,16 +79,16 @@ HTTPGatewayActor::~HTTPGatewayActor() {
 }
 
 void HTTPGatewayActor::route(HttpMethod method, std::string path_pattern,
-                              MessageBuilder builder, int priority) {
+                             MessageBuilder builder, int priority) {
     routes_.add(method, std::move(path_pattern), std::move(builder), priority);
 }
 
 void HTTPGatewayActor::route(HttpMethod method, std::string path_pattern,
-                              ActorAddr target) {
+                             ActorAddr target) {
     auto serializer = serializer_.get();
     route(method, std::move(path_pattern),
-          [target, serializer](const HttpRequest& req)
-              -> std::pair<ActorAddress, TypedMessage> {
+          [target, serializer](
+              const HttpRequest& req) -> std::pair<ActorAddress, TypedMessage> {
               auto result = serializer->deserialize_request(req, TypeTag::User);
               if (!result.has_value()) {
                   return {invalid_actor_addr, TypedMessage{}};
@@ -116,7 +115,8 @@ bool HTTPGatewayActor::run_once() {
         TypedMessage msg;
         {
             std::lock_guard<std::mutex> lock(reply_queue_mutex_);
-            if (reply_queue_.empty()) break;
+            if (reply_queue_.empty())
+                break;
             msg = std::move(reply_queue_.front());
             reply_queue_.pop();
         }
@@ -131,7 +131,8 @@ void HTTPGatewayActor::on_deactivate() {
     ExternalMsgGatewayActor::on_deactivate();
 }
 
-void HTTPGatewayActor::on_request(HTTPConnection* conn, HttpRequest&& req) {  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+void HTTPGatewayActor::on_request(HTTPConnection* conn,
+                                  HttpRequest&& req) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
     size_t qpos = req.path.find('?');
     if (qpos != std::string::npos) {
         std::string query_str = req.path.substr(qpos + 1);
@@ -153,7 +154,8 @@ void HTTPGatewayActor::on_request(HTTPConnection* conn, HttpRequest&& req) {  //
     const auto* builder = routes_.match(req.method, req.path, req);
     if (!builder) {
         StreamBuffer body;
-        gateway_.send_response(conn, HttpStatusCode::NotFound,
+        gateway_.send_response(
+            conn, HttpStatusCode::NotFound,
             {{"Content-Type", "text/plain"}, {"Connection", "close"}},
             std::move(body));
         close_connection(conn);
@@ -163,7 +165,8 @@ void HTTPGatewayActor::on_request(HTTPConnection* conn, HttpRequest&& req) {  //
     auto [target, msg] = (*builder)(req);
     if (!target) {
         StreamBuffer body;
-        gateway_.send_response(conn, HttpStatusCode::InternalError,
+        gateway_.send_response(
+            conn, HttpStatusCode::InternalError,
             {{"Content-Type", "text/plain"}, {"Connection", "close"}},
             std::move(body));
         close_connection(conn);
@@ -189,16 +192,41 @@ void HTTPGatewayActor::on_request(HTTPConnection* conn, HttpRequest&& req) {  //
     TypedMessage correlated_msg(msg.type_id(), correlated);
     correlated_msg.set_sender_address(reply_adapter_.address());
 
-    system().deliver_local(target.id, std::move(correlated_msg));
+    auto result = system().try_deliver_local(target.id, std::move(correlated_msg));
+    if (!result.accepted()) {
+        // Clean up the pending reply entry we just created
+        {
+            std::lock_guard<std::mutex> lock(reply_mutex_);
+            auto it = pending_replies_.find(request_id);
+            if (it != pending_replies_.end()) {
+                // Cancel the timeout timer for this request
+                it->second->conn = nullptr;
+                pending_replies_.erase(it);
+            }
+        }
+
+        StreamBuffer body;
+        const char* msg_str = "Too Many Requests";
+        body.append(reinterpret_cast<const uint8_t*>(msg_str), strlen(msg_str));
+        gateway_.send_response(conn, HttpStatusCode::TooManyRequests,
+                               {{"Content-Type", "text/plain"},
+                                {"Connection", "close"},
+                                {"Retry-After", "5"}},
+                               std::move(body));
+        close_connection(conn);
+        return;
+    }
 
     int timeout_ms = static_cast<int>(
         std::chrono::duration_cast<std::chrono::milliseconds>(reply_timeout_).count());
-    gateway_.event_loop().run_after([this, request_id] { on_timeout(request_id); }, timeout_ms);
+    gateway_.event_loop().run_after(
+        [this, request_id] { on_timeout(request_id); }, timeout_ms);
 }
 
-void HTTPGatewayActor::on_reply(TypedMessage&& msg) {  // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
+void HTTPGatewayActor::on_reply(TypedMessage&& msg) { // NOLINT(cppcoreguidelines-rvalue-reference-param-not-moved)
     const auto& payload = msg.payload();
-    if (payload.size() < 8) return;
+    if (payload.size() < 8)
+        return;
 
     uint64_t request_id = 0;
     for (int i = 0; i < 8; ++i) {
@@ -209,19 +237,25 @@ void HTTPGatewayActor::on_reply(TypedMessage&& msg) {  // NOLINT(cppcoreguidelin
     {
         std::lock_guard<std::mutex> lock(reply_mutex_);
         auto it = pending_replies_.find(request_id);
-        if (it == pending_replies_.end()) return;
+        if (it == pending_replies_.end())
+            return;
         conn = it->second->conn;
         pending_replies_.erase(it);
     }
 
-    if (!conn) return;
+    if (!conn)
+        return;
 
     StreamBuffer reply_payload;
     reply_payload.append(payload.data() + 8, payload.size() - 8);
     TypedMessage reply_msg(msg.type_id(), reply_payload);
 
-    auto [body, content_type] = serializer_->serialize_response(
-        reply_msg, "application/json");
+    auto [body, content_type] = serializer_->serialize_response(reply_msg, "app"
+                                                                           "lic"
+                                                                           "ati"
+                                                                           "on/"
+                                                                           "jso"
+                                                                           "n");
 
     std::vector<HttpHeader> headers = {{"Content-Type", content_type}};
 
@@ -229,7 +263,8 @@ void HTTPGatewayActor::on_reply(TypedMessage&& msg) {  // NOLINT(cppcoreguidelin
         headers.push_back({"Connection", "close"});
     }
 
-    gateway_.send_response(conn, HttpStatusCode::OK, std::move(headers), std::move(body));
+    gateway_.send_response(conn, HttpStatusCode::OK, std::move(headers),
+                           std::move(body));
 
     if (!conn->should_keep_alive()) {
         close_connection(conn);
@@ -248,8 +283,8 @@ void HTTPGatewayActor::on_error(HTTPConnection* conn, const error& err) {
         body.append(reinterpret_cast<const uint8_t*>(msg.data()), msg.size());
     }
 
-    gateway_.send_response(conn, code,
-        {{"Content-Type", "text/plain"}, {"Connection", "close"}},
+    gateway_.send_response(
+        conn, code, {{"Content-Type", "text/plain"}, {"Connection", "close"}},
         std::move(body));
     close_connection(conn);
 }
@@ -259,7 +294,8 @@ void HTTPGatewayActor::on_timeout(uint64_t request_id) {
     {
         std::lock_guard<std::mutex> lock(reply_mutex_);
         auto it = pending_replies_.find(request_id);
-        if (it == pending_replies_.end()) return;
+        if (it == pending_replies_.end())
+            return;
         conn = it->second->conn;
         pending_replies_.erase(it);
     }
@@ -268,7 +304,8 @@ void HTTPGatewayActor::on_timeout(uint64_t request_id) {
         StreamBuffer body;
         const char* msg_str = "Upstream actor did not respond in time";
         body.append(reinterpret_cast<const uint8_t*>(msg_str), strlen(msg_str));
-        gateway_.send_response(conn, HttpStatusCode::GatewayTimeout,
+        gateway_.send_response(
+            conn, HttpStatusCode::GatewayTimeout,
             {{"Content-Type", "text/plain"}, {"Connection", "close"}},
             std::move(body));
         close_connection(conn);
@@ -278,7 +315,7 @@ void HTTPGatewayActor::on_timeout(uint64_t request_id) {
 void HTTPGatewayActor::close_connection(HTTPConnection* conn) {
     {
         std::lock_guard<std::mutex> lock(reply_mutex_);
-        for (auto it = pending_replies_.begin(); it != pending_replies_.end(); ) {
+        for (auto it = pending_replies_.begin(); it != pending_replies_.end();) {
             if (it->second->conn == conn) {
                 it = pending_replies_.erase(it);
             } else {

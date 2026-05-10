@@ -173,6 +173,7 @@ add_library(hpactor_lib SHARED
 
     src/actor/spawn_receiver.cpp
     src/actor/http_gateway_actor.cpp
+    src/mailbox/dead_letter_queue.cpp
     src/actor_type_registry.cpp
     src/ref/actor_proxy.cpp
     src/ref/actor_ref.cpp

@@ -38,6 +38,26 @@ add_executable(test_mailbox_stress mailbox/test_mailbox_stress.cpp)
 target_link_libraries(test_mailbox_stress hpactor)
 add_test(NAME test_mailbox_stress COMMAND test_mailbox_stress)
 
+add_executable(test_mailbox_policy mailbox/test_mailbox_policy.cpp)
+target_link_libraries(test_mailbox_policy hpactor)
+add_test(NAME test_mailbox_policy COMMAND test_mailbox_policy)
+
+add_executable(test_bounded_mailbox mailbox/test_bounded_mailbox.cpp)
+target_link_libraries(test_bounded_mailbox hpactor)
+add_test(NAME test_bounded_mailbox COMMAND test_bounded_mailbox)
+
+add_executable(test_dead_letter_queue mailbox/test_dead_letter_queue.cpp)
+target_link_libraries(test_dead_letter_queue hpactor)
+add_test(NAME test_dead_letter_queue COMMAND test_dead_letter_queue)
+
+add_executable(test_mailbox_overflow_policies mailbox/test_mailbox_overflow_policies.cpp)
+target_link_libraries(test_mailbox_overflow_policies hpactor)
+add_test(NAME test_mailbox_overflow_policies COMMAND test_mailbox_overflow_policies)
+
+add_executable(test_mailbox_backpressure_stress mailbox/test_mailbox_backpressure_stress.cpp)
+target_link_libraries(test_mailbox_backpressure_stress hpactor)
+add_test(NAME test_mailbox_backpressure_stress COMMAND test_mailbox_backpressure_stress)
+
 # =============================================================================
 # Actor tests
 # =============================================================================
@@ -73,9 +93,21 @@ add_executable(test_actor_system actor/test_actor_system.cpp)
 target_link_libraries(test_actor_system hpactor)
 add_test(NAME test_actor_system COMMAND test_actor_system)
 
+add_executable(test_actor_system_backpressure actor/test_actor_system_backpressure.cpp)
+target_link_libraries(test_actor_system_backpressure hpactor)
+add_test(NAME test_actor_system_backpressure COMMAND test_actor_system_backpressure)
+
+add_executable(test_actor_context_try_send actor/test_actor_context_try_send.cpp)
+target_link_libraries(test_actor_context_try_send hpactor)
+add_test(NAME test_actor_context_try_send COMMAND test_actor_context_try_send)
+
 add_executable(test_actor_mailbox actor/test_actor_mailbox.cpp)
 target_link_libraries(test_actor_mailbox hpactor)
 add_test(NAME test_actor_mailbox COMMAND test_actor_mailbox)
+
+add_executable(test_backpressure_signals actor/test_backpressure_signals.cpp)
+target_link_libraries(test_backpressure_signals hpactor)
+add_test(NAME test_backpressure_signals COMMAND test_backpressure_signals)
 
 add_executable(test_proto_stateful_actor actor/test_proto_stateful_actor.cpp)
 target_link_libraries(test_proto_stateful_actor hpactor)
@@ -107,6 +139,10 @@ add_test(NAME test_actor_address COMMAND test_actor_address)
 add_executable(test_actor_proxy ref/test_actor_proxy.cpp)
 target_link_libraries(test_actor_proxy hpactor)
 add_test(NAME test_actor_proxy COMMAND test_actor_proxy)
+
+add_executable(test_actor_proxy_dead_letters ref/test_actor_proxy_dead_letters.cpp)
+target_link_libraries(test_actor_proxy_dead_letters hpactor)
+add_test(NAME test_actor_proxy_dead_letters COMMAND test_actor_proxy_dead_letters)
 
 # =============================================================================
 # Net tests - network transport, connection, framing
@@ -276,6 +312,12 @@ target_link_libraries(test_binary_roundtrip hpactor)
 target_compile_definitions(test_binary_roundtrip PRIVATE
     TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
 add_test(NAME test_binary_roundtrip COMMAND test_binary_roundtrip)
+
+add_executable(test_mailbox_config config/test_mailbox_config.cpp)
+target_link_libraries(test_mailbox_config hpactor)
+target_compile_definitions(test_mailbox_config PRIVATE
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
+add_test(NAME test_mailbox_config COMMAND test_mailbox_config)
 
 # =============================================================================
 # Scheduling tests

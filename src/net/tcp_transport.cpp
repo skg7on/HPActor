@@ -340,9 +340,9 @@ void TcpTransport::stop_listening() {
     acceptor_.close();
 }
 
-void TcpTransport::send(const ActorAddress& target, const StreamBuffer& encoded) {
+bool TcpTransport::try_send(const ActorAddress& target, const StreamBuffer& encoded) {
     auto pool = get_or_create_pool(target.endpoint);
-    pool->send(target, encoded);
+    return pool->try_send(target, encoded);
 }
 
 bool TcpTransport::is_connected(EndPoint remote_endpoint) const {

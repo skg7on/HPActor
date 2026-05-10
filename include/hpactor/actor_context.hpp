@@ -16,16 +16,18 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/typed_message.hpp>
+#include <hpactor/core/actor_ref_cache.hpp>
+#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/net/http_types.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/net/http_types.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
-#include <hpactor/core/actor_ref_cache.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <algorithm>
 #include <chrono>
 #include <cstdint>
+#include <functional>
 #include <memory>
 #include <vector>
 
@@ -74,16 +76,34 @@ class ActorContext {
     void send_with_priority(const ActorAddress& target, TypedMessage msg,
                             uint8_t priority, int64_t deadline_ns);
 
+    // Try-send returning an admission result (opt-in backpressure).
+    // Resolves the target address, stamps the sender address, and delegates
+    // to ActorRef::try_send(). Returns ActorNotFound if resolution fails.
+    mailbox::EnqueueResult try_send(const ActorAddress& target, TypedMessage msg,
+                                    mailbox::DeliveryOptions options = {});
+
+    // Try-send with priority and deadline, returning an admission result.
+    // For local targets, delegates directly to
+    // ActorSystem::try_deliver_local() with the given priority/deadline.
+    // For remote targets, delegates to ActorRef::try_send().
+    mailbox::EnqueueResult
+    try_send_with_priority(const ActorAddress& target, TypedMessage msg,
+                           uint8_t priority, int64_t deadline_ns,
+                           mailbox::DeliveryOptions options = {});
+
     // Replies
     void reply(TypedMessage msg);
     void reply(TypeTag tag, const google::protobuf::Message& msg);
-    template <typename ProtoMsgT>
-    void reply(const ProtoMsgT& msg);
+    template <typename ProtoMsgT> void reply(const ProtoMsgT& msg);
     void reply_with_error(const error& err);
 
     // Get the sender of the current message (for reply routing)
-    const ActorAddress& current_sender() const { return current_sender_; }
-    void set_current_sender(const ActorAddress& sender) { current_sender_ = sender; }
+    const ActorAddress& current_sender() const {
+        return current_sender_;
+    }
+    void set_current_sender(const ActorAddress& sender) {
+        current_sender_ = sender;
+    }
 
     // Scheduled execution
     void schedule(std::chrono::milliseconds delay, TypedMessage msg);
@@ -99,22 +119,30 @@ class ActorContext {
 
     // Link management (used by AbstractActor)
     std::vector<ActorAddress> linked_actors() const;
-    void add_linked(const ActorAddress& addr) { linked_.push_back(addr); }
+    void add_linked(const ActorAddress& addr) {
+        linked_.push_back(addr);
+    }
     void remove_linked(const ActorAddress& addr) {
         auto it = std::find(linked_.begin(), linked_.end(), addr);
-        if (it != linked_.end()) linked_.erase(it);
+        if (it != linked_.end())
+            linked_.erase(it);
     }
 
     // Monitoring
     void monitor(const ActorAddress& target);
 
     // Monitor management (used by AbstractActor)
-    void add_monitored(const ActorAddress& addr) { monitored_.push_back(addr); }
+    void add_monitored(const ActorAddress& addr) {
+        monitored_.push_back(addr);
+    }
     void remove_monitored(const ActorAddress& addr) {
         auto it = std::find(monitored_.begin(), monitored_.end(), addr);
-        if (it != monitored_.end()) monitored_.erase(it);
+        if (it != monitored_.end())
+            monitored_.erase(it);
     }
-    const std::vector<ActorAddress>& monitored_actors() const { return monitored_; }
+    const std::vector<ActorAddress>& monitored_actors() const {
+        return monitored_;
+    }
 
     // Resolve an ActorAddress to an ActorRef (lazy + cached)
     ActorRef resolve(const ActorAddress& target);
@@ -125,23 +153,26 @@ class ActorContext {
         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));
 
     // HTTP egress — async HTTP calls to external services.
-    // Delegates to ActorSystem's HttpClient. Returns a future for the response body.
+    // Delegates to ActorSystem's HttpClient. Returns a future for the response
+    // body.
     RpcFuture<StreamBuffer>
-    http_get(const std::string& url,
-             std::vector<net::HttpHeader> headers = {});
+    http_get(const std::string& url, std::vector<net::HttpHeader> headers = {});
+    RpcFuture<StreamBuffer> http_post(const std::string& url, StreamBuffer body,
+                                      std::vector<net::HttpHeader> headers = {});
+    RpcFuture<StreamBuffer> http_put(const std::string& url, StreamBuffer body,
+                                     std::vector<net::HttpHeader> headers = {});
     RpcFuture<StreamBuffer>
-    http_post(const std::string& url, StreamBuffer body,
-              std::vector<net::HttpHeader> headers = {});
-    RpcFuture<StreamBuffer>
-    http_put(const std::string& url, StreamBuffer body,
-             std::vector<net::HttpHeader> headers = {});
-    RpcFuture<StreamBuffer>
-    http_delete(const std::string& url,
-                std::vector<net::HttpHeader> headers = {});
+    http_delete(const std::string& url, std::vector<net::HttpHeader> headers = {});
     RpcFuture<StreamBuffer>
     http_request(net::HttpMethod method, const std::string& url,
-                 std::vector<net::HttpHeader> headers = {},
-                 StreamBuffer body = {});
+                 std::vector<net::HttpHeader> headers = {}, StreamBuffer body = {});
+
+    // Backpressure signal handling
+    using BackpressureHandler =
+        std::function<void(const mailbox::BackpressureSignal&)>;
+
+    void on_backpressure(BackpressureHandler handler);
+    void handle_backpressure(const mailbox::BackpressureSignal& signal);
 
   private:
     Actor owner_;
@@ -153,6 +184,7 @@ class ActorContext {
 
     ActorRefCache ref_cache_;
     ActorAddress current_sender_;
+    BackpressureHandler backpressure_handler_;
 };
 
 } // namespace hpactor

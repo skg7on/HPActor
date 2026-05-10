@@ -72,6 +72,10 @@ ActorSystem::ActorSystem(const Config& config)
 
     scheduler_->start();
 
+    // Initialize dead-letter queue
+    dead_letters_ =
+        std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
+
     // Initialize metrics subsystem (before actors so instrumentation is ready)
     if (metrics_config_.enabled) {
         metrics_ring_buffer_ =
@@ -179,7 +183,7 @@ ActorSystem::ActorSystem(const Config& config)
             mailboxes_.emplace(
                 SpawnReceiverId,
                 std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    SpawnReceiverId, scheduler_.get()));
+                    SpawnReceiverId, scheduler_.get(), mailbox_config_for_spawn()));
         }
     }
 
@@ -231,6 +235,17 @@ void ActorSystem::on_node_dead(EndPoint dead_ep) {
     }
     if (location_cache_)
         location_cache_->evict_node(dead_ep);
+}
+
+void ActorSystem::signal_backpressure(const mailbox::BackpressureSignal& signal) {
+    if (signal.sender.id == ActorId{0})
+        return; // no sender
+
+    std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
+    auto it = actor_contexts_.find(signal.sender.id);
+    if (it != actor_contexts_.end() && it->second) {
+        it->second->handle_backpressure(signal);
+    }
 }
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
@@ -296,17 +311,142 @@ cli::CliActor* ActorSystem::cli_actor() const {
     return cli_actor_.get();
 }
 
+// -----------------------------------------------------------------------------
+// Dead-letter queue
+// -----------------------------------------------------------------------------
+bool ActorSystem::dead_letter(mailbox::DeadLetterRecord record) noexcept {
+    if (!dead_letters_) {
+        return false;
+    }
+    return dead_letters_->try_push(std::move(record));
+}
+
+mailbox::DeadLetterQueueSnapshot ActorSystem::dead_letter_snapshot() const noexcept {
+    if (!dead_letters_) {
+        return {};
+    }
+    return dead_letters_->snapshot();
+}
+
+bool ActorSystem::pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept {
+    if (!dead_letters_) {
+        return false;
+    }
+    return dead_letters_->try_pop(out);
+}
+
+// -----------------------------------------------------------------------------
+// Mailbox config helpers
+// -----------------------------------------------------------------------------
+mailbox::MailboxConfig ActorSystem::mailbox_config_for_spawn() const {
+    mailbox::MailboxConfig cfg;
+    cfg.capacity.max_messages = config_.mailbox.default_capacity;
+    cfg.capacity.max_bytes = config_.mailbox.default_byte_capacity;
+    cfg.overflow_policy = config_.mailbox.default_policy;
+    cfg.high_watermark = config_.mailbox.high_watermark;
+    cfg.low_watermark = config_.mailbox.low_watermark;
+    cfg.protected_system_messages = config_.mailbox.protected_system_messages;
+    cfg.backpressure_mode = config_.mailbox.backpressure_mode;
+    return cfg;
+}
+
+mailbox::MailboxConfig
+ActorSystem::mailbox_config_for_actor_def(const config::ActorDef& def) const {
+    auto cfg = mailbox_config_for_spawn();
+    if (def.mailbox_capacity != 0) {
+        cfg.capacity.max_messages = def.mailbox_capacity;
+    }
+    return cfg;
+}
+
+// -----------------------------------------------------------------------------
+// try_deliver_local — bounded admission boundary
+// -----------------------------------------------------------------------------
+mailbox::EnqueueResult
+ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
+                               uint8_t priority, int64_t deadline_ns,
+                               mailbox::DeliveryOptions options) {
+    auto* mailbox = get_mailbox(target);
+    if (mailbox == nullptr) {
+        // Capture dead letter for missing actor
+        if (dead_letters_) {
+            mailbox::DeadLetterRecord dl;
+            dl.reason = mailbox::DeadLetterReason::ActorNotFound;
+            dl.source = mailbox::DeadLetterSource::LocalDelivery;
+            dl.sender = msg.sender_address();
+            dl.target = ActorAddress{endpoint_, ActorType{0}, target, 0};
+            dl.type_tag = msg.type_id();
+            dl.message_id = options.message_id;
+            dl.frame_flags = options.flags;
+            dl.priority = priority;
+            dl.deadline_ns = deadline_ns;
+            dl.payload_sample = msg.payload();
+            (void)dead_letter(std::move(dl));
+        }
+
+        mailbox::EnqueueResult r;
+        r.code = mailbox::EnqueueResultCode::ActorNotFound;
+        r.target = target;
+        return r;
+    }
+
+    mailbox::MailboxEnvelopeMeta meta;
+    meta.sender = msg.sender_address();
+    meta.type_tag = msg.type_id();
+    meta.priority = priority;
+    meta.deadline_ns = deadline_ns;
+    meta.flags = options.flags;
+    meta.message_id = options.message_id;
+    if (options.no_drop) {
+        meta.flags |= net::WireFrame::NoDrop;
+    }
+
+    auto result = mailbox->try_push(std::move(msg), meta);
+
+    // Capture dead letter when mailbox rejects and policy is DeadLetter
+    if (!result.accepted() && mailbox->config().overflow_policy ==
+                                  mailbox::OverflowPolicy::DeadLetter) {
+        if (dead_letters_) {
+            mailbox::DeadLetterRecord dl;
+            dl.reason = mailbox::DeadLetterReason::OverflowPolicy;
+            dl.source = mailbox::DeadLetterSource::MailboxAdmission;
+            dl.sender = meta.sender;
+            dl.target = ActorAddress{endpoint_, ActorType{0}, target, 0};
+            dl.type_tag = meta.type_tag;
+            dl.message_id = meta.message_id;
+            dl.frame_flags = meta.flags;
+            dl.priority = meta.priority;
+            dl.deadline_ns = meta.deadline_ns;
+            dl.mailbox_depth = result.depth;
+            dl.mailbox_capacity = result.capacity;
+            (void)dead_letter(std::move(dl));
+        }
+    }
+
+    // Emit backpressure signal when target mailbox is under soft pressure
+    if (result.code == mailbox::EnqueueResultCode::AcceptedWithSoftPressure &&
+        options.emit_backpressure) {
+        mailbox::BackpressureSignal signal;
+        signal.target = ActorAddress{endpoint_, ActorType{0}, target, 0};
+        signal.sender = meta.sender;
+        signal.reason = mailbox::BackpressureReason::HighWatermark;
+        signal.depth = result.depth;
+        signal.capacity = result.capacity;
+        signal.pressure_ratio = result.pressure_ratio;
+        signal.retry_after = result.retry_after;
+        signal_backpressure(signal);
+    }
+
+    return result;
+}
+
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
-    deliver_local(target, std::move(msg), 0, INT64_MAX);
+    (void)try_deliver_local(target, std::move(msg));
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
-                                uint8_t /*priority*/, int64_t /*deadline_ns*/) {
-    auto* mailbox = get_mailbox(target);
-    if (mailbox == nullptr) {
-        return;
-    }
-    mailbox->push(std::move(msg));
+                                uint8_t priority, int64_t deadline_ns) {
+    (void)try_deliver_local(target, std::move(msg), priority, deadline_ns, {});
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
@@ -411,7 +551,7 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
         mailboxes_.emplace(
             id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    id, scheduler_.get()));
+                    id, scheduler_.get(), mailbox_config_for_actor_def(def)));
     }
 
     // Create actor context and set it on the actor

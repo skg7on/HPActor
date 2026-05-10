@@ -34,8 +34,9 @@ ActorRef ActorContext::resolve(const ActorAddress& target) {
 
     // 2. Resolve system pointer
     // NOLINTNEXTLINE(readability-avoid-nested-conditional-operator)
-    auto* system = system_ != nullptr ? system_
-        : (owner_ ? &owner_.get()->system() : nullptr);
+    auto* system = system_ != nullptr
+                       ? system_
+                       : (owner_ ? &owner_.get()->system() : nullptr);
     if (system == nullptr) {
         return ActorRef{};
     }
@@ -73,12 +74,7 @@ void ActorContext::send(ActorRef& target, TypedMessage msg) {
 }
 
 void ActorContext::send(const ActorAddress& target, TypedMessage msg) {
-    auto ref = resolve(target);
-    if (ref) {
-        send(ref, std::move(msg));
-    }
-    // If resolve failed (no transport, no local actor), silently drop.
-    // Matches async messaging semantics — fire and forget.
+    (void)try_send(target, std::move(msg));
 }
 
 void ActorContext::send(const ActorAddress& target, TypeTag tag,
@@ -89,8 +85,32 @@ void ActorContext::send(const ActorAddress& target, TypeTag tag,
 
 void ActorContext::send_with_priority(const ActorAddress& target, TypedMessage msg,
                                       uint8_t priority, int64_t deadline_ns) {
+    (void)try_send_with_priority(target, std::move(msg), priority, deadline_ns);
+}
+
+mailbox::EnqueueResult
+ActorContext::try_send(const ActorAddress& target, TypedMessage msg,
+                       mailbox::DeliveryOptions options) {
     auto ref = resolve(target);
-    if (!ref) { return; }
+    if (!ref) {
+        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+    }
+
+    if (owner_) {
+        msg.set_sender_address(owner_.address());
+    }
+
+    return ref.try_send(ref.address(), std::move(msg), options);
+}
+
+mailbox::EnqueueResult
+ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage msg,
+                                     uint8_t priority, int64_t deadline_ns,
+                                     mailbox::DeliveryOptions options) {
+    auto ref = resolve(target);
+    if (!ref) {
+        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+    }
 
     if (owner_) {
         msg.set_sender_address(owner_.address());
@@ -99,11 +119,13 @@ void ActorContext::send_with_priority(const ActorAddress& target, TypedMessage m
     if (ref.is_local()) {
         auto* system = owner_ ? &owner_.get()->system() : system_;
         if (system != nullptr) {
-            system->deliver_local(target.id, std::move(msg), priority, deadline_ns);
+            return system->try_deliver_local(target.id, std::move(msg),
+                                             priority, deadline_ns, options);
         }
-    } else {
-        ref.send(target, std::move(msg));
+        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
     }
+
+    return ref.try_send(ref.address(), std::move(msg), options);
 }
 
 void ActorContext::reply(TypedMessage msg) {
@@ -118,7 +140,9 @@ void ActorContext::reply(TypeTag tag, const google::protobuf::Message& proto_msg
 }
 
 void ActorContext::reply_with_error(const error& err) {
-    if (current_sender_.id == ActorId{0}) { return; }
+    if (current_sender_.id == ActorId{0}) {
+        return;
+    }
 
     // Wire format: [4 bytes: error code BE][error message string]
     // A protobuf error message can replace this payload later without
@@ -136,7 +160,8 @@ void ActorContext::reply_with_error(const error& err) {
     send(current_sender_, std::move(error_msg));
 }
 
-void ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {  // NOLINT(readability-convert-member-functions-to-static)
+void ActorContext::schedule(std::chrono::milliseconds delay,
+                            TypedMessage msg) { // NOLINT(readability-convert-member-functions-to-static)
     // TODO: schedule message via actor system's clock/alarm mechanism
     (void)delay;
     (void)msg;
@@ -175,41 +200,50 @@ void ActorContext::monitor(const ActorAddress& target) {
     add_monitored(target);
 }
 
-RpcFuture<StreamBuffer>
-ActorContext::rpc(const ActorAddress& target, const StreamBuffer& encoded_request,
-                  std::chrono::milliseconds timeout_ms) {
+RpcFuture<StreamBuffer> ActorContext::rpc(const ActorAddress& target,
+                                          const StreamBuffer& encoded_request,
+                                          std::chrono::milliseconds timeout_ms) {
     return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms);
 }
 
 RpcFuture<StreamBuffer>
-ActorContext::http_get(const std::string& url,
-                       std::vector<net::HttpHeader> headers) {
+ActorContext::http_get(const std::string& url, std::vector<net::HttpHeader> headers) {
     return system_->http_client().get(url, std::move(headers));
 }
 
 RpcFuture<StreamBuffer>
 ActorContext::http_post(const std::string& url, StreamBuffer body,
-                         std::vector<net::HttpHeader> headers) {
+                        std::vector<net::HttpHeader> headers) {
     return system_->http_client().post(url, std::move(body), std::move(headers));
 }
 
 RpcFuture<StreamBuffer>
 ActorContext::http_put(const std::string& url, StreamBuffer body,
-                        std::vector<net::HttpHeader> headers) {
+                       std::vector<net::HttpHeader> headers) {
     return system_->http_client().put(url, std::move(body), std::move(headers));
 }
 
 RpcFuture<StreamBuffer>
 ActorContext::http_delete(const std::string& url,
-                           std::vector<net::HttpHeader> headers) {
+                          std::vector<net::HttpHeader> headers) {
     return system_->http_client().del(url, std::move(headers));
 }
 
 RpcFuture<StreamBuffer>
 ActorContext::http_request(net::HttpMethod method, const std::string& url,
-                            std::vector<net::HttpHeader> headers, StreamBuffer body) {
+                           std::vector<net::HttpHeader> headers, StreamBuffer body) {
     return system_->http_client().request(method, url, std::move(headers),
-                                           std::move(body));
+                                          std::move(body));
+}
+
+void ActorContext::on_backpressure(BackpressureHandler handler) {
+    backpressure_handler_ = std::move(handler);
+}
+
+void ActorContext::handle_backpressure(const mailbox::BackpressureSignal& signal) {
+    if (backpressure_handler_) {
+        backpressure_handler_(signal);
+    }
 }
 
 } // namespace hpactor

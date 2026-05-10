@@ -19,11 +19,13 @@
 
 class MockTransport : public hpactor::net::Transport {
   public:
-    void send(const hpactor::ActorAddress&, const hpactor::StreamBuffer& encoded) override {
+    bool try_send(const hpactor::ActorAddress&,
+                  const hpactor::StreamBuffer& encoded) override {
         sent_frames_.push_back(encoded);
+        return true;
     }
-    hpactor::net::ConnectionPtr connect(hpactor::EndPoint,
-                                        const std::string&, uint16_t) override {
+    hpactor::net::ConnectionPtr
+    connect(hpactor::EndPoint, const std::string&, uint16_t) override {
         return nullptr;
     }
     hpactor::net::ConnectionPtr connect(hpactor::EndPoint) override {
@@ -97,7 +99,8 @@ void test_response() {
     // Decode frame to get the actual message ID
     hpactor::net::WireFrame frame =
         hpactor::net::WireFrame::decode(transport.sent_frames_[0]);
-    hpactor::MessageId actual_msg_id = hpactor::MessageId(frame.pb_frame.message_id());
+    hpactor::MessageId actual_msg_id =
+        hpactor::MessageId(frame.pb_frame.message_id());
 
     // Simulate response with the correct message ID
     hpactor::StreamBuffer response_data = {4, 5, 6};
@@ -132,9 +135,9 @@ void test_concurrent() {
     for (int i = 0; i < 10; i++) {
         hpactor::ActorAddress target{hpactor::LocalEndpoint, 1,
                                      hpactor::ActorId{static_cast<uint64_t>(i)}, 0};
-        futures.push_back(
-            channel.call_raw(target, hpactor::StreamBuffer{static_cast<uint8_t>(i)},
-                             std::chrono::milliseconds{1000}));
+        futures.push_back(channel.call_raw(
+            target, hpactor::StreamBuffer{static_cast<uint8_t>(i)},
+            std::chrono::milliseconds{1000}));
     }
 
     assert(transport.sent_frames_.size() == 10u);

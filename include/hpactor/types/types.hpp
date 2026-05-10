@@ -202,8 +202,7 @@ inline constexpr Ipv4Endpoint LocalEndpoint{0x7F000001, 0}; // 127.0.0.1:0 in
                                                             // order
 
 // to_sockaddr free function for variant
-inline void
-to_sockaddr(const EndPoint& ep, sockaddr* out, socklen_t* len) {
+inline void to_sockaddr(const EndPoint& ep, sockaddr* out, socklen_t* len) {
     if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&ep)) {
         if (*len >= sizeof(sockaddr_in)) {
             ipv4->to_sockaddr(reinterpret_cast<sockaddr_in*>(out));
@@ -440,12 +439,11 @@ using adt::StreamBuffer;
 //   0x00001000 – 0x00FFFFFF   Application-defined messages (~16M slots)
 //
 // System sub-ranges:
-//   0x00 – 0x0F   Core system (lifecycle: Down, Exit, Link, Unlink, Monitor, Demonitor)
-//   0x10 – 0x1F   Spawn protocol (SpawnRequest, SpawnResponse, Error)
-//   0x20 – 0x2F   HTTP protocol (HttpRequest, HttpResponse)
-//   0x30 – 0x3F   TOML bootstrap (SystemInit)
-//   0x40 – 0x4F   Metrics (MetricsRequest, MetricsResponse)
-//   0x50 – 0x5F   CLI interactive (Inspect, Kill, List, Stats)
+//   0x00 – 0x0F   Core system (lifecycle: Down, Exit, Link, Unlink, Monitor,
+//   Demonitor) 0x10 – 0x1F   Spawn protocol (SpawnRequest, SpawnResponse,
+//   Error) 0x20 – 0x2F   HTTP protocol (HttpRequest, HttpResponse) 0x30 – 0x3F
+//   TOML bootstrap (SystemInit) 0x40 – 0x4F   Metrics (MetricsRequest,
+//   MetricsResponse) 0x50 – 0x5F   CLI interactive (Inspect, Kill, List, Stats)
 //   0x60 – 0x6F   Async I/O (IoCompletion)
 //   0x70 – 0xFF   Reserved for future system use
 //
@@ -456,53 +454,58 @@ using adt::StreamBuffer;
 //   ...
 // -----------------------------------------------------------------------------
 enum class TypeTag : uint32_t {
-    // ---- System message range ------------------------------------------------
+    // ---- System message range
+    // ------------------------------------------------
     Invalid = 0x00000000,
 
     // Core system (0x00 – 0x0F)
-    DownMsg    = 0x01,
-    ExitMsg    = 0x02,
-    LinkMsg    = 0x03,
-    UnlinkMsg  = 0x04,
+    DownMsg = 0x01,
+    ExitMsg = 0x02,
+    LinkMsg = 0x03,
+    UnlinkMsg = 0x04,
     MonitorMsg = 0x0A,
     DemonitorMsg = 0x0B,
 
     // Spawn protocol (0x10 – 0x1F)
-    SpawnRequestTag  = 0x10,
+    SpawnRequestTag = 0x10,
     SpawnResponseTag = 0x11,
-    ErrorMsg         = 0x12,
+    ErrorMsg = 0x12,
 
     // HTTP protocol (0x20 – 0x2F)
-    HttpRequestTag  = 0x20,
+    HttpRequestTag = 0x20,
     HttpResponseTag = 0x21,
 
     // TOML config bootstrapping (0x30 – 0x3F)
     SystemInitTag = 0x30,
 
     // Metrics subsystem (0x40 – 0x4F)
-    MetricsRequestTag  = 0x40,
+    MetricsRequestTag = 0x40,
     MetricsResponseTag = 0x41,
 
     // CLI interactive subsystem (0x50 – 0x5F)
-    InspectStateRequestTag   = 0x50,
-    InspectStateResponseTag  = 0x51,
-    KillRequestTag           = 0x52,
-    KillResponseTag          = 0x53,
-    ListActorsRequestTag     = 0x54,
-    ListActorsResponseTag    = 0x55,
-    SystemStatsRequestTag    = 0x56,
-    SystemStatsResponseTag   = 0x57,
-    MemoryStatsRequestTag    = 0x58,
-    MemoryStatsResponseTag   = 0x59,
-    TopologyShowRequestTag   = 0x5A,
-    TopologyShowResponseTag  = 0x5B,
+    InspectStateRequestTag = 0x50,
+    InspectStateResponseTag = 0x51,
+    KillRequestTag = 0x52,
+    KillResponseTag = 0x53,
+    ListActorsRequestTag = 0x54,
+    ListActorsResponseTag = 0x55,
+    SystemStatsRequestTag = 0x56,
+    SystemStatsResponseTag = 0x57,
+    MemoryStatsRequestTag = 0x58,
+    MemoryStatsResponseTag = 0x59,
+    TopologyShowRequestTag = 0x5A,
+    TopologyShowResponseTag = 0x5B,
     TopologyRestartRequestTag = 0x5C,
     TopologyRestartResponseTag = 0x5D,
 
     // Async I/O (0x60 – 0x6F)
     IoCompletionTag = 0x60,
 
-    // ---- Application range ---------------------------------------------------
+    // Backpressure control (0x70 – 0x7F)
+    BackpressureSignalTag = 0x70,
+
+    // ---- Application range
+    // ---------------------------------------------------
     User = 0x00001000,
 };
 
