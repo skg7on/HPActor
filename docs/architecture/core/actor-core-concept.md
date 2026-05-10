@@ -13,7 +13,7 @@ HPActor is a C++20 event-based actor framework inspired by CAF (C++ Actor Framew
 ### Fundamental Rules
 
 1. **No shared state** — Actors encapsulate private state; external access only via messages
-2. **Mailbox FIFO** — Messages arrive in order; each actor processes one message at a time
+2. **Mailbox ordering** — Messages arrive FIFO by default; priority-aware mailboxes preserve FIFO within each priority lane
 3. **Location transparency** — Actors are addressed by address, not reference
 4. **Hierarchy** — Actors form trees; parents supervise children
 
@@ -217,6 +217,7 @@ Location transparency: actors can migrate by updating `node_id` while keeping th
 | No exceptions in hot path | Performance; use `error` class instead |
 | No RTTI | Reduced binary size, LLVM conventions |
 | Explicit state (StatefulActor) | Clear state ownership, easy inspection |
+| Bounded mailbox admission | Prevents mailbox-driven OOM and gives producers backpressure signals |
 
 ---
 

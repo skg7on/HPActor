@@ -179,6 +179,24 @@ void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
 
 Sender identity is carried by the message itself (`msg.sender_address()`), set by the caller before `deliver_local()` is invoked. For local sends, `ActorContext::send()` sets it from `owner_.address()`. For remote receives, `deliver_remote()` sets it from `WireFrame::sender`. The scheduler model is unchanged — polling-based, no per-message `notify_ready()`.
 
+#### Mailbox Admission and Backpressure
+
+The mailbox management design keeps `deliver_local()` as the compatibility entry
+point and adds `try_deliver_local()` as the result-returning admission boundary.
+All inbound paths still converge before the target mailbox, but admission can now
+accept, reject, drop, dead-letter, reroute, or signal pressure based on the
+target actor's mailbox policy.
+
+Dead-letter handling is a system delivery-failure path, not only a mailbox
+overflow path. `try_deliver_local()`, `ActorProxy::send()`, service discovery,
+and transport send failure handling should all call `ActorSystem::dead_letter()`
+when a message cannot be delivered because the actor is gone, the route is
+missing, the remote node is partitioned, or the frame cannot be decoded.
+
+See [Mailbox Management and Backpressure Architecture Design](../actor/mailbox-management-backpressure-design.md)
+for the bounded mailbox, overflow policy, pressure signal, metrics, CLI, and
+configuration model.
+
 ### 5. ActorSystem::deliver_remote() — Wire-to-Mailbox Bridge
 
 New method that connects the transport layer to the unified mailbox:
