@@ -17,7 +17,7 @@ to_proto(::hpactor::PbIpv4Endpoint* pb_ep, const ::hpactor::Ipv4Endpoint& ep) {
 // Helper: convert HPActor Ipv6Endpoint to protobuf PbIpv6Endpoint
 static void
 to_proto(::hpactor::PbIpv6Endpoint* pb_ep, const ::hpactor::Ipv6Endpoint& ep) {
-    pb_ep->set_addr(ep.addr.data(), 16);
+    pb_ep->set_addr(ep.addr.data(), ep.addr.size());
     pb_ep->set_port(ep.port_nw);
 }
 
@@ -87,7 +87,7 @@ static ::hpactor::Ipv4Endpoint from_proto(const ::hpactor::PbIpv4Endpoint& pb_ep
 // Helper: convert protobuf PbIpv6Endpoint to HPActor Ipv6Endpoint
 static ::hpactor::Ipv6Endpoint from_proto(const ::hpactor::PbIpv6Endpoint& pb_ep) {
     std::array<uint8_t, 16> addr{};
-    std::memcpy(addr.data(), pb_ep.addr().data(), 16);
+    std::memcpy(addr.data(), pb_ep.addr().data(), addr.size());
     return ::hpactor::Ipv6Endpoint{addr, static_cast<uint16_t>(pb_ep.port())};
 }
 

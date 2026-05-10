@@ -31,6 +31,15 @@
 
 namespace hpactor {
 
+// constexpr network-to-host byte-order conversion (ntohs is not constexpr)
+inline constexpr uint16_t net_to_host_u16(uint16_t net_val) noexcept {
+#if __BYTE_ORDER__ == __ORDER_LITTLE_ENDIAN__
+    return __builtin_bswap16(net_val);
+#else
+    return net_val;
+#endif
+}
+
 // -----------------------------------------------------------------------------
 // ActorId - unique identifier for an actor instance
 // -----------------------------------------------------------------------------
@@ -73,7 +82,7 @@ struct Ipv4Endpoint {
         : addr(a), port_nw(p) {}
 
     [[nodiscard]] constexpr uint16_t port() const noexcept {
-        return ntohs(port_nw);
+        return net_to_host_u16(port_nw);
     }
     [[nodiscard]] constexpr bool is_ipv4() const noexcept {
         return true;
@@ -109,7 +118,7 @@ struct Ipv4Endpoint {
 }
 
 [[nodiscard]] constexpr bool Ipv4Endpoint::is_private_network() const noexcept {
-    uint8_t b1 = (addr >> 24) & 0xFF;
+    auto b1 = static_cast<uint8_t>((addr >> 24) & 0xFF);
     uint32_t rest = addr & 0xFFFF0000;
     return b1 == 10 || (b1 == 172 && ((addr >> 16) & 0xFF & 0xF0) == 0x10) ||
            (b1 == 192 && rest == 0xC0A80000);
@@ -138,7 +147,7 @@ struct Ipv6Endpoint {
         : addr(a), port_nw(p) {}
 
     [[nodiscard]] constexpr uint16_t port() const noexcept {
-        return ntohs(port_nw);
+        return net_to_host_u16(port_nw);
     }
     [[nodiscard]] constexpr bool is_ipv4() const noexcept {
         return false;
@@ -367,8 +376,8 @@ template <> class result<void> {
     }
 
   private:
-    result<void>() : has_value_(true) {}
-    result<void>(class error err) : has_value_(false), error_(std::move(err)) {}
+    result() : has_value_(true) {}
+    result(class error err) : has_value_(false), error_(std::move(err)) {}
 
     bool has_value_;
     class error error_;
