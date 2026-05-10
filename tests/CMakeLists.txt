@@ -81,6 +81,10 @@ add_executable(test_actor_system actor/test_actor_system.cpp)
 target_link_libraries(test_actor_system hpactor)
 add_test(NAME test_actor_system COMMAND test_actor_system)
 
+add_executable(test_actor_system_backpressure actor/test_actor_system_backpressure.cpp)
+target_link_libraries(test_actor_system_backpressure hpactor)
+add_test(NAME test_actor_system_backpressure COMMAND test_actor_system_backpressure)
+
 add_executable(test_actor_mailbox actor/test_actor_mailbox.cpp)
 target_link_libraries(test_actor_mailbox hpactor)
 add_test(NAME test_actor_mailbox COMMAND test_actor_mailbox)

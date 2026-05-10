@@ -68,7 +68,8 @@ static hpactor::StreamBuffer encode_int(int value) {
 }
 
 static int decode_int(const hpactor::StreamBuffer& payload) {
-    if (payload.size() < sizeof(int)) return 0;
+    if (payload.size() < sizeof(int))
+        return 0;
     int value;
     std::memcpy(&value, payload.data(), sizeof(int));
     return value;
@@ -147,9 +148,8 @@ class PingActor : public hpactor::EventBasedActor {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             if (msg.type_id() == StartTag) {
                 total_rounds_ = rounds_remaining_;
-                std::cout << "  " << name_ << " [" << id().value()
-                          << "]: starting (" << rounds_remaining_
-                          << " rounds)" << std::endl;
+                std::cout << "  " << name_ << " [" << id().value() << "]: starting ("
+                          << rounds_remaining_ << " rounds)" << std::endl;
                 send_next();
             } else if (msg.type_id() == PongTag) {
                 int response = decode_int(msg.payload());
@@ -159,9 +159,8 @@ class PingActor : public hpactor::EventBasedActor {
                 if (rounds_remaining_ > 0) {
                     send_next();
                 } else {
-                    std::cout << "  " << name_ << " [" << id().value()
-                              << "]: done (" << total_rounds_ << " rounds)"
-                              << std::endl;
+                    std::cout << "  " << name_ << " [" << id().value() << "]: done ("
+                              << total_rounds_ << " rounds)" << std::endl;
                 }
             }
         }};
@@ -182,9 +181,8 @@ class PingActor : public hpactor::EventBasedActor {
 // send_from_main
 // ---------------------------------------------------------------------------
 
-static void send_from_main(hpactor::ActorSystem& system,
-                           hpactor::ActorId target, hpactor::TypeTag tag,
-                           int value = 0) {
+static void send_from_main(hpactor::ActorSystem& system, hpactor::ActorId target,
+                           hpactor::TypeTag tag, int value = 0) {
     system.deliver_local(target, make_msg(tag, value));
 }
 
@@ -193,16 +191,15 @@ static void send_from_main(hpactor::ActorSystem& system,
 // =============================================================================
 
 int main() {
-    std::cout << "=== HPActor Example 05: Ping-Pong Communication ==="
-              << std::endl;
+    std::cout << "=== HPActor Example 05: Ping-Pong Communication ===" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}};
+    hpactor::Config config{
+        .scheduler_threads = 2, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn PongActor — the shared target
     auto pong = system.spawn<PongActor>();
-    std::cout << "Spawned PongActor (id=" << pong.id().value() << ")"
-              << std::endl;
+    std::cout << "Spawned PongActor (id=" << pong.id().value() << ")" << std::endl;
 
     // Spawn two PingActors targeting the same PongActor
     auto ping1 = system.spawn<PingActor>(pong.address(), 3, "PingActor-1");
@@ -237,12 +234,10 @@ int main() {
 
     // ---- Demo 3: API surface — link_to / monitor ----
     std::cout << "\n--- Demo 3: Link/Monitor API ---" << std::endl;
-    std::cout << "  link_to() and monitor() are called in PingActor's"
-              << std::endl;
+    std::cout << "  link_to() and monitor() are called in PingActor's" << std::endl;
     std::cout << "  constructor. Implementations are WIP stubs, but the"
               << std::endl;
-    std::cout << "  API surface is fully declared and callable."
-              << std::endl;
+    std::cout << "  API surface is fully declared and callable." << std::endl;
 
     std::cout << "\n=== Complete ===" << std::endl;
     return 0;

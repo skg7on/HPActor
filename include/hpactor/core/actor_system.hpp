@@ -72,6 +72,20 @@ class HybridScheduler;
 } // namespace sched
 
 // -----------------------------------------------------------------------------
+// MailboxDefaults - system-wide default mailbox configuration
+// -----------------------------------------------------------------------------
+struct MailboxDefaults {
+    uint32_t default_capacity = 1024;
+    uint64_t default_byte_capacity = 0;
+    mailbox::OverflowPolicy default_policy = mailbox::OverflowPolicy::RejectNewest;
+    double high_watermark = 0.80;
+    double low_watermark = 0.50;
+    uint32_t protected_system_messages = 32;
+    mailbox::BackpressureMode backpressure_mode =
+        mailbox::BackpressureMode::LocalAndRemoteSignal;
+};
+
+// -----------------------------------------------------------------------------
 // Config - configuration for ActorSystem
 // -----------------------------------------------------------------------------
 struct Config {
@@ -116,6 +130,9 @@ struct Config {
 
     // Gossip configuration. Used when creating GossipMembership internally.
     net::GossipConfig gossip = {};
+
+    // Mailbox defaults — applied to every actor spawned via this system
+    MailboxDefaults mailbox;
 
     // Timer backend selection
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
@@ -246,6 +263,22 @@ class ActorSystem {
     // deadline_ns: absolute deadline in nanoseconds (INT64_MAX = no deadline)
     void deliver_local(ActorId target, TypedMessage msg, uint8_t priority,
                        int64_t deadline_ns);
+
+    // Bounded admission delivery — returns an EnqueueResult describing the
+    // outcome. Returns ActorNotFound when the target actor does not exist,
+    // Rejected when the mailbox is at hard capacity.
+    mailbox::EnqueueResult
+    try_deliver_local(ActorId target, TypedMessage msg, uint8_t priority = 0,
+                      int64_t deadline_ns = INT64_MAX,
+                      mailbox::DeliveryOptions options = {});
+
+    // Build a MailboxConfig from system-wide defaults in Config::mailbox.
+    mailbox::MailboxConfig mailbox_config_for_spawn() const;
+
+    // Build a MailboxConfig for a specific ActorDef, falling back to system
+    // defaults when ActorDef fields are zero.
+    mailbox::MailboxConfig
+    mailbox_config_for_actor_def(const config::ActorDef& def) const;
 
     // Deliver a remote message (from WireFrame) to the target actor's mailbox.
     // Bridges the transport layer to the unified deliver_local() sink.
@@ -387,7 +420,7 @@ Actor ActorSystem::spawn(Args&&... args) {
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
         mailboxes_.emplace(
             id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    id, scheduler_.get()));
+                    id, scheduler_.get(), mailbox_config_for_spawn()));
     }
 
     // Create actor context and set it on the actor

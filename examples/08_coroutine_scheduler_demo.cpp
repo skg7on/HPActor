@@ -50,9 +50,11 @@ using namespace hpactor;
 
 // -----------------------------------------------------------------------------
 // Demo message tag
-constexpr TypeTag kPingTag = static_cast<TypeTag>(static_cast<uint32_t>(TypeTag::User) + 1);
+constexpr TypeTag kPingTag =
+    static_cast<TypeTag>(static_cast<uint32_t>(TypeTag::User) + 1);
 
-// Helper to create a ping TypedMessage (stores sequence as payload StreamBuffer)
+// Helper to create a ping TypedMessage (stores sequence as payload
+// StreamBuffer)
 TypedMessage make_ping_msg(int seq) {
     StreamBuffer payload(sizeof(seq));
     std::memcpy(payload.data(), &seq, sizeof(seq));
@@ -93,9 +95,8 @@ class EchoActor : public hpactor::EventBasedActor {
 
             if (msg.type_id() == kPingTag) {
                 int seq = get_ping_sequence(msg);
-                std::cout
-                    << "[EchoActor] Got ping #" << seq
-                    << " -> thread " << std::this_thread::get_id() << "\n";
+                std::cout << "[EchoActor] Got ping #" << seq << " -> thread "
+                          << std::this_thread::get_id() << "\n";
                 ++count;
                 ++g_context_switches;
             }
@@ -112,7 +113,8 @@ class EchoActor : public hpactor::EventBasedActor {
 void demo_single_actor() {
     std::cout << "\n=== Demo 1: Single Actor Spawn ===" << std::endl;
 
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024, .cli = {}};
+    hpactor::Config config{
+        .scheduler_threads = 4, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
     hpactor::ActorSystem system(config);
 
     std::cout << "Scheduler state:\n";
@@ -149,7 +151,8 @@ void demo_multi_actor() {
     g_context_switches = 0;
     g_done = false;
 
-    hpactor::Config config{.scheduler_threads = 4, .max_queue_depth = 1024, .cli = {}};
+    hpactor::Config config{
+        .scheduler_threads = 4, .max_queue_depth = 1024, .cli = {}, .mailbox = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn actors

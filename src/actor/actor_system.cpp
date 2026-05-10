@@ -179,7 +179,7 @@ ActorSystem::ActorSystem(const Config& config)
             mailboxes_.emplace(
                 SpawnReceiverId,
                 std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    SpawnReceiverId, scheduler_.get()));
+                    SpawnReceiverId, scheduler_.get(), mailbox_config_for_spawn()));
         }
     }
 
@@ -296,17 +296,66 @@ cli::CliActor* ActorSystem::cli_actor() const {
     return cli_actor_.get();
 }
 
+// -----------------------------------------------------------------------------
+// Mailbox config helpers
+// -----------------------------------------------------------------------------
+mailbox::MailboxConfig ActorSystem::mailbox_config_for_spawn() const {
+    mailbox::MailboxConfig cfg;
+    cfg.capacity.max_messages = config_.mailbox.default_capacity;
+    cfg.capacity.max_bytes = config_.mailbox.default_byte_capacity;
+    cfg.overflow_policy = config_.mailbox.default_policy;
+    cfg.high_watermark = config_.mailbox.high_watermark;
+    cfg.low_watermark = config_.mailbox.low_watermark;
+    cfg.protected_system_messages = config_.mailbox.protected_system_messages;
+    cfg.backpressure_mode = config_.mailbox.backpressure_mode;
+    return cfg;
+}
+
+mailbox::MailboxConfig
+ActorSystem::mailbox_config_for_actor_def(const config::ActorDef& def) const {
+    auto cfg = mailbox_config_for_spawn();
+    if (def.mailbox_capacity != 0) {
+        cfg.capacity.max_messages = def.mailbox_capacity;
+    }
+    return cfg;
+}
+
+// -----------------------------------------------------------------------------
+// try_deliver_local — bounded admission boundary
+// -----------------------------------------------------------------------------
+mailbox::EnqueueResult
+ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
+                               uint8_t priority, int64_t deadline_ns,
+                               mailbox::DeliveryOptions options) {
+    auto* mailbox = get_mailbox(target);
+    if (mailbox == nullptr) {
+        mailbox::EnqueueResult r;
+        r.code = mailbox::EnqueueResultCode::ActorNotFound;
+        r.target = target;
+        return r;
+    }
+
+    mailbox::MailboxEnvelopeMeta meta;
+    meta.sender = msg.sender_address();
+    meta.type_tag = msg.type_id();
+    meta.priority = priority;
+    meta.deadline_ns = deadline_ns;
+    meta.flags = options.flags;
+    meta.message_id = options.message_id;
+    if (options.no_drop) {
+        meta.flags |= net::WireFrame::NoDrop;
+    }
+
+    return mailbox->try_push(std::move(msg), meta);
+}
+
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
-    deliver_local(target, std::move(msg), 0, INT64_MAX);
+    (void)try_deliver_local(target, std::move(msg));
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
-                                uint8_t /*priority*/, int64_t /*deadline_ns*/) {
-    auto* mailbox = get_mailbox(target);
-    if (mailbox == nullptr) {
-        return;
-    }
-    mailbox->push(std::move(msg));
+                                uint8_t priority, int64_t deadline_ns) {
+    (void)try_deliver_local(target, std::move(msg), priority, deadline_ns, {});
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
@@ -411,7 +460,7 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
         mailboxes_.emplace(
             id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    id, scheduler_.get()));
+                    id, scheduler_.get(), mailbox_config_for_actor_def(def)));
     }
 
     // Create actor context and set it on the actor
