@@ -49,6 +49,12 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **TOML Configurable**: `[system.metrics]` section — enable/disable, ring buffer capacity, scrape path
 - **Compile-Time Disable**: `ENABLE_ACTOR_METRICS=OFF` for zero-overhead deployments
 
+### Production Reliability Architecture
+- **Reliability Plane Roadmap**: `docs/architecture/production/production-reliability-plane.md` organizes the next evolution into data plane, control plane, and operations plane work
+- **Refined Requirement Backlog**: `docs/architecture/production/feature-gap-refined-requirement-backlog.md` maps subsystem gaps to architecture requirements, dependencies, acceptance evidence, observability, and tests
+- **Missing Design Docs Added**: delivery semantics, DLQ, cluster failure model, sharding/placement, reliable messaging, durable state, graceful shutdown/rolling upgrade, security, operations/SRE, dynamic config, and chaos/reliability testing
+- **Implementation Status**: These are architecture and backlog documents; runtime implementation is pending
+
 ### Actor Lifecycle
 - **ActorState**: Atomic state machine (Idle → Ready → Running → IOWaiting → Terminated) with CAS transitions
 - **Hierarchical Supervision**: OneForOne (restart failed child) and AllForOne (restart all children) strategies
@@ -310,7 +316,8 @@ protos/hpactor/
 └── registrar.proto — Registrar protocol messages
 
 tools/toml-compiler/ — AOT compiler: TOML topology → binary format
-tests/              — 95 unit tests (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision)
+docs/architecture/production/ — Production reliability roadmap, missing design docs, and refined requirement backlog
+tests/              — 99 unit tests (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision)
 examples/           — 9 API usage examples
 third_party/        — Vendored dependencies (llhttp, toml++)
 cmake/              — CMake modules (protobuf codegen, toml++ interface target)
@@ -337,8 +344,25 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Actor Metrics**: Out-of-band ring buffer instrumentation, OpenMetrics `/metrics` endpoint for Prometheus/Grafana
 - **CLI Interactive**: Trie-based command tree with InspectState introspection, paged output, pluggable formatters (Pretty/JSON/Tabular)
 
+### Designed / Backlogged
+
+- **Production Reliability Plane**: Data/control/operations plane roadmap for 24x7 operation
+- **Delivery Semantics**: Typed delivery results, TTL, retry, duplicate handling, and DLQ integration
+- **Mailbox Backpressure**: Bounded admission, overflow policies, upstream pressure signals, and DLQ handoff
+- **Dead-Letter Queue**: Bounded record capture, retention policy, filtering, export, and guarded replay
+- **Distributed Tracing**: Envelope-level OpenTelemetry-compatible context propagation and span export design
+- **Cluster Control**: Failure model, quarantine/fencing, sharding, placement, handoff, and rolling upgrade design
+- **Production Operations**: Health endpoints, authenticated admin API, security/audit, config reload, chaos/soak/fuzz testing
+
 ### Next Steps
 
+- Implement the Production Reliability Plane foundation:
+  - delivery result contract and failure envelope
+  - bounded mailbox admission and backpressure signals
+  - dead-letter queue
+  - distributed tracing
+  - health/readiness/liveness
+  - graceful shutdown and drain
 - Full two-process integration test with TCP transport
 - Argument deserialization for passing constructor args through spawn
 - Typed RPC API (`call<Request, Response>` with serialization)
