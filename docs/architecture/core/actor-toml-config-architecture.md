@@ -21,13 +21,13 @@ This document specifies the architecture for loading actor topologies from TOML 
 │                                                                     │
 │  main.toml  ─┐                                                      │
 │  pools.toml ─┤                                                      │
-│  workers/   ─┼──►  AOT Compiler (Python/Rust)                       │
+│  workers/   ─┼──►  AOT Compiler (C++ tool)                           │
 │  *.toml     ─┘         │                                            │
 │                        ├─ Parse + merge all TOML files              │
 │                        ├─ Resolve template inheritance              │
 │                        ├─ Validate id uniqueness                    │
 │                        ├─ Topological sort (DAG)                    │
-│                        └─ Serialize to FlatBuffers binary           │
+│                        └─ Serialize to HPActor binary topology       │
 │                                        │                            │
 │                              topology.bin                           │
 └─────────────────────────────────────────────────────────────────────┘
@@ -77,9 +77,9 @@ This document specifies the architecture for loading actor topologies from TOML 
     │  toml++ parser    │     │  mmap()           │
     │       │           │     │       │           │
     │       ▼           │     │       ▼           │
-    │  In-memory AST    │     │  GetSystemTopology│
-    │  (std::vector,    │     │  (FlatBuffers)    │
-    │   std::string)    │     │  zero-copy        │
+    │  In-memory AST    │     │  BinaryLoader     │
+    │  (std::vector,    │     │  (custom format)  │
+    │   std::string)    │     │  string-table read│
     │       │           │     │       │           │
     └───────┼───────────┘     └───────┼───────────┘
             │                         │
@@ -235,7 +235,7 @@ class BootstrapEngine {
     // Load from TOML file (runtime path)
     static TopologyModel load_from_toml(const std::string& path);
 
-    // Load from pre-compiled FlatBuffers binary (AOT path)
+    // Load from pre-compiled HPActor binary topology (AOT path)
     static TopologyModel load_from_binary(const std::string& path);
 
     // Execute spawn of entire topology into an ActorSystem
@@ -353,7 +353,9 @@ The official TOML specification does not support `import` or `include` directive
 
 ### Solution: Preprocessor Merge
 
-Imports are resolved by the loader *before* parsing, at the file level. Neither the TOML parser nor the FlatBuffers schema is aware of includes — they see a single, merged document.
+Imports are resolved by the loader *before* parsing, at the file level. Neither
+the actor bootstrap engine nor the binary serializer is aware of includes; they
+see a single, merged topology document.
 
 **Entrypoint (`main.toml`):**
 ```toml
@@ -455,112 +457,78 @@ args:
 
 ### Overview
 
-For production deployments, a build-time tool compiles TOML topology files into a FlatBuffers binary. At startup, the C++ layer `mmap`s this binary — no parsing, no string allocation, no temporary data structures.
+For production deployments, a build-time tool compiles TOML topology files into
+HPActor's custom binary topology format. At startup, the C++ layer `mmap`s this
+binary and reconstructs the `TopologyModel` without re-running the TOML parser.
+The format is defined in `include/hpactor/config/binary_format.hpp`, written by
+`src/config/binary_serializer.cpp`, and read by `src/config/binary_loader.cpp`.
 
-### FlatBuffers Schema (`topology.fbs`)
+### Binary Topology Format
 
-```flatbuffers
-namespace hpactor.config;
+```cpp
+constexpr uint32_t TOPOLOGY_BINARY_MAGIC = 0x48504154; // "HPAT"
 
-// Fixed-length struct — stored inline, zero pointer indirection
-struct ResourceSpec {
-    slab_class_bytes: uint32;
-    max_memory_kb: uint32;
-}
+struct BinaryHeader {
+    uint32_t magic;
+    uint32_t version;
+    uint32_t system_offset;
+    uint32_t dispatcher_count;
+    uint32_t dispatchers_offset;
+    uint32_t actor_count;
+    uint32_t actors_offset;
+    uint32_t string_table_offset;
+    uint32_t string_table_size;
+};
 
-table KeyValue {
-    key: string (key);
-    value: string;
-}
+struct BinarySystemDef {
+    uint32_t scheduler_threads;
+    uint32_t max_queue_depth;
+    uint32_t default_mailbox_size;
+    uint32_t enable_network;
+    uint16_t tcp_port;
+    uint16_t reserved_pad;
+    uint32_t spawn_timeout_ms;
+    uint32_t enable_http_gateway;
+    uint16_t http_port;
+    uint32_t http_max_connections;
+    uint32_t http_max_request_size;
+    uint32_t http_reply_timeout_ms;
+    uint32_t use_coroutines;
+    uint32_t version_offset;
+    uint32_t http_bind_host_offset;
+};
 
-table Dispatcher {
-    name: string (key);
-    threads: uint16;
-    cpu_affinity: [uint8];
-}
-
-table Actor {
-    id: string (key);
-    behavior: string;
-    supervisor_id: string;
-    dispatcher_name: string;
-    dispatch_policy: uint8;
-    mailbox_capacity: uint32;
-    resources: ResourceSpec;    // Inline struct
-    args: [KeyValue];
-}
-
-table SystemConfig {
-    version: string;
-    scheduler_threads: uint32;
-    max_queue_depth: uint32;
-    default_mailbox_size: uint32;
-    enable_network: bool;
-    tcp_port: uint16;
-    udp_port: uint16;
-    spawn_timeout_ms: uint32;
-    enable_http_gateway: bool;
-    http_port: uint16;
-    use_coroutines: bool;
-}
-
-table SystemTopology {
-    system: SystemConfig;
-    dispatchers: [Dispatcher];
-    actors: [Actor];              // Already topologically sorted
-}
-
-root_type SystemTopology;
+struct BinaryActorDef {
+    uint32_t id_offset;
+    uint32_t behavior_offset;
+    uint32_t supervisor_offset;
+    uint32_t dispatcher_offset;
+    uint8_t dispatch_policy;
+    uint32_t mailbox_capacity;
+    uint32_t slab_class_bytes;
+    uint32_t max_memory_kb;
+    uint16_t args_count;
+    uint32_t args_offset;
+};
 ```
 
 **Key design points:**
-- `ResourceSpec` is a `struct` (not `table`) — zero offset overhead, inline in Actor
-- `(key)` annotation on `string` fields enables binary search in FlatBuffers
-- `actors` array is pre-sorted by the compiler; the C++ loader iterates sequentially
-- `dispatch_policy` is `uint8` to match the C++ `enum class : uint8_t`
+- Strings are offsets into one string table, so mapped topology strings can be
+  read directly from the binary region.
+- Actors are pre-sorted by the compiler; the loader iterates sequentially.
+- Fixed-size records keep loader code simple and avoid schema-generator
+  dependencies.
+- The binary currently captures the core topology fields. New subsystem
+  configuration must be added deliberately to the serializer/loader when it
+  becomes part of the AOT startup contract.
 
 ### C++ Zero-Copy Loading
 
 ```cpp
-#include <sys/mman.h>
-#include <fcntl.h>
-#include "topology_generated.h"
+#include <hpactor/config/binary_loader.hpp>
 
 TopologyModel BootstrapEngine::load_from_binary(const std::string& path) {
-    int fd = open(path.c_str(), O_RDONLY);
-    struct stat st;
-    fstat(fd, &st);
-    void* data = mmap(nullptr, st.st_size, PROT_READ, MAP_PRIVATE, fd, 0);
-    close(fd);
-
-    auto topology = hpactor::config::GetSystemTopology(data);
-
-    TopologyModel model;
-    auto sys = topology->system();
-    model.default_mailbox_size = sys->default_mailbox_size();
-    // ... map all fields ...
-
-    for (auto disp : *topology->dispatchers()) {
-        DispatcherDef def;
-        def.name = disp->name()->str();
-        def.threads = disp->threads();
-        // FlatBuffers returns a random-access range for scalar vectors
-        for (auto core : *disp->cpu_affinity()) {
-            def.cpu_affinity.push_back(core);
-        }
-        model.dispatchers.push_back(std::move(def));
-    }
-
-    for (auto actor : *topology->actors()) {
-        ActorDef def;
-        def.id = actor->id()->str();
-        def.behavior = actor->behavior()->str();
-        // ... map remaining fields, including inline resources struct ...
-        model.actors.push_back(std::move(def));
-    }
-
-    munmap(data, st.st_size);
-    return model;
+    return BinaryLoader::load(path).value();
 }
 ```
 
@@ -570,15 +538,21 @@ The AOT compiler is a standalone C++ executable built as part of the CMake proje
 
 **Technology selection — C++:**
 
-The compiler shares the `toml++` dependency and `TomlParser` merge/validate/sort logic with the runtime path. The only difference is the final output step: runtime produces a `TopologyModel` in memory; the AOT compiler serializes to FlatBuffers and writes a binary file. Using C++ eliminates an external language dependency and ensures the AOT and runtime paths never diverge in behavior.
+The compiler shares the `toml++` dependency and `TomlParser` merge/validate/sort
+logic with the runtime path. The only difference is the final output step:
+runtime produces a `TopologyModel` in memory; the AOT compiler serializes that
+model with `BinarySerializer` and writes a `.bin` file. Using C++ eliminates an
+external language dependency and keeps the AOT and runtime paths aligned.
 
 **File structure:**
 ```
 tools/toml-compiler/
 ├── CMakeLists.txt               # Builds hpactor_toml_compiler executable
-├── compiler.cpp                 # CLI entry point
-├── flatbuffers_serializer.hpp   # TopologyModel → FlatBuffers binary
-└── flatbuffers_serializer.cpp   # Bottom-up FlatBufferBuilder serialization
+└── compiler.cpp                 # CLI entry point using BinarySerializer
+
+src/config/
+├── binary_serializer.cpp        # TopologyModel → HPActor binary topology
+└── binary_loader.cpp            # mmap/read binary topology → TopologyModel
 ```
 
 **Compiler phases:**
@@ -589,7 +563,7 @@ Phase 3: Merge all [[actor]], [[dispatcher]] arrays
 Phase 4: Resolve template inheritance (deep merge)
 Phase 5: Validate (duplicate ids, missing behaviors, circular dependencies)
 Phase 6: Topological sort (Kahn's algorithm)
-Phase 7: FlatBuffers serialization (bottom-up construction)
+Phase 7: BinarySerializer writes HPActor binary topology
 Phase 8: Write topology.bin
 ```
 

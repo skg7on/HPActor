@@ -54,9 +54,12 @@ supervisor = "router"
 | Path | When | Mechanism | Overhead |
 |------|------|-----------|----------|
 | **Runtime** | Development, small deployments | Parse TOML directly at startup | One-time string allocation |
-| **AOT (Ahead-of-Time)** | Production, large deployments | Compile TOML→FlatBuffers at build time, `mmap` at startup | Zero-copy, zero-allocation |
+| **AOT (Ahead-of-Time)** | Production, large deployments | Compile TOML to HPActor's custom binary topology format at build time, `mmap` at startup | Zero-copy string-table access, minimal allocation |
 
-Both paths produce the same in-memory topology representation. The runtime path uses a TOML parser (e.g., `toml++`); the AOT path uses a pre-compiled FlatBuffers binary. The bootstrap engine is identical downstream.
+Both paths produce the same `TopologyModel` representation. The runtime path
+uses `toml++`; the AOT path uses `tools/toml-compiler/` to write the compact
+binary format defined in `include/hpactor/config/binary_format.hpp`. The
+bootstrap engine is identical downstream.
 
 ### Integration with Existing Architecture
 
@@ -68,9 +71,9 @@ TOML File
     ▼
 Bootstrap Engine (NEW)
     │
-    ├─ Parses TOML / mmaps FlatBuffers
+    ├─ Parses TOML / mmaps binary topology
     ├─ Resolves DAG spawn order
-    ├─ Validates against ActorTypeRegistry
+    ├─ Validates against ActorFactoryRegistry
     │
     ▼
 ActorSystem::spawn<T>(...)  ← Existing API, unchanged
@@ -95,7 +98,7 @@ behavior = "EchoActor"
 ```
 
 This defines a single `EchoActor` instance. At startup, the bootstrap engine:
-1. Looks up `"EchoActor"` in the `ActorTypeRegistry`
+1. Looks up `"EchoActor"` in the `ActorFactoryRegistry`
 2. Calls `ActorSystem::spawn<EchoActor>()`
 3. Registers the actor under the name `"echo_server"` in `actor_registry`
 
@@ -204,7 +207,7 @@ A TOML topology describes actors across five dimensions:
 | Existing Component | Role in TOML Config |
 |-------------------|---------------------|
 | `ActorSystem::spawn<T>()` | Called by bootstrap engine for each actor in the topology |
-| `ActorTypeRegistry` | Resolves `behavior` strings to C++ types, validates that all referenced behaviors are registered |
+| `ActorFactoryRegistry` | Resolves `behavior` strings to C++ factories, validates that all referenced behaviors are registered |
 | `actor_registry` | Populated with `actor.id` → `ActorAddress` mappings after spawn |
 | `Config` struct | Absorbs `[system]` section values (threads, ports, timeouts) |
 | `DispatchPolicy` / `DispatchHints` | Mapped from `dispatcher` tables and per-actor `dispatch_policy` |
@@ -239,6 +242,6 @@ The `main.toml` declares imports; the bootstrap engine (or AOT compiler) merges 
 ## Limitations
 
 1. **TOML has no native `import`** — The official TOML spec does not support includes. The runtime parser and AOT compiler both implement this as a preprocessor step (see architecture doc).
-2. **Behavior lookup is string-based** — Requires `ACTOR_REGISTER_BEHAVIOR` macros to populate the factory registry. Missing registrations are caught at startup (fail-fast), not compile time.
+2. **Behavior lookup is string-based** — Requires `HPACTOR_REGISTER_ACTOR` static registration to populate the factory registry. Missing registrations are caught at startup (fail-fast), not compile time.
 3. **Dynamic topology changes are out of scope** — The TOML config describes the *initial* topology. Actors spawned at runtime (e.g., per-connection workers) use the programmatic API as before.
 4. **Not a replacement for `ActorContext::spawn()`** — Child actors created in response to messages (dynamic children) still use the imperative API. TOML covers static topology only.

@@ -33,9 +33,13 @@ AbstractActor (interface base, receive() = 0)
     │
     └── LocalActor (ActorContext access)
             │
-            ├── EventBasedActor (cooperative scheduling)
+            ├── EventBasedActor (cooperative scheduling, behavior + protobuf handlers)
             │       ├── StatefulActor<T> (explicit state struct)
-            │       └── TypedEventBasedActor<Signatures...> (static typing)
+            │       ├── ProtoStatefulActor<T> (protobuf-native + explicit state)
+            │       ├── SpawnReceiver (system actor for remote spawn)
+            │       └── DenseComputingActor (dedicated pool dispatch)
+            │
+            ├── TypedEventBasedActor<Signatures...> (static typing)
             │
             └── BlockingActor (thread-per-actor, blocking receive)
                     └── ScopedActor (main thread / non-actor contexts)
@@ -195,14 +199,16 @@ Uniquely identifies an actor across the distributed system:
 
 ```cpp
 struct ActorAddress {
-    NodeId node_id = 0;       // Network node (0 = local)
-    ActorType type = 0;       // Actor type identifier
-    ActorId id;               // Unique instance ID
-    uint64_t incarnation = 0; // Increments on restart
+    EndPoint endpoint;         // IPv4/IPv6 network endpoint
+    ActorType type = 0;        // Actor type identifier
+    ActorId id;                // Unique instance ID
+    uint64_t incarnation = 0;  // Increments on restart
 };
 ```
 
-Location transparency: actors can migrate by updating `node_id` while keeping the same `ActorId`.
+Location transparency is endpoint-based in the current code. `EndPoint` is a
+`std::variant<Ipv4Endpoint, Ipv6Endpoint>` stored directly in `ActorAddress`;
+the earlier numeric `NodeId` model has been replaced.
 
 ---
 
@@ -221,8 +227,16 @@ Location transparency: actors can migrate by updating `node_id` while keeping th
 
 ---
 
-## Limitations
+## Current Implementation Boundary
 
-**Current:** Runtime infrastructure (`ActorSystem::spawn()`, `ActorContext::send()`, scheduler) is not yet implemented. The type system and supervision logic are complete, but actors cannot exchange messages at runtime.
+The core runtime is implemented: `ActorSystem::spawn()`, configured topology
+spawn, `ActorContext::send()`, `try_send()`, local bounded mailbox admission,
+scheduler wakeup, link/monitor delivery, remote actor spawn, async RPC, TCP
+transport, service discovery, metrics, CLI inspection, and dead-letter capture
+all exist in the codebase.
 
-The framework provides the complete **type system** and **actor class hierarchy**. Runtime wiring is the next implementation phase.
+The remaining production work is not basic runtime wiring; it is the
+industry-strength reliability plane described under `docs/architecture/production`.
+That backlog covers the still-incomplete contracts for durable delivery,
+cluster fencing, graceful drain, remote overload control, sharding, protocol
+negotiation, security, and SRE/admin workflows.
