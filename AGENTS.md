@@ -89,7 +89,9 @@ AbstractActor (interface base)
 | `MPSCActorMailbox` | `mailbox/mpsc_actor_mailbox.hpp` | Lock-free MPSC queue with edge-triggered CAS wakeup |
 | `SlabCache` / `SegmentProvider` | `mem/*.hpp` | Two-tier slab allocator (thread-local caches + mmap segments) |
 | `EventLoop` | `net/event_loop.hpp` | kqueue/epoll edge-triggered event loop |
-| `TomlParser` | `config/toml_parser.hpp` | TOML topology parser with imports, templates, DAG validation |
+| `TomlParser` | `config/toml_parser.hpp` | TOML topology parser: coordinator that delegates to self-registered subsystem parsers |
+| `TomlParserRegistry` | `config/toml_parser_registry.hpp` | IoC registry for TOML subsystem parsers with static self-registration |
+| `TomlTableView` | `config/toml_table_view.hpp` | Opaque TOML table wrapper isolating toml.hpp from parser interfaces |
 | `TopologyModel` | `config/topology_model.hpp` | System topology (actors, dispatchers, system config) |
 | `ActorFactoryRegistry` | `config/actor_factory_registry.hpp` | Maps behavior name strings to actor factory functions |
 | `BinaryLoader` / `BinarySerializer` | `config/binary_*.hpp` | mmap-friendly binary topology format |
@@ -120,7 +122,9 @@ The TOML config topology system bootstraps actor trees from declarative config:
 ActorSystem::load_topology("config.toml")  // parse + bootstrap
 ```
 
-Pipeline: TOML file(s) → `TomlParser::parse()` → `TopologyModel` → `BootstrapEngine::execute()` → spawned actors. The `tools/toml-compiler/` AOT compiler pre-compiles TOML to a compact binary format for production (zero-parse mmap bootstrap).
+Pipeline: TOML file(s) → `TomlParser::parse()` (coordinator) → registered subsystem parsers → `TopologyModel` → `BootstrapEngine::execute()` → spawned actors. The `tools/toml-compiler/` AOT compiler pre-compiles TOML to a compact binary format for production (zero-parse mmap bootstrap).
+
+Subsystem parsers self-register via file-scope static registrar objects. New TOML subsystem config is added by creating a parser source file in `src/config/parsers/` — no edits to `parse_file_data` needed. Parser interfaces use opaque `TomlTableView` so no public header includes `toml.hpp`.
 
 ### Supervision
 
@@ -134,7 +138,7 @@ Pipeline: TOML file(s) → `TomlParser::parse()` → `TopologyModel` → `Bootst
 - C++20, no exceptions (`-fno-exceptions`), no RTTI (`-fno-rtti`)
 - Header-only types + compiled runtime (hpactor_lib)
 - LLVM coding standards (see CMakeLists.txt compiler flags)
-- `-fexceptions` enabled only for `src/config/toml_parser.cpp` and `tools/toml-compiler/compiler.cpp` (toml++ requires exceptions in including TUs)
+- `-fexceptions` enabled only for `src/config/toml_parser.cpp`, `src/config/toml_table_view.cpp`, and `tools/toml-compiler/compiler.cpp` (toml++ requires exceptions in including TUs)
 - System packages: OpenSSL, Protobuf; vendored: llhttp, toml++ v3.4.0 (single-header in `third_party/`)
 
 ## Important Files

@@ -1,0 +1,60 @@
+[system]
+version = "1.0"
+scheduler_threads = 8
+max_queue_depth = 2048
+default_mailbox_size = 4096
+enable_network = true
+tcp_port = 9555
+spawn_timeout_ms = 9000
+enable_http_gateway = true
+http_bind_host = "127.0.0.1"
+http_port = 18080
+http_max_connections = 77
+http_max_request_size = 123456
+http_reply_timeout_ms = 4567
+use_coroutines = true
+
+[system.metrics]
+enabled = false
+ring_buffer_capacity = 8192
+metrics_path = "/internal/metrics"
+
+[system.logging]
+enabled = true
+default_level = "debug"
+format = "text"
+ring_buffer_capacity = 4096
+flush_on_level = "warn"
+file_path = "/tmp/hpactor.log"
+drop_policy = "drop_newest"
+sinks = ["stderr", "file", "rotating_file"]
+
+[system.logging.levels]
+config = "trace"
+network = "error"
+
+[system.logging.rotating_file]
+path = "/tmp/hpactor-rotating.log"
+max_bytes = 1048576
+max_files = 3
+
+[system.cli]
+enabled = true
+listen_path = "/tmp/hpactor-cli.sock"
+tcp_port = 7001
+default_format = "json"
+page_size = 25
+
+[system.discovery]
+backend = "gossip"
+
+[[dispatcher]]
+name = "io"
+threads = 2
+cpu_affinity = [0, 1]
+
+[[actor]]
+id = "echo"
+behavior = "EchoActor"
+dispatcher = "io"
+mailbox_capacity = 99

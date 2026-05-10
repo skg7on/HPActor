@@ -12,12 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/config/toml_config_parser.hpp>
+#include <hpactor/config/toml_file_data.hpp>
+#include <hpactor/config/toml_parse_context.hpp>
 #include <hpactor/config/toml_parser.hpp>
+#include <hpactor/config/toml_parser_registry.hpp>
+#include <hpactor/config/toml_table_view.hpp>
 #include <hpactor/log/log_category.hpp>
-#include <hpactor/log/log_level.hpp>
 #include <hpactor/log/logger.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
 
 #include <toml.hpp>
 
@@ -30,65 +32,6 @@ namespace fs = std::filesystem;
 namespace hpactor::config {
 
 namespace {
-
-// ---------------------------------------------------------------------------
-// DispatchPolicy string parsing
-// ---------------------------------------------------------------------------
-static DispatchPolicy parse_dispatch_policy(const std::string& s) {
-    if (s == "DedicatedThread")
-        return DispatchPolicy::DedicatedThread;
-    if (s == "DedicatedPool")
-        return DispatchPolicy::DedicatedPool;
-    return DispatchPolicy::Cooperative;
-}
-
-// ---------------------------------------------------------------------------
-// OverflowPolicy string parsing
-// ---------------------------------------------------------------------------
-static hpactor::mailbox::OverflowPolicy
-parse_overflow_policy(const std::string& s) {
-    if (s == "drop_newest")
-        return hpactor::mailbox::OverflowPolicy::DropNewest;
-    if (s == "drop_oldest")
-        return hpactor::mailbox::OverflowPolicy::DropOldest;
-    if (s == "drop_lowest_priority")
-        return hpactor::mailbox::OverflowPolicy::DropLowestPriority;
-    if (s == "dead_letter")
-        return hpactor::mailbox::OverflowPolicy::DeadLetter;
-    if (s == "spill_to_overflow_queue")
-        return hpactor::mailbox::OverflowPolicy::SpillToOverflowQueue;
-    if (s == "signal_only")
-        return hpactor::mailbox::OverflowPolicy::SignalOnly;
-    if (s == "block_when_allowed")
-        return hpactor::mailbox::OverflowPolicy::BlockWhenAllowed;
-    return hpactor::mailbox::OverflowPolicy::RejectNewest;
-}
-
-// ---------------------------------------------------------------------------
-// BackpressureMode string parsing
-// ---------------------------------------------------------------------------
-static hpactor::mailbox::BackpressureMode
-parse_backpressure_mode(const std::string& s) {
-    if (s == "disabled")
-        return hpactor::mailbox::BackpressureMode::Disabled;
-    if (s == "local")
-        return hpactor::mailbox::BackpressureMode::LocalSignal;
-    if (s == "remote")
-        return hpactor::mailbox::BackpressureMode::RemoteSignal;
-    return hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal;
-}
-
-// ---------------------------------------------------------------------------
-// DeadLetterOverflowPolicy string parsing
-// ---------------------------------------------------------------------------
-static hpactor::mailbox::DeadLetterOverflowPolicy
-parse_dl_overflow_policy(const std::string& s) {
-    if (s == "drop_newest_record")
-        return hpactor::mailbox::DeadLetterOverflowPolicy::DropNewestRecord;
-    if (s == "metadata_only")
-        return hpactor::mailbox::DeadLetterOverflowPolicy::MetadataOnly;
-    return hpactor::mailbox::DeadLetterOverflowPolicy::DropOldestRecord;
-}
 
 // ---------------------------------------------------------------------------
 // Glob expansion — simple *-only pattern via fs::directory_iterator
@@ -131,157 +74,11 @@ static std::vector<std::string> expand_glob(const std::string& pattern) {
 }
 
 // ---------------------------------------------------------------------------
-// TOML value helpers
+// Parse a single TOML file using the registered parser pipeline
 // ---------------------------------------------------------------------------
-static std::string read_string(const toml::table& tbl, const char* key,
-                               const std::string& default_val = "") {
-    auto node = tbl.get(key);
-    if (node && node->is_string())
-        return std::string{node->value<std::string>().value_or(default_val)};
-    return default_val;
-}
-
-static uint32_t
-read_uint32(const toml::table& tbl, const char* key, uint32_t default_val = 0) {
-    auto node = tbl.get(key);
-    if (node && node->is_integer()) {
-        auto val = node->value<int64_t>();
-        if (val && *val >= 0)
-            return static_cast<uint32_t>(*val);
-    }
-    return default_val;
-}
-
-static bool
-read_bool(const toml::table& tbl, const char* key, bool default_val = false) {
-    auto node = tbl.get(key);
-    if (node && node->is_boolean())
-        return node->value<bool>().value_or(default_val);
-    return default_val;
-}
-
-static double
-read_double(const toml::table& tbl, const char* key, double default_val = 0.0) {
-    auto node = tbl.get(key);
-    if (node && node->is_floating_point()) {
-        return node->value<double>().value_or(default_val);
-    }
-    if (node && node->is_integer()) {
-        auto val = node->value<int64_t>();
-        if (val)
-            return static_cast<double>(*val);
-    }
-    return default_val;
-}
-
-// ---------------------------------------------------------------------------
-// Parse [[dispatcher]]
-// ---------------------------------------------------------------------------
-static DispatcherDef parse_dispatcher(const toml::table& tbl) {
-    DispatcherDef def;
-    def.name = read_string(tbl, "name");
-    def.threads = static_cast<uint16_t>(read_uint32(tbl, "threads", 1));
-
-    if (auto* arr = tbl.get("cpu_affinity")) {
-        if (arr->is_array()) {
-            for (const auto& v : *arr->as_array()) {
-                if (v.is_integer()) {
-                    auto val = v.value<int64_t>();
-                    if (val && *val >= 0 && *val <= 255)
-                        def.cpu_affinity.push_back(static_cast<uint8_t>(*val));
-                }
-            }
-        }
-    }
-    return def;
-}
-
-// ---------------------------------------------------------------------------
-// Parse a [[actor]] table from TOML
-// ---------------------------------------------------------------------------
-static ActorDef parse_actor(const toml::table& tbl) {
-    ActorDef def;
-    def.id = read_string(tbl, "id");
-    def.behavior = read_string(tbl, "behavior");
-    def.supervisor = read_string(tbl, "supervisor");
-    def.dispatcher = read_string(tbl, "dispatcher");
-    def.mailbox_capacity = read_uint32(tbl, "mailbox_capacity");
-    def.dispatch_policy =
-        parse_dispatch_policy(read_string(tbl, "dispatch_policy", "Cooperative"));
-
-    if (auto* res = tbl.get("resources")) {
-        if (res->is_table()) {
-            auto& rt = *res->as_table();
-            def.resources.slab_class_bytes = read_uint32(rt, "slab_class_"
-                                                             "bytes");
-            def.resources.max_memory_kb = read_uint32(rt, "max_memory_kb");
-        }
-    }
-
-    if (auto* mb = tbl.get("mailbox")) {
-        if (mb->is_table()) {
-            auto& mt = *mb->as_table();
-            def.mailbox.policy =
-                parse_overflow_policy(read_string(mt, "policy", "reject_newest"));
-            def.mailbox.priority_aware = read_bool(mt, "priority_aware", false);
-            def.mailbox.max_overflow_depth =
-                read_uint32(mt, "max_overflow_depth", 0);
-        }
-    }
-
-    if (auto* a = tbl.get("args")) {
-        if (a->is_table()) {
-            for (const auto& [k, v] : *a->as_table()) {
-                if (v.is_string())
-                    def.args[std::string{k.str()}] =
-                        std::string{v.value<std::string>().value_or("")};
-                else if (v.is_integer())
-                    def.args[std::string{k.str()}] =
-                        std::to_string(v.value<int64_t>().value_or(0));
-                else if (v.is_floating_point())
-                    def.args[std::string{k.str()}] =
-                        std::to_string(v.value<double>().value_or(0.0));
-                else if (v.is_boolean())
-                    def.args[std::string{k.str()}] =
-                        v.value<bool>().value_or(false) ? "true" : "false";
-            }
-        }
-    }
-
-    return def;
-}
-
-// ---------------------------------------------------------------------------
-// Raw actor capture (includes inherits for template resolution)
-// ---------------------------------------------------------------------------
-struct RawActor {
-    ActorDef def;
-    std::string inherits;
-};
-
-// ---------------------------------------------------------------------------
-// Parse [[actor]] from a toml table into RawActor (capturing inherits)
-// ---------------------------------------------------------------------------
-static RawActor parse_raw_actor(const toml::table& tbl) {
-    RawActor raw;
-    raw.def = parse_actor(tbl);
-    raw.inherits = read_string(tbl, "inherits");
-    return raw;
-}
-
-// ---------------------------------------------------------------------------
-// Parse a TOML file into raw data
-// ---------------------------------------------------------------------------
-struct FileData {
-    SystemDef system;
-    std::vector<DispatcherDef> dispatchers;
-    std::vector<RawActor> actors;
-    std::unordered_map<std::string, ActorDef> templates;
-};
-
-static result<FileData>
+static result<TomlFileData>
 parse_file_data(const std::string& filepath, bool is_entrypoint) {
-    FileData data;
+    TomlFileData data;
 
     toml::table root;
     try {
@@ -291,253 +88,57 @@ parse_file_data(const std::string& filepath, bool is_entrypoint) {
         HPACTOR_LOG_ERROR(log::LogCategory::kConfig, ActorId{0}, 0,
                           "topology parse error",
                           log::field_lit("error", err.message().c_str()));
-        return result<FileData>::make(std::move(err));
+        return result<TomlFileData>::make(std::move(err));
     }
 
-    // Validate: imported files must not have [system] or imports
-    if (!is_entrypoint && root.contains("system")) {
+    TomlParseContext ctx(filepath, is_entrypoint);
+    TomlTableView root_view = make_toml_table_view(&root);
+
+    // Imported files must not contain [system]
+    if (!is_entrypoint && root_view.contains("system")) {
         error err(errors::unknown);
-        return result<FileData>::make(std::move(err));
+        return result<TomlFileData>::make(std::move(err));
     }
 
-    // Parse [system] (entrypoint only)
+    // Entrypoint must have [system]
     if (is_entrypoint) {
-        auto* sys_tbl = root.get("system");
-        if (!sys_tbl || !sys_tbl->is_table()) {
+        auto system_view = root_view.table("system");
+        if (!system_view.valid()) {
             error err(errors::unknown);
-            return result<FileData>::make(std::move(err));
-        }
-        auto& st = *sys_tbl->as_table();
-        data.system.version = read_string(st, "version", "1.0");
-        data.system.scheduler_threads = read_uint32(st, "scheduler_threads", 4);
-        data.system.max_queue_depth = read_uint32(st, "max_queue_depth", 1024);
-        data.system.default_mailbox_size =
-            read_uint32(st, "default_mailbox_size", 1024);
-        data.system.enable_network = read_bool(st, "enable_network");
-        data.system.tcp_port = static_cast<uint16_t>(read_uint32(st, "tcp_"
-                                                                     "port"));
-        data.system.spawn_timeout_ms = read_uint32(st, "spawn_timeout_ms", 5000);
-        data.system.enable_http_gateway = read_bool(st, "enable_http_gateway");
-        data.system.http_bind_host = read_string(st, "http_bind_host", "0.0.0.0");
-        data.system.http_port =
-            static_cast<uint16_t>(read_uint32(st, "http_port", 8080));
-        data.system.http_max_connections =
-            read_uint32(st, "http_max_connections", 1000);
-        data.system.http_max_request_size =
-            read_uint32(st, "http_max_request_size", 1048576);
-        data.system.http_reply_timeout_ms =
-            read_uint32(st, "http_reply_timeout_ms", 5000);
-        data.system.use_coroutines = read_bool(st, "use_coroutines");
-
-        // Metrics subsystem
-        if (auto* metrics_node = st.get("metrics")) {
-            if (metrics_node->is_table()) {
-                auto& mt = *metrics_node->as_table();
-                data.system.metrics_enabled = read_bool(mt, "enabled", true);
-                data.system.metrics_ring_buffer_capacity =
-                    read_uint32(mt, "ring_buffer_capacity", 65536);
-                data.system.metrics_path =
-                    read_string(mt, "metrics_path", "/metrics");
-            }
-        }
-
-        // Logging subsystem
-        if (auto* log_node = st.get("logging")) {
-            if (log_node->is_table()) {
-                auto& lt = *log_node->as_table();
-                data.system.logging.enabled = read_bool(lt, "enabled", true);
-
-                // default_level (string → LogLevel)
-                std::string lvl_str = read_string(lt, "default_level", "info");
-                if (auto parsed = log::parse_level(lvl_str); parsed.has_value())
-                    data.system.logging.default_level = parsed.value();
-
-                // format (string → LogFormat)
-                std::string fmt_str = read_string(lt, "format", "json");
-                if (fmt_str == "text")
-                    data.system.logging.format = log::LogFormat::kText;
-                else
-                    data.system.logging.format = log::LogFormat::kJson;
-
-                data.system.logging.ring_buffer_capacity =
-                    read_uint32(lt, "ring_buffer_capacity", 65536);
-
-                // flush_on_level (string → LogLevel)
-                std::string flush_str = read_string(lt, "flush_on_level", "error");
-                if (auto parsed = log::parse_level(flush_str); parsed.has_value())
-                    data.system.logging.flush_on_level = parsed.value();
-
-                data.system.logging.file_path = read_string(lt, "file_path", "");
-
-                // drop_policy (string → DropPolicy)
-                std::string drop_str =
-                    read_string(lt, "drop_policy", "drop_newest");
-                if (drop_str == "drop_newest")
-                    data.system.logging.drop_policy = log::DropPolicy::kDropNewest;
-
-                // sinks (array of strings → vector<LogSinkKind>)
-                if (auto* sinks_arr = lt.get("sinks")) {
-                    if (sinks_arr->is_array()) {
-                        for (const auto& v : *sinks_arr->as_array()) {
-                            if (v.is_string()) {
-                                std::string s = std::string{
-                                    v.value<std::string>().value_or("")};
-                                if (s == "stderr")
-                                    data.system.logging.sinks.push_back(
-                                        log::LogSinkKind::kStderr);
-                                else if (s == "file")
-                                    data.system.logging.sinks.push_back(
-                                        log::LogSinkKind::kFile);
-                                else if (s == "rotating_file")
-                                    data.system.logging.sinks.push_back(
-                                        log::LogSinkKind::kRotatingFile);
-                            }
-                        }
-                    }
-                }
-
-                // [system.logging.levels] sub-table
-                if (auto* levels_node = lt.get("levels")) {
-                    if (levels_node->is_table()) {
-                        for (const auto& [key, val] : *levels_node->as_table()) {
-                            if (!val.is_string())
-                                continue;
-                            auto cat =
-                                log::parse_category(std::string_view{key.str()});
-                            if (!cat.has_value())
-                                continue;
-                            auto lvl = log::parse_level(std::string_view{
-                                val.value<std::string>().value_or("")});
-                            if (!lvl.has_value())
-                                continue;
-                            auto idx = static_cast<size_t>(cat.value());
-                            data.system.logging.levels[idx] = lvl.value();
-                        }
-                    }
-                }
-
-                // [system.logging.rotating_file] sub-table
-                if (auto* rf_node = lt.get("rotating_file")) {
-                    if (rf_node->is_table()) {
-                        auto& rft = *rf_node->as_table();
-                        data.system.logging.rotating_file.path =
-                            read_string(rft, "path", "");
-                        data.system.logging.rotating_file.max_bytes =
-                            static_cast<uint64_t>(
-                                read_uint32(rft, "max_bytes", 104857600));
-                        data.system.logging.rotating_file.max_files =
-                            read_uint32(rft, "max_files", 5);
-                    }
-                }
-            }
-        }
-
-        // CLI subsystem
-        if (auto* cli_node = st.get("cli")) {
-            if (cli_node->is_table()) {
-                auto& ct = *cli_node->as_table();
-                data.system.cli.enabled = read_bool(ct, "enabled", true);
-                data.system.cli.listen_path = read_string(ct, "listen_path", "");
-                data.system.cli.tcp_port =
-                    static_cast<uint16_t>(read_uint32(ct, "tcp_port", 0));
-                data.system.cli.default_format =
-                    read_string(ct, "default_format", "pretty");
-                data.system.cli.page_size = read_uint32(ct, "page_size", 50);
-            }
-        }
-
-        // Mailbox subsystem [system.mailbox]
-        if (auto* mb_node = st.get("mailbox")) {
-            if (mb_node->is_table()) {
-                auto& mt = *mb_node->as_table();
-                data.system.mailbox.default_capacity =
-                    read_uint32(mt, "default_capacity", 1024);
-                data.system.mailbox.default_byte_capacity =
-                    read_uint32(mt, "default_byte_capacity", 0);
-                data.system.mailbox.default_policy = parse_overflow_policy(
-                    read_string(mt, "default_policy", "reject_newest"));
-                data.system.mailbox.high_watermark =
-                    read_double(mt, "high_watermark", 0.80);
-                data.system.mailbox.low_watermark =
-                    read_double(mt, "low_watermark", 0.50);
-                data.system.mailbox.protected_system_messages =
-                    read_uint32(mt, "protected_system_messages", 32);
-                data.system.mailbox.backpressure = parse_backpressure_mode(
-                    read_string(mt, "backpressure", "local_and_remote"));
-            }
-        }
-
-        // Dead letters subsystem [system.dead_letters]
-        if (auto* dl_node = st.get("dead_letters")) {
-            if (dl_node->is_table()) {
-                auto& dt = *dl_node->as_table();
-                data.system.dead_letters.enabled = read_bool(dt, "enabled", true);
-                data.system.dead_letters.capacity =
-                    read_uint32(dt, "capacity", 4096);
-                data.system.dead_letters.byte_capacity =
-                    read_uint32(dt, "byte_capacity", 0);
-                data.system.dead_letters.max_payload_sample_bytes =
-                    read_uint32(dt, "max_payload_sample_bytes", 512);
-                data.system.dead_letters.overflow_policy = parse_dl_overflow_policy(
-                    read_string(dt, "overflow_policy", "drop_oldest_record"));
-                data.system.dead_letters.store_payload =
-                    read_bool(dt, "store_payload", true);
-                data.system.dead_letters.alert_on_first_failure =
-                    read_bool(dt, "alert_on_first_failure", false);
-                data.system.dead_letters.alert_threshold_per_minute =
-                    read_uint32(dt, "alert_threshold_per_minute", 100);
-            }
-        }
-
-        // ── Service discovery ────────────────────────────────────
-        if (auto dt = st["discovery"]; dt.is_table()) {
-            data.system.discovery_backend =
-                read_string(*dt.as_table(), "backend", "");
-        }
-
-        if (auto* imp_arr = st.get("imports")) {
-            if (imp_arr->is_array()) {
-                for (const auto& v : *imp_arr->as_array()) {
-                    if (v.is_string())
-                        data.system.imports.push_back(
-                            std::string{v.value<std::string>().value_or("")});
-                }
-            }
+            return result<TomlFileData>::make(std::move(err));
         }
     }
 
-    // Parse [[dispatcher]]
-    if (auto* disp_arr = root.get("dispatcher")) {
-        if (disp_arr->is_array()) {
-            for (const auto& elem : *disp_arr->as_array()) {
-                if (elem.is_table())
-                    data.dispatchers.push_back(parse_dispatcher(*elem.as_table()));
-            }
+    // Snapshot registered parsers before use
+    auto document_parsers =
+        TomlParserRegistry::instance().create_document_parsers();
+    auto system_parsers = TomlParserRegistry::instance().create_system_parsers();
+
+    if (document_parsers.empty() || (is_entrypoint && system_parsers.empty())) {
+        error err(errors::unknown);
+        HPACTOR_LOG_ERROR(log::LogCategory::kConfig, ActorId{0}, 0,
+                          "no registered TOML parsers found");
+        return result<TomlFileData>::make(std::move(err));
+    }
+
+    // Run document parsers on the root table
+    for (const auto& parser : document_parsers) {
+        auto parsed = parser->parse(root_view, data, ctx);
+        if (!parsed.has_value())
+            return result<TomlFileData>::make(parsed.error());
+    }
+
+    // Run system parsers on [system] table (entrypoint only)
+    if (is_entrypoint) {
+        auto system_view = root_view.table("system");
+        for (const auto& parser : system_parsers) {
+            auto parsed = parser->parse(system_view, data.system, ctx);
+            if (!parsed.has_value())
+                return result<TomlFileData>::make(parsed.error());
         }
     }
 
-    // Parse [template.*]
-    if (auto* tmpl = root.get("template")) {
-        if (tmpl->is_table()) {
-            for (const auto& [name, tbl] : *tmpl->as_table()) {
-                if (tbl.is_table())
-                    data.templates[std::string{name.str()}] =
-                        parse_actor(*tbl.as_table());
-            }
-        }
-    }
-
-    // Parse [[actor]]
-    if (auto* act_arr = root.get("actor")) {
-        if (act_arr->is_array()) {
-            for (const auto& elem : *act_arr->as_array()) {
-                if (elem.is_table())
-                    data.actors.push_back(parse_raw_actor(*elem.as_table()));
-            }
-        }
-    }
-
-    return result<FileData>::make(std::move(data));
+    return result<TomlFileData>::make(std::move(data));
 }
 
 // ---------------------------------------------------------------------------
@@ -574,7 +175,7 @@ static void deep_merge(ActorDef& base, const ActorDef& overrides) {
 // Resolve template inheritance
 // ---------------------------------------------------------------------------
 static result<std::vector<ActorDef>>
-resolve_templates(const std::vector<RawActor>& raw_actors,
+resolve_templates(const std::vector<TomlRawActor>& raw_actors,
                   const std::unordered_map<std::string, ActorDef>& templates) {
     std::vector<ActorDef> resolved;
     resolved.reserve(raw_actors.size());
@@ -710,10 +311,10 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     if (!entry_parse.has_value()) {
         return result<TopologyModel>::make(entry_parse.error());
     }
-    FileData entry_data = std::move(entry_parse.value());
+    TomlFileData entry_data = std::move(entry_parse.value());
 
     // Phase 2: Collect imports' data
-    std::vector<FileData> imported_data;
+    std::vector<TomlFileData> imported_data;
     for (const auto& import_pattern : entry_data.system.imports) {
         fs::path import_path = base_dir / import_pattern;
         auto files = expand_glob(import_path.string());
@@ -728,7 +329,7 @@ result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
     // Phase 3: Merge dispatchers (imported first, then entrypoint)
     std::vector<DispatcherDef> all_dispatchers;
     std::unordered_map<std::string, ActorDef> all_templates;
-    std::vector<RawActor> all_raw_actors;
+    std::vector<TomlRawActor> all_raw_actors;
 
     for (auto& imp : imported_data) {
         for (auto& d : imp.dispatchers)

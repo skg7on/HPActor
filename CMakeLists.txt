@@ -181,6 +181,16 @@ add_library(hpactor_lib SHARED
     src/supervision/supervision.cpp
     src/config/actor_factory_registry.cpp
     src/config/toml_parser.cpp
+    src/config/toml_table_view.cpp
+    src/config/toml_parser_registry.cpp
+    src/config/parsers/system_core_config_parser.cpp
+    src/config/parsers/metrics_config_parser.cpp
+    src/config/parsers/logging_config_parser.cpp
+    src/config/parsers/cli_config_parser.cpp
+    src/config/parsers/discovery_config_parser.cpp
+    src/config/parsers/topology_config_parser.cpp
+    src/config/parsers/mailbox_config_parser.cpp
+    src/config/parsers/dead_letters_config_parser.cpp
     src/config/binary_serializer.cpp
     src/config/binary_loader.cpp
     src/core/proto_type_registry.cpp
@@ -266,9 +276,13 @@ target_sources(hpactor_lib PRIVATE
 )
 set(HPACTOR_ENABLE_CLI 1)
 
-# Enable exceptions for TOML parser (toml++ requires them)
-set_source_files_properties(
+# Enable exceptions for TOML adapter sources (toml++ requires them)
+set(HPACTOR_TOML_EXCEPTION_SOURCES
     src/config/toml_parser.cpp
+    src/config/toml_table_view.cpp
+)
+set_source_files_properties(
+    ${HPACTOR_TOML_EXCEPTION_SOURCES}
     PROPERTIES COMPILE_FLAGS "-fexceptions"
 )
 
