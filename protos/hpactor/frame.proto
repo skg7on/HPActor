@@ -5,6 +5,13 @@ package hpactor.net;
 
 import "hpactor/common.proto";
 
+message PbTraceContext {
+  bytes trace_id = 1;
+  bytes span_id = 2;
+  uint32 flags = 3;
+  string tracestate = 4;
+}
+
 message ActorMsgFrame {
   hpactor.PbActorAddress sender = 1;
   hpactor.PbActorAddress receiver = 2;
@@ -12,4 +19,5 @@ message ActorMsgFrame {
   uint64 message_id = 4;
   uint32 flags = 5;
   bytes payload = 6;
+  PbTraceContext trace_context = 7;
 }

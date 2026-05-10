@@ -56,6 +56,20 @@ struct RawSystemDef {
     uint32_t use_coroutines;
     uint32_t version_offset;
     uint32_t http_bind_host_offset;
+    uint32_t tracing_enabled;
+    uint32_t tracing_propagate_unsampled;
+    uint32_t tracing_ring_buffer_capacity;
+    uint32_t tracing_sampler;
+    uint32_t tracing_exporter;
+    double tracing_sample_ratio;
+    uint32_t tracing_export_interval_ms;
+    uint32_t tracing_max_export_batch_size;
+    uint16_t tracing_max_tracestate_len;
+    uint16_t tracing_pad;
+    uint32_t tracing_flags;
+    uint32_t tracing_service_name_offset;
+    uint32_t tracing_otlp_endpoint_offset;
+    uint32_t tracing_json_file_path_offset;
 };
 
 struct RawDispatcher {
@@ -70,7 +84,7 @@ struct RawActor {
     uint32_t behavior_offset;
     uint32_t supervisor_offset;
     uint32_t dispatcher_offset;
-    uint8_t  dispatch_policy;
+    uint8_t dispatch_policy;
     uint32_t mailbox_capacity;
     uint32_t slab_class_bytes;
     uint32_t max_memory_kb;
@@ -141,6 +155,27 @@ result<TopologyModel> load_binary_topology(const std::string& path) {
     model.system.http_reply_timeout_ms = rsys->http_reply_timeout_ms;
     model.system.use_coroutines = rsys->use_coroutines != 0;
 
+    // Tracing config (zero-filled for older binary versions = disabled)
+    model.system.tracing.enabled = rsys->tracing_enabled != 0;
+    model.system.tracing.propagate_unsampled =
+        rsys->tracing_propagate_unsampled != 0;
+    model.system.tracing.ring_buffer_capacity = rsys->tracing_ring_buffer_capacity;
+    model.system.tracing.sampler =
+        static_cast<hpactor::tracing::SamplerKind>(rsys->tracing_sampler);
+    model.system.tracing.exporter =
+        static_cast<hpactor::tracing::TraceExporterKind>(rsys->tracing_exporter);
+    model.system.tracing.sample_ratio = rsys->tracing_sample_ratio;
+    model.system.tracing.export_interval =
+        std::chrono::milliseconds(rsys->tracing_export_interval_ms);
+    model.system.tracing.max_export_batch_size = rsys->tracing_max_export_batch_size;
+    model.system.tracing.max_tracestate_len = rsys->tracing_max_tracestate_len;
+    model.system.tracing.service_name =
+        str_at(str_table, rsys->tracing_service_name_offset);
+    model.system.tracing.otlp_endpoint =
+        str_at(str_table, rsys->tracing_otlp_endpoint_offset);
+    model.system.tracing.json_file_path =
+        str_at(str_table, rsys->tracing_json_file_path_offset);
+
     // Dispatchers
     const RawDispatcher* dispatchers =
         reinterpret_cast<const RawDispatcher*>(base + hdr->dispatchers_offset);
@@ -148,7 +183,8 @@ result<TopologyModel> load_binary_topology(const std::string& path) {
         DispatcherDef def;
         def.name = str_at(str_table, dispatchers[i].name_offset);
         def.threads = dispatchers[i].threads;
-        if (dispatchers[i].cpu_affinity_count > 0 && dispatchers[i].cpu_affinity_offset) {
+        if (dispatchers[i].cpu_affinity_count > 0 &&
+            dispatchers[i].cpu_affinity_offset) {
             const uint8_t* aff = base + dispatchers[i].cpu_affinity_offset;
             def.cpu_affinity.assign(aff, aff + dispatchers[i].cpu_affinity_count);
         }
@@ -171,7 +207,8 @@ result<TopologyModel> load_binary_topology(const std::string& path) {
         def.resources.max_memory_kb = ra.max_memory_kb;
 
         if (ra.args_count > 0 && ra.args_offset) {
-            const RawKV* kvs = reinterpret_cast<const RawKV*>(base + ra.args_offset);
+            const RawKV* kvs =
+                reinterpret_cast<const RawKV*>(base + ra.args_offset);
             for (uint16_t j = 0; j < ra.args_count; ++j) {
                 def.args[str_at(str_table, kvs[j].key_offset)] =
                     str_at(str_table, kvs[j].value_offset);

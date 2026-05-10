@@ -22,6 +22,7 @@
 #include <cstring>
 #include <netinet/in.h>
 #include <string>
+#include <string_view>
 #include <variant>
 #include <vector>
 
@@ -308,6 +309,7 @@ constexpr uint32_t actor_down = 2;
 constexpr uint32_t actor_not_found = 3;
 constexpr uint32_t mailbox_full = 4;
 constexpr uint32_t timeout = 5;
+constexpr uint32_t invalid_argument = 6;
 
 // HTTP protocol errors
 constexpr uint32_t http_parse_error = 2001;
@@ -401,28 +403,88 @@ struct AlarmHandle {
 };
 
 // -----------------------------------------------------------------------------
-// TraceContext - for distributed tracing
+// Trace identifiers - W3C/OpenTelemetry-compatible distributed tracing IDs
 // -----------------------------------------------------------------------------
+struct TraceId {
+    std::array<uint8_t, 16> bytes{};
+
+    bool valid() const noexcept {
+        for (uint8_t b : bytes) {
+            if (b != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool operator==(const TraceId& other) const noexcept {
+        return bytes == other.bytes;
+    }
+};
+
+struct SpanId {
+    std::array<uint8_t, 8> bytes{};
+
+    bool valid() const noexcept {
+        for (uint8_t b : bytes) {
+            if (b != 0) {
+                return true;
+            }
+        }
+        return false;
+    }
+
+    bool operator==(const SpanId& other) const noexcept {
+        return bytes == other.bytes;
+    }
+};
+
+struct TraceFlags {
+    static constexpr uint8_t kSampled = 0x01;
+
+    uint8_t value = 0;
+
+    bool sampled() const noexcept {
+        return (value & kSampled) != 0;
+    }
+
+    void set_sampled(bool enabled) noexcept {
+        if (enabled) {
+            value = static_cast<uint8_t>(value | kSampled);
+        } else {
+            value = static_cast<uint8_t>(value & ~kSampled);
+        }
+    }
+};
+
 struct TraceContext {
-    TraceContext() = default;
+    TraceId trace_id;
+    SpanId span_id;
+    TraceFlags flags;
+    uint8_t version = 0;
+    uint16_t tracestate_len = 0;
+    std::array<char, 256> tracestate{};
 
-    TraceContext(uint64_t trace_id, uint64_t span_id, uint32_t flags)
-        : trace_id_(trace_id), span_id_(span_id), flags_(flags) {}
-
-    uint64_t trace_id() const {
-        return trace_id_;
-    }
-    uint64_t span_id() const {
-        return span_id_;
-    }
-    uint32_t flags() const {
-        return flags_;
+    bool valid() const noexcept {
+        return trace_id.valid() && span_id.valid();
     }
 
-  private:
-    uint64_t trace_id_ = 0;
-    uint64_t span_id_ = 0;
-    uint32_t flags_ = 0;
+    bool sampled() const noexcept {
+        return flags.sampled();
+    }
+
+    std::string_view tracestate_view() const noexcept {
+        return {tracestate.data(), tracestate_len};
+    }
+
+    void clear() noexcept {
+        trace_id = TraceId{};
+        span_id = SpanId{};
+        flags = TraceFlags{};
+        version = 0;
+        tracestate_len = 0;
+        tracestate.fill('\0');
+    }
 };
 
 // -----------------------------------------------------------------------------

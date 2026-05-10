@@ -466,6 +466,59 @@ target_link_libraries(test_std_allocator hpactor pthread)
 add_test(NAME test_std_allocator COMMAND test_std_allocator)
 
 # =============================================================================
+# Tracing tests
+# =============================================================================
+if(ENABLE_ACTOR_TRACING)
+    add_executable(test_trace_config_smoke tracing/test_trace_config_smoke.cpp)
+    target_link_libraries(test_trace_config_smoke hpactor)
+    add_test(NAME test_trace_config_smoke COMMAND test_trace_config_smoke)
+
+    add_executable(test_trace_context tracing/test_trace_context.cpp)
+    target_link_libraries(test_trace_context hpactor)
+    add_test(NAME test_trace_context COMMAND test_trace_context)
+
+    add_executable(test_w3c_trace_context tracing/test_w3c_trace_context.cpp)
+    target_link_libraries(test_w3c_trace_context hpactor)
+    add_test(NAME test_w3c_trace_context COMMAND test_w3c_trace_context)
+
+    add_executable(test_trace_typed_message tracing/test_trace_typed_message.cpp)
+    target_link_libraries(test_trace_typed_message hpactor)
+    add_test(NAME test_trace_typed_message COMMAND test_trace_typed_message)
+
+    add_executable(test_sampler tracing/test_sampler.cpp)
+    target_link_libraries(test_sampler hpactor)
+    add_test(NAME test_sampler COMMAND test_sampler)
+
+    add_executable(test_trace_manager tracing/test_trace_manager.cpp)
+    target_link_libraries(test_trace_manager hpactor pthread)
+    add_test(NAME test_trace_manager COMMAND test_trace_manager)
+
+    add_executable(test_trace_actor_system tracing/test_trace_actor_system.cpp)
+    target_link_libraries(test_trace_actor_system hpactor pthread)
+    add_test(NAME test_trace_actor_system COMMAND test_trace_actor_system)
+
+    add_executable(test_trace_actor_context tracing/test_trace_actor_context.cpp)
+    target_link_libraries(test_trace_actor_context hpactor pthread)
+    add_test(NAME test_trace_actor_context COMMAND test_trace_actor_context)
+
+    add_executable(test_trace_message_propagation tracing/test_trace_message_propagation.cpp)
+    target_link_libraries(test_trace_message_propagation hpactor pthread)
+    add_test(NAME test_trace_message_propagation COMMAND test_trace_message_propagation)
+
+    add_executable(test_trace_wire_propagation tracing/test_trace_wire_propagation.cpp)
+    target_link_libraries(test_trace_wire_propagation hpactor hpactor_proto pthread)
+    add_test(NAME test_trace_wire_propagation COMMAND test_trace_wire_propagation)
+
+    add_executable(test_trace_rpc tracing/test_trace_rpc.cpp)
+    target_link_libraries(test_trace_rpc hpactor pthread)
+    add_test(NAME test_trace_rpc COMMAND test_trace_rpc)
+
+    add_executable(test_trace_exporters tracing/test_trace_exporters.cpp)
+    target_link_libraries(test_trace_exporters hpactor pthread)
+    add_test(NAME test_trace_exporters COMMAND test_trace_exporters)
+endif()
+
+# =============================================================================
 # CLI tests
 # =============================================================================
 if(ENABLE_CLI)

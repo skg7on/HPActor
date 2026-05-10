@@ -100,6 +100,10 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
     frame.pb_frame.set_payload(reinterpret_cast<const char*>(msg.payload().data()),
                                msg.payload().size());
 
+    if (msg.has_trace_context()) {
+        net::to_proto(frame.pb_frame.mutable_trace_context(), msg.trace_context());
+    }
+
     if (!transport_->try_send(resolved_target, frame.encode())) {
         // Capture dead letter: transport refused the message
         if (system_) {

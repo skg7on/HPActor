@@ -16,7 +16,9 @@
 
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/rpc/rpc_types.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/tracing/span.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -28,7 +30,7 @@
 
 namespace hpactor {
 
-using RpcResponseHandler = std::function<void(MessageId, const StreamBuffer&)>;
+using RpcResponseHandler = std::function<void(const RpcResponseFrame&)>;
 
 // -----------------------------------------------------------------------------
 // PendingCall - tracks in-flight RPC calls
@@ -43,6 +45,9 @@ struct PendingCall {
     std::promise<result<StreamBuffer>> promise;
     std::chrono::steady_clock::time_point enqueued_at;
     std::atomic<bool> ready_{false};
+    bool has_trace_context{false};
+    TraceContext trace_context{};
+    tracing::SpanHandle client_span{};
 };
 
 // -----------------------------------------------------------------------------
@@ -75,8 +80,14 @@ class RpcChannel {
     // Cancel all pending calls
     void abort();
 
+    // Trace-aware call_raw overload
+    RpcFuture<StreamBuffer>
+    call_raw(const ActorAddress& target, const StreamBuffer& encoded_request,
+             std::chrono::milliseconds timeout_ms,
+             const TraceContext* parent_context);
+
     // Handle response from transport layer
-    void on_response(MessageId msg_id, const StreamBuffer& encoded_response);
+    void on_response(const RpcResponseFrame& response);
 
   private:
     void on_timeout(MessageId msg_id);

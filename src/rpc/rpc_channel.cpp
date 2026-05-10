@@ -54,16 +54,16 @@ void RpcChannel::abort() {
         if (!call->ready_.load(std::memory_order_acquire)) {
             call->promise.set_value(
                 result<StreamBuffer>::make(error(errors::unknown, "RPC channel "
-                                                           "aborted")));
+                                                                  "aborted")));
             call->ready_.store(true, std::memory_order_release);
         }
     }
     pending_.clear();
 }
 
-void RpcChannel::on_response(MessageId msg_id, const StreamBuffer& encoded_response) {
+void RpcChannel::on_response(const RpcResponseFrame& response) {
     std::unique_ptr<PendingCall> call;
-    uint64_t key = msg_id.value();
+    uint64_t key = response.msg_id.value();
     {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = pending_.find(key);
@@ -75,7 +75,8 @@ void RpcChannel::on_response(MessageId msg_id, const StreamBuffer& encoded_respo
     }
 
     call->ready_.store(true, std::memory_order_release);
-    call->promise.set_value(result<StreamBuffer>::make(StreamBuffer(encoded_response)));
+    call->promise.set_value(
+        result<StreamBuffer>::make(StreamBuffer(response.payload)));
 }
 
 void RpcChannel::on_timeout(MessageId msg_id) {
@@ -96,7 +97,8 @@ void RpcChannel::on_timeout(MessageId msg_id) {
     } else {
         call_ptr->ready_.store(true, std::memory_order_release);
         call_ptr->promise.set_value(
-            result<StreamBuffer>::make(error(errors::timeout, "RPC call timed out")));
+            result<StreamBuffer>::make(error(errors::timeout, "RPC call timed "
+                                                              "out")));
         std::lock_guard<std::mutex> lock(mutex_);
         pending_.erase(key);
     }
@@ -119,16 +121,27 @@ void RpcChannel::send_request(PendingCall& call, bool is_retry) {
     frame.pb_frame.set_message_id(call.msg_id.value());
     frame.pb_frame.set_flags(net::WireFrame::RpcRequest);
     if (is_retry) {
-        frame.pb_frame.set_flags(frame.pb_frame.flags() | net::WireFrame::RpcIdempotent);
+        frame.pb_frame.set_flags(frame.pb_frame.flags() |
+                                 net::WireFrame::RpcIdempotent);
+    }
+    if (call.has_trace_context) {
+        net::to_proto(frame.pb_frame.mutable_trace_context(), call.trace_context);
     }
 
     StreamBuffer encoded = frame.encode();
     transport_->send(call.target, encoded);
 }
 
-RpcFuture<StreamBuffer>
-RpcChannel::call_raw(const ActorAddress& target, const StreamBuffer& encoded_request,
-                     std::chrono::milliseconds timeout_ms) {
+RpcFuture<StreamBuffer> RpcChannel::call_raw(const ActorAddress& target,
+                                             const StreamBuffer& encoded_request,
+                                             std::chrono::milliseconds timeout_ms) {
+    return call_raw(target, encoded_request, timeout_ms, nullptr);
+}
+
+RpcFuture<StreamBuffer> RpcChannel::call_raw(const ActorAddress& target,
+                                             const StreamBuffer& encoded_request,
+                                             std::chrono::milliseconds timeout_ms,
+                                             const TraceContext* parent_context) {
     MessageId msg_id = MessageId::generate();
 
     auto promise_ptr = std::make_shared<std::promise<result<StreamBuffer>>>();
@@ -144,6 +157,10 @@ RpcChannel::call_raw(const ActorAddress& target, const StreamBuffer& encoded_req
                         .promise = std::move(*promise_ptr),
                         .enqueued_at = std::chrono::steady_clock::now(),
                         .ready_ = false};
+    if (parent_context != nullptr && parent_context->valid()) {
+        call_ptr->has_trace_context = true;
+        call_ptr->trace_context = *parent_context;
+    }
 
     uint64_t key = msg_id.value();
     {

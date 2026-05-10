@@ -72,6 +72,8 @@ ActorSystem::ActorSystem(const Config& config)
 
     scheduler_->start();
 
+    apply_tracing_config(config_.tracing);
+
     // Initialize dead-letter queue
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
@@ -149,8 +151,8 @@ ActorSystem::ActorSystem(const Config& config)
 
         if (config.tcp_port > 0) {
             transport_->set_rpc_handler(
-                [this](hpactor::MessageId id, const hpactor::StreamBuffer& data) {
-                    rpc_channel_->on_response(id, data);
+                [this](const hpactor::RpcResponseFrame& response) {
+                    rpc_channel_->on_response(response);
                 });
 
             transport_->set_actor_message_handler([this](const net::WireFrame& frame) {
@@ -213,7 +215,29 @@ ActorSystem::~ActorSystem() {
     if (log_manager_) {
         log_manager_->stop();
     }
+#if HPACTOR_ENABLE_ACTOR_TRACING
+    if (trace_manager_) {
+        trace_manager_->stop();
+    }
+#endif
     scheduler_->stop();
+}
+
+void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
+#if HPACTOR_ENABLE_ACTOR_TRACING
+    tracing_config_ = config;
+    if (!tracing_config_.enabled) {
+        if (trace_manager_) {
+            trace_manager_->stop();
+            trace_manager_.reset();
+        }
+        return;
+    }
+    trace_manager_ = std::make_unique<tracing::TraceManager>(tracing_config_, this);
+    trace_manager_->start();
+#else
+    (void)config;
+#endif
 }
 
 void ActorSystem::on_node_dead(EndPoint dead_ep) {
@@ -460,6 +484,16 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     TypedMessage msg(static_cast<TypeTag>(frame.pb_frame.type_tag()),
                      std::move(payload));
     msg.set_sender_address(net::from_proto(frame.pb_frame.sender()));
+#if HPACTOR_ENABLE_ACTOR_TRACING
+    if (frame.pb_frame.has_trace_context()) {
+        uint16_t max_state = tracing_config_.max_tracestate_len;
+        auto parsed = net::trace_context_from_proto(
+            frame.pb_frame.trace_context(), max_state);
+        if (parsed.has_value()) {
+            msg.set_trace_context(parsed.value());
+        }
+    }
+#endif
     deliver_local(net::from_proto(frame.pb_frame.receiver()).id, std::move(msg));
 }
 
@@ -625,6 +659,8 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     config_.dead_letters = model.system.dead_letters;
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
+
+    apply_tracing_config(model.system.tracing);
 
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
                      "topology bootstrap complete");

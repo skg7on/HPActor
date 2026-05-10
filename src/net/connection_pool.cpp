@@ -175,9 +175,19 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
 
         // Fall through to RPC handler
         if (rpc_handler_) {
-            rpc_handler_(MessageId(frame.pb_frame.message_id()),
-                         StreamBuffer(frame.pb_frame.payload().begin(),
-                                      frame.pb_frame.payload().end()));
+            RpcResponseFrame response;
+            response.msg_id = MessageId(frame.pb_frame.message_id());
+            response.payload = StreamBuffer(frame.pb_frame.payload().begin(),
+                                            frame.pb_frame.payload().end());
+            if (frame.pb_frame.has_trace_context()) {
+                auto parsed = net::trace_context_from_proto(
+                    frame.pb_frame.trace_context(), 256);
+                if (parsed.has_value()) {
+                    response.has_trace_context = true;
+                    response.trace_context = parsed.value();
+                }
+            }
+            rpc_handler_(response);
         }
         return;
     }

@@ -107,7 +107,8 @@ void test_link_to_down_notification() {
                   .use_coroutines = true,
                   .cli = {},
                   .mailbox = {},
-                  .dead_letters = {}};
+                  .dead_letters = {},
+                  .tracing = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -146,7 +147,8 @@ void test_monitor_down_notification() {
                   .use_coroutines = true,
                   .cli = {},
                   .mailbox = {},
-                  .dead_letters = {}};
+                  .dead_letters = {},
+                  .tracing = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -170,7 +172,8 @@ void test_unlink_from_stops_notification() {
                   .use_coroutines = true,
                   .cli = {},
                   .mailbox = {},
-                  .dead_letters = {}};
+                  .dead_letters = {},
+                  .tracing = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -201,7 +204,8 @@ void test_demonitor_stops_notification() {
                   .use_coroutines = true,
                   .cli = {},
                   .mailbox = {},
-                  .dead_letters = {}};
+                  .dead_letters = {},
+                  .tracing = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -225,7 +229,8 @@ void test_link_to_dead_or_self() {
                   .use_coroutines = true,
                   .cli = {},
                   .mailbox = {},
-                  .dead_letters = {}};
+                  .dead_letters = {},
+                  .tracing = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -263,7 +268,8 @@ void test_link_to_dead_or_self() {
                   .max_queue_depth = 1024,
                   .cli = {},
                   .mailbox = {},
-                  .dead_letters = {}};
+                  .dead_letters = {},
+                  .tracing = {}};
     ActorSystem system(config);
     auto a = system.spawn<DownRecordingActor>();
     a.get()->link_to(a.get()->address());
@@ -288,7 +294,8 @@ void test_link_to_idempotent() {
                   .max_queue_depth = 1024,
                   .cli = {},
                   .mailbox = {},
-                  .dead_letters = {}};
+                  .dead_letters = {},
+                  .tracing = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();
@@ -313,7 +320,8 @@ void test_link_to_sends_link_msg() {
                   .max_queue_depth = 1024,
                   .cli = {},
                   .mailbox = {},
-                  .dead_letters = {}};
+                  .dead_letters = {},
+                  .tracing = {}};
     ActorSystem system(config);
 
     auto a = system.spawn<DownRecordingActor>();

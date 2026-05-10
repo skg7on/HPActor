@@ -16,6 +16,7 @@
 
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/rpc/rpc_types.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <functional>
@@ -169,8 +170,7 @@ class Transport {
     virtual void close_connection(EndPoint remote_endpoint) = 0;
 
     // Set RPC response handler - called when RPC response frames are received
-    using rpc_response_handler =
-        std::function<void(MessageId, const StreamBuffer&)>;
+    using rpc_response_handler = std::function<void(const RpcResponseFrame&)>;
     virtual void set_rpc_handler(rpc_response_handler handler) = 0;
 };
 

@@ -35,7 +35,8 @@ int main() {
                       .max_queue_depth = 1024,
                       .cli = {},
                       .mailbox = {},
-                      .dead_letters = {}};
+                      .dead_letters = {},
+                      .tracing = {}};
         ActorSystem system(config);
         assert(system.scheduler() != nullptr);
         assert(system.scheduler()->worker_count() == 4);
@@ -51,7 +52,8 @@ int main() {
                       .max_queue_depth = 1024,
                       .cli = {},
                       .mailbox = {},
-                      .dead_letters = {}};
+                      .dead_letters = {},
+                      .tracing = {}};
         ActorSystem system(config);
 
         ActorId actors[] = {ActorId{1}, ActorId{2}, ActorId{3}, ActorId{4}};
@@ -73,7 +75,8 @@ int main() {
                       .max_queue_depth = 1024,
                       .cli = {},
                       .mailbox = {},
-                      .dead_letters = {}};
+                      .dead_letters = {},
+                      .tracing = {}};
         ActorSystem system(config);
 
         ActorId actors[] = {ActorId{101}, ActorId{102}, ActorId{103}};
@@ -94,7 +97,8 @@ int main() {
                       .max_queue_depth = 1024,
                       .cli = {},
                       .mailbox = {},
-                      .dead_letters = {}};
+                      .dead_letters = {},
+                      .tracing = {}};
         ActorSystem system(config);
         assert(system.is_running() == true);
         std::cout << "  PASS: is_running returns true" << std::endl;

@@ -197,7 +197,8 @@ int main() {
                            .max_queue_depth = 1024,
                            .cli = {},
                            .mailbox = {},
-                           .dead_letters = {}};
+                           .dead_letters = {},
+                           .tracing = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn PongActor — the shared target

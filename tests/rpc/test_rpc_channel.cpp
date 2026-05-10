@@ -104,7 +104,10 @@ void test_response() {
 
     // Simulate response with the correct message ID
     hpactor::StreamBuffer response_data = {4, 5, 6};
-    channel.on_response(actual_msg_id, response_data);
+    hpactor::RpcResponseFrame response_frame;
+    response_frame.msg_id = actual_msg_id;
+    response_frame.payload = response_data;
+    channel.on_response(response_frame);
 
     auto result = future.get();
     assert(result.has_value());
