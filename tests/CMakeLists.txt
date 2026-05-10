@@ -46,6 +46,10 @@ add_executable(test_bounded_mailbox mailbox/test_bounded_mailbox.cpp)
 target_link_libraries(test_bounded_mailbox hpactor)
 add_test(NAME test_bounded_mailbox COMMAND test_bounded_mailbox)
 
+add_executable(test_dead_letter_queue mailbox/test_dead_letter_queue.cpp)
+target_link_libraries(test_dead_letter_queue hpactor)
+add_test(NAME test_dead_letter_queue COMMAND test_dead_letter_queue)
+
 # =============================================================================
 # Actor tests
 # =============================================================================
