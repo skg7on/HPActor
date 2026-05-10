@@ -54,6 +54,10 @@ add_executable(test_mailbox_overflow_policies mailbox/test_mailbox_overflow_poli
 target_link_libraries(test_mailbox_overflow_policies hpactor)
 add_test(NAME test_mailbox_overflow_policies COMMAND test_mailbox_overflow_policies)
 
+add_executable(test_mailbox_backpressure_stress mailbox/test_mailbox_backpressure_stress.cpp)
+target_link_libraries(test_mailbox_backpressure_stress hpactor)
+add_test(NAME test_mailbox_backpressure_stress COMMAND test_mailbox_backpressure_stress)
+
 # =============================================================================
 # Actor tests
 # =============================================================================
@@ -308,6 +312,12 @@ target_link_libraries(test_binary_roundtrip hpactor)
 target_compile_definitions(test_binary_roundtrip PRIVATE
     TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
 add_test(NAME test_binary_roundtrip COMMAND test_binary_roundtrip)
+
+add_executable(test_mailbox_config config/test_mailbox_config.cpp)
+target_link_libraries(test_mailbox_config hpactor)
+target_compile_definitions(test_mailbox_config PRIVATE
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
+add_test(NAME test_mailbox_config COMMAND test_mailbox_config)
 
 # =============================================================================
 # Scheduling tests
