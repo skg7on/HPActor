@@ -15,6 +15,8 @@
 #include <hpactor/mem/guard_page.hpp>
 #include <hpactor/platform.hpp>
 
+#include <cstdio>
+#include <cstdlib>
 #include <cstring>
 #include <sys/mman.h>
 #include <unistd.h>
