@@ -252,9 +252,9 @@ void GossipMembership::start() {
         // arrived.
         auto retry_fn = std::make_shared<std::function<void()>>();
         *retry_fn = [this, retry_fn]() {
-            auto& ext = extras_for(this);
-            ext.join_seed_index++;
-            if (ext.join_seed_index >= config_.seeds.size()) {
+            auto& ext_inner = extras_for(this);
+            ext_inner.join_seed_index++;
+            if (ext_inner.join_seed_index >= config_.seeds.size()) {
                 return; // No more seeds to try
             }
             {
@@ -263,8 +263,8 @@ void GossipMembership::start() {
                     return; // Already received SyncRsp — joined successfully
                 }
             }
-            send_join(config_.seeds[ext.join_seed_index]);
-            ext.join_retry_timer = loop_->run_after(*retry_fn, 1000);
+            send_join(config_.seeds[ext_inner.join_seed_index]);
+            ext_inner.join_retry_timer = loop_->run_after(*retry_fn, 1000);
         };
         ext.join_retry_timer = loop_->run_after(*retry_fn, 1000);
     }

@@ -8,35 +8,30 @@
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 
+#include <charconv>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <iostream>
 #include <thread>
-#include <charconv>
 
 namespace hpactor {
 namespace cli {
 
 std::string CliActor::get_history_path(const CliConfig& config) {
-    if (!config.history_path.empty()) return config.history_path;
+    if (!config.history_path.empty())
+        return config.history_path;
     const char* home = getenv("HOME");
-    if (!home) home = "/tmp";
+    if (!home)
+        home = "/tmp";
     return std::string(home) + "/.hpactor_history";
 }
 
 CliActor::CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& config)
-    : DaemonActor(ctx, system)
-    , system_(system)
-    , config_(config)
-    , line_editor_(
-          LineEditorConfig{
-              get_history_path(config),
-              config.history_max,
-              /*multiline=*/false
-          },
-          /*root=*/nullptr)
-{
+    : DaemonActor(ctx, system), system_(system), config_(config),
+      line_editor_(LineEditorConfig{get_history_path(config), config.history_max,
+                                    /*multiline=*/false},
+                   /*root=*/nullptr) {
     formatter_ = OutputFormatter::create(config.default_format);
     pager_ = std::make_unique<Pager>(config.page_size);
     build_command_tree();
@@ -54,7 +49,8 @@ void CliActor::on_daemon_stop() {
 }
 
 void CliActor::print_greeting() {
-    printf("HPActor CLI v1.0 — Type /help for available commands. /quit to exit.\n\n");
+    printf("HPActor CLI v1.0 — Type /help for available commands. /quit to "
+           "exit.\n\n");
 }
 
 // ---------------------------------------------------------------------------
@@ -63,8 +59,7 @@ void CliActor::print_greeting() {
 // ---------------------------------------------------------------------------
 
 std::optional<StreamBuffer>
-CliActor::poll_for_response(TypeTag expected_tag,
-                            std::chrono::milliseconds timeout) {
+CliActor::poll_for_response(TypeTag expected_tag, std::chrono::milliseconds timeout) {
     auto deadline = std::chrono::steady_clock::now() + timeout;
 
     while (std::chrono::steady_clock::now() < deadline) {
@@ -87,42 +82,42 @@ CliActor::poll_for_response(TypeTag expected_tag,
 // ---------------------------------------------------------------------------
 
 std::optional<InspectStateReply>
-CliActor::send_and_wait_inspect(ActorId target,
-                                const InspectStateRequest& req,
+CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
                                 std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
-    if (!actor) return std::nullopt;
+    if (!actor)
+        return std::nullopt;
 
     TypedMessage msg(TypeTag::InspectStateRequestTag, req);
     context()->send(actor->address(), std::move(msg));
 
     auto payload = poll_for_response(TypeTag::InspectStateResponseTag, timeout);
-    if (!payload) return std::nullopt;
+    if (!payload)
+        return std::nullopt;
 
     InspectStateReply reply;
-    if (!reply.ParseFromArray(payload->data(),
-                               static_cast<int>(payload->size()))) {
+    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size()))) {
         return std::nullopt;
     }
     return reply;
 }
 
 std::optional<KillReply>
-CliActor::send_and_wait_kill(ActorId target,
-                              const KillRequest& req,
-                              std::chrono::milliseconds timeout) {
+CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
+                             std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
-    if (!actor) return std::nullopt;
+    if (!actor)
+        return std::nullopt;
 
     TypedMessage msg(TypeTag::KillRequestTag, req);
     context()->send(actor->address(), std::move(msg));
 
     auto payload = poll_for_response(TypeTag::KillResponseTag, timeout);
-    if (!payload) return std::nullopt;
+    if (!payload)
+        return std::nullopt;
 
     KillReply reply;
-    if (!reply.ParseFromArray(payload->data(),
-                               static_cast<int>(payload->size()))) {
+    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size()))) {
         return std::nullopt;
     }
     return reply;
@@ -132,19 +127,18 @@ CliActor::send_and_wait_kill(ActorId target,
 // Actor enumeration — iterates the system actor map under lock.
 // ---------------------------------------------------------------------------
 
-std::vector<ActorMeta>
-CliActor::enumerate_actors(const std::string& filter) {
+std::vector<ActorMeta> CliActor::enumerate_actors(const std::string& filter) {
     std::vector<ActorMeta> result;
-    system_.for_each_actor(
-        [&](ActorId /*id*/, AbstractActor& actor) {
-            if (!filter.empty()) {
-                std::string type_name(actor.type_name().data(),
-                                      actor.type_name().size());
-                if (type_name.find(filter) == std::string::npos) return;
-            }
-            auto meta = actor.to_metadata();
-            result.push_back(std::move(meta));
-        });
+    system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
+        if (!filter.empty()) {
+            std::string type_name(actor.type_name().data(),
+                                  actor.type_name().size());
+            if (type_name.find(filter) == std::string::npos)
+                return;
+        }
+        auto meta = actor.to_metadata();
+        result.push_back(std::move(meta));
+    });
     return result;
 }
 
@@ -161,7 +155,8 @@ static ActorId parse_actor_id(const std::string& s) {
         start = s.data() + 2;
     }
     auto [ptr, ec] = std::from_chars(start, s.data() + s.size(), raw, base);
-    if (ec != std::errc{}) return ActorId{0};
+    if (ec != std::errc{})
+        return ActorId{0};
     return ActorId{raw};
 }
 
@@ -169,10 +164,13 @@ void CliActor::build_command_tree() {
     auto root = std::make_unique<CommandNode>("/", "CLI root");
 
     // ── /actor <id> show ──────────────────────────────────────────────
-    auto* actor = root->add_child("actor", "Actor operations");
-    auto* actor_id = actor->add_child("<id>", "Target actor ID", /*is_param=*/true);
+    auto* actor_cmd = root->add_child("actor", "Actor operations");
+    auto* actor_id_param =
+        actor_cmd->add_child("<id>", "Target actor ID", /*is_param=*/true);
 
-    actor_id->add_child("show", "Display actor metadata, state, mailbox, and children")
+    actor_id_param
+        ->add_child("show", "Display actor metadata, state, mailbox, and "
+                            "children")
         ->execute = [this](CommandContext& ctx) -> result<void> {
         auto id_str = ctx.get_param("<id>");
         if (!id_str) {
@@ -202,15 +200,16 @@ void CliActor::build_command_tree() {
                            reply->metadata().actor_type());
 
         std::map<std::string, std::string> kv;
-        kv["State"]        = reply->metadata().state();
-        kv["Incarnation"]  = std::to_string(reply->metadata().incarnation());
-        kv["Processed"]    = std::to_string(reply->metadata().messages_processed()) + " msgs";
-        kv["Uptime (ms)"]  = std::to_string(reply->metadata().uptime_ms());
-        kv["Behavior"]     = reply->metadata().behavior_name();
+        kv["State"] = reply->metadata().state();
+        kv["Incarnation"] = std::to_string(reply->metadata().incarnation());
+        kv["Processed"] =
+            std::to_string(reply->metadata().messages_processed()) + " msgs";
+        kv["Uptime (ms)"] = std::to_string(reply->metadata().uptime_ms());
+        kv["Behavior"] = reply->metadata().behavior_name();
 
         if (reply->has_mailbox()) {
             kv["Mailbox depth"] = std::to_string(reply->mailbox().depth());
-            kv["Mailbox max"]   = std::to_string(reply->mailbox().max_depth());
+            kv["Mailbox max"] = std::to_string(reply->mailbox().max_depth());
         }
 
         ctx.output->key_value(kv);
@@ -223,8 +222,8 @@ void CliActor::build_command_tree() {
     };
 
     // ── /actor <id> kill ──────────────────────────────────────────────
-    actor_id->add_child("kill", "Terminate actor (graceful shutdown)")
-        ->execute = [this](CommandContext& ctx) -> result<void> {
+    actor_id_param->add_child("kill", "Terminate actor (graceful shutdown)")->execute =
+        [this](CommandContext& ctx) -> result<void> {
         auto id_str = ctx.get_param("<id>");
         if (!id_str) {
             ctx.output->error("Missing actor ID (usage: /actor <id> kill)");
@@ -250,17 +249,18 @@ void CliActor::build_command_tree() {
         if (reply->success()) {
             ctx.output->raw("Actor " + *id_str + " terminated.");
         } else {
-            ctx.output->error("Failed to kill actor " + *id_str +
-                              ": " + reply->error_message());
+            ctx.output->error("Failed to kill actor " + *id_str + ": " +
+                              reply->error_message());
         }
         return result<void>::make();
     };
 
     // ── /actor list ───────────────────────────────────────────────────
-    actor->add_child("list", "List all actors [--filter <type>]")
-        ->execute = [this](CommandContext& ctx) -> result<void> {
+    actor_cmd->add_child("list", "List all actors [--filter <type>]")->execute =
+        [this](CommandContext& ctx) -> result<void> {
         std::string filter;
-        if (auto f = ctx.get_param("filter")) filter = *f;
+        if (auto f = ctx.get_param("filter"))
+            filter = *f;
 
         auto actors = enumerate_actors(filter);
 
@@ -274,12 +274,8 @@ void CliActor::build_command_tree() {
             char id_buf[32];
             snprintf(id_buf, sizeof(id_buf), "0x%04llX",
                      static_cast<unsigned long long>(a.actor_id));
-            rows.push_back({
-                id_buf,
-                a.actor_type,
-                a.state,
-                std::to_string(a.messages_processed)
-            });
+            rows.push_back({id_buf, a.actor_type, a.state,
+                            std::to_string(a.messages_processed)});
         }
 
         ctx.output->table(cols, rows);
@@ -289,34 +285,33 @@ void CliActor::build_command_tree() {
     // ── /system stats ─────────────────────────────────────────────────
     auto* sys = root->add_child("system", "System operations");
 
-    sys->add_child("stats", "System-wide statistics")
-        ->execute = [this](CommandContext& ctx) -> result<void> {
+    sys->add_child("stats", "System-wide statistics")->execute =
+        [this](CommandContext& ctx) -> result<void> {
         ctx.output->header("System Statistics");
 
         std::map<std::string, std::string> kv;
-        kv["Total actors"]       = std::to_string(system_.actor_count());
+        kv["Total actors"] = std::to_string(system_.actor_count());
         if (auto* sched = system_.scheduler()) {
             kv["Scheduler threads"] = std::to_string(sched->worker_count());
         }
-        kv["CLI enabled"]        = config_.enabled ? "yes" : "no";
-        kv["CLI format"]         = config_.default_format;
+        kv["CLI enabled"] = config_.enabled ? "yes" : "no";
+        kv["CLI format"] = config_.default_format;
 
         ctx.output->key_value(kv);
         return result<void>::make();
     };
 
-    sys->add_child("memory", "Memory subsystem stats")
-        ->execute = [](CommandContext& ctx) -> result<void> {
+    sys->add_child("memory", "Memory subsystem stats")->execute =
+        [](CommandContext& ctx) -> result<void> {
         ctx.output->header("System Memory");
-        ctx.output->key_value({
-            {"Status", "Memory subsystem active"},
-            {"Note", "Use /metrics show for detailed memory stats"}
-        });
+        ctx.output->key_value({{"Status", "Memory subsystem active"},
+                               {"Note", "Use /metrics show for detailed memory "
+                                        "stats"}});
         return result<void>::make();
     };
 
-    sys->add_child("list", "List system actors")
-        ->execute = [this](CommandContext& ctx) -> result<void> {
+    sys->add_child("list", "List system actors")->execute =
+        [this](CommandContext& ctx) -> result<void> {
         ctx.output->header("System Actors");
 
         std::vector<std::string> cols = {"ID", "Type", "State"};
@@ -336,8 +331,8 @@ void CliActor::build_command_tree() {
 
     // ── /metrics show ─────────────────────────────────────────────────
     auto* metrics = root->add_child("metrics", "Metrics operations");
-    metrics->add_child("show", "Show current metrics snapshot")
-        ->execute = [](CommandContext& ctx) -> result<void> {
+    metrics->add_child("show", "Show current metrics snapshot")->execute =
+        [](CommandContext& ctx) -> result<void> {
         ctx.output->header("Metrics");
         ctx.output->raw("metrics show — not yet implemented");
         return result<void>::make();
@@ -345,24 +340,24 @@ void CliActor::build_command_tree() {
 
     // ── /topology show ────────────────────────────────────────────────
     auto* topo = root->add_child("topology", "Topology operations");
-    topo->add_child("show", "Show topology tree")
-        ->execute = [](CommandContext& ctx) -> result<void> {
+    topo->add_child("show", "Show topology tree")->execute =
+        [](CommandContext& ctx) -> result<void> {
         ctx.output->header("Topology");
         ctx.output->raw("topology show — not yet implemented");
         return result<void>::make();
     };
 
     // ── /help ─────────────────────────────────────────────────────────
-    root->add_child("help", "Show available commands")
-        ->execute = [this](CommandContext& ctx) -> result<void> {
+    root->add_child("help", "Show available commands")->execute =
+        [this](CommandContext& ctx) -> result<void> {
         ctx.output->header("Available Commands");
         ctx.output->raw(command_tree_->help());
         return result<void>::make();
     };
 
     // ── /quit ─────────────────────────────────────────────────────────
-    root->add_child("quit", "Exit the CLI")
-        ->execute = [this](CommandContext& ctx) -> result<void> {
+    root->add_child("quit", "Exit the CLI")->execute =
+        [this](CommandContext& ctx) -> result<void> {
         ctx.output->raw("Goodbye.");
         running_ = false;
         return result<void>::make();
@@ -467,5 +462,5 @@ bool CliActor::run_once() {
     return true;
 }
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor

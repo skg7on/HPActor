@@ -76,6 +76,7 @@ int main() {
     meta.deadline_ns = 1234;
 
     auto r1 = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta);
+    (void)r1;
     assert(r1.accepted());
     assert(r1.depth == 1);
     assert(scheduler.notify_ready_count.load() == 1);
@@ -83,10 +84,12 @@ int main() {
     assert(scheduler.last_deadline == 1234);
 
     auto r2 = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    (void)r2;
     assert(r2.accepted());
     assert(r2.depth == 2);
 
     auto r3 = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{3}), meta);
+    (void)r3;
     assert(!r3.accepted());
     assert(r3.code == EnqueueResultCode::Rejected);
     assert(r3.capacity == 2);
