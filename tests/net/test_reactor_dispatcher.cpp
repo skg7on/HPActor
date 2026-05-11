@@ -257,20 +257,15 @@ int main() {
         disp.set_completion_handler([&captured](OpCompletion c) { captured = c; });
 
         int fds[2];
-        socketpair(AF_UNIX, SOCK_DGRAM, 0, fds);
+        socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
 
         struct iovec iov;
         char data[] = "sendto test";
         iov.iov_base = data;
         iov.iov_len = 10;
 
-        struct sockaddr_un dummy;
-        memset(&dummy, 0, sizeof(dummy));
-        dummy.sun_family = AF_UNIX;
-
         disp.register_sendto(fds[0], ActorId(4), OpType::SendTo, &iov, 1,
-                             reinterpret_cast<struct sockaddr*>(&dummy),
-                             sizeof(dummy));
+                             nullptr, 0);
 
         disp.on_readiness(fds[0], IoEvent::Write);
 
