@@ -18,11 +18,13 @@ namespace hpactor::log {
 
 [[nodiscard]] const char* to_string(LogCategory category) noexcept {
     switch (category) {
+        // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define HPACTOR_LOG_CATEGORY_TO_STRING(name, str)                              \
     case LogCategory::name:                                                    \
         return str;
         HPACTOR_LOG_CATEGORIES(HPACTOR_LOG_CATEGORY_TO_STRING)
 #undef HPACTOR_LOG_CATEGORY_TO_STRING
+        // NOLINTEND(cppcoreguidelines-macro-usage)
         case LogCategory::kCount:
             return "count";
     }
@@ -31,21 +33,25 @@ namespace hpactor::log {
 
 [[nodiscard]] const char* to_string(LogEventId id) noexcept {
     switch (id) {
+        // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define HPACTOR_LOG_EVENT_TO_STRING(name, value, str)                          \
     case LogEventId::name:                                                     \
         return str;
         HPACTOR_LOG_EVENTS(HPACTOR_LOG_EVENT_TO_STRING)
 #undef HPACTOR_LOG_EVENT_TO_STRING
+        // NOLINTEND(cppcoreguidelines-macro-usage)
     }
     return "unknown_event";
 }
 
 [[nodiscard]] result<LogCategory> parse_category(std::string_view value) noexcept {
+    // NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define HPACTOR_LOG_CATEGORY_PARSE(name, str)                                  \
-    if (value == str)                                                          \
+    if ((value) == (str))                                                      \
         return result<LogCategory>::make(LogCategory::name);
     HPACTOR_LOG_CATEGORIES(HPACTOR_LOG_CATEGORY_PARSE)
 #undef HPACTOR_LOG_CATEGORY_PARSE
+    // NOLINTEND(cppcoreguidelines-macro-usage)
     return result<LogCategory>::make(error(errors::unknown, "unknown log "
                                                             "category"));
 }

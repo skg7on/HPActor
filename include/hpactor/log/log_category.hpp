@@ -22,19 +22,23 @@
 namespace hpactor::log {
 
 enum class LogCategory : uint16_t {
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define HPACTOR_LOG_CATEGORY_ENUM(name, str) name,
     HPACTOR_LOG_CATEGORIES(HPACTOR_LOG_CATEGORY_ENUM)
 #undef HPACTOR_LOG_CATEGORY_ENUM
-        kCount, // sentinel, not a valid emit category
+    // NOLINTEND(cppcoreguidelines-macro-usage)
+    kCount, // sentinel, not a valid emit category
 };
 
 // Stable numeric IDs for common framework events.
 // Ranges: 1000-1099 actor, 1100-1199 mailbox, 1200-1299 memory,
 //         1300-1399 registrar/discovery, 1400-1499 network, 1500-1599 scheduler
 enum class LogEventId : uint32_t {
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define HPACTOR_LOG_EVENT_ENUM(name, value, str) name = value,
     HPACTOR_LOG_EVENTS(HPACTOR_LOG_EVENT_ENUM)
 #undef HPACTOR_LOG_EVENT_ENUM
+    // NOLINTEND(cppcoreguidelines-macro-usage)
 };
 
 [[nodiscard]] const char* to_string(LogCategory category) noexcept;

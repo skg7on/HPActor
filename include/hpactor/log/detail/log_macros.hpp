@@ -22,6 +22,7 @@
 // kCount is intentionally outside HPACTOR_LOG_CATEGORIES — it is a sentinel,
 // not a real emit category, and is handled explicitly by to_string / parse.
 
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define HPACTOR_LOG_CATEGORIES(X)                                              \
     X(kActor, "actor")                                                         \
     X(kActorState, "actor_state")                                              \
@@ -67,3 +68,4 @@
     X(kNetworkFrameDecodeFailed, 1401, "network_frame_decode_failed")          \
     X(kSchedulerDispatch, 1500, "scheduler_dispatch")                          \
     X(kSchedulerSteal, 1501, "scheduler_steal")
+// NOLINTEND(cppcoreguidelines-macro-usage)
