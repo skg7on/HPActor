@@ -17,6 +17,7 @@
 // (merge_member, mark_suspicious, pick_random_peers, etc.).  The layout and
 // symbols are unchanged — the library is already compiled with the real access
 // levels; this is compile-time only.
+#include <sstream> // GCC 13 workaround for __xfer_bufptrs bug in <sstream>
 #define private public
 #include <hpactor/net/gossip_membership.hpp>
 #undef private
@@ -35,8 +36,8 @@ static EndPoint ep(uint16_t port) {
     return Ipv4Endpoint{0x7F000001, htons(port)};
 }
 
-static Member make_member(EndPoint e, const char* host, MemberStatus st,
-                          uint64_t inc) {
+static Member
+make_member(EndPoint e, const char* host, MemberStatus st, uint64_t inc) {
     Member m;
     m.endpoint = e;
     if (host)
@@ -83,7 +84,7 @@ int main() {
         // Simulate the self-insertion that start() would perform, without I/O.
         gm.incarnation_ = 1;
         Member self = make_member(self_ep, "127.0.0.1", MemberStatus::Alive,
-                                 gm.incarnation_);
+                                  gm.incarnation_);
         gm.members_[self_ep] = std::move(self);
 
         // discover_all returns a snapshot containing self.
@@ -116,8 +117,8 @@ int main() {
         ann.host = "updated-host";
         gm.announce(std::move(ann));
 
-        assert(gm.incarnation_ > 100);               // incarnation bumped
-        assert(gm.needs_dissemination_ == true);      // dissemination flag set
+        assert(gm.incarnation_ > 100);           // incarnation bumped
+        assert(gm.needs_dissemination_ == true); // dissemination flag set
         assert(gm.config_.local_state.incarnation == gm.incarnation_);
         assert(gm.config_.local_state.host == "updated-host");
     }
@@ -275,7 +276,7 @@ int main() {
         }
 
         auto peers = gm.pick_random_peers(10, {});
-        assert(peers.size() == 3);     // all peers, self excluded
+        assert(peers.size() == 3); // all peers, self excluded
     }
 
     // ---- Test 12: pick_random_peers — empty when solo cluster -------------
@@ -301,8 +302,7 @@ int main() {
         gm.members_[ep(9000)] = Member{};
 
         // Dead member far past timeout.
-        auto ancient = std::chrono::steady_clock::now() -
-                       std::chrono::seconds(60);
+        auto ancient = std::chrono::steady_clock::now() - std::chrono::seconds(60);
         Member dead;
         dead.endpoint = ep(9001);
         dead.status = MemberStatus::Dead;
@@ -341,9 +341,8 @@ int main() {
         e.incarnation = 5;
         pb.push_back(e);
 
-        StreamBuffer encoded =
-            gm.encode_message(GossipMessageType::Ping, gm.incarnation_, 1,
-                              ep(9000), pb);
+        StreamBuffer encoded = gm.encode_message(
+            GossipMessageType::Ping, gm.incarnation_, 1, ep(9000), pb);
 
         GossipMessageType out_type;
         EndPoint out_sender;
@@ -387,9 +386,8 @@ int main() {
         meta.acceptors.push_back(acc);
         pb.push_back(meta);
 
-        StreamBuffer encoded =
-            gm.encode_message(GossipMessageType::Ping, gm.incarnation_, 1,
-                              ep(9000), pb);
+        StreamBuffer encoded = gm.encode_message(
+            GossipMessageType::Ping, gm.incarnation_, 1, ep(9000), pb);
 
         GossipMessageType out_type;
         EndPoint out_sender;

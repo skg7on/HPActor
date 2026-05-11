@@ -1,5 +1,10 @@
 # Tests CMakeLists.txt - organized by subsystem
 
+# Ensure assert() always fires in tests regardless of build type.
+# CMake defines NDEBUG in Release/RelWithDebInfo, which strips assertions
+# and causes -Wunused-variable warnings. -UNDEBUG reverses that for tests.
+add_compile_options(-UNDEBUG)
+
 # =============================================================================
 # Core tests - types, result, serialization
 # =============================================================================

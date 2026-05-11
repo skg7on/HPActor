@@ -145,8 +145,7 @@ add_compile_options(
     -Wshadow
     -Wconversion
     $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
-    # GCC 13 libstdc++ bug: __xfer_bufptrs redeclared with different access in <sstream>
-    $<$<CXX_COMPILER_ID:GNU>:-Wno-changes-access>
+
 )
 
 # Suppress linker warnings for dylibs built for newer macOS versions
