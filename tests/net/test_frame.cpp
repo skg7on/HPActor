@@ -38,7 +38,7 @@ int main() {
     WireFrame f2;
     to_proto(f2.pb_frame.mutable_sender(), sender);
     to_proto(f2.pb_frame.mutable_receiver(), receiver);
-    f2.pb_frame.set_payload("hello", 5);
+    f2.pb_frame.set_payload("hello", 5u);
     f2.pb_frame.set_flags(WireFrame::Important);
     f2.pb_frame.set_message_id(12345);
 
@@ -77,14 +77,13 @@ int main() {
     WireFrame f_ipv6;
     to_proto(f_ipv6.pb_frame.mutable_sender(), ipv6_sender);
     to_proto(f_ipv6.pb_frame.mutable_receiver(), ipv6_receiver);
-    f_ipv6.pb_frame.set_payload("xyz", 3);
+    f_ipv6.pb_frame.set_payload("xyz", 3u);
     f_ipv6.pb_frame.set_message_id(99999);
 
     StreamBuffer encoded_ipv6 = f_ipv6.encode();
     WireFrame decoded_ipv6 = WireFrame::decode(encoded_ipv6);
 
-    assert(std::get<Ipv6Endpoint>(
-               from_proto(decoded_ipv6.pb_frame.sender()).endpoint)
+    assert(std::get<Ipv6Endpoint>(from_proto(decoded_ipv6.pb_frame.sender()).endpoint)
                .port_nw == htons(8080));
     assert(decoded_ipv6.pb_frame.message_id() == 99999);
 
