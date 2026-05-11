@@ -39,11 +39,18 @@ void* guarded_alloc(size_t user_bytes) noexcept {
         return nullptr;
 
     // Protect leading guard page
-    mprotect(base, ps, PROT_NONE);
+    if (mprotect(base, ps, PROT_NONE) < 0) {
+        munmap(base, total);
+        return nullptr;
+    }
 
     // Protect trailing guard page (page-aligned)
     auto* trailing = static_cast<std::byte*>(base) + ps + user_pages;
-    mprotect(trailing, ps, PROT_NONE);
+    if (mprotect(trailing, ps, PROT_NONE) < 0) {
+        mprotect(base, ps, PROT_READ | PROT_WRITE);
+        munmap(base, total);
+        return nullptr;
+    }
 
     return static_cast<std::byte*>(base) + ps;
 }

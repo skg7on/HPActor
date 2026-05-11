@@ -257,7 +257,7 @@ int main() {
         disp.set_completion_handler([&captured](OpCompletion c) { captured = c; });
 
         int fds[2];
-        socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        socketpair(AF_UNIX, SOCK_DGRAM, 0, fds);
 
         struct iovec iov;
         char data[] = "sendto test";
