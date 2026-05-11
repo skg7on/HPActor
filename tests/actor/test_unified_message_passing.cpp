@@ -38,7 +38,7 @@ void test_deliver_remote_bridge() {
     net::to_proto(frame.pb_frame.mutable_receiver(), target.address());
     frame.pb_frame.set_type_tag(static_cast<uint32_t>(TypeTag::User));
     frame.pb_frame.set_payload(
-        reinterpret_cast<const char*>(StreamBuffer{1, 3, 3, 7}.data()), 4);
+        reinterpret_cast<const char*>(StreamBuffer{1, 3, 3, 7}.data()), 4u);
 
     system.deliver_remote(frame);
 
