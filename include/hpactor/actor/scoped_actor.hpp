@@ -26,6 +26,8 @@ class ActorSystem;
 // -----------------------------------------------------------------------------
 class ScopedActor : public BlockingActor {
   public:
+    using AbstractActor::receive;
+
     explicit ScopedActor(ActorSystem& sys);
     ~ScopedActor();
 

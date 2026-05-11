@@ -272,7 +272,7 @@ set_source_files_properties(
     third_party/llhttp/http.c
     PROPERTIES
         LANGUAGE C
-        COMPILE_FLAGS "-Wno-error -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
+        COMPILE_FLAGS "-Wno-error -Wno-conversion -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
 )
 target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR} third_party/llhttp)
 
