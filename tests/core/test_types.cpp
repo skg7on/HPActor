@@ -17,6 +17,7 @@
 #include <hpactor/types/types.hpp>
 
 // Always-on assertion (NDEBUG strips standard assert in Release builds).
+// NOLINTNEXTLINE(cppcoreguidelines-macro-usage)
 #define CHECK(expr)                                                            \
     do {                                                                       \
         if (!(expr)) {                                                         \
