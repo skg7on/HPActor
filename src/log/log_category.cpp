@@ -18,34 +18,11 @@ namespace hpactor::log {
 
 [[nodiscard]] const char* to_string(LogCategory category) noexcept {
     switch (category) {
-        case LogCategory::kActor:
-            return "actor";
-        case LogCategory::kActorState:
-            return "actor_state";
-        case LogCategory::kMailbox:
-            return "mailbox";
-        case LogCategory::kScheduler:
-            return "scheduler";
-        case LogCategory::kMemory:
-            return "memory";
-        case LogCategory::kRegistrar:
-            return "registrar";
-        case LogCategory::kDiscovery:
-            return "discovery";
-        case LogCategory::kNetwork:
-            return "network";
-        case LogCategory::kRpc:
-            return "rpc";
-        case LogCategory::kConfig:
-            return "config";
-        case LogCategory::kSupervision:
-            return "supervision";
-        case LogCategory::kCli:
-            return "cli";
-        case LogCategory::kHttp:
-            return "http";
-        case LogCategory::kUser:
-            return "user";
+#define HPACTOR_LOG_CATEGORY_TO_STRING(name, str)                              \
+    case LogCategory::name:                                                    \
+        return str;
+        HPACTOR_LOG_CATEGORIES(HPACTOR_LOG_CATEGORY_TO_STRING)
+#undef HPACTOR_LOG_CATEGORY_TO_STRING
         case LogCategory::kCount:
             return "count";
     }
@@ -54,91 +31,21 @@ namespace hpactor::log {
 
 [[nodiscard]] const char* to_string(LogEventId id) noexcept {
     switch (id) {
-        case LogEventId::kActorSpawned:
-            return "actor_spawned";
-        case LogEventId::kActorTerminated:
-            return "actor_terminated";
-        case LogEventId::kActorStateTransfer:
-            return "actor_state_transfer";
-        case LogEventId::kActorLinkRejected:
-            return "actor_link_rejected";
-        case LogEventId::kMailboxDepthHigh:
-            return "mailbox_depth_high";
-        case LogEventId::kMailboxHighWatermark:
-            return "mailbox_high_watermark";
-        case LogEventId::kMailboxLowWatermarkRecovered:
-            return "mailbox_low_watermark_recovered";
-        case LogEventId::kMailboxFull:
-            return "mailbox_full";
-        case LogEventId::kMailboxMessageRejected:
-            return "mailbox_message_rejected";
-        case LogEventId::kMailboxMessageDropped:
-            return "mailbox_message_dropped";
-        case LogEventId::kMailboxOverflowRerouted:
-            return "mailbox_overflow_rerouted";
-        case LogEventId::kBackpressureSignalSent:
-            return "backpressure_signal_sent";
-        case LogEventId::kSystemReserveExhausted:
-            return "system_reserve_exhausted";
-        case LogEventId::kDeadLetterQueued:
-            return "dead_letter_queued";
-        case LogEventId::kDeadLetterLost:
-            return "dead_letter_lost";
-        case LogEventId::kMemoryAlloc:
-            return "memory_alloc";
-        case LogEventId::kMemoryFree:
-            return "memory_free";
-        case LogEventId::kMemoryCorruption:
-            return "memory_corruption";
-        case LogEventId::kRegistrarRegister:
-            return "registrar_register";
-        case LogEventId::kRegistrarResolveMiss:
-            return "registrar_resolve_miss";
-        case LogEventId::kDiscoveryNodeJoined:
-            return "discovery_node_joined";
-        case LogEventId::kDiscoveryNodeDead:
-            return "discovery_node_dead";
-        case LogEventId::kNetworkFrameReceived:
-            return "network_frame_received";
-        case LogEventId::kNetworkFrameDecodeFailed:
-            return "network_frame_decode_failed";
-        case LogEventId::kSchedulerDispatch:
-            return "scheduler_dispatch";
-        case LogEventId::kSchedulerSteal:
-            return "scheduler_steal";
+#define HPACTOR_LOG_EVENT_TO_STRING(name, value, str)                          \
+    case LogEventId::name:                                                     \
+        return str;
+        HPACTOR_LOG_EVENTS(HPACTOR_LOG_EVENT_TO_STRING)
+#undef HPACTOR_LOG_EVENT_TO_STRING
     }
     return "unknown_event";
 }
 
 [[nodiscard]] result<LogCategory> parse_category(std::string_view value) noexcept {
-    if (value == "actor")
-        return result<LogCategory>::make(LogCategory::kActor);
-    if (value == "actor_state")
-        return result<LogCategory>::make(LogCategory::kActorState);
-    if (value == "mailbox")
-        return result<LogCategory>::make(LogCategory::kMailbox);
-    if (value == "scheduler")
-        return result<LogCategory>::make(LogCategory::kScheduler);
-    if (value == "memory")
-        return result<LogCategory>::make(LogCategory::kMemory);
-    if (value == "registrar")
-        return result<LogCategory>::make(LogCategory::kRegistrar);
-    if (value == "discovery")
-        return result<LogCategory>::make(LogCategory::kDiscovery);
-    if (value == "network")
-        return result<LogCategory>::make(LogCategory::kNetwork);
-    if (value == "rpc")
-        return result<LogCategory>::make(LogCategory::kRpc);
-    if (value == "config")
-        return result<LogCategory>::make(LogCategory::kConfig);
-    if (value == "supervision")
-        return result<LogCategory>::make(LogCategory::kSupervision);
-    if (value == "cli")
-        return result<LogCategory>::make(LogCategory::kCli);
-    if (value == "http")
-        return result<LogCategory>::make(LogCategory::kHttp);
-    if (value == "user")
-        return result<LogCategory>::make(LogCategory::kUser);
+#define HPACTOR_LOG_CATEGORY_PARSE(name, str)                                  \
+    if (value == str)                                                          \
+        return result<LogCategory>::make(LogCategory::name);
+    HPACTOR_LOG_CATEGORIES(HPACTOR_LOG_CATEGORY_PARSE)
+#undef HPACTOR_LOG_CATEGORY_PARSE
     return result<LogCategory>::make(error(errors::unknown, "unknown log "
                                                             "category"));
 }
