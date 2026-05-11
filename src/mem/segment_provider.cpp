@@ -47,16 +47,22 @@ void SegmentProvider::release_slab(void* slab, SizeClass /*sc*/) {
         return;
     }
 
-    Segment* seg = it->second;
+    uint32_t idx = it->second;
     addr_to_segment_.erase(it);
 
-    if (seg->dec_ref() == 0) {
+    if (idx >= segments_.size()) {
+        return;
+    }
+
+    if (segments_[idx].dec_ref() == 0) {
         // Last slab — munmap the whole segment
-        munmap(seg->base, seg->size);
-        auto seg_it = std::find_if(segments_.begin(), segments_.end(),
-                                   [seg](const Segment& s) { return &s == seg; });
-        if (seg_it != segments_.end()) {
-            segments_.erase(seg_it);
+        munmap(segments_[idx].base, segments_[idx].size);
+        segments_.erase(segments_.begin() + idx);
+        // Update indices for slabs in segments that shifted
+        for (auto& [ptr, i] : addr_to_segment_) {
+            if (i > idx) {
+                --i;
+            }
         }
     }
 }
@@ -66,7 +72,11 @@ SegmentProvider::SegmentInfo SegmentProvider::lookup(void* ptr) const {
 
     auto it = addr_to_segment_.find(ptr);
     if (it != addr_to_segment_.end()) {
-        return {it->second->base, it->second->size};
+        auto idx = it->second;
+        if (idx < segments_.size()) {
+            return {segments_[idx].base, segments_[idx].size};
+        }
+        return {nullptr, 0};
     }
 
     // Linear scan for interior pointers
@@ -101,12 +111,13 @@ SegmentProvider::Stats SegmentProvider::stats() const {
 
 void* SegmentProvider::carve_from_segment(SizeClass sc) {
     size_t needed = slab_size(sc);
-    for (auto& seg : segments_) {
+    for (size_t i = 0; i < segments_.size(); ++i) {
+        auto& seg = segments_[i];
         if (seg.size - seg.offset >= needed) {
             void* slab = static_cast<std::byte*>(seg.base) + seg.offset;
             seg.offset += needed;
             seg.inc_ref();
-            addr_to_segment_[slab] = &seg;
+            addr_to_segment_[slab] = static_cast<uint32_t>(i);
             return slab;
         }
     }
@@ -134,8 +145,8 @@ void* SegmentProvider::allocate_new_segment(size_t size) {
     seg.ref_count = 1;
 
     segments_.push_back(seg);
-    Segment* seg_ptr = &segments_.back();
-    addr_to_segment_[base] = seg_ptr;
+    uint32_t idx = static_cast<uint32_t>(segments_.size() - 1);
+    addr_to_segment_[base] = idx;
 
     return base;
 }
