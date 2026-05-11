@@ -15,59 +15,26 @@
 #pragma once
 
 #include <cstdint>
+#include <hpactor/log/detail/log_macros.hpp>
 #include <hpactor/types/types.hpp>
 #include <string_view>
 
 namespace hpactor::log {
 
 enum class LogCategory : uint16_t {
-    kActor = 0,
-    kActorState,
-    kMailbox,
-    kScheduler,
-    kMemory,
-    kRegistrar,
-    kDiscovery,
-    kNetwork,
-    kRpc,
-    kConfig,
-    kSupervision,
-    kCli,
-    kHttp,
-    kUser,
-    kCount, // sentinel, not a valid emit category
+#define HPACTOR_LOG_CATEGORY_ENUM(name, str) name,
+    HPACTOR_LOG_CATEGORIES(HPACTOR_LOG_CATEGORY_ENUM)
+#undef HPACTOR_LOG_CATEGORY_ENUM
+        kCount, // sentinel, not a valid emit category
 };
 
 // Stable numeric IDs for common framework events.
 // Ranges: 1000-1099 actor, 1100-1199 mailbox, 1200-1299 memory,
 //         1300-1399 registrar/discovery, 1400-1499 network, 1500-1599 scheduler
 enum class LogEventId : uint32_t {
-    kActorSpawned = 1000,
-    kActorTerminated,
-    kActorStateTransfer,
-    kActorLinkRejected,
-    kMailboxDepthHigh = 1100,
-    kMailboxHighWatermark,
-    kMailboxLowWatermarkRecovered,
-    kMailboxFull,
-    kMailboxMessageRejected,
-    kMailboxMessageDropped,
-    kMailboxOverflowRerouted,
-    kBackpressureSignalSent,
-    kSystemReserveExhausted,
-    kDeadLetterQueued,
-    kDeadLetterLost,
-    kMemoryAlloc = 1200,
-    kMemoryFree,
-    kMemoryCorruption,
-    kRegistrarRegister = 1300,
-    kRegistrarResolveMiss,
-    kDiscoveryNodeJoined,
-    kDiscoveryNodeDead,
-    kNetworkFrameReceived = 1400,
-    kNetworkFrameDecodeFailed,
-    kSchedulerDispatch = 1500,
-    kSchedulerSteal,
+#define HPACTOR_LOG_EVENT_ENUM(name, value, str) name = value,
+    HPACTOR_LOG_EVENTS(HPACTOR_LOG_EVENT_ENUM)
+#undef HPACTOR_LOG_EVENT_ENUM
 };
 
 [[nodiscard]] const char* to_string(LogCategory category) noexcept;
