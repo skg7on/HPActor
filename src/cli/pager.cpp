@@ -1,11 +1,12 @@
 // Copyright 2026 HPActor Contributors
 // Licensed under the Apache License, Version 2.0
 
-#include <hpactor/cli/pager.hpp>
-#include <hpactor/cli/output_formatter.hpp>
 #include <algorithm>
 #include <charconv>
+#include <cstdint>
 #include <cstdio>
+#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli/pager.hpp>
 
 namespace hpactor {
 namespace cli {
@@ -22,8 +23,7 @@ bool Pager::show_page(uint32_t total_items,
     render(start, end - start);
 
     char buf[128];
-    int n = snprintf(buf, sizeof(buf),
-                     "Page %u of %u (%u-%u of %u)",
+    int n = snprintf(buf, sizeof(buf), "Page %u of %u (%u-%u of %u)",
                      current_page(), total_pages(), start + 1, end, total_items_);
     output->raw(std::string(buf, static_cast<size_t>(n)));
     output->raw("[n]ext, [p]rev, [q]uit, /search, g<num>");
@@ -32,7 +32,8 @@ bool Pager::show_page(uint32_t total_items,
 }
 
 uint32_t Pager::total_pages() const {
-    if (total_items_ == 0) return 1;
+    if (total_items_ == 0)
+        return 1;
     return (total_items_ + page_size_ - 1) / page_size_;
 }
 
@@ -57,12 +58,22 @@ void Pager::prev_page() {
 }
 
 Pager::Action Pager::parse_input(const std::string& input, std::string& arg) {
-    if (input.empty()) return Action::Next;
-    if (input == "n" || input == "next") return Action::Next;
-    if (input == "p" || input == "prev") return Action::Previous;
-    if (input == "q" || input == "quit") return Action::Quit;
-    if (input == "f" || input == "first") { goto_page(1); return Action::Goto; }
-    if (input == "l" || input == "last")  { goto_page(total_pages()); return Action::Goto; }
+    if (input.empty())
+        return Action::Next;
+    if (input == "n" || input == "next")
+        return Action::Next;
+    if (input == "p" || input == "prev")
+        return Action::Previous;
+    if (input == "q" || input == "quit")
+        return Action::Quit;
+    if (input == "f" || input == "first") {
+        goto_page(1);
+        return Action::Goto;
+    }
+    if (input == "l" || input == "last") {
+        goto_page(total_pages());
+        return Action::Goto;
+    }
     if (!input.empty() && input[0] == '/') {
         arg = input.substr(1);
         return Action::Search;
@@ -71,11 +82,12 @@ Pager::Action Pager::parse_input(const std::string& input, std::string& arg) {
         arg = input.substr(1);
         uint32_t page = 0;
         auto [ptr, ec] = std::from_chars(arg.data(), arg.data() + arg.size(), page);
-        if (ec == std::errc{}) goto_page(page);
+        if (ec == std::errc{})
+            goto_page(page);
         return Action::Goto;
     }
     return Action::Unknown;
 }
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor
