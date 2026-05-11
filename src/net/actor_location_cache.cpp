@@ -14,14 +14,17 @@
 
 #include <hpactor/net/actor_location_cache.hpp>
 
+#include <mutex>
+
 namespace hpactor::net {
 
 std::optional<EndPoint> ActorLocationCache::get(ActorId id) const {
     std::shared_lock lock(mutex_);
     auto it = cache_.find(id);
-    if (it == cache_.end()) return std::nullopt;
+    if (it == cache_.end())
+        return std::nullopt;
     if (it->second.expires_at <= std::chrono::steady_clock::now())
-        return std::nullopt;  // expired, deferred eviction via purge_expired()
+        return std::nullopt; // expired, deferred eviction via purge_expired()
     return it->second.endpoint;
 }
 
@@ -38,8 +41,10 @@ void ActorLocationCache::evict(ActorId id) {
 void ActorLocationCache::evict_node(EndPoint ep) {
     std::unique_lock lock(mutex_);
     for (auto it = cache_.begin(); it != cache_.end();) {
-        if (it->second.endpoint == ep) it = cache_.erase(it);
-        else ++it;
+        if (it->second.endpoint == ep)
+            it = cache_.erase(it);
+        else
+            ++it;
     }
 }
 
@@ -47,8 +52,10 @@ void ActorLocationCache::purge_expired() {
     std::unique_lock lock(mutex_);
     auto now = std::chrono::steady_clock::now();
     for (auto it = cache_.begin(); it != cache_.end();) {
-        if (it->second.expires_at <= now) it = cache_.erase(it);
-        else ++it;
+        if (it->second.expires_at <= now)
+            it = cache_.erase(it);
+        else
+            ++it;
     }
 }
 
