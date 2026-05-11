@@ -336,6 +336,7 @@ endif()
 add_library(linenoise STATIC
     third_party/linenoise/linenoise.c
 )
+set_target_properties(linenoise PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(linenoise PUBLIC third_party/linenoise)
 target_compile_options(linenoise PRIVATE
     -Wno-error
