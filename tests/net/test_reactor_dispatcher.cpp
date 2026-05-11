@@ -256,30 +256,38 @@ int main() {
         std::optional<OpCompletion> captured;
         disp.set_completion_handler([&captured](OpCompletion c) { captured = c; });
 
-        int fds[2];
-        socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
+        // Create a datagram socket pair — sendto needs a destination.
+        int sender = socket(AF_UNIX, SOCK_DGRAM, 0);
+        int receiver = socket(AF_UNIX, SOCK_DGRAM, 0);
+        assert(sender >= 0 && receiver >= 0);
+
+        struct sockaddr_un recv_addr;
+        memset(&recv_addr, 0, sizeof(recv_addr));
+        recv_addr.sun_family = AF_UNIX;
+        snprintf(recv_addr.sun_path, sizeof(recv_addr.sun_path),
+                 "/tmp/hpactor_sendto_test_%d", getpid());
+        unlink(recv_addr.sun_path);
+        assert(bind(receiver, reinterpret_cast<struct sockaddr*>(&recv_addr),
+                    sizeof(recv_addr)) == 0);
 
         struct iovec iov;
         char data[] = "sendto test";
         iov.iov_base = data;
         iov.iov_len = 10;
 
-        struct sockaddr_un dummy;
-        memset(&dummy, 0, sizeof(dummy));
-        dummy.sun_family = AF_UNIX;
+        disp.register_sendto(sender, ActorId(4), OpType::SendTo, &iov, 1,
+                             reinterpret_cast<struct sockaddr*>(&recv_addr),
+                             sizeof(recv_addr));
 
-        disp.register_sendto(fds[0], ActorId(4), OpType::SendTo, &iov, 1,
-                             reinterpret_cast<struct sockaddr*>(&dummy),
-                             sizeof(dummy));
-
-        disp.on_readiness(fds[0], IoEvent::Write);
+        disp.on_readiness(sender, IoEvent::Write);
 
         assert(captured.has_value() && "completion should be captured");
         assert(captured->type == OpType::SendTo && "should be SendTo");
         assert(captured->result == 10 && "should send 10 StreamBuffer");
 
-        close(fds[0]);
-        close(fds[1]);
+        close(sender);
+        close(receiver);
+        unlink(recv_addr.sun_path);
         printf("PASS\n");
     }
 

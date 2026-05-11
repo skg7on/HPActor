@@ -13,15 +13,15 @@
 // limitations under the License.
 
 // Comprehensive async TCP transport tests
-// Tests edge cases and race conditions in acceptor, TcpTransport, and connection
-// pooling
+// Tests edge cases and race conditions in acceptor, TcpTransport, and
+// connection pooling
 
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/event_loop.hpp>
-#include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/tcp_transport.hpp>
+#include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <algorithm>
@@ -32,6 +32,7 @@
 #include <cstring>
 #include <fcntl.h>
 #include <functional>
+#include <sys/stat.h>
 #include <thread>
 #include <unistd.h>
 #include <vector>
@@ -51,7 +52,8 @@ void test_acceptor_rapid_open_close() {
     // Rapidly open and close multiple acceptors
     for (int cycle = 0; cycle < 20; ++cycle) {
         UnixDomainAcceptor acceptor(&loop);
-        std::string path = "/tmp/hpactor/test_rapid_" + std::to_string(cycle) + ".sock";
+        std::string path =
+            "/tmp/hpactor/test_rapid_" + std::to_string(cycle) + ".sock";
 
         // Listen
         bool ok = acceptor.listen(path);
@@ -176,19 +178,17 @@ void test_send_during_close_race() {
     fcntl(sv[1], F_SETFL, flags | O_NONBLOCK);
 
     auto remote_ep = endpoint_ops::parse_endpoint("127.0.0.1:12345");
-    auto client = WireFrameConnection::create_as_client(sv[0], LocalEndpoint, remote_ep, &loop);
-    auto server = WireFrameConnection::create_as_server(sv[1], LocalEndpoint, remote_ep, &loop);
+    auto client = WireFrameConnection::create_as_client(sv[0], LocalEndpoint,
+                                                        remote_ep, &loop);
+    auto server = WireFrameConnection::create_as_server(sv[1], LocalEndpoint,
+                                                        remote_ep, &loop);
 
     std::atomic<int> send_completions{0};
     std::atomic<int> errors{0};
 
-    client->set_send_completion_handler([&](int) {
-        send_completions++;
-    });
+    client->set_send_completion_handler([&](int) { send_completions++; });
 
-    client->set_error_handler([&](ConnectionPtr, const error&) {
-        errors++;
-    });
+    client->set_error_handler([&](ConnectionPtr, const error&) { errors++; });
 
     // Send multiple messages rapidly
     for (int i = 0; i < 10; ++i) {
@@ -370,7 +370,8 @@ void test_send_without_frame_handler() {
     assert(r == 0);
 
     auto remote_ep = endpoint_ops::parse_endpoint("127.0.0.1:12345");
-    auto conn = WireFrameConnection::create_as_client(sv[0], LocalEndpoint, remote_ep, &loop);
+    auto conn = WireFrameConnection::create_as_client(sv[0], LocalEndpoint,
+                                                      remote_ep, &loop);
 
     // Don't set frame handler - should handle gracefully
 
@@ -468,7 +469,8 @@ void test_concurrent_acceptor_operations() {
                     addr.sin_family = AF_INET;
                     addr.sin_addr.s_addr = htonl(0x7F000001);
                     addr.sin_port = htons(port);
-                    (void)::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+                    (void)::connect(fd, reinterpret_cast<struct sockaddr*>(&addr),
+                                    sizeof(addr));
                     close(fd);
                 }
             }
@@ -562,15 +564,18 @@ void test_plain_connection_state_transitions() {
     auto remote_ep = endpoint_ops::parse_endpoint("127.0.0.1:12345");
 
     // Client side - create_client sets state to Connected
-    auto client = WireFrameConnection::create_as_client(sv[0], LocalEndpoint, remote_ep, &loop);
+    auto client = WireFrameConnection::create_as_client(sv[0], LocalEndpoint,
+                                                        remote_ep, &loop);
     assert(client->state() == ConnectionState::Connected); // Changed assertion
 
     // Server side
-    auto server = WireFrameConnection::create_as_server(sv[1], LocalEndpoint, remote_ep, &loop);
+    auto server = WireFrameConnection::create_as_server(sv[1], LocalEndpoint,
+                                                        remote_ep, &loop);
     assert(server->state() == ConnectionState::Connected);
 
     // Client should transition to Connected when socket is connected
-    // (Note: WireFrameConnection doesn't auto-connect, only sets state in factory)
+    // (Note: WireFrameConnection doesn't auto-connect, only sets state in
+    // factory)
 
     // Close client
     client->close();
@@ -696,7 +701,8 @@ void test_acceptor_edge_triggered() {
             addr.sin_family = AF_INET;
             addr.sin_addr.s_addr = htonl(0x7F000001);
             addr.sin_port = htons(22150);
-            (void)::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+            (void)::connect(fd, reinterpret_cast<struct sockaddr*>(&addr),
+                            sizeof(addr));
             close(fd);
         }
     });
@@ -824,9 +830,7 @@ void test_is_connected_accuracy() {
     EventLoop loop;
     TcpAcceptor acceptor(&loop);
     acceptor.listen(22500);
-    acceptor.set_accept_handler([&](int fd, EndPoint) {
-        ::close(fd);
-    });
+    acceptor.set_accept_handler([&](int fd, EndPoint) { ::close(fd); });
 
     TcpTransport transport(ep, tls_config, pool_config, nullptr);
 
@@ -860,6 +864,7 @@ void test_is_connected_accuracy() {
 // Main - run all tests
 // =============================================================================
 int main() {
+    mkdir("/tmp/hpactor", 0755);
     printf("=== TCP Transport Comprehensive Tests ===\n\n");
 
     test_acceptor_rapid_open_close();

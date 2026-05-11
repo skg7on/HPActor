@@ -74,6 +74,7 @@ void test_uds_fallback_when_uds_unavailable() {
 }
 
 int main() {
+    mkdir("/tmp/hpactor", 0755);
     // Test SimpleNodeId: "localhost:5000" -> "/tmp/hpactor/localhost_5000.sock"
     {
         auto path = derive_uds_path("localhost:5000");

@@ -25,6 +25,7 @@
         }                                                                      \
     } while (false)
 
+
 int main() {
     // Test 1: ActorId default construction (value == 0)
     hpactor::ActorId default_actor_id;

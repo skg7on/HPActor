@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/reactor/epoll_backend.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/reactor/epoll_backend.hpp>
 
 #if defined(__linux__)
+#    include <cerrno>
 #    include <cstdlib>
 #    include <cstring>
 #    include <ctime>
-#    include <cerrno>
 #    include <fcntl.h>
 #    include <sys/epoll.h>
 #    include <sys/socket.h>
@@ -56,7 +56,7 @@ bool EpollBackend::start() {
     // Add timerfd to epoll
     struct epoll_event ev;
     ev.events = EPOLLIN;
-    ev.data.ptr = nullptr;
+    ev.data.fd = timerfd_;
     if (epoll_ctl(epoll_fd_, EPOLL_CTL_ADD, timerfd_, &ev) < 0) {
         close(timerfd_);
         close(epoll_fd_);
@@ -233,7 +233,8 @@ void EpollBackend::try_pending_accept(int fd, PendingOp& op) {
     while (true) {
         int client_fd = ::accept(fd, nullptr, nullptr);
         if (client_fd < 0) {
-            if (errno == EAGAIN) break;
+            if (errno == EAGAIN)
+                break;
             break;
         }
         add_fd(client_fd, IoEvent::Read);
@@ -256,7 +257,8 @@ bool EpollBackend::try_pending_connect(int fd, PendingOp& op, uint32_t events,
                                        int& error) {
     (void)fd;
     (void)op;
-    if (!(events & EPOLLOUT)) return false;
+    if (!(events & EPOLLOUT))
+        return false;
     int err = 0;
     socklen_t errlen = sizeof(err);
     getsockopt(fd, SOL_SOCKET, SO_ERROR, &err, &errlen);
@@ -266,20 +268,21 @@ bool EpollBackend::try_pending_connect(int fd, PendingOp& op, uint32_t events,
 
 bool EpollBackend::try_pending_send(int fd, PendingOp& op, uint32_t events,
                                     ssize_t& total, int& error) {
-    if (!(events & EPOLLOUT)) return false;
+    if (!(events & EPOLLOUT))
+        return false;
 
     OpType optype = static_cast<OpType>(op.op_type);
     while (true) {
         ssize_t n;
         if (optype == OpType::SendTo) {
             n = ::sendto(fd, op.data.data(), op.data.size(), 0,
-                         reinterpret_cast<const sockaddr*>(&op.addr),
-                         op.addrlen);
+                         reinterpret_cast<const sockaddr*>(&op.addr), op.addrlen);
         } else {
             n = ::send(fd, op.data.data(), op.data.size(), 0);
         }
         if (n < 0) {
-            if (errno == EAGAIN) return false; // Keep pending op
+            if (errno == EAGAIN)
+                return false; // Keep pending op
             error = errno;
             return true;
         }
@@ -294,7 +297,8 @@ bool EpollBackend::try_pending_send(int fd, PendingOp& op, uint32_t events,
 
 bool EpollBackend::try_pending_recv(int fd, PendingOp& op, uint32_t events,
                                     ssize_t& total, int& error) {
-    if (!(events & EPOLLIN)) return false;
+    if (!(events & EPOLLIN))
+        return false;
 
     OpType optype = static_cast<OpType>(op.op_type);
     while (true) {
@@ -308,12 +312,14 @@ bool EpollBackend::try_pending_recv(int fd, PendingOp& op, uint32_t events,
             n = ::readv(fd, op.saved_bufs, op.buf_count);
         }
         if (n < 0) {
-            if (errno == EAGAIN) return false; // Keep pending op
+            if (errno == EAGAIN)
+                return false; // Keep pending op
             error = errno;
             return true;
         }
         total += n;
-        if (n == 0) return true; // EOF
+        if (n == 0)
+            return true; // EOF
     }
 }
 
@@ -336,48 +342,49 @@ void EpollBackend::deliver_op_completion(const PendingOp& op, OpType optype,
 
 void EpollBackend::process_pending_op(int fd, uint32_t events) {
     auto it = pending_ops_.find(fd);
-    if (it == pending_ops_.end()) return;
+    if (it == pending_ops_.end())
+        return;
 
     PendingOp& op = it->second;
     OpType optype = static_cast<OpType>(op.op_type);
 
     switch (optype) {
-    case OpType::Accept:
-        try_pending_accept(fd, op);
-        return; // Keep pending op for re-trigger
+        case OpType::Accept:
+            try_pending_accept(fd, op);
+            return; // Keep pending op for re-trigger
 
-    case OpType::Connect: {
-        int error = 0;
-        if (try_pending_connect(fd, op, events, error)) {
-            deliver_op_completion(op, optype, fd, 0, error);
-            pending_ops_.erase(it);
+        case OpType::Connect: {
+            int error = 0;
+            if (try_pending_connect(fd, op, events, error)) {
+                deliver_op_completion(op, optype, fd, 0, error);
+                pending_ops_.erase(it);
+            }
+            return;
         }
-        return;
-    }
-    case OpType::Send:
-    case OpType::SendTo: {
-        ssize_t total = 0;
-        int error = 0;
-        if (try_pending_send(fd, op, events, total, error)) {
-            deliver_op_completion(op, optype, fd, total, error);
-            pending_ops_.erase(it);
+        case OpType::Send:
+        case OpType::SendTo: {
+            ssize_t total = 0;
+            int error = 0;
+            if (try_pending_send(fd, op, events, total, error)) {
+                deliver_op_completion(op, optype, fd, total, error);
+                pending_ops_.erase(it);
+            }
+            return;
         }
-        return;
-    }
-    case OpType::Recv:
-    case OpType::RecvFrom: {
-        ssize_t total = 0;
-        int error = 0;
-        if (try_pending_recv(fd, op, events, total, error)) {
-            deliver_op_completion(op, optype, fd, total, error);
-            pending_ops_.erase(it);
+        case OpType::Recv:
+        case OpType::RecvFrom: {
+            ssize_t total = 0;
+            int error = 0;
+            if (try_pending_recv(fd, op, events, total, error)) {
+                deliver_op_completion(op, optype, fd, total, error);
+                pending_ops_.erase(it);
+            }
+            return;
         }
-        return;
-    }
-    default:
-        deliver_op_completion(op, optype, fd, 0, EINVAL);
-        pending_ops_.erase(it);
-        return;
+        default:
+            deliver_op_completion(op, optype, fd, 0, EINVAL);
+            pending_ops_.erase(it);
+            return;
     }
 }
 
@@ -838,7 +845,8 @@ int EpollBackend::wait(int timeout_ms) {
     int num_events = epoll_wait(epoll_fd_, events, 16, timeout_ms);
 
     if (num_events < 0) {
-        if (errno == EINTR) return 0;
+        if (errno == EINTR)
+            return 0;
         return -1;
     }
 
@@ -868,7 +876,8 @@ void EpollBackend::service_read_handler(int fd) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = read_handlers_.find(fd);
-        if (it == read_handlers_.end()) return;
+        if (it == read_handlers_.end())
+            return;
         cb = it->second;
     }
     cb(fd);
@@ -893,7 +902,8 @@ void EpollBackend::service_write_handler(int fd) {
     {
         std::lock_guard<std::mutex> lock(mutex_);
         auto it = write_handlers_.find(fd);
-        if (it == write_handlers_.end()) return;
+        if (it == write_handlers_.end())
+            return;
         cb = it->second;
     }
     cb(fd);

@@ -66,8 +66,12 @@ class SegmentProvider {
         size_t offset{0};
         uint32_t ref_count{0}; // atomic not needed; protected by mutex_
 
-        void inc_ref() { ++ref_count; }
-        uint32_t dec_ref() { return --ref_count; }
+        void inc_ref() {
+            ++ref_count;
+        }
+        uint32_t dec_ref() {
+            return --ref_count;
+        }
     };
 
     void* carve_from_segment(SizeClass sc);
@@ -75,7 +79,7 @@ class SegmentProvider {
 
     mutable std::mutex mutex_;
     std::vector<Segment> segments_;
-    std::unordered_map<void*, Segment*> addr_to_segment_;
+    std::unordered_map<void*, uint32_t> addr_to_segment_;
 };
 
 } // namespace hpactor::mem

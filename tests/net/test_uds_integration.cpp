@@ -18,6 +18,7 @@
 #include <cassert>
 #include <cstring>
 #include <string>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -89,6 +90,7 @@ void test_path_derivation() {
 } // namespace hpactor
 
 int main() {
+    mkdir("/tmp/hpactor", 0755);
     hpactor::net::test_path_derivation();
     hpactor::net::test_connect_and_frame();
     return 0;
