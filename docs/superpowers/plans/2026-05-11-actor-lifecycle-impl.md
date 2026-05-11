@@ -4,7 +4,11 @@
 
 **Goal:** Implement the opt-in LifecycleActor mixin with 7-state declarative state machine, message gating, and integration into ActorSystem, supervision, CLI, and metrics.
 
-**Architecture:** New `lifecycle_state.hpp` holds the `constexpr StateDef` table where each state owns its transition rules. `LifecycleActor` is a virtual mixin class (multiple inheritance) with atomic state storage, CAS-based transitions, and post-transition hooks. AbstractActor gains an `as_lifecycle()` virtual method for RTTI-free downcasting. The gate is a single check in `EventBasedActor::receive()` after system message interception.
+**Architecture:** New `lifecycle_state.hpp` holds the `constexpr StateDef` table where each state owns its transition rules. `LifecycleActor` is a virtual mixin class (multiple inheritance) with atomic state storage, CAS-based transitions, and post-transition hooks. `AbstractActor` gains a virtual `as_lifecycle()` method returning `nullptr` by default; each lifecycle-capable actor must explicitly override it to return `this` (standard RTTI-free mixin downcast). The gate is a single check in `EventBasedActor::receive()` after system message interception.
+
+**Deferred items (explicitly excluded from this plan):**
+- CLI `/actor <id> drain` command — requires CLI command tree integration; track as follow-up
+- Metrics ring buffer wiring inside `transition()` — `LifecycleActor` has no reference to metrics infrastructure; emit metrics at call sites instead
 
 **Tech Stack:** C++20, `std::atomic`, `-fno-exceptions`, `-fno-rtti`, LLVM coding standards
 
@@ -119,6 +123,15 @@ public:
         incarnation_.fetch_add(1, std::memory_order_relaxed);
     }
 
+    // ── Failure reason ─────────────────────────────────
+    // Set before transition(kFailed) so on_fail() receives the real error.
+    void set_failure_reason(error err) {
+        failure_reason_ = err;
+    }
+    error failure_reason() const {
+        return failure_reason_;
+    }
+
     // ── Transition ─────────────────────────────────────
     // Validates that `to` is a legal transition from the current state,
     // performs a CAS, and invokes the corresponding virtual hook.
@@ -130,16 +143,21 @@ public:
     virtual void on_drain()    {}
     virtual void on_stop()     {}
     virtual void on_deactivate() {}
-    virtual void on_fail(error reason);
+    virtual void on_fail(error err);
     virtual void on_recover()  {}
     virtual void on_restart()  {}
 
-    // RTTI-free downcast from AbstractActor
-    virtual LifecycleActor* as_lifecycle() { return this; }
+    // NOTE: LifecycleActor does NOT override as_lifecycle().
+    // Each lifecycle actor class must explicitly override
+    // AbstractActor::as_lifecycle() to return this. Example:
+    //   LifecycleActor* as_lifecycle() override { return this; }
+    // This is required because LifecycleActor does not inherit from
+    // AbstractActor, so it cannot override its virtual method directly.
 
 protected:
     std::atomic<uint8_t> state_;
     std::atomic<uint64_t> incarnation_;
+    error failure_reason_{0};
 };
 
 } // namespace hpactor
@@ -170,7 +188,7 @@ git commit -m "feat(lifecycle): add LifecycleActor mixin class"
 
 namespace hpactor {
 
-void LifecycleActor::on_fail(error /*reason*/) {
+void LifecycleActor::on_fail(error /*err*/) {
     // Default no-op; subclasses override for failure-specific cleanup
 }
 
@@ -197,7 +215,8 @@ bool LifecycleActor::transition(LifecycleState to) {
         return false;
     }
 
-    // Post-transition: invoke the hook for this transition
+    // Post-transition: invoke the hook for this transition.
+    // on_fail() uses the stored failure_reason_ (set by caller before transition).
     if (to == LifecycleState::kActive && (from == LifecycleState::kStarting || from == LifecycleState::kRecovering)) {
         on_start();
     } else if (to == LifecycleState::kDraining) {
@@ -207,7 +226,7 @@ bool LifecycleActor::transition(LifecycleState to) {
     } else if (to == LifecycleState::kStopped) {
         on_deactivate();
     } else if (to == LifecycleState::kFailed) {
-        on_fail(error(0));
+        on_fail(failure_reason_);
     } else if (to == LifecycleState::kStarting && (from == LifecycleState::kFailed || from == LifecycleState::kStopped)) {
         on_restart();
     } else if (to == LifecycleState::kRecovering) {
@@ -220,15 +239,14 @@ bool LifecycleActor::transition(LifecycleState to) {
 } // namespace hpactor
 ```
 
-- [ ] **Step 2: Verify it compiles by adding to the build**
+- [ ] **Step 2: Add to CMakeLists.txt and verify compilation**
 
-First, check how src/actor/ files are included in CMakeLists.txt:
+In the top-level `CMakeLists.txt`, find the `hpactor_lib` source file list. Insert `src/actor/lifecycle_actor.cpp` after the existing `src/actor/` entries. The source entries are alphabetically grouped under `src/actor/` — add after `src/actor/http_gateway_actor.cpp` (line ~187).
 
 ```bash
-grep -n "lifecycle\|src/actor/" CMakeLists.txt | head -5
+# Verify the file is added correctly:
+grep "lifecycle_actor" CMakeLists.txt
 ```
-
-Then add `src/actor/lifecycle_actor.cpp` to the hpactor_lib sources in the top-level CMakeLists.txt.
 
 - [ ] **Step 3: Commit**
 
@@ -479,18 +497,18 @@ git commit -m "feat(lifecycle): add lifecycle transition aggregation in metrics"
 ### Task 10: Wire lifecycle in ActorSystem::spawn()
 
 **Files:**
-- Modify: `src/actor/actor_system.cpp`
+- Modify: `include/hpactor/core/actor_system.hpp` (template method, line ~514)
 
-- [ ] **Step 1: Add include**
+- [ ] **Step 1: Add include in actor_system.hpp**
 
-At top of file:
+In `include/hpactor/core/actor_system.hpp`, add after existing includes:
 ```cpp
 #include <hpactor/actor/lifecycle_actor.hpp>
 ```
 
 - [ ] **Step 2: Add lifecycle transition after on_activate()**
 
-In the `spawn()` template method (in `actor_system.hpp`, around line 514 after `actor->on_activate()`), add:
+In the `spawn()` template method (line ~514, after `actor->on_activate()`), add:
 
 ```cpp
     // Transition lifecycle to ACTIVE if actor has lifecycle management
@@ -499,17 +517,12 @@ In the `spawn()` template method (in `actor_system.hpp`, around line 514 after `
     }
 ```
 
-- [ ] **Step 3: Add include in actor_system.hpp for the template method**
+Note: `src/actor/actor_system.cpp` does NOT need a new include — the lifecycle wiring is in the template defined in the header.
 
-In `include/hpactor/core/actor_system.hpp`, add after existing includes:
-```cpp
-#include <hpactor/actor/lifecycle_actor.hpp>
-```
-
-- [ ] **Step 4: Commit**
+- [ ] **Step 3: Commit**
 
 ```bash
-git add src/actor/actor_system.cpp include/hpactor/core/actor_system.hpp
+git add include/hpactor/core/actor_system.hpp
 git commit -m "feat(lifecycle): wire lifecycle STARTING→ACTIVE in ActorSystem::spawn()"
 ```
 
@@ -537,8 +550,9 @@ After `++count;` (line 110), before the metrics emission (line 112), add:
 
 ```cpp
     // Drive lifecycle for the failing child
-    if (auto* actor = system().get_actor(child_id).get()) {
-        if (auto* lc = actor->as_lifecycle()) {
+    if (auto actor = system().get_actor(child_id)) {
+        if (auto* lc = actor.get()->as_lifecycle()) {
+            lc->set_failure_reason(error(/* reason from the failure */));
             lc->transition(LifecycleState::kFailed);
             lc->bump_incarnation();
             lc->transition(LifecycleState::kStarting);
@@ -815,12 +829,12 @@ using namespace hpactor;
 
 // ── Test 1: Actor without LifecycleActor returns nullptr ─
 TEST(test_no_lifecycle_returns_null) {
-    ActorSystemConfig cfg;
+    ActorSystem::Config cfg;
     cfg.scheduler_threads = 1;
-    cfg.disable_network = true;
-    auto system = ActorSystem::create(cfg);
-    auto actor = system->spawn<EventBasedActor>();
-    CHECK(actor->as_lifecycle() == nullptr);
+    cfg.enable_network = false;
+    ActorSystem system(cfg);
+    auto actor = system.spawn<EventBasedActor>();
+    CHECK(actor.get()->as_lifecycle() == nullptr);
     std::cout << "PASS: test_no_lifecycle_returns_null\n";
 }
 
@@ -829,15 +843,20 @@ class SimpleLifecycleActor : public EventBasedActor, public LifecycleActor {
 public:
     SimpleLifecycleActor(ActorContext* ctx, ActorSystem& sys)
         : EventBasedActor(ctx, sys) {}
+
+    // REQUIRED: override AbstractActor::as_lifecycle() to return this.
+    // LifecycleActor does NOT inherit from AbstractActor, so the override
+    // must appear in the class that inherits from both.
+    LifecycleActor* as_lifecycle() override { return this; }
 };
 
 TEST(test_lifecycle_actor_spawns_active) {
-    ActorSystemConfig cfg;
+    ActorSystem::Config cfg;
     cfg.scheduler_threads = 1;
-    cfg.disable_network = true;
-    auto system = ActorSystem::create(cfg);
-    auto actor = system->spawn<SimpleLifecycleActor>();
-    auto* lc = actor->as_lifecycle();
+    cfg.enable_network = false;
+    ActorSystem system(cfg);
+    auto actor = system.spawn<SimpleLifecycleActor>();
+    auto* lc = actor.get()->as_lifecycle();
     CHECK(lc != nullptr);
     // After spawn(), the lifecycle should be ACTIVE
     CHECK_EQ(lc->state(), LifecycleState::kActive);
@@ -846,24 +865,24 @@ TEST(test_lifecycle_actor_spawns_active) {
 
 // ── Test 5: to_metadata() reports lifecycle state ────────
 TEST(test_to_metadata_reports_lifecycle_state) {
-    ActorSystemConfig cfg;
+    ActorSystem::Config cfg;
     cfg.scheduler_threads = 1;
-    cfg.disable_network = true;
-    auto system = ActorSystem::create(cfg);
-    auto actor = system->spawn<SimpleLifecycleActor>();
-    auto meta = actor->to_metadata();
+    cfg.enable_network = false;
+    ActorSystem system(cfg);
+    auto actor = system.spawn<SimpleLifecycleActor>();
+    auto meta = actor.get()->to_metadata();
     CHECK_EQ(meta.state, "active");
     std::cout << "PASS: test_to_metadata_reports_lifecycle_state\n";
 }
 
 // ── Test 6: Default actor to_metadata() says "unknown" ──
 TEST(test_default_actor_to_metadata_unknown) {
-    ActorSystemConfig cfg;
+    ActorSystem::Config cfg;
     cfg.scheduler_threads = 1;
-    cfg.disable_network = true;
-    auto system = ActorSystem::create(cfg);
-    auto actor = system->spawn<EventBasedActor>();
-    auto meta = actor->to_metadata();
+    cfg.enable_network = false;
+    ActorSystem system(cfg);
+    auto actor = system.spawn<EventBasedActor>();
+    auto meta = actor.get()->to_metadata();
     CHECK_EQ(meta.state, "unknown");
     std::cout << "PASS: test_default_actor_to_metadata_unknown\n";
 }
