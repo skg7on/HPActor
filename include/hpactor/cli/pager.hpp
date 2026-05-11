@@ -2,6 +2,7 @@
 // Licensed under the Apache License, Version 2.0
 #pragma once
 
+#include <cstdint>
 #include <functional>
 #include <string>
 
@@ -11,7 +12,7 @@ namespace cli {
 class OutputFormatter;
 
 class Pager {
-public:
+  public:
     enum class Action { Next, Previous, Quit, Search, Goto, Unknown };
 
     Pager(uint32_t page_size);
@@ -25,17 +26,19 @@ public:
     // Parse user input after a page prompt.
     Action parse_input(const std::string& input, std::string& arg);
 
-    uint32_t current_page() const { return current_offset_ / page_size_ + 1; }
+    uint32_t current_page() const {
+        return current_offset_ / page_size_ + 1;
+    }
     uint32_t total_pages() const;
     void goto_page(uint32_t page);
     void next_page();
     void prev_page();
 
-private:
+  private:
     uint32_t page_size_;
     uint32_t current_offset_ = 0;
     uint32_t total_items_ = 0;
 };
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor

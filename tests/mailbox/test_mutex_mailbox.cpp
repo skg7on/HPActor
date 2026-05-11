@@ -29,6 +29,7 @@ int main() {
 
     TypedMessage msg;
     bool popped = mailbox.pop(msg);
+    (void)popped;
     assert(popped);
     assert(msg.type_id() == TypeTag::User);
     assert(msg.payload().size() == 1);
@@ -37,6 +38,7 @@ int main() {
 
     // Test try_pop on empty
     bool tried = mailbox.try_pop(msg);
+    (void)tried;
     assert(!tried);
 
     // Test thread safety - push from multiple threads
@@ -45,7 +47,8 @@ int main() {
         threads.emplace_back([&mailbox, i]() {
             for (int j = 0; j < 100; ++j) {
                 mailbox.push(TypedMessage(TypeTag::User,
-                    StreamBuffer{static_cast<uint8_t>(i), static_cast<uint8_t>(j)}));
+                                          StreamBuffer{static_cast<uint8_t>(i),
+                                                       static_cast<uint8_t>(j)}));
             }
         });
     }

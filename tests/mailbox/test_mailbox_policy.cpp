@@ -22,6 +22,7 @@ using namespace hpactor::mailbox;
 
 int main() {
     MailboxConfig cfg;
+    (void)cfg;
     assert(cfg.capacity.max_messages == 1024);
     assert(cfg.capacity.max_bytes == 0);
     assert(cfg.overflow_policy == OverflowPolicy::RejectNewest);

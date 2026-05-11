@@ -117,7 +117,17 @@ endif()
 
 find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
 if(CLANG_TIDY_EXE)
-    set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-config-file=${CMAKE_SOURCE_DIR}/.clang-tidy")
+    execute_process(COMMAND ${CLANG_TIDY_EXE} --version
+        OUTPUT_VARIABLE CLANG_TIDY_VERSION_OUTPUT
+        OUTPUT_STRIP_TRAILING_WHITESPACE
+    )
+    string(REGEX MATCH "version ([0-9]+)\\.[0-9]+" _ ${CLANG_TIDY_VERSION_OUTPUT})
+    if(CMAKE_MATCH_1 AND CMAKE_MATCH_1 GREATER_EQUAL 20)
+        message(STATUS "clang-tidy ${CMAKE_MATCH_1}.x found — enabling")
+        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-config-file=${CMAKE_SOURCE_DIR}/.clang-tidy")
+    else()
+        message(STATUS "clang-tidy version ${CMAKE_MATCH_1} (< 20) — skipping")
+    endif()
 endif()
 
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -135,6 +145,7 @@ add_compile_options(
     -Wshadow
     -Wconversion
     $<$<COMPILE_LANGUAGE:CXX>:-Wold-style-cast>
+
 )
 
 # Suppress linker warnings for dylibs built for newer macOS versions
@@ -262,7 +273,7 @@ set_source_files_properties(
     third_party/llhttp/http.c
     PROPERTIES
         LANGUAGE C
-        COMPILE_FLAGS "-Wno-error -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
+        COMPILE_FLAGS "-Wno-error -Wno-conversion -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
 )
 target_include_directories(hpactor_lib PUBLIC include ${CMAKE_CURRENT_BINARY_DIR} third_party/llhttp)
 
@@ -326,6 +337,7 @@ endif()
 add_library(linenoise STATIC
     third_party/linenoise/linenoise.c
 )
+set_target_properties(linenoise PROPERTIES POSITION_INDEPENDENT_CODE ON)
 target_include_directories(linenoise PUBLIC third_party/linenoise)
 target_compile_options(linenoise PRIVATE
     -Wno-error
