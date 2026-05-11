@@ -92,7 +92,7 @@ git commit -m "feat(lifecycle): add LifecycleState enum and constexpr StateDef t
 #include <cstdint>
 
 #include <hpactor/actor/lifecycle_state.hpp>
-#include <hpactor/types/types_fwd.hpp>
+#include <hpactor/types/types.hpp>  // complete error type needed for value members
 
 namespace hpactor {
 
@@ -275,9 +275,8 @@ In the public section of `AbstractActor`, after `is_event_based_actor()` (around
 ```cpp
 // Lifecycle query — RTTI-free downcast to LifecycleActor mixin.
 // Returns nullptr for actors that don't opt into lifecycle management.
-virtual LifecycleActor* as_lifecycle() {
-    return nullptr;
-}
+virtual LifecycleActor* as_lifecycle() { return nullptr; }
+virtual const LifecycleActor* as_lifecycle() const { return nullptr; }
 ```
 
 - [ ] **Step 2: Commit**
@@ -308,7 +307,7 @@ cli::ActorMeta AbstractActor::to_metadata() const {
     cli::ActorMeta m;
     m.actor_id = id().value();
     m.actor_type = std::string(type_name());
-    if (auto* lc = const_cast<AbstractActor*>(this)->as_lifecycle()) {
+    if (auto* lc = as_lifecycle()) {
         m.state = lc->state_string();
     } else {
         m.state = "unknown";
@@ -345,9 +344,9 @@ Insert after line 161:
 
 ```cpp
     // -- Lifecycle message gate --
-    // System messages and CLI/metrics messages (TypeTag < 100) always pass.
-    // User messages (TypeTag >= 100) are only accepted in ACTIVE state.
-    if (static_cast<uint16_t>(msg.type_id()) >= 100) {
+    // System messages and CLI/metrics messages (TypeTag < 0x1000) always pass.
+    // User messages (TypeTag >= 0x1000) are only accepted in ACTIVE state.
+    if (static_cast<uint16_t>(msg.type_id()) >= 0x1000) {
         if (auto* lc = as_lifecycle()) {
             if (!lc->accepts_user_msgs()) {
                 // Reject user message — not accepting in this state
@@ -371,9 +370,9 @@ Actually, let's keep this simpler. The gate itself is the important part:
 
 ```cpp
     // -- Lifecycle message gate --
-    // User messages (TypeTag >= 100) are only accepted in ACTIVE state.
-    // System messages (TypeTag < 100) always pass through.
-    if (static_cast<uint16_t>(msg.type_id()) >= 100) {
+    // User messages (TypeTag >= 0x1000) are only accepted in ACTIVE state.
+    // System messages (TypeTag < 0x1000) always pass through.
+    if (static_cast<uint16_t>(msg.type_id()) >= 0x1000) {
         if (auto* lc = as_lifecycle()) {
             if (!lc->accepts_user_msgs()) {
                 return;
@@ -471,19 +470,14 @@ grep -n "case MetricEventType::k" src/metrics/metrics_aggregator.cpp
 Add after the last existing case:
 ```cpp
         case MetricEventType::kLifecycleTransition:
-            // Track per-state actor counts — increment target, decrement source
-            {
-                auto from_state = static_cast<uint8_t>(e.code); // from state
-                auto to_state = static_cast<uint8_t>(e.value_lo); // to state
-                // Per-state gauge update handled by emitting two counter events
-                // or via a separate gauge family
-            }
+            // from_state in e.code, to_state in e.aux
             break;
         case MetricEventType::kMessageRejected:
+            // rejected-by state in e.code
             break;
 ```
 
-Since the aggregator already has patterns for lifecycle events (kActorSpawned/kActorTerminated), follow the same patterns. This is a minimal integration — we can enhance later.
+`MetricEvent` has `code` and `aux` fields (not `value_lo`). This is a minimal stub that compiles — full aggregation logic is deferred.
 
 - [ ] **Step 2: Commit**
 
@@ -542,17 +536,17 @@ At top of file:
 
 - [ ] **Step 2: Update SupervisorActor::restart_child()**
 
-In the `restart_child` method (lines 91-119), add lifecycle transitions. After getting the actor (conceptually — we need to look up the actor by child_id), drive the lifecycle:
+First, update the method signature to accept the failure reason. In `supervision.hpp` find `restart_child(ActorId child_id)` and change to `restart_child(ActorId child_id, const error& reason)`. In `supervision.cpp`, update the definition at line 91.
 
-Replace the method body (or add to the existing logic around line 110-118):
+In `handle_child_down()`, update the call site at line 77 from `restart_child(child_id)` to `restart_child(child_id, reason)`.
 
-After `++count;` (line 110), before the metrics emission (line 112), add:
+Then, in `restart_child()` (after `++count;` at line 110, before metrics at line 112), add:
 
 ```cpp
     // Drive lifecycle for the failing child
     if (auto actor = system().get_actor(child_id)) {
         if (auto* lc = actor.get()->as_lifecycle()) {
-            lc->set_failure_reason(error(/* reason from the failure */));
+            lc->set_failure_reason(reason);
             lc->transition(LifecycleState::kFailed);
             lc->bump_incarnation();
             lc->transition(LifecycleState::kStarting);
@@ -561,6 +555,8 @@ After `++count;` (line 110), before the metrics emission (line 112), add:
 ```
 
 Note: The actual respawn is subclass-specific. The base `SupervisorActor::restart_child()` manages the counter and drives the lifecycle. Subclasses override to provide actual respawn logic.
+
+Also update `restart_all_children()` — for now, it passes `error(0)` since it has no specific failure context.
 
 - [ ] **Step 3: Commit**
 
@@ -829,7 +825,7 @@ using namespace hpactor;
 
 // ── Test 1: Actor without LifecycleActor returns nullptr ─
 TEST(test_no_lifecycle_returns_null) {
-    ActorSystem::Config cfg;
+    Config cfg;
     cfg.scheduler_threads = 1;
     cfg.enable_network = false;
     ActorSystem system(cfg);
@@ -848,10 +844,11 @@ public:
     // LifecycleActor does NOT inherit from AbstractActor, so the override
     // must appear in the class that inherits from both.
     LifecycleActor* as_lifecycle() override { return this; }
+    const LifecycleActor* as_lifecycle() const override { return this; }
 };
 
 TEST(test_lifecycle_actor_spawns_active) {
-    ActorSystem::Config cfg;
+    Config cfg;
     cfg.scheduler_threads = 1;
     cfg.enable_network = false;
     ActorSystem system(cfg);
@@ -865,7 +862,7 @@ TEST(test_lifecycle_actor_spawns_active) {
 
 // ── Test 5: to_metadata() reports lifecycle state ────────
 TEST(test_to_metadata_reports_lifecycle_state) {
-    ActorSystem::Config cfg;
+    Config cfg;
     cfg.scheduler_threads = 1;
     cfg.enable_network = false;
     ActorSystem system(cfg);
@@ -877,7 +874,7 @@ TEST(test_to_metadata_reports_lifecycle_state) {
 
 // ── Test 6: Default actor to_metadata() says "unknown" ──
 TEST(test_default_actor_to_metadata_unknown) {
-    ActorSystem::Config cfg;
+    Config cfg;
     cfg.scheduler_threads = 1;
     cfg.enable_network = false;
     ActorSystem system(cfg);
