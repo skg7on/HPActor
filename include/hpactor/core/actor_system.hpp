@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
 #include <hpactor/core/actor_registry.hpp>
@@ -512,6 +513,11 @@ Actor ActorSystem::spawn(Args&&... args) {
 
     // Activate the actor (DaemonActor starts its thread here, etc.)
     actor->on_activate();
+
+    // Transition lifecycle to ACTIVE if actor has lifecycle management
+    if (auto* lc = actor->as_lifecycle()) {
+        lc->transition(LifecycleState::kActive);
+    }
 
     HPACTOR_LOG_INFO(log::LogCategory::kActor, id,
                      static_cast<uint32_t>(log::LogEventId::kActorSpawned),
