@@ -159,7 +159,8 @@ class RestartingSupervisor : public hpactor::SupervisorActor {
     }
 
   protected:
-    void restart_child(hpactor::ActorId child_id) override {
+    void restart_child(hpactor::ActorId child_id,
+                       const hpactor::error& reason) override {
         // Remove the dead child from our list
         children_.erase(std::remove_if(children_.begin(), children_.end(),
                                        [&child_id](const hpactor::Actor& a) {
@@ -168,7 +169,7 @@ class RestartingSupervisor : public hpactor::SupervisorActor {
                         children_.end());
 
         // Let the base manage restart counts and the sliding window
-        hpactor::SupervisorActor::restart_child(child_id);
+        hpactor::SupervisorActor::restart_child(child_id, reason);
 
         // Spawn a fresh replacement via the factory
         hpactor::Actor new_child = factory_();
