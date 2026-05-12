@@ -113,7 +113,7 @@ void SupervisorActor::restart_child(ActorId child_id, const error& reason) {
 
     // Drive lifecycle for the failing child
     if (auto actor = system().get_actor(child_id)) {
-        if (auto* lc = actor.get()->as_lifecycle()) {
+        if (auto* lc = actor->as_lifecycle()) {
             lc->set_failure_reason(reason);
             lc->transition(LifecycleState::kFailed);
             lc->bump_incarnation();

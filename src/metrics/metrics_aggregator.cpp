@@ -223,10 +223,8 @@ void Aggregator::on_event(const MetricEvent& e) {
             break;
         }
         case MetricEventType::kLifecycleTransition:
-            // from_state in e.code, to_state in e.aux
-            break;
         case MetricEventType::kMessageRejected:
-            // rejected-by state in e.code
+            // lifecycle state changes + message rejection stubs
             break;
     }
 }
