@@ -102,10 +102,11 @@ cli::ActorMeta AbstractActor::to_metadata() const {
     m.actor_type = std::string(type_name());
     if (auto* lc = as_lifecycle()) {
         m.state = lc->state_string();
+        m.incarnation = lc->incarnation();
     } else {
         m.state = "unknown";
+        m.incarnation = address().incarnation;
     }
-    m.incarnation = address().incarnation;
     return m;
 }
 
