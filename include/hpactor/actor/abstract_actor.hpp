@@ -33,6 +33,9 @@ class ActorSystem;
 namespace net {
 enum class OpType : uint32_t;
 } // namespace net
+
+class LifecycleActor;
+
 namespace sched {
 class IScheduler;
 } // namespace sched
@@ -91,6 +94,15 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
     // Type query for safe downcasting without RTTI
     virtual bool is_event_based_actor() const {
         return false;
+    }
+
+    // Lifecycle query — RTTI-free downcast to LifecycleActor mixin.
+    // Returns nullptr for actors that don't opt into lifecycle management.
+    virtual LifecycleActor* as_lifecycle() {
+        return nullptr;
+    }
+    virtual const LifecycleActor* as_lifecycle() const {
+        return nullptr;
     }
 
     // Dispatch policy — tells the scheduler how to execute this actor.
