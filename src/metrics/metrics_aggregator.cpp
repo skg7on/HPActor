@@ -222,6 +222,10 @@ void Aggregator::on_event(const MetricEvent& e) {
             c.total.fetch_add(1, std::memory_order_relaxed);
             break;
         }
+        case MetricEventType::kLifecycleTransition:
+        case MetricEventType::kMessageRejected:
+            // lifecycle state changes + message rejection stubs
+            break;
     }
 }
 

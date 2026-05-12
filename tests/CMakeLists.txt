@@ -134,6 +134,14 @@ add_executable(test_link_monitor actor/test_link_monitor.cpp)
 target_link_libraries(test_link_monitor hpactor hpactor_proto pthread)
 add_test(NAME test_link_monitor COMMAND test_link_monitor)
 
+add_executable(test_lifecycle_state actor/test_lifecycle_state.cpp)
+target_link_libraries(test_lifecycle_state hpactor)
+add_test(NAME test_lifecycle_state COMMAND test_lifecycle_state)
+
+add_executable(test_lifecycle_actor actor/test_lifecycle_actor.cpp)
+target_link_libraries(test_lifecycle_actor hpactor)
+add_test(NAME test_lifecycle_actor COMMAND test_lifecycle_actor)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================

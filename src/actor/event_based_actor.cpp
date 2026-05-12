@@ -14,6 +14,7 @@
 
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
@@ -161,6 +162,18 @@ void EventBasedActor::receive(TypedMessage& msg) {
     }
     // -- End system message interception --
 
+    // -- Lifecycle message gate --
+    // User messages (TypeTag >= 0x1000) are only accepted in ACTIVE state.
+    // System messages (TypeTag < 0x1000) always pass through.
+    if (static_cast<uint16_t>(msg.type_id()) >= 0x1000) {
+        if (auto* lc = as_lifecycle()) {
+            if (!lc->accepts_user_msgs()) {
+                return;
+            }
+        }
+    }
+    // -- End lifecycle message gate --
+
     if (!handlers_initialized_) {
         initialize_proto_handlers();
     }
@@ -225,7 +238,11 @@ void EventBasedActor::receive(TypedMessage& msg) {
             StreamBuffer payload(reply_data.begin(), reply_data.end());
             ctx->reply(TypedMessage(TypeTag::KillResponseTag, std::move(payload)));
 
-            // Schedule termination with normal exit code
+            // Drive lifecycle state machine for graceful stop
+            if (auto* lc = as_lifecycle()) {
+                lc->transition(LifecycleState::kStopping);
+                lc->transition(LifecycleState::kStopped);
+            }
             set_exit_reason(0);
             return;
         }

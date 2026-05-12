@@ -15,9 +15,9 @@
 #pragma once
 #include <chrono>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/mem/std_allocator.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>
@@ -63,7 +63,7 @@ class SupervisorActor : public EventBasedActor {
 
     // Override to add actual spawn logic for restarted children.
     // The base implementation manages restart counts and the sliding window.
-    virtual void restart_child(ActorId child_id);
+    virtual void restart_child(ActorId child_id, const error& reason);
     void restart_all_children();
 
     Supervisor& strategy_;
@@ -71,8 +71,7 @@ class SupervisorActor : public EventBasedActor {
   public:
     using ActorVec = std::vector<Actor, mem::MemStdAllocator<Actor>>;
     using RestartCountMap =
-        std::unordered_map<ActorId, uint32_t, std::hash<ActorId>,
-                           std::equal_to<>,
+        std::unordered_map<ActorId, uint32_t, std::hash<ActorId>, std::equal_to<>,
                            mem::MemStdAllocator<std::pair<const ActorId, uint32_t>>>;
 
   protected:
@@ -95,8 +94,7 @@ class SelfSupervisingActor : public EventBasedActor {
     using ActorAddrVec =
         std::vector<ActorAddress, mem::MemStdAllocator<ActorAddress>>;
     using RestartCountMap =
-        std::unordered_map<ActorId, uint32_t, std::hash<ActorId>,
-                           std::equal_to<>,
+        std::unordered_map<ActorId, uint32_t, std::hash<ActorId>, std::equal_to<>,
                            mem::MemStdAllocator<std::pair<const ActorId, uint32_t>>>;
 
     SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,

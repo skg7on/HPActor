@@ -16,6 +16,7 @@
 #include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/supervision.hpp>
 
+#include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/messages.pb.h>
 #include <hpactor/metrics/metrics_event.hpp>
 
@@ -59,9 +60,10 @@ Behavior SupervisorActor::make_behavior() {
     }};
 }
 
-void SupervisorActor::handle_child_down(TypeTag /*tag*/, const StreamBuffer& payload) {
-    auto pb = mem::allocate_shared<::hpactor::DownMessage>(
-        id(), mem::RegionType::kActor);
+void SupervisorActor::handle_child_down(TypeTag /*tag*/,
+                                        const StreamBuffer& payload) {
+    auto pb =
+        mem::allocate_shared<::hpactor::DownMessage>(id(), mem::RegionType::kActor);
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
         return;
     }
@@ -74,7 +76,7 @@ void SupervisorActor::handle_child_down(TypeTag /*tag*/, const StreamBuffer& pay
 
     switch (directive) {
         case SupervisionDirective::Restart:
-            restart_child(child_id);
+            restart_child(child_id, reason);
             break;
         case SupervisionDirective::Stop:
             children_.erase(std::remove_if(children_.begin(), children_.end(),
@@ -88,7 +90,7 @@ void SupervisorActor::handle_child_down(TypeTag /*tag*/, const StreamBuffer& pay
     }
 }
 
-void SupervisorActor::restart_child(ActorId child_id) {
+void SupervisorActor::restart_child(ActorId child_id, const error& reason) {
     auto now = std::chrono::steady_clock::now();
     auto& count = restart_counts_[child_id];
 
@@ -109,6 +111,16 @@ void SupervisorActor::restart_child(ActorId child_id) {
 
     ++count;
 
+    // Drive lifecycle for the failing child
+    if (auto actor = system().get_actor(child_id)) {
+        if (auto* lc = actor->as_lifecycle()) {
+            lc->set_failure_reason(reason);
+            lc->transition(LifecycleState::kFailed);
+            lc->bump_incarnation();
+            lc->transition(LifecycleState::kStarting);
+        }
+    }
+
     if (metrics_ring_buffer_) [[unlikely]] {
         metrics::MetricEvent evt{};
         evt.actor_id = id();
@@ -120,7 +132,7 @@ void SupervisorActor::restart_child(ActorId child_id) {
 
 void SupervisorActor::restart_all_children() {
     for (auto& child : children_) {
-        restart_child(child.id());
+        restart_child(child.id(), error(0));
     }
 }
 
@@ -180,9 +192,10 @@ SelfSupervisingActor::on_failure(ActorId child_id, const error& err) {
     return decide_restart(child_id, err);
 }
 
-void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/, const StreamBuffer& payload) {
-    auto pb = mem::allocate_shared<::hpactor::DownMessage>(
-        id(), mem::RegionType::kActor);
+void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/,
+                                             const StreamBuffer& payload) {
+    auto pb =
+        mem::allocate_shared<::hpactor::DownMessage>(id(), mem::RegionType::kActor);
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
         return;
     }
