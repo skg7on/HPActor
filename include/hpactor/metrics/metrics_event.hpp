@@ -35,6 +35,8 @@ enum class MetricEventType : uint8_t {
     kMailboxDeadLetter = 12,
     kBackpressureSignal = 13,
     kDeadLetterLost = 14,
+    kLifecycleTransition = 15,
+    kMessageRejected = 16,
 };
 
 struct alignas(32) MetricEvent {
