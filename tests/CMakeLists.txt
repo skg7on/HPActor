@@ -375,6 +375,10 @@ add_executable(test_actor_state sched/test_actor_state.cpp)
 target_link_libraries(test_actor_state hpactor)
 add_test(NAME test_actor_state COMMAND test_actor_state)
 
+add_executable(test_actor_state_transfer sched/test_actor_state_transfer.cpp)
+target_link_libraries(test_actor_state_transfer hpactor)
+add_test(NAME test_actor_state_transfer COMMAND test_actor_state_transfer)
+
 add_executable(test_mailbox_awaiter sched/test_mailbox_awaiter.cpp)
 target_link_libraries(test_mailbox_awaiter hpactor)
 add_test(NAME test_mailbox_awaiter COMMAND test_mailbox_awaiter)

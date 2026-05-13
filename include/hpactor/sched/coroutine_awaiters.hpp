@@ -61,7 +61,7 @@ template <typename T> class MailboxAwaiter {
 
         // Transition: Running → Idle
         uint32_t expected = ActorState::kRunning;
-        if (promise_.state.cas(expected, ActorState::kIdle)) {
+        if (promise_.actor_state->cas(expected, ActorState::kIdle)) {
             promise_.continuation = continuation;
             return true; // successfully suspended
         }

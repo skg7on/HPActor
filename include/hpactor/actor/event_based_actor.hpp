@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/actor/actor_state.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/behavior.hpp>
@@ -177,6 +178,7 @@ class EventBasedActor : public LocalActor {
             auto task = act();
             if (task) {
                 coro_handle_ = task.handle();
+                coro_handle_.promise().actor_state = &actor_state_;
                 actor_coroutine_ = sched::ActorCoroutine{std::move(task), id()};
 
                 if (mailbox_) {
@@ -207,6 +209,13 @@ class EventBasedActor : public LocalActor {
 
     mailbox::MPSCActorMailbox<TypedMessage>* get_mailbox() {
         return mailbox_;
+    }
+
+    ActorState& actor_state() {
+        return actor_state_;
+    }
+    const ActorState& actor_state() const {
+        return actor_state_;
     }
 
     bool mailbox_has_messages() const {
@@ -276,6 +285,7 @@ class EventBasedActor : public LocalActor {
     std::coroutine_handle<sched::CoroutinePromise> coro_handle_;
 #endif
     Behavior behavior_;
+    ActorState actor_state_;
     uint32_t exit_reason_ = 0;
     mailbox::MPSCActorMailbox<TypedMessage>* mailbox_ = nullptr;
     sched::IScheduler* scheduler_ = nullptr;
