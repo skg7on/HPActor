@@ -133,6 +133,22 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
         return;
     }
 
+    // Cooperative path: gate on actor state to prevent double-enqueue.
+    // If the actor is already executing (Running) or enqueued (Ready),
+    // a second WorkItem would be redundant.  CAS Idle→Ready atomically.
+    auto actor_ptr = system_.get_actor(actor);
+    if (actor_ptr && actor_ptr->is_event_based_actor()) {
+        auto* eb = static_cast<EventBasedActor*>(actor_ptr.get());
+        auto& state = eb->actor_state();
+        uint32_t current = state.get();
+        if (current == ActorState::kReady || current == ActorState::kRunning)
+            return;
+        if (current == ActorState::kTerminated)
+            return;
+        if (!state.cas(current, ActorState::kReady))
+            return; // another thread won the race
+    }
+
     // Round-robin across workers for fair initial placement.
     // The atomic counter avoids the stale hint issue where get_victim always
     // returns the same value because record_attempt is only called on steals.
@@ -315,15 +331,15 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         // First transition: kIdle/kIOWaiting → kReady (if needed)
         // This handles the case where actor is picked up after suspending
         // on mailbox (kIdle) or on timer/IO (kIOWaiting).
-        if (promise.state.is_idle() || promise.state.is_io_waiting()) {
-            promise.state.set(ActorState::kReady);
+        if (promise.actor_state->is_idle() || promise.actor_state->is_io_waiting()) {
+            promise.actor_state->set(ActorState::kReady);
         }
 
         // Transition: Ready → Running
         // If not in Ready state (already Running/Terminated), skip
         uint32_t expected = ActorState::kReady;
-        if (!promise.state.cas(expected, ActorState::kRunning)) {
-            if (promise.state.is_terminated()) {
+        if (!promise.actor_state->cas(expected, ActorState::kRunning)) {
+            if (promise.actor_state->is_terminated()) {
                 actor->set_exit_reason(errors::actor_down);
                 actor->on_exit();
             }
@@ -351,12 +367,29 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     }
 #endif // HPACTOR_SUPPORT_COROUTINES
 
-    // Behavior-based scheduling (default)
-    // Process actor by dispatching messages through Behavior
-    // The actor's receive() method calls the current behavior handler
+    // Behavior-based scheduling — state-aware CAS dispatch.
+    // Uses the same ActorState machine as the coroutine path:
+    // Idle -> Ready -> Running -> Idle (if empty) / Ready (if more work).
+    auto& actor_state = actor->actor_state();
+
+    // First transition: kIdle → kReady (if actor is idle on first pickup)
+    if (actor_state.is_idle()) {
+        actor_state.set(ActorState::kReady);
+    }
+
+    // Transition: Ready → Running
+    uint32_t expected = ActorState::kReady;
+    if (!actor_state.cas(expected, ActorState::kRunning)) {
+        if (actor_state.is_terminated()) {
+            actor->set_exit_reason(errors::actor_down);
+            actor->on_exit();
+        }
+        return;
+    }
 
     auto mailbox = system_.get_mailbox(item.actor);
     if (!mailbox) {
+        actor_state.set(ActorState::kIdle);
         return;
     }
 
@@ -365,11 +398,24 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         actor->receive(msg);
     }
 
-    // After processing one message, check if there are more messages waiting.
-    // If so, re-enqueue the actor for immediate processing (no yield needed).
-    // This prevents message accumulation while still allowing fairness.
     if (!mailbox->empty()) {
-        notify_ready(item.actor, 0, INT64_MAX);
+        // More messages waiting — re-enqueue directly.
+        // We set kReady and push to a worker queue, bypassing the state
+        // gate in notify_ready() (which would skip kReady actors).
+        actor_state.set(ActorState::kReady);
+        static std::atomic<uint32_t> rr{0};
+        uint32_t v = rr.fetch_add(1, std::memory_order_relaxed);
+        workers_[v % num_workers_].queues[0].push_bottom(item);
+    } else {
+        actor_state.set(ActorState::kIdle);
+        // Double-check: a message may have arrived between the empty check
+        // and setting Idle.  notify_ready() will CAS Idle→Ready and enqueue.
+        // If we lost the race, our CAS fails and we skip the redundant enqueue.
+        if (!mailbox->empty()) {
+            expected = ActorState::kIdle;
+            if (actor_state.cas(expected, ActorState::kReady))
+                notify_ready(item.actor, 0, INT64_MAX);
+        }
     }
 }
 

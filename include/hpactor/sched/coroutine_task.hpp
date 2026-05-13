@@ -41,7 +41,9 @@ struct CoroutinePromise {
     using handle_type = std::coroutine_handle<CoroutinePromise>;
 
     ActorId actor_id;
-    ActorState state;
+    ActorState state; // owned fallback (used when not wired to actor)
+    ActorState* actor_state{&state}; // active state — may point to
+                                     // EventBasedActor::actor_state_
     WorkerThread* owner{nullptr};
 
     // Mailbox integration
@@ -67,41 +69,41 @@ struct CoroutinePromise {
 
     // Called on co_return
     void return_void() noexcept {
-        state.set(ActorState::kTerminated);
+        actor_state->set(ActorState::kTerminated);
     }
 
     // Called on unhandled exception
     void unhandled_exception() noexcept {
-        state.set(ActorState::kTerminated);
+        actor_state->set(ActorState::kTerminated);
     }
 
     CoroutineTask get_return_object();
 
     // State access
     void set_running() {
-        state.set(ActorState::kRunning);
+        actor_state->set(ActorState::kRunning);
     }
     void set_idle() {
-        state.set(ActorState::kIdle);
+        actor_state->set(ActorState::kIdle);
     }
     void set_ready() {
-        state.set(ActorState::kReady);
+        actor_state->set(ActorState::kReady);
     }
     void set_io_waiting() {
-        state.set(ActorState::kIOWaiting);
+        actor_state->set(ActorState::kIOWaiting);
     }
     void set_terminated() {
-        state.set(ActorState::kTerminated);
+        actor_state->set(ActorState::kTerminated);
     }
 
     bool is_idle() const {
-        return state.is_idle();
+        return actor_state->is_idle();
     }
     bool is_running() const {
-        return state.is_running();
+        return actor_state->is_running();
     }
     bool is_terminated() const {
-        return state.is_terminated();
+        return actor_state->is_terminated();
     }
 
     // Called by MPSCActorMailbox when a message arrives while actor is idle.

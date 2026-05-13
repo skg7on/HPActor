@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/blocking_actor.hpp>
+#include <hpactor/core/proto_type_registry.hpp>
 
 namespace hpactor {
 
@@ -22,16 +23,36 @@ namespace hpactor {
 class ActorSystem;
 
 // -----------------------------------------------------------------------------
-// ScopedActor - blocking actor for non-actor contexts (e.g., main function)
+// ScopedActor - blocking actor for non-actor contexts (e.g., main function).
+//
+// Manages its own lifecycle: constructs with an ActorSystem, registers
+// itself, and cleans up on destruction.  Does not go through the normal
+// spawn path.
 // -----------------------------------------------------------------------------
 class ScopedActor : public BlockingActor {
   public:
     using AbstractActor::receive;
 
     explicit ScopedActor(ActorSystem& sys);
-    ~ScopedActor();
+    ~ScopedActor() override;
 
-    template <typename T> T receive();
+    // Block until a message of type T arrives, then return it.
+    template <typename T> T receive() {
+        T result{};
+        bool received = false;
+
+        BlockingActor::receive([&](const TypedMessage& msg) {
+            if (msg.type_id() == MessageTraits<T>::tag()) {
+                const auto& buf = msg.payload();
+                if (result.ParseFromArray(buf.data(), static_cast<int>(buf.size()))) {
+                    received = true;
+                }
+            }
+        });
+        (void)received;
+
+        return result;
+    }
 };
 
 } // namespace hpactor
