@@ -358,7 +358,9 @@ bool EventBasedActor::drain_one(TypedMessage& msg) {
             record.sender = msg.sender_address();
             record.target = address();
             record.type_tag = msg.type_id();
-            record.timestamp_ns = system().clock().now_ns();
+            auto _ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    system().clock().now().time_since_epoch()).count();
+record.timestamp_ns = static_cast<uint64_t>(_ns);
             system().dead_letter(std::move(record));
             return false;
         }
@@ -414,7 +416,9 @@ if (static_cast<uint16_t>(msg.type_id()) >= 0x1000) {
                 record.sender = msg.sender_address();
                 record.target = address();
                 record.type_tag = msg.type_id();
-                record.timestamp_ns = system().clock().now_ns();
+                auto _ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    system().clock().now().time_since_epoch()).count();
+record.timestamp_ns = static_cast<uint64_t>(_ns);
                 system().dead_letter(std::move(record));
             }
             return;
@@ -436,7 +440,9 @@ void EventBasedActor::drain_all_immediate() {
         record.sender = msg->sender_address();
         record.target = address();
         record.type_tag = msg->type_id();
-        record.timestamp_ns = system().clock().now_ns();
+        auto _ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+    system().clock().now().time_since_epoch()).count();
+record.timestamp_ns = static_cast<uint64_t>(_ns);
         system().dead_letter(std::move(record));
     }
 }
@@ -845,62 +851,70 @@ git commit -m "feat(shutdown): add ActorSystem::shutdown() with ShutdownCoordina
 
 In `src/cli/cli_actor.cpp`, in the `build_command_tree()` function, add after existing `/system` commands:
 
-```cpp
+First add a \`shutdown_phase()\` getter to ActorSystem alongside \`is_ready()\`
+and \`is_draining()\` (from Task 10):
+
+\`\`\`cpp
+ShutdownPhase shutdown_phase() const noexcept;
+\`\`\`
+
+Then add the CLI commands:
+
+\`\`\`cpp
 // ── /system drain ──────────────────────────────────────────────
-system_node->add_child("drain", "Graceful node shutdown")->execute =
-    [this](CommandContext& ctx) {
-        if (ctx.has_flag("status")) {
-            // Show shutdown status
-            auto phase = system_->shutdown_phase();
-            ctx.output->result("Shutdown phase: " +
-                               std::to_string(static_cast<int>(phase)));
-            ctx.output->result("Actors pending: " +
-                               std::to_string(system_->actor_count()));
-            return;
-        }
-
-        bool force = ctx.has_flag("force");
-        ShutdownOptions opts;
-        if (force) opts.ingress_timeout = std::chrono::milliseconds{0};
-
-        auto result = system_->shutdown(opts);
-        if (result.is_ok()) {
-            ctx.output->result("Shutdown complete");
-        } else {
-            ctx.output->error("Shutdown failed: " + result.error().message());
-        }
-    };
+auto* drain = sys->add_child("drain", "Graceful node shutdown");
+drain->execute = [this](CommandContext& ctx) -> result<void> {
+    auto result = system().shutdown();
+    if (result.has_value()) {
+        ctx.output->raw("Shutdown complete");
+    } else {
+        ctx.output->error("Shutdown failed");
+    }
+    return result<void>::make();
+};
 
 // ── /system drain status ───────────────────────────────────────
-// Handled above via has_flag("status")
+drain->add_child("status", "Show shutdown progress")->execute =
+    [this](CommandContext& ctx) -> result<void> {
+    ctx.output->raw("Shutdown phase: " +
+                    std::to_string(static_cast<int>(system().shutdown_phase())));
+    ctx.output->raw("Actors live: " +
+                    std::to_string(system().actor_count()));
+    return result<void>::make();
+};
 
 // ── /system stop <actor-id> ────────────────────────────────────
-auto* stop_node = system_node->add_child("stop", "Graceful stop of an actor");
-stop_node->add_param("actor_id", "Actor ID to stop")->execute =
-    [this](CommandContext& ctx) {
-        auto id_str = ctx.get_param("actor_id");
-        if (!id_str) {
-            ctx.output->error("Missing actor ID (usage: /system stop <actor-id>)");
-            return;
-        }
-        // Parse ActorId from string, call stop()
-        ActorId target_id{std::stoull(std::string(*id_str))};
+auto* stop = sys->add_child("stop", "Graceful stop of an actor");
+auto* id_param = stop->add_child("<actor_id>", "Actor ID to stop",
+                                  /*is_param=*/true);
+id_param->execute = [this](CommandContext& ctx) -> result<void> {
+    auto id_str = ctx.get_param("<actor_id>");
+    if (!id_str) {
+        ctx.output->error("Missing actor ID (usage: /system stop <actor_id>)");
+        return result<void>::make();
+    }
+    ActorId target_id{std::stoull(std::string(*id_str))};
 
-        if (ctx.has_flag("force")) {
-            auto actor = system_->get_actor(target_id);
-            if (auto* lc = actor->as_lifecycle()) {
-                lc->set_drain_config(DrainConfig{DrainPolicy::ImmediateStop});
-            }
-        }
+    if (ctx.has_flag("force")) {
+        system().set_drain_config(target_id,
+                                  DrainConfig{DrainPolicy::ImmediateStop});
+    }
 
-        auto result = system_->stop_actor(target_id);
-        if (result.is_ok()) {
-            ctx.output->result("Actor " + std::string(*id_str) + " stopped");
-        } else {
-            ctx.output->error("Failed to stop actor: " + result.error().message());
-        }
-    };
-```
+    auto actor = system().get_actor(target_id);
+    if (!actor) {
+        ctx.output->error("Actor not found: " + std::string(*id_str));
+        return result<void>::make();
+    }
+    auto* actx = actor->actor_context();
+    if (actx) {
+        actx->stop(target_id);
+        ctx.output->raw("Drain initiated for actor " + std::string(*id_str));
+    } else {
+        ctx.output->error("Actor has no context");
+    }
+    return result<void>::make();
+};
+\`\`\`
 
 - [ ] **Step 2: Build and verify CLI**
 
