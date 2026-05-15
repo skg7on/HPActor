@@ -20,6 +20,7 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/messages.pb.h>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
@@ -91,6 +92,23 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
     ReceiveSpanGuard span_guard(trace_manager, &receive_span);
 #endif
+    // -- Drain gate: apply drain policy to every message during kDraining --
+    if (auto* lc = as_lifecycle()) {
+        if (lc->state() == LifecycleState::kDraining) {
+            if (!drain_one(msg)) {
+                // Drain-completion check: if mailbox is now empty, finish drain
+                if (mailbox_is_empty()) {
+                    cancel_drain_timer();
+                    lc->transition(LifecycleState::kStopping);
+                    lc->transition(LifecycleState::kStopped);
+                    on_exit();
+                }
+                return; // message was dead-lettered by the drain policy
+            }
+        }
+    }
+    // -- End drain gate --
+
     // -- System message interception (link / monitor / death) --
     {
         switch (msg.type_id()) {
@@ -163,11 +181,13 @@ void EventBasedActor::receive(TypedMessage& msg) {
     // -- End system message interception --
 
     // -- Lifecycle message gate --
-    // User messages (TypeTag >= 0x1000) are only accepted in ACTIVE state.
+    // User messages (TypeTag >= 0x1000) are only accepted in ACTIVE state
+    // or while draining (the drain gate handles drain policy decisions).
     // System messages (TypeTag < 0x1000) always pass through.
-    if (static_cast<uint16_t>(msg.type_id()) >= 0x1000) {
+    if (static_cast<uint32_t>(msg.type_id()) >= 0x1000) {
         if (auto* lc = as_lifecycle()) {
-            if (!lc->accepts_user_msgs()) {
+            if (!lc->accepts_user_msgs() &&
+                lc->state() != LifecycleState::kDraining) {
                 return;
             }
         }
@@ -291,6 +311,17 @@ void EventBasedActor::receive(TypedMessage& msg) {
         evt.value_hi = static_cast<uint32_t>(ns > UINT32_MAX ? UINT32_MAX : ns);
         metrics_ring_buffer_->try_push(evt);
     }
+
+    // -- Drain-completion check after processing a message --
+    if (auto* lc = as_lifecycle()) {
+        if (lc->state() == LifecycleState::kDraining && mailbox_is_empty()) {
+            cancel_drain_timer();
+            lc->transition(LifecycleState::kStopping);
+            lc->transition(LifecycleState::kStopped);
+            on_exit();
+        }
+    }
+    // -- End drain-completion check --
 }
 
 void EventBasedActor::become(Behavior bh) {
@@ -384,6 +415,81 @@ cli::MboxSnapshot EventBasedActor::mailbox_snapshot() const {
     if (mailbox_)
         return mailbox_->snapshot();
     return {};
+}
+
+// ── Drain helpers
+// ─────────────────────────────────────────────────────────────
+
+bool EventBasedActor::drain_one(TypedMessage& msg) {
+    auto* lc = as_lifecycle();
+    if (!lc)
+        return true; // no lifecycle = process normally
+
+    auto policy = lc->drain_config().policy;
+    bool is_system = static_cast<uint32_t>(msg.type_id()) < 0x1000;
+
+    switch (policy) {
+        case DrainPolicy::Drain:
+            return true; // process normally
+
+        case DrainPolicy::DropUserMessages:
+            if (!is_system) {
+                mailbox::DeadLetterRecord record;
+                record.reason = mailbox::DeadLetterReason::DrainPolicyDrop;
+                record.source = mailbox::DeadLetterSource::MailboxAdmission;
+                record.sender = msg.sender_address();
+                record.target = address();
+                record.type_tag = msg.type_id();
+                auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              system().clock().now().time_since_epoch())
+                              .count();
+                record.timestamp_ns = static_cast<uint64_t>(ns);
+                system().dead_letter(std::move(record));
+                return false;
+            }
+            return true;
+
+        case DrainPolicy::ImmediateStop:
+            return false; // handled at drain trigger, not per-message
+
+        case DrainPolicy::SnapshotAndStop:
+        case DrainPolicy::TransferShard: {
+            // Deferred — fall back to Drain (log warning)
+            HPACTOR_LOG_WARNING(
+                log::LogCategory::kActor, id(),
+                static_cast<uint32_t>(log::LogEventId::kActorTerminated),
+                "deferred drain policy — falling back to Drain");
+            lc->set_drain_config(
+                DrainConfig{DrainPolicy::Drain, lc->drain_config().timeout});
+            return true;
+        }
+    }
+    return true;
+}
+
+void EventBasedActor::drain_all_immediate() {
+    TypedMessage msg;
+    while (mailbox_ && mailbox_->try_pop(msg)) {
+        mailbox::DeadLetterRecord record;
+        record.reason = mailbox::DeadLetterReason::MailboxClosed;
+        record.source = mailbox::DeadLetterSource::MailboxAdmission;
+        record.sender = msg.sender_address();
+        record.target = address();
+        record.type_tag = msg.type_id();
+        auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      system().clock().now().time_since_epoch())
+                      .count();
+        record.timestamp_ns = static_cast<uint64_t>(ns);
+        system().dead_letter(std::move(record));
+    }
+}
+
+void EventBasedActor::start_drain_timer() {
+    // Will be implemented in Task 7
+}
+
+void EventBasedActor::cancel_drain_timer() {
+    // Will be implemented in Task 7
 }
 
 } // namespace hpactor

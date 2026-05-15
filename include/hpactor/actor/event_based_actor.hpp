@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/actor_state.hpp>
+#include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/behavior.hpp>
@@ -22,6 +23,7 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
+#include <hpactor/sched/scheduler.hpp>
 
 #include <hpactor/mem/std_allocator.hpp>
 
@@ -225,6 +227,18 @@ class EventBasedActor : public LocalActor {
         return !mailbox_ || mailbox_->empty();
     }
 
+    // Drain helpers
+    // Returns true if the message should be processed normally.
+    // Returns false if the message was dead-lettered by the drain policy.
+    bool drain_one(TypedMessage& msg);
+
+    // Dead-letter all messages currently in the mailbox (ImmediateStop).
+    void drain_all_immediate();
+
+    // Drain timer management (stubs — implemented in Task 7).
+    void start_drain_timer();
+    void cancel_drain_timer();
+
     void set_scheduler(sched::IScheduler* scheduler) override {
         scheduler_ = scheduler;
     }
@@ -289,6 +303,7 @@ class EventBasedActor : public LocalActor {
     uint32_t exit_reason_ = 0;
     mailbox::MPSCActorMailbox<TypedMessage>* mailbox_ = nullptr;
     sched::IScheduler* scheduler_ = nullptr;
+    sched::TimerHandle drain_timer_handle_{};
 
     bool handlers_initialized_ = false;
 

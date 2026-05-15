@@ -146,6 +146,10 @@ add_executable(test_is_system_actor actor/test_is_system_actor.cpp)
 target_link_libraries(test_is_system_actor hpactor)
 add_test(NAME test_is_system_actor COMMAND test_is_system_actor)
 
+add_executable(test_drain_policy actor/test_drain_policy.cpp)
+target_link_libraries(test_drain_policy hpactor)
+add_test(NAME test_drain_policy COMMAND test_drain_policy)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
