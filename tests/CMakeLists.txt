@@ -142,6 +142,10 @@ add_executable(test_lifecycle_actor actor/test_lifecycle_actor.cpp)
 target_link_libraries(test_lifecycle_actor hpactor)
 add_test(NAME test_lifecycle_actor COMMAND test_lifecycle_actor)
 
+add_executable(test_is_system_actor actor/test_is_system_actor.cpp)
+target_link_libraries(test_is_system_actor hpactor)
+add_test(NAME test_is_system_actor COMMAND test_is_system_actor)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
