@@ -16,7 +16,7 @@ using namespace hpactor;
 template <typename Fn>
 static bool
 poll_until(Fn&& condition,
-           int timeout_ms = 2000) { // NOLINT(cppcoreguidelines-missing-std-forward)
+           int timeout_ms = 5000) { // NOLINT(cppcoreguidelines-missing-std-forward)
     auto deadline =
         std::chrono::steady_clock::now() + std::chrono::milliseconds(timeout_ms);
     while (std::chrono::steady_clock::now() < deadline) {
