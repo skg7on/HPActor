@@ -31,6 +31,9 @@ A high-performance distributed Actor framework with million-level concurrency su
 ### Mailbox
 - **MPSCMailbox\<T\>**: Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue)
 - **MPSCActorMailbox\<T\>**: Edge-triggered CAS wakeup — no lost wakeups, no spurious rescheduling
+- **Bounded Admission**: Configurable capacity, high/low watermarks, overflow policies (RejectNewest, DeadLetter, DropExisting)
+- **Backpressure Signals**: `EnqueueResult` with pressure ratio, retry-after hint, and upstream `BackpressureMode` (local, remote, both)
+- **Dead-Letter Queue**: Bounded record capture with reason tracking (ActorNotFound, OverflowPolicy, DrainTimeout, DrainPolicyDrop), payload sampling, snapshot API
 - **Swap-in Interface**: `IMailbox<T>` allows replacing the mailbox implementation without touching actor code
 
 ### Memory Management
@@ -51,18 +54,47 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **TOML Configurable**: `[system.metrics]` section — enable/disable, ring buffer capacity, scrape path
 - **Compile-Time Disable**: `ENABLE_ACTOR_METRICS=OFF` for zero-overhead deployments
 
+### Structured Logging
+- **LogRingBuffer**: MPSC lock-free bounded ring buffer for log event capture
+- **LogDrain**: Consumer thread with batching and configurable sink writes
+- **ILogSink Interface**: Pluggable sinks — `StderrSink`, `FileSink`, `RotatingFileSink` (size-based rotation), `MemorySink` (testing)
+- **Formatters**: `TextLogFormatter` (human-readable), `JsonLogFormatter` (machine-parseable)
+- **LogManager**: Owns config, ring buffer, drain, and sinks — wired into ActorSystem lifecycle
+- **Subsystem Events**: Lifecycle, config/bootstrap, mailbox depth, scheduler, memory, registrar/discovery, network
+- **TOML Configurable**: `[system.logging]` section — level, sinks, rotation, format
+
+### Distributed Tracing
+- **W3C TraceContext**: 16-byte TraceId, 8-byte SpanId, TraceFlags — propagated through TypedMessage and ActorMsgFrame
+- **Actor Receive Spans**: Consumer-kind spans with RAII guard on every early-return path
+- **Local Propagation**: Send/reply propagation via ActorContext current trace scope
+- **Remote Propagation**: PbTraceContext in frame.proto, conversion helpers in frame_protobuf.cpp
+- **TraceManager**: Parent-based sampling, bounded MPSC ring buffer, drain thread
+- **Exporters**: Memory (testing), JSON file, OTLP HTTP
+- **TOML Configurable**: `[system.tracing]` section — enabled, service_name, exporter, sample_ratio
+- **Compile-Time Disable**: `ENABLE_ACTOR_TRACING=OFF` for zero-overhead deployments
+
 ### Production Reliability Architecture
 - **Reliability Plane Roadmap**: `docs/architecture/production/production-reliability-plane.md` organizes the next evolution into data plane, control plane, and operations plane work
 - **Refined Requirement Backlog**: `docs/architecture/production/feature-gap-refined-requirement-backlog.md` maps subsystem gaps to architecture requirements, dependencies, acceptance evidence, observability, and tests
-- **Missing Design Docs Added**: delivery semantics, DLQ, cluster failure model, sharding/placement, reliable messaging, durable state, graceful shutdown/rolling upgrade, security, operations/SRE, dynamic config, and chaos/reliability testing
-- **Implementation Status**: These are architecture and backlog documents; runtime implementation is pending
+- **Design Docs**: delivery semantics, DLQ, cluster failure model, sharding/placement, reliable messaging, durable state, graceful shutdown/rolling upgrade, security, operations/SRE, dynamic config, and chaos/reliability testing
+- **Implementation Status**: Bounded mailboxes, dead-letter queue, distributed tracing, graceful shutdown, and actor lifecycle are implemented. Cluster control, security, and operations plane remain in design.
 
 ### Actor Lifecycle
 - **ActorState**: Atomic state machine (Idle → Ready → Running → IOWaiting → Terminated) with CAS transitions
+- **LifecycleActor Mixin**: Opt-in lifecycle state machine (Created → Starting → Active → Draining → Stopping → Stopped / Failed) with constexpr `StateDef` transition table
+- **Message Gate**: Rejects user messages during non-Active states to prevent processing during startup/shutdown
 - **Hierarchical Supervision**: OneForOne (restart failed child) and AllForOne (restart all children) strategies
 - **SupervisorActor**: Supervises children via strategy pattern
 - **SelfSupervisingActor**: Manages own children with configurable policy (max restarts, restart interval)
 - **Remote Child Tracking**: Supervision across process boundaries
+
+### Graceful Shutdown
+- **DrainPolicy**: Per-actor drain behavior (Drain all in-flight, Drop remaining, Timeout with deadline)
+- **ActorSystem::shutdown()**: Phase-machine coordinator — Running → DrainingIngress → DrainingActors → LeavingCluster → FlushingTelemetry → Stopped
+- **ActorContext::stop() / stop_sync()**: Graceful actor termination API with drain completion
+- **System Actors Drain Last**: `is_system_actor()` virtual ensures infrastructure actors outlive application actors
+- **CLI Commands**: `/system drain` and `/system stop` for operational control
+- **TOML Configurable**: `[system.shutdown]` section — drain_timeout, stop_timeout, phase ordering
 
 ### Networking
 - **EventLoop**: kqueue (macOS) / epoll (Linux) edge-triggered event loop with timer support
@@ -223,7 +255,7 @@ ActorRef (std::variant)
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (99 tests)
+# Run tests (138 tests)
 ctest --output-on-failure
 
 # Run a single test
@@ -241,6 +273,7 @@ ctest --output-on-failure
 | `-DENABLE_MEMORY_TRACKING=OFF` | Disable per-actor memory tracking (default ON) |
 | `-DENABLE_MEMORY_DEBUG=ON` | Enable memory poisoning + canary verification (default OFF) |
 | `-DENABLE_ACTOR_METRICS=OFF` | Disable actor-level metrics subsystem (default ON) |
+| `-DENABLE_ACTOR_TRACING=OFF` | Disable distributed tracing subsystem (default ON) |
 | `-DENABLE_CLI=OFF` | Disable interactive CLI subsystem (default ON) |
 
 ## Design Constraints
@@ -276,11 +309,13 @@ The codebase uses LLVM style (`clang-format`) with strict warnings (`-Wall -Wext
 
 ```
 include/hpactor/
-├── actor/          — Actor base classes, behaviors, typed actors, proto actors
+├── actor/          — Actor base classes, behaviors, typed actors, lifecycle, drain
+├── adt/            — Shared data structures (StreamBuffer)
 ├── cli/            — CLI subsystem (CliActor, CommandNode, Lexer, OutputFormatter, Pager, commands)
 ├── config/         — TOML config topology parser, binary format, actor factory registry
 ├── core/           — ActorSystem, ActorContext, mailbox, registry, config
-├── mailbox/        — MPSCMailbox, MPSCActorMailbox (lock-free queues)
+├── log/            — Structured logging (LogManager, LogRingBuffer, LogDrain, sinks, formatters)
+├── mailbox/        — MPSCMailbox, MPSCActorMailbox, DeadLetterQueue, MailboxPolicy
 ├── metrics/        — MpscRingBuffer, MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
 ├── net/            — EventLoop, TLS, connection pool, registrar, reactor/proactor
 ├── ref/            — Actor references (address, ref, proxy, cache)
@@ -288,6 +323,7 @@ include/hpactor/
 ├── sched/          — HybridScheduler, work queues, timing wheel, coroutines
 ├── spawn/          — AsyncActor for non-blocking remote spawn
 ├── supervision/    — OneForOne, AllForOne supervisors
+├── tracing/        — Distributed tracing (TraceManager, TraceContext, exporters, sampler)
 ├── mem/            — Two-tier slab allocator, hibernation, compaction, observability
 ├── types/          — Type system, protobuf serialization, endpoints
 ├── behavior.hpp    — Dynamic behavior with message_handler
@@ -298,8 +334,10 @@ include/hpactor/
 src/
 ├── actor/          — ActorSystem, EventBasedActor, SpawnReceiver, ProtoActor
 ├── cli/            — CliActor, lexer, command_node, formatters (pretty/json/tabular), pager
-├── config/         — TOML parser, binary serializer/loader, factory registry
+├── config/         — TOML parser, binary serializer/loader, factory registry, subsystem parsers
+├── log/            — LogManager, LogDrain, sinks, formatters
 ├── metrics/        — MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
+├── tracing/        — TraceManager, exporters (memory, JSON, OTLP), sampler, context parser
 ├── core/           — serialization.cpp (protobuf-based)
 ├── net/            — EventLoop, TcpTransport, TLS, connection pool, frame
 ├── ref/            — ActorRef, ActorProxy implementations
@@ -319,15 +357,15 @@ protos/hpactor/
 
 tools/toml-compiler/ — AOT compiler: TOML topology → binary format
 docs/architecture/production/ — Production reliability roadmap, missing design docs, and refined requirement backlog
-tests/              — 99 unit tests (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision)
-examples/           — 9 API usage examples
+tests/              — 138 unit tests (actor, cli, config, core, log, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, tracing)
+examples/           — 11 API usage examples
 third_party/        — Vendored dependencies (llhttp, toml++)
 cmake/              — CMake modules (protobuf codegen, toml++ interface target)
 ```
 
 ## Status
 
-### Complete (99 tests passing)
+### Complete (138 tests passing)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
@@ -335,7 +373,8 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Supervision**: OneForOne, AllForOne, SupervisorActor, SelfSupervisingActor
 - **Scheduling**: HybridScheduler with work-stealing + EDF + timing wheel + coroutine frame pool
 - **Coroutines**: CoroutineTask, MailboxAwaiter, TimerAwaiter, YieldAwaiter
-- **Mailbox**: MPSCMailbox (Vyukov lock-free), MPSCActorMailbox (edge-triggered CAS)
+- **Mailbox**: MPSCMailbox (Vyukov lock-free), MPSCActorMailbox (edge-triggered CAS), bounded admission, backpressure signals
+- **Dead-Letter Queue**: Bounded record capture with reason tracking, payload sampling, snapshot API
 - **Memory Management**: Two-tier slab allocator (mmap → thread-local slabs), typed regions, hibernation with ZRAM hints, compaction with fragmentation budget, per-actor observability, memory poisoning + canaries + guard pages
 - **Network**: TLS 1.3, connection pooling, UDS support, reactor/proactor backends
 - **Service Discovery**: Pluggable IServiceDiscovery with 4 backends (Gossip SWIM, UdpRegistrar, Hybrid, Static) + ActorLocationCache
@@ -345,27 +384,25 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **TOML Config Topology**: Declarative topology bootstrapping with templates, imports, AOT binary compilation
 - **Actor Metrics**: Out-of-band ring buffer instrumentation, OpenMetrics `/metrics` endpoint for Prometheus/Grafana
 - **CLI Interactive**: Trie-based command tree with InspectState introspection, paged output, pluggable formatters (Pretty/JSON/Tabular)
+- **Structured Logging**: MPSC ring buffer, batched drain, pluggable sinks (stderr, file, rotating), text/JSON formatters
+- **Distributed Tracing**: W3C TraceContext propagation, actor receive spans, memory/JSON/OTLP exporters, parent-based sampling
+- **Actor Lifecycle**: LifecycleActor mixin with constexpr state machine, message gate, supervision integration
+- **Graceful Shutdown**: DrainPolicy, phase-machine coordinator, CLI drain/stop commands, TOML config
 
 ### Designed / Backlogged
 
 - **Production Reliability Plane**: Data/control/operations plane roadmap for 24x7 operation
-- **Delivery Semantics**: Typed delivery results, TTL, retry, duplicate handling, and DLQ integration
-- **Mailbox Backpressure**: Bounded admission, overflow policies, upstream pressure signals, and DLQ handoff
-- **Dead-Letter Queue**: Bounded record capture, retention policy, filtering, export, and guarded replay
-- **Distributed Tracing**: Envelope-level OpenTelemetry-compatible context propagation and span export design
+- **Reliable Messaging**: ACK/NACK, retry, deduplication, durable outbox/inbox
+- **Durable Actor State**: Snapshot, event sourcing, recovery
 - **Cluster Control**: Failure model, quarantine/fencing, sharding, placement, handoff, and rolling upgrade design
 - **Production Operations**: Health endpoints, authenticated admin API, security/audit, config reload, chaos/soak/fuzz testing
 
 ### Next Steps
 
-- Implement the Production Reliability Plane foundation:
-  - delivery result contract and failure envelope
-  - bounded mailbox admission and backpressure signals
-  - dead-letter queue
-  - distributed tracing
-  - health/readiness/liveness
-  - graceful shutdown and drain
 - Full two-process integration test with TCP transport
+- Health/readiness/liveness endpoints
+- Cluster failure model with quarantine/fencing
+- Security architecture (mTLS identity, authorization, audit)
 - Argument deserialization for passing constructor args through spawn
 - Typed RPC API (`call<Request, Response>` with serialization)
 - Tiny-block optimization for 32B size class in slab allocator
