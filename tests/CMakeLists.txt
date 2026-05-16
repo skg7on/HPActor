@@ -162,6 +162,10 @@ add_executable(test_shutdown_coordinator actor/test_shutdown_coordinator.cpp)
 target_link_libraries(test_shutdown_coordinator hpactor)
 add_test(NAME test_shutdown_coordinator COMMAND test_shutdown_coordinator)
 
+add_executable(test_drain_integration actor/test_drain_integration.cpp)
+target_link_libraries(test_drain_integration hpactor)
+add_test(NAME test_drain_integration COMMAND test_drain_integration)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
