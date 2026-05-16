@@ -352,6 +352,12 @@ target_compile_definitions(test_mailbox_config PRIVATE
     TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
 add_test(NAME test_mailbox_config COMMAND test_mailbox_config)
 
+add_executable(test_shutdown_config config/test_shutdown_config.cpp)
+target_link_libraries(test_shutdown_config hpactor)
+target_compile_definitions(test_shutdown_config PRIVATE
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
+add_test(NAME test_shutdown_config COMMAND test_shutdown_config)
+
 # =============================================================================
 # Scheduling tests
 # =============================================================================

@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
@@ -140,6 +141,13 @@ struct Config {
 
     // Dead-letter queue configuration
     mailbox::DeadLetterConfig dead_letters;
+
+    // Shutdown configuration
+    DrainConfig shutdown_drain{DrainPolicy::Drain,
+                               std::chrono::milliseconds{30'000}};
+    uint32_t ingress_timeout_ms{5000};
+    uint32_t cluster_leave_timeout_ms{10000};
+    bool shutdown_force_after_timeout{true};
 
     // Timer backend selection
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;

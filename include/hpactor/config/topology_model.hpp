@@ -123,6 +123,11 @@ struct SystemDef {
     std::string metrics_path{"/metrics"};
     hpactor::log::LogConfig logging;
     hpactor::cli::CliConfig cli;
+    std::string default_drain_policy{"Drain"};
+    uint32_t default_drain_timeout_ms{30000};
+    uint32_t shutdown_ingress_timeout_ms{5000};
+    uint32_t shutdown_cluster_leave_timeout_ms{10000};
+    bool shutdown_force_after_timeout{true};
     SystemMailboxDef mailbox;
     hpactor::mailbox::DeadLetterConfig dead_letters;
     std::string discovery_backend;
