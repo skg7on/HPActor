@@ -329,6 +329,59 @@ void CliActor::build_command_tree() {
         return result<void>::make();
     };
 
+    // ── /system drain ──────────────────────────────────────────────────
+    auto* drain = sys->add_child("drain", "Graceful node shutdown");
+    drain->execute = [this](CommandContext& ctx) -> result<void> {
+        auto shutdown_result = system().shutdown();
+        if (shutdown_result.has_value()) {
+            ctx.output->raw("Shutdown complete");
+        } else {
+            ctx.output->error("Shutdown failed");
+        }
+        return result<void>::make();
+    };
+
+    // ── /system drain status ───────────────────────────────────────────
+    drain->add_child("status", "Show shutdown progress")->execute =
+        [this](CommandContext& ctx) -> result<void> {
+        ctx.output->raw("Shutdown phase: " + std::to_string(static_cast<int>(
+                                                 system().shutdown_phase())));
+        ctx.output->raw("Actors live: " + std::to_string(system().actor_count()));
+        return result<void>::make();
+    };
+
+    // ── /system stop <actor_id> ────────────────────────────────────────
+    auto* stop = sys->add_child("stop", "Graceful stop of an actor");
+    auto* stop_id_param = stop->add_child("<actor_id>", "Actor ID to stop",
+                                          /*is_param=*/true);
+    stop_id_param->execute = [this](CommandContext& ctx) -> result<void> {
+        auto id_str = ctx.get_param("<actor_id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /system stop "
+                              "<actor_id>)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        if (ctx.has_flag("force")) {
+            system().set_drain_config(target_id,
+                                      DrainConfig{DrainPolicy::ImmediateStop});
+        }
+
+        auto actor = system().get_actor(target_id);
+        if (!actor) {
+            ctx.output->error("Actor not found: " + std::string(*id_str));
+            return result<void>::make();
+        }
+        context()->stop(target_id);
+        ctx.output->raw("Drain initiated for actor " + std::string(*id_str));
+        return result<void>::make();
+    };
+
     // ── /metrics show ─────────────────────────────────────────────────
     auto* metrics = root->add_child("metrics", "Metrics operations");
     metrics->add_child("show", "Show current metrics snapshot")->execute =
