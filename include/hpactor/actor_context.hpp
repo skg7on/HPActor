@@ -196,6 +196,15 @@ class ActorContext {
     void on_backpressure(BackpressureHandler handler);
     void handle_backpressure(const mailbox::BackpressureSignal& signal);
 
+    // ── Graceful actor stop ────────────────────────────────────────────────
+    // Initiates drain per the target actor's DrainPolicy.
+    // Returns immediately; the actor drains on its scheduler thread.
+    void stop(ActorId target);
+
+    // Synchronous stop — blocks until target reaches kStopped or timeout.
+    // Returns error on timeout. Do not call from actor threads.
+    result<void> stop_sync(ActorId target, std::chrono::milliseconds timeout);
+
   private:
     Actor owner_;
     ActorSystem* system_ = nullptr;

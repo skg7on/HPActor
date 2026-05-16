@@ -12,13 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 
 #include <google/protobuf/message.h>
+
+#include <chrono>
+#include <thread>
 
 namespace hpactor {
 
@@ -304,6 +309,113 @@ void ActorContext::handle_backpressure(const mailbox::BackpressureSignal& signal
     if (backpressure_handler_) {
         backpressure_handler_(signal);
     }
+}
+
+void ActorContext::stop(ActorId target) {
+    // Resolve system pointer
+    auto* system = system_ != nullptr
+                       ? system_
+                       : (owner_ ? &owner_.get()->system() : nullptr);
+    if (system == nullptr) {
+        return;
+    }
+
+    // Resolve target actor
+    auto actor = system->get_actor(target);
+    if (actor == nullptr) {
+        return;
+    }
+
+    // Emit drain start metric event
+    if (auto* ring_buf = system->metrics_ring_buffer()) {
+        metrics::MetricEvent evt{};
+        evt.actor_id = target;
+        evt.event_type = metrics::MetricEventType::kActorDrainStart;
+        evt.value_hi = 1;
+        ring_buf->try_push(evt);
+    }
+
+    // Check for lifecycle support
+    auto* lc = actor->as_lifecycle();
+    if (lc == nullptr) {
+        // No lifecycle: call on_exit directly if EventBasedActor
+        if (actor->is_event_based_actor()) {
+            auto* eba = static_cast<EventBasedActor*>(actor.get());
+            eba->on_exit();
+        }
+        return;
+    }
+
+    auto policy = lc->drain_config().policy;
+
+    if (policy == DrainPolicy::ImmediateStop) {
+        // Drain mailbox directly (dead-letter all messages)
+        if (actor->is_event_based_actor()) {
+            auto* eba = static_cast<EventBasedActor*>(actor.get());
+            eba->drain_all_immediate();
+        }
+        // Drive lifecycle: kActive -> kStopping -> kStopped
+        lc->transition(LifecycleState::kStopping);
+        lc->transition(LifecycleState::kStopped);
+        // Notify linked/monitored actors
+        if (actor->is_event_based_actor()) {
+            auto* eba = static_cast<EventBasedActor*>(actor.get());
+            eba->on_exit();
+        }
+    } else {
+        // Transition to kDraining (invokes on_drain() hook)
+        lc->transition(LifecycleState::kDraining);
+        // Start drain timer (completes drain on timeout or when mailbox
+        // empties)
+        if (actor->is_event_based_actor()) {
+            auto* eba = static_cast<EventBasedActor*>(actor.get());
+            eba->start_drain_timer();
+        } else {
+            // Non-EventBasedActor with lifecycle but no drain timer support:
+            // transition directly to stopped.
+            lc->transition(LifecycleState::kStopping);
+            lc->transition(LifecycleState::kStopped);
+        }
+    }
+}
+
+result<void>
+ActorContext::stop_sync(ActorId target, std::chrono::milliseconds timeout) {
+    stop(target);
+
+    // Resolve system pointer for polling
+    auto* system = system_ != nullptr
+                       ? system_
+                       : (owner_ ? &owner_.get()->system() : nullptr);
+    if (system == nullptr) {
+        return result<void>::make(error(errors::actor_not_found, "no actor "
+                                                                 "system "
+                                                                 "available"));
+    }
+
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+
+    while (std::chrono::steady_clock::now() < deadline) {
+        auto actor = system->get_actor(target);
+        if (actor == nullptr) {
+            // Actor removed from registry (already fully stopped / cleaned up)
+            return result<void>::make();
+        }
+
+        auto* lc = actor->as_lifecycle();
+        if (lc != nullptr && lc->state() == LifecycleState::kStopped) {
+            return result<void>::make();
+        }
+        if (lc == nullptr) {
+            // Non-lifecycle actors: on_exit was called synchronously in stop(),
+            // consider it done.
+            return result<void>::make();
+        }
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+
+    return result<void>::make(error(errors::timeout, "stop_sync timed out"));
 }
 
 } // namespace hpactor

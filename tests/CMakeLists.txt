@@ -154,6 +154,10 @@ add_executable(test_drain_timeout actor/test_drain_timeout.cpp)
 target_link_libraries(test_drain_timeout hpactor)
 add_test(NAME test_drain_timeout COMMAND test_drain_timeout)
 
+add_executable(test_actor_stop actor/test_actor_stop.cpp)
+target_link_libraries(test_actor_stop hpactor hpactor_proto pthread)
+add_test(NAME test_actor_stop COMMAND test_actor_stop)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
