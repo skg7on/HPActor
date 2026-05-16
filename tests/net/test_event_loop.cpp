@@ -20,6 +20,7 @@
 #include <chrono>
 #include <cstdio>
 #include <cstring>
+#include <fcntl.h>
 #include <limits>
 #include <optional>
 #include <sys/socket.h>
@@ -30,6 +31,13 @@
 
 using namespace hpactor;
 using namespace hpactor::net;
+
+namespace {
+void make_nonblocking(int fd) {
+    int flags = fcntl(fd, F_GETFL, 0);
+    fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
+} // namespace
 
 int main() {
     setvbuf(stdout, nullptr, _IONBF, 0); // Disable buffering for CI pipe
@@ -897,6 +905,8 @@ int main() {
         int fds[2];
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0 && "socketpair should succeed");
+        make_nonblocking(fds[0]);
+        make_nonblocking(fds[1]);
 
         loop.set_completion_callback(
             [&captured](OpCompletion c) { captured = c; });
@@ -933,6 +943,8 @@ int main() {
         int fds[2];
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
+        make_nonblocking(fds[0]);
+        make_nonblocking(fds[1]);
 
         loop.set_completion_callback(
             [&captured](OpCompletion c) { captured = c; });
@@ -975,6 +987,8 @@ int main() {
         int fds[2];
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
+        make_nonblocking(fds[0]);
+        make_nonblocking(fds[1]);
 
         loop.set_completion_callback(
             [&captured](OpCompletion c) { captured = c; });
@@ -1018,6 +1032,8 @@ int main() {
         int fds[2];
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
+        make_nonblocking(fds[0]);
+        make_nonblocking(fds[1]);
 
         // Set up completion callback to capture both operations
         loop.set_completion_callback([&captured_send, &captured_recv](OpCompletion c) {
@@ -1083,6 +1099,8 @@ int main() {
         int fds[2];
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
+        make_nonblocking(fds[0]);
+        make_nonblocking(fds[1]);
 
         loop.set_completion_callback(
             [&captured](OpCompletion c) { captured = c; });
@@ -1120,6 +1138,8 @@ int main() {
         int fds[2];
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
+        make_nonblocking(fds[0]);
+        make_nonblocking(fds[1]);
 
         loop.set_completion_callback(
             [&captured](OpCompletion c) { captured = c; });
@@ -1156,6 +1176,8 @@ int main() {
         int fds[2];
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
+        make_nonblocking(fds[0]);
+        make_nonblocking(fds[1]);
 
         loop.set_completion_callback(
             [&captured](OpCompletion c) { captured = c; });
@@ -1192,6 +1214,8 @@ int main() {
         int fds[2];
         int r = ::socketpair(AF_UNIX, SOCK_STREAM, 0, fds);
         assert(r == 0);
+        make_nonblocking(fds[0]);
+        make_nonblocking(fds[1]);
 
         loop.set_completion_callback(
             [&captured](OpCompletion c) { captured = c; });

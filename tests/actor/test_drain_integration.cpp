@@ -99,7 +99,7 @@ struct DlqCounts {
 
 static void test_full_shutdown_drains_spawn_tree() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 
