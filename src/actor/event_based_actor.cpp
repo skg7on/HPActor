@@ -485,11 +485,38 @@ void EventBasedActor::drain_all_immediate() {
 }
 
 void EventBasedActor::start_drain_timer() {
-    // Will be implemented in Task 7
+    auto* lc = as_lifecycle();
+    if (!lc || !scheduler_)
+        return;
+
+    auto timeout = lc->drain_config().timeout;
+    auto delay_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(timeout).count();
+    std::weak_ptr<AbstractActor> weak_self = shared_from_this();
+    drain_timer_handle_ = scheduler_->schedule_after(
+        [weak_self]() {
+            if (auto self = weak_self.lock()) {
+                auto* actor_ptr = static_cast<EventBasedActor*>(self.get());
+                if (auto* lc2 = actor_ptr->as_lifecycle()) {
+                    if (lc2->state() == LifecycleState::kDraining) {
+                        lc2->on_drain_timeout();
+                        // Dead-letter remaining mailbox messages
+                        actor_ptr->drain_all_immediate();
+                        lc2->transition(LifecycleState::kStopping);
+                        lc2->transition(LifecycleState::kStopped);
+                        actor_ptr->on_exit();
+                    }
+                }
+            }
+        },
+        delay_ns);
 }
 
 void EventBasedActor::cancel_drain_timer() {
-    // Will be implemented in Task 7
+    if (drain_timer_handle_.valid() && scheduler_) {
+        scheduler_->cancel_timer(drain_timer_handle_);
+        drain_timer_handle_ = sched::TimerHandle{};
+    }
 }
 
 } // namespace hpactor

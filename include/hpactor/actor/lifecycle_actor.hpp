@@ -8,7 +8,6 @@
 
 #include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_state.hpp>
-#include <hpactor/sched/scheduler.hpp>
 #include <hpactor/types/types.hpp> // complete error type needed for value members
 
 namespace hpactor {
@@ -85,7 +84,6 @@ class LifecycleActor {
     std::atomic<uint64_t> incarnation_;
     error failure_reason_{0};
     DrainConfig drain_config_{};
-    sched::TimerHandle drain_timer_handle_{};
 };
 
 } // namespace hpactor

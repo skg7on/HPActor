@@ -150,6 +150,10 @@ add_executable(test_drain_policy actor/test_drain_policy.cpp)
 target_link_libraries(test_drain_policy hpactor)
 add_test(NAME test_drain_policy COMMAND test_drain_policy)
 
+add_executable(test_drain_timeout actor/test_drain_timeout.cpp)
+target_link_libraries(test_drain_timeout hpactor)
+add_test(NAME test_drain_timeout COMMAND test_drain_timeout)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
