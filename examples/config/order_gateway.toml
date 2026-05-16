@@ -1,0 +1,16 @@
+[system]
+version = "1.0"
+scheduler_threads = 4
+enable_network = true
+tcp_port = 17130
+enable_http_gateway = false
+metrics_enabled = true
+
+[system.cli]
+enabled = true
+default_format = "pretty"
+page_size = 20
+
+[system.dead_letters]
+enabled = true
+capacity = 128

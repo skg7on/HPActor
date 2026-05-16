@@ -1,0 +1,26 @@
+[system]
+version = "1.0"
+scheduler_threads = 4
+enable_network = true
+tcp_port = 17133
+metrics_enabled = true
+
+[[dispatcher]]
+name = "fulfillment_pool"
+threads = 4
+
+[system.dead_letters]
+enabled = true
+capacity = 128
+
+[[actor]]
+id = "fulfillment_worker_1"
+behavior = "FulfillmentWorkerActor"
+dispatcher = "fulfillment_pool"
+mailbox_capacity = 256
+
+[[actor]]
+id = "fulfillment_worker_2"
+behavior = "FulfillmentWorkerActor"
+dispatcher = "fulfillment_pool"
+mailbox_capacity = 256

@@ -1,0 +1,52 @@
+[system]
+version = "1.0"
+scheduler_threads = 4
+enable_network = false
+enable_http_gateway = false
+metrics_enabled = true
+metrics_path = "/metrics"
+
+[system.mailbox]
+default_capacity = 1024
+default_policy = "reject_newest"
+high_watermark = 0.80
+low_watermark = 0.50
+protected_system_messages = 32
+
+[system.dead_letters]
+enabled = true
+capacity = 128
+max_payload_sample_bytes = 256
+store_payload = true
+
+[system.cli]
+enabled = true
+default_format = "pretty"
+page_size = 20
+
+[system.tracing]
+enabled = true
+service_name = "order-platform-all-in-one"
+exporter = "json_file"
+json_file_path = "build/order-platform-traces.jsonl"
+sample_ratio = 1.0
+
+[[actor]]
+id = "order_log"
+behavior = "OrderLogActor"
+mailbox_capacity = 128
+
+[[actor]]
+id = "inventory"
+behavior = "InventoryActor"
+mailbox_capacity = 128
+
+[[actor]]
+id = "payment"
+behavior = "PaymentActor"
+mailbox_capacity = 128
+
+[[actor]]
+id = "fulfillment_worker_1"
+behavior = "FulfillmentWorkerActor"
+mailbox_capacity = 128

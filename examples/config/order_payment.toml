@@ -1,0 +1,15 @@
+[system]
+version = "1.0"
+scheduler_threads = 2
+enable_network = true
+tcp_port = 17132
+metrics_enabled = true
+
+[system.dead_letters]
+enabled = true
+capacity = 128
+
+[[actor]]
+id = "payment"
+behavior = "PaymentActor"
+mailbox_capacity = 256

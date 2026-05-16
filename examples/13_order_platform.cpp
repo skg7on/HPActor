@@ -10,6 +10,7 @@
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 #include <atomic>
@@ -517,6 +518,11 @@ class OrderCoordinatorActor : public hpactor::StatefulActor<OrderCoordinatorStat
     hpactor::ActorAddress log_;
     std::promise<order::OrderStatusPayload>* done_ = nullptr;
 };
+
+HPACTOR_REGISTER_ACTOR("OrderLogActor", OrderLogActor)
+HPACTOR_REGISTER_ACTOR("InventoryActor", InventoryActor)
+HPACTOR_REGISTER_ACTOR("PaymentActor", PaymentActor)
+HPACTOR_REGISTER_ACTOR("FulfillmentWorkerActor", FulfillmentWorkerActor)
 
 // ---------------------------------------------------------------------------
 // Config and runners
