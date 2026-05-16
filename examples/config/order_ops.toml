@@ -1,0 +1,28 @@
+[system]
+version = "1.0"
+scheduler_threads = 2
+enable_network = true
+tcp_port = 17134
+metrics_enabled = true
+metrics_path = "/metrics"
+
+[system.cli]
+enabled = true
+default_format = "pretty"
+page_size = 20
+
+[system.dead_letters]
+enabled = true
+capacity = 256
+
+[system.tracing]
+enabled = true
+service_name = "order-platform-ops"
+exporter = "json_file"
+json_file_path = "build/order-platform-ops-traces.jsonl"
+sample_ratio = 1.0
+
+[[actor]]
+id = "order_log"
+behavior = "OrderLogActor"
+mailbox_capacity = 256

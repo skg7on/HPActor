@@ -595,3 +595,11 @@ if(ENABLE_CLI)
     target_link_libraries(test_line_editor hpactor)
     add_test(NAME test_line_editor COMMAND test_line_editor)
 endif()
+
+# =============================================================================
+# Example support tests
+# =============================================================================
+add_executable(test_order_platform_messages examples/test_order_platform_messages.cpp)
+target_link_libraries(test_order_platform_messages hpactor)
+target_include_directories(test_order_platform_messages PRIVATE ${CMAKE_SOURCE_DIR})
+add_test(NAME test_order_platform_messages COMMAND test_order_platform_messages)
