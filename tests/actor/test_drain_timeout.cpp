@@ -182,7 +182,7 @@ static void test_drain_timeout_forces_transition() {
 
 static void test_drain_completes_before_timeout_cancels_timer() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto ref = system.spawn<DrainTimeoutTestActor>();

@@ -66,7 +66,8 @@ void actor_registry::erase(const std::string& name) {
 ActorSystem::ActorSystem(const Config& config)
     : config_(config), endpoint_(config.endpoint), registry_(endpoint_),
       scheduler_(std::make_unique<sched::HybridScheduler>(
-          *this, config.scheduler_threads, 4, config.timer_backend)),
+          *this, config.scheduler_threads, 4, config.timer_backend,
+          config.scheduler_start_paused)),
       actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
     // Register system protobuf types
     proto_registry_.register_system_types();

@@ -24,6 +24,7 @@
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <functional>
 #include <memory>
@@ -62,6 +63,11 @@ struct TimerHandle {
 using timer_callback = std::function<void()>;
 
 enum class TimerBackend : uint8_t { TimingWheel = 0, CalendarQueue = 1 };
+
+struct SchedulerDrainResult {
+    size_t executed = 0;
+    bool idle = true;
+};
 
 // -----------------------------------------------------------------------------
 // IScheduler: interface for actor schedulers
@@ -116,6 +122,28 @@ class IScheduler {
 
     // Shutdown a dedicated execution context for an actor.
     virtual void unregister_dedicated(ActorId actor) = 0;
+
+    // Worker control (intended for deterministic testing).
+    virtual void pause_workers() noexcept {}
+    virtual void resume_workers() noexcept {}
+    virtual bool workers_paused() const noexcept {
+        return false;
+    }
+    virtual bool run_one_ready() {
+        return false;
+    }
+    virtual SchedulerDrainResult drain_ready(size_t max_items) {
+        SchedulerDrainResult result;
+        for (size_t i = 0; i < max_items; ++i) {
+            if (!run_one_ready()) {
+                result.idle = true;
+                return result;
+            }
+            ++result.executed;
+        }
+        result.idle = false;
+        return result;
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -134,7 +162,8 @@ class HybridScheduler : public IScheduler {
     // ActorSystem reference is held for processing actors
     explicit HybridScheduler(ActorSystem& system, uint32_t num_workers,
                              uint32_t num_priorities = 4,
-                             TimerBackend timer_backend = TimerBackend::TimingWheel);
+                             TimerBackend timer_backend = TimerBackend::TimingWheel,
+                             bool start_paused = false);
     ~HybridScheduler() override;
 
     HybridScheduler(const HybridScheduler&) = delete;
@@ -160,6 +189,13 @@ class HybridScheduler : public IScheduler {
     void register_dedicated_thread(ActorId actor, int cpu_affinity) override;
     void register_dedicated_pool(ActorId actor, uint32_t pool_size) override;
     void unregister_dedicated(ActorId actor) override;
+
+    // Worker control (deterministic testing)
+    void pause_workers() noexcept override;
+    void resume_workers() noexcept override;
+    bool workers_paused() const noexcept override;
+    bool run_one_ready() override;
+    SchedulerDrainResult drain_ready(size_t max_items) override;
 
     // Try to steal work from another worker (called when local queue is empty)
     bool try_steal(WorkItem& out);
@@ -200,6 +236,11 @@ class HybridScheduler : public IScheduler {
 
     friend class WorkerThread;
 
+    void wait_if_paused(uint32_t worker_id);
+    bool pop_any_ready(WorkItem& out);
+    void mark_dispatch_begin() noexcept;
+    void mark_dispatch_end() noexcept;
+
     void worker_loop(uint32_t worker_id);
     bool pop_local(WorkItem& out, uint32_t worker_id);
     bool pop_edf(WorkItem& out, uint32_t worker_id);
@@ -239,6 +280,13 @@ class HybridScheduler : public IScheduler {
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 
     log::Logger* logger_{nullptr};
+
+    // Worker control
+    std::atomic<bool> workers_paused_{false};
+    std::atomic<uint32_t> active_worker_dispatches_{0};
+    std::atomic<uint32_t> parked_worker_count_{0};
+    std::mutex worker_control_mutex_;
+    std::condition_variable worker_control_cv_;
 
     // Timer advancement thread
     std::thread timer_thread_;

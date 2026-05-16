@@ -124,7 +124,7 @@ class ShutdownSystemActor : public EventBasedActor, public LifecycleActor {
 
 static void test_shutdown_phase_machine_transitions() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 
@@ -159,7 +159,7 @@ static void test_shutdown_phase_machine_transitions() {
 
 static void test_shutdown_reverse_topological_order() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 
@@ -203,7 +203,7 @@ static void test_shutdown_reverse_topological_order() {
 
 static void test_forced_stop_on_timeout() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 
@@ -246,7 +246,7 @@ static void test_forced_stop_on_timeout() {
 
 static void test_is_ready_flips_on_draining_ingress() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 

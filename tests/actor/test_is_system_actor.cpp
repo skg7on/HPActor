@@ -13,7 +13,7 @@ using namespace hpactor;
 // Test that a regular EventBasedActor (user actor) is not a system actor.
 static void test_user_actor_is_not_system() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto actor = system.spawn<EventBasedActor>();
@@ -36,7 +36,7 @@ class TestSystemActor : public EventBasedActor {
 // system actor.
 static void test_system_actors_return_true() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto actor = system.spawn<TestSystemActor>();

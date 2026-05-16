@@ -12,6 +12,7 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/ref/actor_ref.hpp>
+#include <scheduler_test_driver.hpp>
 
 #include <atomic>
 #include <cassert>
@@ -97,8 +98,10 @@ static void test_actor_state_cas_transitions() {
 static void test_behavior_actor_receives_messages() {
     Config cfg;
     cfg.scheduler_threads = 2;
+    cfg.scheduler_start_paused = true;
     cfg.enable_network = false;
     ActorSystem system(cfg);
+    hpactor::test::SchedulerTestDriver driver(system);
 
     auto actor = system.spawn<CountingActor>();
     auto addr = actor.address();
@@ -113,10 +116,9 @@ static void test_behavior_actor_receives_messages() {
         ctx.send(addr, std::move(msg));
     }
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(500));
-
     auto* ca = static_cast<CountingActor*>(actor.get().get());
-    assert(ca->received() == kMsgCount);
+    bool done = driver.drain_until([&] { return ca->received() == kMsgCount; });
+    assert(done);
     std::cout << "PASS: test_behavior_actor_receives_messages ("
               << ca->received() << "/" << kMsgCount << ")\n";
 }
@@ -124,8 +126,10 @@ static void test_behavior_actor_receives_messages() {
 static void test_concurrent_sends_single_actor() {
     Config cfg;
     cfg.scheduler_threads = 4;
+    cfg.scheduler_start_paused = true;
     cfg.enable_network = false;
     ActorSystem system(cfg);
+    hpactor::test::SchedulerTestDriver driver(system);
 
     auto actor = system.spawn<CountingActor>();
     auto addr = actor.address();
@@ -136,7 +140,6 @@ static void test_concurrent_sends_single_actor() {
 
     for (int t = 0; t < kThreads; ++t) {
         threads.emplace_back([&system, &addr]() {
-            // Each thread gets its own ActorContext
             auto local_sender = system.spawn<EventBasedActor>();
             ActorContext ctx(local_sender, &system);
 
@@ -152,20 +155,12 @@ static void test_concurrent_sends_single_actor() {
         t.join();
     }
 
-    // Poll until all messages processed (up to 30 seconds for slow CI)
     auto* ca = static_cast<CountingActor*>(actor.get().get());
     int expected = kThreads * kMsgsPerThread;
-    int received = 0;
-    for (int deadline = 0; deadline < 300; ++deadline) {
-        received = ca->received();
-        if (received == expected)
-            break;
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-    }
-
-    assert(received == expected);
-    std::cout << "PASS: test_concurrent_sends_single_actor (" << received << "/"
-              << expected << ")\n";
+    bool done = driver.drain_until([&] { return ca->received() == expected; });
+    assert(done);
+    std::cout << "PASS: test_concurrent_sends_single_actor (" << ca->received()
+              << "/" << expected << ")\n";
 }
 
 static void test_state_prevents_double_execution() {

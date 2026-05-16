@@ -40,8 +40,7 @@ HPACTOR_REGISTER_ACTOR("BootstrapTestActor", BootstrapTestActor)
 // ---------------------------------------------------------------------------
 // Helper: write inline TOML to a temp file
 // ---------------------------------------------------------------------------
-static std::string write_temp(const std::string& content,
-                              const std::string& name) {
+static std::string write_temp(const std::string& content, const std::string& name) {
     std::string path = "/tmp/hpactor_bs_test_" + name + ".toml";
     std::ofstream f(path);
     f << content;
@@ -64,7 +63,7 @@ behavior = "BootstrapTestActor"
     std::string path = write_temp(toml, "single");
 
     Config config;
-    config.scheduler_threads = 1;
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto result = system.load_topology(path);
@@ -95,7 +94,7 @@ supervisor = "parent"
     std::string path = write_temp(toml, "supervisor");
 
     Config config;
-    config.scheduler_threads = 1;
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto result = system.load_topology(path);
@@ -124,7 +123,7 @@ behavior = "BootstrapTestActor"
     std::string path = write_temp(toml, "sysinit");
 
     Config config;
-    config.scheduler_threads = 1;
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto result = system.load_topology(path);
@@ -161,7 +160,7 @@ behavior = "BootstrapTestActor"
     std::string path = write_temp(toml, "multiroot");
 
     Config config;
-    config.scheduler_threads = 1;
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto result = system.load_topology(path);
@@ -189,7 +188,7 @@ behavior = "NonexistentActor"
     std::string path = write_temp(toml, "unknown_beh");
 
     Config config;
-    config.scheduler_threads = 1;
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto result = system.load_topology(path);
@@ -218,7 +217,7 @@ dispatch_policy = "Cooperative"
     std::string path = write_temp(toml, "dispatcher");
 
     Config config;
-    config.scheduler_threads = 1;
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto result = system.load_topology(path);
@@ -248,7 +247,7 @@ inherits = "base"
     std::string path = write_temp(toml, "templ_args");
 
     Config config;
-    config.scheduler_threads = 1;
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto result = system.load_topology(path);

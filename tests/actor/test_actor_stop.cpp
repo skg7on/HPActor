@@ -106,7 +106,7 @@ class NonLifecycleActor : public EventBasedActor {
 
 static void test_stop_async_transitions_to_stopped() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 
@@ -155,7 +155,7 @@ static void test_stop_async_transitions_to_stopped() {
 
 static void test_stop_sync_blocks_until_stopped() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 
@@ -216,7 +216,7 @@ static void test_stop_sync_timeout_returns_error() {
 
 static void test_stop_no_lifecycle_calls_on_exit_directly() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 

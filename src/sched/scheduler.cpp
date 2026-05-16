@@ -46,10 +46,12 @@ struct HybridScheduler::DedicatedStorage {
 thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
-                                 uint32_t num_priorities, TimerBackend timer_backend)
+                                 uint32_t num_priorities,
+                                 TimerBackend timer_backend, bool start_paused)
     : system_(system), num_workers_(num_workers),
       num_priorities_(num_priorities), workers_(num_workers), a2ws_(num_workers),
       timer_backend_(std::in_place_type<TimingWheel>, 1'000'000, 4),
+      workers_paused_(start_paused),
       dedicated_(std::make_unique<DedicatedStorage>()) {
     for (uint32_t i = 0; i < num_workers; ++i) {
         workers_[i].queues =
@@ -90,6 +92,9 @@ HybridScheduler::~HybridScheduler() {
 
 void HybridScheduler::stop() {
     running_.store(false, std::memory_order_release);
+    // Wake any workers parked in wait_if_paused so they see running_ == false
+    // and exit their loop.
+    resume_workers();
     for (auto& t : worker_threads_) {
         if (t.joinable())
             t.join();
@@ -421,6 +426,28 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     }
 }
 
+void HybridScheduler::wait_if_paused(uint32_t worker_id) {
+    (void)worker_id;
+    if (!workers_paused_.load(std::memory_order_acquire)) {
+        return;
+    }
+    parked_worker_count_.fetch_add(1, std::memory_order_relaxed);
+    std::unique_lock<std::mutex> lock(worker_control_mutex_);
+    worker_control_cv_.wait(lock, [this] {
+        return !workers_paused_.load(std::memory_order_acquire) ||
+               !running_.load(std::memory_order_acquire);
+    });
+    parked_worker_count_.fetch_sub(1, std::memory_order_relaxed);
+}
+
+void HybridScheduler::mark_dispatch_begin() noexcept {
+    active_worker_dispatches_.fetch_add(1, std::memory_order_release);
+}
+
+void HybridScheduler::mark_dispatch_end() noexcept {
+    active_worker_dispatches_.fetch_sub(1, std::memory_order_release);
+}
+
 void HybridScheduler::worker_loop(uint32_t worker_id) {
     tl_current_worker_id = worker_id; // set thread-local
 
@@ -431,23 +458,31 @@ void HybridScheduler::worker_loop(uint32_t worker_id) {
     }
 
     while (running_.load(std::memory_order_acquire)) {
+        wait_if_paused(worker_id);
+
         WorkItem item;
 
         // Try local pop first (owner operation - wait-free)
         if (pop_local(item, worker_id)) {
+            mark_dispatch_begin();
             execute_actor(item);
+            mark_dispatch_end();
             continue;
         }
 
         // Check EDF queue for deadline-ordered work
         if (pop_edf(item, worker_id)) {
+            mark_dispatch_begin();
             execute_actor(item);
+            mark_dispatch_end();
             continue;
         }
 
         // Local empty - try stealing (lock-free but may fail)
         if (try_steal(item)) {
+            mark_dispatch_begin();
             execute_actor(item);
+            mark_dispatch_end();
             continue;
         }
 
@@ -559,6 +594,75 @@ void HybridScheduler::register_dedicated_pool(ActorId actor, uint32_t pool_size)
         pool->start();
     }
     dedicated_->actor_pool_map_[actor] = pool_size;
+}
+
+void HybridScheduler::pause_workers() noexcept {
+    workers_paused_.store(true, std::memory_order_release);
+    // Wait until no worker is inside actor code.
+    while (active_worker_dispatches_.load(std::memory_order_acquire) > 0) {
+        std::this_thread::yield();
+    }
+}
+
+void HybridScheduler::resume_workers() noexcept {
+    workers_paused_.store(false, std::memory_order_release);
+    {
+        std::lock_guard<std::mutex> lock(worker_control_mutex_);
+    }
+    worker_control_cv_.notify_all();
+}
+
+bool HybridScheduler::workers_paused() const noexcept {
+    return workers_paused_.load(std::memory_order_acquire);
+}
+
+bool HybridScheduler::pop_any_ready(WorkItem& out) {
+    // Scan all workers, stealing from each. We must use steal_top() rather
+    // than pop_bottom() because the caller (e.g., run_one_ready from test
+    // thread) is not the owning worker of any queue.
+    for (uint32_t w = 0; w < num_workers_; ++w) {
+        auto& worker = workers_[w];
+        // Check EDF first
+        if (pop_edf(out, w)) {
+            return true;
+        }
+        // Check priority queues, highest to lowest
+        for (uint32_t p = 0; p < num_priorities_; ++p) {
+            if (worker.queues[p].steal_top(out)) {
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool HybridScheduler::run_one_ready() {
+    if (!workers_paused_.load(std::memory_order_acquire)) {
+        return false;
+    }
+    WorkItem item;
+    if (!pop_any_ready(item)) {
+        return false;
+    }
+    // Temporarily set thread-local for metrics/logging attribution.
+    uint32_t saved_id = tl_current_worker_id;
+    tl_current_worker_id = UINT32_MAX;
+    execute_actor(item);
+    tl_current_worker_id = saved_id;
+    return true;
+}
+
+SchedulerDrainResult HybridScheduler::drain_ready(size_t max_items) {
+    SchedulerDrainResult result;
+    for (size_t i = 0; i < max_items; ++i) {
+        if (!run_one_ready()) {
+            result.idle = true;
+            return result;
+        }
+        ++result.executed;
+    }
+    result.idle = false;
+    return result;
 }
 
 void HybridScheduler::unregister_dedicated(ActorId actor) {

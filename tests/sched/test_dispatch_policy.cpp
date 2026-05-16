@@ -87,7 +87,10 @@ int main() {
         assert(raw->dispatch_policy() == sched::DispatchPolicy::DedicatedThread);
 
         // Wait for daemon to run
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (std::chrono::steady_clock::now() < deadline && !raw->ran.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds{1});
+        }
         assert(raw->ran.load());
     }
 

@@ -91,7 +91,7 @@ static DrainTestActor* spawn_test_actor(ActorSystem& system) {
 
 static void test_drain_policy_processes_all_messages() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto* actor = spawn_test_actor(system);
@@ -133,7 +133,7 @@ static void test_drain_policy_processes_all_messages() {
 
 static void test_drop_user_messages_deadletters_user_keeps_system() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto* actor = spawn_test_actor(system);
@@ -172,7 +172,7 @@ static void test_drop_user_messages_deadletters_user_keeps_system() {
 
 static void test_immediate_stop_deadletters_all() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto* actor = spawn_test_actor(system);
@@ -201,7 +201,7 @@ static void test_immediate_stop_deadletters_all() {
 
 static void test_deferred_policy_falls_back_to_drain() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto* actor = spawn_test_actor(system);
