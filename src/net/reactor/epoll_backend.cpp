@@ -213,7 +213,7 @@ int EpollBackend::process_timers() {
         new_val.it_value.tv_nsec = (nextExpiry % 1000) * 1000000;
         new_val.it_interval.tv_sec = 0;
         new_val.it_interval.tv_nsec = 0;
-        timerfd_settime(timerfd_, 0, &new_val, nullptr);
+        timerfd_settime(timerfd_, TFD_TIMER_ABSTIME, &new_val, nullptr);
     } else {
         // No timers, disarm
         struct itimerspec new_val;
@@ -437,7 +437,7 @@ uint64_t EpollBackend::run_after(ActorId actor, int delay_ms) {
     new_val.it_value.tv_nsec = (expires_at_ms % 1000) * 1000000;
     new_val.it_interval.tv_sec = 0;
     new_val.it_interval.tv_nsec = 0;
-    timerfd_settime(timerfd_, 0, &new_val, nullptr);
+    timerfd_settime(timerfd_, TFD_TIMER_ABSTIME, &new_val, nullptr);
 
     return handle;
 }
@@ -465,13 +465,13 @@ uint64_t EpollBackend::run_every(ActorId actor, int interval_ms) {
                   return a.expires_at_ms < b.expires_at_ms;
               });
 
-    // Update timerfd to fire at next timer
+    // Update timerfd to fire at next timer (absolute monotonic time)
     struct itimerspec new_val;
     new_val.it_value.tv_sec = expires_at_ms / 1000;
     new_val.it_value.tv_nsec = (expires_at_ms % 1000) * 1000000;
     new_val.it_interval.tv_sec = 0;
     new_val.it_interval.tv_nsec = 0;
-    timerfd_settime(timerfd_, 0, &new_val, nullptr);
+    timerfd_settime(timerfd_, TFD_TIMER_ABSTIME, &new_val, nullptr);
 
     return handle;
 }

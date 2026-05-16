@@ -24,6 +24,7 @@ using namespace hpactor;
 void test_try_send_accepted() {
     Config cfg;
     cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
     cfg.mailbox.default_capacity = 4;
 
     ActorSystem system(cfg);
@@ -48,19 +49,22 @@ void test_try_send_accepted() {
 void test_try_send_full_mailbox() {
     Config cfg;
     cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
-    cfg.mailbox.default_capacity = 1;
+    cfg.scheduler_threads = 0;
+    cfg.mailbox.default_capacity = 4;
 
     ActorSystem system(cfg);
     auto sender = system.spawn<EventBasedActor>();
     auto target = system.spawn<EventBasedActor>();
     ActorContext ctx(sender, &system);
 
-    // Fill the mailbox (capacity 1)
-    auto ok = ctx.try_send(target.address(),
-                           TypedMessage(TypeTag::User, StreamBuffer{1}));
-    assert(ok.accepted());
+    // Fill the mailbox (capacity 4)
+    for (int i = 0; i < 4; ++i) {
+        auto ok = ctx.try_send(target.address(),
+                               TypedMessage(TypeTag::User, StreamBuffer{1}));
+        assert(ok.accepted());
+    }
 
-    // Second message should be rejected (mailbox full)
+    // Next message should be rejected (mailbox full)
     auto full = ctx.try_send(target.address(),
                              TypedMessage(TypeTag::User, StreamBuffer{2}));
     assert(!full.accepted());
@@ -84,6 +88,7 @@ void test_try_send_actor_not_found() {
 void test_try_send_with_priority() {
     Config cfg;
     cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
     cfg.mailbox.default_capacity = 4;
 
     ActorSystem system(cfg);
@@ -108,6 +113,7 @@ void test_try_send_with_priority() {
 void test_try_send_sets_sender_address() {
     Config cfg;
     cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
     cfg.mailbox.default_capacity = 4;
 
     ActorSystem system(cfg);
@@ -131,6 +137,7 @@ void test_try_send_sets_sender_address() {
 void test_existing_send_still_works() {
     Config cfg;
     cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
     cfg.mailbox.default_capacity = 4;
 
     ActorSystem system(cfg);
