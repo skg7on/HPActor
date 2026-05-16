@@ -14,6 +14,8 @@
 #include <iostream>
 #include <thread>
 
+#include <hpactor/mem/memory_region.hpp>
+
 using namespace hpactor;
 
 // ── Helper: poll until condition is true or timeout expires
@@ -181,13 +183,22 @@ static void test_stop_sync_timeout_returns_error() {
     ActorSystem system(cfg);
 
     // Use default DrainPolicy::Drain with 30s drain timeout.
-    // stop() transitions to kDraining but drain completion requires
-    // either the scheduler to empty the mailbox or the drain timer to fire.
-    // With no scheduler processing and a 30s drain timeout, a 10ms
-    // stop_sync should time out.
+    // Inject messages so the drain has work — with scheduler_threads=0
+    // the messages can't be processed, keeping the actor in kDraining.
     auto target_ref = system.spawn<StopTestActor>();
-    auto* lc = static_cast<StopTestActor*>(target_ref.get().get())->as_lifecycle();
+    auto* target = static_cast<StopTestActor*>(target_ref.get().get());
+    auto* lc = target->as_lifecycle();
     assert(lc != nullptr);
+
+    // Inject messages so drain can't complete instantly
+    auto* mailbox = target->get_mailbox();
+    for (int i = 0; i < 5; ++i) {
+        auto* node = static_cast<TypedMessage*>(mem::allocate(
+            mem::RegionType::kMessage, sizeof(TypedMessage), target->id()));
+        new (node) TypedMessage(TypeTag(0x1001), StreamBuffer{});
+        node->set_sender_address(ActorAddress{});
+        mailbox->inject_for_test(node);
+    }
 
     ActorContext ctx(Actor{}, &system);
 
