@@ -21,7 +21,7 @@ int main() {
     cfg.enabled = true;
     cfg.exporter = TraceExporterKind::kMemory;
     cfg.sampler = SamplerKind::kAlwaysOn;
-    cfg.export_interval = std::chrono::milliseconds(100000);
+    cfg.export_interval = std::chrono::milliseconds(300);
     auto* memory = new MemoryExporter();
     TraceManager manager(cfg, nullptr, std::unique_ptr<SpanExporter>(memory));
     manager.start();
