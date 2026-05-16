@@ -1000,15 +1000,8 @@ int main() {
         iov.iov_base = send_buf;
         iov.iov_len = 4;
 
-        // Address is ignored on connected sockets but we provide valid address
-        struct sockaddr_un addr;
-        memset(&addr, 0, sizeof(addr));
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, "/tmp/test", sizeof(addr.sun_path) - 1);
-
-        backend->async_sendto(fds[0], &iov, 1,
-                              reinterpret_cast<sockaddr*>(&addr), sizeof(addr),
-                              ActorId(1), static_cast<uint32_t>(OpType::SendTo));
+        backend->async_sendto(fds[0], &iov, 1, nullptr, 0, ActorId(1),
+                              static_cast<uint32_t>(OpType::SendTo));
         loop.process_completions();
 
         assert(captured.has_value() && "completion should be captured");
