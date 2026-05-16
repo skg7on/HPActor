@@ -3,19 +3,76 @@
 
 #include <examples/order_platform/messages.hpp>
 
+#include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/stateful_actor.hpp>
+#include <hpactor/actor/typed_actor.hpp>
+#include <hpactor/actor_context.hpp>
+#include <hpactor/behavior.hpp>
+#include <hpactor/cli/cli_types.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <csignal>
 #include <cstdlib>
+#include <deque>
+#include <future>
 #include <iostream>
 #include <optional>
+#include <sstream>
 #include <string>
 #include <thread>
+#include <unordered_map>
 
 namespace order = hpactor::examples::order_platform;
 
 namespace {
+
+// ---------------------------------------------------------------------------
+// State structs
+// ---------------------------------------------------------------------------
+
+struct OrderRecord {
+    std::string order_id;
+    std::string customer_id;
+    order::ScenarioKind scenario = order::ScenarioKind::HappyPath;
+    order::OrderStatus status = order::OrderStatus::Received;
+    std::vector<order::OrderLine> lines;
+    uint64_t subtotal_cents = 0;
+    uint64_t discount_cents = 0;
+    uint64_t tax_cents = 0;
+    uint64_t total_cents = 0;
+    uint64_t reservation_id = 0;
+    std::string detail;
+};
+
+struct OrderCoordinatorState {
+    std::unordered_map<std::string, OrderRecord> orders;
+    uint64_t processed = 0;
+};
+struct InventoryState {
+    std::unordered_map<std::string, uint32_t> stock;
+    std::unordered_map<uint64_t, order::InventoryReservePayload> reservations;
+    uint64_t next_reservation_id = 1;
+    uint64_t accepted = 0;
+    uint64_t rejected = 0;
+    uint64_t released = 0;
+};
+
+struct OrderLogState {
+    static constexpr size_t kCapacity = 64;
+    std::deque<std::string> entries;
+    void append(std::string value) {
+        if (entries.size() == kCapacity)
+            entries.pop_front();
+        entries.push_back(std::move(value));
+    }
+};
+
+// ---------------------------------------------------------------------------
+// Options and CLI
+// ---------------------------------------------------------------------------
 
 struct Options {
     std::string mode = "--help";
@@ -122,6 +179,337 @@ std::optional<Options> parse_args(int argc, char* argv[]) {
     return opts;
 }
 
+// ---------------------------------------------------------------------------
+// Actors
+// ---------------------------------------------------------------------------
+
+class OrderLogActor : public hpactor::StatefulActor<OrderLogState> {
+  public:
+    static constexpr const char* kActorTypeName = "OrderLogActor";
+
+    OrderLogActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
+        : hpactor::StatefulActor<OrderLogState>(ctx, sys) {
+        become(make_behavior());
+    }
+
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == order::LogOrderEventTag) {
+                state().append(
+                    std::string(msg.payload().begin(), msg.payload().end()));
+            }
+        }};
+    }
+};
+
+class InventoryActor : public hpactor::StatefulActor<InventoryState> {
+  public:
+    static constexpr const char* kActorTypeName = "InventoryActor";
+
+    InventoryActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
+        : hpactor::StatefulActor<InventoryState>(ctx, sys) {
+        state().stock.emplace("sku-book", 100);
+        state().stock.emplace("sku-pen", 200);
+        state().stock.emplace("sku-lamp", 5);
+        become(make_behavior());
+    }
+
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() == order::ReserveInventoryTag) {
+                order::InventoryReservePayload payload;
+                if (!order::decode_inventory_reserve(msg.payload(), payload))
+                    return;
+
+                bool enough = true;
+                for (const auto& line : payload.lines) {
+                    auto it = state().stock.find(line.sku);
+                    if (it == state().stock.end() || it->second < line.quantity) {
+                        enough = false;
+                        break;
+                    }
+                }
+
+                order::InventoryReplyPayload reply;
+                reply.order_id = payload.order_id;
+                if (enough) {
+                    for (const auto& line : payload.lines)
+                        state().stock[line.sku] -= line.quantity;
+                    reply.ok = true;
+                    reply.reservation_id = state().next_reservation_id++;
+                    reply.detail = "reserved";
+                    state().reservations.emplace(reply.reservation_id, payload);
+                    ++state().accepted;
+                    context()->reply(hpactor::TypedMessage(
+                        order::InventoryReservedTag,
+                        order::encode_inventory_reply(reply)));
+                } else {
+                    reply.ok = false;
+                    reply.detail = "insufficient stock";
+                    ++state().rejected;
+                    context()->reply(hpactor::TypedMessage(
+                        order::InventoryRejectedTag,
+                        order::encode_inventory_reply(reply)));
+                }
+            }
+        }};
+    }
+};
+
+class PaymentActor : public hpactor::EventBasedActor {
+  public:
+    static constexpr const char* kActorTypeName = "PaymentActor";
+
+    PaymentActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
+        : hpactor::EventBasedActor(ctx, sys) {
+        become(make_behavior());
+    }
+
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() != order::AuthorizePaymentTag)
+                return;
+            order::PaymentAuthorizePayload payload;
+            if (!order::decode_payment_authorize(msg.payload(), payload))
+                return;
+
+            if (payload.scenario == order::ScenarioKind::PaymentDecline) {
+                order::PaymentReplyPayload reply{payload.order_id, false, "",
+                                                 "card declined"};
+                context()->reply(hpactor::TypedMessage(
+                    order::PaymentDeclinedTag, order::encode_payment_reply(reply)));
+                return;
+            }
+            if (payload.scenario == order::ScenarioKind::PaymentTimeout) {
+                return;
+            }
+
+            order::PaymentReplyPayload reply;
+            reply.order_id = payload.order_id;
+            reply.ok = true;
+            reply.authorization_id = "auth-" + payload.order_id;
+            reply.detail = "authorized";
+            context()->reply(hpactor::TypedMessage(
+                order::PaymentAuthorizedTag, order::encode_payment_reply(reply)));
+        }};
+    }
+};
+
+class FulfillmentWorkerActor : public hpactor::EventBasedActor {
+  public:
+    static constexpr const char* kActorTypeName = "FulfillmentWorkerActor";
+
+    FulfillmentWorkerActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
+        : hpactor::EventBasedActor(ctx, sys) {
+        become(make_behavior());
+    }
+
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() != order::QueueFulfillmentTag)
+                return;
+            order::FulfillmentPayload payload;
+            if (!order::decode_fulfillment(msg.payload(), payload))
+                return;
+            if (payload.scenario == order::ScenarioKind::WorkerCrash) {
+                set_exit_reason(1);
+                return;
+            }
+            context()->reply(hpactor::TypedMessage(
+                order::FulfillmentQueuedTag, order::encode_fulfillment(payload)));
+        }};
+    }
+};
+
+class OrderCoordinatorActor : public hpactor::StatefulActor<OrderCoordinatorState> {
+  public:
+    static constexpr const char* kActorTypeName = "OrderCoordinatorActor";
+
+    OrderCoordinatorActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+                          hpactor::ActorAddress inventory,
+                          hpactor::ActorAddress payment,
+                          hpactor::ActorAddress fulfillment,
+                          hpactor::ActorAddress log,
+                          std::promise<order::OrderStatusPayload>* done)
+        : hpactor::StatefulActor<OrderCoordinatorState>(ctx, sys),
+          inventory_(inventory), payment_(payment), fulfillment_(fulfillment),
+          log_(log), done_(done) {
+        become(make_behavior());
+    }
+
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            ++state().processed;
+            if (msg.type_id() == order::SubmitOrderTag) {
+                on_submit(msg);
+            } else if (msg.type_id() == order::InventoryReservedTag ||
+                       msg.type_id() == order::InventoryRejectedTag) {
+                on_inventory(msg);
+            } else if (msg.type_id() == order::PaymentAuthorizedTag ||
+                       msg.type_id() == order::PaymentDeclinedTag) {
+                on_payment(msg);
+            } else if (msg.type_id() == order::FulfillmentQueuedTag ||
+                       msg.type_id() == order::FulfillmentFailedTag) {
+                on_fulfillment(msg);
+            } else if (msg.type_id() == order::PaymentTimedOutTag) {
+                on_payment_timeout(msg);
+            }
+        }};
+    }
+
+  private:
+    void log_event(const std::string& text) {
+        context()->send(log_, hpactor::TypedMessage(
+                                  order::LogOrderEventTag,
+                                  hpactor::StreamBuffer(text.begin(), text.end())));
+    }
+
+    void complete(const OrderRecord& record) {
+        order::OrderStatusPayload result;
+        result.order_id = record.order_id;
+        result.status = record.status;
+        result.detail = record.detail;
+        result.total_cents = record.total_cents;
+        if (done_ != nullptr)
+            done_->set_value(result);
+    }
+
+    void on_submit(hpactor::TypedMessage& msg) {
+        order::SubmitOrderPayload payload;
+        if (!order::decode_submit_order(msg.payload(), payload))
+            return;
+
+        OrderRecord record;
+        record.order_id = payload.order_id;
+        record.customer_id = payload.customer_id;
+        record.scenario = payload.scenario;
+        record.lines = payload.lines;
+        record.subtotal_cents = order::calculate_subtotal(payload.lines);
+        record.discount_cents = record.subtotal_cents >= 5000 ? 500 : 0;
+        record.tax_cents = (record.subtotal_cents - record.discount_cents) / 10;
+        record.total_cents =
+            record.subtotal_cents - record.discount_cents + record.tax_cents;
+        record.status = order::OrderStatus::Priced;
+        state().orders[record.order_id] = record;
+        log_event(record.order_id +
+                  " priced total=" + std::to_string(record.total_cents));
+
+        order::InventoryReservePayload reserve{record.order_id, record.lines};
+        context()->send(inventory_, hpactor::TypedMessage(
+                                        order::ReserveInventoryTag,
+                                        order::encode_inventory_reserve(reserve)));
+    }
+
+    void on_inventory(hpactor::TypedMessage& msg) {
+        order::InventoryReplyPayload reply;
+        if (!order::decode_inventory_reply(msg.payload(), reply))
+            return;
+        auto it = state().orders.find(reply.order_id);
+        if (it == state().orders.end())
+            return;
+        auto& record = it->second;
+        if (!reply.ok) {
+            record.status = order::OrderStatus::InventoryFailed;
+            record.detail = reply.detail;
+            log_event(record.order_id + " inventory_failed");
+            complete(record);
+            return;
+        }
+        record.status = order::OrderStatus::InventoryReserved;
+        record.reservation_id = reply.reservation_id;
+        log_event(record.order_id + " inventory_reserved");
+
+        order::PaymentAuthorizePayload payment;
+        payment.order_id = record.order_id;
+        payment.customer_id = record.customer_id;
+        payment.amount_cents = record.total_cents;
+        payment.scenario = record.scenario;
+        context()->send(payment_, hpactor::TypedMessage(
+                                      order::AuthorizePaymentTag,
+                                      order::encode_payment_authorize(payment)));
+
+        if (record.scenario == order::ScenarioKind::PaymentTimeout) {
+            order::OrderStatusPayload timeout_marker;
+            timeout_marker.order_id = record.order_id;
+            context()->schedule(
+                std::chrono::milliseconds(200),
+                hpactor::TypedMessage(order::PaymentTimedOutTag,
+                                      order::encode_order_status(timeout_marker)));
+        }
+    }
+
+    void on_payment(hpactor::TypedMessage& msg) {
+        order::PaymentReplyPayload reply;
+        if (!order::decode_payment_reply(msg.payload(), reply))
+            return;
+        auto it = state().orders.find(reply.order_id);
+        if (it == state().orders.end())
+            return;
+        auto& record = it->second;
+        if (!reply.ok) {
+            record.status = order::OrderStatus::PaymentFailed;
+            record.detail = reply.detail;
+            log_event(record.order_id + " payment_failed");
+            complete(record);
+            return;
+        }
+        record.status = order::OrderStatus::PaymentAuthorized;
+        log_event(record.order_id + " payment_authorized");
+        order::FulfillmentPayload fulfill;
+        fulfill.order_id = record.order_id;
+        fulfill.reservation_id = record.reservation_id;
+        fulfill.scenario = record.scenario;
+        context()->send(fulfillment_,
+                        hpactor::TypedMessage(order::QueueFulfillmentTag,
+                                              order::encode_fulfillment(fulfill)));
+    }
+
+    void on_payment_timeout(hpactor::TypedMessage& msg) {
+        order::OrderStatusPayload timeout;
+        if (!order::decode_order_status(msg.payload(), timeout))
+            return;
+        auto it = state().orders.find(timeout.order_id);
+        if (it == state().orders.end())
+            return;
+        auto& record = it->second;
+        if (record.status == order::OrderStatus::InventoryReserved) {
+            record.status = order::OrderStatus::PaymentTimedOut;
+            record.detail = "payment timed out";
+            log_event(record.order_id + " payment_timed_out");
+            complete(record);
+        }
+    }
+
+    void on_fulfillment(hpactor::TypedMessage& msg) {
+        order::FulfillmentPayload reply;
+        if (!order::decode_fulfillment(msg.payload(), reply))
+            return;
+        auto it = state().orders.find(reply.order_id);
+        if (it == state().orders.end())
+            return;
+        auto& record = it->second;
+        record.status = order::OrderStatus::Completed;
+        record.detail = "completed";
+        log_event(record.order_id + " completed");
+        complete(record);
+    }
+
+    hpactor::ActorAddress inventory_;
+    hpactor::ActorAddress payment_;
+    hpactor::ActorAddress fulfillment_;
+    hpactor::ActorAddress log_;
+    std::promise<order::OrderStatusPayload>* done_ = nullptr;
+};
+
+// ---------------------------------------------------------------------------
+// Config and runners
+// ---------------------------------------------------------------------------
+
 hpactor::Config make_base_config(const Options& opts, uint16_t actor_port) {
     hpactor::Config config;
     config.scheduler_threads = 4;
@@ -153,8 +541,46 @@ int run_all_in_one(const Options& opts) {
     hpactor::Config config = make_base_config(opts, 0);
     config.enable_network = false;
     hpactor::ActorSystem system(config);
-    std::cout << "ALL-IN-ONE scenario=" << order::to_string(opts.scenario) << "\n";
-    std::cout << "actor_count=" << system.actor_count() << "\n";
+
+    auto log = system.spawn<OrderLogActor>();
+    auto inventory = system.spawn<InventoryActor>();
+    auto payment = system.spawn<PaymentActor>();
+    auto fulfillment_worker = system.spawn<FulfillmentWorkerActor>();
+
+    std::promise<order::OrderStatusPayload> done;
+    auto result_future = done.get_future();
+    auto coordinator = system.spawn<OrderCoordinatorActor>(
+        inventory.address(), payment.address(), fulfillment_worker.address(),
+        log.address(), &done);
+
+    order::SubmitOrderPayload submit;
+    submit.order_id = "demo-1";
+    submit.customer_id = "customer-1";
+    submit.scenario = opts.scenario;
+    submit.lines.push_back(order::OrderLine{"sku-book", 2, 1599});
+    submit.lines.push_back(order::OrderLine{"sku-pen", 3, 250});
+    if (opts.scenario == order::ScenarioKind::InsufficientStock) {
+        submit.lines.push_back(order::OrderLine{"sku-lamp", 99, 3200});
+    }
+
+    system.deliver_local(coordinator.id(),
+                         hpactor::TypedMessage(order::SubmitOrderTag,
+                                               order::encode_submit_order(submit)));
+
+    auto status = result_future.wait_for(std::chrono::seconds(3));
+    if (status == std::future_status::timeout) {
+        std::cout << "SCENARIO RESULT order_id=demo-1 status=timeout\n";
+        return 2;
+    }
+    auto final_status = result_future.get();
+    std::cout << "SCENARIO RESULT order_id=" << final_status.order_id
+              << " status=" << order::to_string(final_status.status)
+              << " detail=" << final_status.detail
+              << " total_cents=" << final_status.total_cents << "\n";
+
+    auto dlq = system.dead_letter_snapshot();
+    std::cout << "DLQ depth=" << dlq.depth << " total_pushed=" << dlq.total_pushed
+              << " total_lost=" << dlq.total_lost << "\n";
     return 0;
 }
 
