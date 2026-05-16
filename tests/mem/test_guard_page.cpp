@@ -46,22 +46,25 @@ int main() {
     // We test this by forking — the child attempts the illegal write,
     // and the parent verifies the child died from SIGSEGV.
     {
-        constexpr size_t kUserSize = 4096;
+        // Use page_size() as allocation so rounding is a no-op
+        size_t kGuardTestSize = page_size();
 
         pid_t pid = fork();
         assert(pid >= 0);
 
         if (pid == 0) {
             // Child: allocate guarded memory
-            void* p = guarded_alloc(kUserSize);
-            if (!p) _exit(1);
+            void* p = guarded_alloc(kGuardTestSize);
+            if (!p)
+                _exit(1);
 
             // Touch the valid memory first to ensure it's mapped
-            std::memset(p, 0xAB, kUserSize);
+            std::memset(p, 0xAB, kGuardTestSize);
 
-            // Write far past the end (multiple pages) to ensure we hit a guard
+            // Read from the trailing guard page (PROT_NONE) — must crash
             auto* byte_ptr = static_cast<uint8_t*>(p);
-            volatile uint8_t val = byte_ptr[kUserSize + page_size()]; // well beyond
+            volatile uint8_t val = byte_ptr[kGuardTestSize]; // first byte of
+                                                             // guard page
 
             // Should not reach here
             (void)val;

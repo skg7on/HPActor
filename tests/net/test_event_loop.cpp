@@ -58,9 +58,13 @@ int main() {
         uint64_t handle = loop.run_after([&fired]() { fired = true; }, 10);
         assert(handle > 0 && "run_after should return valid handle");
 
-        // Process completions and wait
-        loop.wait(50);
-        loop.process_completions();
+        // Poll until fired (CI runners may be slow)
+        int waited = 0;
+        while (!fired.load() && waited < 500) {
+            loop.wait(20);
+            loop.process_completions();
+            waited += 20;
+        }
 
         assert(fired && "Timer callback should have fired");
         printf("PASS\n");

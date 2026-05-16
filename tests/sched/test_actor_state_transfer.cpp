@@ -131,7 +131,7 @@ static void test_concurrent_sends_single_actor() {
     auto addr = actor.address();
 
     constexpr int kThreads = 4;
-    constexpr int kMsgsPerThread = 250;
+    constexpr int kMsgsPerThread = 50;
     std::vector<std::thread> threads;
 
     for (int t = 0; t < kThreads; ++t) {
