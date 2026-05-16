@@ -158,6 +158,10 @@ add_executable(test_actor_stop actor/test_actor_stop.cpp)
 target_link_libraries(test_actor_stop hpactor hpactor_proto pthread)
 add_test(NAME test_actor_stop COMMAND test_actor_stop)
 
+add_executable(test_shutdown_coordinator actor/test_shutdown_coordinator.cpp)
+target_link_libraries(test_shutdown_coordinator hpactor)
+add_test(NAME test_shutdown_coordinator COMMAND test_shutdown_coordinator)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================

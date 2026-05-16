@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
@@ -716,6 +717,238 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     }
 
     return result<void>::make();
+}
+
+} // namespace hpactor
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Shutdown helpers (anonymous namespace, uses public ActorSystem API only)
+// ═══════════════════════════════════════════════════════════════════════════════
+
+namespace hpactor {
+namespace {
+
+struct ActorDrainInfo {
+    ActorId id;
+    bool is_system;
+};
+
+void initiate_actor_drain(ActorSystem& sys, ActorId id) {
+    auto actor = sys.get_actor(id);
+    if (!actor)
+        return;
+
+    auto* lc = actor->as_lifecycle();
+    if (lc == nullptr) {
+        // No lifecycle: call on_exit directly if EventBasedActor
+        if (actor->is_event_based_actor()) {
+            static_cast<EventBasedActor*>(actor.get())->on_exit();
+        }
+        return;
+    }
+
+    auto state = lc->state();
+    // Skip actors that are already stopping or stopped
+    if (state == LifecycleState::kStopping || state == LifecycleState::kStopped)
+        return;
+
+    auto policy = lc->drain_config().policy;
+
+    if (policy == DrainPolicy::ImmediateStop) {
+        // Drain mailbox synchronously (dead-letter all messages)
+        if (actor->is_event_based_actor()) {
+            static_cast<EventBasedActor*>(actor.get())->drain_all_immediate();
+        } else {
+            auto* mailbox = sys.get_mailbox(id);
+            if (mailbox) {
+                TypedMessage msg;
+                while (mailbox->try_pop(msg)) {
+                    // Messages dropped — equivalent to dead-lettering
+                }
+            }
+        }
+        // Drive lifecycle: kActive -> kStopping -> kStopped
+        lc->transition(LifecycleState::kStopping);
+        lc->transition(LifecycleState::kStopped);
+        // Notify linked/monitored actors
+        if (actor->is_event_based_actor()) {
+            static_cast<EventBasedActor*>(actor.get())->on_exit();
+        }
+    } else {
+        // Drain / DropUserMessages / deferred policies:
+        // transition to kDraining, let EventBasedActor::receive() / drain
+        // timer handle completion.
+        if (state == LifecycleState::kActive) {
+            lc->transition(LifecycleState::kDraining);
+        }
+        // Start drain timer if EventBasedActor
+        if (actor->is_event_based_actor()) {
+            static_cast<EventBasedActor*>(actor.get())->start_drain_timer();
+        } else {
+            // Non-EventBasedActor with lifecycle but no drain timer:
+            // transition directly to stopped.
+            lc->transition(LifecycleState::kStopping);
+            lc->transition(LifecycleState::kStopped);
+        }
+    }
+}
+
+void poll_drain_complete(ActorSystem& sys, ActorId id,
+                         std::chrono::steady_clock::time_point deadline) {
+    while (std::chrono::steady_clock::now() < deadline) {
+        auto actor = sys.get_actor(id);
+        if (!actor)
+            return; // Actor removed from registry
+
+        auto* lc = actor->as_lifecycle();
+        if (lc == nullptr)
+            return; // No lifecycle — already handled
+
+        if (lc->state() == LifecycleState::kStopped)
+            return; // Drain complete
+
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+}
+
+} // anonymous namespace
+} // namespace hpactor
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// ActorSystem — shutdown implementation
+// ═══════════════════════════════════════════════════════════════════════════════
+
+namespace hpactor {
+
+result<void> ActorSystem::shutdown() {
+    return shutdown(ShutdownOptions{});
+}
+
+result<void> ActorSystem::shutdown(const ShutdownOptions& opts) {
+    ShutdownPhase phase = ShutdownPhase::Running;
+
+    // Helper: check if we should force-stop (modifies phase/running in place)
+    auto check_force = [&](std::chrono::steady_clock::time_point deadline) -> bool {
+        if (!opts.force_after_timeout)
+            return false;
+        if (std::chrono::steady_clock::now() < deadline)
+            return false;
+        phase = ShutdownPhase::ForcedStop;
+        shutdown_phase_.store(ShutdownPhase::ForcedStop, std::memory_order_release);
+        running_.store(false, std::memory_order_release);
+        return true;
+    };
+
+    // ── Phase: DrainingIngress ──────────────────────────────────────────
+    phase = ShutdownPhase::DrainingIngress;
+    shutdown_phase_.store(ShutdownPhase::DrainingIngress, std::memory_order_release);
+    is_ready_.store(false, std::memory_order_release);
+
+    auto ingress_deadline = std::chrono::steady_clock::now() + opts.ingress_timeout;
+    // (HTTP gateway / remote spawn gating deferred to follow-up tasks)
+    if (check_force(ingress_deadline))
+        return result<void>::make();
+
+    // ── Phase: DrainingActors ──────────────────────────────────────────
+    phase = ShutdownPhase::DrainingActors;
+    shutdown_phase_.store(ShutdownPhase::DrainingActors, std::memory_order_release);
+    auto actor_deadline =
+        std::chrono::steady_clock::now() + opts.actor_drain_timeout;
+
+    // Collect actor IDs under lock, then drain in order
+    {
+        std::vector<ActorDrainInfo> actors;
+        for_each_actor([&](ActorId id, AbstractActor& actor) {
+            actors.push_back({id, actor.is_system_actor()});
+        });
+        // Lock released — safe to call into actors
+
+        // Pass 1: initiate drain for non-system actors
+        for (auto& info : actors) {
+            if (info.is_system)
+                continue;
+            initiate_actor_drain(*this, info.id);
+            if (check_force(actor_deadline))
+                break;
+        }
+        // Poll non-system actors to completion
+        if (!check_force(actor_deadline)) {
+            for (const auto& info : actors) {
+                if (info.is_system)
+                    continue;
+                poll_drain_complete(*this, info.id, actor_deadline);
+                if (check_force(actor_deadline))
+                    break;
+            }
+        }
+
+        // Pass 2: initiate drain for system actors (last)
+        if (!check_force(actor_deadline)) {
+            for (auto& info : actors) {
+                if (!info.is_system)
+                    continue;
+                initiate_actor_drain(*this, info.id);
+                if (check_force(actor_deadline))
+                    break;
+            }
+        }
+        // Poll system actors to completion
+        if (!check_force(actor_deadline)) {
+            for (const auto& info : actors) {
+                if (!info.is_system)
+                    continue;
+                poll_drain_complete(*this, info.id, actor_deadline);
+                if (check_force(actor_deadline))
+                    break;
+            }
+        }
+    }
+
+    if (check_force(actor_deadline))
+        return result<void>::make();
+
+    // ── Phase: LeavingCluster ──────────────────────────────────────────
+    phase = ShutdownPhase::LeavingCluster;
+    shutdown_phase_.store(ShutdownPhase::LeavingCluster, std::memory_order_release);
+    auto leave_deadline =
+        std::chrono::steady_clock::now() + opts.cluster_leave_timeout;
+    // (Full implementation deferred until sharding)
+    if (check_force(leave_deadline))
+        return result<void>::make();
+
+    // ── Phase: FlushingTelemetry ──────────────────────────────────────
+    phase = ShutdownPhase::FlushingTelemetry;
+    shutdown_phase_.store(ShutdownPhase::FlushingTelemetry,
+                          std::memory_order_release);
+    // Best-effort flush of logs, metrics, DLQ — no blocking
+
+    // ── Phase: Stopped ─────────────────────────────────────────────────
+    phase = ShutdownPhase::Stopped;
+    shutdown_phase_.store(ShutdownPhase::Stopped, std::memory_order_release);
+    running_.store(false, std::memory_order_release);
+    return result<void>::make();
+}
+
+ShutdownPhase ActorSystem::shutdown_phase() const noexcept {
+    return shutdown_phase_.load(std::memory_order_acquire);
+}
+
+bool ActorSystem::is_ready() const noexcept {
+    return is_ready_.load(std::memory_order_acquire);
+}
+
+bool ActorSystem::is_draining() const noexcept {
+    return shutdown_phase_.load(std::memory_order_acquire) ==
+           ShutdownPhase::DrainingActors;
+}
+
+void ActorSystem::set_drain_config(ActorId target, DrainConfig cfg) {
+    auto actor = get_actor(target);
+    if (actor) {
+        if (auto* lc = actor->as_lifecycle()) {
+            lc->set_drain_config(cfg);
+        }
+    }
 }
 
 } // namespace hpactor

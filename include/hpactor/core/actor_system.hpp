@@ -164,6 +164,24 @@ struct ActorTypeDef {
     ActorType id;
 };
 
+// Shutdown phase enumeration
+enum class ShutdownPhase : uint8_t {
+    Running,
+    DrainingIngress,
+    DrainingActors,
+    LeavingCluster,
+    FlushingTelemetry,
+    Stopped,
+    ForcedStop,
+};
+
+struct ShutdownOptions {
+    std::chrono::milliseconds ingress_timeout{5'000};
+    std::chrono::milliseconds actor_drain_timeout{30'000};
+    std::chrono::milliseconds cluster_leave_timeout{10'000};
+    bool force_after_timeout{true};
+};
+
 // -----------------------------------------------------------------------------
 // ActorSystem - the actor environment containing schedulers, registry, etc.
 // -----------------------------------------------------------------------------
@@ -372,6 +390,23 @@ class ActorSystem {
         return *actor_type_registry_;
     }
 
+    // ── Shutdown ───────────────────────────────────────────────────────────
+
+    // Node shutdown — drives the full phase machine.
+    // Overload with no arguments uses default ShutdownOptions{}.
+    result<void> shutdown();
+    result<void> shutdown(const ShutdownOptions& opts);
+
+    // Current shutdown phase
+    ShutdownPhase shutdown_phase() const noexcept;
+
+    // Health/readiness gating
+    bool is_ready() const noexcept;
+    bool is_draining() const noexcept;
+
+    // Per-actor drain config override (for admin/CLI use)
+    void set_drain_config(ActorId target, DrainConfig cfg);
+
   private:
     Config config_;
     EndPoint endpoint_;
@@ -397,6 +432,10 @@ class ActorSystem {
 
     // Running flag for network thread loop
     std::atomic<bool> running_{true};
+
+    // Shutdown state
+    std::atomic<ShutdownPhase> shutdown_phase_{ShutdownPhase::Running};
+    std::atomic<bool> is_ready_{true};
 
     // Scheduler
     std::unique_ptr<sched::IScheduler> scheduler_;
