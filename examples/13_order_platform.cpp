@@ -316,6 +316,9 @@ class FulfillmentWorkerActor : public hpactor::EventBasedActor {
             if (!order::decode_fulfillment(msg.payload(), payload))
                 return;
             if (payload.scenario == order::ScenarioKind::WorkerCrash) {
+                context()->reply(
+                    hpactor::TypedMessage(order::FulfillmentFailedTag,
+                                          order::encode_fulfillment(payload)));
                 set_exit_reason(1);
                 return;
             }
@@ -375,8 +378,10 @@ class OrderCoordinatorActor : public hpactor::StatefulActor<OrderCoordinatorStat
         result.status = record.status;
         result.detail = record.detail;
         result.total_cents = record.total_cents;
-        if (done_ != nullptr)
+        if (done_ != nullptr) {
             done_->set_value(result);
+            done_ = nullptr;
+        }
     }
 
     void on_submit(hpactor::TypedMessage& msg) {
@@ -493,6 +498,13 @@ class OrderCoordinatorActor : public hpactor::StatefulActor<OrderCoordinatorStat
         if (it == state().orders.end())
             return;
         auto& record = it->second;
+        if (msg.type_id() == order::FulfillmentFailedTag) {
+            record.status = order::OrderStatus::FulfillmentFailed;
+            record.detail = "worker failed";
+            log_event(record.order_id + " fulfillment_failed");
+            complete(record);
+            return;
+        }
         record.status = order::OrderStatus::Completed;
         record.detail = "completed";
         log_event(record.order_id + " completed");
@@ -509,6 +521,39 @@ class OrderCoordinatorActor : public hpactor::StatefulActor<OrderCoordinatorStat
 // ---------------------------------------------------------------------------
 // Config and runners
 // ---------------------------------------------------------------------------
+
+const char* enqueue_code_name(hpactor::mailbox::EnqueueResultCode code) {
+    using Code = hpactor::mailbox::EnqueueResultCode;
+    switch (code) {
+        case Code::Accepted:
+            return "accepted";
+        case Code::AcceptedWithSoftPressure:
+            return "accepted_with_soft_pressure";
+        case Code::Rejected:
+            return "rejected";
+        case Code::DroppedNewest:
+            return "dropped_newest";
+        case Code::DroppedExisting:
+            return "dropped_existing";
+        case Code::ReroutedToDeadLetter:
+            return "rerouted_to_dead_letter";
+        case Code::ReroutedToOverflow:
+            return "rerouted_to_overflow";
+        case Code::MailboxClosed:
+            return "mailbox_closed";
+        case Code::ActorNotFound:
+            return "actor_not_found";
+    }
+    return "rejected";
+}
+
+void print_enqueue_result(const char* label,
+                          const hpactor::mailbox::EnqueueResult& result) {
+    std::cout << label << " code=" << enqueue_code_name(result.code)
+              << " depth=" << result.depth << " capacity=" << result.capacity
+              << " pressure=" << result.pressure_ratio
+              << " retryable=" << (result.retryable() ? "true" : "false") << "\n";
+}
 
 hpactor::Config make_base_config(const Options& opts, uint16_t actor_port) {
     hpactor::Config config;
@@ -561,6 +606,35 @@ int run_all_in_one(const Options& opts) {
     submit.lines.push_back(order::OrderLine{"sku-pen", 3, 250});
     if (opts.scenario == order::ScenarioKind::InsufficientStock) {
         submit.lines.push_back(order::OrderLine{"sku-lamp", 99, 3200});
+    }
+
+    if (opts.scenario == order::ScenarioKind::Overload) {
+        for (int i = 0; i < 8; ++i) {
+            order::SubmitOrderPayload burst = submit;
+            burst.order_id = "burst-" + std::to_string(i);
+            auto result = system.try_deliver_local(
+                coordinator.id(),
+                hpactor::TypedMessage(order::SubmitOrderTag,
+                                      order::encode_submit_order(burst)));
+            print_enqueue_result("OVERLOAD enqueue", result);
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        auto dlq = system.dead_letter_snapshot();
+        std::cout << "OVERLOAD dlq_depth=" << dlq.depth
+                  << " total_pushed=" << dlq.total_pushed << "\n";
+        return 0;
+    }
+
+    if (opts.scenario == order::ScenarioKind::MissingRoute) {
+        auto result = system.try_deliver_local(
+            hpactor::ActorId{999999},
+            hpactor::TypedMessage(order::SubmitOrderTag,
+                                  order::encode_submit_order(submit)));
+        print_enqueue_result("MISSING_ROUTE enqueue", result);
+        auto dlq = system.dead_letter_snapshot();
+        std::cout << "MISSING_ROUTE dlq_depth=" << dlq.depth
+                  << " total_pushed=" << dlq.total_pushed << "\n";
+        return 0;
     }
 
     system.deliver_local(coordinator.id(),
