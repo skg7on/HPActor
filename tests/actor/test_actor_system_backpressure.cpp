@@ -24,6 +24,7 @@ using namespace hpactor;
 int main() {
     Config cfg;
     cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
     cfg.mailbox.default_capacity = 1;
 
     ActorSystem system(cfg);
