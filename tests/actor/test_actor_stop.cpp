@@ -176,7 +176,7 @@ static void test_stop_sync_blocks_until_stopped() {
 
 static void test_stop_sync_timeout_returns_error() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
 

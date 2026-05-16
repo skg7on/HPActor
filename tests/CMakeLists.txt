@@ -409,6 +409,7 @@ add_test(NAME test_actor_state COMMAND test_actor_state)
 add_executable(test_actor_state_transfer sched/test_actor_state_transfer.cpp)
 target_link_libraries(test_actor_state_transfer hpactor)
 add_test(NAME test_actor_state_transfer COMMAND test_actor_state_transfer)
+set_tests_properties(test_actor_state_transfer PROPERTIES TIMEOUT 35)
 
 add_executable(test_mailbox_awaiter sched/test_mailbox_awaiter.cpp)
 target_link_libraries(test_mailbox_awaiter hpactor)

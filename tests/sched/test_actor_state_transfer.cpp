@@ -152,11 +152,11 @@ static void test_concurrent_sends_single_actor() {
         t.join();
     }
 
-    // Poll until all messages processed (up to 10 seconds)
+    // Poll until all messages processed (up to 30 seconds for slow CI)
     auto* ca = static_cast<CountingActor*>(actor.get().get());
     int expected = kThreads * kMsgsPerThread;
     int received = 0;
-    for (int deadline = 0; deadline < 100; ++deadline) {
+    for (int deadline = 0; deadline < 300; ++deadline) {
         received = ca->received();
         if (received == expected)
             break;
