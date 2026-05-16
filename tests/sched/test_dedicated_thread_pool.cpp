@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cassert>
 #include <atomic>
+#include <cassert>
 #include <chrono>
-#include <thread>
 #include <hpactor/sched/dedicated_thread_pool.hpp>
 #include <hpactor/sched/work_queue.hpp>
 #include <hpactor/types/types.hpp>
+#include <thread>
 
 using namespace hpactor;
 using namespace hpactor::sched;
@@ -42,15 +42,14 @@ int main() {
         std::atomic<int> counter{0};
         ActorId test_id(42);
 
-        pool.enqueue(test_id, [&counter]() {
-            counter.fetch_add(1);
-        });
-        pool.enqueue(test_id, [&counter]() {
-            counter.fetch_add(1);
-        });
+        pool.enqueue(test_id, [&counter]() { counter.fetch_add(1); });
+        pool.enqueue(test_id, [&counter]() { counter.fetch_add(1); });
 
         // Give workers time to process
-        std::this_thread::sleep_for(std::chrono::milliseconds(50));
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (std::chrono::steady_clock::now() < deadline && counter.load() < 2) {
+            std::this_thread::sleep_for(std::chrono::milliseconds{1});
+        }
         assert(counter.load() == 2);
 
         pool.stop();
@@ -71,7 +70,11 @@ int main() {
             pool.enqueue(actor_b, [&b_count]() { b_count.fetch_add(1); });
         }
 
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (std::chrono::steady_clock::now() < deadline &&
+               (a_count.load() < 10 || b_count.load() < 10)) {
+            std::this_thread::sleep_for(std::chrono::milliseconds{1});
+        }
         assert(a_count.load() == 10);
         assert(b_count.load() == 10);
 

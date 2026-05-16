@@ -13,7 +13,7 @@ using namespace hpactor;
 
 static void test_no_lifecycle_returns_null() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto actor = system.spawn<EventBasedActor>();
@@ -36,7 +36,7 @@ class SimpleLifecycleActor : public EventBasedActor, public LifecycleActor {
 
 static void test_lifecycle_actor_spawns_active() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto actor = system.spawn<SimpleLifecycleActor>();
@@ -48,7 +48,7 @@ static void test_lifecycle_actor_spawns_active() {
 
 static void test_to_metadata_reports_lifecycle_state() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto actor = system.spawn<SimpleLifecycleActor>();
@@ -59,7 +59,7 @@ static void test_to_metadata_reports_lifecycle_state() {
 
 static void test_default_actor_to_metadata_unknown() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0;
     cfg.enable_network = false;
     ActorSystem system(cfg);
     auto actor = system.spawn<EventBasedActor>();

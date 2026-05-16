@@ -4,6 +4,7 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/messages.pb.h>
+#include <scheduler_test_driver.hpp>
 
 #include <cassert>
 #include <chrono>
@@ -108,8 +109,10 @@ void test_link_to_down_notification() {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
+                  .scheduler_start_paused = true,
                   .tracing = {}};
     ActorSystem system(config);
+    hpactor::test::SchedulerTestDriver driver(system);
 
     auto a = system.spawn<DownRecordingActor>();
     auto b = system.spawn<ShortLivedActor>();
@@ -132,9 +135,8 @@ void test_link_to_down_notification() {
     // Deliver message to trigger B's coroutine (which will exit after one msg)
     system.deliver_local(b.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
 
-    // Poll until A receives DownMsg or timeout
     auto* rec = static_cast<DownRecordingActor*>(a.get().get());
-    bool received = poll_until([rec, &b]() {
+    bool received = driver.drain_until([rec, &b]() {
         return rec->down_count() >= 1 && rec->last_down_actor() == b.id();
     });
     assert(received);
@@ -148,8 +150,10 @@ void test_monitor_down_notification() {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
+                  .scheduler_start_paused = true,
                   .tracing = {}};
     ActorSystem system(config);
+    hpactor::test::SchedulerTestDriver driver(system);
 
     auto a = system.spawn<DownRecordingActor>();
     auto b = system.spawn<ShortLivedActor>();
@@ -159,7 +163,7 @@ void test_monitor_down_notification() {
     system.deliver_local(b.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
 
     auto* rec = static_cast<DownRecordingActor*>(a.get().get());
-    bool received = poll_until([rec, &b]() {
+    bool received = driver.drain_until([rec, &b]() {
         return rec->down_count() >= 1 && rec->last_down_actor() == b.id();
     });
     assert(received);
@@ -173,8 +177,10 @@ void test_unlink_from_stops_notification() {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
+                  .scheduler_start_paused = true,
                   .tracing = {}};
     ActorSystem system(config);
+    hpactor::test::SchedulerTestDriver driver(system);
 
     auto a = system.spawn<DownRecordingActor>();
     auto b = system.spawn<ShortLivedActor>();
@@ -190,9 +196,7 @@ void test_unlink_from_stops_notification() {
 
     system.deliver_local(b.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
 
-    // Give time for any potential message delivery, then verify no DownMsg
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
+    driver.drain();
     auto* rec = static_cast<DownRecordingActor*>(a.get().get());
     assert(rec->down_count() == 0);
 }
@@ -205,8 +209,10 @@ void test_demonitor_stops_notification() {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
+                  .scheduler_start_paused = true,
                   .tracing = {}};
     ActorSystem system(config);
+    hpactor::test::SchedulerTestDriver driver(system);
 
     auto a = system.spawn<DownRecordingActor>();
     auto b = system.spawn<ShortLivedActor>();
@@ -216,8 +222,7 @@ void test_demonitor_stops_notification() {
 
     system.deliver_local(b.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
-
+    driver.drain();
     auto* rec = static_cast<DownRecordingActor*>(a.get().get());
     assert(rec->down_count() == 0);
 }
@@ -321,19 +326,18 @@ void test_link_to_sends_link_msg() {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
+                  .scheduler_start_paused = true,
                   .tracing = {}};
     ActorSystem system(config);
+    hpactor::test::SchedulerTestDriver driver(system);
 
     auto a = system.spawn<DownRecordingActor>();
     auto b = system.spawn<DownRecordingActor>();
 
     a.get()->link_to(b.address());
 
-    // The LinkMsg should be in B's mailbox, which the scheduler should deliver
-    // via receive(), adding A to B's linked_ set
-    // Poll for delivery
     auto* ctx_b = static_cast<DownRecordingActor*>(b.get().get())->context();
-    bool delivered = poll_until([ctx_b, &a]() {
+    bool delivered = driver.drain_until([ctx_b, &a]() {
         for (const auto& linked : ctx_b->linked_actors()) {
             if (linked == a.get()->address())
                 return true;

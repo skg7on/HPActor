@@ -1,5 +1,8 @@
 # Tests CMakeLists.txt - organized by subsystem
 
+# Test support headers (SchedulerTestDriver etc.)
+include_directories(${CMAKE_SOURCE_DIR}/tests/support)
+
 # Ensure assert() always fires in tests regardless of build type.
 # CMake defines NDEBUG in Release/RelWithDebInfo, which strips assertions
 # and causes -Wunused-variable warnings. -UNDEBUG reverses that for tests.
@@ -430,6 +433,10 @@ add_test(NAME test_dispatch_policy COMMAND test_dispatch_policy)
 add_executable(test_calendar_queue sched/test_calendar_queue.cpp)
 target_link_libraries(test_calendar_queue hpactor)
 add_test(NAME test_calendar_queue COMMAND test_calendar_queue)
+
+add_executable(test_scheduler_control sched/test_scheduler_control.cpp)
+target_link_libraries(test_scheduler_control hpactor)
+add_test(NAME test_scheduler_control COMMAND test_scheduler_control)
 
 # =============================================================================
 # HTTP tests

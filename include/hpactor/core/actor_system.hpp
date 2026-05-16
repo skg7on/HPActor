@@ -152,6 +152,11 @@ struct Config {
     // Timer backend selection
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
 
+    // Start scheduler workers in paused state (for deterministic testing).
+    // When true, workers are created but blocked until resume_workers() is
+    // called.
+    bool scheduler_start_paused = false;
+
     // Distributed tracing configuration
     tracing::TraceConfig tracing;
 };

@@ -12,20 +12,19 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <cassert>
 #include <atomic>
+#include <cassert>
 #include <chrono>
-#include <thread>
 #include <hpactor/actor/daemon_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <thread>
 
 using namespace hpactor;
 
 // Minimal DaemonActor for testing
 class TestDaemon : public DaemonActor {
-public:
-    TestDaemon(ActorContext* ctx, ActorSystem& sys)
-        : DaemonActor(ctx, sys) {}
+  public:
+    TestDaemon(ActorContext* ctx, ActorSystem& sys) : DaemonActor(ctx, sys) {}
 
     std::atomic<int> iterations{0};
     std::atomic<bool> started{false};
@@ -34,7 +33,8 @@ public:
     bool run_once() override {
         started.store(true);
         iterations.fetch_add(1);
-        if (iterations.load() >= 10) return false;
+        if (iterations.load() >= 10)
+            return false;
         std::this_thread::sleep_for(std::chrono::milliseconds(5));
         return true;
     }
@@ -62,8 +62,10 @@ int main() {
         assert(raw->dispatch_policy() == sched::DispatchPolicy::DedicatedThread);
 
         // Wait for daemon to start and run
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
+        auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+        while (std::chrono::steady_clock::now() < deadline && !raw->stopped.load()) {
+            std::this_thread::sleep_for(std::chrono::milliseconds{1});
+        }
         assert(raw->started.load());
         assert(raw->iterations.load() > 0);
         assert(raw->stopped.load());
