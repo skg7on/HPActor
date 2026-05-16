@@ -28,6 +28,7 @@ class CaptureActor final : public EventBasedActor {
 
 int main() {
     Config cfg;
+    cfg.scheduler_threads = 0;
     cfg.tracing.enabled = true;
     cfg.tracing.exporter = tracing::TraceExporterKind::kMemory;
     cfg.tracing.sampler = tracing::SamplerKind::kAlwaysOn;

@@ -71,7 +71,7 @@ jobs:
         run: cmake --build "$BUILD_DIR" --parallel
 
       - name: Test
-        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 120
+        run: ctest --test-dir "$BUILD_DIR" --output-on-failure --timeout 30 --parallel $(nproc)
 
       - name: Upload CTest logs
         if: failure()

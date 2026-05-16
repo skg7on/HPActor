@@ -221,6 +221,44 @@ Subsystem parsers self-register via file-scope static registrar objects (`TomlSy
   tests for actor/network/config interactions, and sanitizer/chaos/soak coverage
   for reliability-plane features.
 
+### Test Design Constraints
+
+Tests must be deterministic across platforms, build configurations, and CI
+environments. The following rules prevent flaky tests:
+
+- **No timing assumptions.** Never assume a timer fires within N ms, a thread
+  completes within a deadline, or a sleep is "long enough." Use condition-based
+  polling with generous timeouts (5s+) for tests that genuinely need the
+  scheduler, or disable the scheduler (`scheduler_threads = 0`) for tests that
+  inspect mailbox/lifecycle state directly.
+- **No assumed thread execution order.** Never assume the scheduler processes a
+  message before or after a specific line of test code. If a test sends a
+  message and then inspects the mailbox, the scheduler may have already drained
+  it. Use `scheduler_threads = 0` when the test needs to observe intermediate
+  state (mailbox contents, lifecycle transitions, backpressure thresholds).
+- **No platform-specific syscall behavior in assertions.** Behaviors that differ
+  between Linux and macOS (e.g., `sendto` on connected sockets returning
+  EISCONN vs. silently succeeding, `readv` with zero-length buffers, signal
+  delivery in forked children, page sizes) must be guarded with `#ifdef` or
+  tested portably. Prefer testing the observable outcome rather than the
+  specific errno or signal number.
+- **Non-blocking I/O for async tests.** Any test that calls the epoll/kqueue
+  backend's `async_recv`/`async_send` (which loop until EAGAIN) must use
+  non-blocking file descriptors. Blocking fds cause infinite hangs in the
+  edge-triggered drain loop.
+- **No reliance on NDEBUG-compiled-out asserts for control flow.** Tests must
+  fail explicitly (return non-zero, print FAIL) rather than relying solely on
+  `assert()` which is removed in Release builds. Use `assert` for invariants
+  that indicate test infrastructure bugs, not for the condition under test.
+- **Inject messages directly for mailbox/drain tests.** Use
+  `mailbox->inject_for_test()` to place messages without triggering scheduler
+  notification. This avoids races where the scheduler processes messages before
+  the test can observe them.
+- **Generous CI timeouts.** Tests that require the scheduler to process messages
+  (link/monitor, concurrent sends) should poll with at least 5s timeout. Set
+  CMake `TIMEOUT` properties for tests that legitimately need more than the
+  global ctest timeout.
+
 ## Important Files
 
 - `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)

@@ -152,6 +152,8 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
     // Round-robin across workers for fair initial placement.
     // The atomic counter avoids the stale hint issue where get_victim always
     // returns the same value because record_attempt is only called on steals.
+    if (num_workers_ == 0)
+        return;
     static std::atomic<uint32_t> rr_counter{0};
     uint32_t victim = rr_counter.fetch_add(1, std::memory_order_relaxed);
 

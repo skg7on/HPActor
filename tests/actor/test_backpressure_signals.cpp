@@ -25,6 +25,7 @@ using namespace hpactor;
 void test_backpressure_signal_on_soft_pressure() {
     Config cfg;
     cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
     // Small capacity with low high-watermark to trigger soft pressure quickly
     cfg.mailbox.default_capacity = 2;
     cfg.mailbox.high_watermark = 0.50;
