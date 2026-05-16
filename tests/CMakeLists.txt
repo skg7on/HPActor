@@ -195,6 +195,7 @@ add_test(NAME test_communication_endpoint COMMAND test_communication_endpoint)
 add_executable(test_event_loop net/test_event_loop.cpp)
 target_link_libraries(test_event_loop hpactor)
 add_test(NAME test_event_loop COMMAND test_event_loop)
+set_tests_properties(test_event_loop PROPERTIES TIMEOUT 15)
 
 add_executable(test_connection net/test_connection.cpp)
 target_link_libraries(test_connection hpactor)
