@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor_context.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 
@@ -101,6 +101,7 @@ void test_actor_context_send_with_actor_ref() {
 void test_actor_context_send_sets_sender_address() {
     Config config;
     config.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto sender = system.spawn<EventBasedActor>();
@@ -154,6 +155,7 @@ void test_actor_context_resolve_remote() {
 void test_actor_context_reply() {
     Config config;
     config.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto actor_a = system.spawn<EventBasedActor>();
@@ -196,8 +198,8 @@ void test_actor_context_add_remove_linked() {
 
     assert(ctx.linked_actors().empty());
 
-    ActorAddress addr1{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{1},
-                       ActorId{10}, 0};
+    ActorAddress addr1{endpoint_ops::parse_endpoint("127.0.0.1:0"),
+                       ActorType{1}, ActorId{10}, 0};
     ctx.add_linked(addr1);
     assert(ctx.linked_actors().size() == 1);
     assert(ctx.linked_actors()[0] == addr1);
@@ -223,8 +225,8 @@ void test_actor_context_add_remove_monitored() {
 
     assert(ctx.monitored_actors().empty());
 
-    ActorAddress addr1{endpoint_ops::parse_endpoint("127.0.0.1:0"), ActorType{2},
-                       ActorId{20}, 0};
+    ActorAddress addr1{endpoint_ops::parse_endpoint("127.0.0.1:0"),
+                       ActorType{2}, ActorId{20}, 0};
     ctx.add_monitored(addr1);
     assert(ctx.monitored_actors().size() == 1);
     assert(ctx.monitored_actors()[0] == addr1);

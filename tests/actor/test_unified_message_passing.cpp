@@ -27,6 +27,7 @@ using namespace hpactor;
 void test_deliver_remote_bridge() {
     Config config;
     config.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto target = system.spawn<EventBasedActor>();
@@ -55,6 +56,7 @@ void test_deliver_remote_bridge() {
 void test_unified_send_reply_loop() {
     Config config;
     config.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto alice = system.spawn<EventBasedActor>();
@@ -93,6 +95,7 @@ void test_unified_send_reply_loop() {
 void test_reply_with_error() {
     Config config;
     config.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto alice = system.spawn<EventBasedActor>();
@@ -119,6 +122,7 @@ void test_reply_with_error() {
 void test_send_to_self() {
     Config config;
     config.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    config.scheduler_threads = 0;
     ActorSystem system(config);
 
     auto actor = system.spawn<EventBasedActor>();
