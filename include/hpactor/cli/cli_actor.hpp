@@ -32,7 +32,7 @@ class SystemStatsReply;
 class MemoryStatsReply;
 
 class CliActor : public DaemonActor {
-public:
+  public:
     CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& config);
 
     // DaemonActor interface
@@ -40,35 +40,47 @@ public:
     void on_daemon_start() override;
     void on_daemon_stop() override;
 
+    bool is_system_actor() const override {
+        return true;
+    }
+
     // Accessors for commands
-    ActorSystem& system() { return system_; }
-    const CliConfig& config() const { return config_; }
-    OutputFormatter* formatter() { return formatter_.get(); }
-    Pager* pager() { return pager_.get(); }
+    ActorSystem& system() {
+        return system_;
+    }
+    const CliConfig& config() const {
+        return config_;
+    }
+    OutputFormatter* formatter() {
+        return formatter_.get();
+    }
+    Pager* pager() {
+        return pager_.get();
+    }
 
     // Whether the CLI input loop is still running.
     // Set to false by /quit or EOF on stdin.
-    bool is_running() const { return running_; }
+    bool is_running() const {
+        return running_;
+    }
 
     // --- Request-Response Helpers ---
     //
     // Send an InspectStateRequest to target and block on the reply.
     // Polls this actor's mailbox on the dedicated thread — safe, no
     // scheduler contention since CliActor uses DispatchPolicy::DedicatedThread.
-    std::optional<InspectStateReply>
-    send_and_wait_inspect(ActorId target,
-                          const class InspectStateRequest& req,
-                          std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+    std::optional<InspectStateReply> send_and_wait_inspect(
+        ActorId target, const class InspectStateRequest& req,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
 
-    std::optional<KillReply>
-    send_and_wait_kill(ActorId target,
-                       const class KillRequest& req,
-                       std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+    std::optional<KillReply> send_and_wait_kill(
+        ActorId target, const class KillRequest& req,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
 
     // Enumerate all known actors. Returns metadata for each.
     std::vector<ActorMeta> enumerate_actors(const std::string& filter = "");
 
-private:
+  private:
     void build_command_tree();
     void execute_tokens(const std::vector<Token>& tokens);
     void print_greeting();
@@ -77,8 +89,7 @@ private:
     // Poll mailbox for a message with the given TypeTag, ignoring all others.
     // Returns the raw StreamBuffer payload if found before timeout.
     std::optional<StreamBuffer>
-    poll_for_response(TypeTag expected_tag,
-                      std::chrono::milliseconds timeout);
+    poll_for_response(TypeTag expected_tag, std::chrono::milliseconds timeout);
 
     ActorSystem& system_;
     CliConfig config_;
@@ -89,5 +100,5 @@ private:
     bool running_ = true;
 };
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor

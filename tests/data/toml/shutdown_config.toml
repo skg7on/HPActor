@@ -1,0 +1,13 @@
+[system]
+version = "1.0"
+
+[system.shutdown]
+drain_policy = "DropUserMessages"
+drain_timeout_ms = 15000
+ingress_timeout_ms = 10000
+cluster_leave_timeout_ms = 20000
+force_after_timeout = false
+
+[[actor]]
+id = "echo"
+behavior = "EchoActor"

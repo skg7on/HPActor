@@ -224,7 +224,10 @@ void Aggregator::on_event(const MetricEvent& e) {
         }
         case MetricEventType::kLifecycleTransition:
         case MetricEventType::kMessageRejected:
-            // lifecycle state changes + message rejection stubs
+        case MetricEventType::kActorDrainStart:
+        case MetricEventType::kActorDrainComplete:
+        case MetricEventType::kActorDrainTimeout:
+            // lifecycle, rejection, and drain stubs — no aggregation yet
             break;
     }
 }

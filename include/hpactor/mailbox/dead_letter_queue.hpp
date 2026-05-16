@@ -36,6 +36,8 @@ enum class DeadLetterReason : uint8_t {
     DecodeFailed,
     OverflowPolicy,
     NoDropRejected,
+    DrainTimeout = 12,    // message dropped because drain deadline expired
+    DrainPolicyDrop = 13, // message dropped by DropUserMessages policy
 };
 
 enum class DeadLetterSource : uint8_t {

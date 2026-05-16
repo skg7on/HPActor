@@ -46,6 +46,10 @@
     X(kActorTerminated, 1001, "actor_terminated")                              \
     X(kActorStateTransfer, 1002, "actor_state_transfer")                       \
     X(kActorLinkRejected, 1003, "actor_link_rejected")                         \
+    X(kActorDrainStart, 1004, "actor_drain_start")                             \
+    X(kActorDrainComplete, 1005, "actor_drain_complete")                       \
+    X(kActorDrainTimeout, 1006, "actor_drain_timeout")                         \
+    X(kShutdownPhaseTransition, 1007, "shutdown_phase_transition")             \
     X(kMailboxDepthHigh, 1100, "mailbox_depth_high")                           \
     X(kMailboxHighWatermark, 1101, "mailbox_high_watermark")                   \
     X(kMailboxLowWatermarkRecovered, 1102, "mailbox_low_watermark_recovered")  \

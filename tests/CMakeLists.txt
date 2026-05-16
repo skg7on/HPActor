@@ -142,6 +142,30 @@ add_executable(test_lifecycle_actor actor/test_lifecycle_actor.cpp)
 target_link_libraries(test_lifecycle_actor hpactor)
 add_test(NAME test_lifecycle_actor COMMAND test_lifecycle_actor)
 
+add_executable(test_is_system_actor actor/test_is_system_actor.cpp)
+target_link_libraries(test_is_system_actor hpactor)
+add_test(NAME test_is_system_actor COMMAND test_is_system_actor)
+
+add_executable(test_drain_policy actor/test_drain_policy.cpp)
+target_link_libraries(test_drain_policy hpactor)
+add_test(NAME test_drain_policy COMMAND test_drain_policy)
+
+add_executable(test_drain_timeout actor/test_drain_timeout.cpp)
+target_link_libraries(test_drain_timeout hpactor)
+add_test(NAME test_drain_timeout COMMAND test_drain_timeout)
+
+add_executable(test_actor_stop actor/test_actor_stop.cpp)
+target_link_libraries(test_actor_stop hpactor hpactor_proto pthread)
+add_test(NAME test_actor_stop COMMAND test_actor_stop)
+
+add_executable(test_shutdown_coordinator actor/test_shutdown_coordinator.cpp)
+target_link_libraries(test_shutdown_coordinator hpactor)
+add_test(NAME test_shutdown_coordinator COMMAND test_shutdown_coordinator)
+
+add_executable(test_drain_integration actor/test_drain_integration.cpp)
+target_link_libraries(test_drain_integration hpactor)
+add_test(NAME test_drain_integration COMMAND test_drain_integration)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
@@ -335,6 +359,12 @@ target_link_libraries(test_mailbox_config hpactor)
 target_compile_definitions(test_mailbox_config PRIVATE
     TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
 add_test(NAME test_mailbox_config COMMAND test_mailbox_config)
+
+add_executable(test_shutdown_config config/test_shutdown_config.cpp)
+target_link_libraries(test_shutdown_config hpactor)
+target_compile_definitions(test_shutdown_config PRIVATE
+    TEST_DATA_DIR="${CMAKE_SOURCE_DIR}/tests/data/toml")
+add_test(NAME test_shutdown_config COMMAND test_shutdown_config)
 
 # =============================================================================
 # Scheduling tests

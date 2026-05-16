@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
@@ -141,6 +142,13 @@ struct Config {
     // Dead-letter queue configuration
     mailbox::DeadLetterConfig dead_letters;
 
+    // Shutdown configuration
+    DrainConfig shutdown_drain{DrainPolicy::Drain,
+                               std::chrono::milliseconds{30'000}};
+    uint32_t ingress_timeout_ms{5000};
+    uint32_t cluster_leave_timeout_ms{10000};
+    bool shutdown_force_after_timeout{true};
+
     // Timer backend selection
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
 
@@ -154,6 +162,24 @@ struct Config {
 struct ActorTypeDef {
     std::string name;
     ActorType id;
+};
+
+// Shutdown phase enumeration
+enum class ShutdownPhase : uint8_t {
+    Running,
+    DrainingIngress,
+    DrainingActors,
+    LeavingCluster,
+    FlushingTelemetry,
+    Stopped,
+    ForcedStop,
+};
+
+struct ShutdownOptions {
+    std::chrono::milliseconds ingress_timeout{5'000};
+    std::chrono::milliseconds actor_drain_timeout{30'000};
+    std::chrono::milliseconds cluster_leave_timeout{10'000};
+    bool force_after_timeout{true};
 };
 
 // -----------------------------------------------------------------------------
@@ -364,6 +390,23 @@ class ActorSystem {
         return *actor_type_registry_;
     }
 
+    // ── Shutdown ───────────────────────────────────────────────────────────
+
+    // Node shutdown — drives the full phase machine.
+    // Overload with no arguments uses default ShutdownOptions{}.
+    result<void> shutdown();
+    result<void> shutdown(const ShutdownOptions& opts);
+
+    // Current shutdown phase
+    ShutdownPhase shutdown_phase() const noexcept;
+
+    // Health/readiness gating
+    bool is_ready() const noexcept;
+    bool is_draining() const noexcept;
+
+    // Per-actor drain config override (for admin/CLI use)
+    void set_drain_config(ActorId target, DrainConfig cfg);
+
   private:
     Config config_;
     EndPoint endpoint_;
@@ -389,6 +432,10 @@ class ActorSystem {
 
     // Running flag for network thread loop
     std::atomic<bool> running_{true};
+
+    // Shutdown state
+    std::atomic<ShutdownPhase> shutdown_phase_{ShutdownPhase::Running};
+    std::atomic<bool> is_ready_{true};
 
     // Scheduler
     std::unique_ptr<sched::IScheduler> scheduler_;

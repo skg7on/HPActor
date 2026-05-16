@@ -6,6 +6,7 @@
 #include <atomic>
 #include <cstdint>
 
+#include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_state.hpp>
 #include <hpactor/types/types.hpp> // complete error type needed for value members
 
@@ -47,6 +48,14 @@ class LifecycleActor {
         return failure_reason_;
     }
 
+    // ── Drain config accessors ──────────────────────────
+    DrainConfig drain_config() const noexcept {
+        return drain_config_;
+    }
+    void set_drain_config(DrainConfig cfg) noexcept {
+        drain_config_ = cfg;
+    }
+
     // ── Transition ─────────────────────────────────────
     // Validates that `to` is a legal transition from the current state,
     // performs a CAS, and invokes the corresponding virtual hook.
@@ -56,6 +65,7 @@ class LifecycleActor {
     // ── Virtual hooks (default = no-op) ────────────────
     virtual void on_start() {}
     virtual void on_drain() {}
+    virtual void on_drain_timeout() {}
     virtual void on_stop() {}
     virtual void on_deactivate() {}
     virtual void on_fail(error err);
@@ -73,6 +83,7 @@ class LifecycleActor {
     std::atomic<uint8_t> state_;
     std::atomic<uint64_t> incarnation_;
     error failure_reason_{0};
+    DrainConfig drain_config_{};
 };
 
 } // namespace hpactor

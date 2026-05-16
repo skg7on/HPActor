@@ -24,20 +24,24 @@
 namespace hpactor::metrics {
 
 class MetricsActor : public EventBasedActor {
-public:
+  public:
     MetricsActor(ActorSystem& system,
                  std::shared_ptr<MpscRingBuffer<MetricEvent>> ring_buffer);
 
     void register_handlers() override;
 
+    bool is_system_actor() const override {
+        return true;
+    }
+
     static constexpr const char* kActorTypeName = "MetricsActor";
 
-private:
+  private:
     std::shared_ptr<MpscRingBuffer<MetricEvent>> ring_buffer_;
-    MetricRegistry                                registry_;
-    Aggregator                                    aggregator_;
-    OpenMetricsFormatter                          formatter_;
-    uint64_t                                      events_lost_{0};
+    MetricRegistry registry_;
+    Aggregator aggregator_;
+    OpenMetricsFormatter formatter_;
+    uint64_t events_lost_{0};
 };
 
 } // namespace hpactor::metrics

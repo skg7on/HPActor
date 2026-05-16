@@ -105,6 +105,13 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
         return nullptr;
     }
 
+    // Returns true for system actors that should drain last during node
+    // shutdown. MetricsActor, CliActor, SpawnReceiver override this to return
+    // true.
+    virtual bool is_system_actor() const {
+        return false;
+    }
+
     // Dispatch policy — tells the scheduler how to execute this actor.
     // Default: Cooperative (M:N work-stealing pool).
     virtual sched::DispatchPolicy dispatch_policy() const {

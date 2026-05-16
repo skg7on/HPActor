@@ -33,6 +33,10 @@ class SpawnReceiver : public EventBasedActor {
 
     Behavior make_behavior() override;
 
+    bool is_system_actor() const override {
+        return true;
+    }
+
   private:
     void handle_spawn_request(const SpawnRequest& req, const net::WireFrame& frame);
 
