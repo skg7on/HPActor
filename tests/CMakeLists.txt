@@ -629,6 +629,10 @@ if(ENABLE_CLI)
     add_executable(test_line_editor cli/test_line_editor.cpp)
     target_link_libraries(test_line_editor hpactor)
     add_test(NAME test_line_editor COMMAND test_line_editor)
+
+    add_executable(test_cli_actor cli/test_cli_actor.cpp)
+    target_link_libraries(test_cli_actor hpactor)
+    add_test(NAME test_cli_actor COMMAND test_cli_actor)
 endif()
 
 # =============================================================================
