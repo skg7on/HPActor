@@ -127,14 +127,22 @@
 #include <examples/order_platform/messages.hpp>
 
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/http_gateway_actor.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
 #include <hpactor/actor/typed_actor.hpp>
 #include <hpactor/actor_context.hpp>
+#include <hpactor/actor_type_registry.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/http_client.hpp>
+#include <hpactor/net/http_types.hpp>
+#include <hpactor/net/registrar.hpp>
+#include <hpactor/spawn.hpp>
 
 #include <atomic>
 #include <chrono>
@@ -152,6 +160,27 @@
 namespace order = hpactor::examples::order_platform;
 
 namespace {
+
+// ---------------------------------------------------------------------------
+// Minimal JSON helpers (order platform schema only)
+// ---------------------------------------------------------------------------
+
+[[maybe_unused]] static std::string json_escape(const std::string& s) {
+    std::string out;
+    out.reserve(s.size() + 2);
+    for (char c : s) {
+        if (c == '"') {
+            out += '\\';
+            out += '"';
+        } else if (c == '\\') {
+            out += '\\';
+            out += '\\';
+        } else {
+            out += c;
+        }
+    }
+    return out;
+}
 
 // ---------------------------------------------------------------------------
 // State structs
@@ -485,11 +514,33 @@ class OrderCoordinatorActor : public hpactor::StatefulActor<OrderCoordinatorStat
                 on_fulfillment(msg);
             } else if (msg.type_id() == order::PaymentTimedOutTag) {
                 on_payment_timeout(msg);
+            } else if (msg.type_id() == order::QueryOrderTag) {
+                on_query(msg);
             }
         }};
     }
 
   private:
+    void on_query(hpactor::TypedMessage& msg) {
+        order::QueryOrderPayload query;
+        if (!order::decode_query_order(msg.payload(), query))
+            return;
+        auto it = state().orders.find(query.order_id);
+        order::OrderStatusPayload status;
+        status.order_id = query.order_id;
+        if (it == state().orders.end()) {
+            status.status = order::OrderStatus::Cancelled;
+            status.detail = "not found";
+        } else {
+            const auto& record = it->second;
+            status.status = record.status;
+            status.detail = record.detail;
+            status.total_cents = record.total_cents;
+        }
+        context()->reply(hpactor::TypedMessage(
+            order::OrderStatusTag, order::encode_order_status(status)));
+    }
+
     void log_event(const std::string& text) {
         context()->send(log_, hpactor::TypedMessage(
                                   order::LogOrderEventTag,
@@ -648,6 +699,123 @@ HPACTOR_REGISTER_ACTOR("PaymentActor", PaymentActor)
 HPACTOR_REGISTER_ACTOR("FulfillmentWorkerActor", FulfillmentWorkerActor)
 
 // ---------------------------------------------------------------------------
+// Ops probe actor
+// ---------------------------------------------------------------------------
+
+class OpsProbeActor : public hpactor::EventBasedActor {
+  public:
+    OpsProbeActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
+                  std::chrono::milliseconds interval = std::chrono::seconds(1))
+        : hpactor::EventBasedActor(ctx, sys), interval_(interval) {
+        become(make_behavior());
+        // Kick off the first tick.
+        context()->schedule(interval_,
+                            hpactor::TypedMessage(order::OpsProbeTickTag,
+                                                  hpactor::StreamBuffer{}));
+    }
+
+  protected:
+    hpactor::Behavior make_behavior() override {
+        return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
+            if (msg.type_id() != order::OpsProbeTickTag)
+                return;
+            print_tick();
+            // Self-reschedule.
+            context()->schedule(interval_,
+                                hpactor::TypedMessage(order::OpsProbeTickTag,
+                                                      hpactor::StreamBuffer{}));
+        }};
+    }
+
+  private:
+    void print_tick() {
+        auto& sys = system();
+        auto* sched = sys.scheduler();
+        auto dlq = sys.dead_letter_snapshot();
+
+        std::cout << "[" << tick_ << "] "
+                  << "actors=" << sys.actor_count() << " "
+                  << "dlq_depth=" << dlq.depth << " "
+                  << "dlq_pushed=" << dlq.total_pushed << " "
+                  << "dlq_lost=" << dlq.total_lost;
+        if (sched) {
+            std::cout << " workers=" << sched->worker_count();
+        }
+        std::cout << "\n";
+        ++tick_;
+    }
+
+    std::chrono::milliseconds interval_;
+    uint64_t tick_ = 0;
+};
+
+// ---------------------------------------------------------------------------
+// Dead-letter record helpers
+// ---------------------------------------------------------------------------
+
+const char* dead_letter_reason_name(hpactor::mailbox::DeadLetterReason reason) {
+    using R = hpactor::mailbox::DeadLetterReason;
+    switch (reason) {
+        case R::MailboxFull:
+            return "MailboxFull";
+        case R::MailboxClosed:
+            return "MailboxClosed";
+        case R::ActorNotFound:
+            return "ActorNotFound";
+        case R::ActorTerminated:
+            return "ActorTerminated";
+        case R::MissingRoute:
+            return "MissingRoute";
+        case R::RemoteNodeUnreachable:
+            return "RemoteNodeUnreachable";
+        case R::NetworkPartition:
+            return "NetworkPartition";
+        case R::TransportSendFailed:
+            return "TransportSendFailed";
+        case R::DecodeFailed:
+            return "DecodeFailed";
+        case R::OverflowPolicy:
+            return "OverflowPolicy";
+        case R::NoDropRejected:
+            return "NoDropRejected";
+        case R::DrainTimeout:
+            return "DrainTimeout";
+        case R::DrainPolicyDrop:
+            return "DrainPolicyDrop";
+        default:
+            return "Unknown";
+    }
+}
+
+void print_dead_letter_records(hpactor::ActorSystem& system) {
+    hpactor::mailbox::DeadLetterRecord record;
+    size_t count = 0;
+    while (system.pop_dead_letter(record)) {
+        std::cout << "  DLQ[" << count << "] "
+                  << "reason=" << dead_letter_reason_name(record.reason)
+                  << " type_tag=0x" << std::hex
+                  << static_cast<uint32_t>(record.type_tag) << std::dec
+                  << " sender_id=" << record.sender.id.value()
+                  << " target_id=" << record.target.id.value()
+                  << " depth=" << record.mailbox_depth << "/"
+                  << record.mailbox_capacity
+                  << " payload_bytes=" << record.payload_size << "\n";
+        if (!record.payload_sample.empty()) {
+            size_t sample_len = std::min(record.payload_sample.size(), size_t(64));
+            std::string sample(record.payload_sample.begin(),
+                               record.payload_sample.begin() + sample_len);
+            std::cout << "    sample: " << sample << "\n";
+        }
+        ++count;
+    }
+    if (count == 0) {
+        std::cout << "  (no dead-letter records)\n";
+    } else {
+        std::cout << "  total: " << count << " records\n";
+    }
+}
+
+// ---------------------------------------------------------------------------
 // Config and runners
 // ---------------------------------------------------------------------------
 
@@ -751,6 +919,8 @@ int run_all_in_one(const Options& opts) {
         auto dlq = system.dead_letter_snapshot();
         std::cout << "OVERLOAD dlq_depth=" << dlq.depth
                   << " total_pushed=" << dlq.total_pushed << "\n";
+        std::cout << "--- Dead-Letter Records ---\n";
+        print_dead_letter_records(system);
         return 0;
     }
 
@@ -763,6 +933,8 @@ int run_all_in_one(const Options& opts) {
         auto dlq = system.dead_letter_snapshot();
         std::cout << "MISSING_ROUTE dlq_depth=" << dlq.depth
                   << " total_pushed=" << dlq.total_pushed << "\n";
+        std::cout << "--- Dead-Letter Records ---\n";
+        print_dead_letter_records(system);
         return 0;
     }
 
@@ -784,6 +956,9 @@ int run_all_in_one(const Options& opts) {
     auto dlq = system.dead_letter_snapshot();
     std::cout << "DLQ depth=" << dlq.depth << " total_pushed=" << dlq.total_pushed
               << " total_lost=" << dlq.total_lost << "\n";
+
+    std::cout << "--- Dead-Letter Records ---\n";
+    print_dead_letter_records(system);
     return 0;
 }
 
@@ -795,13 +970,249 @@ int run_long_role(const Options& opts, const char* role) {
     return 0;
 }
 
+int run_ops(const Options& opts) {
+    hpactor::Config config = make_base_config(opts, opts.actor_port);
+    config.cli.enabled = true;
+    hpactor::ActorSystem system(config);
+
+    // Spawn the probe actor for periodic health output.
+    system.spawn<OpsProbeActor>(std::chrono::seconds(1));
+
+    std::cout << "OPS probe running (interval=1s, actors=" << system.actor_count()
+              << ")\n";
+
+    run_until_signal("OPS");
+
+    // Final DLQ dump on exit.
+    std::cout << "--- Final Dead-Letter Records ---\n";
+    print_dead_letter_records(system);
+    return 0;
+}
+
+int run_payment(const Options& opts) {
+    hpactor::Config config = make_base_config(opts, opts.actor_port);
+    config.enable_network = true;
+    config.tcp_port = opts.actor_port;
+    hpactor::ActorSystem system(config);
+
+    // Register PaymentActor so remote spawn requests can create instances.
+    system.actor_type_registry().register_type<PaymentActor>("PaymentActor");
+
+    std::cout << "PAYMENT node listening on "
+              << hpactor::endpoint_ops::to_string(system.endpoint())
+              << " (tcp=" << opts.actor_port << ")\n";
+    run_until_signal("PAYMENT");
+    return 0;
+}
+
+int run_gateway(const Options& opts) {
+    hpactor::Config config = make_base_config(opts, opts.actor_port);
+    config.enable_network = true;
+    config.tcp_port = opts.actor_port;
+
+    // Add static route for remote payment endpoint before ActorSystem
+    // construction, so the transport can resolve it.
+    if (!opts.payment_endpoint.empty()) {
+        auto remote_ep =
+            hpactor::endpoint_ops::parse_endpoint(opts.payment_endpoint);
+        // Extract host string from the endpoint.
+        std::string payment_host =
+            opts.payment_endpoint.substr(0, opts.payment_endpoint.find(':'));
+        config.registrar.static_routes.push_back(hpactor::net::StaticRouteConfig{
+            remote_ep, payment_host,
+            static_cast<uint16_t>(std::stoi(opts.payment_endpoint.substr(
+                opts.payment_endpoint.find(':') + 1)))});
+    }
+
+    hpactor::ActorSystem system(config);
+
+    // Spawn local actors.
+    auto log = system.spawn<OrderLogActor>();
+    auto inventory = system.spawn<InventoryActor>();
+    auto fulfillment_worker = system.spawn<FulfillmentWorkerActor>();
+
+    // Resolve payment actor — local or remote.
+    hpactor::ActorAddress payment_addr;
+    if (!opts.payment_endpoint.empty()) {
+        // Remote-spawn PaymentActor on the payment node.
+        hpactor::StreamBuffer args;
+        hpactor::AsyncActor async =
+            system.spawn_remote_async(opts.payment_endpoint, "PaymentActor", args);
+
+        std::cout << "Remote-spawning PaymentActor on " << opts.payment_endpoint
+                  << "...\n";
+
+        auto async_result = async.get();
+        if (!async_result.has_value()) {
+            std::cerr << "Failed to remote-spawn PaymentActor: "
+                      << async_result.error().message() << "\n";
+            return 1;
+        }
+        payment_addr = async_result.value().address();
+        std::cout << "Remote PaymentActor spawned: id=" << payment_addr.id.value()
+                  << "\n";
+    } else {
+        auto payment = system.spawn<PaymentActor>();
+        payment_addr = payment.address();
+        std::cout << "Local PaymentActor spawned\n";
+    }
+
+    auto coordinator = system.spawn<OrderCoordinatorActor>(
+        inventory.address(), payment_addr, fulfillment_worker.address(),
+        log.address(),
+        nullptr); // long-running, no completion promise
+
+    // Spawn HTTP gateway on the configured port.
+    auto gw_handle =
+        system.spawn<hpactor::net::HTTPGatewayActor>(opts.host, opts.http_port);
+    auto gw =
+        std::static_pointer_cast<hpactor::net::HTTPGatewayActor>(gw_handle.get());
+
+    auto coordinator_addr = coordinator.address();
+
+    // POST /orders — submit a new order via JSON body.
+    gw->route(
+        hpactor::net::HttpMethod::POST, "/orders",
+        [coordinator_addr](const hpactor::net::HttpRequest& req)
+            -> std::pair<hpactor::ActorAddress, hpactor::TypedMessage> {
+            std::string body(req.body.begin(), req.body.end());
+            order::SubmitOrderPayload submit;
+            // Find the order_id field: "order_id":"..."
+            auto pos = body.find("\"order_id\"");
+            if (pos == std::string::npos) {
+                return {coordinator_addr,
+                        hpactor::TypedMessage(order::SubmitOrderTag,
+                                              hpactor::StreamBuffer{})};
+            }
+            // Skip "order_id":" to find the value.
+            pos = body.find('"', pos + 11);
+            if (pos == std::string::npos)
+                pos = body.find("order_id") + 9;
+            else
+                pos = pos + 1;
+            auto end = body.find('"', pos);
+            if (end != std::string::npos)
+                submit.order_id = body.substr(pos, end - pos);
+
+            // Extract customer_id.
+            pos = body.find("\"customer_id\"");
+            if (pos != std::string::npos) {
+                pos = body.find('"', pos + 14);
+                if (pos != std::string::npos) {
+                    ++pos;
+                    end = body.find('"', pos);
+                    if (end != std::string::npos)
+                        submit.customer_id = body.substr(pos, end - pos);
+                }
+            }
+
+            // Extract scenario if present.
+            pos = body.find("\"scenario\"");
+            if (pos != std::string::npos) {
+                pos = body.find('"', pos + 10);
+                if (pos != std::string::npos) {
+                    ++pos;
+                    end = body.find('"', pos);
+                    if (end != std::string::npos)
+                        submit.scenario = order::scenario_from_string(
+                            body.substr(pos, end - pos));
+                }
+            }
+
+            // Extract lines array.
+            pos = body.find("\"lines\"");
+            if (pos != std::string::npos) {
+                // Parse each object in the array:
+                // {"sku":"...","quantity":N,"unit_cents":M}
+                size_t obj_start = body.find('{', pos);
+                while (obj_start != std::string::npos &&
+                       obj_start < body.find(']', pos)) {
+                    order::OrderLine line;
+                    auto sku_pos = body.find("\"sku\"", obj_start);
+                    if (sku_pos != std::string::npos) {
+                        sku_pos = body.find('"', sku_pos + 6);
+                        if (sku_pos != std::string::npos) {
+                            ++sku_pos;
+                            auto sku_end = body.find('"', sku_pos);
+                            if (sku_end != std::string::npos)
+                                line.sku = body.substr(sku_pos, sku_end - sku_pos);
+                        }
+                    }
+                    auto qty_pos = body.find("\"quantity\"", obj_start);
+                    if (qty_pos != std::string::npos) {
+                        qty_pos = body.find(':', qty_pos) + 1;
+                        line.quantity = static_cast<uint32_t>(
+                            std::strtoul(body.c_str() + qty_pos, nullptr, 10));
+                    }
+                    auto uc_pos = body.find("\"unit_cents\"", obj_start);
+                    if (uc_pos != std::string::npos) {
+                        uc_pos = body.find(':', uc_pos) + 1;
+                        line.unit_cents =
+                            std::strtoull(body.c_str() + uc_pos, nullptr, 10);
+                    }
+                    submit.lines.push_back(std::move(line));
+                    obj_start = body.find('{', obj_start + 1);
+                }
+            }
+
+            return {coordinator_addr,
+                    hpactor::TypedMessage(order::SubmitOrderTag,
+                                          order::encode_submit_order(submit))};
+        });
+
+    // GET /orders/:id — query order status.
+    gw->route(hpactor::net::HttpMethod::GET, "/orders/:id",
+              [coordinator_addr](const hpactor::net::HttpRequest& req)
+                  -> std::pair<hpactor::ActorAddress, hpactor::TypedMessage> {
+                  auto it = req.path_params.find("id");
+                  std::string order_id =
+                      (it != req.path_params.end()) ? it->second : "";
+                  order::QueryOrderPayload query{order_id};
+                  return {coordinator_addr,
+                          hpactor::TypedMessage(order::QueryOrderTag,
+                                                order::encode_query_order(query))};
+              });
+
+    std::cout << "GATEWAY listening on http://" << opts.host << ":"
+              << opts.http_port << "\n";
+    run_until_signal("GATEWAY");
+    return 0;
+}
+
 int run_query(const Options& opts) {
     if (!opts.submit_demo_order) {
         std::cout << "QUERY requires --submit demo-order\n";
         return 1;
     }
-    std::cout << "QUERY would submit demo-order to HTTP port "
-              << opts.gateway_port << "\n";
+
+    // Build a demo order as JSON.
+    std::ostringstream json;
+    json << R"({"order_id":"demo-1")"
+         << R"(,"customer_id":"customer-1")"
+         << R"(,"scenario":")" << order::to_string(opts.scenario) << R"(")"
+         << R"(,"lines":[{"sku":"sku-book","quantity":2,"unit_cents":1599}])"
+         << "}";
+    std::string json_body = json.str();
+    hpactor::StreamBuffer body(json_body.begin(), json_body.end());
+
+    // Use HttpClient to POST the order.
+    hpactor::net::EventLoop loop;
+    hpactor::net::HttpClient client(&loop);
+
+    std::string url = "http://" + opts.host + ":" +
+                      std::to_string(opts.gateway_port) + "/orders";
+
+    auto future = client.post(url, body, {{"Content-Type", "application/json"}});
+
+    auto result = future.get();
+    if (!result.has_value()) {
+        std::cerr << "QUERY failed: " << result.error().message() << "\n";
+        return 1;
+    }
+
+    auto& response = result.value();
+    std::string response_str(response.begin(), response.end());
+    std::cout << "QUERY response: " << response_str << "\n";
     return 0;
 }
 
@@ -819,15 +1230,15 @@ int main(int argc, char* argv[]) {
     if (opts->mode == "--query")
         return run_query(*opts);
     if (opts->mode == "--gateway")
-        return run_long_role(*opts, "GATEWAY");
+        return run_gateway(*opts);
     if (opts->mode == "--inventory")
         return run_long_role(*opts, "INVENTORY");
     if (opts->mode == "--payment")
-        return run_long_role(*opts, "PAYMENT");
+        return run_payment(*opts);
     if (opts->mode == "--fulfillment")
         return run_long_role(*opts, "FULFILLMENT");
     if (opts->mode == "--ops")
-        return run_long_role(*opts, "OPS");
+        return run_ops(*opts);
 
     print_usage(argv[0]);
     return 1;

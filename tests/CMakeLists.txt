@@ -97,6 +97,10 @@ add_executable(test_actor_context actor/test_actor_context.cpp)
 target_link_libraries(test_actor_context hpactor)
 add_test(NAME test_actor_context COMMAND test_actor_context)
 
+add_executable(test_actor_context_schedule actor/test_actor_context_schedule.cpp)
+target_link_libraries(test_actor_context_schedule hpactor)
+add_test(NAME test_actor_context_schedule COMMAND test_actor_context_schedule)
+
 add_executable(test_actor_system actor/test_actor_system.cpp)
 target_link_libraries(test_actor_system hpactor)
 add_test(NAME test_actor_system COMMAND test_actor_system)

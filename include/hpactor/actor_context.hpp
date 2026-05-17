@@ -106,7 +106,8 @@ class ActorContext {
     }
 
     // Scheduled execution
-    void schedule(std::chrono::milliseconds delay, TypedMessage msg);
+    AlarmHandle schedule(std::chrono::milliseconds delay, TypedMessage msg);
+    void cancel_schedule(AlarmHandle handle);
 
     // Children management
     std::vector<Actor> children() const;
