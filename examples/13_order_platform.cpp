@@ -1,5 +1,128 @@
 // Copyright 2026 HPActor Contributors
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+// =============================================================================
+// HPActor Example 13: Multi-Role Order Platform
+// =============================================================================
+//
+// A five-actor order-processing pipeline demonstrating the full HPActor
+// feature surface in a single, self-contained example:
+//
+//   Actors and workflow:
+//     OrderCoordinator  — orchestrates the lifecycle: submit → price →
+//                          reserve → authorize → fulfill → complete
+//     InventoryActor    — reserves stock or rejects with "insufficient stock"
+//     PaymentActor      — authorizes, declines, or simulates a timeout
+//     FulfillmentWorker — queues fulfillment or simulates a worker crash
+//     OrderLogActor     — append-only event log (circular, capacity 64)
+//
+//   Features demonstrated:
+//     - StatefulActor<T> (coordinator, inventory, log) and EventBasedActor
+//       (payment, fulfillment)
+//     - TypedMessage with custom TypeTags and hand-rolled binary
+//       serialization via BufferWriter / BufferReader
+//     - Message routing: context()->send(addr, msg) for directed sends,
+//       context()->reply(msg) for request-response reply
+//     - Timer scheduling: context()->schedule(delay, msg) for the
+//       payment-timeout scenario
+//     - Bounded mailboxes: capacity shrinks to 2 in overload mode,
+//       forcing overflow into the dead-letter queue
+//     - Dead-letter queue: enabled (capacity 128), snapshot inspected
+//       after each scenario run
+//     - EnqueueResult introspection: try_deliver_local() returns
+//       code, depth, capacity, pressure_ratio, and retryable status
+//     - Tracing: JSON-file exporter writes span data to
+//       build/order-platform-traces.jsonl
+//     - HPACTOR_REGISTER_ACTOR for all four worker actor types
+//     - std::promise / std::future bridge for collecting the final
+//       OrderStatus from outside the actor system
+//     - Supervision readiness: FulfillmentWorker calls
+//       set_exit_reason(1) in the worker-crash scenario so a
+//       supervisor can detect the failure and restart
+//
+//   Modes (--all-in-one is the primary demo path; other modes are
+//   stubs for a distributed deployment):
+//
+//     --all-in-one       single-process, all actors local, runs one
+//                        scenario and prints the result + DLQ snapshot
+//     --gateway          long-running gateway role (stub)
+//     --inventory        long-running inventory role (stub)
+//     --payment          long-running payment role (stub)
+//     --fulfillment      long-running fulfillment role (stub)
+//     --ops              long-running ops role (stub)
+//     --query            query mode (stub, requires --submit demo-order)
+//
+//   Scenarios (--scenario <name>):
+//
+//     happy-path         full pipeline succeeds; order completes
+//     insufficient-stock inventory rejects; order ends InventoryFailed
+//     payment-decline    payment actor declines; order ends PaymentFailed
+//     payment-timeout    payment actor drops the message; a 200 ms timer
+//                        fires PaymentTimedOut on the coordinator
+//     worker-crash       fulfillment worker sets exit_reason(1);
+//                        order ends FulfillmentFailed
+//     overload           bounded mailbox capacity = 2; 8 rapid sends
+//                        overflow into the dead-letter queue
+//     missing-route      send to a non-existent ActorId; message lands
+//                        in the dead-letter queue
+//
+//   Quickstart (all-in-one, local actors only):
+//
+//     ./13_order_platform --all-in-one --scenario happy-path
+//     ./13_order_platform --all-in-one --scenario insufficient-stock
+//     ./13_order_platform --all-in-one --scenario payment-decline
+//     ./13_order_platform --all-in-one --scenario payment-timeout
+//     ./13_order_platform --all-in-one --scenario worker-crash
+//     ./13_order_platform --all-in-one --scenario overload
+//     ./13_order_platform --all-in-one --scenario missing-route
+//
+//   Distributed (conceptual — stub roles run until Ctrl-C):
+//
+//     # Terminal 1: payment service
+//     ./13_order_platform --payment --actor-port 17132
+//
+//     # Terminal 2: gateway + remaining workers
+//     ./13_order_platform --gateway --actor-port 17130 --http-port 18130
+//     --payment 127.0.0.1:17132
+//
+//     # Terminal 3: query the result
+//     ./13_order_platform --query --gateway-port 18130 --submit demo-order
+//
+//   Optional flags:
+//
+//     --host 127.0.0.1           bind address for actor and registrar
+//     --registrar-host 127.0.0.1 registrar server address
+//     --actor-port 17130         actor TCP port
+//     --http-port 18130          HTTP gateway port
+//     --registrar-port 19153     registrar TCP/UDP port
+//     --gateway-port 18130       port for --query to connect to
+//
+//   Default registrar port is 19153 (not 5353). Port 5353 is commonly
+//   used by mDNS (Bonjour) on macOS and Linux, preventing the UDP
+//   resolver socket from binding.
+//
+//   Expected output (happy-path):
+//     SCENARIO RESULT order_id=demo-1 status=completed detail=completed
+//     total_cents=<n>
+//     DLQ depth=0 total_pushed=0 total_lost=0
+//
+//   Expected output (overload):
+//     OVERLOAD enqueue code=... depth=... capacity=2 pressure=...
+//     ... (8 lines)
+//     OVERLOAD dlq_depth=<n> total_pushed=<n>
+//
+// =============================================================================
 
 #include <examples/order_platform/messages.hpp>
 
