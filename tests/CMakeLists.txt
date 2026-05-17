@@ -284,6 +284,10 @@ add_executable(test_log_integration log/test_log_integration.cpp)
 target_link_libraries(test_log_integration hpactor pthread)
 add_test(NAME test_log_integration COMMAND test_log_integration)
 
+add_executable(test_log_sinks log/test_log_sinks.cpp)
+target_link_libraries(test_log_sinks hpactor)
+add_test(NAME test_log_sinks COMMAND test_log_sinks)
+
 add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)
