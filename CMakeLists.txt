@@ -293,20 +293,16 @@ target_sources(hpactor_lib PRIVATE
 )
 set(HPACTOR_ENABLE_CLI 1)
 
-# Tracing subsystem
-if(ENABLE_ACTOR_TRACING)
-    set(HPACTOR_ENABLE_ACTOR_TRACING 1)
-    target_sources(hpactor_lib PRIVATE
-        src/tracing/trace_context_parser.cpp
-        src/tracing/sampler.cpp
-        src/tracing/memory_exporter.cpp
-        src/tracing/json_exporter.cpp
-        src/tracing/otlp_exporter.cpp
-        src/tracing/trace_manager.cpp
-    )
-else()
-    set(HPACTOR_ENABLE_ACTOR_TRACING 0)
-endif()
+# Tracing subsystem — always compiled; runtime behavior controlled by Config::tracing.enabled
+set(HPACTOR_ENABLE_ACTOR_TRACING 1)
+target_sources(hpactor_lib PRIVATE
+    src/tracing/trace_context_parser.cpp
+    src/tracing/sampler.cpp
+    src/tracing/memory_exporter.cpp
+    src/tracing/json_exporter.cpp
+    src/tracing/otlp_exporter.cpp
+    src/tracing/trace_manager.cpp
+)
 
 # Enable exceptions for TOML adapter sources (toml++ requires them)
 set(HPACTOR_TOML_EXCEPTION_SOURCES

@@ -235,6 +235,13 @@ class EventBasedActor : public LocalActor {
     // Dead-letter all messages currently in the mailbox (ImmediateStop).
     void drain_all_immediate();
 
+    // System message handlers invoked from receive().
+    bool handle_link_msg(const TypedMessage& msg);
+    bool handle_unlink_msg(const TypedMessage& msg);
+    bool handle_monitor_msg(const TypedMessage& msg);
+    bool handle_demonitor_msg(const TypedMessage& msg);
+    void handle_down_msg(const TypedMessage& msg);
+
     // Drain timer management (stubs — implemented in Task 7).
     void start_drain_timer();
     void cancel_drain_timer();

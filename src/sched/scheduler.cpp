@@ -48,19 +48,21 @@ thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                  uint32_t num_priorities,
                                  TimerBackend timer_backend, bool start_paused)
-    : system_(system), num_workers_(num_workers),
-      num_priorities_(num_priorities), workers_(num_workers), a2ws_(num_workers),
-      timer_backend_(std::in_place_type<TimingWheel>, 1'000'000, 4),
-      workers_paused_(start_paused),
+    : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
+      workers_(num_workers), a2ws_(num_workers), workers_paused_(start_paused),
       dedicated_(std::make_unique<DedicatedStorage>()) {
+    switch (timer_backend) {
+        case TimerBackend::TimingWheel:
+            timer_backend_.emplace<TimingWheel>(1'000'000, 4);
+            break;
+        case TimerBackend::CalendarQueue:
+            timer_backend_.emplace<CalendarQueue>();
+            break;
+    }
     for (uint32_t i = 0; i < num_workers; ++i) {
         workers_[i].queues =
             std::make_unique<ChaselevDeque<WorkItem>[]>(num_priorities);
         workers_[i].index = i;
-    }
-
-    if (timer_backend == TimerBackend::CalendarQueue) {
-        timer_backend_.emplace<CalendarQueue>();
     }
 }
 
@@ -200,15 +202,13 @@ bool HybridScheduler::try_steal(WorkItem& out) {
                 evt.value_hi = victim_idx;
                 metrics_ring_buffer_->try_push(evt);
             }
-            if (logger_) [[unlikely]] {
-                HPACTOR_LOG_DEBUG(
-                    log::LogCategory::kScheduler, out.actor,
-                    static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
-                    "work stolen",
-                    log::field("from_worker", static_cast<uint64_t>(victim_idx)),
-                    log::field("to_worker",
-                               static_cast<uint64_t>(tl_current_worker_id)));
-            }
+            HPACTOR_LOG_DEBUG(
+                log::LogCategory::kScheduler, out.actor,
+                static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
+                "work stolen",
+                log::field("from_worker", static_cast<uint64_t>(victim_idx)),
+                log::field("to_worker",
+                           static_cast<uint64_t>(tl_current_worker_id)));
             return true;
         }
 
@@ -223,15 +223,13 @@ bool HybridScheduler::try_steal(WorkItem& out) {
                     evt.value_hi = victim_idx;
                     metrics_ring_buffer_->try_push(evt);
                 }
-                if (logger_) [[unlikely]] {
-                    HPACTOR_LOG_DEBUG(
-                        log::LogCategory::kScheduler, out.actor,
-                        static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
-                        "work stolen",
-                        log::field("from_worker", static_cast<uint64_t>(victim_idx)),
-                        log::field("to_worker",
-                                   static_cast<uint64_t>(tl_current_worker_id)));
-                }
+                HPACTOR_LOG_DEBUG(
+                    log::LogCategory::kScheduler, out.actor,
+                    static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
+                    "work stolen",
+                    log::field("from_worker", static_cast<uint64_t>(victim_idx)),
+                    log::field("to_worker",
+                               static_cast<uint64_t>(tl_current_worker_id)));
                 return true;
             }
         }
@@ -309,13 +307,11 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         metrics_ring_buffer_->try_push(evt);
     }
 
-    if (logger_) [[unlikely]] {
-        HPACTOR_LOG_DEBUG(
-            log::LogCategory::kScheduler, item.actor,
-            static_cast<uint32_t>(log::LogEventId::kSchedulerDispatch),
-            "actor dispatched",
-            log::field("worker_id", static_cast<uint64_t>(tl_current_worker_id)));
-    }
+    HPACTOR_LOG_DEBUG(
+        log::LogCategory::kScheduler, item.actor,
+        static_cast<uint32_t>(log::LogEventId::kSchedulerDispatch),
+        "actor dispatched",
+        log::field("worker_id", static_cast<uint64_t>(tl_current_worker_id)));
 
     auto* actor = static_cast<EventBasedActor*>(actor_ptr.get());
 
@@ -451,11 +447,8 @@ void HybridScheduler::mark_dispatch_end() noexcept {
 void HybridScheduler::worker_loop(uint32_t worker_id) {
     tl_current_worker_id = worker_id; // set thread-local
 
-    if (logger_) [[unlikely]] {
-        HPACTOR_LOG_DEBUG(
-            log::LogCategory::kScheduler, ActorId{0}, 0, "worker started",
-            log::field("worker_id", static_cast<uint64_t>(worker_id)));
-    }
+    HPACTOR_LOG_DEBUG(log::LogCategory::kScheduler, ActorId{0}, 0, "worker started",
+                      log::field("worker_id", static_cast<uint64_t>(worker_id)));
 
     while (running_.load(std::memory_order_acquire)) {
         wait_if_paused(worker_id);

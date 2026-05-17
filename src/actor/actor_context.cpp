@@ -101,15 +101,11 @@ void ActorContext::send(ActorRef& target, TypedMessage msg) {
     auto* system = system_ != nullptr
                        ? system_
                        : (owner_ ? &owner_.get()->system() : nullptr);
-#if HPACTOR_ENABLE_ACTOR_TRACING
     if (system != nullptr && system->trace_manager() != nullptr) {
         system->trace_manager()->inject_message_context(
             msg, this,
             system->trace_manager()->config().create_roots_for_actor_context_sends);
     }
-#else
-    (void)system;
-#endif
 
     target.send(target.address(), std::move(msg));
 }
@@ -142,15 +138,11 @@ ActorContext::try_send(const ActorAddress& target, TypedMessage msg,
     }
 
     auto* system = owner_ ? &owner_.get()->system() : system_;
-#if HPACTOR_ENABLE_ACTOR_TRACING
     if (system != nullptr && system->trace_manager() != nullptr) {
         system->trace_manager()->inject_message_context(
             msg, this,
             system->trace_manager()->config().create_roots_for_actor_context_sends);
     }
-#else
-    (void)system;
-#endif
 
     return ref.try_send(ref.address(), std::move(msg), options);
 }
@@ -169,15 +161,11 @@ ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage ms
     }
 
     auto* system = owner_ ? &owner_.get()->system() : system_;
-#if HPACTOR_ENABLE_ACTOR_TRACING
     if (system != nullptr && system->trace_manager() != nullptr) {
         system->trace_manager()->inject_message_context(
             msg, this,
             system->trace_manager()->config().create_roots_for_actor_context_sends);
     }
-#else
-    (void)system;
-#endif
 
     if (ref.is_local()) {
         if (system != nullptr) {
