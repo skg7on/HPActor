@@ -1,7 +1,7 @@
 # HPActor
 
 [![CI](https://github.com/skg7on/HPActor/actions/workflows/ci.yml/badge.svg)](https://github.com/skg7on/HPActor/actions/workflows/ci.yml)
-[![Coverage](https://raw.githubusercontent.com/skg7on/HPActor/gh-pages/coverage-badge.svg)](https://raw.githubusercontent.com/skg7on/HPActor/gh-pages/coverage-html/index.html)
+[![Coverage](https://skg7on.github.io/HPActor/coverage-badge.svg)](https://skg7on.github.io/HPActor/coverage-html/)
 
 A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, multi-priority queues, and an application-defined two-tier slab memory allocator for deterministic response times without GC pauses.
 
