@@ -442,6 +442,10 @@ add_executable(test_coroutine_frame_pool sched/test_coroutine_frame_pool.cpp)
 target_link_libraries(test_coroutine_frame_pool hpactor pthread)
 add_test(NAME test_coroutine_frame_pool COMMAND test_coroutine_frame_pool)
 
+add_executable(test_worker_thread sched/test_worker_thread.cpp)
+target_link_libraries(test_worker_thread hpactor pthread)
+add_test(NAME test_worker_thread COMMAND test_worker_thread)
+
 # =============================================================================
 # HTTP tests
 # =============================================================================
