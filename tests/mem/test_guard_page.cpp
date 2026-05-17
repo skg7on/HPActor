@@ -21,6 +21,82 @@
 #include <sys/wait.h>
 #include <unistd.h>
 
+namespace mem = hpactor::mem;
+
+void test_page_size_positive() {
+    size_t ps = mem::page_size();
+    assert(ps > 0);
+    assert(ps == static_cast<size_t>(sysconf(_SC_PAGESIZE)));
+    printf("  PASSED test_page_size_positive\n");
+}
+
+void test_guarded_alloc_nonnull() {
+    void* ptr = mem::guarded_alloc(64);
+    assert(ptr != nullptr);
+    auto* bytes = static_cast<std::byte*>(ptr);
+    std::memset(bytes, 0xAB, 64);
+    assert(bytes[0] == std::byte{0xAB});
+    assert(bytes[63] == std::byte{0xAB});
+    mem::guarded_free(ptr, 64);
+    printf("  PASSED test_guarded_alloc_nonnull\n");
+}
+
+void test_guarded_alloc_zero() {
+    void* ptr = mem::guarded_alloc(0);
+    assert(ptr != nullptr);
+    auto* bytes = static_cast<std::byte*>(ptr);
+    bytes[0] = std::byte{0x42};
+    mem::guarded_free(ptr, 0);
+    printf("  PASSED test_guarded_alloc_zero\n");
+}
+
+void test_guarded_free_null() {
+    mem::guarded_free(nullptr, 64);
+    printf("  PASSED test_guarded_free_null\n");
+}
+
+void test_guarded_alloc_multiple() {
+    void* p1 = mem::guarded_alloc(128);
+    void* p2 = mem::guarded_alloc(256);
+    assert(p1 != nullptr);
+    assert(p2 != nullptr);
+    assert(p1 != p2);
+    mem::guarded_free(p1, 128);
+    mem::guarded_free(p2, 256);
+    printf("  PASSED test_guarded_alloc_multiple\n");
+}
+
+void test_handler_install_idempotent() {
+    mem::install_corruption_handler();
+    mem::install_corruption_handler();
+    printf("  PASSED test_handler_install_idempotent\n");
+}
+
+void test_handler_remove_and_restore() {
+    mem::remove_corruption_handler();
+    mem::remove_corruption_handler();
+    mem::install_corruption_handler();
+    printf("  PASSED test_handler_remove_and_restore\n");
+}
+
+void test_set_log_fd() {
+    mem::set_guard_page_log_fd(-1);
+    mem::set_guard_page_log_fd(STDERR_FILENO);
+    printf("  PASSED test_set_log_fd\n");
+}
+
+void test_guarded_alloc_and_free_cycle() {
+    size_t sizes[] = {16, 64, 256, 1024, 4096};
+    for (int si = 0; si < 5; si++) {
+        for (int i = 0; i < 5; i++) {
+            void* p = mem::guarded_alloc(sizes[si]);
+            assert(p != nullptr);
+            mem::guarded_free(p, sizes[si]);
+        }
+    }
+    printf("  PASSED test_guarded_alloc_and_free_cycle\n");
+}
+
 int main() {
     using namespace hpactor::mem;
 
@@ -80,6 +156,16 @@ int main() {
             assert(sig == SIGSEGV || sig == SIGBUS);
         }
     }
+
+    test_page_size_positive();
+    test_guarded_alloc_nonnull();
+    test_guarded_alloc_zero();
+    test_guarded_free_null();
+    test_guarded_alloc_multiple();
+    test_handler_install_idempotent();
+    test_handler_remove_and_restore();
+    test_set_log_fd();
+    test_guarded_alloc_and_free_cycle();
 
     std::cout << "test_guard_page: PASS\n";
     return 0;

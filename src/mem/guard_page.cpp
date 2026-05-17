@@ -30,9 +30,12 @@ size_t page_size() noexcept {
 
 void* guarded_alloc(size_t user_bytes) noexcept {
     size_t ps = page_size();
-    // Round user_bytes up to page boundary so trailing guard is page-aligned.
+    // Ensure at least one byte of usable space, even for user_bytes == 0,
+    // so that the returned pointer is always inside the writable region
+    // (not on the trailing guard page).
     // Layout: [guard page] [usable (page-aligned)] [guard page]
-    size_t user_pages = ((user_bytes + ps - 1) / ps) * ps;
+    size_t clamped = user_bytes > 0 ? user_bytes : 1;
+    size_t user_pages = ((clamped + ps - 1) / ps) * ps;
     size_t total = ps + user_pages + ps;
 
     void* base = mmap(nullptr, total, PROT_READ | PROT_WRITE,
@@ -61,7 +64,9 @@ void guarded_free(void* user_ptr, size_t user_bytes) noexcept {
     if (!user_ptr)
         return;
     size_t ps = page_size();
-    size_t user_pages = ((user_bytes + ps - 1) / ps) * ps;
+    // Must match the same clamping as guarded_alloc for consistency
+    size_t clamped = user_bytes > 0 ? user_bytes : 1;
+    size_t user_pages = ((clamped + ps - 1) / ps) * ps;
     void* base = static_cast<std::byte*>(user_ptr) - ps;
     size_t total = ps + user_pages + ps;
     munmap(base, total);
