@@ -169,6 +169,14 @@ add_executable(test_drain_integration actor/test_drain_integration.cpp)
 target_link_libraries(test_drain_integration hpactor)
 add_test(NAME test_drain_integration COMMAND test_drain_integration)
 
+add_executable(test_scoped_actor actor/test_scoped_actor.cpp)
+target_link_libraries(test_scoped_actor hpactor)
+add_test(NAME test_scoped_actor COMMAND test_scoped_actor)
+
+add_executable(test_local_actor actor/test_local_actor.cpp)
+target_link_libraries(test_local_actor hpactor)
+add_test(NAME test_local_actor COMMAND test_local_actor)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
