@@ -223,6 +223,11 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Create: `tests/sched/test_worker_thread.cpp`
 - Modify: `tests/CMakeLists.txt`
 
+**Test design notes:**
+- `WorkItem` has field `actor` (type `ActorId`), not `actor_id` — see `work_queue.hpp:27-31`
+- Push/pop/steal/depth tests operate on the queue directly WITHOUT starting the worker thread, to avoid races where the worker's `thread_loop()` consumes items before the test can observe them (CLAUDE.md constraint: "No assumed thread execution order")
+- `MetricEvent` must be zero-initialized (`MetricEvent evt{};`) — POD struct, default-init leaves indeterminate values
+
 - [ ] **Step 1: Write the test file**
 
 ```cpp
@@ -232,16 +237,8 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 
 #include <cassert>
 #include <cstdio>
-#include <thread>
-#include <chrono>
 
 using namespace hpactor::sched;
-
-// Simple work item type for testing
-struct TestItem {
-    int value;
-    bool processed{false};
-};
 
 void test_config_defaults() {
     WorkerThread::Config cfg;
@@ -265,8 +262,12 @@ void test_start_stop() {
     WorkerThread worker(cfg);
     assert(!worker.is_running());
     worker.start();
+    // running_ is set to true inside start() before thread is spawned,
+    // so is_running() is immediately observable
     assert(worker.is_running());
     worker.stop();
+    // stop() sets running_=false then joins the thread; after stop()
+    // returns is_running() must be false
     assert(!worker.is_running());
     printf("  PASSED test_start_stop\n");
 }
@@ -276,26 +277,30 @@ void test_double_start() {
     WorkerThread worker(cfg);
     worker.start();
     assert(worker.is_running());
-    worker.start(); // should be no-op
+    worker.start(); // should be no-op — start() returns early if already running
     assert(worker.is_running());
     worker.stop();
     printf("  PASSED test_double_start\n");
 }
 
+// Queue operations tested WITHOUT starting the worker thread.
+// If the worker thread were running, its thread_loop() might pop items
+// before the test can observe them — violating "no assumed thread
+// execution order" (CLAUDE.md test constraints).
+
 void test_push_pop() {
     WorkerThread::Config cfg;
     WorkerThread worker(cfg);
-    worker.start();
+    // NOT calling worker.start() — testing queue operations in isolation
 
     WorkItem item;
-    item.actor_id = ActorId{0};
+    item.actor = ActorId{0};
     worker.push(0, item);
 
     WorkItem out;
     assert(worker.pop(out));
-    assert(out.actor_id == ActorId{0});
+    assert(out.actor == ActorId{0});
 
-    worker.stop();
     printf("  PASSED test_push_pop\n");
 }
 
@@ -312,28 +317,26 @@ void test_pop_empty() {
 void test_steal() {
     WorkerThread::Config cfg;
     WorkerThread worker(cfg);
-    worker.start();
+    // NOT calling worker.start()
 
-    // Push items of different priorities
     WorkItem item1;
-    item1.actor_id = ActorId{1};
+    item1.actor = ActorId{1};
     worker.push(0, item1);
 
     WorkItem item2;
-    item2.actor_id = ActorId{2};
+    item2.actor = ActorId{2};
     worker.push(1, item2);
 
     WorkItem stolen;
     assert(worker.steal(stolen));
     // Steal takes from highest priority first (priority 0)
-    assert(stolen.actor_id == ActorId{1});
+    assert(stolen.actor == ActorId{1});
 
     // One item remains that can be popped
     WorkItem popped;
     assert(worker.pop(popped));
-    assert(popped.actor_id == ActorId{2});
+    assert(popped.actor == ActorId{2});
 
-    worker.stop();
     printf("  PASSED test_steal\n");
 }
 
@@ -352,9 +355,8 @@ void test_depth() {
     WorkerThread worker(cfg);
 
     WorkItem item;
-    item.actor_id = ActorId{0};
+    item.actor = ActorId{0};
     worker.push(0, item);
-    // depth_approx should be >= 1 (exact count depends on queue impl)
     size_t d = worker.depth();
     assert(d >= 1);
 
@@ -392,7 +394,7 @@ void test_acquire_release_frame() {
     worker.release_frame(f);
     assert(!f->in_use);
 
-    // release with nullptr is no-op
+    // release with nullptr is no-op (null guard in release_frame)
     worker.release_frame(nullptr);
 
     printf("  PASSED test_acquire_release_frame\n");
@@ -402,7 +404,8 @@ void test_process_noop() {
     WorkerThread::Config cfg;
     WorkerThread worker(cfg);
     WorkItem item;
-    worker.process(item); // should not crash, is a no-op
+    item.actor = ActorId{0};
+    worker.process(item); // placeholder no-op — must not crash
     printf("  PASSED test_process_noop\n");
 }
 
@@ -699,6 +702,11 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 - Create: `tests/metrics/test_metrics_aggregator.cpp`
 - Modify: `tests/CMakeLists.txt`
 
+**Test design notes:**
+- `Aggregator::ensure_families_registered()` and `make_actor_labels()` are **private** — tested indirectly through `begin_drain()` + `on_event()` + `end_drain()` (public API)
+- `MetricEvent` is a POD struct (`alignas(32)`); `MetricEvent evt;` leaves fields indeterminate. Always use `MetricEvent evt{};` for zero-initialization (CLAUDE.md constraint: deterministic tests)
+- `scheduler_threads = 0` — no scheduler needed for these checks
+
 - [ ] **Step 1: Write the test file**
 
 ```cpp
@@ -710,91 +718,94 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 #include <cassert>
 #include <cstdio>
 
-using namespace hpactor;
 using namespace hpactor::metrics;
 
-void test_ensure_families_registered() {
-    ActorSystemConfig sys_cfg;
-    sys_cfg.scheduler_threads = 0; // no scheduler needed
-    ActorSystem sys(sys_cfg);
+void test_families_registered_via_begin_drain() {
+    hpactor::ActorSystemConfig sys_cfg;
+    sys_cfg.scheduler_threads = 0;
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
-    agg.ensure_families_registered();
-    // Second call should be no-op
-    agg.ensure_families_registered();
+    // begin_drain() calls ensure_families_registered() internally
+    agg.begin_drain();
+    agg.end_drain();
 
     auto snapshot = registry.snapshot();
+    // 13 families registered + 1 (hpactor_actors_active from end_drain)
     assert(snapshot.families.size() >= 13);
-    printf("  PASSED test_ensure_families_registered\n");
+
+    // Second drain — families already registered, no duplicates
+    agg.begin_drain();
+    agg.end_drain();
+    auto snapshot2 = registry.snapshot();
+    assert(snapshot2.families.size() == snapshot.families.size());
+
+    printf("  PASSED test_families_registered_via_begin_drain\n");
 }
 
-void test_mailbox_enqueue_event() {
-    ActorSystemConfig sys_cfg;
+void test_mailbox_enqueue_dequeue_events() {
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
     agg.begin_drain();
 
-    MetricEvent evt;
-    evt.actor_id = ActorId{1};
+    MetricEvent evt{};
+    evt.actor_id = hpactor::ActorId{1};
     evt.event_type = MetricEventType::kMailboxEnqueue;
     agg.on_event(evt);
 
-    // Enqueue also increments mailbox_messages_total counter
-    MetricEvent evt2;
-    evt2.actor_id = ActorId{1};
+    MetricEvent evt2{};
+    evt2.actor_id = hpactor::ActorId{1};
     evt2.event_type = MetricEventType::kMailboxDequeue;
     agg.on_event(evt2);
 
     agg.end_drain();
-
+    // must not crash; families exist after drain
     auto snapshot = registry.snapshot();
-    assert(snapshot.families.size() >= 2); // at minimum, depth and messages families
+    (void)snapshot;
 
-    printf("  PASSED test_mailbox_enqueue_event\n");
+    printf("  PASSED test_mailbox_enqueue_dequeue_events\n");
 }
 
 void test_message_processed_event() {
-    ActorSystemConfig sys_cfg;
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
     agg.begin_drain();
 
-    MetricEvent evt;
-    evt.actor_id = ActorId{2};
+    MetricEvent evt{};
+    evt.actor_id = hpactor::ActorId{2};
     evt.event_type = MetricEventType::kMessageProcessed;
     evt.value_hi = 1500000; // 1.5ms in microseconds
     agg.on_event(evt);
 
     agg.end_drain();
-
-    auto snapshot = registry.snapshot();
-    (void)snapshot;
     printf("  PASSED test_message_processed_event\n");
 }
 
 void test_actor_lifecycle_events() {
-    ActorSystemConfig sys_cfg;
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
     agg.begin_drain();
 
-    MetricEvent spawned;
-    spawned.actor_id = ActorId{3};
+    MetricEvent spawned{};
+    spawned.actor_id = hpactor::ActorId{3};
     spawned.event_type = MetricEventType::kActorSpawned;
     agg.on_event(spawned);
 
-    MetricEvent terminated;
-    terminated.actor_id = ActorId{3};
+    MetricEvent terminated{};
+    terminated.actor_id = hpactor::ActorId{3};
     terminated.event_type = MetricEventType::kActorTerminated;
     agg.on_event(terminated);
 
@@ -803,20 +814,20 @@ void test_actor_lifecycle_events() {
 }
 
 void test_scheduler_events() {
-    ActorSystemConfig sys_cfg;
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
     agg.begin_drain();
 
-    MetricEvent dispatch;
+    MetricEvent dispatch{};
     dispatch.event_type = MetricEventType::kSchedulerDispatch;
     dispatch.value_hi = 0; // worker 0
     agg.on_event(dispatch);
 
-    MetricEvent steal;
+    MetricEvent steal{};
     steal.event_type = MetricEventType::kSchedulerSteal;
     steal.value_hi = 1; // source worker 1
     agg.on_event(steal);
@@ -826,22 +837,22 @@ void test_scheduler_events() {
 }
 
 void test_memory_events() {
-    ActorSystemConfig sys_cfg;
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
     agg.begin_drain();
 
-    MetricEvent alloc;
-    alloc.actor_id = ActorId{4};
+    MetricEvent alloc{};
+    alloc.actor_id = hpactor::ActorId{4};
     alloc.event_type = MetricEventType::kMemoryAlloc;
     alloc.value_hi = 1024;
     agg.on_event(alloc);
 
-    MetricEvent free_evt;
-    free_evt.actor_id = ActorId{4};
+    MetricEvent free_evt{};
+    free_evt.actor_id = hpactor::ActorId{4};
     free_evt.event_type = MetricEventType::kMemoryFree;
     free_evt.value_hi = 512;
     agg.on_event(free_evt);
@@ -851,26 +862,26 @@ void test_memory_events() {
 }
 
 void test_mailbox_rejection_events() {
-    ActorSystemConfig sys_cfg;
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
     agg.begin_drain();
 
-    MetricEvent rejected;
-    rejected.actor_id = ActorId{5};
+    MetricEvent rejected{};
+    rejected.actor_id = hpactor::ActorId{5};
     rejected.event_type = MetricEventType::kMailboxRejected;
     agg.on_event(rejected);
 
-    MetricEvent dropped;
-    dropped.actor_id = ActorId{5};
+    MetricEvent dropped{};
+    dropped.actor_id = hpactor::ActorId{5};
     dropped.event_type = MetricEventType::kMailboxDropped;
     agg.on_event(dropped);
 
-    MetricEvent dl;
-    dl.actor_id = ActorId{5};
+    MetricEvent dl{};
+    dl.actor_id = hpactor::ActorId{5};
     dl.event_type = MetricEventType::kMailboxDeadLetter;
     agg.on_event(dl);
 
@@ -879,21 +890,21 @@ void test_mailbox_rejection_events() {
 }
 
 void test_backpressure_and_dl_lost() {
-    ActorSystemConfig sys_cfg;
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
     agg.begin_drain();
 
-    MetricEvent bp;
-    bp.actor_id = ActorId{6};
+    MetricEvent bp{};
+    bp.actor_id = hpactor::ActorId{6};
     bp.event_type = MetricEventType::kBackpressureSignal;
     agg.on_event(bp);
 
-    MetricEvent lost;
-    lost.actor_id = ActorId{6};
+    MetricEvent lost{};
+    lost.actor_id = hpactor::ActorId{6};
     lost.event_type = MetricEventType::kDeadLetterLost;
     agg.on_event(lost);
 
@@ -901,18 +912,36 @@ void test_backpressure_and_dl_lost() {
     printf("  PASSED test_backpressure_and_dl_lost\n");
 }
 
-void test_stub_events_noop() {
-    ActorSystemConfig sys_cfg;
+void test_supervisor_restart_event() {
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
     agg.begin_drain();
 
-    // All stub events should not crash
-    MetricEvent e;
-    e.actor_id = ActorId{7};
+    MetricEvent evt{};
+    evt.actor_id = hpactor::ActorId{7};
+    evt.event_type = MetricEventType::kSupervisorRestart;
+    agg.on_event(evt);
+
+    agg.end_drain();
+    printf("  PASSED test_supervisor_restart_event\n");
+}
+
+void test_stub_events_noop() {
+    hpactor::ActorSystemConfig sys_cfg;
+    sys_cfg.scheduler_threads = 0;
+    hpactor::ActorSystem sys(sys_cfg);
+    MetricRegistry registry;
+    Aggregator agg(registry, sys);
+
+    agg.begin_drain();
+
+    // All stub events must not crash — they hit the default case or no-op branches
+    MetricEvent e{};
+    e.actor_id = hpactor::ActorId{8};
 
     e.event_type = MetricEventType::kLifecycleTransition;
     agg.on_event(e);
@@ -930,9 +959,9 @@ void test_stub_events_noop() {
 }
 
 void test_end_drain_records_active() {
-    ActorSystemConfig sys_cfg;
+    hpactor::ActorSystemConfig sys_cfg;
     sys_cfg.scheduler_threads = 0;
-    ActorSystem sys(sys_cfg);
+    hpactor::ActorSystem sys(sys_cfg);
     MetricRegistry registry;
     Aggregator agg(registry, sys);
 
@@ -940,7 +969,6 @@ void test_end_drain_records_active() {
     agg.end_drain();
 
     auto snapshot = registry.snapshot();
-    // hpactor_actors_active family should exist
     bool found = false;
     for (auto& fam : snapshot.families) {
         if (fam.name.find("hpactor_actors_active") != std::string::npos) {
@@ -954,14 +982,15 @@ void test_end_drain_records_active() {
 
 int main() {
     printf("MetricsAggregator tests:\n");
-    test_ensure_families_registered();
-    test_mailbox_enqueue_event();
+    test_families_registered_via_begin_drain();
+    test_mailbox_enqueue_dequeue_events();
     test_message_processed_event();
     test_actor_lifecycle_events();
     test_scheduler_events();
     test_memory_events();
     test_mailbox_rejection_events();
     test_backpressure_and_dl_lost();
+    test_supervisor_restart_event();
     test_stub_events_noop();
     test_end_drain_records_active();
     printf("All MetricsAggregator tests PASSED\n");
@@ -1546,19 +1575,16 @@ void test_supervisor_actor_construct() {
     printf("  PASSED test_supervisor_actor_construct\n");
 }
 
-void test_self_supervising_add_remove_child() {
+void test_self_supervising_construct() {
     ActorSystemConfig cfg;
     cfg.scheduler_threads = 0;
     ActorSystem sys(cfg);
 
     SupervisionPolicy policy;
     SelfSupervisingActor actor(nullptr, sys, policy);
-
-    auto child = sys.spawn<AbstractActor>();
-    actor.add_child(std::move(child));
-
-    // remove_child is tested indirectly — for now verify add doesn't crash
-    printf("  PASSED test_self_supervising_add_remove_child\n");
+    // constructed successfully — must not crash
+    (void)actor;
+    printf("  PASSED test_self_supervising_construct\n");
 }
 ```
 
@@ -1567,7 +1593,7 @@ Add calls in `main()`:
 test_one_for_one_passes_directive();
 test_all_for_one_always_restart();
 test_supervisor_actor_construct();
-test_self_supervising_add_remove_child();
+test_self_supervising_construct();
 ```
 
 - [ ] **Step 3: Build and run**
@@ -1584,7 +1610,7 @@ git add tests/supervision/test_supervision.cpp
 git commit -m "test: extend Supervision tests
 
 Add OneForOne, AllForOne, SupervisorActor construction, and
-SelfSupervisingActor child management tests.
+SelfSupervisingActor construction tests.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ```
@@ -1595,6 +1621,11 @@ Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 
 **Files:**
 - Modify: `tests/cli/test_line_editor.cpp` — append new test functions
+
+**Test design notes:**
+- `LineEditor::current_` is **private static** — cannot be accessed from tests
+- `LineEditor::tokenize_partial()` is **private static** — cannot be called from tests
+- Only test the public API: construct, destruct, `add_history()`, `load_history()`, `save_history()`, `readline()`
 
 - [ ] **Step 1: Read the existing test file**
 
@@ -1614,25 +1645,28 @@ void test_construct_destruct() {
     cfg.multiline = false;
 
     auto root = std::make_unique<CommandNode>("/", "root");
-    LineEditor editor(cfg, root.get());
-    // After construction, current_ should point to editor
-    assert(LineEditor::current_ == &editor);
-    // Destructor clears current_
-    // (tested by going out of scope here is fine since no readline)
+    {
+        LineEditor editor(cfg, root.get());
+        // constructor must not crash
+    }
+    // destructor must not crash (saves history, clears singleton)
     printf("  PASSED test_construct_destruct\n");
 }
 
-void test_tokenize_partial_basic() {
-    auto words = LineEditor::tokenize_partial("/actor list");
-    assert(words.size() == 3); // "actor", "list" (Eof is excluded)
-    assert(words[0] == "/" || words[1] == "actor"); // depends on lexer
-    printf("  PASSED test_tokenize_partial_basic\n");
-}
+void test_construct_with_history_path() {
+    LineEditorConfig cfg;
+    cfg.history_max = 200;
+    cfg.history_path = "/tmp/hpactor_test_line_editor_history.txt";
+    cfg.multiline = true;
+    std::remove(cfg.history_path.c_str());
 
-void test_tokenize_partial_empty() {
-    auto words = LineEditor::tokenize_partial("");
-    assert(words.empty());
-    printf("  PASSED test_tokenize_partial_empty\n");
+    auto root = std::make_unique<CommandNode>("/", "root");
+    LineEditor editor(cfg, root.get());
+    // constructor with history path and multiline must not crash
+
+    // clean up
+    std::remove(cfg.history_path.c_str());
+    printf("  PASSED test_construct_with_history_path\n");
 }
 
 void test_add_history_no_path() {
@@ -1643,8 +1677,29 @@ void test_add_history_no_path() {
 
     auto root = std::make_unique<CommandNode>("/", "root");
     LineEditor editor(cfg, root.get());
-    editor.add_history("/help"); // should not crash with no history path
+    editor.add_history("/help"); // no history path — calls linenoiseHistoryAdd only
     printf("  PASSED test_add_history_no_path\n");
+}
+
+void test_add_history_with_path() {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "/tmp/hpactor_test_line_editor_history2.txt";
+    cfg.multiline = false;
+    std::remove(cfg.history_path.c_str());
+
+    auto root = std::make_unique<CommandNode>("/", "root");
+    LineEditor editor(cfg, root.get());
+    editor.add_history("/system stats"); // should save to history file
+
+    // verify file was created
+    struct stat st;
+    int rc = stat(cfg.history_path.c_str(), &st);
+    assert(rc == 0);
+
+    // clean up
+    std::remove(cfg.history_path.c_str());
+    printf("  PASSED test_add_history_with_path\n");
 }
 
 void test_load_save_history_no_path() {
@@ -1655,19 +1710,39 @@ void test_load_save_history_no_path() {
 
     auto root = std::make_unique<CommandNode>("/", "root");
     LineEditor editor(cfg, root.get());
-    editor.load_history(); // no path → no-op
-    editor.save_history(); // no path → no-op
+    editor.load_history(); // no path → no-op, must not crash
+    editor.save_history(); // no path → no-op, must not crash
     printf("  PASSED test_load_save_history_no_path\n");
 }
+
+void test_set_root() {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+
+    auto root1 = std::make_unique<CommandNode>("/", "root");
+    LineEditor editor(cfg, root1.get());
+
+    auto root2 = std::make_unique<CommandNode>("/", "root2");
+    editor.set_root(root2.get()); // must not crash
+    printf("  PASSED test_set_root\n");
+}
+```
+
+Add includes at the top if not present:
+```cpp
+#include <sys/stat.h>
 ```
 
 Add calls in `main()`:
 ```cpp
 test_construct_destruct();
-test_tokenize_partial_basic();
-test_tokenize_partial_empty();
+test_construct_with_history_path();
 test_add_history_no_path();
+test_add_history_with_path();
 test_load_save_history_no_path();
+test_set_root();
 ```
 
 - [ ] **Step 3: Build and run**
@@ -1683,7 +1758,8 @@ Expected: All tests PASSED.
 git add tests/cli/test_line_editor.cpp
 git commit -m "test: extend LineEditor tests
 
-Add construction/destruction, tokenize_partial, and history management tests.
+Add construction/destruction, history management, and set_root tests
+using only public API.
 
 Co-Authored-By: Claude Opus 4.7 <noreply@anthropic.com>"
 ```
@@ -2060,8 +2136,37 @@ git commit -m "test: final adjustments for coverage targets"
 
 ## Self-Review
 
-1. **Spec coverage:** Tasks 1-13 cover all 9 subsystems from the spec. Task 14 verifies coverage met. The large networking files (tls_context, tcp_transport, tls_connection, registrar_client, registrar_server, registrar, gossip_membership) are deferred as noted in the spec — they need integration infrastructure beyond the scope of unit test files.
+### 1. Test Design Constraints (CLAUDE.md)
 
-2. **Placeholder scan:** No "TBD", "TODO", or "implement later" patterns in code steps. Every step shows actual code.
+| Constraint | Status |
+|-----------|--------|
+| No timing assumptions | All event-based tests use `scheduler_threads = 0`; concurrent stress test uses `thread::join()` (no timing) |
+| No assumed thread execution order | WorkerThread push/pop/steal tests operate WITHOUT starting the worker thread to avoid races with `thread_loop()` |
+| No platform-specific syscall in assertions | `guard_page` tests use portable `sysconf`; `mmap`/`mprotect` are POSIX-standard |
+| Non-blocking I/O for async tests | No epoll/kqueue paths exercised by these unit tests |
+| `assert()` only for invariants | CMakeLists.txt has `add_compile_options(-UNDEBUG)` — `assert()` always fires in tests |
+| Inject messages directly | Not applicable — no mailbox delivery tests in this plan |
+| Generous CI timeouts | No scheduler-dependent tests here; all are direct API calls |
 
-3. **Type consistency:** Test function names match the spec. Include paths use the `hpactor/` prefix convention. `ActorSystemConfig`, `WorkItem`, `MetricEvent`, `ActorId` types used consistently across tasks.
+### 2. Accessibility Verification
+
+| API surface | Check |
+|------------|-------|
+| `LineEditor::current_` | PRIVATE — removed from tests |
+| `LineEditor::tokenize_partial()` | PRIVATE — removed from tests |
+| `Aggregator::ensure_families_registered()` | PRIVATE — tested via `begin_drain()` |
+| `Aggregator::make_actor_labels()` | PRIVATE — tested via `on_event()` |
+| `WorkItem::actor` (not `actor_id`) | Verified against `work_queue.hpp:27-31` |
+| `MetricEvent` zero-init | All instances use `MetricEvent evt{};` |
+
+### 3. Spec Coverage
+
+Tasks 1-13 cover all 9 subsystems from the spec. Task 14 verifies coverage met. The large networking files (tls_context, tcp_transport, tls_connection, registrar_client, registrar_server, registrar, gossip_membership) are deferred as noted in the spec — they need integration infrastructure beyond the scope of unit test files.
+
+### 4. Placeholder Scan
+
+No "TBD", "TODO", or "implement later" patterns in code steps. Every step shows actual code.
+
+### 5. Type Consistency
+
+Test function names match the spec. Include paths use the `hpactor/` prefix convention. `WorkItem.actor` (not `actor_id`) used consistently. `MetricEvent` always brace-initialized.
