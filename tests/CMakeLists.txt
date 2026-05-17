@@ -177,6 +177,10 @@ add_executable(test_local_actor actor/test_local_actor.cpp)
 target_link_libraries(test_local_actor hpactor)
 add_test(NAME test_local_actor COMMAND test_local_actor)
 
+add_executable(test_spawn_receiver_construct actor/test_spawn_receiver_construct.cpp)
+target_link_libraries(test_spawn_receiver_construct hpactor hpactor_proto pthread)
+add_test(NAME test_spawn_receiver_construct COMMAND test_spawn_receiver_construct)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
