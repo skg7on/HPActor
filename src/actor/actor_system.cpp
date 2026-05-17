@@ -217,16 +217,13 @@ ActorSystem::~ActorSystem() {
     if (log_manager_) {
         log_manager_->stop();
     }
-#if HPACTOR_ENABLE_ACTOR_TRACING
     if (trace_manager_) {
         trace_manager_->stop();
     }
-#endif
     scheduler_->stop();
 }
 
 void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
-#if HPACTOR_ENABLE_ACTOR_TRACING
     tracing_config_ = config;
     if (!tracing_config_.enabled) {
         if (trace_manager_) {
@@ -237,9 +234,6 @@ void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
     }
     trace_manager_ = std::make_unique<tracing::TraceManager>(tracing_config_, this);
     trace_manager_->start();
-#else
-    (void)config;
-#endif
 }
 
 void ActorSystem::on_node_dead(EndPoint dead_ep) {
@@ -486,7 +480,6 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     TypedMessage msg(static_cast<TypeTag>(frame.pb_frame.type_tag()),
                      std::move(payload));
     msg.set_sender_address(net::from_proto(frame.pb_frame.sender()));
-#if HPACTOR_ENABLE_ACTOR_TRACING
     if (frame.pb_frame.has_trace_context()) {
         uint16_t max_state = tracing_config_.max_tracestate_len;
         auto parsed = net::trace_context_from_proto(
@@ -495,7 +488,6 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
             msg.set_trace_context(parsed.value());
         }
     }
-#endif
     deliver_local(net::from_proto(frame.pb_frame.receiver()).id, std::move(msg));
 }
 

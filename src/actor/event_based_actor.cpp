@@ -31,7 +31,6 @@
 
 namespace hpactor {
 
-#if HPACTOR_ENABLE_ACTOR_TRACING
 namespace {
 
 class ReceiveSpanGuard {
@@ -56,7 +55,6 @@ class ReceiveSpanGuard {
 };
 
 } // namespace
-#endif // HPACTOR_ENABLE_ACTOR_TRACING
 
 EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
     : LocalActor(ctx, sys) {}
@@ -65,7 +63,6 @@ void EventBasedActor::on_activate() {}
 
 void EventBasedActor::receive(TypedMessage& msg) {
     auto* ctx = context();
-#if HPACTOR_ENABLE_ACTOR_TRACING
     auto* trace_manager = system().trace_manager();
     tracing::SpanHandle receive_span;
     std::unique_ptr<ActorContext::TraceScope> trace_scope;
@@ -91,7 +88,6 @@ void EventBasedActor::receive(TypedMessage& msg) {
     }
 
     ReceiveSpanGuard span_guard(trace_manager, &receive_span);
-#endif
     // -- Drain gate: apply drain policy to every message during kDraining --
     if (auto* lc = as_lifecycle()) {
         if (lc->state() == LifecycleState::kDraining) {
@@ -111,72 +107,28 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
     // -- System message interception (link / monitor / death) --
     {
+        bool handled = false;
         switch (msg.type_id()) {
-            case TypeTag::LinkMsg: {
-                // Bidirectional link handshake: add sender to our linked_ set
-                if (ctx != nullptr) {
-                    const auto& sender = msg.sender_address();
-                    bool already_linked = false;
-                    for (const auto& linked : ctx->linked_actors()) {
-                        if (linked == sender) {
-                            already_linked = true;
-                            break;
-                        }
-                    }
-                    if (!already_linked) {
-                        ctx->add_linked(sender);
-                    }
-                }
-                return; // System message — fully handled, do not forward
-            }
-
-            case TypeTag::UnlinkMsg: {
-                if (ctx != nullptr) {
-                    ctx->remove_linked(msg.sender_address());
-                }
-                return; // System message — fully handled
-            }
-
-            case TypeTag::MonitorMsg: {
-                // Add sender to our monitored_ list (one-way relationship).
-                // The sender wants to be notified when we die.
-                if (ctx != nullptr) {
-                    const auto& sender = msg.sender_address();
-                    bool already = false;
-                    for (const auto& m : ctx->monitored_actors()) {
-                        if (m == sender) {
-                            already = true;
-                            break;
-                        }
-                    }
-                    if (!already) {
-                        ctx->add_monitored(sender);
-                    }
-                }
-                return; // System message — fully handled
-            }
-
-            case TypeTag::DemonitorMsg: {
-                // Remove sender from our monitored_ list.
-                if (ctx != nullptr) {
-                    ctx->remove_monitored(msg.sender_address());
-                }
-                return; // System message — fully handled
-            }
-
-            case TypeTag::DownMsg: {
-                // Clean up linked/monitored entries for the dead actor
-                if (ctx != nullptr) {
-                    ctx->remove_linked(msg.sender_address());
-                    ctx->remove_monitored(msg.sender_address());
-                }
-                // Fall through — behavior/supervision must see DownMsg
+            case TypeTag::LinkMsg:
+                handled = handle_link_msg(msg);
                 break;
-            }
-
+            case TypeTag::UnlinkMsg:
+                handled = handle_unlink_msg(msg);
+                break;
+            case TypeTag::MonitorMsg:
+                handled = handle_monitor_msg(msg);
+                break;
+            case TypeTag::DemonitorMsg:
+                handled = handle_demonitor_msg(msg);
+                break;
+            case TypeTag::DownMsg:
+                handle_down_msg(msg);
+                break;
             default:
                 break;
         }
+        if (handled)
+            return;
     }
     // -- End system message interception --
 
@@ -322,6 +274,66 @@ void EventBasedActor::receive(TypedMessage& msg) {
         }
     }
     // -- End drain-completion check --
+}
+
+bool EventBasedActor::handle_link_msg(const TypedMessage& msg) {
+    auto* ctx = context();
+    if (ctx == nullptr)
+        return true;
+    const auto& sender = msg.sender_address();
+    bool already_linked = false;
+    for (const auto& linked : ctx->linked_actors()) {
+        if (linked == sender) {
+            already_linked = true;
+            break;
+        }
+    }
+    if (!already_linked) {
+        ctx->add_linked(sender);
+    }
+    return true;
+}
+
+bool EventBasedActor::handle_unlink_msg(const TypedMessage& msg) {
+    auto* ctx = context();
+    if (ctx != nullptr) {
+        ctx->remove_linked(msg.sender_address());
+    }
+    return true;
+}
+
+bool EventBasedActor::handle_monitor_msg(const TypedMessage& msg) {
+    auto* ctx = context();
+    if (ctx == nullptr)
+        return true;
+    const auto& sender = msg.sender_address();
+    bool already = false;
+    for (const auto& m : ctx->monitored_actors()) {
+        if (m == sender) {
+            already = true;
+            break;
+        }
+    }
+    if (!already) {
+        ctx->add_monitored(sender);
+    }
+    return true;
+}
+
+bool EventBasedActor::handle_demonitor_msg(const TypedMessage& msg) {
+    auto* ctx = context();
+    if (ctx != nullptr) {
+        ctx->remove_monitored(msg.sender_address());
+    }
+    return true;
+}
+
+void EventBasedActor::handle_down_msg(const TypedMessage& msg) {
+    auto* ctx = context();
+    if (ctx != nullptr) {
+        ctx->remove_linked(msg.sender_address());
+        ctx->remove_monitored(msg.sender_address());
+    }
 }
 
 void EventBasedActor::become(Behavior bh) {
