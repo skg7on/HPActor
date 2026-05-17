@@ -209,14 +209,14 @@ jobs:
           </svg>
           BADGE
 
-      - name: Deploy to GitHub Pages
+      - name: Deploy to gh-pages
         if: github.ref == 'refs/heads/main'
         run: |
-          mkdir -p /tmp/gh-pages
-          cp coverage-badge.svg /tmp/gh-pages/
-          cp -r coverage-html /tmp/gh-pages/
+          DEPLOY_DIR=$(mktemp -d)
+          cp coverage-badge.svg "$DEPLOY_DIR/"
+          cp -r coverage-html "$DEPLOY_DIR/"
 
-          cd /tmp/gh-pages
+          cd "$DEPLOY_DIR"
           git init
           git checkout -b gh-pages
           git config user.name "github-actions[bot]"
