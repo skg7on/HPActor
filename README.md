@@ -1,8 +1,6 @@
 # HPActor
 
 [![CI](https://github.com/skg7on/HPActor/actions/workflows/ci.yml/badge.svg)](https://github.com/skg7on/HPActor/actions/workflows/ci.yml)
-[![Coverage][coverage-badge]](https://codecov.io/gh/actor-framework/actor-framework)
-
 
 A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, multi-priority queues, and an application-defined two-tier slab memory allocator for deterministic response times without GC pauses.
 
