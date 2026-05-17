@@ -93,8 +93,8 @@
 //     ./13_order_platform --payment --actor-port 17132
 //
 //     # Terminal 2: gateway + remaining workers
-//     ./13_order_platform --gateway --actor-port 17130 --http-port 18130 \
-//         --payment 127.0.0.1:17132
+//     ./13_order_platform --gateway --actor-port 17130 --http-port 18130
+//     --payment 127.0.0.1:17132
 //
 //     # Terminal 3: query the result
 //     ./13_order_platform --query --gateway-port 18130 --submit demo-order
