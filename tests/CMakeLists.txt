@@ -316,6 +316,10 @@ add_executable(test_service_discovery net/test_service_discovery.cpp)
 target_link_libraries(test_service_discovery hpactor)
 add_test(NAME test_service_discovery COMMAND test_service_discovery)
 
+add_executable(test_hybrid_discovery net/test_hybrid_discovery.cpp)
+target_link_libraries(test_hybrid_discovery hpactor)
+add_test(NAME test_hybrid_discovery COMMAND test_hybrid_discovery)
+
 # =============================================================================
 # Spawn tests - remote actor spawn
 # =============================================================================
