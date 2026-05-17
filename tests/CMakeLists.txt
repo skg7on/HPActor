@@ -438,6 +438,10 @@ add_executable(test_scheduler_control sched/test_scheduler_control.cpp)
 target_link_libraries(test_scheduler_control hpactor)
 add_test(NAME test_scheduler_control COMMAND test_scheduler_control)
 
+add_executable(test_coroutine_frame_pool sched/test_coroutine_frame_pool.cpp)
+target_link_libraries(test_coroutine_frame_pool hpactor pthread)
+add_test(NAME test_coroutine_frame_pool COMMAND test_coroutine_frame_pool)
+
 # =============================================================================
 # HTTP tests
 # =============================================================================

@@ -31,9 +31,10 @@ CoroutineFramePool::CoroutineFramePool(size_t num_frames, size_t stack_size)
         frames_[i].stack_size = stack_size;
         frames_[i].in_use = false;
 
-        // Push onto free stack
+        // Push onto free stack with frame index
         auto* node = reinterpret_cast<FreeNode*>(stack);
         node->next = free_stack_.load(std::memory_order_relaxed);
+        node->index = i;
         free_stack_.store(node, std::memory_order_release);
     }
 
@@ -51,10 +52,8 @@ CoroutineFramePool::Frame* CoroutineFramePool::acquire() {
                                               std::memory_order_acquire)) {
             free_count_.fetch_sub(1, std::memory_order_release);
 
-            // Calculate frame index from stack pointer
-            std::byte* stack_ptr = reinterpret_cast<std::byte*>(node);
-            size_t index =
-                static_cast<size_t>(stack_ptr - stacks_[0].get()) / stack_size_;
+            // Retrieve frame directly from stored index
+            size_t index = node->index;
             Frame* frame = &frames_[index];
             frame->in_use = true;
             return frame;
@@ -71,8 +70,11 @@ void CoroutineFramePool::release(Frame* frame) {
 
     frame->in_use = false;
 
-    // Push onto free stack
+    // Push onto free stack (restore index first, since the stack region may
+    // have been written to)
+    size_t index = static_cast<size_t>(frame - frames_.data());
     auto* node = reinterpret_cast<FreeNode*>(frame->stack_ptr);
+    node->index = index;
     FreeNode* current = free_stack_.load(std::memory_order_acquire);
     do {
         node->next = current;
