@@ -72,22 +72,21 @@ ActorSystem::ActorSystem(const Config& config)
     // Register system protobuf types
     proto_registry_.register_system_types();
 
-    scheduler_->start();
-
-    apply_tracing_config(config_.tracing);
-
     // Initialize dead-letter queue
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
 
-    // Initialize metrics subsystem (before actors so instrumentation is ready)
+    // Initialize metrics subsystem (before scheduler so instrumentation is
+    // ready)
     if (metrics_config_.enabled) {
         metrics_ring_buffer_ =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
         scheduler_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
     }
 
-    // Initialize logging subsystem
+    // Initialize logging subsystem before starting the scheduler so that
+    // worker threads see a valid global logger, not a dangling pointer
+    // left over from a previous ActorSystem instance.
     if (logging_config_.enabled) {
         log_manager_ = std::make_unique<log::LogManager>(logging_config_);
         log_manager_->start();
@@ -98,6 +97,10 @@ ActorSystem::ActorSystem(const Config& config)
     if (logger_) [[unlikely]] {
         scheduler_->set_logger(logger_);
     }
+
+    scheduler_->start();
+
+    apply_tracing_config(config_.tracing);
 
     if (config.enable_network) {
         network_loop_ = std::make_unique<net::EventLoop>();

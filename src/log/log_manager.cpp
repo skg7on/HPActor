@@ -98,6 +98,13 @@ LogManager::LogManager(const LogConfig& config) : config_(config) {
 }
 
 LogManager::~LogManager() {
+    // Reset the global logger to no-op so that any code still holding a
+    // reference does not access the ring buffer or levels array after they
+    // are freed.  Without this, a subsequent ActorSystem whose scheduler
+    // workers start before its LogManager is created will dereference
+    // dangling pointers from the previous instance.
+    global_logger().configure(nullptr, nullptr, LogLevel::kCritical, nullptr,
+                              nullptr);
     stop();
 }
 
