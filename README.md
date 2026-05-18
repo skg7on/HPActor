@@ -78,7 +78,7 @@ A high-performance distributed Actor framework with million-level concurrency su
 - **Reliability Plane Roadmap**: `docs/architecture/production/production-reliability-plane.md` organizes the next evolution into data plane, control plane, and operations plane work
 - **Refined Requirement Backlog**: `docs/architecture/production/feature-gap-refined-requirement-backlog.md` maps subsystem gaps to architecture requirements, dependencies, acceptance evidence, observability, and tests
 - **Design Docs**: delivery semantics, DLQ, cluster failure model, sharding/placement, reliable messaging, durable state, graceful shutdown/rolling upgrade, security, operations/SRE, dynamic config, and chaos/reliability testing
-- **Implementation Status**: Bounded mailboxes, dead-letter queue, distributed tracing, graceful shutdown, and actor lifecycle are implemented. Cluster control, security, and operations plane remain in design.
+- **Implementation Status**: Scheduled messages, bounded mailboxes, dead-letter queue, distributed tracing, HTTP gateway, graceful shutdown, and actor lifecycle are implemented. Cluster control, security, and operations plane remain in design.
 
 ### Actor Lifecycle
 - **ActorState**: Atomic state machine (Idle → Ready → Running → IOWaiting → Terminated) with CAS transitions
@@ -256,8 +256,8 @@ ActorRef (std::variant)
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (140 tests)
-ctest --output-on-failure
+# Run tests (141 tests)
+ctest --output-on-failure --parallel 8
 
 # Run a single test
 ./build/tests/test_<name>
@@ -358,28 +358,30 @@ protos/hpactor/
 
 tools/toml-compiler/ — AOT compiler: TOML topology → binary format
 docs/architecture/production/ — Production reliability roadmap, missing design docs, and refined requirement backlog
-tests/              — 140 unit tests (actor, cli, config, core, log, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, tracing)
-examples/           — 11 API usage examples
+tests/              — 141 unit tests across actor(26), cli(6), config(7), core(2), examples(1), log(6), mailbox(8), mem(14), metrics(2), net(19), ref(3), rpc(1), sched(13), spawn(5), supervision(5), tracing(12)
+examples/           — 13 API usage examples
 third_party/        — Vendored dependencies (llhttp, toml++)
 cmake/              — CMake modules (protobuf codegen, toml++ interface target)
 ```
 
 ## Status
 
-### Complete (140 tests passing)
+### Complete (141 tests passing)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
 - **Actor References**: ActorRef (local/proxy variant), ActorRefCache (LRU resolution cache)
+- **Scheduled Messages**: `context()->schedule(delay, msg)` for timer-based self-delivery with `AlarmHandle` cancellation
 - **Supervision**: OneForOne, AllForOne, SupervisorActor, SelfSupervisingActor
 - **Scheduling**: HybridScheduler with work-stealing + EDF + timing wheel + coroutine frame pool
 - **Coroutines**: CoroutineTask, MailboxAwaiter, TimerAwaiter, YieldAwaiter
 - **Mailbox**: MPSCMailbox (Vyukov lock-free), MPSCActorMailbox (edge-triggered CAS), bounded admission, backpressure signals
-- **Dead-Letter Queue**: Bounded record capture with reason tracking, payload sampling, snapshot API
+- **Dead-Letter Queue**: Bounded record capture with reason tracking, payload sampling, snapshot API, record iteration
 - **Memory Management**: Two-tier slab allocator (mmap → thread-local slabs), typed regions, hibernation with ZRAM hints, compaction with fragmentation budget, per-actor observability, memory poisoning + canaries + guard pages
 - **Network**: TLS 1.3, connection pooling, UDS support, reactor/proactor backends
+- **HTTP Gateway**: HTTPGatewayActor with route registration, HttpClient for outbound requests, request/reply correlation
 - **Service Discovery**: Pluggable IServiceDiscovery with 4 backends (Gossip SWIM, UdpRegistrar, Hybrid, Static) + ActorLocationCache
-- **Remote Spawn**: AsyncActor with spawn_remote(), ActorTypeRegistry
+- **Remote Spawn**: AsyncActor with spawn_remote()/spawn_remote_async(), ActorTypeRegistry, cross-process message routing
 - **RPC**: Async RPC channel with at-least-once delivery, retry, and timeout
 - **Serialization**: Protobuf-based for all system messages (WireFrame, Down, Exit, Link, Unlink, Spawn)
 - **TOML Config Topology**: Declarative topology bootstrapping with templates, imports, AOT binary compilation
@@ -389,6 +391,7 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Distributed Tracing**: W3C TraceContext propagation, actor receive spans, memory/JSON/OTLP exporters, parent-based sampling
 - **Actor Lifecycle**: LifecycleActor mixin with constexpr state machine, message gate, supervision integration
 - **Graceful Shutdown**: DrainPolicy, phase-machine coordinator, CLI drain/stop commands, TOML config
+- **Order Platform Example**: Full-featured 5-actor order pipeline demonstrating stateful actors, bounded mailboxes, DLQ, tracing, HTTP gateway, remote spawn, and ops probe
 
 ### Designed / Backlogged
 
@@ -400,11 +403,9 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 
 ### Next Steps
 
-- Full two-process integration test with TCP transport
-- Health/readiness/liveness endpoints
-- Cluster failure model with quarantine/fencing
-- Security architecture (mTLS identity, authorization, audit)
-- Argument deserialization for passing constructor args through spawn
+- Production reliability plane: health/readiness/liveness endpoints, cluster failure model (quarantine/fencing), security (mTLS, auth, audit)
 - Typed RPC API (`call<Request, Response>` with serialization)
+- Argument deserialization for passing constructor args through remote spawn
+- Proactor backend production hardening (IoUringBackend, GcdBackend)
 - Tiny-block optimization for 32B size class in slab allocator
 - Runtime configuration via environment variables for memory limits

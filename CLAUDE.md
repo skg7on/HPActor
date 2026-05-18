@@ -167,6 +167,8 @@ Actors communicate via protobuf `TypedMessage` (TypeTag + payload). From within 
 - `context()->send(addr, msg)` — send message
 - `context()->reply(msg)` — reply to sender
 - `context()->reply_with_error(code)` — reply with error
+- `context()->schedule(delay, msg)` — schedule self-delivery after delay (returns `AlarmHandle`)
+- `context()->cancel_schedule(handle)` — cancel a pending scheduled message
 - `become(Behavior)` — change behavior dynamically
 - `co_await mailbox_awaiter` — suspend until message arrives (coroutine actors)
 
@@ -263,8 +265,8 @@ environments. The following rules prevent flaky tests:
 
 - `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
-- `tests/` — 99 unit tests
-- `examples/` — 9 API usage examples
+- `tests/` — 141 unit tests
+- `examples/` — 13 API usage examples
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
 - `third_party/` — vendored dependencies (llhttp, toml++)
 - `cmake/` — CMake modules (protobuf codegen, toml++ interface target)
