@@ -37,7 +37,7 @@ cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
 ninja -C build
 
 # Run tests
-ctest --output-on-failure
+ctest --output-on-failure --parallel 8
 
 # Run a single test
 ./build/tests/test_<name>
