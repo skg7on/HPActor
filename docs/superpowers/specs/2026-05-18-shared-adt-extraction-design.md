@@ -73,27 +73,35 @@ struct TimerTag {};
 
 ### Concrete Instantiations
 
+Old hand-written classes are replaced by aliases pointing to the generic template:
+
+```cpp
+// include/hpactor/types/types.hpp
+using ActorId     = Id<ActorTag>;
+using MessageId   = Id<MessageTag>;
+using AlarmHandle = Id<AlarmTag>;
+
+// include/hpactor/sched/scheduler.hpp
+using TimerHandle = Id<TimerTag>;
 ```
-ActorId     → Id<ActorTag>
-MessageId   → Id<MessageTag>
-AlarmHandle → Id<AlarmTag>
-TimerHandle → Id<TimerTag>
-```
+
+All existing call sites continue to compile without changes — `ActorId{42}`, `msg_id.value()`, `std::hash<ActorId>{}` all work identically.
 
 ### Migration Notes
 
-- `MessageId::generate()` moves to a free function `generate_message_id()` in `types/types.hpp`, or is replaced with `Id<MessageTag>(next_counter)` at call sites
-- `AlarmHandle::id()` → `.value()` (consistent with the rest)
-- `TimerHandle::valid()` → `.valid()` (already provided by `Id`)
-- Old class definitions deleted from `types/types.hpp` and `sched/scheduler.hpp`
+- `MessageId::generate()` becomes a free function `generate_message_id()` returning `MessageId`; call sites that used `MessageId::generate()` update to `generate_message_id()`
+- Old class definitions deleted; aliases provide the same names
+- `Id<Tag, T>` provides `value()`, `valid()`, `==`, `!=`, `<=>` — all operations the old classes exposed
+- `AlarmHandle::id()` maps to `AlarmHandle::value()` via the alias
+- `TimerHandle::valid()` maps to `TimerHandle::valid()` via the alias (same name)
 
 ### Files Changed
 
 - **New:** `include/hpactor/adt/id.hpp` (~40 lines)
 - **New:** `include/hpactor/adt/tags.hpp` (~15 lines)
-- **Modified:** `include/hpactor/types/types.hpp` — remove `ActorId`, `MessageId`, `AlarmHandle`
-- **Modified:** `include/hpactor/sched/scheduler.hpp` — remove `TimerHandle`
-- **Modified:** ~15-20 files referencing these types (~200 call sites updated)
+- **Modified:** `include/hpactor/types/types.hpp` — remove `ActorId`, `MessageId`, `AlarmHandle` class definitions; add `using` aliases
+- **Modified:** `include/hpactor/sched/scheduler.hpp` — remove `TimerHandle` class definition; add `using` alias
+- **Modified:** ~5 files that call `MessageId::generate()` → update to `generate_message_id()`
 
 ---
 
@@ -368,13 +376,13 @@ namespace hpactor::sched {
 
 | Section | New ADT | New Files | Modified Files | Call Sites |
 |---------|---------|-----------|---------------|------------|
-| 1. Opaque IDs | `Id<Tag, T>` | `adt/id.hpp`, `adt/tags.hpp` | ~17 | ~200 |
+| 1. Opaque IDs | `Id<Tag, T>` | `adt/id.hpp`, `adt/tags.hpp` | ~7 | ~5 |
 | 2. Result types | (none — `result<T>` already canonical) | 0 | 2 | ~5 |
 | 3. Node descriptors | `NodeIdentity` | `adt/node_identity.hpp` | ~6 | ~35 |
 | 4. Config schema | X-macro tables | 4 `.def` files | ~8 | ~50 |
 | 5. DispatchPolicy | (dedup) | 0 | ~7 | ~15 |
 
-**Total:** 7 new files, ~40 modified files, ~300 call sites updated.
+**Total:** 7 new files, ~30 modified files, ~110 call sites updated.
 
 **New `include/hpactor/adt/` directory:**
 
