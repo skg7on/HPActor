@@ -16,27 +16,35 @@
 // HPActor Example 11: CLI Interactive Demo
 // =============================================================================
 //
-// A complex actor system demonstrating CLI interactive introspection:
+// A complex actor system demonstrating CLI interactive introspection with
+// recently-added production framework features:
 //
 //   12 actors across 7 types:
-//     - 4 × WorkerActor       — periodic task processing (every 100ms)
-//     - 1 × AggregatorActor   — collects results, running stats
-//     - 1 × HealthCheckActor  — pings workers (every 500ms)
-//     - 1 × BroadcastActor    — config broadcasts (every 1s)
-//     - 1 × ClockActor        — logical clock, time queries
-//     - 1 × LogActor          — ring-buffer event log
-//     - 1 × SystemMonitorActor — system-wide stats (every 2s)
-//     - 1 × CliActor          — interactive CLI (DaemonActor, stdin)
+//     - 4 x WorkerActor          — periodic task processing (every 100ms)
+//     - 1 x AggregatorActor      — collects results, running stats
+//     - 1 x HealthCheckActor     — pings workers (every 500ms)
+//     - 1 x BroadcastActor       — config broadcasts (every 1s)
+//     - 1 x ClockActor           — logical clock, time queries
+//     - 1 x LogActor             — ring-buffer event log
+//     - 1 x SystemMonitorActor   — system-wide stats (every 2s)
+//     - 1 x CliActor             — interactive CLI (DaemonActor, stdin)
 //
 //   Scheduler: 4 worker threads with A2WS work-stealing
 //   CLI:       enabled, opt-in via CliConfig
 //
+//   Production features demonstrated (post-Phase 10):
+//     - Bounded mailboxes — per-actor capacity limits with DeadLetter overflow
+//     - Graceful shutdown — DrainPolicy, system.shutdown() phase-machine
+//     - Thread-safe RNG — per-thread xorshift64 (rand() is not thread-safe)
+//
 //   CLI commands:
-//     /actor <id> show  — InspectStateRequest → target actor → reply
-//     /actor <id> kill  — KillRequest → target actor → terminate
-//     /actor list       — enumerate all actors via registry
-//     /system stats     — system-wide statistics
-//     /system memory    — memory subsystem status
+//     /actor <id> show     — InspectStateRequest -> target actor -> reply
+//     /actor <id> kill     — KillRequest -> target actor -> terminate
+//     /actor list          — enumerate all actors via registry
+//     /system stats        — system-wide statistics
+//     /system memory       — memory subsystem status
+//     /system drain        — graceful node shutdown (drain phases)
+//     /system stop <id>    — graceful stop of a single actor
 //     /help, /quit
 //
 //   Every actor overrides to_metadata() and serialize_state() so the CLI
@@ -66,6 +74,50 @@
 #include <vector>
 
 // =============================================================================
+// Thread-safe random number generator
+// =============================================================================
+// rand() uses shared global state that is NOT thread-safe.  On glibc (Linux),
+// concurrent calls from multiple scheduler workers corrupt the internal RNG
+// state, causing segfaults.  Each thread needs its own generator instance.
+
+namespace {
+
+// Simple thread-local xorshift64 RNG.  Each worker thread gets its own state;
+// no shared global state (unlike rand()).  Seeded from the system clock plus
+// an atomic counter so threads starting at the same time still get different
+// sequences.
+class Trng {
+  public:
+    Trng() {
+        static std::atomic<uint64_t> s_counter{1};
+        auto now = std::chrono::steady_clock::now().time_since_epoch().count();
+        state_ = static_cast<uint64_t>(now) ^ (s_counter.fetch_add(1) << 33);
+        if (state_ == 0)
+            state_ = 1;
+    }
+
+    uint64_t next() {
+        uint64_t x = state_;
+        x ^= x << 13;
+        x ^= x >> 7;
+        x ^= x << 17;
+        state_ = x;
+        return x;
+    }
+
+    double next_double() {
+        return static_cast<double>(next() >> 11) * 0x1.0p-53;
+    }
+
+  private:
+    uint64_t state_;
+};
+
+thread_local Trng tl_rng;
+
+} // namespace
+
+// =============================================================================
 // Message Type Tags — application range (0x00010000 – 0x000100FF)
 // =============================================================================
 
@@ -82,7 +134,7 @@ static const hpactor::TypeTag PeriodicTickTag{0x00010009};
 static const hpactor::TypeTag StartTag{0x0001000A};
 
 // =============================================================================
-// Payload helpers — simple int/double encode/decode via StreamBuffer
+// Payload helpers
 // =============================================================================
 
 static hpactor::StreamBuffer encode_u64(uint64_t v) {
@@ -91,8 +143,8 @@ static hpactor::StreamBuffer encode_u64(uint64_t v) {
     return buf;
 }
 
-static hpactor::TypedMessage make_msg(hpactor::TypeTag tag,
-                                      hpactor::StreamBuffer payload = {}) {
+static hpactor::TypedMessage
+make_msg(hpactor::TypeTag tag, hpactor::StreamBuffer payload = {}) {
     return hpactor::TypedMessage(tag, std::move(payload));
 }
 
@@ -101,7 +153,7 @@ static hpactor::TypedMessage make_msg(hpactor::TypeTag tag,
 // =============================================================================
 
 class ClockActor : public hpactor::EventBasedActor {
-public:
+  public:
     ClockActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
         epoch_start_ = std::chrono::steady_clock::now();
@@ -127,31 +179,37 @@ public:
         return {s.begin(), s.end()};
     }
 
-protected:
+  protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             processed_.fetch_add(1);
             if (msg.type_id() == TimeQueryTag) {
                 auto now = std::chrono::steady_clock::now();
-                logical_time_us_ = std::chrono::duration_cast<std::chrono::microseconds>(
-                    now - epoch_start_).count();
+                logical_time_us_ =
+                    std::chrono::duration_cast<std::chrono::microseconds>(
+                        now - epoch_start_)
+                        .count();
                 queries_answered_++;
-                context()->reply(make_msg(TimeReplyTag,
+                context()->reply(make_msg(
+                    TimeReplyTag,
                     encode_u64(static_cast<uint64_t>(logical_time_us_))));
             } else if (msg.type_id() == PeriodicTickTag) {
-                logical_time_us_ = std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::steady_clock::now() - epoch_start_).count();
+                logical_time_us_ =
+                    std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::steady_clock::now() - epoch_start_)
+                        .count();
                 context()->schedule(std::chrono::milliseconds(100),
                                     make_msg(PeriodicTickTag));
             }
         }};
     }
 
-private:
+  private:
     uint64_t elapsed_ms() const {
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::milliseconds>(
-                std::chrono::steady_clock::now() - epoch_start_).count());
+                std::chrono::steady_clock::now() - epoch_start_)
+                .count());
     }
 
     std::chrono::steady_clock::time_point epoch_start_;
@@ -169,15 +227,18 @@ struct LogRingBuffer {
     std::deque<std::string> entries;
 
     void append(const std::string& entry) {
-        if (entries.size() >= kCapacity) entries.pop_front();
+        if (entries.size() >= kCapacity)
+            entries.pop_front();
         entries.push_back(entry);
     }
 
-    size_t size() const { return entries.size(); }
+    size_t size() const {
+        return entries.size();
+    }
 };
 
 class LogActor : public hpactor::StatefulActor<LogRingBuffer> {
-public:
+  public:
     LogActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::StatefulActor<LogRingBuffer>(ctx, sys) {
         become(make_behavior());
@@ -189,20 +250,18 @@ public:
         m.actor_type = "LogActor";
         m.state = "Running";
         m.messages_processed = processed_.load();
-        m.uptime_ms = elapsed_ms();
+        m.uptime_ms = 0;
         return m;
     }
 
     std::vector<uint8_t> serialize_state() const override {
         std::ostringstream oss;
         auto& buf = state();
-        oss << "total_events=" << total_events_
-            << " ring_depth=" << buf.size()
+        oss << "total_events=" << total_events_ << " ring_depth=" << buf.size()
             << " capacity=" << LogRingBuffer::kCapacity;
         if (!buf.entries.empty()) {
             oss << "\n  last_5_events:";
-            size_t start = buf.entries.size() > 5
-                ? buf.entries.size() - 5 : 0;
+            size_t start = buf.entries.size() > 5 ? buf.entries.size() - 5 : 0;
             for (size_t i = start; i < buf.entries.size(); ++i) {
                 oss << "\n    " << buf.entries[i];
             }
@@ -211,7 +270,7 @@ public:
         return {s.begin(), s.end()};
     }
 
-protected:
+  protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             processed_.fetch_add(1);
@@ -223,8 +282,7 @@ protected:
         }};
     }
 
-private:
-    uint64_t elapsed_ms() const { return 0; }  // simplified
+  private:
     uint64_t total_events_ = 0;
     std::atomic<uint64_t> processed_{0};
 };
@@ -234,14 +292,12 @@ private:
 // =============================================================================
 
 class WorkerActor : public hpactor::EventBasedActor {
-public:
+  public:
     WorkerActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
                 uint32_t worker_id, hpactor::ActorId aggregator_id,
                 hpactor::ActorId log_id)
-        : hpactor::EventBasedActor(ctx, sys)
-        , worker_id_(worker_id)
-        , aggregator_id_(aggregator_id)
-        , log_id_(log_id) {
+        : hpactor::EventBasedActor(ctx, sys), worker_id_(worker_id),
+          aggregator_id_(aggregator_id), log_id_(log_id) {
         become(make_behavior());
     }
 
@@ -260,65 +316,59 @@ public:
 
     std::vector<uint8_t> serialize_state() const override {
         std::ostringstream oss;
-        oss << "worker_id=" << worker_id_
-            << " tasks_processed=" << tasks_processed_
+        oss << "worker_id=" << worker_id_ << " tasks_processed=" << tasks_processed_
             << " avg_latency_us=" << std::fixed << std::setprecision(1)
-            << avg_latency_us_
-            << " current_load=" << std::fixed << std::setprecision(2)
-            << current_load_
+            << avg_latency_us_ << " current_load=" << std::fixed
+            << std::setprecision(2) << current_load_
             << " healthy=" << (healthy_ ? "yes" : "no");
         auto s = oss.str();
         return {s.begin(), s.end()};
     }
 
-protected:
+  protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             processed_.fetch_add(1);
             if (msg.type_id() == StartTag || msg.type_id() == PeriodicTickTag) {
                 do_work();
             } else if (msg.type_id() == HealthPingTag) {
-                // Reply with pong containing current load
                 auto load = static_cast<uint64_t>(current_load_ * 1000.0);
                 context()->reply(make_msg(HealthPongTag, encode_u64(load)));
-            } else if (msg.type_id() == BroadcastConfigTag) {
-                // Config broadcast received — in a real system, this would
-                // update batch sizes, rate limits, etc.
             }
+            // BroadcastConfigTag — config update, no reply needed
         }};
     }
 
-private:
+  private:
     void do_work() {
-        // Simulate variable-latency work (50–500us)
-        double latency = 50.0 + (rand() % 450);
-        double throughput = 1000.0 + (rand() % 4000);
+        // Thread-safe RNG — each worker thread has its own state
+        double latency = 50.0 + static_cast<double>(tl_rng.next() % 450);
+        double throughput = 1000.0 + static_cast<double>(tl_rng.next() % 4000);
 
         tasks_processed_++;
         avg_latency_us_ = (avg_latency_us_ * 0.9) + (latency * 0.1);
-        current_load_ = 0.3 + ((rand() % 70) / 100.0);
+        current_load_ = 0.3 + tl_rng.next_double() * 0.7;
 
         // Send result to Aggregator
         hpactor::StreamBuffer payload(16);
         auto* data = reinterpret_cast<double*>(payload.data());
         data[0] = latency;
         data[1] = throughput;
-        context()->send(aggregator_addr_, make_msg(WorkerResultTag,
-                          std::move(payload)));
+        context()->send(aggregator_addr_,
+                        make_msg(WorkerResultTag, std::move(payload)));
 
-        // Log significant events
+        // Log milestone events to the LogActor
         if (tasks_processed_ % 100 == 0) {
             char buf[128];
             int n = snprintf(buf, sizeof(buf),
-                "[Worker-%u] %llu tasks, avg %.0f us",
-                worker_id_,
-                static_cast<unsigned long long>(tasks_processed_),
-                avg_latency_us_);
+                             "[Worker-%u] %lu tasks, avg %.0f us", worker_id_,
+                             static_cast<unsigned long>(tasks_processed_),
+                             avg_latency_us_);
             hpactor::StreamBuffer log_payload(
                 reinterpret_cast<const uint8_t*>(buf),
                 reinterpret_cast<const uint8_t*>(buf + n));
-            context()->send(log_addr_, make_msg(LogEntryTag,
-                              std::move(log_payload)));
+            context()->send(log_addr_,
+                            make_msg(LogEntryTag, std::move(log_payload)));
         }
 
         // Schedule next tick
@@ -337,9 +387,13 @@ private:
     bool healthy_ = true;
     std::atomic<uint64_t> processed_{0};
 
-public:
-    void set_aggregator_addr(hpactor::ActorAddress a) { aggregator_addr_ = a; }
-    void set_log_addr(hpactor::ActorAddress a) { log_addr_ = a; }
+  public:
+    void set_aggregator_addr(hpactor::ActorAddress a) {
+        aggregator_addr_ = a;
+    }
+    void set_log_addr(hpactor::ActorAddress a) {
+        log_addr_ = a;
+    }
 };
 
 // =============================================================================
@@ -347,7 +401,7 @@ public:
 // =============================================================================
 
 class AggregatorActor : public hpactor::EventBasedActor {
-public:
+  public:
     AggregatorActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
         latencies_.reserve(4096);
@@ -368,59 +422,51 @@ public:
         std::ostringstream oss;
         oss << "total_processed=" << total_processed_
             << " avg_latency_us=" << std::fixed << std::setprecision(1)
-            << avg_latency_us_
-            << " p50_us=" << std::fixed << std::setprecision(1) << p50_us_
-            << " p99_us=" << std::fixed << std::setprecision(1) << p99_us_
-            << " active_workers=" << active_workers_;
+            << avg_latency_us_ << " p50_us=" << std::fixed << std::setprecision(1)
+            << p50_us_ << " p99_us=" << std::fixed << std::setprecision(1)
+            << p99_us_ << " active_workers=" << active_workers_;
         auto s = oss.str();
         return {s.begin(), s.end()};
     }
 
-protected:
+  protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             processed_.fetch_add(1);
             if (msg.type_id() == WorkerResultTag) {
                 if (msg.payload().size() >= 16) {
-                    auto* data = reinterpret_cast<const double*>(
-                        msg.payload().data());
+                    auto* data =
+                        reinterpret_cast<const double*>(msg.payload().data());
                     double latency = data[0];
-                    // throughput = data[1] — available for rate calculations
 
                     total_processed_++;
                     avg_latency_us_ = (avg_latency_us_ * 0.95) + (latency * 0.05);
                     latencies_.push_back(latency);
 
-                    // Recompute percentiles periodically
                     if (latencies_.size() >= 100) {
                         std::sort(latencies_.begin(), latencies_.end());
                         p50_us_ = latencies_[latencies_.size() / 2];
                         p99_us_ = latencies_[latencies_.size() * 99 / 100];
                         if (latencies_.size() > 2000) {
                             latencies_.erase(latencies_.begin(),
-                                latencies_.begin() + 1000);
+                                             latencies_.begin() + 1000);
                         }
                     }
                 }
             } else if (msg.type_id() == MonitorQueryTag) {
-                // Reply with current aggregate stats
                 std::array<uint64_t, 5> stats = {
-                    total_processed_,
-                    static_cast<uint64_t>(avg_latency_us_),
+                    total_processed_, static_cast<uint64_t>(avg_latency_us_),
                     static_cast<uint64_t>(p50_us_),
-                    static_cast<uint64_t>(p99_us_),
-                    active_workers_
-                };
+                    static_cast<uint64_t>(p99_us_), active_workers_};
                 hpactor::StreamBuffer payload(
                     reinterpret_cast<const uint8_t*>(stats.data()),
                     reinterpret_cast<const uint8_t*>(stats.data() + 5));
-                context()->reply(make_msg(MonitorReplyTag,
-                                          std::move(payload)));
+                context()->reply(make_msg(MonitorReplyTag, std::move(payload)));
             }
         }};
     }
 
-private:
+  private:
     uint64_t total_processed_ = 0;
     double avg_latency_us_ = 0.0;
     double p50_us_ = 0.0;
@@ -435,7 +481,7 @@ private:
 // =============================================================================
 
 class HealthCheckActor : public hpactor::EventBasedActor {
-public:
+  public:
     HealthCheckActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
         become(make_behavior());
@@ -464,7 +510,7 @@ public:
         return {s.begin(), s.end()};
     }
 
-protected:
+  protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             processed_.fetch_add(1);
@@ -472,12 +518,13 @@ protected:
                 do_health_check();
             } else if (msg.type_id() == HealthPongTag) {
                 healthy_count_++;
-                unhealthy_count_ = static_cast<uint32_t>(workers_.size()) - healthy_count_;
+                unhealthy_count_ =
+                    static_cast<uint32_t>(workers_.size()) - healthy_count_;
             }
         }};
     }
 
-private:
+  private:
     void do_health_check() {
         healthy_count_ = 0;
         for (auto& addr : workers_) {
@@ -498,7 +545,7 @@ private:
 // =============================================================================
 
 class BroadcastActor : public hpactor::EventBasedActor {
-public:
+  public:
     BroadcastActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
         become(make_behavior());
@@ -526,7 +573,7 @@ public:
         return {s.begin(), s.end()};
     }
 
-protected:
+  protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             processed_.fetch_add(1);
@@ -536,16 +583,14 @@ protected:
         }};
     }
 
-private:
+  private:
     void do_broadcast() {
         char buf[64];
-        int n = snprintf(buf, sizeof(buf),
-            "config:v%llu:batch_size=%u",
-            static_cast<unsigned long long>(broadcasts_sent_),
-            static_cast<unsigned>(16 + (broadcasts_sent_ % 3) * 8));
-        hpactor::StreamBuffer payload(
-            reinterpret_cast<const uint8_t*>(buf),
-            reinterpret_cast<const uint8_t*>(buf + n));
+        int n = snprintf(buf, sizeof(buf), "config:v%lu:batch_size=%u",
+                         static_cast<unsigned long>(broadcasts_sent_),
+                         static_cast<unsigned>(16 + (broadcasts_sent_ % 3) * 8));
+        hpactor::StreamBuffer payload(reinterpret_cast<const uint8_t*>(buf),
+                                      reinterpret_cast<const uint8_t*>(buf + n));
         for (auto& addr : workers_) {
             context()->send(addr, make_msg(BroadcastConfigTag, payload));
         }
@@ -564,7 +609,7 @@ private:
 // =============================================================================
 
 class SystemMonitorActor : public hpactor::EventBasedActor {
-public:
+  public:
     SystemMonitorActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys)
         : hpactor::EventBasedActor(ctx, sys) {
         become(make_behavior());
@@ -591,7 +636,7 @@ public:
         return {s.begin(), s.end()};
     }
 
-protected:
+  protected:
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             processed_.fetch_add(1);
@@ -601,21 +646,24 @@ protected:
         }};
     }
 
-private:
+  private:
     void gather_stats() {
         total_messages_ = 0;
         running_actors_ = 0;
         idle_actors_ = 0;
 
-        system().for_each_actor([&](hpactor::ActorId /*id*/,
-                                     hpactor::AbstractActor& actor) {
-            auto meta = actor.to_metadata();
-            total_messages_ += meta.messages_processed;
-            if (meta.state == "Running") running_actors_++;
-            else if (meta.state == "Idle") idle_actors_++;
-        });
+        system().for_each_actor(
+            [&](hpactor::ActorId /*id*/, hpactor::AbstractActor& actor) {
+                auto meta = actor.to_metadata();
+                total_messages_ += meta.messages_processed;
+                if (meta.state == "Running")
+                    running_actors_++;
+                else if (meta.state == "Idle")
+                    idle_actors_++;
+            });
 
-        scheduler_utilization_ = running_actors_ > 0 ? 0.5 + (rand() % 40) / 100.0 : 0.0;
+        scheduler_utilization_ =
+            running_actors_ > 0 ? 0.5 + tl_rng.next_double() * 0.4 : 0.0;
 
         context()->schedule(std::chrono::milliseconds(2000),
                             make_msg(PeriodicTickTag));
@@ -632,15 +680,11 @@ private:
 // Utility: deliver message to an actor from outside the actor system
 // =============================================================================
 
-static void send_to_actor(hpactor::ActorSystem& system,
-                          hpactor::ActorId target, hpactor::TypeTag tag,
-                          hpactor::StreamBuffer payload = {}) {
+static void
+send_to_actor(hpactor::ActorSystem& system, hpactor::ActorId target,
+              hpactor::TypeTag tag, hpactor::StreamBuffer payload = {}) {
     system.deliver_local(target, hpactor::TypedMessage(tag, std::move(payload)));
 }
-
-// =============================================================================
-// Utility: format ActorId as hex string
-// =============================================================================
 
 // =============================================================================
 // Main
@@ -651,31 +695,38 @@ int main() {
     std::cout << "\nArchitecture:" << std::endl;
     std::cout << "  12 actors: 4xWorker, Aggregator, HealthCheck, Broadcast,"
               << std::endl;
-    std::cout << "             Clock, Log, SystemMonitor, CliActor"
-              << std::endl;
+    std::cout << "             Clock, Log, SystemMonitor, CliActor" << std::endl;
     std::cout << "  4 scheduler threads with A2WS work-stealing" << std::endl;
+    std::cout << "  Features: bounded mailboxes, graceful shutdown," << std::endl;
+    std::cout << "            thread-safe RNG" << std::endl;
     std::cout << "  CLI: Tab completion, hints, history, syntax highlighting"
               << std::endl;
     std::cout << std::endl;
 
-    // Configure: 4 threads, CLI enabled
+    // ── Configure: 4 threads, CLI enabled, bounded mailboxes ──────────
     hpactor::Config config;
     config.scheduler_threads = 4;
     config.max_queue_depth = 1024;
-    config.cli = hpactor::cli::CliConfig{
-        .enabled = true,
-        .listen_path = "",
-        .tcp_port = 0,
-        .default_format = "pretty",
-        .page_size = 20,
-        .history_path = "",
-        .history_max = 1000
-    };
+    config.cli = hpactor::cli::CliConfig{.enabled = true,
+                                         .listen_path = "",
+                                         .tcp_port = 0,
+                                         .default_format = "pretty",
+                                         .page_size = 20,
+                                         .history_path = "",
+                                         .history_max = 1000};
+
+    // Bounded mailboxes: 256 msg capacity, overflow → DeadLetter queue
+    config.mailbox.default_capacity = 256;
+    config.mailbox.default_policy = hpactor::mailbox::OverflowPolicy::DeadLetter;
+    config.dead_letters.capacity = 1024;
+
+    // Graceful shutdown: drain in-flight work for up to 30 s, then force-stop
+    config.shutdown_drain = hpactor::DrainConfig{
+        hpactor::DrainPolicy::Drain, std::chrono::milliseconds{30'000}};
 
     // IMPORTANT: ActorSystem construction starts the CliActor daemon thread
-    // which takes over stdin/stdout. All diagnostic output must happen BEFORE
-    // this point, or be routed through the CLI formatter. We print setup info
-    // first, then spawn actors silently.
+    // which takes over stdin/stdout.  All diagnostic output must happen BEFORE
+    // this point, or be routed through the CLI formatter.
     hpactor::ActorSystem system(config);
 
     // ── Spawn all actors (silently — CliActor owns stdout now) ─────────
@@ -689,10 +740,10 @@ int main() {
 
     std::vector<std::shared_ptr<WorkerActor>> workers;
     for (uint32_t w = 0; w < 4; ++w) {
-        auto worker = system.spawn<WorkerActor>(
-            w + 1, aggregator.id(), log_actor.id());
-        workers.push_back(std::static_pointer_cast<WorkerActor>(
-            system.get_actor(worker.id())));
+        auto worker =
+            system.spawn<WorkerActor>(w + 1, aggregator.id(), log_actor.id());
+        workers.push_back(
+            std::static_pointer_cast<WorkerActor>(system.get_actor(worker.id())));
     }
 
     // ── Wire up addresses (set after spawn so addresses are known) ──
@@ -703,9 +754,11 @@ int main() {
     }
 
     auto* health_raw = std::static_pointer_cast<HealthCheckActor>(
-        system.get_actor(health_check.id())).get();
-    auto* broadcast_raw = std::static_pointer_cast<BroadcastActor>(
-        system.get_actor(broadcast.id())).get();
+                           system.get_actor(health_check.id()))
+                           .get();
+    auto* broadcast_raw =
+        std::static_pointer_cast<BroadcastActor>(system.get_actor(broadcast.id()))
+            .get();
 
     for (auto& w : workers) {
         health_raw->add_worker(w->address());
@@ -727,13 +780,22 @@ int main() {
     // Let the actors initialize before the user starts typing
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // Keep the main thread alive. The CliActor's DaemonActor thread
-    // handles stdin. When the user types /quit or sends EOF, the CLI
-    // loop exits and is_running() returns false.
+    // Keep the main thread alive.  The CliActor's DaemonActor thread
+    // handles stdin.  When the user types /quit or sends EOF, the CLI
+    // loop exits and is_running() returns false.  On exit, we initiate
+    // graceful shutdown to drain in-flight work before the process exits.
     while (system.cli_actor() && system.cli_actor()->is_running()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(200));
     }
 
-    std::cout << "\n=== Demo Complete ===" << std::endl;
+    std::cout << "\nInitiating graceful shutdown..." << std::endl;
+    auto shutdown_result = system.shutdown();
+    if (shutdown_result.has_value()) {
+        std::cout << "Shutdown complete — all actors drained." << std::endl;
+    } else {
+        std::cout << "Shutdown timed out — forcing exit." << std::endl;
+    }
+
+    std::cout << "=== Demo Complete ===" << std::endl;
     return 0;
 }
