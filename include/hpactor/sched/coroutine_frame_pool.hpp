@@ -78,7 +78,7 @@ class CoroutineFramePool {
     }
 
   private:
-    struct alignas(64) FreeNode {
+    struct FreeNode {
         FreeNode* next;
         size_t index;
     };
