@@ -1,0 +1,193 @@
+# =============================================================================
+# src/CMakeLists.txt — hpactor_lib shared library and platform backends
+# =============================================================================
+
+add_library(hpactor_lib SHARED
+    actor/abstract_actor.cpp
+    actor/actor_context.cpp
+    actor/actor_system.cpp
+    actor/daemon_actor.cpp
+    actor/event_based_actor.cpp
+    actor/local_actor.cpp
+    actor/spawn_receiver.cpp
+    actor/http_gateway_actor.cpp
+    actor/lifecycle_actor.cpp
+    actor/blocking_actor.cpp
+    actor/scoped_actor.cpp
+    actor_type_registry.cpp
+    spawn.cpp
+    ref/actor_proxy.cpp
+    ref/actor_ref.cpp
+    supervision/supervision.cpp
+    mailbox/dead_letter_queue.cpp
+    config/actor_factory_registry.cpp
+    config/toml_parser.cpp
+    config/toml_table_view.cpp
+    config/toml_parser_registry.cpp
+    config/parsers/system_core_config_parser.cpp
+    config/parsers/metrics_config_parser.cpp
+    config/parsers/logging_config_parser.cpp
+    config/parsers/cli_config_parser.cpp
+    config/parsers/discovery_config_parser.cpp
+    config/parsers/topology_config_parser.cpp
+    config/parsers/mailbox_config_parser.cpp
+    config/parsers/dead_letters_config_parser.cpp
+    config/parsers/tracing_config_parser.cpp
+    config/parsers/shutdown_config_parser.cpp
+    config/binary_serializer.cpp
+    config/binary_loader.cpp
+    core/proto_type_registry.cpp
+    types/typed_message.cpp
+    net/event_loop.cpp
+    net/acceptor.cpp
+    net/connection.cpp
+    net/tcp_transport.cpp
+    net/frame.cpp
+    net/frame_protobuf.cpp
+    net/tls_context.cpp
+    net/tls_connection.cpp
+    net/wireframe_connection.cpp
+    net/connection_pool.cpp
+    net/endpoint.cpp
+    net/registrar.cpp
+    net/registrar_server.cpp
+    net/registrar_client.cpp
+    net/static_discovery.cpp
+    net/actor_location_cache.cpp
+    net/gossip_membership.cpp
+    net/hybrid_discovery.cpp
+    net/http_parser.cpp
+    net/http_gateway.cpp
+    net/http_client.cpp
+    net/http_connection.cpp
+    sched/scheduler.cpp
+    sched/worker_thread.cpp
+    sched/edf_queue.cpp
+    sched/a2ws.cpp
+    sched/timing_wheel.cpp
+    sched/calendar_queue.cpp
+    sched/coroutine_frame_pool.cpp
+    sched/dedicated_thread_pool.cpp
+    mem/segment_provider.cpp
+    mem/slab_cache.cpp
+    mem/thread_local_allocator.cpp
+    mem/memory_config.cpp
+    mem/memory_tracker.cpp
+    mem/hibernation_manager.cpp
+    mem/guard_page.cpp
+    mem/compaction.cpp
+    mem/zram.cpp
+    rpc/rpc_channel.cpp
+    metrics/metrics_registry.cpp
+    metrics/metrics_aggregator.cpp
+    metrics/metrics_formatter.cpp
+    metrics/metrics_actor.cpp
+    log/log_level.cpp
+    log/log_category.cpp
+    log/log_formatter.cpp
+    log/logger.cpp
+    log/log_drain.cpp
+    log/log_manager.cpp
+    log/stderr_sink.cpp
+    log/file_sink.cpp
+    log/rotating_file_sink.cpp
+    adt/stream_buffer.cpp
+    ../third_party/llhttp/llhttp.c
+    ../third_party/llhttp/api.c
+    ../third_party/llhttp/http.c
+)
+
+target_include_directories(hpactor_lib
+    PUBLIC
+        ${CMAKE_SOURCE_DIR}/include
+        ${CMAKE_BINARY_DIR}
+        ${CMAKE_SOURCE_DIR}/third_party/llhttp
+)
+
+# ---- vendored C sources (llhttp) -------------------------------------------
+
+set_source_files_properties(
+    ../third_party/llhttp/llhttp.c
+    ../third_party/llhttp/api.c
+    ../third_party/llhttp/http.c
+    PROPERTIES
+        LANGUAGE C
+        COMPILE_FLAGS "-Wno-error -Wno-conversion -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
+)
+
+# ---- exceptions for toml++ TUs ---------------------------------------------
+
+set_source_files_properties(
+    config/toml_parser.cpp
+    config/toml_table_view.cpp
+    PROPERTIES COMPILE_FLAGS "-fexceptions"
+)
+
+# ---- CLI subsystem (runtime opt-in via cli.enabled) ------------------------
+
+target_sources(hpactor_lib PRIVATE
+    cli/lexer.cpp
+    cli/command_node.cpp
+    cli/line_editor.cpp
+    cli/pretty_formatter.cpp
+    cli/json_formatter.cpp
+    cli/tabular_formatter.cpp
+    cli/pager.cpp
+    cli/cli_actor.cpp
+)
+
+# ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------
+
+target_sources(hpactor_lib PRIVATE
+    tracing/trace_context_parser.cpp
+    tracing/sampler.cpp
+    tracing/memory_exporter.cpp
+    tracing/json_exporter.cpp
+    tracing/otlp_exporter.cpp
+    tracing/trace_manager.cpp
+)
+
+# ---- platform-specific I/O backends ----------------------------------------
+
+if(CMAKE_SYSTEM_NAME STREQUAL "Linux")
+    if(HPACTOR_ENABLE_PROACTOR)
+        message(STATUS "Using io_uring (Proactor)")
+        target_sources(hpactor_lib PRIVATE net/proactor/iouring_backend.cpp)
+    else()
+        message(STATUS "Using epoll (Reactor)")
+    endif()
+    target_sources(hpactor_lib PRIVATE net/reactor/epoll_backend.cpp)
+elseif(CMAKE_SYSTEM_NAME STREQUAL "Darwin")
+    if(HPACTOR_ENABLE_PROACTOR)
+        message(STATUS "Using GCD (Proactor)")
+        target_sources(hpactor_lib PRIVATE net/proactor/gcd_backend.cpp)
+    else()
+        message(STATUS "Using kqueue (Reactor)")
+    endif()
+    target_sources(hpactor_lib PRIVATE net/reactor/kqueue_backend.cpp)
+endif()
+
+# ---- link dependencies -----------------------------------------------------
+
+target_link_libraries(hpactor_lib
+    PUBLIC
+        tomlplusplus::tomlplusplus
+        OpenSSL::SSL
+        OpenSSL::Crypto
+        protobuf::libprotobuf
+        ${HPACTOR_ABSL_LIBS}
+        hpactor_proto
+)
+
+if(ENABLE_CLI)
+    target_link_libraries(hpactor_lib PRIVATE linenoise)
+endif()
+
+# ARM64 / RISC-V may need -latomic for std::atomic<uint64_t>
+if(UNIX AND NOT APPLE)
+    target_link_libraries(hpactor_lib PUBLIC atomic)
+endif()
+
+# ---- alias -----------------------------------------------------------------
+
+add_library(hpactor ALIAS hpactor_lib)
