@@ -181,13 +181,85 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - TOML `[system.cli]` config: enabled, listen_path, tcp_port, default_format, page_size
 - `ENABLE_CLI` CMake option (default ON), `HPACTOR_ENABLE_CLI` compile-time guard
 - 5 new test suites: test_lexer, test_command_node, test_formatters, test_pager, test_cli_integration
-- 2 new test suites: test_gossip_membership, test_service_discovery
 - CLI is opt-in at runtime (`CliConfig::enabled = false` by default) — explicit enable via TOML or Config
 
-**Tests:** ✅ 99 tests passing
-- Memory: test_size_class, test_alloc_header, test_freelist, test_segment_provider, test_slab_cache, test_thread_local_allocator, test_memory_stress (1M ops), test_memory_tracker, test_telemetry_ring_buffer, test_memory_poisoning, test_guard_page, test_hibernation, test_compaction, test_allocator_benchmark
-- Scheduling: test_chaselev_deque, test_multi_priority_work_queue, test_hybrid_scheduler, test_edf_queue, test_a2ws, test_mailbox_awaiter, test_coroutine_scheduling, test_priority_scheduler
-- UDS: test_unix_domain_socket (path derivation, acceptor, fallback), test_uds_integration (connect and data flow)
+**Structured Logging:** ✅ Complete (2026-05-11, 20 commits, 7 test files)
+- `LogRingBuffer` — MPSC lock-free bounded ring buffer for log entries
+- `Logger` — timestamp capture, structured log entries with categories and levels
+- `LogDrain` — consumer thread with batching and sink writes
+- `ILogSink` — pluggable sinks: `StderrSink`, `FileSink`, `RotatingFileSink` (size-based rotation), `MemorySink` (for testing)
+- `TextLogFormatter`, `JsonLogFormatter` — human-readable and machine-parseable output
+- `LogManager` — owns config, ring buffer, drain, and sinks; wired into ActorSystem lifecycle
+- TOML `[system.log]` config: level, sinks, file paths, rotation settings
+- Header-only `include/hpactor/log/`, compiled `src/log/`
+- 7 test files: test_log_ring_buffer, test_log_level, test_log_category, test_log_formatter, test_log_config, test_log_sinks, test_log_integration
+
+**Distributed Tracing:** ✅ Complete (2026-05-12, ~1800 lines, 12 test files)
+- W3C-compatible `TraceContext` — 16-byte TraceId, 8-byte SpanId, TraceFlags (sampled flag)
+- Actor receive spans (consumer kind) with RAII `SpanGuard` — automatic start/end around message handlers
+- Local send/reply propagation via `ActorContext` current trace scope
+- Remote frame propagation — `PbTraceContext` in `frame.proto`, encoded in Frame header
+- `TraceManager` — parent-based sampling decision, bounded MPSC ring buffer, drain thread, memory exporter
+- `TraceExporter` interface — `MemoryExporter` for testing/inspection
+- `Span` — name, kind (producer/consumer/client/server/internal), attributes, status, events, links
+- TOML `[system.tracing]` config: enabled, sampling_rate, exporter, ring_buffer_capacity
+- `ENABLE_ACTOR_TRACING` CMake option (default ON)
+- 12 test files: test_w3c_trace_context, test_trace_context, test_trace_actor_context, test_trace_actor_system, test_trace_manager, test_trace_exporters, test_trace_message_propagation, test_trace_wire_propagation, test_trace_typed_message, test_trace_rpc, test_sampler, test_trace_config_smoke
+
+**Actor Lifecycle:** ✅ Complete (2026-05-13, PR #94)
+- `LifecycleActor` mixin — opt-in lifecycle state machine
+- `LifecycleState` enum: Created → Starting → Running → Stopping → Stopped; plus Failed, Terminated
+- Constexpr `StateDef` transition table — compile-time state transition definitions
+- Message gate — rejects messages during non-Active states (Created, Starting, Stopping, Stopped, Failed)
+- Supervision integration — drives FAILED→STARTING transition on restart
+- Metrics events for lifecycle transitions
+- 2 test files: test_lifecycle_state (12 state machine tests), test_lifecycle_actor
+
+**Actor State Transfer:** ✅ Complete (2026-05-13, PR #95)
+- State transfer for non-coroutine actors — serialized state handoff during migration
+- Integration with hibernation and lifecycle subsystems
+
+**Bounded Mailboxes & Dead-Letter Queue:** ✅ Complete (2026-05-14, PR #96 prerequisites)
+- `BoundedMailbox` — bounded capacity with overflow policies: Block, DropHead, DropTail, DeadLetterQueue
+- `DeadLetterQueue` actor — retention policy (max records, max age), per-actor observability, replay capability
+- Mailbox backpressure signals — push-back from full mailbox to producer via overflow policy
+- `MailboxPolicy` config — TOML-driven per-actor mailbox sizing and overflow policy
+- 5 new test files: test_bounded_mailbox, test_dead_letter_queue, test_mailbox_overflow_policies, test_mailbox_backpressure_stress, test_mailbox_policy
+
+**Graceful Actor Stop & System Shutdown:** ✅ Complete (2026-05-15, PR #96)
+- `DrainPolicy` — Complete (drain all in-flight), Drop (discard), Timeout (deadline-based)
+- `DrainConfig` — per-actor drain configuration with policy and timeout
+- Drain-aware message processing — stops accepting new messages during drain; in-flight messages complete normally
+- Drain timeout via `TimingWheel` — configurable deadline for in-flight message completion
+- `ActorSystem::shutdown()` — phase-machine coordinator: user actors drain first, system actors drain last
+- TOML `[system.shutdown]` config: drain_timeout, stop_timeout, phase ordering
+- CLI `/system drain` and `/system stop` commands
+- DLQ `DrainTimeout` and `DrainPolicyDrop` dead-letter reasons
+- `on_drain_timeout()` hook for custom drain timeout handling
+- 4 test files: test_drain_policy, test_drain_timeout, test_drain_integration, test_shutdown_coordinator
+
+**Deterministic Scheduler Worker-Control API:** ✅ Complete (2026-05-16, PR #104)
+- `scheduler_test_driver.hpp` support header (61 lines) — pause/resume/step workers for deterministic tests
+- `test_scheduler_control.cpp` (169 lines) — validates worker-control API
+- Refactored worker tests for deterministic scheduling
+
+**Full-Featured Example:** ✅ Complete (2026-05-16, PR #102)
+- Order platform — coordinator, inventory, payment, fulfillment actors
+- Happy path scenario — order flows through all actors successfully
+- Failure scenarios — overload (bounded mailbox), missing-route, worker-crash
+- CLI integration — inspect order state via CLI commands
+- `test_order_platform_messages.cpp` — validates message flow and failure handling
+- Follow-up issues #97-#100 implemented (PR #111 design specs + #47cb85e implementation)
+
+**Low-Coverage Test Additions:** ✅ Complete (2026-05-17, PR #110)
+- Extended tests for: ConnectionPool, HybridDiscovery, CliActor, LineEditor, Supervision, GuardPage, ActorProxy, SpawnReceiver, ScopedActor, LocalActor, MetricsAggregator, LogSink, WorkerThread, CoroutineFramePool
+- 13 test files extended with construction, edge-case, and utility tests
+
+**Coverage Badge:** ✅ Complete (2026-05-17, PRs #106-108)
+- Automated coverage reporting with badge in README
+
+**Tests:** ✅ 140 tests passing (152 test source files)
+- 16 test subdirectories: actor (29), cli (6), config (7), core (2), examples (1), log (7), mailbox (11), mem (14), metrics (2), net (19), ref (3), rpc (1), sched (18), spawn (5), supervision (5), tracing (12), +1 top-level
 
 **Documentation:** ✅ Complete
 - Architecture: `docs/architecture/production/production-reliability-plane.md` (24x7 production reliability roadmap)
@@ -252,7 +324,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Phase 0-10 + Memory Management + TOML Config + CLI Interactive Complete** (94 tests passing)
+**Phase 0-16 Complete** (140 tests passing, 152 test source files)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -288,14 +360,12 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - 8 phases (M1-M8), 18 commits, 14 new memory tests
 - Performance: bump alloc 25 ns/op, freelist recycle 32 ns/op, 1M ops in 650ms
 
-**Next Steps (Phase 11 - remaining items)**
-- Production Reliability Plane foundation:
-  - delivery semantics and structured delivery results
-  - bounded mailbox implementation and backpressure signals
-  - dead-letter queue implementation
-  - distributed tracing implementation and trace/log/metric/DLQ correlation
+**Next Steps (remaining items)**
+- Production Reliability Plane remaining:
   - health/readiness/liveness endpoints
-  - graceful shutdown and node drain protocol
+  - structured delivery results (explicit success/failure for sends)
+  - reliable messaging (ACK/NACK, retry, dedup, durable outbox/inbox)
+  - durable actor state (snapshot, event sourcing, recovery)
 - Cluster control follow-up:
   - cluster failure model with quarantine/fencing
   - protocol/feature negotiation for rolling upgrades
@@ -307,10 +377,10 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - chaos, soak, fuzz, and compatibility test lanes
 - Proactor backend production hardening (GcdBackend, IoUringBackend)
 - Full two-process integration test with TCP transport
-- Per-actor argument deserialization via `configure_from_args()` (concept defined, integration pending)
+- Wire up RPC trace context end-to-end (transport layer changes)
+- HTTP ingress/egress trace propagation
 - Typed RPC API (template call<Request, Response> with serialization)
 - Tiny-block optimization for 32B size class (packed out-of-band metadata)
-- Runtime configuration knobs (environment variables / config file)
 - Multi-node TOML topology (remote actor placement via dispatcher name)
 
 **Source Reorganization**
@@ -327,9 +397,13 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `mem/` — Memory management (alloc_header, size_class, freelist, segment_provider, slab_cache, thread_local_allocator, memory_region, memory_config, memory_tracker, telemetry_ring_buffer, hibernation_registry, hibernatable, guard_page, compaction, zram)
   - `cli/` — CLI subsystem (cli_actor, cli_config, cli_types, command_node, command_context, token, lexer, pager, output_formatter, pretty_formatter, json_formatter, tabular_formatter, commands/)
   - `metrics/` — Metrics subsystem (metrics_ring_buffer, metrics_event, metrics_config, metrics_registry, metrics_aggregator, metrics_formatter, metrics_actor)
+  - `log/` — Structured logging (log_ring_buffer, logger, log_drain, log_sink, log_formatter, log_manager, log_config)
+  - `tracing/` — Distributed tracing (trace_context, span, span_guard, trace_manager, trace_exporter, trace_config)
 - `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
 - `src/cli/` — cli_actor.cpp, lexer.cpp, command_node.cpp, pretty_formatter.cpp, json_formatter.cpp, tabular_formatter.cpp, pager.cpp
 - `src/metrics/` — metrics_registry.cpp, metrics_aggregator.cpp, metrics_formatter.cpp, metrics_actor.cpp
+- `src/log/` — log_manager.cpp, log_drain.cpp, log_sinks.cpp
+- `src/tracing/` — trace_manager.cpp, trace_exporter.cpp
 - `src/config/` — actor_factory_registry.cpp, toml_parser.cpp, binary_serializer.cpp, binary_loader.cpp
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
@@ -340,7 +414,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `src/rpc/rpc_channel.cpp` — RpcChannel implementation
 - `src/mem/` — segment_provider.cpp, slab_cache.cpp, thread_local_allocator.cpp, memory_config.cpp, memory_tracker.cpp, hibernation_manager.cpp, guard_page.cpp, compaction.cpp, zram.cpp
 - `tools/toml-compiler/` — AOT compiler executable (compiler.cpp)
-- Tests: `tests/{actor,cli,config,core,mailbox,metrics,net,ref,supervision,spawn,sched,rpc,mem}/`
+- Tests: `tests/{actor,cli,config,core,examples,log,mailbox,metrics,net,ref,rpc,sched,spawn,supervision,tracing,mem}/`
 
 ## Build Commands
 
@@ -367,4 +441,4 @@ cmake -DENABLE_MEMORY_DEBUG=ON ..     # Enable poisoning + canaries (default OFF
 ## Known Issues
 
 - ASAN may report false positives in `test_mailbox_awaiter` and `test_priority_scheduler` due to intrusive queue memory patterns. Tests pass cleanly with TSAN or without sanitizers.
-- MPSCMailbox `dequeue()` had a cyclic queue bug when returning last element — fixed in commit dc25f18.
+- Proactor backend (`IoUringBackend`, `GcdBackend`) needs production hardening.
