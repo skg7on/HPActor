@@ -112,6 +112,10 @@ struct FulfillmentPayload {
     ScenarioKind scenario = ScenarioKind::HappyPath;
 };
 
+struct QueryOrderPayload {
+    std::string order_id;
+};
+
 struct PricingRequest {
     std::string order_id;
     std::vector<OrderLine> lines;
@@ -465,6 +469,17 @@ decode_fulfillment(const StreamBuffer& buffer, FulfillmentPayload& out) {
         return false;
     out.scenario = static_cast<ScenarioKind>(scenario);
     return reader.done();
+}
+
+inline StreamBuffer encode_query_order(const QueryOrderPayload& payload) {
+    BufferWriter writer;
+    writer.str(payload.order_id);
+    return writer.finish();
+}
+
+inline bool decode_query_order(const StreamBuffer& buffer, QueryOrderPayload& out) {
+    BufferReader reader(buffer);
+    return reader.str(out.order_id) && reader.done();
 }
 
 inline uint64_t calculate_subtotal(const std::vector<OrderLine>& lines) {

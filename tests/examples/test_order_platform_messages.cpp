@@ -83,6 +83,20 @@ static void test_malformed_decode_rejected() {
     assert(!decode_submit_order(truncated, out));
 }
 
+static void test_query_order_round_trip() {
+    QueryOrderPayload in;
+    in.order_id = "ord-500";
+
+    auto encoded = encode_query_order(in);
+    QueryOrderPayload out;
+    assert(decode_query_order(encoded, out));
+    assert(out.order_id == "ord-500");
+
+    // Malformed rejected.
+    hpactor::StreamBuffer truncated{0x00, 0x00, 0x00, 0x02, 'x'};
+    assert(!decode_query_order(truncated, out));
+}
+
 static void test_scenario_from_string() {
     assert(scenario_from_string("happy-path") == ScenarioKind::HappyPath);
     assert(scenario_from_string("insufficient-stock") ==
@@ -101,6 +115,7 @@ int main() {
     test_inventory_round_trip();
     test_payment_round_trip();
     test_malformed_decode_rejected();
+    test_query_order_round_trip();
     test_scenario_from_string();
     return 0;
 }

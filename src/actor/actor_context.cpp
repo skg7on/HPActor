@@ -210,11 +210,37 @@ void ActorContext::reply_with_error(const error& err) {
     send(current_sender_, std::move(error_msg));
 }
 
-void ActorContext::schedule(std::chrono::milliseconds delay,
-                            TypedMessage msg) { // NOLINT(readability-convert-member-functions-to-static)
-    // TODO: schedule message via actor system's clock/alarm mechanism
-    (void)delay;
-    (void)msg;
+AlarmHandle
+ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {
+    auto* sched = system_->scheduler();
+    if (!sched)
+        return AlarmHandle{};
+
+    msg.set_sender_address(owner_.address());
+
+    ActorId self_id = owner_.id();
+    ActorSystem* sys = system_;
+
+    // Wrap in shared_ptr because TypedMessage is move-only and std::function
+    // requires a copyable callable.
+    auto msg_ptr = std::make_shared<TypedMessage>(std::move(msg));
+    auto callback = [sys, self_id, msg_ptr]() {
+        sys->deliver_local(self_id, std::move(*msg_ptr));
+    };
+
+    int64_t delay_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(delay).count();
+    auto handle = sched->schedule_after(std::move(callback), delay_ns);
+    return AlarmHandle{handle.id};
+}
+
+void ActorContext::cancel_schedule(AlarmHandle handle) {
+    if (handle.id() == 0)
+        return;
+    auto* sched = system_->scheduler();
+    if (!sched)
+        return;
+    sched->cancel_timer(sched::TimerHandle{handle.id()});
 }
 
 std::vector<Actor> ActorContext::children() const {
