@@ -13,6 +13,9 @@
 // limitations under the License.
 
 #include <cassert>
+#include <hpactor/core/actor_system.hpp>
+#include <hpactor/supervision/all_for_one_supervisor.hpp>
+#include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/supervision.hpp>
 
 void test_supervision_directive_values() {
@@ -47,10 +50,61 @@ void test_supervision_policy_custom() {
     assert(policy.restart_interval.count() == 1000);
 }
 
+void test_one_for_one_passes_directive() {
+    hpactor::SupervisionPolicy policy;
+    hpactor::OneForOneSupervisor sup(policy);
+    hpactor::ChildFailure failure;
+    failure.child_id = hpactor::ActorId{1};
+    failure.reason = hpactor::error(0);
+    failure.directive = hpactor::SupervisionDirective::Restart;
+    assert(sup.on_child_failure(failure) == hpactor::SupervisionDirective::Restart);
+    failure.directive = hpactor::SupervisionDirective::Stop;
+    assert(sup.on_child_failure(failure) == hpactor::SupervisionDirective::Stop);
+    failure.directive = hpactor::SupervisionDirective::Escalate;
+    assert(sup.on_child_failure(failure) == hpactor::SupervisionDirective::Escalate);
+    printf("  PASSED test_one_for_one_passes_directive\n");
+}
+
+void test_all_for_one_always_restart() {
+    hpactor::SupervisionPolicy policy;
+    hpactor::AllForOneSupervisor sup(policy);
+    hpactor::ChildFailure failure;
+    failure.child_id = hpactor::ActorId{1};
+    failure.reason = hpactor::error(0);
+    failure.directive = hpactor::SupervisionDirective::Stop;
+    assert(sup.on_child_failure(failure) == hpactor::SupervisionDirective::Restart);
+    printf("  PASSED test_all_for_one_always_restart\n");
+}
+
+void test_supervisor_actor_construct() {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 0;
+    hpactor::ActorSystem sys(cfg);
+    hpactor::OneForOneSupervisor strategy(hpactor::SupervisionPolicy{});
+    std::vector<hpactor::Actor> children;
+    hpactor::SupervisorActor actor(nullptr, sys, strategy, std::move(children));
+    (void)actor;
+    printf("  PASSED test_supervisor_actor_construct\n");
+}
+
+void test_self_supervising_construct() {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 0;
+    hpactor::ActorSystem sys(cfg);
+    hpactor::SupervisionPolicy policy;
+    hpactor::SelfSupervisingActor actor(nullptr, sys, policy);
+    (void)actor;
+    printf("  PASSED test_self_supervising_construct\n");
+}
+
 int main() {
     test_supervision_directive_values();
     test_child_failure_struct();
     test_supervision_policy_default();
     test_supervision_policy_custom();
+    test_one_for_one_passes_directive();
+    test_all_for_one_always_restart();
+    test_supervisor_actor_construct();
+    test_self_supervising_construct();
     return 0;
 }

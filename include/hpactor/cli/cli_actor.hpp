@@ -80,11 +80,16 @@ class CliActor : public DaemonActor {
     // Enumerate all known actors. Returns metadata for each.
     std::vector<ActorMeta> enumerate_actors(const std::string& filter = "");
 
+    // Resolve the CLI history file path from config.
+    // If config.history_path is non-empty, returns it directly.
+    // Otherwise returns $HOME/.hpactor_history, falling back to
+    // /tmp/.hpactor_history.
+    static std::string get_history_path(const CliConfig& config);
+
   private:
     void build_command_tree();
     void execute_tokens(const std::vector<Token>& tokens);
     void print_greeting();
-    static std::string get_history_path(const CliConfig& config);
 
     // Poll mailbox for a message with the given TypeTag, ignoring all others.
     // Returns the raw StreamBuffer payload if found before timeout.

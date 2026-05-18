@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cli/command_node.hpp>
 #include <cassert>
 #include <cstdio>
+#include <hpactor/cli/command_node.hpp>
+#include <hpactor/cli/line_editor.hpp>
+#include <sys/stat.h>
 
 using namespace hpactor::cli;
 
@@ -83,8 +85,10 @@ void test_completion_matches() {
     // Under /actor: <id> (parameter) and "list" (keyword)
     bool found_list = false, found_param = false;
     for (auto& c : actor->children) {
-        if (c->keyword == "list" && !c->is_parameter) found_list = true;
-        if (c->keyword == "<id>" && c->is_parameter) found_param = true;
+        if (c->keyword == "list" && !c->is_parameter)
+            found_list = true;
+        if (c->keyword == "<id>" && c->is_parameter)
+            found_param = true;
     }
     assert(found_list);
     assert(found_param);
@@ -93,8 +97,10 @@ void test_completion_matches() {
     auto* id_node = actor->find_child("5", param);
     bool found_show = false, found_kill = false;
     for (auto& c : id_node->children) {
-        if (c->keyword == "show") found_show = true;
-        if (c->keyword == "kill") found_kill = true;
+        if (c->keyword == "show")
+            found_show = true;
+        if (c->keyword == "kill")
+            found_kill = true;
     }
     assert(found_show && found_kill);
 }
@@ -108,7 +114,8 @@ void test_prefix_match_for_completion() {
     // "list" starts with "l" -> should match
     bool has_list = false;
     for (auto& c : actor->children) {
-        if (c->keyword.starts_with("l") && !c->is_parameter) has_list = true;
+        if (c->keyword.starts_with("l") && !c->is_parameter)
+            has_list = true;
     }
     assert(has_list);
 }
@@ -116,12 +123,17 @@ void test_prefix_match_for_completion() {
 void test_root_children() {
     auto root = build_test_tree();
     // Root should have actor, system, help, quit
-    bool found_actor = false, found_system = false, found_help = false, found_quit = false;
+    bool found_actor = false, found_system = false, found_help = false,
+         found_quit = false;
     for (auto& c : root->children) {
-        if (c->keyword == "actor") found_actor = true;
-        if (c->keyword == "system") found_system = true;
-        if (c->keyword == "help") found_help = true;
-        if (c->keyword == "quit") found_quit = true;
+        if (c->keyword == "actor")
+            found_actor = true;
+        if (c->keyword == "system")
+            found_system = true;
+        if (c->keyword == "help")
+            found_help = true;
+        if (c->keyword == "quit")
+            found_quit = true;
     }
     assert(found_actor && found_system && found_help && found_quit);
 }
@@ -178,6 +190,80 @@ void test_help_text() {
     assert(text.find("system") != std::string::npos);
 }
 
+void test_construct_destruct() {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    auto root = std::make_unique<CommandNode>("/", "root");
+    {
+        LineEditor editor(cfg, root.get());
+    }
+    printf("  PASSED test_construct_destruct\n");
+}
+
+void test_construct_with_history_path() {
+    LineEditorConfig cfg;
+    cfg.history_max = 200;
+    cfg.history_path = "/tmp/hpactor_test_line_editor_history.txt";
+    cfg.multiline = true;
+    std::remove(cfg.history_path.c_str());
+    auto root = std::make_unique<CommandNode>("/", "root");
+    LineEditor editor(cfg, root.get());
+    std::remove(cfg.history_path.c_str());
+    printf("  PASSED test_construct_with_history_path\n");
+}
+
+void test_add_history_no_path() {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    auto root = std::make_unique<CommandNode>("/", "root");
+    LineEditor editor(cfg, root.get());
+    editor.add_history("/help");
+    printf("  PASSED test_add_history_no_path\n");
+}
+
+void test_add_history_with_path() {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "/tmp/hpactor_test_line_editor_history2.txt";
+    cfg.multiline = false;
+    std::remove(cfg.history_path.c_str());
+    auto root = std::make_unique<CommandNode>("/", "root");
+    LineEditor editor(cfg, root.get());
+    editor.add_history("/system stats");
+    struct stat st;
+    assert(stat(cfg.history_path.c_str(), &st) == 0);
+    std::remove(cfg.history_path.c_str());
+    printf("  PASSED test_add_history_with_path\n");
+}
+
+void test_load_save_history_no_path() {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    auto root = std::make_unique<CommandNode>("/", "root");
+    LineEditor editor(cfg, root.get());
+    editor.load_history();
+    editor.save_history();
+    printf("  PASSED test_load_save_history_no_path\n");
+}
+
+void test_set_root() {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    auto root1 = std::make_unique<CommandNode>("/", "root");
+    LineEditor editor(cfg, root1.get());
+    auto root2 = std::make_unique<CommandNode>("/", "root2");
+    editor.set_root(root2.get());
+    printf("  PASSED test_set_root\n");
+}
+
 int main() {
     test_root_traversal();
     test_unknown_command();
@@ -191,6 +277,12 @@ int main() {
     test_prefix_match_ambiguous_shows_all();
     test_suggest_levenshtein();
     test_help_text();
+    test_construct_destruct();
+    test_construct_with_history_path();
+    test_add_history_no_path();
+    test_add_history_with_path();
+    test_load_save_history_no_path();
+    test_set_root();
 
     printf("test_line_editor: PASSED\n");
     return 0;

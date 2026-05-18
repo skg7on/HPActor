@@ -15,9 +15,47 @@
 #include <hpactor/net/connection_pool.hpp>
 
 #include <cassert>
+#include <cstdio>
 
 using namespace hpactor;
 using namespace hpactor::net;
+
+void test_stats_initial() {
+    EndPoint ep = endpoint_ops::parse_endpoint("127.0.0.1:9001");
+    PoolConfig cfg;
+    ConnectionPool pool(ep, cfg, nullptr);
+    auto s = pool.stats();
+    assert(s.active_connections == 0);
+    assert(s.pending_messages == 0);
+    assert(s.reconnect_attempts == 0);
+    assert(!s.is_connected);
+    printf("  PASSED test_stats_initial\n");
+}
+
+void test_drain_empty() {
+    EndPoint ep = endpoint_ops::parse_endpoint("127.0.0.1:9002");
+    PoolConfig cfg;
+    ConnectionPool pool(ep, cfg, nullptr);
+    size_t unsent = pool.drain();
+    assert(unsent == 0);
+    printf("  PASSED test_drain_empty\n");
+}
+
+void test_abort_empty() {
+    EndPoint ep = endpoint_ops::parse_endpoint("127.0.0.1:9003");
+    PoolConfig cfg;
+    ConnectionPool pool(ep, cfg, nullptr);
+    pool.abort();
+    printf("  PASSED test_abort_empty\n");
+}
+
+void test_is_connected_false() {
+    EndPoint ep = endpoint_ops::parse_endpoint("127.0.0.1:9004");
+    PoolConfig cfg;
+    ConnectionPool pool(ep, cfg, nullptr);
+    assert(!pool.is_connected());
+    printf("  PASSED test_is_connected_false\n");
+}
 
 int main() {
     // Test PoolConfig default values
@@ -35,6 +73,11 @@ int main() {
     assert(stats.pending_messages == 0);
     assert(stats.reconnect_attempts == 0);
     assert(stats.is_connected == false);
+
+    test_stats_initial();
+    test_drain_empty();
+    test_abort_empty();
+    test_is_connected_false();
 
     return 0;
 }

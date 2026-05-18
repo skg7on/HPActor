@@ -169,6 +169,18 @@ add_executable(test_drain_integration actor/test_drain_integration.cpp)
 target_link_libraries(test_drain_integration hpactor)
 add_test(NAME test_drain_integration COMMAND test_drain_integration)
 
+add_executable(test_scoped_actor actor/test_scoped_actor.cpp)
+target_link_libraries(test_scoped_actor hpactor)
+add_test(NAME test_scoped_actor COMMAND test_scoped_actor)
+
+add_executable(test_local_actor actor/test_local_actor.cpp)
+target_link_libraries(test_local_actor hpactor)
+add_test(NAME test_local_actor COMMAND test_local_actor)
+
+add_executable(test_spawn_receiver_construct actor/test_spawn_receiver_construct.cpp)
+target_link_libraries(test_spawn_receiver_construct hpactor hpactor_proto pthread)
+add_test(NAME test_spawn_receiver_construct COMMAND test_spawn_receiver_construct)
+
 # =============================================================================
 # Ref tests - actor references and addresses
 # =============================================================================
@@ -260,6 +272,10 @@ add_executable(test_metrics_integration metrics/test_metrics_integration.cpp)
 target_link_libraries(test_metrics_integration hpactor pthread)
 add_test(NAME test_metrics_integration COMMAND test_metrics_integration)
 
+add_executable(test_metrics_aggregator metrics/test_metrics_aggregator.cpp)
+target_link_libraries(test_metrics_aggregator hpactor pthread)
+add_test(NAME test_metrics_aggregator COMMAND test_metrics_aggregator)
+
 add_executable(test_log_level log/test_log_level.cpp)
 target_link_libraries(test_log_level hpactor)
 add_test(NAME test_log_level COMMAND test_log_level)
@@ -284,6 +300,10 @@ add_executable(test_log_integration log/test_log_integration.cpp)
 target_link_libraries(test_log_integration hpactor pthread)
 add_test(NAME test_log_integration COMMAND test_log_integration)
 
+add_executable(test_log_sinks log/test_log_sinks.cpp)
+target_link_libraries(test_log_sinks hpactor)
+add_test(NAME test_log_sinks COMMAND test_log_sinks)
+
 add_executable(test_proactor_dispatcher net/test_proactor_dispatcher.cpp)
 target_link_libraries(test_proactor_dispatcher hpactor)
 add_test(NAME test_proactor_dispatcher COMMAND test_proactor_dispatcher)
@@ -295,6 +315,10 @@ add_test(NAME test_gossip_membership COMMAND test_gossip_membership)
 add_executable(test_service_discovery net/test_service_discovery.cpp)
 target_link_libraries(test_service_discovery hpactor)
 add_test(NAME test_service_discovery COMMAND test_service_discovery)
+
+add_executable(test_hybrid_discovery net/test_hybrid_discovery.cpp)
+target_link_libraries(test_hybrid_discovery hpactor)
+add_test(NAME test_hybrid_discovery COMMAND test_hybrid_discovery)
 
 # =============================================================================
 # Spawn tests - remote actor spawn
@@ -437,6 +461,14 @@ add_test(NAME test_calendar_queue COMMAND test_calendar_queue)
 add_executable(test_scheduler_control sched/test_scheduler_control.cpp)
 target_link_libraries(test_scheduler_control hpactor)
 add_test(NAME test_scheduler_control COMMAND test_scheduler_control)
+
+add_executable(test_coroutine_frame_pool sched/test_coroutine_frame_pool.cpp)
+target_link_libraries(test_coroutine_frame_pool hpactor pthread)
+add_test(NAME test_coroutine_frame_pool COMMAND test_coroutine_frame_pool)
+
+add_executable(test_worker_thread sched/test_worker_thread.cpp)
+target_link_libraries(test_worker_thread hpactor pthread)
+add_test(NAME test_worker_thread COMMAND test_worker_thread)
 
 # =============================================================================
 # HTTP tests
@@ -601,6 +633,10 @@ if(ENABLE_CLI)
     add_executable(test_line_editor cli/test_line_editor.cpp)
     target_link_libraries(test_line_editor hpactor)
     add_test(NAME test_line_editor COMMAND test_line_editor)
+
+    add_executable(test_cli_actor cli/test_cli_actor.cpp)
+    target_link_libraries(test_cli_actor hpactor)
+    add_test(NAME test_cli_actor COMMAND test_cli_actor)
 endif()
 
 # =============================================================================

@@ -80,6 +80,7 @@ class CoroutineFramePool {
   private:
     struct alignas(64) FreeNode {
         FreeNode* next;
+        size_t index;
     };
 
     std::atomic<FreeNode*> free_stack_{nullptr};
