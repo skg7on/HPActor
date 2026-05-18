@@ -100,6 +100,7 @@ add_test(NAME test_actor_context COMMAND test_actor_context)
 add_executable(test_actor_context_schedule actor/test_actor_context_schedule.cpp)
 target_link_libraries(test_actor_context_schedule hpactor)
 add_test(NAME test_actor_context_schedule COMMAND test_actor_context_schedule)
+set_tests_properties(test_actor_context_schedule PROPERTIES TIMEOUT 15)
 
 add_executable(test_actor_system actor/test_actor_system.cpp)
 target_link_libraries(test_actor_system hpactor)

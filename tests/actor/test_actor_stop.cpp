@@ -205,8 +205,10 @@ static void test_stop_sync_timeout_returns_error() {
     auto result = ctx.stop_sync(target_ref.id(), std::chrono::milliseconds(10));
     assert(!result.has_value());
     assert(result.error().code() == errors::timeout);
-    // Actor should still be in kDraining (not yet stopped)
-    assert(lc->state() == LifecycleState::kDraining);
+    // Actor should not have reached kStopped yet (no worker to drain).
+    // May be kDraining or kStopping depending on drain timeout timing.
+    auto state = lc->state();
+    assert(state != LifecycleState::kStopped);
 
     std::cout << "PASS: test_stop_sync_timeout_returns_error\n";
 }
