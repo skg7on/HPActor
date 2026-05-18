@@ -506,6 +506,7 @@ bool CliActor::run_once() {
     std::string line = line_editor_.readline("hpactor> ");
     if (line.empty()) {
         printf("\nGoodbye.\n");
+        running_ = false;
         return false;
     }
 
