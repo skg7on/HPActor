@@ -14,10 +14,13 @@
 
 #include <hpactor/sched/timing_wheel.hpp>
 
+#include <chrono>
+
 namespace hpactor::sched {
 
 TimingWheel::TimingWheel(int64_t tick_ns, uint32_t num_levels)
-    : tick_ns_(tick_ns), num_levels_(num_levels), levels_(num_levels) {
+    : tick_ns_(tick_ns), num_levels_(num_levels), levels_(num_levels),
+      current_time_(std::chrono::steady_clock::now().time_since_epoch().count()) {
     // Initialize each level
     // Level 0: 256 buckets of tick_ns each
     // Level 1: 256 buckets of 256 * tick_ns each
