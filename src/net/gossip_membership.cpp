@@ -69,12 +69,12 @@ EndPoint pb_endpoint_to_ep(const PbEndpoint& pb) {
 
 void to_pb_piggyback(PbPiggybackEntry* pb, const PiggybackEntry& entry) {
     pb->set_type(static_cast<PbPiggybackType>(entry.type));
-    ep_to_pb_endpoint(pb->mutable_endpoint(), entry.endpoint);
+    ep_to_pb_endpoint(pb->mutable_endpoint(), entry.identity.endpoint);
     pb->set_incarnation(entry.incarnation);
     for (const auto& s : entry.actor_types)
         pb->add_actor_types(s);
     pb->set_load(entry.load);
-    for (const auto& acc : entry.acceptors) {
+    for (const auto& acc : entry.identity.acceptors) {
         auto* a = pb->add_acceptors();
         a->set_port(acc.port);
         a->set_handshake_version(acc.handshake_version);
@@ -86,7 +86,7 @@ void to_pb_piggyback(PbPiggybackEntry* pb, const PiggybackEntry& entry) {
 PiggybackEntry from_pb_piggyback(const PbPiggybackEntry& pb) {
     PiggybackEntry entry;
     entry.type = static_cast<PiggybackType>(pb.type());
-    entry.endpoint = pb_endpoint_to_ep(pb.endpoint());
+    entry.identity.endpoint = pb_endpoint_to_ep(pb.endpoint());
     entry.incarnation = pb.incarnation();
     for (const auto& s : pb.actor_types())
         entry.actor_types.push_back(s);
@@ -97,7 +97,7 @@ PiggybackEntry from_pb_piggyback(const PbPiggybackEntry& pb) {
         acc.handshake_version = static_cast<uint8_t>(a.handshake_version());
         acc.protocol_version = static_cast<uint8_t>(a.protocol_version());
         acc.tls_required = a.tls_required();
-        entry.acceptors.push_back(acc);
+        entry.identity.acceptors.push_back(acc);
     }
     return entry;
 }
@@ -105,14 +105,14 @@ PiggybackEntry from_pb_piggyback(const PbPiggybackEntry& pb) {
 // ---- Member conversion to/from protobuf ----
 
 void to_pb_member(PbGossipMember* pb, const Member& m) {
-    ep_to_pb_endpoint(pb->mutable_endpoint(), m.endpoint);
-    pb->set_host(m.host);
-    pb->set_uds_path(m.uds_path);
+    ep_to_pb_endpoint(pb->mutable_endpoint(), m.identity.endpoint);
+    pb->set_host(m.identity.host);
+    pb->set_uds_path(m.identity.uds_path);
     pb->set_incarnation(m.incarnation);
     pb->set_status(static_cast<uint32_t>(m.status));
     for (const auto& s : m.actor_types)
         pb->add_actor_types(s);
-    for (const auto& acc : m.acceptors) {
+    for (const auto& acc : m.identity.acceptors) {
         auto* a = pb->add_acceptors();
         a->set_port(acc.port);
         a->set_handshake_version(acc.handshake_version);
@@ -123,9 +123,9 @@ void to_pb_member(PbGossipMember* pb, const Member& m) {
 
 Member from_pb_member(const PbGossipMember& pb) {
     Member m;
-    m.endpoint = pb_endpoint_to_ep(pb.endpoint());
-    m.host = pb.host();
-    m.uds_path = pb.uds_path();
+    m.identity.endpoint = pb_endpoint_to_ep(pb.endpoint());
+    m.identity.host = pb.host();
+    m.identity.uds_path = pb.uds_path();
     m.incarnation = pb.incarnation();
     m.status = static_cast<MemberStatus>(pb.status());
     for (const auto& s : pb.actor_types())
@@ -136,7 +136,7 @@ Member from_pb_member(const PbGossipMember& pb) {
         acc.handshake_version = static_cast<uint8_t>(a.handshake_version());
         acc.protocol_version = static_cast<uint8_t>(a.protocol_version());
         acc.tls_required = a.tls_required();
-        m.acceptors.push_back(acc);
+        m.identity.acceptors.push_back(acc);
     }
     return m;
 }
@@ -239,7 +239,7 @@ void GossipMembership::start() {
         self.incarnation = incarnation_;
         self.status = MemberStatus::Alive;
         self.last_seen = std::chrono::steady_clock::now();
-        members_[self.endpoint] = std::move(self);
+        members_[self.identity.endpoint] = std::move(self);
     }
 
     // Bootstrap: join an existing cluster via a seed, or start a solo cluster.
@@ -380,7 +380,7 @@ GossipMembership::encode_message(GossipMessageType type, uint64_t inc,
         case GossipMessageType::Ping: {
             auto* ping = env.mutable_ping();
             ep_to_pb_endpoint(ping->mutable_sender_endpoint(),
-                              config_.local_state.endpoint);
+                              config_.local_state.identity.endpoint);
             ping->set_incarnation(inc);
             ping->set_seq_no(seq);
             for (const auto& e : pb)
@@ -390,7 +390,7 @@ GossipMembership::encode_message(GossipMessageType type, uint64_t inc,
         case GossipMessageType::Ack: {
             auto* ack = env.mutable_ack();
             ep_to_pb_endpoint(ack->mutable_sender_endpoint(),
-                              config_.local_state.endpoint);
+                              config_.local_state.identity.endpoint);
             ack->set_incarnation(inc);
             for (const auto& e : pb)
                 to_pb_piggyback(ack->add_piggyback(), e);
@@ -399,7 +399,7 @@ GossipMembership::encode_message(GossipMessageType type, uint64_t inc,
         case GossipMessageType::PingReq: {
             auto* pr = env.mutable_ping_req();
             ep_to_pb_endpoint(pr->mutable_sender_endpoint(),
-                              config_.local_state.endpoint);
+                              config_.local_state.identity.endpoint);
             ep_to_pb_endpoint(pr->mutable_target_endpoint(), ping_target);
             pr->set_incarnation(inc);
             break;
@@ -407,7 +407,7 @@ GossipMembership::encode_message(GossipMessageType type, uint64_t inc,
         case GossipMessageType::IndirectAck: {
             auto* ia = env.mutable_indirect_ack();
             ep_to_pb_endpoint(ia->mutable_sender_endpoint(),
-                              config_.local_state.endpoint);
+                              config_.local_state.identity.endpoint);
             ep_to_pb_endpoint(ia->mutable_original_requester(), ping_target);
             ia->set_incarnation(inc);
             break;
@@ -415,13 +415,13 @@ GossipMembership::encode_message(GossipMessageType type, uint64_t inc,
         case GossipMessageType::Join: {
             auto* join = env.mutable_join();
             ep_to_pb_endpoint(join->mutable_sender_endpoint(),
-                              config_.local_state.endpoint);
+                              config_.local_state.identity.endpoint);
             join->set_incarnation(inc);
-            join->set_host(config_.local_state.host);
-            join->set_uds_path(config_.local_state.uds_path);
+            join->set_host(config_.local_state.identity.host);
+            join->set_uds_path(config_.local_state.identity.uds_path);
             for (const auto& s : config_.local_state.actor_types)
                 join->add_actor_types(s);
-            for (const auto& acc : config_.local_state.acceptors) {
+            for (const auto& acc : config_.local_state.identity.acceptors) {
                 auto* a = join->add_acceptors();
                 a->set_port(acc.port);
                 a->set_handshake_version(acc.handshake_version);
@@ -433,7 +433,7 @@ GossipMembership::encode_message(GossipMessageType type, uint64_t inc,
         case GossipMessageType::Leave: {
             auto* leave = env.mutable_leave();
             ep_to_pb_endpoint(leave->mutable_sender_endpoint(),
-                              config_.local_state.endpoint);
+                              config_.local_state.identity.endpoint);
             leave->set_incarnation(inc);
             break;
         }
@@ -528,7 +528,8 @@ bool GossipMembership::decode_message(const StreamBuffer& data,
 StreamBuffer
 GossipMembership::encode_sync_rsp(const std::vector<Member>& members) const {
     PbGossipSyncRsp rsp;
-    ep_to_pb_endpoint(rsp.mutable_sender_endpoint(), config_.local_state.endpoint);
+    ep_to_pb_endpoint(rsp.mutable_sender_endpoint(),
+                      config_.local_state.identity.endpoint);
     rsp.set_incarnation(incarnation_);
     for (const auto& m : members) {
         to_pb_member(rsp.add_members(), m);
@@ -576,11 +577,11 @@ build_piggyback_impl(const GossipConfig& config, uint64_t incarnation,
     if (needs_dissemination) {
         PiggybackEntry meta;
         meta.type = PiggybackType::Metadata;
-        meta.endpoint = config.local_state.endpoint;
+        meta.identity.endpoint = config.local_state.identity.endpoint;
         meta.incarnation = incarnation;
         meta.actor_types = config.local_state.actor_types;
         meta.load = 0;
-        meta.acceptors = config.local_state.acceptors;
+        meta.identity.acceptors = config.local_state.identity.acceptors;
         entries.push_back(std::move(meta));
     }
 
@@ -590,13 +591,13 @@ build_piggyback_impl(const GossipConfig& config, uint64_t incarnation,
         if (m.status == MemberStatus::Suspicious) {
             PiggybackEntry e;
             e.type = PiggybackType::Suspicious;
-            e.endpoint = ep;
+            e.identity.endpoint = ep;
             e.incarnation = m.incarnation;
             entries.push_back(std::move(e));
         } else if (m.status == MemberStatus::Dead) {
             PiggybackEntry e;
             e.type = PiggybackType::Dead;
-            e.endpoint = ep;
+            e.identity.endpoint = ep;
             e.incarnation = m.incarnation;
             entries.push_back(std::move(e));
         }
@@ -620,7 +621,7 @@ void GossipMembership::protocol_round() {
         std::vector<EndPoint> alive;
         for (const auto& [ep, m] : members_) {
             if (m.status == MemberStatus::Alive &&
-                !(ep == config_.local_state.endpoint)) {
+                !(ep == config_.local_state.identity.endpoint)) {
                 alive.push_back(ep);
             }
         }
@@ -638,8 +639,8 @@ void GossipMembership::protocol_round() {
 
             for (const auto& target : targets) {
                 StreamBuffer msg =
-                    encode_message(GossipMessageType::Ping, incarnation_,
-                                   seq_no_++, config_.local_state.endpoint, pb);
+                    encode_message(GossipMessageType::Ping, incarnation_, seq_no_++,
+                                   config_.local_state.identity.endpoint, pb);
                 async_udp_send(loop_, udp_socket_, msg, target);
 
                 // Record pending ping.
@@ -682,7 +683,7 @@ void GossipMembership::protocol_round() {
 
                 // Pick indirect probe peers: Alive, not self, not the target.
                 std::unordered_set<EndPoint> exclude{
-                    target, config_.local_state.endpoint};
+                    target, config_.local_state.identity.endpoint};
                 auto probes = pick_random_peers(config_.indirect_probes, exclude);
 
                 if (probes.empty()) {
@@ -807,7 +808,7 @@ void GossipMembership::handle_ping(EndPoint sender, uint64_t inc, uint32_t /*seq
     // Merge the sender — a Ping proves they are alive.
     {
         Member m;
-        m.endpoint = sender;
+        m.identity.endpoint = sender;
         m.incarnation = inc;
         m.status = MemberStatus::Alive;
         m.last_seen = std::chrono::steady_clock::now();
@@ -838,7 +839,7 @@ void GossipMembership::handle_ping(EndPoint sender, uint64_t inc, uint32_t /*seq
     // Send Ack with piggyback.
     StreamBuffer ack_msg =
         encode_message(GossipMessageType::Ack, incarnation_, seq_no_++,
-                       config_.local_state.endpoint, ack_pb);
+                       config_.local_state.identity.endpoint, ack_pb);
     async_udp_send(loop_, udp_socket_, ack_msg, sender);
 }
 
@@ -847,7 +848,7 @@ void GossipMembership::handle_ack(EndPoint sender, uint64_t inc,
     // Merge the sender — an Ack proves they are alive.
     {
         Member m;
-        m.endpoint = sender;
+        m.identity.endpoint = sender;
         m.incarnation = inc;
         m.status = MemberStatus::Alive;
         m.last_seen = std::chrono::steady_clock::now();
@@ -879,7 +880,7 @@ void GossipMembership::handle_ping_req(EndPoint sender, EndPoint target) {
     // Merge the requester.
     {
         Member m;
-        m.endpoint = sender;
+        m.identity.endpoint = sender;
         m.status = MemberStatus::Alive;
         m.last_seen = std::chrono::steady_clock::now();
         merge_member(m);
@@ -897,8 +898,9 @@ void GossipMembership::handle_ping_req(EndPoint sender, EndPoint target) {
                                   members_);
     }
 
-    StreamBuffer msg = encode_message(GossipMessageType::Ping, incarnation_,
-                                      seq_no_++, config_.local_state.endpoint, pb);
+    StreamBuffer msg =
+        encode_message(GossipMessageType::Ping, incarnation_, seq_no_++,
+                       config_.local_state.identity.endpoint, pb);
     async_udp_send(loop_, udp_socket_, msg, target);
 }
 
@@ -906,7 +908,7 @@ void GossipMembership::handle_indirect_ack(EndPoint sender, EndPoint target) {
     // Merge the indirect ack sender.
     {
         Member m;
-        m.endpoint = sender;
+        m.identity.endpoint = sender;
         m.status = MemberStatus::Alive;
         m.last_seen = std::chrono::steady_clock::now();
         merge_member(m);
@@ -928,7 +930,7 @@ void GossipMembership::handle_join(EndPoint sender, uint64_t inc,
     // Merge the joining node.
     {
         Member m;
-        m.endpoint = sender;
+        m.identity.endpoint = sender;
         m.incarnation = inc;
         m.status = MemberStatus::Alive;
         m.last_seen = std::chrono::steady_clock::now();
@@ -960,12 +962,12 @@ void GossipMembership::handle_sync_rsp(std::vector<Member> members) {
     // Ensure self is still in the table (should always be, but be defensive).
     {
         std::unique_lock<std::shared_mutex> lock(members_mutex_);
-        if (members_.find(config_.local_state.endpoint) == members_.end()) {
+        if (members_.find(config_.local_state.identity.endpoint) == members_.end()) {
             Member self = config_.local_state;
             self.incarnation = incarnation_;
             self.status = MemberStatus::Alive;
             self.last_seen = std::chrono::steady_clock::now();
-            members_[self.endpoint] = std::move(self);
+            members_[self.identity.endpoint] = std::move(self);
         }
     }
 }
@@ -1006,14 +1008,16 @@ void GossipMembership::send_ping(EndPoint target) {
         pb = build_piggyback_impl(config_, incarnation_, needs_dissemination_,
                                   members_);
     }
-    StreamBuffer msg = encode_message(GossipMessageType::Ping, incarnation_,
-                                      seq_no_++, config_.local_state.endpoint, pb);
+    StreamBuffer msg =
+        encode_message(GossipMessageType::Ping, incarnation_, seq_no_++,
+                       config_.local_state.identity.endpoint, pb);
     async_udp_send(loop_, udp_socket_, msg, target);
 }
 
 void GossipMembership::send_ack(EndPoint target, std::vector<PiggybackEntry> pb) {
-    StreamBuffer msg = encode_message(GossipMessageType::Ack, incarnation_,
-                                      seq_no_++, config_.local_state.endpoint, pb);
+    StreamBuffer msg =
+        encode_message(GossipMessageType::Ack, incarnation_, seq_no_++,
+                       config_.local_state.identity.endpoint, pb);
     async_udp_send(loop_, udp_socket_, msg, target);
 }
 
@@ -1044,14 +1048,15 @@ void GossipMembership::send_join(EndPoint seed) {
     {
         PiggybackEntry meta;
         meta.type = PiggybackType::Metadata;
-        meta.endpoint = config_.local_state.endpoint;
+        meta.identity.endpoint = config_.local_state.identity.endpoint;
         meta.incarnation = incarnation_;
         meta.actor_types = config_.local_state.actor_types;
-        meta.acceptors = config_.local_state.acceptors;
+        meta.identity.acceptors = config_.local_state.identity.acceptors;
         pb.push_back(std::move(meta));
     }
-    StreamBuffer msg = encode_message(GossipMessageType::Join, incarnation_,
-                                      seq_no_++, config_.local_state.endpoint, pb);
+    StreamBuffer msg =
+        encode_message(GossipMessageType::Join, incarnation_, seq_no_++,
+                       config_.local_state.identity.endpoint, pb);
     async_udp_send(loop_, udp_socket_, msg, seed);
 }
 
@@ -1072,8 +1077,9 @@ void GossipMembership::send_sync_rsp(EndPoint target) {
 
 void GossipMembership::send_leave(EndPoint target) {
     std::vector<PiggybackEntry> pb; // empty piggyback for leave
-    StreamBuffer msg = encode_message(GossipMessageType::Leave, incarnation_,
-                                      seq_no_++, config_.local_state.endpoint, pb);
+    StreamBuffer msg =
+        encode_message(GossipMessageType::Leave, incarnation_, seq_no_++,
+                       config_.local_state.identity.endpoint, pb);
     async_udp_send(loop_, udp_socket_, msg, target);
 }
 
@@ -1121,11 +1127,12 @@ void GossipMembership::mark_dead(EndPoint ep) {
 void GossipMembership::merge_member(const Member& remote) {
     std::unique_lock<std::shared_mutex> lock(members_mutex_);
 
-    auto it = members_.find(remote.endpoint);
+    auto it = members_.find(remote.identity.endpoint);
     if (it == members_.end()) {
         // First time seeing this endpoint — insert.
-        members_[remote.endpoint] = remote;
-        members_[remote.endpoint].last_seen = std::chrono::steady_clock::now();
+        members_[remote.identity.endpoint] = remote;
+        members_[remote.identity.endpoint].last_seen =
+            std::chrono::steady_clock::now();
         return;
     }
 
@@ -1160,11 +1167,11 @@ void GossipMembership::merge_member(const Member& remote) {
     if (!remote.actor_types.empty()) {
         existing.actor_types = remote.actor_types;
     }
-    if (!remote.host.empty()) {
-        existing.host = remote.host;
+    if (!remote.identity.host.empty()) {
+        existing.identity.host = remote.identity.host;
     }
-    if (!remote.acceptors.empty()) {
-        existing.acceptors = remote.acceptors;
+    if (!remote.identity.acceptors.empty()) {
+        existing.identity.acceptors = remote.identity.acceptors;
     }
 
     existing.last_seen = std::chrono::steady_clock::now();
@@ -1174,11 +1181,11 @@ void GossipMembership::apply_piggyback(const std::vector<PiggybackEntry>& entrie
     std::unique_lock<std::shared_mutex> lock(members_mutex_);
 
     for (const auto& entry : entries) {
-        auto it = members_.find(entry.endpoint);
+        auto it = members_.find(entry.identity.endpoint);
         if (it == members_.end()) {
             // We don't know this endpoint — insert it with the piggyback info.
             Member m;
-            m.endpoint = entry.endpoint;
+            m.identity.endpoint = entry.identity.endpoint;
             m.incarnation = entry.incarnation;
             m.last_seen = std::chrono::steady_clock::now();
 
@@ -1195,10 +1202,10 @@ void GossipMembership::apply_piggyback(const std::vector<PiggybackEntry>& entrie
                 case PiggybackType::Metadata:
                     m.status = MemberStatus::Alive;
                     m.actor_types = entry.actor_types;
-                    m.acceptors = entry.acceptors;
+                    m.identity.acceptors = entry.identity.acceptors;
                     break;
             }
-            members_[entry.endpoint] = std::move(m);
+            members_[entry.identity.endpoint] = std::move(m);
             continue;
         }
 
@@ -1229,8 +1236,8 @@ void GossipMembership::apply_piggyback(const std::vector<PiggybackEntry>& entrie
                 if (!entry.actor_types.empty()) {
                     existing.actor_types = entry.actor_types;
                 }
-                if (!entry.acceptors.empty()) {
-                    existing.acceptors = entry.acceptors;
+                if (!entry.identity.acceptors.empty()) {
+                    existing.identity.acceptors = entry.identity.acceptors;
                 }
                 break;
         }
@@ -1266,7 +1273,7 @@ GossipMembership::pick_random_peers(size_t count,
     for (const auto& [ep, m] : members_) {
         if (m.status != MemberStatus::Alive)
             continue;
-        if (ep == config_.local_state.endpoint)
+        if (ep == config_.local_state.identity.endpoint)
             continue; // exclude self
         if (exclude.find(ep) != exclude.end())
             continue;

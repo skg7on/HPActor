@@ -15,10 +15,11 @@ int main() {
     // Test 1: PbRegisterPayload round-trip (acceptors at top level per spec)
     {
         NodeEndpoint ep;
-        ep.endpoint = endpoint_ops::parse_endpoint("192.168.1.100:5353");
-        ep.host = "192.168.1.100";
+        ep.identity.endpoint = endpoint_ops::parse_endpoint("192.168.1.100:"
+                                                            "5353");
+        ep.identity.host = "192.168.1.100";
         ep.tcp_port = 5353;
-        ep.acceptors.push_back({8080, 1, 1, false});
+        ep.identity.acceptors.push_back({8080, 1, 1, false});
 
         StreamBuffer serialized = serialize_register_payload(ep);
         PbRegisterPayload parsed;
@@ -43,8 +44,8 @@ int main() {
     // Test 3: PbNodeJoinPayload round-trip
     {
         NodeEndpoint ep;
-        ep.endpoint = endpoint_ops::parse_endpoint("10.0.0.1:4000");
-        ep.host = "10.0.0.1";
+        ep.identity.endpoint = endpoint_ops::parse_endpoint("10.0.0.1:4000");
+        ep.identity.host = "10.0.0.1";
         ep.tcp_port = 4000;
 
         StreamBuffer serialized = serialize_node_join_payload(ep);
@@ -80,8 +81,9 @@ int main() {
     // acceptors per spec)
     {
         NodeEndpoint ep;
-        ep.endpoint = endpoint_ops::parse_endpoint("192.168.1.50:5353");
-        ep.host = "192.168.1.50";
+        ep.identity.endpoint = endpoint_ops::parse_endpoint("192.168.1.50:"
+                                                            "5353");
+        ep.identity.host = "192.168.1.50";
         ep.tcp_port = 5353;
 
         StreamBuffer serialized = serialize_resolve_response_payload(ep);

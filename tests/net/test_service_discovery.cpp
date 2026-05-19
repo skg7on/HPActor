@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/service_discovery.hpp>
-#include <hpactor/net/static_discovery.hpp>
 #include <hpactor/net/actor_location_cache.hpp>
-#include <hpactor/net/registrar.hpp>
 #include <hpactor/net/gossip_membership.hpp>
 #include <hpactor/net/hybrid_discovery.hpp>
+#include <hpactor/net/registrar.hpp>
+#include <hpactor/net/service_discovery.hpp>
+#include <hpactor/net/static_discovery.hpp>
 
 #include <cassert>
 #include <cstdio>
@@ -38,11 +38,17 @@ static EndPoint ep(uint16_t port) {
 struct TestDiscovery : IServiceDiscovery {
     void start() override {}
     void stop() override {}
-    std::vector<Member> discover_all() const override { return {}; }
-    const Member* discover(EndPoint) const override { return nullptr; }
+    std::vector<Member> discover_all() const override {
+        return {};
+    }
+    const Member* discover(EndPoint) const override {
+        return nullptr;
+    }
     void announce(Member) override {}
     void on_member_change(MemberChangeCallback) override {}
-    std::string backend_name() const override { return "test"; }
+    std::string backend_name() const override {
+        return "test";
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -62,19 +68,19 @@ int main() {
         auto ep2 = ep(9001);
         std::vector<Member> members;
         Member m1;
-        m1.endpoint = ep1;
-        m1.host = "host-a";
+        m1.identity.endpoint = ep1;
+        m1.identity.host = "host-a";
         members.push_back(m1);
         Member m2;
-        m2.endpoint = ep2;
-        m2.host = "host-b";
+        m2.identity.endpoint = ep2;
+        m2.identity.host = "host-b";
         members.push_back(m2);
 
         StaticDiscovery sd(std::move(members));
         const auto* found = sd.discover(ep1);
         assert(found != nullptr);
-        assert(found->endpoint == ep1);
-        assert(found->host == "host-a");
+        assert(found->identity.endpoint == ep1);
+        assert(found->identity.host == "host-a");
         // tcp_port removed — port is in endpoint
     }
 
@@ -84,7 +90,7 @@ int main() {
         auto unknown = ep(9999);
         std::vector<Member> members;
         Member m;
-        m.endpoint = known;
+        m.identity.endpoint = known;
         members.push_back(m);
 
         StaticDiscovery sd(std::move(members));
@@ -97,10 +103,10 @@ int main() {
         auto ep2 = ep(9001);
         std::vector<Member> members;
         Member m1;
-        m1.endpoint = ep1;
+        m1.identity.endpoint = ep1;
         members.push_back(m1);
         Member m2;
-        m2.endpoint = ep2;
+        m2.identity.endpoint = ep2;
         members.push_back(m2);
 
         StaticDiscovery sd(std::move(members));
@@ -133,7 +139,7 @@ int main() {
         ActorId id(42);
         auto ep1 = ep(9000);
 
-        cache.put(id, ep1, std::chrono::seconds(-1));  // already expired
+        cache.put(id, ep1, std::chrono::seconds(-1)); // already expired
         auto result = cache.get(id);
         assert(!result.has_value());
     }
@@ -159,13 +165,13 @@ int main() {
 
         cache.put(ActorId(1), ep1);
         cache.put(ActorId(2), ep1);
-        cache.put(ActorId(3), ep2);   // different endpoint
+        cache.put(ActorId(3), ep2); // different endpoint
 
         cache.evict_node(ep1);
 
         assert(!cache.get(ActorId(1)).has_value());
         assert(!cache.get(ActorId(2)).has_value());
-        assert(cache.get(ActorId(3)).has_value());   // still present
+        assert(cache.get(ActorId(3)).has_value()); // still present
     }
 
     // ---- Test 10: ActorLocationCache purge_expired cleans up --------------
@@ -173,14 +179,14 @@ int main() {
         ActorLocationCache cache;
         auto ep1 = ep(9000);
 
-        cache.put(ActorId(1), ep1, std::chrono::seconds(-1));    // expired
-        cache.put(ActorId(2), ep1, std::chrono::seconds(3600));  // not expired
+        cache.put(ActorId(1), ep1, std::chrono::seconds(-1));   // expired
+        cache.put(ActorId(2), ep1, std::chrono::seconds(3600)); // not expired
 
         cache.purge_expired();
 
-        assert(!cache.get(ActorId(1)).has_value());   // expired
+        assert(!cache.get(ActorId(1)).has_value()); // expired
         auto result = cache.get(ActorId(2));
-        assert(result.has_value());                    // kept
+        assert(result.has_value()); // kept
         assert(*result == ep1);
     }
 

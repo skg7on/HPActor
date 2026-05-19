@@ -428,7 +428,7 @@ NodeRegistry::NodeRegistry(const RegistrarConfig& config) : config_(config) {}
 void NodeRegistry::upsert_endpoint(NodeEndpoint endpoint) {
     std::lock_guard<std::mutex> lock(mutex_);
     endpoint.last_seen = std::chrono::steady_clock::now();
-    endpoints_[endpoint.endpoint] = endpoint;
+    endpoints_[endpoint.identity.endpoint] = endpoint;
 }
 
 bool NodeRegistry::remove_endpoint(EndPoint endpoint) {
@@ -576,8 +576,8 @@ void UdpRegistrar::start_client_mode() {
     // Populate with static routes
     for (const auto& route : config_.static_routes) {
         NodeEndpoint ep;
-        ep.endpoint = route.endpoint;
-        ep.host = route.address;
+        ep.identity.endpoint = route.endpoint;
+        ep.identity.host = route.address;
         ep.tcp_port = route.port;
         ep.is_static_route = true;
         client_registry_->upsert_endpoint(ep);
@@ -641,8 +641,8 @@ void UdpRegistrar::start_client_mode_async() {
     // Populate with static routes
     for (const auto& route : config_.static_routes) {
         NodeEndpoint ep;
-        ep.endpoint = route.endpoint;
-        ep.host = route.address;
+        ep.identity.endpoint = route.endpoint;
+        ep.identity.host = route.address;
         ep.tcp_port = route.port;
         ep.is_static_route = true;
         client_registry_->upsert_endpoint(ep);
@@ -841,14 +841,14 @@ void UdpRegistrar::handle_resolve_response(const StreamBuffer& payload) {
 
     auto& info = msg.endpoint_info();
     NodeEndpoint ep;
-    ep.endpoint = endpoint_ops::parse_endpoint(info.endpoint());
-    ep.host = info.host();
+    ep.identity.endpoint = endpoint_ops::parse_endpoint(info.endpoint());
+    ep.identity.host = info.host();
     ep.tcp_port = static_cast<uint16_t>(info.tcp_port());
     ep.last_seen = std::chrono::steady_clock::now();
     server_->registry()->upsert_endpoint(ep);
 
     if (node_callback_) {
-        node_callback_(ep.endpoint, true);
+        node_callback_(ep.identity.endpoint, true);
     }
 }
 
@@ -873,10 +873,10 @@ void UdpRegistrar::send_resolve_response(const NodeEndpoint& endpoint,
 
 Member UdpRegistrar::to_member(const NodeEndpoint& ep) {
     Member m;
-    m.endpoint = ep.endpoint;
-    m.host = ep.host;
-    m.uds_path = ep.uds_path;
-    m.acceptors = ep.acceptors;
+    m.identity.endpoint = ep.identity.endpoint;
+    m.identity.host = ep.identity.host;
+    m.identity.uds_path = ep.identity.uds_path;
+    m.identity.acceptors = ep.identity.acceptors;
     m.last_seen = ep.last_seen;
     return m;
 }

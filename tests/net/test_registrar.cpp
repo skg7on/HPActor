@@ -45,22 +45,23 @@ int main() {
 
     // Test NodeEndpoint defaults
     NodeEndpoint ep;
-    assert(ep.endpoint == EndPoint{});
+    assert(ep.identity.endpoint == EndPoint{});
     assert(ep.tcp_port == 0);
     assert(ep.is_static_route == false);
-    assert(ep.acceptors.empty());
+    assert(ep.identity.acceptors.empty());
 
     // Test NodeEndpoint with acceptors
     NodeEndpoint ep3;
-    ep3.endpoint = hpactor::endpoint_ops::parse_endpoint("node1:12345");
-    ep3.host = "localhost";
+    ep3.identity.endpoint = hpactor::endpoint_ops::parse_endpoint("node1:"
+                                                                  "12345");
+    ep3.identity.host = "localhost";
     ep3.tcp_port = 9000;
-    ep3.acceptors.push_back({9000, 1, 1, false});
-    assert(ep3.acceptors.size() == 1);
-    assert(ep3.acceptors[0].port == 9000);
-    assert(ep3.acceptors[0].handshake_version == 1);
-    assert(ep3.acceptors[0].protocol_version == 1);
-    assert(ep3.acceptors[0].tls_required == false);
+    ep3.identity.acceptors.push_back({9000, 1, 1, false});
+    assert(ep3.identity.acceptors.size() == 1);
+    assert(ep3.identity.acceptors[0].port == 9000);
+    assert(ep3.identity.acceptors[0].handshake_version == 1);
+    assert(ep3.identity.acceptors[0].protocol_version == 1);
+    assert(ep3.identity.acceptors[0].tls_required == false);
 
     // Test HostResolver with IP address (no DNS needed)
     HostResolver resolver;
@@ -84,8 +85,9 @@ int main() {
     assert(registry.all().empty());
 
     NodeEndpoint ep2;
-    ep2.endpoint = hpactor::endpoint_ops::parse_endpoint("node42:12345");
-    ep2.host = "192.168.1.100";
+    ep2.identity.endpoint = hpactor::endpoint_ops::parse_endpoint("node42:"
+                                                                  "12345");
+    ep2.identity.host = "192.168.1.100";
     ep2.tcp_port = 9001;
     ep2.is_static_route = true;
     registry.upsert_endpoint(ep2);

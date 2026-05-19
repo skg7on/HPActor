@@ -83,7 +83,7 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
             }
             return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
         }
-        resolved_target.endpoint = member->endpoint;
+        resolved_target.endpoint = member->identity.endpoint;
         if (location_cache_) {
             location_cache_->put(target.id, resolved_target.endpoint);
         }

@@ -167,12 +167,12 @@ void RegistrarClient::attempt_connection() {
     }
 
     // Resolve server hostname
-    std::string server_ip = server_ep->host;
+    std::string server_ip = server_ep->identity.host;
     struct in_addr addr;
     if (inet_pton(AF_INET, server_ip.c_str(), &addr) != 1) {
         // Try to resolve hostname
         HostResolver resolver;
-        server_ip = resolver.resolve(server_ep->host);
+        server_ip = resolver.resolve(server_ep->identity.host);
         if (server_ip.empty()) {
             // Schedule retry
             if (loop_) {
@@ -257,10 +257,10 @@ void RegistrarClient::send_registration() {
 
     // Create NodeEndpoint for serialization
     NodeEndpoint ep;
-    ep.endpoint = local_endpoint_;
-    ep.host = host;
+    ep.identity.endpoint = local_endpoint_;
+    ep.identity.host = host;
     ep.tcp_port = tcp_port;
-    ep.acceptors = acceptors_;
+    ep.identity.acceptors = acceptors_;
 
     StreamBuffer payload = serialize_register_payload(ep);
     server_connection_->send_message(TcpMessageType::Register, payload);
@@ -300,8 +300,8 @@ void RegistrarClient::handle_server_message(TcpMessageType type,
             uint16_t tcp_port = static_cast<uint16_t>(ep_info.tcp_port());
 
             NodeEndpoint node_ep;
-            node_ep.endpoint = endpoint;
-            node_ep.host = host;
+            node_ep.identity.endpoint = endpoint;
+            node_ep.identity.host = host;
             node_ep.tcp_port = tcp_port;
             node_ep.last_seen = std::chrono::steady_clock::now();
             shared_registry_->upsert_endpoint(node_ep);

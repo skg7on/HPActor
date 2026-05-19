@@ -120,7 +120,7 @@ ActorSystem::ActorSystem(const Config& config)
 
         discovery_->on_member_change([this](const net::Member& m, bool joined) {
             if (!joined) {
-                on_node_dead(m.endpoint);
+                on_node_dead(m.identity.endpoint);
             }
             // Note: proactive connection pool warming (prewarm_pool) will be
             // integrated in a follow-up task when ConnectionPool is updated.

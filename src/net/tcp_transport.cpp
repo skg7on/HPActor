@@ -198,12 +198,12 @@ ConnectionPtr TcpTransport::connect(EndPoint remote_endpoint) {
     }
 
     // Check if UDS path is available for this endpoint
-    if (!ep->uds_path.empty()) {
-        return connect_unix_domain(remote_endpoint, ep->uds_path);
+    if (!ep->identity.uds_path.empty()) {
+        return connect_unix_domain(remote_endpoint, ep->identity.uds_path);
     }
 
     // Resolve hostname to IP if needed
-    std::string ip = host_resolver_.resolve(ep->host);
+    std::string ip = host_resolver_.resolve(ep->identity.host);
 
     // Connect to resolved IP:port
     return connect(remote_endpoint, ip, ep->tcp_port);

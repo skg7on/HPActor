@@ -18,10 +18,11 @@ namespace net {
 // PbRegisterPayload - acceptors are at top level per spec
 inline PbRegisterPayload to_proto_register(const NodeEndpoint& ep) {
     PbRegisterPayload msg;
-    msg.mutable_endpoint_info()->set_endpoint(endpoint_ops::to_string(ep.endpoint));
-    msg.mutable_endpoint_info()->set_host(ep.host);
+    msg.mutable_endpoint_info()->set_endpoint(
+        endpoint_ops::to_string(ep.identity.endpoint));
+    msg.mutable_endpoint_info()->set_host(ep.identity.host);
     msg.mutable_endpoint_info()->set_tcp_port(ep.tcp_port);
-    for (const auto& acc : ep.acceptors) {
+    for (const auto& acc : ep.identity.acceptors) {
         auto* a = msg.add_acceptors();
         a->set_port(acc.port);
         a->set_handshake_version(acc.handshake_version);
@@ -37,7 +38,8 @@ inline StreamBuffer serialize_register_payload(const NodeEndpoint& ep) {
     return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-inline bool parse_register_payload(const StreamBuffer& data, PbRegisterPayload& msg) {
+inline bool
+parse_register_payload(const StreamBuffer& data, PbRegisterPayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -61,8 +63,9 @@ inline bool parse_accept_payload(const StreamBuffer& data, PbAcceptPayload& msg)
 // PbNodeJoinPayload
 inline PbNodeJoinPayload to_proto_node_join(const NodeEndpoint& ep) {
     PbNodeJoinPayload msg;
-    msg.mutable_endpoint_info()->set_endpoint(endpoint_ops::to_string(ep.endpoint));
-    msg.mutable_endpoint_info()->set_host(ep.host);
+    msg.mutable_endpoint_info()->set_endpoint(
+        endpoint_ops::to_string(ep.identity.endpoint));
+    msg.mutable_endpoint_info()->set_host(ep.identity.host);
     msg.mutable_endpoint_info()->set_tcp_port(ep.tcp_port);
     return msg;
 }
@@ -73,7 +76,8 @@ inline StreamBuffer serialize_node_join_payload(const NodeEndpoint& ep) {
     return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-inline bool parse_node_join_payload(const StreamBuffer& data, PbNodeJoinPayload& msg) {
+inline bool
+parse_node_join_payload(const StreamBuffer& data, PbNodeJoinPayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -90,7 +94,8 @@ inline StreamBuffer serialize_node_leave_payload(const EndPoint& ep) {
     return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-inline bool parse_node_leave_payload(const StreamBuffer& data, PbNodeLeavePayload& msg) {
+inline bool
+parse_node_leave_payload(const StreamBuffer& data, PbNodeLeavePayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 
@@ -113,8 +118,7 @@ inline StreamBuffer serialize_error_payload(uint8_t code, const std::string& msg
 // -----------------------------------------------------------------------------
 
 // PbResolveQueryPayload
-inline PbResolveQueryPayload
-to_proto_resolve_query(const EndPoint& ep) {
+inline PbResolveQueryPayload to_proto_resolve_query(const EndPoint& ep) {
     PbResolveQueryPayload msg;
     msg.set_target_endpoint(endpoint_ops::to_string(ep));
     return msg;
@@ -134,8 +138,9 @@ parse_resolve_query_payload(const StreamBuffer& data, PbResolveQueryPayload& msg
 // PbResolveResponsePayload
 inline PbResolveResponsePayload to_proto_resolve_response(const NodeEndpoint& ep) {
     PbResolveResponsePayload msg;
-    msg.mutable_endpoint_info()->set_endpoint(endpoint_ops::to_string(ep.endpoint));
-    msg.mutable_endpoint_info()->set_host(ep.host);
+    msg.mutable_endpoint_info()->set_endpoint(
+        endpoint_ops::to_string(ep.identity.endpoint));
+    msg.mutable_endpoint_info()->set_host(ep.identity.host);
     msg.mutable_endpoint_info()->set_tcp_port(ep.tcp_port);
     return msg;
 }
@@ -146,8 +151,8 @@ inline StreamBuffer serialize_resolve_response_payload(const NodeEndpoint& ep) {
     return StreamBuffer(serialized.begin(), serialized.end());
 }
 
-inline bool
-parse_resolve_response_payload(const StreamBuffer& data, PbResolveResponsePayload& msg) {
+inline bool parse_resolve_response_payload(const StreamBuffer& data,
+                                           PbResolveResponsePayload& msg) {
     return msg.ParseFromArray(data.data(), static_cast<int>(data.size()));
 }
 

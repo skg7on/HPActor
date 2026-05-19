@@ -39,9 +39,9 @@ static EndPoint ep(uint16_t port) {
 static Member
 make_member(EndPoint e, const char* host, MemberStatus st, uint64_t inc) {
     Member m;
-    m.endpoint = e;
+    m.identity.endpoint = e;
     if (host)
-        m.host = host;
+        m.identity.host = host;
     m.status = st;
     m.incarnation = inc;
     m.last_seen = std::chrono::steady_clock::now();
@@ -77,8 +77,8 @@ int main() {
     {
         GossipConfig cfg;
         EndPoint self_ep = ep(9000);
-        cfg.local_state.endpoint = self_ep;
-        cfg.local_state.host = "127.0.0.1";
+        cfg.local_state.identity.endpoint = self_ep;
+        cfg.local_state.identity.host = "127.0.0.1";
         GossipMembership gm(cfg, nullptr);
 
         // Simulate the self-insertion that start() would perform, without I/O.
@@ -91,7 +91,7 @@ int main() {
         auto all = gm.discover_all();
         assert(all.size() == 1);
         assert(all[0].status == MemberStatus::Alive);
-        assert(all[0].endpoint == self_ep);
+        assert(all[0].identity.endpoint == self_ep);
 
         // discover returns a pointer for the known endpoint.
         const auto* found = gm.discover(self_ep);
@@ -106,32 +106,32 @@ int main() {
     {
         GossipConfig cfg;
         EndPoint self_ep = ep(9000);
-        cfg.local_state.endpoint = self_ep;
-        cfg.local_state.host = "original-host";
+        cfg.local_state.identity.endpoint = self_ep;
+        cfg.local_state.identity.host = "original-host";
         GossipMembership gm(cfg, nullptr);
         gm.incarnation_ = 100;
         gm.needs_dissemination_ = false;
 
         Member ann;
-        ann.endpoint = self_ep;
-        ann.host = "updated-host";
+        ann.identity.endpoint = self_ep;
+        ann.identity.host = "updated-host";
         gm.announce(std::move(ann));
 
         assert(gm.incarnation_ > 100);           // incarnation bumped
         assert(gm.needs_dissemination_ == true); // dissemination flag set
         assert(gm.config_.local_state.incarnation == gm.incarnation_);
-        assert(gm.config_.local_state.host == "updated-host");
+        assert(gm.config_.local_state.identity.host == "updated-host");
     }
 
     // ---- Test 4: discover_all() returns a copy, not a reference -----------
     {
         GossipConfig cfg;
         EndPoint self_ep = ep(9000);
-        cfg.local_state.endpoint = self_ep;
+        cfg.local_state.identity.endpoint = self_ep;
         GossipMembership gm(cfg, nullptr);
 
         Member self;
-        self.endpoint = self_ep;
+        self.identity.endpoint = self_ep;
         self.status = MemberStatus::Alive;
         self.incarnation = 1;
         gm.members_[self_ep] = self;
@@ -155,7 +155,7 @@ int main() {
     {
         GossipConfig cfg;
         EndPoint self_ep = ep(9000);
-        cfg.local_state.endpoint = self_ep;
+        cfg.local_state.identity.endpoint = self_ep;
         GossipMembership gm(cfg, nullptr);
         gm.members_[self_ep] = Member{};
 
@@ -168,14 +168,14 @@ int main() {
         assert(it != gm.members_.end());
         assert(it->second.status == MemberStatus::Alive);
         assert(it->second.incarnation == 5);
-        assert(it->second.host == "10.0.0.1");
+        assert(it->second.identity.host == "10.0.0.1");
     }
 
     // ---- Test 7: merge_member — update on higher incarnation ---------------
     {
         GossipConfig cfg;
         EndPoint self_ep = ep(9000);
-        cfg.local_state.endpoint = self_ep;
+        cfg.local_state.identity.endpoint = self_ep;
         GossipMembership gm(cfg, nullptr);
         gm.members_[self_ep] = Member{};
 
@@ -188,14 +188,14 @@ int main() {
         gm.merge_member(second);
 
         assert(gm.members_[alice].incarnation == 10);
-        assert(gm.members_[alice].host == "host-b");
+        assert(gm.members_[alice].identity.host == "host-b");
     }
 
     // ---- Test 8: merge_member — ignore lower incarnation (stale) -----------
     {
         GossipConfig cfg;
         EndPoint self_ep = ep(9000);
-        cfg.local_state.endpoint = self_ep;
+        cfg.local_state.identity.endpoint = self_ep;
         GossipMembership gm(cfg, nullptr);
         gm.members_[self_ep] = Member{};
 
@@ -205,22 +205,22 @@ int main() {
 
         // Stale update — entirely ignored.
         Member stale;
-        stale.endpoint = alice;
+        stale.identity.endpoint = alice;
         stale.incarnation = 5;
         stale.status = MemberStatus::Suspicious;
-        stale.host = "stale";
+        stale.identity.host = "stale";
         gm.merge_member(stale);
 
         assert(gm.members_[alice].incarnation == 10);
         assert(gm.members_[alice].status == MemberStatus::Alive);
-        assert(gm.members_[alice].host == "original");
+        assert(gm.members_[alice].identity.host == "original");
     }
 
     // ---- Test 9: merge_member — Dead -> Alive on reincarnation ------------
     {
         GossipConfig cfg;
         EndPoint self_ep = ep(9000);
-        cfg.local_state.endpoint = self_ep;
+        cfg.local_state.identity.endpoint = self_ep;
         GossipMembership gm(cfg, nullptr);
         gm.members_[self_ep] = Member{};
 
@@ -235,14 +235,14 @@ int main() {
 
         assert(gm.members_[alice].status == MemberStatus::Alive);
         assert(gm.members_[alice].incarnation == 20);
-        assert(gm.members_[alice].host == "host-b");
+        assert(gm.members_[alice].identity.host == "host-b");
     }
 
     // ---- Test 10: mark_suspicious / mark_dead transitions ------------------
     {
         GossipConfig cfg;
         EndPoint self_ep = ep(9000);
-        cfg.local_state.endpoint = self_ep;
+        cfg.local_state.identity.endpoint = self_ep;
         GossipMembership gm(cfg, nullptr);
         gm.members_[self_ep] = Member{};
 
@@ -259,18 +259,18 @@ int main() {
     // ---- Test 11: pick_random_peers — all available when fewer than count ---
     {
         GossipConfig cfg;
-        cfg.local_state.endpoint = ep(9000);
+        cfg.local_state.identity.endpoint = ep(9000);
         GossipMembership gm(cfg, nullptr);
         // Self must be Alive.
         Member self;
-        self.endpoint = ep(9000);
+        self.identity.endpoint = ep(9000);
         self.status = MemberStatus::Alive;
         gm.members_[ep(9000)] = self;
 
         // Add three Alive peers.
         for (uint16_t p = 9001; p <= 9003; ++p) {
             Member peer;
-            peer.endpoint = ep(p);
+            peer.identity.endpoint = ep(p);
             peer.status = MemberStatus::Alive;
             gm.members_[ep(p)] = std::move(peer);
         }
@@ -282,10 +282,10 @@ int main() {
     // ---- Test 12: pick_random_peers — empty when solo cluster -------------
     {
         GossipConfig cfg;
-        cfg.local_state.endpoint = ep(9000);
+        cfg.local_state.identity.endpoint = ep(9000);
         GossipMembership gm(cfg, nullptr);
         Member self;
-        self.endpoint = ep(9000);
+        self.identity.endpoint = ep(9000);
         self.status = MemberStatus::Alive;
         gm.members_[ep(9000)] = self;
 
@@ -297,21 +297,21 @@ int main() {
     {
         GossipConfig cfg;
         cfg.dead_timeout = std::chrono::milliseconds(50);
-        cfg.local_state.endpoint = ep(9000);
+        cfg.local_state.identity.endpoint = ep(9000);
         GossipMembership gm(cfg, nullptr);
         gm.members_[ep(9000)] = Member{};
 
         // Dead member far past timeout.
         auto ancient = std::chrono::steady_clock::now() - std::chrono::seconds(60);
         Member dead;
-        dead.endpoint = ep(9001);
+        dead.identity.endpoint = ep(9001);
         dead.status = MemberStatus::Dead;
         dead.last_seen = ancient;
         gm.members_[ep(9001)] = std::move(dead);
 
         // Left member far past timeout.
         Member left;
-        left.endpoint = ep(9002);
+        left.identity.endpoint = ep(9002);
         left.status = MemberStatus::Left;
         left.last_seen = ancient;
         gm.members_[ep(9002)] = std::move(left);
@@ -330,14 +330,14 @@ int main() {
     // ---- Test 14: Wire encode/decode roundtrip — Ping with piggyback ------
     {
         GossipConfig cfg;
-        cfg.local_state.endpoint = ep(9000);
+        cfg.local_state.identity.endpoint = ep(9000);
         GossipMembership gm(cfg, nullptr);
         gm.incarnation_ = 42;
 
         std::vector<PiggybackEntry> pb;
         PiggybackEntry e;
         e.type = PiggybackType::Alive;
-        e.endpoint = ep(9001);
+        e.identity.endpoint = ep(9001);
         e.incarnation = 5;
         pb.push_back(e);
 
@@ -360,21 +360,21 @@ int main() {
         assert(out_seq == 1);
         assert(out_pb.size() == 1);
         assert(out_pb[0].type == PiggybackType::Alive);
-        assert(out_pb[0].endpoint == ep(9001));
+        assert(out_pb[0].identity.endpoint == ep(9001));
         assert(out_pb[0].incarnation == 5);
     }
 
     // ---- Test 15: Metadata piggyback encode/decode roundtrip --------------
     {
         GossipConfig cfg;
-        cfg.local_state.endpoint = ep(9000);
+        cfg.local_state.identity.endpoint = ep(9000);
         GossipMembership gm(cfg, nullptr);
         gm.incarnation_ = 42;
 
         std::vector<PiggybackEntry> pb;
         PiggybackEntry meta;
         meta.type = PiggybackType::Metadata;
-        meta.endpoint = ep(9000);
+        meta.identity.endpoint = ep(9000);
         meta.incarnation = 42;
         meta.actor_types = {"actorType1", "actorType2"};
         meta.load = 75;
@@ -383,7 +383,7 @@ int main() {
         acc.handshake_version = 1;
         acc.protocol_version = 1;
         acc.tls_required = false;
-        meta.acceptors.push_back(acc);
+        meta.identity.acceptors.push_back(acc);
         pb.push_back(meta);
 
         StreamBuffer encoded = gm.encode_message(
@@ -406,11 +406,11 @@ int main() {
         assert(out_pb[0].actor_types.size() == 2);
         assert(out_pb[0].actor_types[0] == "actorType1");
         assert(out_pb[0].actor_types[1] == "actorType2");
-        assert(out_pb[0].acceptors.size() == 1);
-        assert(out_pb[0].acceptors[0].port == 9000);
-        assert(out_pb[0].acceptors[0].handshake_version == 1);
-        assert(out_pb[0].acceptors[0].protocol_version == 1);
-        assert(out_pb[0].acceptors[0].tls_required == false);
+        assert(out_pb[0].identity.acceptors.size() == 1);
+        assert(out_pb[0].identity.acceptors[0].port == 9000);
+        assert(out_pb[0].identity.acceptors[0].handshake_version == 1);
+        assert(out_pb[0].identity.acceptors[0].protocol_version == 1);
+        assert(out_pb[0].identity.acceptors[0].tls_required == false);
     }
 
     std::printf("All gossip membership tests passed\n");
