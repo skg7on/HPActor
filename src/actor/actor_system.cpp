@@ -664,7 +664,7 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     config_.mailbox.low_watermark = model.system.mailbox.low_watermark;
     config_.mailbox.protected_system_messages =
         model.system.mailbox.protected_system_messages;
-    config_.mailbox.backpressure_mode = model.system.mailbox.backpressure;
+    config_.mailbox.backpressure_mode = model.system.mailbox.backpressure_mode;
     config_.dead_letters = model.system.dead_letters;
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);

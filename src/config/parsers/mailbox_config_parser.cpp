@@ -81,7 +81,7 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
         out.mailbox.low_watermark = mt.read_double("low_watermark", 0.50);
         out.mailbox.protected_system_messages =
             mt.read_uint32("protected_system_messages", 32);
-        out.mailbox.backpressure =
+        out.mailbox.backpressure_mode =
             parse_backpressure_mode(mt.read_string("backpressure", "local_and_"
                                                                    "remote"));
 
