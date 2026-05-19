@@ -1,0 +1,27 @@
+// X-macro table: system configuration fields shared across Config (runtime),
+// SystemDef (TOML), and BinarySystemDef (mmap).
+//
+// Columns:
+//   1. cpp_name      — field name in Config struct
+//   2. cpp_type      — runtime C++ type
+//   3. toml_key      — dotted TOML key under [system]
+//   4. default_value — default for Config struct initialization
+//
+// Usage: define HPACTOR_SYSTEM_FIELD before including, then #undef after.
+//
+//   // Generate struct members:
+//   #define HPACTOR_SYSTEM_FIELD(name, type, toml, def) type name{def};
+//   #include "system_fields.def"
+//   #undef HPACTOR_SYSTEM_FIELD
+
+HPACTOR_SYSTEM_FIELD(scheduler_threads,       size_t,                        "scheduler.threads",            4)
+HPACTOR_SYSTEM_FIELD(max_queue_depth,         size_t,                        "scheduler.max_queue_depth",    1024)
+HPACTOR_SYSTEM_FIELD(enable_network,          bool,                          "network.enabled",              false)
+HPACTOR_SYSTEM_FIELD(tcp_port,                uint16_t,                      "network.tcp_port",             0)
+HPACTOR_SYSTEM_FIELD(spawn_timeout_ms,        std::chrono::milliseconds,     "spawn.timeout_ms",             std::chrono::milliseconds{5000})
+HPACTOR_SYSTEM_FIELD(enable_http_gateway,     bool,                          "http.enable_gateway",          false)
+HPACTOR_SYSTEM_FIELD(http_port,               uint16_t,                      "http.port",                    8080)
+HPACTOR_SYSTEM_FIELD(http_bind_host,           std::string,                   "http.bind_host",               "0.0.0.0")
+HPACTOR_SYSTEM_FIELD(http_max_connections,    size_t,                        "http.max_connections",         1000)
+HPACTOR_SYSTEM_FIELD(http_max_request_size,   size_t,                        "http.max_request_size",        1048576)
+HPACTOR_SYSTEM_FIELD(http_reply_timeout_ms,   std::chrono::milliseconds,     "http.reply_timeout_ms",        std::chrono::milliseconds{5000})
