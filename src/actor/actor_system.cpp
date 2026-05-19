@@ -522,7 +522,7 @@ result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
 AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
                                            const std::string& actor_type,
                                            const StreamBuffer& /*args*/) {
-    AsyncActor handle(endpoint_, config_.spawn_timeout);
+    AsyncActor handle(endpoint_, config_.spawn_timeout_ms);
 
     if (!config_.enable_network || !transport_) {
         SpawnResponse resp;

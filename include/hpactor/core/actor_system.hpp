@@ -80,30 +80,22 @@ class HybridScheduler;
 // MailboxDefaults - system-wide default mailbox configuration
 // -----------------------------------------------------------------------------
 struct MailboxDefaults {
-    uint32_t default_capacity = 1024;
-    uint64_t default_byte_capacity = 0;
-    mailbox::OverflowPolicy default_policy = mailbox::OverflowPolicy::RejectNewest;
-    double high_watermark = 0.80;
-    double low_watermark = 0.50;
-    uint32_t protected_system_messages = 32;
-    mailbox::BackpressureMode backpressure_mode =
-        mailbox::BackpressureMode::LocalAndRemoteSignal;
+#define HPACTOR_MAILBOX_FIELD(name, type, toml, def) type name{def};
+#include <hpactor/config/mailbox_fields.def>
+#undef HPACTOR_MAILBOX_FIELD
 };
 
 // -----------------------------------------------------------------------------
 // Config - configuration for ActorSystem
 // -----------------------------------------------------------------------------
 struct Config {
-    size_t scheduler_threads = 4;
-    size_t max_queue_depth = 1024;
+// ── Shared system fields (generated from config/system_fields.def) ──
+#define HPACTOR_SYSTEM_FIELD(name, type, toml, def) type name{def};
+#include <hpactor/config/system_fields.def>
+#undef HPACTOR_SYSTEM_FIELD
+
+    // ── Config-only fields ──
     EndPoint endpoint = LocalEndpoint;
-
-    // Network configuration
-    bool enable_network = false;
-    uint16_t tcp_port = 0; // Transport TCP port (0 = don't listen)
-
-    // Remote spawn configuration
-    std::chrono::milliseconds spawn_timeout{5000};
 
     // TLS and pool config (used if enable_network=true)
     net::TlsConfig tls = {};
@@ -111,15 +103,7 @@ struct Config {
     net::RegistrarConfig registrar = {};
 
     // HTTP subsystem (requires enable_network = true)
-    bool enable_http_gateway = false;
     bool enable_http_client = false;
-
-    // HTTP gateway configuration
-    uint16_t http_port = 8080;
-    std::string http_bind_host = "0.0.0.0";
-    size_t http_max_connections = 1000;
-    size_t http_max_request_size = 1048576;
-    std::chrono::milliseconds http_reply_timeout{5000};
 
     // Coroutine scheduling (requires HPACTOR_SUPPORT_COROUTINES=1 at compile
     // time) When true, actors use coroutine-based execution instead of
