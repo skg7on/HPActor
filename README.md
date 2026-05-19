@@ -5,6 +5,16 @@
 
 A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, multi-priority queues, and an application-defined two-tier slab memory allocator for deterministic response times without GC pauses.
 
+## Recent Work (May 11-18, 2026)
+
+The last week moved a large part of the production reliability roadmap from design into runtime support:
+
+- **Lifecycle and graceful stop**: `LifecycleActor`, drain policies, drain-aware dispatch, `ActorContext::stop()`, `ActorSystem::shutdown()`, and CLI `/system drain` / `/system stop`.
+- **Backpressure and DLQ**: Bounded mailbox admission, producer-facing `EnqueueResult`, actor-system dead-letter capture, DLQ snapshots/pop, drain-related dead-letter reasons, and mailbox policy TOML parsing.
+- **Observability**: Structured logging X-Macro cleanup, distributed tracing, lifecycle/dead-letter metric aggregation, CI and coverage badges, and coverage workflow publishing.
+- **Example coverage**: `13_order_platform` now demonstrates a multi-actor order pipeline, failure scenarios, remote payment spawn, DLQ visibility, an ops probe, and TOML role configs.
+- **Test and CI hardening**: Deterministic scheduler worker-control support, low-coverage test expansion across core subsystems, TimingWheel initialization fixes, and safer logger lifetime across repeated `ActorSystem` instances.
+
 ## Features
 
 ### Actor Model
@@ -32,9 +42,9 @@ A high-performance distributed Actor framework with million-level concurrency su
 ### Mailbox
 - **MPSCMailbox\<T\>**: Vyukov lock-free MPSC queue (wait-free enqueue, lock-free dequeue)
 - **MPSCActorMailbox\<T\>**: Edge-triggered CAS wakeup — no lost wakeups, no spurious rescheduling
-- **Bounded Admission**: Configurable capacity, high/low watermarks, overflow policies (RejectNewest, DeadLetter, DropExisting)
+- **Bounded Admission**: Configurable capacity, high/low watermarks, overflow policies (RejectNewest, DropNewest, DropOldest, DeadLetter, and more)
 - **Backpressure Signals**: `EnqueueResult` with pressure ratio, retry-after hint, and upstream `BackpressureMode` (local, remote, both)
-- **Dead-Letter Queue**: Bounded record capture with reason tracking (ActorNotFound, OverflowPolicy, DrainTimeout, DrainPolicyDrop), payload sampling, snapshot API
+- **Dead-Letter Queue**: Bounded record capture with reason/source tracking, payload sampling, snapshot and pop APIs
 - **Swap-in Interface**: `IMailbox<T>` allows replacing the mailbox implementation without touching actor code
 
 ### Memory Management
@@ -82,15 +92,15 @@ A high-performance distributed Actor framework with million-level concurrency su
 
 ### Actor Lifecycle
 - **ActorState**: Atomic state machine (Idle → Ready → Running → IOWaiting → Terminated) with CAS transitions
-- **LifecycleActor Mixin**: Opt-in lifecycle state machine (Created → Starting → Active → Draining → Stopping → Stopped / Failed) with constexpr `StateDef` transition table
-- **Message Gate**: Rejects user messages during non-Active states to prevent processing during startup/shutdown
+- **LifecycleActor Mixin**: Opt-in lifecycle state machine (Starting → Active → Draining → Stopping → Stopped, with Failed/Recovering paths) with constexpr `StateDef` transition table
+- **Message Gate**: Rejects user messages outside Active state and applies drain policy during Draining
 - **Hierarchical Supervision**: OneForOne (restart failed child) and AllForOne (restart all children) strategies
 - **SupervisorActor**: Supervises children via strategy pattern
 - **SelfSupervisingActor**: Manages own children with configurable policy (max restarts, restart interval)
 - **Remote Child Tracking**: Supervision across process boundaries
 
 ### Graceful Shutdown
-- **DrainPolicy**: Per-actor drain behavior (Drain all in-flight, Drop remaining, Timeout with deadline)
+- **DrainPolicy**: Per-actor drain behavior (Drain, DropUserMessages, ImmediateStop, with SnapshotAndStop/TransferShard reserved)
 - **ActorSystem::shutdown()**: Phase-machine coordinator — Running → DrainingIngress → DrainingActors → LeavingCluster → FlushingTelemetry → Stopped
 - **ActorContext::stop() / stop_sync()**: Graceful actor termination API with drain completion
 - **System Actors Drain Last**: `is_system_actor()` virtual ensures infrastructure actors outlive application actors
@@ -256,7 +266,7 @@ ActorRef (std::variant)
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (141 tests)
+# Run tests (150 CTest targets)
 ctest --output-on-failure --parallel 8
 
 # Run a single test
@@ -358,15 +368,15 @@ protos/hpactor/
 
 tools/toml-compiler/ — AOT compiler: TOML topology → binary format
 docs/architecture/production/ — Production reliability roadmap, missing design docs, and refined requirement backlog
-tests/              — 141 unit tests across actor(26), cli(6), config(7), core(2), examples(1), log(6), mailbox(8), mem(14), metrics(2), net(19), ref(3), rpc(1), sched(13), spawn(5), supervision(5), tracing(12)
-examples/           — 13 API usage examples
+tests/              — 150 CTest targets across actor(29), cli(7), config(7), core(2), examples(1), log(7), mailbox(11), mem(15), metrics(3), net(24), ref(3), rpc(1), sched(18), spawn(5), supervision(5), tracing(12)
+examples/           — 12 API usage examples, including the full order platform scenario
 third_party/        — Vendored dependencies (llhttp, toml++)
 cmake/              — CMake modules (protobuf codegen, toml++ interface target)
 ```
 
 ## Status
 
-### Complete (141 tests passing)
+### Complete (150 CTest targets configured)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
@@ -376,7 +386,7 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Scheduling**: HybridScheduler with work-stealing + EDF + timing wheel + coroutine frame pool
 - **Coroutines**: CoroutineTask, MailboxAwaiter, TimerAwaiter, YieldAwaiter
 - **Mailbox**: MPSCMailbox (Vyukov lock-free), MPSCActorMailbox (edge-triggered CAS), bounded admission, backpressure signals
-- **Dead-Letter Queue**: Bounded record capture with reason tracking, payload sampling, snapshot API, record iteration
+- **Dead-Letter Queue**: Bounded record capture with reason/source tracking, payload sampling, snapshot and pop APIs
 - **Memory Management**: Two-tier slab allocator (mmap → thread-local slabs), typed regions, hibernation with ZRAM hints, compaction with fragmentation budget, per-actor observability, memory poisoning + canaries + guard pages
 - **Network**: TLS 1.3, connection pooling, UDS support, reactor/proactor backends
 - **HTTP Gateway**: HTTPGatewayActor with route registration, HttpClient for outbound requests, request/reply correlation
@@ -391,7 +401,9 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Distributed Tracing**: W3C TraceContext propagation, actor receive spans, memory/JSON/OTLP exporters, parent-based sampling
 - **Actor Lifecycle**: LifecycleActor mixin with constexpr state machine, message gate, supervision integration
 - **Graceful Shutdown**: DrainPolicy, phase-machine coordinator, CLI drain/stop commands, TOML config
-- **Order Platform Example**: Full-featured 5-actor order pipeline demonstrating stateful actors, bounded mailboxes, DLQ, tracing, HTTP gateway, remote spawn, and ops probe
+- **Deterministic Test Support**: Scheduler worker pause/resume/step driver plus CI-oriented test design constraints for race-prone subsystems
+- **CI and Coverage**: GitHub Actions CI, coverage workflow, README badges, and stabilized gcc-debug / clang-release test paths
+- **Order Platform Example**: Full-featured multi-actor order pipeline demonstrating stateful actors, bounded mailboxes, DLQ, tracing, HTTP gateway, remote spawn, and ops probe
 
 ### Designed / Backlogged
 
