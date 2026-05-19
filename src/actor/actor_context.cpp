@@ -235,12 +235,12 @@ ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {
 }
 
 void ActorContext::cancel_schedule(AlarmHandle handle) {
-    if (handle.id() == 0)
+    if (handle.value() == 0)
         return;
     auto* sched = system_->scheduler();
     if (!sched)
         return;
-    sched->cancel_timer(sched::TimerHandle{handle.id()});
+    sched->cancel_timer(sched::TimerHandle{handle.value()});
 }
 
 std::vector<Actor> ActorContext::children() const {

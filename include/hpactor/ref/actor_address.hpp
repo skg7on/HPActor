@@ -23,10 +23,10 @@ namespace hpactor {
 // ActorAddress - unique identifier for an actor across the distributed system
 // -----------------------------------------------------------------------------
 struct ActorAddress {
-    EndPoint endpoint; // Network location
-    ActorType type = 0;             // Actor type identifier
-    ActorId id;                     // Unique instance ID
-    uint64_t incarnation = 0;       // Increments on restart
+    EndPoint endpoint;        // Network location
+    ActorType type = 0;       // Actor type identifier
+    ActorId id;               // Unique instance ID
+    uint64_t incarnation = 0; // Increments on restart
 
     ActorAddress() : endpoint(Ipv4Endpoint{0x7F000001, 0}) {}
     ActorAddress(EndPoint ep, ActorType t, ActorId i, uint64_t inc)
@@ -71,23 +71,11 @@ inline const ActorAddr invalid_actor_addr{};
 } // namespace hpactor
 
 // -----------------------------------------------------------------------------
-// std::hash specialization for ActorId
-// -----------------------------------------------------------------------------
-template <> struct std::hash<hpactor::ActorId> {
-    std::size_t operator()(const hpactor::ActorId& aid) const noexcept {
-        size_t seed = std::hash<hpactor::ActorId::counter_type>{}(aid.value());
-        hpactor::ActorAddress::hash_combine(seed, aid.value());
-        return seed;
-    }
-};
-
-// -----------------------------------------------------------------------------
 // std::hash specialization for ActorAddress
 // -----------------------------------------------------------------------------
 template <> struct std::hash<hpactor::ActorAddress> {
     std::size_t operator()(const hpactor::ActorAddress& addr) const noexcept {
-        std::size_t seed =
-            std::hash<hpactor::EndPoint>{}(addr.endpoint);
+        std::size_t seed = std::hash<hpactor::EndPoint>{}(addr.endpoint);
         hpactor::ActorAddress::hash_combine(
             seed, std::hash<hpactor::ActorType>{}(addr.type));
         hpactor::ActorAddress::hash_combine(

@@ -16,7 +16,8 @@
 void test_frame_encoding() {
     hpactor::net::WireFrame frame;
     auto snd_addr =
-        hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node1:12345"),
+        hpactor::ActorAddress{hpactor::endpoint_ops::parse_endpoint("node1:"
+                                                                    "12345"),
                               hpactor::ActorType{10}, hpactor::ActorId{42}, 1};
     auto rcv_addr = hpactor::ActorAddress{
         hpactor::endpoint_ops::parse_endpoint("node2:12345"),
@@ -54,7 +55,8 @@ void test_spawn_request_protobuf() {
     pb_req.set_args_type(static_cast<uint32_t>(hpactor::TypeTag::User));
     pb_req.set_serialized_args("abc");
     auto* sup = pb_req.mutable_supervisor();
-    sup->mutable_global_addr()->mutable_endpoint()->mutable_ipv4()->set_addr(0x7F000001);
+    sup->mutable_global_addr()->mutable_endpoint()->mutable_ipv4()->set_addr(
+        0x7F000001);
     sup->mutable_global_addr()->mutable_endpoint()->mutable_ipv4()->set_port(8080);
     sup->mutable_global_addr()->mutable_local_addr()->set_actor_type(10);
     sup->mutable_global_addr()->mutable_local_addr()->set_actor_id(42);
@@ -66,16 +68,18 @@ void test_spawn_request_protobuf() {
     auto decoded = registry.deserialize(hpactor::TypeTag::SpawnRequestTag, encoded);
     assert(decoded != nullptr);
 
-    auto* decoded_req = static_cast<::hpactor::SpawnRequestMessage*>(decoded.get());
+    auto* decoded_req =
+        static_cast<::hpactor::SpawnRequestMessage*>(decoded.get());
     assert(decoded_req->actor_type_name() == "worker");
-    assert(decoded_req->args_type() == static_cast<uint32_t>(hpactor::TypeTag::User));
+    assert(decoded_req->args_type() ==
+           static_cast<uint32_t>(hpactor::TypeTag::User));
     assert(decoded_req->serialized_args() == "abc");
     assert(decoded_req->supervisor().global_addr().local_addr().actor_id() == 42);
 }
 
 // Test message_id correlation between request and response
 void test_message_id_correlation() {
-    uint64_t request_message_id = hpactor::MessageId::generate().value();
+    uint64_t request_message_id = hpactor::generate_message_id().value();
 
     hpactor::net::WireFrame request_frame;
     request_frame.pb_frame.set_message_id(request_message_id);
@@ -85,7 +89,8 @@ void test_message_id_correlation() {
     response_frame.pb_frame.set_message_id(request_message_id);
     response_frame.pb_frame.set_flags(hpactor::net::WireFrame::RpcResponse);
 
-    assert(response_frame.pb_frame.message_id() == request_frame.pb_frame.message_id());
+    assert(response_frame.pb_frame.message_id() ==
+           request_frame.pb_frame.message_id());
 
     uint64_t matched_id = response_frame.pb_frame.message_id();
     assert(matched_id == request_message_id);

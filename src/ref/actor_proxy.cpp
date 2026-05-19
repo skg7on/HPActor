@@ -95,7 +95,7 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
         msg.sender_address().id != ActorId{0} ? msg.sender_address() : address_;
     net::to_proto(frame.pb_frame.mutable_sender(), sender_addr);
     net::to_proto(frame.pb_frame.mutable_receiver(), resolved_target);
-    frame.pb_frame.set_message_id(MessageId::generate().value());
+    frame.pb_frame.set_message_id(generate_message_id().value());
     frame.pb_frame.set_type_tag(static_cast<uint32_t>(msg.type_id()));
     frame.pb_frame.set_payload(reinterpret_cast<const char*>(msg.payload().data()),
                                msg.payload().size());

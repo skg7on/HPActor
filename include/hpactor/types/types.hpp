@@ -26,7 +26,9 @@
 #include <variant>
 #include <vector>
 
+#include <hpactor/adt/id.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
+#include <hpactor/adt/tags.hpp>
 #include <vector>
 
 namespace hpactor {
@@ -43,27 +45,7 @@ inline constexpr uint16_t net_to_host_u16(uint16_t net_val) noexcept {
 // -----------------------------------------------------------------------------
 // ActorId - unique identifier for an actor instance
 // -----------------------------------------------------------------------------
-struct ActorId {
-    using counter_type = uint64_t;
-
-    ActorId() = default;
-
-    explicit constexpr ActorId(counter_type value) : value_(value) {}
-
-    counter_type value() const noexcept {
-        return value_;
-    }
-
-    bool operator==(const ActorId& other) const noexcept {
-        return value_ == other.value_;
-    }
-    bool operator!=(const ActorId& other) const noexcept {
-        return !(*this == other);
-    }
-
-  private:
-    counter_type value_ = 0;
-};
+using ActorId = Id<ActorTag>;
 
 // -----------------------------------------------------------------------------
 // Protocol - network protocol family
@@ -250,35 +232,12 @@ using incarnation_type = uint64_t;
 // -----------------------------------------------------------------------------
 // MessageId - unique identifier for a message
 // -----------------------------------------------------------------------------
-struct MessageId {
-    using counter_type = uint64_t;
+using MessageId = Id<MessageTag>;
 
-    MessageId() = default;
-
-    explicit MessageId(counter_type value) : value_(value) {}
-
-    counter_type value() const {
-        return value_;
-    }
-
-    bool operator==(const MessageId& other) const {
-        return value_ == other.value_;
-    }
-    bool operator!=(const MessageId& other) const {
-        return !(*this == other);
-    }
-
-    static MessageId generate() {
-        return MessageId(next_id_.fetch_add(1));
-    }
-
-  private:
-    counter_type value_ = 0;
-    static std::atomic<uint64_t> next_id_;
-};
-
-// Definition of static member
-inline std::atomic<uint64_t> MessageId::next_id_{1};
+inline MessageId generate_message_id() {
+    static std::atomic<uint64_t> next_id_{1};
+    return MessageId(next_id_.fetch_add(1));
+}
 
 // -----------------------------------------------------------------------------
 // error - error code wrapper (no exceptions in hot path)
@@ -398,18 +357,7 @@ class Clock {
 // -----------------------------------------------------------------------------
 // AlarmHandle - opaque handle for alarms
 // -----------------------------------------------------------------------------
-struct AlarmHandle {
-    AlarmHandle() = default;
-
-    explicit AlarmHandle(uint64_t id) : id_(id) {}
-
-    uint64_t id() const {
-        return id_;
-    }
-
-  private:
-    uint64_t id_ = 0;
-};
+using AlarmHandle = Id<AlarmTag>;
 
 // -----------------------------------------------------------------------------
 // Trace identifiers - W3C/OpenTelemetry-compatible distributed tracing IDs

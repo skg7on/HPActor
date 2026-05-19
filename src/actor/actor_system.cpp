@@ -540,7 +540,7 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     net::to_proto(pb_req.mutable_supervisor(), system_actor_.address());
 
     StreamBuffer request_bytes = proto_registry_.serialize(pb_req);
-    uint64_t msg_id = MessageId::generate().value();
+    uint64_t msg_id = generate_message_id().value();
 
     net::WireFrame frame;
     net::to_proto(frame.pb_frame.mutable_sender(), system_actor_.address());

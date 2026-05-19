@@ -57,7 +57,7 @@ static void test_schedule_returns_valid_handle() {
     auto actor = std::static_pointer_cast<ScheduleTestActor>(handle.get());
 
     auto alarm = actor->trigger_schedule(std::chrono::milliseconds(5000));
-    assert(alarm.id() != 0);
+    assert(alarm.value() != 0);
 
     actor->context()->cancel_schedule(alarm);
 }
@@ -91,7 +91,7 @@ static void test_cancel_prevents_mailbox_delivery() {
     auto actor = std::static_pointer_cast<ScheduleTestActor>(handle.get());
 
     auto alarm = actor->trigger_schedule(std::chrono::milliseconds(200));
-    assert(alarm.id() != 0);
+    assert(alarm.value() != 0);
 
     // Cancel before the timer thread advances past the expiry.
     actor->context()->cancel_schedule(alarm);

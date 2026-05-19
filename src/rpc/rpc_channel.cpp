@@ -142,7 +142,7 @@ RpcFuture<StreamBuffer> RpcChannel::call_raw(const ActorAddress& target,
                                              const StreamBuffer& encoded_request,
                                              std::chrono::milliseconds timeout_ms,
                                              const TraceContext* parent_context) {
-    MessageId msg_id = MessageId::generate();
+    MessageId msg_id = generate_message_id();
 
     auto promise_ptr = std::make_shared<std::promise<result<StreamBuffer>>>();
     auto future = promise_ptr->get_future();

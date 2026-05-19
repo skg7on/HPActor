@@ -424,7 +424,7 @@ class ActorSystem {
     std::mutex actor_contexts_mutex_;
 
     // Actor ID generator
-    std::atomic<ActorId::counter_type> next_actor_id_{1};
+    std::atomic<uint64_t> next_actor_id_{1};
 
     // Running flag for network thread loop
     std::atomic<bool> running_{true};
