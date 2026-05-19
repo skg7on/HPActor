@@ -15,6 +15,8 @@
 #pragma once
 
 #include <hpactor/actor/actor_fwd.hpp>
+#include <hpactor/adt/id.hpp>
+#include <hpactor/adt/tags.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/a2ws.hpp>
@@ -53,12 +55,7 @@ class DedicatedThreadPool; // forward decl
 // -----------------------------------------------------------------------------
 // TimerHandle and timer_callback types
 // -----------------------------------------------------------------------------
-struct TimerHandle {
-    uint64_t id = 0;
-    bool valid() const noexcept {
-        return id != 0;
-    }
-};
+using TimerHandle = Id<TimerTag>;
 
 using timer_callback = std::function<void()>;
 

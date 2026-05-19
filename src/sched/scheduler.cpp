@@ -563,12 +563,13 @@ void HybridScheduler::cancel_timer(TimerHandle handle) {
         return;
 
     std::lock_guard<std::mutex> lock(cancellation_mutex_);
-    auto it = recurring_cancellations_.find(handle.id);
+    auto it = recurring_cancellations_.find(handle.value());
     if (it != recurring_cancellations_.end()) {
         it->second->store(true, std::memory_order_release);
         recurring_cancellations_.erase(it);
     }
-    std::visit([&](auto& backend) { backend.cancel(handle.id); }, timer_backend_);
+    std::visit([&](auto& backend) { backend.cancel(handle.value()); },
+               timer_backend_);
 }
 
 void HybridScheduler::register_dedicated_thread(ActorId actor, int cpu_affinity) {
