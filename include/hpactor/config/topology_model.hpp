@@ -27,18 +27,9 @@
 
 namespace hpactor::config {
 
-// -----------------------------------------------------------------------------
-// DispatchPolicy — config-facing dispatch policy enum
-//
-// Mirrors sched::DispatchPolicy but lives in the config namespace to avoid
-// coupling config parsing to scheduler internals. Converted at the bootstrap
-// engine boundary.
-// -----------------------------------------------------------------------------
-enum class DispatchPolicy : uint8_t {
-    Cooperative = 0,
-    DedicatedThread,
-    DedicatedPool,
-};
+// DispatchPolicy is defined in types/types.hpp -- config uses the same enum via
+// hpactor::DispatchPolicy.
+using DispatchPolicy = hpactor::DispatchPolicy;
 
 // -----------------------------------------------------------------------------
 // ResourceSpec — per-actor memory resource specification

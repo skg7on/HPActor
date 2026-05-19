@@ -53,6 +53,15 @@ using ActorId = Id<ActorTag>;
 enum class Protocol { IPv4, IPv6 };
 
 // -----------------------------------------------------------------------------
+// DispatchPolicy — how an actor is dispatched to a scheduler worker
+// -----------------------------------------------------------------------------
+enum class DispatchPolicy : uint8_t {
+    Cooperative = 0,
+    DedicatedThread,
+    DedicatedPool,
+};
+
+// -----------------------------------------------------------------------------
 // Ipv4Endpoint - IPv4 address and port (network byte order)
 // -----------------------------------------------------------------------------
 struct Ipv4Endpoint {

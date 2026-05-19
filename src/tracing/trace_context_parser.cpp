@@ -44,41 +44,41 @@ TraceParseResult parse_w3c_trace_context(std::string_view traceparent,
                                          uint16_t max_tracestate_len) noexcept {
     TraceParseResult result;
     if (traceparent.empty()) {
-        result.status = TraceParseStatus::kMissing;
+        result.status_value = TraceParseStatus::kMissing;
         return result;
     }
     if (traceparent.size() != 55 || traceparent[2] != '-' ||
         traceparent[35] != '-' || traceparent[52] != '-') {
-        result.status = TraceParseStatus::kMalformed;
+        result.status_value = TraceParseStatus::kMalformed;
         return result;
     }
     if (!traceparent.starts_with("00")) {
-        result.status = TraceParseStatus::kUnsupportedVersion;
+        result.status_value = TraceParseStatus::kUnsupportedVersion;
         return result;
     }
 
     TraceContext ctx;
     if (!parse_hex_bytes(traceparent.substr(3, 32), ctx.trace_id.bytes) ||
         !ctx.trace_id.valid()) {
-        result.status = TraceParseStatus::kInvalidTraceId;
+        result.status_value = TraceParseStatus::kInvalidTraceId;
         return result;
     }
     if (!parse_hex_bytes(traceparent.substr(36, 16), ctx.span_id.bytes) ||
         !ctx.span_id.valid()) {
-        result.status = TraceParseStatus::kInvalidSpanId;
+        result.status_value = TraceParseStatus::kInvalidSpanId;
         return result;
     }
 
     std::array<uint8_t, 1> flags{};
     if (!parse_hex_bytes(traceparent.substr(53, 2), flags)) {
-        result.status = TraceParseStatus::kMalformed;
+        result.status_value = TraceParseStatus::kMalformed;
         return result;
     }
     ctx.flags.value = flags[0];
 
     if (tracestate.size() > max_tracestate_len ||
         tracestate.size() > ctx.tracestate.size()) {
-        result.status = TraceParseStatus::kTracestateTooLarge;
+        result.status_value = TraceParseStatus::kTracestateTooLarge;
         return result;
     }
     if (!tracestate.empty()) {
@@ -86,7 +86,7 @@ TraceParseResult parse_w3c_trace_context(std::string_view traceparent,
         ctx.tracestate_len = static_cast<uint16_t>(tracestate.size());
     }
 
-    result.status = TraceParseStatus::kOk;
+    result.status_value = TraceParseStatus::kOk;
     result.context = ctx;
     return result;
 }
