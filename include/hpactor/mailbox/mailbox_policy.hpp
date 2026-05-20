@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/types/failure_reason.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
@@ -102,6 +103,32 @@ enum class EnqueueResultCode : uint8_t {
     ActorNotFound,
 };
 
+/// Map an EnqueueResultCode to the canonical FailureReason.
+/// Accepted and AcceptedWithSoftPressure are not failures — callers
+/// should guard with !result.accepted() before calling.
+[[nodiscard]] constexpr FailureReason
+failure_reason(EnqueueResultCode code) noexcept {
+    switch (code) {
+        case EnqueueResultCode::Rejected:
+            return FailureReason::RejectedByPolicy;
+        case EnqueueResultCode::DroppedNewest:
+        case EnqueueResultCode::DroppedExisting:
+            return FailureReason::Dropped;
+        case EnqueueResultCode::ReroutedToDeadLetter:
+            return FailureReason::RejectedByPolicy;
+        case EnqueueResultCode::ReroutedToOverflow:
+            return FailureReason::RejectedByPolicy;
+        case EnqueueResultCode::MailboxClosed:
+            return FailureReason::MailboxClosed;
+        case EnqueueResultCode::ActorNotFound:
+            return FailureReason::NoRoute;
+        case EnqueueResultCode::Accepted:
+        case EnqueueResultCode::AcceptedWithSoftPressure:
+            return FailureReason::Unknown; // Not a failure
+    }
+    return FailureReason::Unknown;
+}
+
 struct EnqueueResult {
     EnqueueResultCode code = EnqueueResultCode::Accepted;
     ActorId target;
@@ -128,6 +155,12 @@ struct EnqueueResult {
         return code == EnqueueResultCode::Rejected ||
                code == EnqueueResultCode::MailboxClosed ||
                code == EnqueueResultCode::ReroutedToOverflow;
+    }
+
+    /// Canonical failure reason for this result.
+    /// Returns Unknown when the enqueue was accepted.
+    [[nodiscard]] FailureReason failure_reason() const noexcept {
+        return mailbox::failure_reason(code);
     }
 };
 

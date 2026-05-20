@@ -29,6 +29,7 @@
 #include <hpactor/adt/id.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/adt/tags.hpp>
+#include <hpactor/types/failure_reason.hpp>
 #include <vector>
 
 namespace hpactor {
@@ -268,6 +269,11 @@ class error {
     bool ok() const {
         return code_ == 0;
     }
+
+    /// Map this error's code to the canonical FailureReason.
+    /// Returns FailureReason::Unknown when no mapping exists.
+    [[nodiscard]] FailureReason failure_reason() const noexcept;
+
     explicit operator bool() const {
         return !ok();
     }
@@ -295,6 +301,25 @@ constexpr uint32_t http_timeout = 2003;
 
 constexpr uint32_t user = 1000;
 } // namespace errors
+
+inline FailureReason error::failure_reason() const noexcept {
+    switch (code_) {
+        case errors::unknown:
+            return FailureReason::Unknown;
+        case errors::actor_down:
+            return FailureReason::ActorDead;
+        case errors::actor_not_found:
+            return FailureReason::NoRoute;
+        case errors::mailbox_full:
+            return FailureReason::MailboxFull;
+        case errors::timeout:
+            return FailureReason::Timeout;
+        case errors::invalid_argument:
+            return FailureReason::RejectedByPolicy;
+        default:
+            return FailureReason::Unknown;
+    }
+}
 
 // -----------------------------------------------------------------------------
 // result<T> - return type for message handlers
