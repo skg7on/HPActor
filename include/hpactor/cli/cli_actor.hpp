@@ -64,6 +64,16 @@ class CliActor : public DaemonActor {
         return running_;
     }
 
+    // Access the command tree (for help command generating help text).
+    const CommandNode* command_tree() const {
+        return command_tree_.get();
+    }
+
+    // Request the CLI input loop to stop (used by /quit).
+    void request_shutdown() {
+        running_ = false;
+    }
+
     // --- Request-Response Helpers ---
     //
     // Send an InspectStateRequest to target and block on the reply.
