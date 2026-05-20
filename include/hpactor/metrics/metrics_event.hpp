@@ -40,6 +40,7 @@ enum class MetricEventType : uint8_t {
     kActorDrainStart = 17,
     kActorDrainComplete = 18,
     kActorDrainTimeout = 19,
+    kDeliveryFailure = 20,
 };
 
 struct alignas(32) MetricEvent {
