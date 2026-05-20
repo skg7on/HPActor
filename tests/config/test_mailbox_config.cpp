@@ -43,7 +43,7 @@ void test_system_mailbox_defaults() {
     assert(std::abs(mb.high_watermark - 0.75) < 0.001);
     assert(std::abs(mb.low_watermark - 0.25) < 0.001);
     assert(mb.protected_system_messages == 8);
-    assert(mb.backpressure ==
+    assert(mb.backpressure_mode ==
            hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal);
 
     std::cout << "[PASS] test_system_mailbox_defaults\n";
@@ -116,7 +116,7 @@ void test_mailbox_defaults_when_absent() {
     assert(std::abs(mb.high_watermark - 0.80) < 0.001);
     assert(std::abs(mb.low_watermark - 0.50) < 0.001);
     assert(mb.protected_system_messages == 32);
-    assert(mb.backpressure ==
+    assert(mb.backpressure_mode ==
            hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal);
 
     // Dead letters defaults

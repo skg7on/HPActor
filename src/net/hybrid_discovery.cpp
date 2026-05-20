@@ -19,22 +19,23 @@
 namespace hpactor::net {
 
 HybridDiscovery::HybridDiscovery(const RegistrarConfig& reg_cfg,
-                                  const GossipConfig& gossip_cfg,
-                                  EndPoint local_ep, EventLoop* loop)
-    : registrar_(reg_cfg, local_ep, loop)
-    , gossip_(gossip_cfg, loop)
-    , local_ep_(local_ep) {}
+                                 const GossipConfig& gossip_cfg,
+                                 EndPoint local_ep, EventLoop* loop)
+    : registrar_(reg_cfg, local_ep, loop), gossip_(gossip_cfg, loop),
+      local_ep_(local_ep) {}
 
-HybridDiscovery::~HybridDiscovery() { stop(); }
+HybridDiscovery::~HybridDiscovery() {
+    stop();
+}
 
 void HybridDiscovery::start() {
-    registrar_.start();  // first: determines server/client mode
-    gossip_.start();     // second: cross-host gossip
+    registrar_.start(); // first: determines server/client mode
+    gossip_.start();    // second: cross-host gossip
 }
 
 void HybridDiscovery::stop() {
-    gossip_.stop();      // first: graceful Leave to peers
-    registrar_.stop();   // second: close registrar sockets
+    gossip_.stop();    // first: graceful Leave to peers
+    registrar_.stop(); // second: close registrar sockets
 }
 
 std::vector<Member> HybridDiscovery::discover_all() const {
@@ -42,23 +43,27 @@ std::vector<Member> HybridDiscovery::discover_all() const {
     auto remote = gossip_.discover_all();
     // Same-host entries take precedence on collision
     std::unordered_map<EndPoint, Member> merged;
-    for (auto& m : remote) merged[m.endpoint] = std::move(m);
-    for (auto& m : local) merged[m.endpoint] = std::move(m);
+    for (auto& m : remote)
+        merged[m.identity.endpoint] = std::move(m);
+    for (auto& m : local)
+        merged[m.identity.endpoint] = std::move(m);
     std::vector<Member> result;
     result.reserve(merged.size());
-    for (auto& [_, m] : merged) result.push_back(std::move(m));
+    for (auto& [_, m] : merged)
+        result.push_back(std::move(m));
     return result;
 }
 
 const Member* HybridDiscovery::discover(EndPoint ep) const {
     auto* local = registrar_.discover(ep);
-    if (local) return local;
+    if (local)
+        return local;
     return gossip_.discover(ep);
 }
 
 void HybridDiscovery::announce(Member m) {
     // Delegate to registrar if local endpoint
-    if (m.endpoint == local_ep_ || m.host == "127.0.0.1") {
+    if (m.identity.endpoint == local_ep_ || m.identity.host == "127.0.0.1") {
         registrar_.announce(m);
     }
     // Always propagate via gossip for cross-host visibility
@@ -78,7 +83,8 @@ void HybridDiscovery::on_member_change(MemberChangeCallback cb) {
 void HybridDiscovery::on_local_member_change(const Member& m, bool joined) {
     // Push local changes into gossip layer for cross-host visibility
     gossip_.announce(m);
-    if (user_callback_) user_callback_(m, joined);
+    if (user_callback_)
+        user_callback_(m, joined);
 }
 
 } // namespace hpactor::net

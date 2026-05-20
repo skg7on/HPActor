@@ -17,7 +17,7 @@ int main() {
 
     TraceContext parent = manager.create_root_context("rpc-test");
     PendingCall call;
-    call.msg_id = MessageId::generate();
+    call.msg_id = generate_message_id();
     call.target = ActorAddress{LocalEndpoint, ActorType{1}, ActorId{2}, 0};
     call.has_trace_context = true;
     call.trace_context = parent;

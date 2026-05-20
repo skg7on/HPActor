@@ -169,10 +169,10 @@ void RegistrarServer::handle_tcp_message(RegistrarConnectionPtr conn,
 
             // Create and upsert endpoint
             NodeEndpoint ep;
-            ep.endpoint = node_endpoint;
-            ep.host = client_host;
+            ep.identity.endpoint = node_endpoint;
+            ep.identity.host = client_host;
             ep.tcp_port = client_port;
-            ep.acceptors = std::move(client_acceptors);
+            ep.identity.acceptors = std::move(client_acceptors);
             ep.last_seen = std::chrono::steady_clock::now();
             registry_.upsert_endpoint(ep);
 

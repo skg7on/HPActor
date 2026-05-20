@@ -1,0 +1,16 @@
+// X-macro table: mailbox defaults (shared by Config::MailboxDefaults and TOML SystemMailboxDef)
+//
+// Columns: cpp_name, cpp_type, toml_key, default_value
+//
+// Usage:
+//   #define HPACTOR_MAILBOX_FIELD(name, type, toml, def) type name{def};
+//   #include "mailbox_fields.def"
+//   #undef HPACTOR_MAILBOX_FIELD
+
+HPACTOR_MAILBOX_FIELD(default_capacity,        uint32_t,                        "capacity",                1024)
+HPACTOR_MAILBOX_FIELD(default_byte_capacity,   uint64_t,                        "byte_capacity",           0)
+HPACTOR_MAILBOX_FIELD(default_policy,          hpactor::mailbox::OverflowPolicy,   "overflow_policy",         hpactor::mailbox::OverflowPolicy::RejectNewest)
+HPACTOR_MAILBOX_FIELD(high_watermark,          double,                                "high_watermark",          0.80)
+HPACTOR_MAILBOX_FIELD(low_watermark,           double,                                "low_watermark",           0.50)
+HPACTOR_MAILBOX_FIELD(protected_system_messages, uint32_t,                            "protected_system_messages", 32)
+HPACTOR_MAILBOX_FIELD(backpressure_mode,       hpactor::mailbox::BackpressureMode,    "backpressure_mode",       hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal)

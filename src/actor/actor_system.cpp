@@ -123,7 +123,7 @@ ActorSystem::ActorSystem(const Config& config)
 
         discovery_->on_member_change([this](const net::Member& m, bool joined) {
             if (!joined) {
-                on_node_dead(m.endpoint);
+                on_node_dead(m.identity.endpoint);
             }
             // Note: proactive connection pool warming (prewarm_pool) will be
             // integrated in a follow-up task when ConnectionPool is updated.
@@ -525,7 +525,7 @@ result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
 AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
                                            const std::string& actor_type,
                                            const StreamBuffer& /*args*/) {
-    AsyncActor handle(endpoint_, config_.spawn_timeout);
+    AsyncActor handle(endpoint_, config_.spawn_timeout_ms);
 
     if (!config_.enable_network || !transport_) {
         SpawnResponse resp;
@@ -543,7 +543,7 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     net::to_proto(pb_req.mutable_supervisor(), system_actor_.address());
 
     StreamBuffer request_bytes = proto_registry_.serialize(pb_req);
-    uint64_t msg_id = MessageId::generate().value();
+    uint64_t msg_id = generate_message_id().value();
 
     net::WireFrame frame;
     net::to_proto(frame.pb_frame.mutable_sender(), system_actor_.address());
@@ -658,16 +658,20 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     // Apply system-level logging config from topology
     logging_config_ = model.system.logging;
 
-    // Apply mailbox defaults from topology
-    config_.mailbox.default_capacity = model.system.mailbox.default_capacity;
-    config_.mailbox.default_byte_capacity =
-        model.system.mailbox.default_byte_capacity;
-    config_.mailbox.default_policy = model.system.mailbox.default_policy;
-    config_.mailbox.high_watermark = model.system.mailbox.high_watermark;
-    config_.mailbox.low_watermark = model.system.mailbox.low_watermark;
-    config_.mailbox.protected_system_messages =
-        model.system.mailbox.protected_system_messages;
-    config_.mailbox.backpressure_mode = model.system.mailbox.backpressure;
+// Apply shared system fields from topology
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#define HPACTOR_SYSTEM_TOML_FIELD(name, type, toml, def)                       \
+    config_.name = static_cast<decltype(config_.name)>(model.system.name);
+#include <hpactor/config/system_toml_fields.def>
+#undef HPACTOR_SYSTEM_TOML_FIELD
+
+// Apply mailbox defaults from topology
+#define HPACTOR_MAILBOX_FIELD(name, type, toml, def)                           \
+    config_.mailbox.name = model.system.mailbox.name;
+#include <hpactor/config/mailbox_fields.def>
+#undef HPACTOR_MAILBOX_FIELD
+    // NOLINTEND(cppcoreguidelines-macro-usage)
+
     config_.dead_letters = model.system.dead_letters;
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);

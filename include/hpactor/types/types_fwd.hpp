@@ -14,15 +14,18 @@
 
 #pragma once
 
+#include <hpactor/adt/id.hpp>
+#include <hpactor/adt/tags.hpp>
+
 namespace hpactor {
 
 // Forward declarations only - no type aliases or definitions
+//
+// ActorId, MessageId, and AlarmHandle are type aliases (Id<Tag>), so they
+// cannot be forward-declared; the necessary headers are included above.
 
-struct ActorId;
-struct MessageId;
 struct TraceContext;
 class error;
-struct AlarmHandle;
 class Clock;
 template <typename T> class Task;
 

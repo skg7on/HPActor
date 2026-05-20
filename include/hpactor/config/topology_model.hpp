@@ -27,18 +27,9 @@
 
 namespace hpactor::config {
 
-// -----------------------------------------------------------------------------
-// DispatchPolicy — config-facing dispatch policy enum
-//
-// Mirrors sched::DispatchPolicy but lives in the config namespace to avoid
-// coupling config parsing to scheduler internals. Converted at the bootstrap
-// engine boundary.
-// -----------------------------------------------------------------------------
-enum class DispatchPolicy : uint8_t {
-    Cooperative = 0,
-    DedicatedThread,
-    DedicatedPool,
-};
+// DispatchPolicy is defined in types/types.hpp -- config uses the same enum via
+// hpactor::DispatchPolicy.
+using DispatchPolicy = hpactor::DispatchPolicy;
 
 // -----------------------------------------------------------------------------
 // ResourceSpec — per-actor memory resource specification
@@ -86,15 +77,9 @@ struct ActorDef {
 // SystemMailboxDef — system-wide mailbox defaults from [system.mailbox]
 // -----------------------------------------------------------------------------
 struct SystemMailboxDef {
-    uint32_t default_capacity{1024};
-    uint64_t default_byte_capacity{0};
-    hpactor::mailbox::OverflowPolicy default_policy =
-        hpactor::mailbox::OverflowPolicy::RejectNewest;
-    double high_watermark{0.80};
-    double low_watermark{0.50};
-    uint32_t protected_system_messages{32};
-    hpactor::mailbox::BackpressureMode backpressure =
-        hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal;
+#define HPACTOR_MAILBOX_FIELD(name, type, toml, def) type name{def};
+#include <hpactor/config/mailbox_fields.def>
+#undef HPACTOR_MAILBOX_FIELD
 };
 
 // -----------------------------------------------------------------------------
@@ -105,18 +90,14 @@ struct SystemMailboxDef {
 // -----------------------------------------------------------------------------
 struct SystemDef {
     std::string version;
-    uint32_t scheduler_threads{4};
-    uint32_t max_queue_depth{1024};
+
+// ── Shared system fields (generated from system_toml_fields.def) ──
+#define HPACTOR_SYSTEM_TOML_FIELD(name, type, toml, def) type name{def};
+#include <hpactor/config/system_toml_fields.def>
+#undef HPACTOR_SYSTEM_TOML_FIELD
+
+    // ── SystemDef-only fields ──
     uint32_t default_mailbox_size{1024};
-    bool enable_network{false};
-    uint16_t tcp_port{0};
-    uint32_t spawn_timeout_ms{5000};
-    bool enable_http_gateway{false};
-    std::string http_bind_host{"0.0.0.0"};
-    uint16_t http_port{8080};
-    uint32_t http_max_connections{1000};
-    uint32_t http_max_request_size{1048576};
-    uint32_t http_reply_timeout_ms{5000};
     bool use_coroutines{false};
     bool metrics_enabled{true};
     uint32_t metrics_ring_buffer_capacity{65536};

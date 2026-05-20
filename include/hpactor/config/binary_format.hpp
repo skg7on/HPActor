@@ -55,7 +55,10 @@ struct BinarySystemDef {
     uint32_t http_reply_timeout_ms;
     uint32_t use_coroutines;
     uint32_t version_offset; // string table offset
-    uint32_t http_bind_host_offset;
+    union {
+        uint32_t http_bind_host;        // X-macro compatible name
+        uint32_t http_bind_host_offset; // string table offset (canonical)
+    };
     uint32_t tracing_enabled;
     uint32_t tracing_propagate_unsampled;
     uint32_t tracing_ring_buffer_capacity;

@@ -14,8 +14,9 @@
 
 #pragma once
 
-#include <hpactor/types/types.hpp>
+#include <hpactor/adt/node_identity.hpp>
 #include <hpactor/net/acceptor.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <chrono>
 #include <cstdint>
@@ -29,21 +30,19 @@ namespace hpactor::net {
 enum class MemberStatus : uint8_t { Alive, Suspicious, Dead, Left };
 
 struct Member {
-    EndPoint endpoint;   // identity (IP + port in network byte order)
-    std::string host;
-    std::string uds_path;
-    std::vector<AcceptorInfo> acceptors;
+    NodeIdentity identity;
     std::vector<std::string> actor_types;
     MemberStatus status = MemberStatus::Alive;
     uint64_t incarnation = 0;
-    // Not transmitted on wire — receivers set to steady_clock::now() on receipt.
+    // Not transmitted on wire — receivers set to steady_clock::now() on
+    // receipt.
     std::chrono::steady_clock::time_point last_seen;
 };
 
 using MemberChangeCallback = std::function<void(const Member&, bool joined)>;
 
 class IServiceDiscovery {
-public:
+  public:
     virtual ~IServiceDiscovery() = default;
 
     virtual void start() = 0;

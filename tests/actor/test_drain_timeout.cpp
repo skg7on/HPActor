@@ -35,8 +35,8 @@ class MockScheduler : public sched::IScheduler {
         return schedule_after(std::move(cb), interval_ns);
     }
     void cancel_timer(sched::TimerHandle handle) override {
-        cancelled_.insert(handle.id);
-        callbacks_.erase(handle.id);
+        cancelled_.insert(handle.value());
+        callbacks_.erase(handle.value());
     }
     void notify_ready(ActorId, uint8_t, int64_t) override {}
     void notify_idle(ActorId) override {}

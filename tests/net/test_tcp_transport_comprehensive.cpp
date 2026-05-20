@@ -122,10 +122,10 @@ void test_uds_then_tcp_fallback_same_endpoint() {
 
     auto ep = endpoint_ops::parse_endpoint("127.0.0.1:19999");
     NodeEndpoint node_ep;
-    node_ep.endpoint = ep;
-    node_ep.host = "127.0.0.1";
+    node_ep.identity.endpoint = ep;
+    node_ep.identity.host = "127.0.0.1";
     node_ep.tcp_port = 19999;
-    node_ep.uds_path = "/tmp/hpactor/node1.sock";
+    node_ep.identity.uds_path = "/tmp/hpactor/node1.sock";
     registry.upsert_endpoint(node_ep);
 
     TlsConfig tls_config;

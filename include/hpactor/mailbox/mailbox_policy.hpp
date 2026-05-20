@@ -112,6 +112,13 @@ struct EnqueueResult {
     TypeTag affected_type = TypeTag::Invalid;
     uint64_t affected_message_id = 0;
 
+    [[nodiscard]] EnqueueResultCode status() const noexcept {
+        return code;
+    }
+    [[nodiscard]] bool ok() const noexcept {
+        return accepted();
+    }
+
     [[nodiscard]] bool accepted() const noexcept {
         return code == EnqueueResultCode::Accepted ||
                code == EnqueueResultCode::AcceptedWithSoftPressure;

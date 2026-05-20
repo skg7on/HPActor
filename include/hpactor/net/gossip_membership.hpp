@@ -14,8 +14,9 @@
 
 #pragma once
 
-#include <hpactor/net/service_discovery.hpp>
+#include <hpactor/adt/node_identity.hpp>
 #include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/service_discovery.hpp>
 
 #include <chrono>
 #include <cstdint>
@@ -30,22 +31,29 @@ namespace hpactor::net {
 
 // ── Gossip message types ────────────────────────────────────────
 enum class GossipMessageType : uint8_t {
-    Ping = 0x01, Ack = 0x02, PingReq = 0x03, IndirectAck = 0x04,
-    Join = 0x05, SyncRsp = 0x06, Leave = 0x07,
+    Ping = 0x01,
+    Ack = 0x02,
+    PingReq = 0x03,
+    IndirectAck = 0x04,
+    Join = 0x05,
+    SyncRsp = 0x06,
+    Leave = 0x07,
 };
 
 enum class PiggybackType : uint8_t {
-    Alive = 0x01, Suspicious = 0x02, Dead = 0x03, Metadata = 0x04,
+    Alive = 0x01,
+    Suspicious = 0x02,
+    Dead = 0x03,
+    Metadata = 0x04,
 };
 
 struct PiggybackEntry {
     PiggybackType type;
-    EndPoint endpoint;
+    NodeIdentity identity;
     uint64_t incarnation;
     // Metadata-only fields:
     std::vector<std::string> actor_types;
     uint32_t load = 0;
-    std::vector<AcceptorInfo> acceptors;
 };
 
 // ── Configuration ───────────────────────────────────────────────
@@ -76,7 +84,7 @@ struct PendingPing {
 
 // ── GossipMembership ────────────────────────────────────────────
 class GossipMembership : public IServiceDiscovery {
-public:
+  public:
     GossipMembership(const GossipConfig& cfg, EventLoop* loop);
     ~GossipMembership() override;
 
@@ -86,19 +94,22 @@ public:
     const Member* discover(EndPoint) const override;
     void announce(Member) override;
     void on_member_change(MemberChangeCallback) override;
-    std::string backend_name() const override { return "gossip"; }
+    std::string backend_name() const override {
+        return "gossip";
+    }
     const std::unordered_map<EndPoint, Member>* raw_members() const override {
         return &members_;
     }
 
-private:
+  private:
     void protocol_round();
     void handle_packet(const StreamBuffer& data, const std::string& from_host,
                        uint16_t from_port);
 
     // Message handlers
     void handle_ping(EndPoint sender, uint64_t inc, uint32_t seq,
-                     std::vector<PiggybackEntry> pb, const std::string& host, uint16_t port);
+                     std::vector<PiggybackEntry> pb, const std::string& host,
+                     uint16_t port);
     void handle_ack(EndPoint sender, uint64_t inc, std::vector<PiggybackEntry> pb);
     void handle_ping_req(EndPoint sender, EndPoint target);
     void handle_indirect_ack(EndPoint sender, EndPoint target);
@@ -116,13 +127,16 @@ private:
     void send_leave(EndPoint target);
 
     // Wire protocol encode/decode
-    StreamBuffer encode_message(GossipMessageType type, uint64_t inc, uint32_t seq,
-        EndPoint ping_target, const std::vector<PiggybackEntry>& pb) const;
-    bool decode_message(const StreamBuffer& data, GossipMessageType& type,
-        EndPoint& sender, uint64_t& inc, uint32_t& seq, EndPoint& ping_target,
-        std::vector<PiggybackEntry>& pb) const;
+    StreamBuffer encode_message(GossipMessageType type, uint64_t inc,
+                                uint32_t seq, EndPoint ping_target,
+                                const std::vector<PiggybackEntry>& pb) const;
+    bool
+    decode_message(const StreamBuffer& data, GossipMessageType& type,
+                   EndPoint& sender, uint64_t& inc, uint32_t& seq,
+                   EndPoint& ping_target, std::vector<PiggybackEntry>& pb) const;
     StreamBuffer encode_sync_rsp(const std::vector<Member>& members) const;
-    bool decode_sync_rsp(const StreamBuffer& data, std::vector<Member>& members) const;
+    bool
+    decode_sync_rsp(const StreamBuffer& data, std::vector<Member>& members) const;
 
     // State mutations
     void mark_suspicious(EndPoint ep);
@@ -130,8 +144,8 @@ private:
     void merge_member(const Member& remote);
     void apply_piggyback(const std::vector<PiggybackEntry>& entries);
     void purge_dead_tombstones();
-    std::vector<EndPoint> pick_random_peers(size_t count,
-        std::unordered_set<EndPoint> exclude = {});
+    std::vector<EndPoint>
+    pick_random_peers(size_t count, std::unordered_set<EndPoint> exclude = {});
 
     void setup_udp_socket();
     void teardown_udp_socket();

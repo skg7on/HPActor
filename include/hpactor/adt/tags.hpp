@@ -12,26 +12,18 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/static_discovery.hpp>
+#pragma once
 
-namespace hpactor::net {
+namespace hpactor {
 
-StaticDiscovery::StaticDiscovery(std::vector<Member> members)
-    : members_(std::move(members)) {
-    for (size_t i = 0; i < members_.size(); ++i) {
-        index_[members_[i].identity.endpoint] = i;
-    }
-}
+struct ActorTag {};
+struct MessageTag {};
+struct AlarmTag {};
 
-std::vector<Member> StaticDiscovery::discover_all() const {
-    return members_;
-}
+} // namespace hpactor
 
-const Member* StaticDiscovery::discover(EndPoint ep) const {
-    auto it = index_.find(ep);
-    if (it != index_.end())
-        return &members_[it->second];
-    return nullptr;
-}
+namespace hpactor::sched {
 
-} // namespace hpactor::net
+struct TimerTag {};
+
+} // namespace hpactor::sched

@@ -25,7 +25,6 @@
         }                                                                      \
     } while (false)
 
-
 int main() {
     // Test 1: ActorId default construction (value == 0)
     hpactor::ActorId default_actor_id;
@@ -75,8 +74,8 @@ int main() {
     CHECK(hpactor::errors::user == 1000);
 
     // Test 10: MessageId generate
-    hpactor::MessageId id1 = hpactor::MessageId::generate();
-    hpactor::MessageId id2 = hpactor::MessageId::generate();
+    hpactor::MessageId id1 = hpactor::generate_message_id();
+    hpactor::MessageId id2 = hpactor::generate_message_id();
     CHECK(id1 != id2); // Each call should be unique
 
     // Test 11: Clock
@@ -89,8 +88,8 @@ int main() {
     // Test 12: AlarmHandle
     hpactor::AlarmHandle handle1;
     hpactor::AlarmHandle handle2(42);
-    CHECK(handle1.id() == 0);
-    CHECK(handle2.id() == 42);
+    CHECK(handle1.value() == 0);
+    CHECK(handle2.value() == 42);
 
     // Test 13: TraceContext
     hpactor::TraceContext ctx;

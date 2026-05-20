@@ -1,0 +1,12 @@
+// X-macro table: dispatcher definition fields
+//
+// Columns: cpp_name, cpp_type, default_value
+//
+// Usage:
+//   #define HPACTOR_DISPATCHER_FIELD(name, type, def) type name{def};
+//   #include "dispatcher_fields.def"
+//   #undef HPACTOR_DISPATCHER_FIELD
+
+HPACTOR_DISPATCHER_FIELD(name,          std::string,            "")
+HPACTOR_DISPATCHER_FIELD(threads,       uint16_t,               1)
+HPACTOR_DISPATCHER_FIELD(cpu_affinity,  std::vector<uint8_t>,   {})

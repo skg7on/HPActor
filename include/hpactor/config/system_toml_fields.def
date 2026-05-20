@@ -1,0 +1,16 @@
+// X-macro table: TOML SystemDef fields (TOML types differ from runtime types).
+// Same fields as system_fields.def but with TOML-native types.
+//
+// Columns: cpp_name, toml_type, toml_key, default_value
+
+HPACTOR_SYSTEM_TOML_FIELD(scheduler_threads,       uint32_t,     "scheduler.threads",            4)
+HPACTOR_SYSTEM_TOML_FIELD(max_queue_depth,         uint32_t,     "scheduler.max_queue_depth",    1024)
+HPACTOR_SYSTEM_TOML_FIELD(enable_network,          bool,         "network.enabled",              false)
+HPACTOR_SYSTEM_TOML_FIELD(tcp_port,                uint16_t,     "network.tcp_port",             0)
+HPACTOR_SYSTEM_TOML_FIELD(spawn_timeout_ms,        uint32_t,     "spawn.timeout_ms",             5000)
+HPACTOR_SYSTEM_TOML_FIELD(enable_http_gateway,     bool,         "http.enable_gateway",          false)
+HPACTOR_SYSTEM_TOML_FIELD(http_port,               uint16_t,     "http.port",                    8080)
+HPACTOR_SYSTEM_TOML_FIELD(http_bind_host,          std::string,  "http.bind_host",               "0.0.0.0")
+HPACTOR_SYSTEM_TOML_FIELD(http_max_connections,    uint32_t,     "http.max_connections",         1000)
+HPACTOR_SYSTEM_TOML_FIELD(http_max_request_size,   uint32_t,     "http.max_request_size",        1048576)
+HPACTOR_SYSTEM_TOML_FIELD(http_reply_timeout_ms,   uint32_t,     "http.reply_timeout_ms",        5000)

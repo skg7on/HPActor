@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/adt/node_identity.hpp>
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/service_discovery.hpp>
@@ -56,13 +57,10 @@ struct RegistrarConfig {
 // NodeEndpoint - information about a known node
 // -----------------------------------------------------------------------------
 struct NodeEndpoint {
-    EndPoint endpoint;
-    std::string host; // Resolved IP or hostname
+    NodeIdentity identity;
     uint16_t tcp_port = 0;
     bool is_static_route = false;
-    std::vector<AcceptorInfo> acceptors;
     std::chrono::steady_clock::time_point last_seen;
-    std::string uds_path; // NEW: path to UDS socket, empty if not available
 };
 
 // -----------------------------------------------------------------------------

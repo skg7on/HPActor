@@ -22,6 +22,18 @@ namespace hpactor::config {
 
 namespace {
 
+// Assign Dst from Src when the types are directly compatible; silently skip
+// otherwise.  Catches mismatches like std::string = uint32_t (string is
+// assignable from char = int, but that's not what we want for binary offset
+// fields).
+template <typename Dst, typename Src>
+void assign_or_skip(Dst& dst, const Src& src) {
+    if constexpr (std::is_assignable_v<Dst&, const Src&> &&
+                  !(std::is_arithmetic_v<Src> && std::is_same_v<Dst, std::string>)) {
+        dst = src;
+    }
+}
+
 class BinaryWriter {
   public:
     BinaryWriter() {
@@ -91,21 +103,23 @@ std::vector<uint8_t> serialize_topology(const TopologyModel& model) {
 
     // SystemDef
     BinarySystemDef bsys{};
-    bsys.scheduler_threads = model.system.scheduler_threads;
-    bsys.max_queue_depth = model.system.max_queue_depth;
+
+// Shared scalar fields (generated from system_toml_fields.def)
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#define HPACTOR_SYSTEM_TOML_FIELD(name, type, toml, def)                       \
+    assign_or_skip(bsys.name, model.system.name);
+#include <hpactor/config/system_toml_fields.def>
+#undef HPACTOR_SYSTEM_TOML_FIELD
+    // NOLINTEND(cppcoreguidelines-macro-usage)
+
+    // SystemDef-only fields (not in the shared X-macro table)
     bsys.default_mailbox_size = model.system.default_mailbox_size;
-    bsys.enable_network = model.system.enable_network ? 1 : 0;
-    bsys.tcp_port = model.system.tcp_port;
     bsys.reserved_pad = 0;
-    bsys.spawn_timeout_ms = model.system.spawn_timeout_ms;
-    bsys.enable_http_gateway = model.system.enable_http_gateway ? 1 : 0;
-    bsys.http_port = model.system.http_port;
-    bsys.http_max_connections = model.system.http_max_connections;
-    bsys.http_max_request_size = model.system.http_max_request_size;
-    bsys.http_reply_timeout_ms = model.system.http_reply_timeout_ms;
     bsys.use_coroutines = model.system.use_coroutines ? 1 : 0;
+
+    // String table fields (override X-macro-generated assignments)
     bsys.version_offset = w.add_string(model.system.version);
-    bsys.http_bind_host_offset = w.add_string(model.system.http_bind_host);
+    bsys.http_bind_host = w.add_string(model.system.http_bind_host);
     // Tracing
     bsys.tracing_enabled = model.system.tracing.enabled ? 1 : 0;
     bsys.tracing_propagate_unsampled =

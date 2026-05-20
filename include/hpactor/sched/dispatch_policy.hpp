@@ -14,15 +14,11 @@
 
 #pragma once
 
-#include <cstdint>
+#include <hpactor/types/types.hpp>
 
 namespace hpactor::sched {
 
-enum class DispatchPolicy : uint8_t {
-    Cooperative = 0,
-    DedicatedThread,
-    DedicatedPool,
-};
+using DispatchPolicy = hpactor::DispatchPolicy;
 
 struct DispatchHints {
     int cpu_affinity = -1;

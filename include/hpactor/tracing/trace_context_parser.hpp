@@ -19,8 +19,15 @@ enum class TraceParseStatus : uint8_t {
 };
 
 struct TraceParseResult {
-    TraceParseStatus status{TraceParseStatus::kMissing};
+    TraceParseStatus status_value{TraceParseStatus::kMissing};
     TraceContext context{};
+
+    [[nodiscard]] TraceParseStatus status() const noexcept {
+        return status_value;
+    }
+    [[nodiscard]] bool ok() const noexcept {
+        return status_value == TraceParseStatus::kOk;
+    }
 };
 
 TraceParseResult parse_w3c_trace_context(std::string_view traceparent,
