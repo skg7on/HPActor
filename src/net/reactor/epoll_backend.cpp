@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <algorithm>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/reactor/epoll_backend.hpp>
 
@@ -212,8 +213,7 @@ int EpollBackend::process_timers() {
         clock_gettime(CLOCK_MONOTONIC, &now_ts);
         int64_t now_abs_ms = now_ts.tv_sec * 1000 + now_ts.tv_nsec / 1000000;
         int64_t delay_ms = nextExpiry - now_abs_ms;
-        if (delay_ms < 1)
-            delay_ms = 1;
+        delay_ms = std::max<int64_t>(delay_ms, 1);
         struct itimerspec new_val{};
         new_val.it_value.tv_sec = delay_ms / 1000;
         new_val.it_value.tv_nsec = (delay_ms % 1000) * 1000000;
@@ -434,8 +434,7 @@ uint64_t EpollBackend::run_after(ActorId actor, int delay_ms) {
     // Update timerfd to fire at earliest timer (relative delay from now)
     int64_t front_delay = timers_.front().expires_at_ms -
                           (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-    if (front_delay < 1)
-        front_delay = 1;
+    front_delay = std::max<int64_t>(front_delay, 1);
     struct itimerspec new_val{};
     new_val.it_value.tv_sec = front_delay / 1000;
     new_val.it_value.tv_nsec = (front_delay % 1000) * 1000000;
@@ -470,8 +469,7 @@ uint64_t EpollBackend::run_every(ActorId actor, int interval_ms) {
     // Update timerfd to fire at earliest timer (relative delay from now)
     int64_t front_delay = timers_.front().expires_at_ms -
                           (ts.tv_sec * 1000 + ts.tv_nsec / 1000000);
-    if (front_delay < 1)
-        front_delay = 1;
+    front_delay = std::max<int64_t>(front_delay, 1);
     struct itimerspec new_val{};
     new_val.it_value.tv_sec = front_delay / 1000;
     new_val.it_value.tv_nsec = (front_delay % 1000) * 1000000;
