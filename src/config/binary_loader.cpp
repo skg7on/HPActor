@@ -55,7 +55,10 @@ struct RawSystemDef {
     uint32_t http_reply_timeout_ms;
     uint32_t use_coroutines;
     uint32_t version_offset;
-    uint32_t http_bind_host_offset;
+    union {
+        uint32_t http_bind_host;        // X-macro compatible name
+        uint32_t http_bind_host_offset; // string table offset (canonical)
+    };
     uint32_t tracing_enabled;
     uint32_t tracing_propagate_unsampled;
     uint32_t tracing_ring_buffer_capacity;
@@ -101,6 +104,18 @@ inline const char* str_at(const uint8_t* str_table, uint32_t offset) {
     return offset ? reinterpret_cast<const char*>(str_table + offset) : "";
 }
 
+// Assign Dst from Src when the types are directly compatible; silently skip
+// otherwise.  Catches mismatches like std::string = uint32_t (string is
+// assignable from char = int, but that's not what we want for binary offset
+// fields).
+template <typename Dst, typename Src>
+void assign_or_skip(Dst& dst, const Src& src) {
+    if constexpr (std::is_assignable_v<Dst&, const Src&> &&
+                  !(std::is_arithmetic_v<Src> && std::is_same_v<Dst, std::string>)) {
+        dst = static_cast<Dst>(src);
+    }
+}
+
 } // anonymous namespace
 
 // -----------------------------------------------------------------------------
@@ -141,19 +156,22 @@ result<TopologyModel> load_binary_topology(const std::string& path) {
     const RawSystemDef* rsys =
         reinterpret_cast<const RawSystemDef*>(base + hdr->system_offset);
     model.system.version = str_at(str_table, rsys->version_offset);
-    model.system.scheduler_threads = rsys->scheduler_threads;
-    model.system.max_queue_depth = rsys->max_queue_depth;
+
+// Shared scalar fields (generated from system_toml_fields.def)
+// NOLINTBEGIN(cppcoreguidelines-macro-usage)
+#define HPACTOR_SYSTEM_TOML_FIELD(name, type, toml, def)                       \
+    assign_or_skip(model.system.name, rsys->name);
+#include <hpactor/config/system_toml_fields.def>
+#undef HPACTOR_SYSTEM_TOML_FIELD
+    // NOLINTEND(cppcoreguidelines-macro-usage)
+
+    // SystemDef-only fields (not in the shared X-macro table)
     model.system.default_mailbox_size = rsys->default_mailbox_size;
-    model.system.enable_network = rsys->enable_network != 0;
-    model.system.tcp_port = rsys->tcp_port;
-    model.system.spawn_timeout_ms = rsys->spawn_timeout_ms;
-    model.system.enable_http_gateway = rsys->enable_http_gateway != 0;
-    model.system.http_bind_host = str_at(str_table, rsys->http_bind_host_offset);
-    model.system.http_port = rsys->http_port;
-    model.system.http_max_connections = rsys->http_max_connections;
-    model.system.http_max_request_size = rsys->http_max_request_size;
-    model.system.http_reply_timeout_ms = rsys->http_reply_timeout_ms;
     model.system.use_coroutines = rsys->use_coroutines != 0;
+
+    // String-override: assign_or_skip skips string fields (string != uint32_t),
+    // so apply the string-table lookup manually.
+    model.system.http_bind_host = str_at(str_table, rsys->http_bind_host_offset);
 
     // Tracing config (zero-filled for older binary versions = disabled)
     model.system.tracing.enabled = rsys->tracing_enabled != 0;
