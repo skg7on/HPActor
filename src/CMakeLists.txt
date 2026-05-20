@@ -135,6 +135,11 @@ target_sources(hpactor_lib PRIVATE
     cli/tabular_formatter.cpp
     cli/pager.cpp
     cli/cli_actor.cpp
+    cli/commands/help_command.cpp
+    cli/commands/quit_command.cpp
+    cli/commands/actor_commands.cpp
+    cli/commands/system_commands.cpp
+    cli/commands/misc_commands.cpp
 )
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------
