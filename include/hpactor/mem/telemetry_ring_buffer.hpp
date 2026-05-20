@@ -14,24 +14,25 @@
 
 #pragma once
 
-#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <cstdint>
+#include <hpactor/adt/mpsc_ring_buffer.hpp>
 
 namespace hpactor::mem {
 
 // Allocation event for telemetry. Compact (32 bytes) for ring buffer density.
 struct AllocationEvent {
-    uint64_t timestamp;   // rdtsc or monotonic ns
-    uint32_t actor_id;    // owning actor
-    uint16_t block_size;  // user bytes requested
-    uint8_t  size_class;  // SizeClass index
-    uint8_t  region_type; // RegionType
-    uint8_t  event_type;  // 0=alloc, 1=free, 2=corruption, 3=hibernate_in, 4=hibernate_out
-    uint8_t  _pad[7];     // align to 32B
+    uint64_t timestamp;  // rdtsc or monotonic ns
+    uint32_t actor_id;   // owning actor
+    uint16_t block_size; // user bytes requested
+    uint8_t size_class;  // SizeClass index
+    uint8_t region_type; // RegionType
+    uint8_t event_type;  // 0=alloc, 1=free, 2=corruption, 3=hibernate_in,
+                         // 4=hibernate_out
+    uint8_t _pad[7];     // align to 32B
 };
 
-// Alias: reuse the generic MpscRingBuffer
+// Alias for backward compatibility — delegates to the shared ADT.
 template <size_t Capacity = 65536>
-using TelemetryRingBuffer = metrics::MpscRingBuffer<AllocationEvent, Capacity>;
+using TelemetryRingBuffer = adt::MpscRingBuffer<AllocationEvent, Capacity>;
 
 } // namespace hpactor::mem
