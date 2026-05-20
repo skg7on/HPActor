@@ -38,6 +38,7 @@ add_library(hpactor_lib SHARED
     config/binary_loader.cpp
     core/proto_type_registry.cpp
     types/typed_message.cpp
+    types/failure_reason.cpp
     net/event_loop.cpp
     net/acceptor.cpp
     net/connection.cpp
