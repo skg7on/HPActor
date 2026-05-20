@@ -18,6 +18,7 @@
 #include <hpactor/types/failure_reason.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <algorithm>
 #include <array>
 #include <cstdint>
 #include <cstring>
@@ -63,6 +64,7 @@ struct FailureEnvelope {
     void set_detail(std::string_view s) noexcept {
         detail_len = static_cast<uint8_t>(std::min(s.size(), detail.size() - 1));
         std::memcpy(detail.data(), s.data(), detail_len);
+        detail[detail_len] = '\0';
     }
 
     /// View of the detail string.
