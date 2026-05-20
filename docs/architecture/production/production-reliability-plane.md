@@ -63,6 +63,7 @@ Responsibilities:
 
 Primary docs:
 
+- [Structured Failure Envelope](structured-failure-envelope-design.md)
 - [Actor Delivery Semantics](actor-delivery-semantics-design.md)
 - [Dead-Letter Queue](dead-letter-queue-design.md)
 - [Reliable Messaging](reliable-messaging-design.md)
