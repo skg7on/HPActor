@@ -14,90 +14,40 @@
 
 #pragma once
 
-#include "hpactor/log/log_event.hpp"
-#include <atomic>
-#include <cstdint>
-#include <cstdio>
-#include <cstdlib>
-#include <memory>
+#include <hpactor/adt/mpsc_ring_buffer.hpp>
+#include <hpactor/log/log_event.hpp>
 
 namespace hpactor::log {
 
+// Thin wrapper around adt::DynamicMpscRingBuffer<LogEvent>.
+// Preserves the LogRingBuffer type identity for existing callers
+// (LogManager, LogDrain, Logger, test_log_ring_buffer).
 class LogRingBuffer {
   public:
-    explicit LogRingBuffer(size_t capacity)
-        : capacity_(capacity), mask_(capacity - 1) {
-        if (capacity == 0 || (capacity & (capacity - 1)) != 0) {
-            std::fprintf(stderr,
-                         "LogRingBuffer capacity must be a power of two, got "
-                         "%zu\n",
-                         capacity);
-            std::abort();
-        }
-        buffer_ = std::make_unique<LogEvent[]>(capacity);
-    }
+    explicit LogRingBuffer(size_t capacity) : buffer_(capacity) {}
 
     bool try_push(const LogEvent& value) noexcept {
-        uint64_t w = write_cursor_.load(std::memory_order_relaxed);
-        uint64_t r = read_cursor_.load(std::memory_order_acquire);
-
-        if (w - r >= capacity_) {
-            events_lost_.fetch_add(1, std::memory_order_relaxed);
-            return false;
-        }
-
-        while (!write_cursor_.compare_exchange_weak(
-            w, w + 1, std::memory_order_acquire, std::memory_order_relaxed)) {
-            r = read_cursor_.load(std::memory_order_acquire);
-            if (w - r >= capacity_) {
-                events_lost_.fetch_add(1, std::memory_order_relaxed);
-                return false;
-            }
-        }
-
-        buffer_[w & mask_] = value;
-        std::atomic_thread_fence(std::memory_order_release);
-        return true;
+        return buffer_.try_push(value);
     }
 
     template <typename Fn> size_t drain(Fn&& callback) {
-        uint64_t r = read_cursor_.load(std::memory_order_relaxed);
-        uint64_t w = write_cursor_.load(std::memory_order_acquire);
-        std::atomic_thread_fence(std::memory_order_acquire);
-
-        size_t count = 0;
-        while (r < w) {
-            callback(buffer_[r & mask_]);
-            ++r;
-            ++count;
-        }
-
-        read_cursor_.store(r, std::memory_order_release);
-        return count;
+        return buffer_.drain(std::forward<Fn>(callback));
     }
 
     uint64_t events_lost() const noexcept {
-        return events_lost_.load(std::memory_order_relaxed);
+        return buffer_.events_lost();
     }
 
     size_t size() const noexcept {
-        uint64_t w = write_cursor_.load(std::memory_order_acquire);
-        uint64_t r = read_cursor_.load(std::memory_order_acquire);
-        return static_cast<size_t>(w - r);
+        return buffer_.size();
     }
 
     bool empty() const noexcept {
-        return size() == 0;
+        return buffer_.empty();
     }
 
   private:
-    size_t capacity_;
-    size_t mask_;
-    std::unique_ptr<LogEvent[]> buffer_;
-
-    alignas(64) std::atomic<uint64_t> write_cursor_{0};
-    alignas(64) std::atomic<uint64_t> read_cursor_{0};
-    alignas(64) std::atomic<uint64_t> events_lost_{0};
+    adt::DynamicMpscRingBuffer<LogEvent> buffer_;
 };
 
 } // namespace hpactor::log

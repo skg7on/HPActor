@@ -9,6 +9,13 @@ include_directories(${CMAKE_SOURCE_DIR}/tests/support)
 add_compile_options(-UNDEBUG)
 
 # =============================================================================
+# ADT tests - abstract data types
+# =============================================================================
+add_executable(test_adt_mpsc_ring_buffer adt/test_adt_mpsc_ring_buffer.cpp)
+target_link_libraries(test_adt_mpsc_ring_buffer hpactor pthread)
+add_test(NAME test_adt_mpsc_ring_buffer COMMAND test_adt_mpsc_ring_buffer)
+
+# =============================================================================
 # Core tests - types, result, serialization
 # =============================================================================
 add_executable(test_types core/test_types.cpp)
