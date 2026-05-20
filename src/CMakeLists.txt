@@ -126,6 +126,7 @@ set_source_files_properties(
 # ---- CLI subsystem (runtime opt-in via cli.enabled) ------------------------
 
 target_sources(hpactor_lib PRIVATE
+    cli/command_registry.cpp
     cli/lexer.cpp
     cli/command_node.cpp
     cli/line_editor.cpp
