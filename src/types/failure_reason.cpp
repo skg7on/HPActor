@@ -12,7 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/types/failure_envelope.hpp>
 #include <hpactor/types/failure_reason.hpp>
+
+#include <chrono>
 
 namespace hpactor {
 
@@ -96,6 +99,29 @@ const char* to_string(FailureSource source) noexcept {
             return "unknown";
     }
     return "unknown";
+}
+
+FailureEnvelope
+make_failure_envelope(FailureReason reason, ActorId actor_id,
+                      const ActorAddress& sender, const ActorAddress& receiver,
+                      MessageId message_id, const TraceContext& trace,
+                      FailureSource source, std::string_view detail) noexcept {
+    FailureEnvelope env;
+    env.reason = reason;
+    env.actor_id = actor_id;
+    env.sender = sender;
+    env.receiver = receiver;
+    env.message_id = message_id;
+    env.trace = trace;
+    env.retryable = retryable(reason);
+    env.source = source;
+    if (!detail.empty()) {
+        env.set_detail(detail);
+    }
+    auto now = std::chrono::steady_clock::now().time_since_epoch();
+    env.timestamp_ns = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(now).count());
+    return env;
 }
 
 } // namespace hpactor
