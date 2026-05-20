@@ -1,0 +1,15 @@
+# HPActor system test topology — 3 actors for bootstrap validation
+[system]
+version = "1.0"
+
+[[actor]]
+id = "alpha"
+behavior = "CountingActor"
+
+[[actor]]
+id = "beta"
+behavior = "CountingActor"
+
+[[actor]]
+id = "gamma"
+behavior = "EchoActor"
