@@ -3,16 +3,15 @@
 
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/command_context.hpp>
+#include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/lexer.hpp>
 #include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 
-#include <charconv>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <iostream>
 #include <thread>
 
 namespace hpactor {
@@ -146,275 +145,61 @@ std::vector<ActorMeta> CliActor::enumerate_actors(const std::string& filter) {
 // Command tree — registered commands wired to real implementations.
 // ---------------------------------------------------------------------------
 
-static ActorId parse_actor_id(const std::string& s) {
-    uint64_t raw = 0;
-    int base = 10;
-    const char* start = s.data();
-    if (s.size() >= 2 && s[0] == '0' && (s[1] == 'x' || s[1] == 'X')) {
-        base = 16;
-        start = s.data() + 2;
+// Mount a single registered command into the tree, creating intermediate
+// nodes as needed. Sets execute on the terminal node.
+void mount_command(CommandNode* root, const ICommand& cmd) {
+    auto segments = parse_command_path(cmd.path());
+    if (segments.empty())
+        return;
+
+    CommandNode* node = root;
+    for (size_t i = 0; i < segments.size(); ++i) {
+        auto& seg = segments[i];
+        bool is_param = is_param_segment(seg);
+        bool is_last = (i == segments.size() - 1);
+
+        // Find existing child or create one
+        CommandNode* child = nullptr;
+        for (auto& c : node->children) {
+            if (c->keyword == seg) {
+                child = c.get();
+                break;
+            }
+        }
+        if (!child) {
+            child = node->add_child(seg, "", is_param);
+        }
+
+        if (is_last) {
+            child->help_text = cmd.help_text();
+            child->execute = [&cmd](CommandContext& ctx) -> result<void> {
+                return cmd.execute(ctx);
+            };
+        }
+        node = child;
     }
-    auto [ptr, ec] = std::from_chars(start, s.data() + s.size(), raw, base);
-    if (ec != std::errc{})
-        return ActorId{0};
-    return ActorId{raw};
 }
 
 void CliActor::build_command_tree() {
     auto root = std::make_unique<CommandNode>("/", "CLI root");
 
-    // ── /actor <id> show ──────────────────────────────────────────────
-    auto* actor_cmd = root->add_child("actor", "Actor operations");
-    auto* actor_id_param =
-        actor_cmd->add_child("<id>", "Target actor ID", /*is_param=*/true);
+    auto& cmds = CommandRegistry::instance().commands();
+    // Sort by order for deterministic tree assembly
+    std::vector<const ICommand*> sorted;
+    sorted.reserve(cmds.size());
+    for (auto& c : cmds)
+        sorted.push_back(c.get());
+    // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
+    std::stable_sort(sorted.begin(), sorted.end(),
+                     [](const ICommand* a, const ICommand* b) {
+                         if (a->order() != b->order())
+                             return a->order() < b->order();
+                         return a->path() < b->path();
+                     });
 
-    actor_id_param
-        ->add_child("show", "Display actor metadata, state, mailbox, and "
-                            "children")
-        ->execute = [this](CommandContext& ctx) -> result<void> {
-        auto id_str = ctx.get_param("<id>");
-        if (!id_str) {
-            ctx.output->error("Missing actor ID (usage: /actor <id> show)");
-            return result<void>::make();
-        }
-        ActorId target_id = parse_actor_id(*id_str);
-        if (target_id == ActorId{0}) {
-            ctx.output->error("Invalid actor ID: " + *id_str);
-            return result<void>::make();
-        }
-
-        InspectStateRequest req;
-        req.set_target_actor_id(target_id.value());
-        req.set_include_state(true);
-        req.set_include_mailbox(true);
-        req.set_include_children(true);
-
-        auto reply = send_and_wait_inspect(target_id, req);
-        if (!reply) {
-            ctx.output->error("No response from actor " + *id_str +
-                              " (timeout or not found)");
-            return result<void>::make();
-        }
-
-        ctx.output->header("Actor " + *id_str + " — " +
-                           reply->metadata().actor_type());
-
-        std::map<std::string, std::string> kv;
-        kv["State"] = reply->metadata().state();
-        kv["Incarnation"] = std::to_string(reply->metadata().incarnation());
-        kv["Processed"] =
-            std::to_string(reply->metadata().messages_processed()) + " msgs";
-        kv["Uptime (ms)"] = std::to_string(reply->metadata().uptime_ms());
-        kv["Behavior"] = reply->metadata().behavior_name();
-
-        if (reply->has_mailbox()) {
-            kv["Mailbox depth"] = std::to_string(reply->mailbox().depth());
-            kv["Mailbox max"] = std::to_string(reply->mailbox().max_depth());
-        }
-
-        ctx.output->key_value(kv);
-
-        if (!reply->state_blob().empty()) {
-            ctx.output->raw("State: " + reply->state_blob());
-        }
-
-        return result<void>::make();
-    };
-
-    // ── /actor <id> kill ──────────────────────────────────────────────
-    actor_id_param->add_child("kill", "Terminate actor (graceful shutdown)")->execute =
-        [this](CommandContext& ctx) -> result<void> {
-        auto id_str = ctx.get_param("<id>");
-        if (!id_str) {
-            ctx.output->error("Missing actor ID (usage: /actor <id> kill)");
-            return result<void>::make();
-        }
-        ActorId target_id = parse_actor_id(*id_str);
-        if (target_id == ActorId{0}) {
-            ctx.output->error("Invalid actor ID: " + *id_str);
-            return result<void>::make();
-        }
-
-        KillRequest req;
-        req.set_target_actor_id(target_id.value());
-        req.set_force(false);
-
-        auto reply = send_and_wait_kill(target_id, req);
-        if (!reply) {
-            ctx.output->error("No response from actor " + *id_str +
-                              " (timeout or not found)");
-            return result<void>::make();
-        }
-
-        if (reply->success()) {
-            ctx.output->raw("Actor " + *id_str + " terminated.");
-        } else {
-            ctx.output->error("Failed to kill actor " + *id_str + ": " +
-                              reply->error_message());
-        }
-        return result<void>::make();
-    };
-
-    // ── /actor list ───────────────────────────────────────────────────
-    actor_cmd->add_child("list", "List all actors [--filter <type>]")->execute =
-        [this](CommandContext& ctx) -> result<void> {
-        std::string filter;
-        if (auto f = ctx.get_param("filter"))
-            filter = *f;
-
-        auto actors = enumerate_actors(filter);
-
-        ctx.output->header("Actors (" + std::to_string(actors.size()) + " total)");
-
-        std::vector<std::string> cols = {"ID", "Type", "State", "Processed"};
-        std::vector<std::vector<std::string>> rows;
-        rows.reserve(actors.size());
-
-        for (auto& a : actors) {
-            char id_buf[32];
-            snprintf(id_buf, sizeof(id_buf), "0x%04llX",
-                     static_cast<unsigned long long>(a.actor_id));
-            rows.push_back({id_buf, a.actor_type, a.state,
-                            std::to_string(a.messages_processed)});
-        }
-
-        ctx.output->table(cols, rows);
-        return result<void>::make();
-    };
-
-    // ── /system stats ─────────────────────────────────────────────────
-    auto* sys = root->add_child("system", "System operations");
-
-    sys->add_child("stats", "System-wide statistics")->execute =
-        [this](CommandContext& ctx) -> result<void> {
-        ctx.output->header("System Statistics");
-
-        std::map<std::string, std::string> kv;
-        kv["Total actors"] = std::to_string(system_.actor_count());
-        if (auto* sched = system_.scheduler()) {
-            kv["Scheduler threads"] = std::to_string(sched->worker_count());
-        }
-        kv["CLI enabled"] = config_.enabled ? "yes" : "no";
-        kv["CLI format"] = config_.default_format;
-
-        ctx.output->key_value(kv);
-        return result<void>::make();
-    };
-
-    sys->add_child("memory", "Memory subsystem stats")->execute =
-        [](CommandContext& ctx) -> result<void> {
-        ctx.output->header("System Memory");
-        ctx.output->key_value({{"Status", "Memory subsystem active"},
-                               {"Note", "Use /metrics show for detailed memory "
-                                        "stats"}});
-        return result<void>::make();
-    };
-
-    sys->add_child("list", "List system actors")->execute =
-        [this](CommandContext& ctx) -> result<void> {
-        ctx.output->header("System Actors");
-
-        std::vector<std::string> cols = {"ID", "Type", "State"};
-        std::vector<std::vector<std::string>> rows;
-
-        system_.for_each_actor([&](ActorId actor_id, AbstractActor& actor) {
-            char id_buf[32];
-            snprintf(id_buf, sizeof(id_buf), "0x%04llX",
-                     static_cast<unsigned long long>(actor_id.value()));
-            auto meta = actor.to_metadata();
-            rows.push_back({id_buf, meta.actor_type, meta.state});
-        });
-
-        ctx.output->table(cols, rows);
-        return result<void>::make();
-    };
-
-    // ── /system drain ──────────────────────────────────────────────────
-    auto* drain = sys->add_child("drain", "Graceful node shutdown");
-    drain->execute = [this](CommandContext& ctx) -> result<void> {
-        auto shutdown_result = system().shutdown();
-        if (shutdown_result.has_value()) {
-            ctx.output->raw("Shutdown complete");
-        } else {
-            ctx.output->error("Shutdown failed");
-        }
-        return result<void>::make();
-    };
-
-    // ── /system drain status ───────────────────────────────────────────
-    drain->add_child("status", "Show shutdown progress")->execute =
-        [this](CommandContext& ctx) -> result<void> {
-        ctx.output->raw("Shutdown phase: " + std::to_string(static_cast<int>(
-                                                 system().shutdown_phase())));
-        ctx.output->raw("Actors live: " + std::to_string(system().actor_count()));
-        return result<void>::make();
-    };
-
-    // ── /system stop <actor_id> ────────────────────────────────────────
-    auto* stop = sys->add_child("stop", "Graceful stop of an actor");
-    auto* stop_id_param = stop->add_child("<actor_id>", "Actor ID to stop",
-                                          /*is_param=*/true);
-    stop_id_param->execute = [this](CommandContext& ctx) -> result<void> {
-        auto id_str = ctx.get_param("<actor_id>");
-        if (!id_str) {
-            ctx.output->error("Missing actor ID (usage: /system stop "
-                              "<actor_id>)");
-            return result<void>::make();
-        }
-        ActorId target_id = parse_actor_id(*id_str);
-        if (target_id == ActorId{0}) {
-            ctx.output->error("Invalid actor ID: " + *id_str);
-            return result<void>::make();
-        }
-
-        if (ctx.has_flag("force")) {
-            system().set_drain_config(target_id,
-                                      DrainConfig{DrainPolicy::ImmediateStop});
-        }
-
-        auto actor = system().get_actor(target_id);
-        if (!actor) {
-            ctx.output->error("Actor not found: " + std::string(*id_str));
-            return result<void>::make();
-        }
-        context()->stop(target_id);
-        ctx.output->raw("Drain initiated for actor " + std::string(*id_str));
-        return result<void>::make();
-    };
-
-    // ── /metrics show ─────────────────────────────────────────────────
-    auto* metrics = root->add_child("metrics", "Metrics operations");
-    metrics->add_child("show", "Show current metrics snapshot")->execute =
-        [](CommandContext& ctx) -> result<void> {
-        ctx.output->header("Metrics");
-        ctx.output->raw("metrics show — not yet implemented");
-        return result<void>::make();
-    };
-
-    // ── /topology show ────────────────────────────────────────────────
-    auto* topo = root->add_child("topology", "Topology operations");
-    topo->add_child("show", "Show topology tree")->execute =
-        [](CommandContext& ctx) -> result<void> {
-        ctx.output->header("Topology");
-        ctx.output->raw("topology show — not yet implemented");
-        return result<void>::make();
-    };
-
-    // ── /help ─────────────────────────────────────────────────────────
-    root->add_child("help", "Show available commands")->execute =
-        [this](CommandContext& ctx) -> result<void> {
-        ctx.output->header("Available Commands");
-        ctx.output->raw(command_tree_->help());
-        return result<void>::make();
-    };
-
-    // ── /quit ─────────────────────────────────────────────────────────
-    root->add_child("quit", "Exit the CLI")->execute =
-        [this](CommandContext& ctx) -> result<void> {
-        ctx.output->raw("Goodbye.");
-        running_ = false;
-        return result<void>::make();
-    };
+    for (auto* cmd : sorted) {
+        mount_command(root.get(), *cmd);
+    }
 
     command_tree_ = std::move(root);
 }
