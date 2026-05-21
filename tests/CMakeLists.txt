@@ -26,6 +26,14 @@ add_executable(test_result core/test_result.cpp)
 target_link_libraries(test_result hpactor)
 add_test(NAME test_result COMMAND test_result)
 
+add_executable(test_failure_envelope core/test_failure_envelope.cpp)
+target_link_libraries(test_failure_envelope hpactor)
+add_test(NAME test_failure_envelope COMMAND test_failure_envelope)
+
+add_executable(test_failure_reason core/test_failure_reason.cpp)
+target_link_libraries(test_failure_reason hpactor)
+add_test(NAME test_failure_reason COMMAND test_failure_reason)
+
 # =============================================================================
 # Mailbox tests
 # =============================================================================
