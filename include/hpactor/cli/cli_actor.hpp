@@ -64,6 +64,28 @@ class CliActor : public DaemonActor {
         return running_;
     }
 
+    /// \brief Read-only access to the command tree.
+    ///
+    /// Exposed so that commands (e.g. /help) can walk the tree to
+    /// generate help text or inspect available sub-commands.
+    ///
+    /// \return Non-owning pointer to the root \c CommandNode. Never
+    ///         \c nullptr after construction.
+    const CommandNode* command_tree() const {
+        return command_tree_.get();
+    }
+
+    /// \brief Request the CLI input loop to exit.
+    ///
+    /// Sets \c running_ to \c false. The current command completes,
+    /// then \c run_once() returns \c false and the daemon loop shuts
+    /// down cleanly via \c on_daemon_stop().
+    ///
+    /// \note Callable from any command handler (CLI daemon thread).
+    void request_shutdown() {
+        running_ = false;
+    }
+
     // --- Request-Response Helpers ---
     //
     // Send an InspectStateRequest to target and block on the reply.

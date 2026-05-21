@@ -127,6 +127,7 @@ set_source_files_properties(
 # ---- CLI subsystem (runtime opt-in via cli.enabled) ------------------------
 
 target_sources(hpactor_lib PRIVATE
+    cli/command_registry.cpp
     cli/lexer.cpp
     cli/command_node.cpp
     cli/line_editor.cpp
@@ -135,6 +136,12 @@ target_sources(hpactor_lib PRIVATE
     cli/tabular_formatter.cpp
     cli/pager.cpp
     cli/cli_actor.cpp
+    cli/commands/help_command.cpp
+    cli/commands/quit_command.cpp
+    cli/commands/actor_commands.cpp
+    cli/commands/system_commands.cpp
+    cli/commands/misc_commands.cpp
+    cli/commands/failure_commands.cpp
 )
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------

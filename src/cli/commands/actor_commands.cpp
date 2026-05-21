@@ -1,0 +1,189 @@
+// Copyright 2026 HPActor Contributors
+// Licensed under the Apache License, Version 2.0
+
+#include <hpactor/cli/cli_actor.hpp>
+#include <hpactor/cli/command_registry.hpp>
+#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli_messages.pb.h>
+#include <hpactor/core/actor_system.hpp>
+
+#include "command_utils.hpp"
+
+#include <cstdio>
+#include <map>
+#include <string>
+
+namespace hpactor {
+namespace cli {
+namespace {
+
+class ActorShowCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/show";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Display actor metadata, state, mailbox, and children";
+    }
+    int order() const noexcept override {
+        return 100;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> show)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        InspectStateRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_include_state(true);
+        req.set_include_mailbox(true);
+        req.set_include_children(true);
+
+        auto reply = cli->send_and_wait_inspect(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        ctx.output->header("Actor " + *id_str + " — " +
+                           reply->metadata().actor_type());
+
+        std::map<std::string, std::string> kv;
+        kv["State"] = reply->metadata().state();
+        kv["Incarnation"] = std::to_string(reply->metadata().incarnation());
+        kv["Processed"] =
+            std::to_string(reply->metadata().messages_processed()) + " msgs";
+        kv["Uptime (ms)"] = std::to_string(reply->metadata().uptime_ms());
+        kv["Behavior"] = reply->metadata().behavior_name();
+
+        if (reply->has_mailbox()) {
+            kv["Mailbox depth"] = std::to_string(reply->mailbox().depth());
+            kv["Mailbox max"] = std::to_string(reply->mailbox().max_depth());
+        }
+
+        ctx.output->key_value(kv);
+
+        if (!reply->state_blob().empty()) {
+            ctx.output->raw("State: " + reply->state_blob());
+        }
+        return result<void>::make();
+    }
+};
+
+class ActorKillCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/kill";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Terminate actor (graceful shutdown)";
+    }
+    int order() const noexcept override {
+        return 200;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> kill)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        KillRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_force(false);
+
+        auto reply = cli->send_and_wait_kill(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        if (reply->success()) {
+            ctx.output->raw("Actor " + *id_str + " terminated.");
+        } else {
+            ctx.output->error("Failed to kill actor " + *id_str + ": " +
+                              reply->error_message());
+        }
+        return result<void>::make();
+    }
+};
+
+class ActorListCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/list";
+    }
+    std::string_view help_text() const noexcept override {
+        return "List all actors [--filter <type>]";
+    }
+    int order() const noexcept override {
+        return 300;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        std::string filter;
+        if (auto f = ctx.get_param("filter"))
+            filter = *f;
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        auto actors = cli->enumerate_actors(filter);
+
+        ctx.output->header("Actors (" + std::to_string(actors.size()) + " total)");
+
+        std::vector<std::string> cols = {"ID", "Type", "State", "Processed"};
+        std::vector<std::vector<std::string>> rows;
+        rows.reserve(actors.size());
+
+        for (auto& a : actors) {
+            char id_buf[32];
+            snprintf(id_buf, sizeof(id_buf), "0x%04llX",
+                     static_cast<unsigned long long>(a.actor_id));
+            rows.push_back({id_buf, a.actor_type, a.state,
+                            std::to_string(a.messages_processed)});
+        }
+
+        ctx.output->table(cols, rows);
+        return result<void>::make();
+    }
+};
+
+const CommandRegistration<ActorShowCommand> kRegisterActorShow;
+const CommandRegistration<ActorKillCommand> kRegisterActorKill;
+const CommandRegistration<ActorListCommand> kRegisterActorList;
+
+} // anonymous namespace
+} // namespace cli
+} // namespace hpactor
