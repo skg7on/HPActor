@@ -28,7 +28,7 @@ HPACTOR_REGISTER_ACTOR("ForwardingActor", ForwardingActor);
 // Test 1: Multi-actor send/reply chain with live scheduler
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_multi_actor_send_reply_chain() {
+static void test_multi_actor_deliver_messages() {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
@@ -36,25 +36,19 @@ static void test_multi_actor_send_reply_chain() {
     auto a2 = system.spawn<test::CountingActor>();
     auto a3 = system.spawn<test::CountingActor>();
 
-    // Send messages directly to each actor's address via their context
-    auto* actor1 = static_cast<test::CountingActor*>(a1.get().get());
     auto* actor2 = static_cast<test::CountingActor*>(a2.get().get());
     auto* actor3 = static_cast<test::CountingActor*>(a3.get().get());
 
-    // Use ActorContext to send messages between actors
-    // A1's context sends to A2 and A3
-    auto addr2 = a2.address();
-    auto addr3 = a3.address();
-
+    // Use deliver_local — the direct, resolution-free delivery path
     TypedMessage msg1(TypeTag(0x1001), StreamBuffer{});
     msg1.set_sender_address(a1.address());
-    actor1->context()->send(addr2, std::move(msg1));
+    system.deliver_local(a2.id(), std::move(msg1));
 
     TypedMessage msg2(TypeTag(0x1002), StreamBuffer{});
     msg2.set_sender_address(a1.address());
-    actor1->context()->send(addr3, std::move(msg2));
+    system.deliver_local(a3.id(), std::move(msg2));
 
-    // Poll until all messages are processed
+    // Poll until the scheduler processes both messages
     bool done = test::assert_eventually(
         [&]() {
             return actor2->handler_count >= 1 && actor3->handler_count >= 1;
@@ -65,7 +59,7 @@ static void test_multi_actor_send_reply_chain() {
     assert(actor2->handler_count >= 1);
     assert(actor3->handler_count >= 1);
 
-    std::printf("PASS: test_multi_actor_send_reply_chain\n");
+    std::printf("PASS: test_multi_actor_deliver_messages\n");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
@@ -162,7 +156,7 @@ static void test_for_each_actor_enumerates_all() {
 }
 
 int main() {
-    test_multi_actor_send_reply_chain();
+    test_multi_actor_deliver_messages();
     test_lifecycle_transitions_observable();
     test_actor_count_reflects_live_actors();
     test_link_unlink_api();
