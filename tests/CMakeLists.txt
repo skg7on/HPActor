@@ -649,6 +649,10 @@ if(ENABLE_CLI)
     add_executable(test_cli_actor cli/test_cli_actor.cpp)
     target_link_libraries(test_cli_actor hpactor)
     add_test(NAME test_cli_actor COMMAND test_cli_actor)
+
+    add_executable(test_command_registry cli/test_command_registry.cpp)
+    target_link_libraries(test_command_registry hpactor)
+    add_test(NAME test_command_registry COMMAND test_command_registry)
 endif()
 
 # =============================================================================
