@@ -739,9 +739,10 @@ Deliverables:
 
 - this high-level architecture document
 - feature-gap backlog for AI planes
-- detailed specs for accelerator resources, MLX runtime plugins, MLX/Metal
-  probing, MLX tensor handles, inference serving, distributed inference, and
-  training orchestration
+- detailed specs for accelerator resources, runtime plugin ABI, mock runtime,
+  MLX runtime plugins, MLX/Metal probing, MLX tensor handles, model/artifact
+  metadata, tensor data plane, inference serving, AI observability, AI
+  security, distributed inference, and training orchestration
 - acceptance test matrix and mock runtime design
 
 Exit criteria:
@@ -880,22 +881,22 @@ Exit criteria:
 | [AI-MLX-001](mlx-runtime-plugin-design.md) | P0 | Add macOS Apple silicon MLX runtime plugin as the first native backend. |
 | [AI-MLX-002](mlx-device-probe-unified-memory-design.md) | P0 | Add MLX/Metal device probe and unified-memory pressure accounting. |
 | [AI-MLX-003](mlx-tensor-handle-design.md) | P0 | Add `MlxTensorHandle` and MLX unified-memory tensor metadata contract. |
-| AI-RUN-001 | P0 | Define no-throw model runtime plugin ABI. |
-| AI-RUN-002 | P0 | Add deterministic `MockModelRuntime`. |
-| AI-INF-001 | P0 | Add single-node model replica actor lifecycle. |
-| AI-INF-002 | P0 | Add bounded dynamic batcher with cancellation. |
-| AI-INF-003 | P0 | Add streaming token response actor. |
-| AI-MOD-001 | P0 | Add model registry and artifact metadata model. |
-| AI-OBS-001 | P0 | Add model/request/token metrics and trace attributes. |
-| AI-SEC-001 | P0 | Add tenant/model authorization hooks. |
-| AI-DATA-001 | P1 | Add tensor buffer metadata and handle model. |
-| AI-DIST-001 | P1 | Add model placement coordinator and placement epoch. |
-| AI-DIST-002 | P1 | Add model shard group readiness and stale-route handling. |
-| AI-DIST-MLX-001 | P1 | Add MLX distributed rendezvous adapter for supported communication backends. |
-| AI-TRN-001 | P1 | Add training job actor and worker group lifecycle. |
-| AI-TRN-002 | P1 | Add rank rendezvous and checkpoint coordination. |
-| AI-OPS-001 | P1 | Add AI admin/CLI surfaces. |
-| AI-TST-001 | P1 | Add AI fault injection and chaos test harness extensions. |
+| [AI-RUN-001](model-runtime-plugin-abi-design.md) | P0 | Define no-throw model runtime plugin ABI. |
+| [AI-RUN-002](mock-model-runtime-design.md) | P0 | Add deterministic `MockModelRuntime`. |
+| [AI-INF-001](model-replica-lifecycle-design.md) | P0 | Add single-node model replica actor lifecycle. |
+| [AI-INF-002](dynamic-batcher-cancellation-design.md) | P0 | Add bounded dynamic batcher with cancellation. |
+| [AI-INF-003](streaming-token-response-design.md) | P0 | Add streaming token response actor. |
+| [AI-MOD-001](model-registry-artifact-metadata-design.md) | P0 | Add model registry and artifact metadata model. |
+| [AI-OBS-001](ai-observability-request-token-metrics-design.md) | P0 | Add model/request/token metrics and trace attributes. |
+| [AI-SEC-001](ai-tenant-model-authorization-design.md) | P0 | Add tenant/model authorization hooks. |
+| [AI-DATA-001](tensor-buffer-handle-data-plane-design.md) | P1 | Add tensor buffer metadata and handle model. |
+| [AI-DIST-001](model-placement-coordinator-design.md) | P1 | Add model placement coordinator and placement epoch. |
+| [AI-DIST-002](model-shard-group-readiness-stale-routes-design.md) | P1 | Add model shard group readiness and stale-route handling. |
+| [AI-DIST-MLX-001](mlx-distributed-rendezvous-adapter-design.md) | P1 | Add MLX distributed rendezvous adapter for supported communication backends. |
+| [AI-TRN-001](training-job-worker-group-lifecycle-design.md) | P1 | Add training job actor and worker group lifecycle. |
+| [AI-TRN-002](training-rank-rendezvous-checkpoint-design.md) | P1 | Add rank rendezvous and checkpoint coordination. |
+| [AI-OPS-001](ai-admin-cli-operations-design.md) | P1 | Add AI admin/CLI surfaces. |
+| [AI-TST-001](ai-fault-injection-chaos-testing-design.md) | P1 | Add AI fault injection and chaos test harness extensions. |
 
 ## 11. Acceptance Criteria
 

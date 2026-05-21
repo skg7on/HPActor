@@ -3,7 +3,8 @@
 **Status:** Proposed design; implementation not started
 **Requirement ID:** AI-MLX-001
 **Parent Architecture:** [Distributed AI Model Inference and Training Architecture](distributed-ai-model-inference-training-architecture.md)
-**Related Requirements:** [AI-MLX-002](mlx-device-probe-unified-memory-design.md), [AI-MLX-003](mlx-tensor-handle-design.md), [AI-ACC-001](accelerator-resource-plane-design.md), [AI-ACC-002](accelerator-observability-telemetry-design.md)
+**Depends On:** [AI-RUN-001 No-Throw Model Runtime Plugin ABI Design](model-runtime-plugin-abi-design.md)
+**Related Requirements:** [AI-RUN-002](mock-model-runtime-design.md), [AI-MLX-002](mlx-device-probe-unified-memory-design.md), [AI-MLX-003](mlx-tensor-handle-design.md), [AI-ACC-001](accelerator-resource-plane-design.md), [AI-ACC-002](accelerator-observability-telemetry-design.md), [AI-MOD-001](model-registry-artifact-metadata-design.md), [AI-OBS-001](ai-observability-request-token-metrics-design.md), [AI-SEC-001](ai-tenant-model-authorization-design.md), [AI-DATA-001](tensor-buffer-handle-data-plane-design.md), [AI-DIST-MLX-001](mlx-distributed-rendezvous-adapter-design.md)
 
 ## 1. Executive Summary
 
@@ -14,13 +15,14 @@ MLX owns tensor execution, lazy evaluation, streams, model math, memory caches,
 and future distributed communication.
 
 The runtime boundary is `MlxModelRuntime`, an optional backend behind the
-generic `ModelRuntime` interface. It must not make non-AI HPActor users link
-MLX, include MLX headers, enable exceptions, or depend on Apple-only APIs. The
-first native adapter should prefer the MLX C bridge or a narrow internal C++
-adapter because MLX C exposes opaque objects, stream/device handles, explicit
-free calls, and integer error returns. A Python sidecar fallback remains part of
-the design for MLX-LM workflows and for APIs that are not yet stable or
-convenient through the native binding.
+generic `ModelRuntime` interface defined by
+[AI-RUN-001](model-runtime-plugin-abi-design.md). It must not make non-AI
+HPActor users link MLX, include MLX headers, enable exceptions, or depend on
+Apple-only APIs. The first native adapter should prefer the MLX C bridge or a
+narrow internal C++ adapter because MLX C exposes opaque objects, stream/device
+handles, explicit free calls, and integer error returns. A Python sidecar
+fallback remains part of the design for MLX-LM workflows and for APIs that are
+not yet stable or convenient through the native binding.
 
 ## 2. Goals
 

@@ -4,6 +4,7 @@
 **Requirement ID:** AI-ACC-002
 **Parent Architecture:** [Distributed AI Model Inference and Training Architecture](distributed-ai-model-inference-training-architecture.md)
 **Depends On:** [AI-ACC-001 Accelerator Resource Plane Design](accelerator-resource-plane-design.md)
+**Related Requirements:** [AI-OBS-001](ai-observability-request-token-metrics-design.md), [AI-DATA-001](tensor-buffer-handle-data-plane-design.md), [AI-SEC-001](ai-tenant-model-authorization-design.md), [AI-DIST-001](model-placement-coordinator-design.md), [AI-DIST-002](model-shard-group-readiness-stale-routes-design.md), [AI-DIST-MLX-001](mlx-distributed-rendezvous-adapter-design.md), [AI-TRN-001](training-job-worker-group-lifecycle-design.md), [AI-TRN-002](training-rank-rendezvous-checkpoint-design.md), [AI-OPS-001](ai-admin-cli-operations-design.md), [AI-TST-001](ai-fault-injection-chaos-testing-design.md)
 
 ## 1. Executive Summary
 
@@ -291,7 +292,9 @@ MLX is the first concrete runtime target. Official MLX APIs currently expose:
 MLX/Metal discovery and unified-memory budget rules are defined in
 [AI-MLX-002](mlx-device-probe-unified-memory-design.md). MLX array ownership,
 readiness, and handle lifetime rules are defined in
-[AI-MLX-003](mlx-tensor-handle-design.md).
+[AI-MLX-003](mlx-tensor-handle-design.md). The backend-neutral runtime stats,
+health, and error contract is defined in
+[AI-RUN-001](model-runtime-plugin-abi-design.md).
 
 The MLX telemetry source maps those signals as follows:
 

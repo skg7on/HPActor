@@ -3,7 +3,7 @@
 **Status:** Proposed design; implementation not started
 **Requirement ID:** AI-MLX-003
 **Parent Architecture:** [Distributed AI Model Inference and Training Architecture](distributed-ai-model-inference-training-architecture.md)
-**Related Requirements:** [AI-MLX-001](mlx-runtime-plugin-design.md), [AI-MLX-002](mlx-device-probe-unified-memory-design.md), [AI-ACC-001](accelerator-resource-plane-design.md), [AI-ACC-002](accelerator-observability-telemetry-design.md)
+**Related Requirements:** [AI-MLX-001](mlx-runtime-plugin-design.md), [AI-MLX-002](mlx-device-probe-unified-memory-design.md), [AI-ACC-001](accelerator-resource-plane-design.md), [AI-ACC-002](accelerator-observability-telemetry-design.md), [AI-DATA-001](tensor-buffer-handle-data-plane-design.md), [AI-SEC-001](ai-tenant-model-authorization-design.md), [AI-OBS-001](ai-observability-request-token-metrics-design.md)
 
 ## 1. Executive Summary
 
