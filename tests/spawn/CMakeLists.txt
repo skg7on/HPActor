@@ -17,3 +17,7 @@ add_test(NAME test_spawn_serialization COMMAND test_spawn_serialization)
 add_executable(test_spawn_integration test_spawn_integration.cpp)
 target_link_libraries(test_spawn_integration hpactor hpactor_proto pthread)
 add_test(NAME test_spawn_integration COMMAND test_spawn_integration)
+
+add_executable(test_spawn_failure_reason test_spawn_failure_reason.cpp)
+target_link_libraries(test_spawn_failure_reason hpactor)
+add_test(NAME test_spawn_failure_reason COMMAND test_spawn_failure_reason)

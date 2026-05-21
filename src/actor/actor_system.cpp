@@ -32,6 +32,7 @@
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/spawn.hpp>
+#include <hpactor/types/failure_envelope.hpp>
 
 // Protobuf message types for spawn serialization
 #include <hpactor/common.pb.h>
@@ -415,6 +416,21 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
         mailbox::EnqueueResult r;
         r.code = mailbox::EnqueueResultCode::ActorNotFound;
         r.target = target;
+        // Build failure envelope for observability
+        if (metrics_ring_buffer_) [[unlikely]] {
+            FailureEnvelope env = make_failure_envelope(
+                FailureReason::NoRoute, target, msg.sender_address(),
+                ActorAddress{endpoint_, ActorType{0}, target, 0},
+                MessageId{options.message_id}, TraceContext{},
+                FailureSource::ActorRuntime, "target actor not found in registry");
+            metrics::MetricEvent evt{};
+            evt.timestamp_ns = env.timestamp_ns;
+            evt.actor_id = target;
+            evt.event_type = metrics::MetricEventType::kDeliveryFailure;
+            evt.code = static_cast<uint8_t>(env.reason);
+            evt.value_hi = 1;
+            metrics_ring_buffer_->try_push(evt);
+        }
         return r;
     }
 
@@ -448,6 +464,34 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
             dl.mailbox_depth = result.depth;
             dl.mailbox_capacity = result.capacity;
             (void)dead_letter(std::move(dl));
+        }
+    }
+
+    // Build failure envelope for mailbox rejection
+    if (!result.accepted()) {
+        if (metrics_ring_buffer_) [[unlikely]] {
+            FailureEnvelope env = make_failure_envelope(
+                result.failure_reason(), target, meta.sender,
+                ActorAddress{endpoint_, ActorType{0}, target, 0},
+                MessageId{options.message_id}, TraceContext{},
+                FailureSource::Mailbox, "mailbox admission rejected");
+            metrics::MetricEvent evt{};
+            evt.timestamp_ns = env.timestamp_ns;
+            evt.actor_id = target;
+            evt.event_type = metrics::MetricEventType::kDeliveryFailure;
+            evt.code = static_cast<uint8_t>(env.reason);
+            evt.value_hi = 1;
+            metrics_ring_buffer_->try_push(evt);
+        }
+        if (logger_) [[unlikely]] {
+            HPACTOR_LOG_WARNING(
+                log::LogCategory::kActor, target, 0, "delivery_failure",
+                log::field_lit("reason", to_string(result.failure_reason())),
+                log::field("retryable",
+                           result.failure_reason() != FailureReason::Unknown &&
+                               retryable(result.failure_reason())),
+                log::field("depth", static_cast<uint64_t>(result.depth)),
+                log::field("capacity", static_cast<uint64_t>(result.capacity)));
         }
     }
 

@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/types/failure_reason.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
@@ -102,6 +103,38 @@ enum class EnqueueResultCode : uint8_t {
     ActorNotFound,
 };
 
+/// \brief Map an EnqueueResultCode to the canonical FailureReason.
+///
+/// \param[in] code The mailbox admission result code.
+/// \return The corresponding FailureReason. Returns
+///         \c FailureReason::Unknown for \c Accepted and
+///         \c AcceptedWithSoftPressure — callers should guard with
+///         \c !result.accepted() before calling.
+/// \note Thread safety: constexpr and lock-free — safe to call from any
+///       thread without synchronization.
+[[nodiscard]] constexpr FailureReason
+failure_reason(EnqueueResultCode code) noexcept {
+    switch (code) {
+        case EnqueueResultCode::Rejected:
+            return FailureReason::RejectedByPolicy;
+        case EnqueueResultCode::DroppedNewest:
+        case EnqueueResultCode::DroppedExisting:
+            return FailureReason::Dropped;
+        case EnqueueResultCode::ReroutedToDeadLetter:
+            return FailureReason::RejectedByPolicy;
+        case EnqueueResultCode::ReroutedToOverflow:
+            return FailureReason::RejectedByPolicy;
+        case EnqueueResultCode::MailboxClosed:
+            return FailureReason::MailboxClosed;
+        case EnqueueResultCode::ActorNotFound:
+            return FailureReason::NoRoute;
+        case EnqueueResultCode::Accepted:
+        case EnqueueResultCode::AcceptedWithSoftPressure:
+            return FailureReason::Unknown; // Not a failure
+    }
+    return FailureReason::Unknown;
+}
+
 struct EnqueueResult {
     EnqueueResultCode code = EnqueueResultCode::Accepted;
     ActorId target;
@@ -128,6 +161,15 @@ struct EnqueueResult {
         return code == EnqueueResultCode::Rejected ||
                code == EnqueueResultCode::MailboxClosed ||
                code == EnqueueResultCode::ReroutedToOverflow;
+    }
+
+    /// \brief Canonical failure reason for this admission result.
+    ///
+    /// \return The FailureReason corresponding to the \c code field.
+    ///         Returns \c FailureReason::Unknown when the enqueue was
+    ///         accepted.
+    [[nodiscard]] FailureReason failure_reason() const noexcept {
+        return mailbox::failure_reason(code);
     }
 };
 

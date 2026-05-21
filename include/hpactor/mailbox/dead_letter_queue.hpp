@@ -16,6 +16,8 @@
 
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/ref/actor_address.hpp>
+#include <hpactor/types/failure_envelope.hpp>
+#include <hpactor/types/failure_reason.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <cstdint>
@@ -49,6 +51,62 @@ enum class DeadLetterSource : uint8_t {
     ServiceDiscovery,
     Replay,
 };
+
+/// Map DeadLetterReason to the canonical FailureReason.
+[[nodiscard]] constexpr FailureReason
+failure_reason(DeadLetterReason reason) noexcept {
+    switch (reason) {
+        case DeadLetterReason::MailboxFull:
+            return FailureReason::MailboxFull;
+        case DeadLetterReason::MailboxClosed:
+            return FailureReason::MailboxClosed;
+        case DeadLetterReason::ActorNotFound:
+            return FailureReason::NoRoute;
+        case DeadLetterReason::ActorTerminated:
+            return FailureReason::ActorDead;
+        case DeadLetterReason::MissingRoute:
+            return FailureReason::NoRoute;
+        case DeadLetterReason::RemoteNodeUnreachable:
+            return FailureReason::NodeUnavailable;
+        case DeadLetterReason::NetworkPartition:
+            return FailureReason::NodeUnavailable;
+        case DeadLetterReason::TransportSendFailed:
+            return FailureReason::TransportError;
+        case DeadLetterReason::DecodeFailed:
+            return FailureReason::SerializationError;
+        case DeadLetterReason::OverflowPolicy:
+            return FailureReason::RejectedByPolicy;
+        case DeadLetterReason::NoDropRejected:
+            return FailureReason::RejectedByPolicy;
+        case DeadLetterReason::DrainTimeout:
+            return FailureReason::Timeout;
+        case DeadLetterReason::DrainPolicyDrop:
+            return FailureReason::Dropped;
+    }
+    return FailureReason::Unknown;
+}
+
+/// Map DeadLetterSource to the canonical FailureSource.
+[[nodiscard]] constexpr FailureSource
+failure_source(DeadLetterSource source) noexcept {
+    switch (source) {
+        case DeadLetterSource::LocalDelivery:
+            return FailureSource::ActorRuntime;
+        case DeadLetterSource::RemoteDelivery:
+            return FailureSource::Transport;
+        case DeadLetterSource::ActorProxy:
+            return FailureSource::ActorRuntime;
+        case DeadLetterSource::Transport:
+            return FailureSource::Transport;
+        case DeadLetterSource::MailboxAdmission:
+            return FailureSource::Mailbox;
+        case DeadLetterSource::ServiceDiscovery:
+            return FailureSource::Discovery;
+        case DeadLetterSource::Replay:
+            return FailureSource::ActorRuntime;
+    }
+    return FailureSource::Unknown;
+}
 
 enum class DeadLetterOverflowPolicy : uint8_t {
     DropOldestRecord,
@@ -86,6 +144,22 @@ struct DeadLetterRecord {
     uint32_t mailbox_depth = 0;
     uint32_t mailbox_capacity = 0;
     uint64_t timestamp_ns = 0;
+
+    /// Build a FailureEnvelope from this dead-letter record's fields.
+    [[nodiscard]] FailureEnvelope to_failure_envelope() const noexcept {
+        FailureEnvelope env;
+        env.reason = failure_reason(reason);
+        env.actor_id = target.id;
+        env.sender = sender;
+        env.receiver = target;
+        env.message_id = MessageId{message_id};
+        env.trace = TraceContext{}; // DLQ records don't yet carry full trace
+                                    // context
+        env.retryable = ::hpactor::retryable(env.reason);
+        env.timestamp_ns = timestamp_ns;
+        env.source = failure_source(source);
+        return env;
+    }
 };
 
 struct DeadLetterQueueSnapshot {

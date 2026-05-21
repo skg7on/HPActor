@@ -26,6 +26,14 @@ add_executable(test_result core/test_result.cpp)
 target_link_libraries(test_result hpactor)
 add_test(NAME test_result COMMAND test_result)
 
+add_executable(test_failure_envelope core/test_failure_envelope.cpp)
+target_link_libraries(test_failure_envelope hpactor)
+add_test(NAME test_failure_envelope COMMAND test_failure_envelope)
+
+add_executable(test_failure_reason core/test_failure_reason.cpp)
+target_link_libraries(test_failure_reason hpactor)
+add_test(NAME test_failure_reason COMMAND test_failure_reason)
+
 # =============================================================================
 # Mailbox tests
 # =============================================================================
@@ -64,6 +72,10 @@ add_test(NAME test_bounded_mailbox COMMAND test_bounded_mailbox)
 add_executable(test_dead_letter_queue mailbox/test_dead_letter_queue.cpp)
 target_link_libraries(test_dead_letter_queue hpactor)
 add_test(NAME test_dead_letter_queue COMMAND test_dead_letter_queue)
+
+add_executable(test_dead_letter_failure mailbox/test_dead_letter_failure.cpp)
+target_link_libraries(test_dead_letter_failure hpactor)
+add_test(NAME test_dead_letter_failure COMMAND test_dead_letter_failure)
 
 add_executable(test_mailbox_overflow_policies mailbox/test_mailbox_overflow_policies.cpp)
 target_link_libraries(test_mailbox_overflow_policies hpactor)

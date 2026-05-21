@@ -24,7 +24,7 @@ Status:
 |----|----------|--------|-------------|
 | ACT-001 | P0 | Missing | Define actor lifecycle states for starting, active, draining, stopping, stopped, failed, hibernating, passivated, and recovering. |
 | ACT-002 | P0 | Missing | Add graceful actor stop protocol with per-actor drain policy and timeout. |
-| ACT-003 | P0 | Missing | Add structured failure envelopes for failed send, failed ask, timeout, delivery rejection, and remote node loss. |
+| ACT-003 | P0 | Designed | Add structured failure envelopes for failed send, failed ask, timeout, delivery rejection, and remote node loss. See [Structured Failure Envelope Design](structured-failure-envelope-design.md). |
 | ACT-004 | P1 | Missing | Add actor quarantine for repeatedly failing or unsafe actors. |
 | ACT-005 | P1 | Missing | Add circuit breaker policy for actors that fail or time out under load. |
 | ACT-006 | P1 | Missing | Add actor-local rate limiting and admission policy. |
