@@ -270,8 +270,14 @@ class error {
         return code_ == 0;
     }
 
-    /// Map this error's code to the canonical FailureReason.
-    /// Returns FailureReason::Unknown when no mapping exists.
+    /// \brief Map this error's code to the canonical FailureReason.
+    ///
+    /// Maps the internal \c code_ to the corresponding FailureReason
+    /// using the \c errors:: namespace constants.
+    ///
+    /// \return The FailureReason for the stored error code. Returns
+    ///         \c FailureReason::Unknown when no mapping exists (e.g.
+    ///         unmapped HTTP protocol codes, user-defined codes).
     [[nodiscard]] FailureReason failure_reason() const noexcept;
 
     explicit operator bool() const {

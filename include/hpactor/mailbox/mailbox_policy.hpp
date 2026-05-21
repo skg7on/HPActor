@@ -103,9 +103,15 @@ enum class EnqueueResultCode : uint8_t {
     ActorNotFound,
 };
 
-/// Map an EnqueueResultCode to the canonical FailureReason.
-/// Accepted and AcceptedWithSoftPressure are not failures — callers
-/// should guard with !result.accepted() before calling.
+/// \brief Map an EnqueueResultCode to the canonical FailureReason.
+///
+/// \param[in] code The mailbox admission result code.
+/// \return The corresponding FailureReason. Returns
+///         \c FailureReason::Unknown for \c Accepted and
+///         \c AcceptedWithSoftPressure — callers should guard with
+///         \c !result.accepted() before calling.
+/// \note Thread safety: constexpr and lock-free — safe to call from any
+///       thread without synchronization.
 [[nodiscard]] constexpr FailureReason
 failure_reason(EnqueueResultCode code) noexcept {
     switch (code) {
@@ -157,8 +163,11 @@ struct EnqueueResult {
                code == EnqueueResultCode::ReroutedToOverflow;
     }
 
-    /// Canonical failure reason for this result.
-    /// Returns Unknown when the enqueue was accepted.
+    /// \brief Canonical failure reason for this admission result.
+    ///
+    /// \return The FailureReason corresponding to the \c code field.
+    ///         Returns \c FailureReason::Unknown when the enqueue was
+    ///         accepted.
     [[nodiscard]] FailureReason failure_reason() const noexcept {
         return mailbox::failure_reason(code);
     }
