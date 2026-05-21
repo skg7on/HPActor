@@ -47,7 +47,7 @@ class CountingActor : public EventBasedActor {
 
 static void test_event_based_actor_has_actor_state() {
     Config cfg;
-    cfg.scheduler_threads = 1;
+    cfg.scheduler_threads = 0; // no scheduler — keep actor in post-spawn state
     cfg.enable_network = false;
     ActorSystem system(cfg);
 
