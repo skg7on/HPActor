@@ -1,9 +1,8 @@
-add_subdirectory(net)
-if(ENABLE_EXAMPLES)
-    add_subdirectory(examples)
-endif()
+# System Tests CMakeLists.txt
+#
+# System tests exercise multiple HPActor subsystems through public APIs.
+# Each test file is a self-contained executable with a main().
 
-# System tests — standalone executables exercising multiple subsystems
 add_executable(test_system_topology_bootstrap
     test_system_topology_bootstrap.cpp)
 target_link_libraries(test_system_topology_bootstrap hpactor)
