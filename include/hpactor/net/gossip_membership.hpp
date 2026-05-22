@@ -18,6 +18,15 @@
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/service_discovery.hpp>
 
+// FRIEND_TEST macro: self-contained definition compatible with gtest.
+// This avoids a dependency on gtest/gtest_prod.h which may not be in the
+// include path during library builds.  The class-name convention here matches
+// what GTest's TEST_F() macro generates internally.
+#ifndef FRIEND_TEST
+#    define FRIEND_TEST(test_case_name, test_name)                             \
+        friend class test_case_name##_##test_name##_Test
+#endif
+
 #include <chrono>
 #include <cstdint>
 #include <functional>
@@ -100,6 +109,24 @@ class GossipMembership : public IServiceDiscovery {
     const std::unordered_map<EndPoint, Member>* raw_members() const override {
         return &members_;
     }
+
+    // GTest FRIEND_TEST declarations to replace #define private public hack
+#ifdef FRIEND_TEST
+    FRIEND_TEST(GossipMembershipTest, ConstructionDefaults);
+    FRIEND_TEST(GossipMembershipTest, BootstrapSoloCluster);
+    FRIEND_TEST(GossipMembershipTest, AnnounceBumpsIncarnation);
+    FRIEND_TEST(GossipMembershipTest, DiscoverAllReturnsCopy);
+    FRIEND_TEST(GossipMembershipTest, MergeMemberNoneToAlive);
+    FRIEND_TEST(GossipMembershipTest, MergeMemberUpdateHigher);
+    FRIEND_TEST(GossipMembershipTest, MergeMemberIgnoreLower);
+    FRIEND_TEST(GossipMembershipTest, MergeMemberDeadToAlive);
+    FRIEND_TEST(GossipMembershipTest, MarkSuspiciousDeadTransitions);
+    FRIEND_TEST(GossipMembershipTest, PickRandomPeersAllAvailable);
+    FRIEND_TEST(GossipMembershipTest, PickRandomPeersEmptySolo);
+    FRIEND_TEST(GossipMembershipTest, PurgeDeadTombstones);
+    FRIEND_TEST(GossipMembershipTest, WireEncodeDecodePing);
+    FRIEND_TEST(GossipMembershipTest, WireEncodeDecodeMetadata);
+#endif
 
   private:
     void protocol_round();
