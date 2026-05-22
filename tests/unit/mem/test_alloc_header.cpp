@@ -48,7 +48,7 @@ TEST(AllocHeaderTest, UserDataReturnsPointerAfterHeader) {
     AllocHeader* hdr =
         AllocHeader::stamp(buffer, SizeClass::k128B, hpactor::ActorId{42});
     void* user = hdr->user_data();
-    // codeql[cpp/suspicious-add-sizeof] std::byte has sizeof 1
+    EXPECT_EQ(static_cast<std::byte*>(user), &buffer[sizeof(AllocHeader)]);
     EXPECT_EQ(static_cast<std::byte*>(user), buffer + sizeof(AllocHeader));
 }
 
