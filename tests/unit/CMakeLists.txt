@@ -1,5 +1,5 @@
 add_subdirectory(core)
-# TODO(Task 6): add_subdirectory(adt)
+add_subdirectory(adt)
 # TODO(Task 7): add_subdirectory(mailbox)
 # TODO(Task 8): add_subdirectory(sched)
 # TODO(Task 9): add_subdirectory(mem)
