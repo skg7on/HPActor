@@ -28,41 +28,41 @@ static constexpr int64_t ONE_MS = 1'000'000;
 // ---------------------------------------------------------------------------
 class CalendarQueueTest : public ::testing::Test {
   protected:
-    CalendarQueue q;
+    CalendarQueue q_;
 };
 
 TEST_F(CalendarQueueTest, BasicSchedule) {
     int fired = 0;
-    auto id = q.schedule(ONE_MS, [&fired] { fired++; });
+    auto id = q_.schedule(ONE_MS, [&fired] { fired++; });
     EXPECT_GE(id, 1U);
-    uint32_t r1 = q.advance(ONE_MS); // init: sets clock origin
+    uint32_t r1 = q_.advance(ONE_MS); // init: sets clock origin
     EXPECT_EQ(r1, 0U);
-    uint32_t r2 = q.advance(3 * ONE_MS); // advance through bucket containing
-                                         // timer
+    uint32_t r2 = q_.advance(3 * ONE_MS); // advance through bucket containing
+                                          // timer
     EXPECT_EQ(r2, 1U);
     EXPECT_EQ(fired, 1);
-    EXPECT_EQ(q.size(), 0U);
+    EXPECT_EQ(q_.size(), 0U);
 }
 
 TEST_F(CalendarQueueTest, Cancel) {
     int fired = 0;
-    auto id = q.schedule(ONE_MS, [&fired] { fired++; });
-    bool ok = q.cancel(id);
+    auto id = q_.schedule(ONE_MS, [&fired] { fired++; });
+    bool ok = q_.cancel(id);
     EXPECT_TRUE(ok);
-    EXPECT_EQ(q.size(), 0U);
-    q.advance(ONE_MS);
-    uint32_t r = q.advance(3 * ONE_MS);
+    EXPECT_EQ(q_.size(), 0U);
+    q_.advance(ONE_MS);
+    uint32_t r = q_.advance(3 * ONE_MS);
     EXPECT_EQ(r, 0U);
     EXPECT_EQ(fired, 0);
 }
 
 TEST_F(CalendarQueueTest, CancelNonexistent) {
-    EXPECT_FALSE(q.cancel(999));
-    EXPECT_FALSE(q.cancel(0));
+    EXPECT_FALSE(q_.cancel(999));
+    EXPECT_FALSE(q_.cancel(0));
 }
 
 TEST_F(CalendarQueueTest, IdValid) {
-    auto id = q.schedule(ONE_MS, [] {});
+    auto id = q_.schedule(ONE_MS, [] {});
     EXPECT_GE(id, 1U);
     TimerHandle h0{0};
     EXPECT_FALSE(h0.valid());
@@ -72,11 +72,11 @@ TEST_F(CalendarQueueTest, IdValid) {
 
 TEST_F(CalendarQueueTest, ZeroDelayClamped) {
     int fired = 0;
-    auto id = q.schedule(0, [&fired] { fired++; }); // zero delay -> clamped to
-                                                    // 1 fine bucket
+    auto id = q_.schedule(0, [&fired] { fired++; }); // zero delay -> clamped to
+                                                     // 1 fine bucket
     EXPECT_GE(id, 1U);
-    q.advance(ONE_MS);
-    uint32_t r = q.advance(3 * ONE_MS);
+    q_.advance(ONE_MS);
+    uint32_t r = q_.advance(3 * ONE_MS);
     EXPECT_EQ(r, 1U);
     EXPECT_EQ(fired, 1);
 }
