@@ -1,5 +1,10 @@
 # HPActor
 
+<picture>
+  <source srcset="docs/project-logo/assets/hpactor-logo.png" media="(prefers-color-scheme: dark)">
+  <img src="docs/project-logo/assets/hpactor-logo-preview.png" alt="HPActor logo" width="600">
+</picture>
+
 [![CI](https://github.com/skg7on/HPActor/actions/workflows/ci.yml/badge.svg)](https://github.com/skg7on/HPActor/actions/workflows/ci.yml)
 [![Coverage](https://skg7on.github.io/HPActor/coverage-badge.svg)](https://skg7on.github.io/HPActor/coverage-html/)
 
