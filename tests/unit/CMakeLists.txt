@@ -1,7 +1,7 @@
 add_subdirectory(core)
 add_subdirectory(adt)
 add_subdirectory(mailbox)
-# TODO(Task 8): add_subdirectory(sched)
+add_subdirectory(sched)
 # TODO(Task 9): add_subdirectory(mem)
 # TODO(Task 10): if(ENABLE_CLI)
 #     add_subdirectory(cli)
