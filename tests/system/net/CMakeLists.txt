@@ -18,7 +18,11 @@ add_executable(test_system_net
     test_hybrid_discovery.cpp
     test_http_connection.cpp
     test_http_gateway.cpp
-    test_iouring_backend.cpp
 )
 target_link_libraries(test_system_net hpactor pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_system_net PROPERTIES TIMEOUT 30)
+
+# test_iouring_backend depends on liburing (Linux-only, requires ENABLE_PROACTOR=ON)
+if(liburing_FOUND)
+    target_sources(test_system_net PRIVATE test_iouring_backend.cpp)
+endif()
