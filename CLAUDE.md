@@ -40,7 +40,14 @@ ninja -C build
 ctest --output-on-failure --parallel 8
 
 # Run a single test
-./build/tests/test_<name>
+./build/tests/unit/core/test_unit_core
+
+# Run a single GTest suite or test via filter
+./build/tests/unit/core/test_unit_core --gtest_list_tests
+./build/tests/unit/core/test_unit_core --gtest_filter="*ActorId*"
+
+# Run a specific GTest case through ctest
+ctest -R "ActorIdDefaultConstruction" --output-on-failure
 
 # Build with sanitizers
 cmake -DENABLE_TSAN=ON ..  # ThreadSanitizer
@@ -265,11 +272,11 @@ environments. The following rules prevent flaky tests:
 
 - `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
-- `tests/` — 141 unit tests
+- `tests/` — 154 test source files in three-tier structure (unit, integration, system) using Google Test
 - `examples/` — 13 API usage examples
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
-- `third_party/` — vendored dependencies (llhttp, toml++)
-- `cmake/` — CMake modules (protobuf codegen, toml++ interface target)
+- `third_party/` — vendored dependencies (googletest v1.14.0, llhttp, toml++)
+- `cmake/` — CMake modules (gtest, protobuf codegen, toml++ interface target)
 - `docs/architecture/production/` — production reliability plane, missing design docs, and refined requirement backlog
 - `docs/superpowers/tutorials/actor-framework-tutorial.md` — usage guide
 - `.claude/projects/*/memory/` — persistent project memory
