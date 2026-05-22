@@ -29,6 +29,49 @@ the repository-local `.worktrees/` directory.
 - Pure read-only inspection may happen from the main checkout, but any design or
   implementation write must move into `.worktrees/` first.
 
+### CRITICAL: Never Leak Files to the Main Checkout
+
+The main checkout at the repository root (e.g., `/Users/<user>/Workspace/.../HPActor/`)
+and each worktree (e.g., `.worktrees/<name>/`) are **separate working directories**
+that share the same `.git` repository. Writing to the wrong one leaks changes onto
+the wrong branch.
+
+**Hard rules:**
+
+- **Never use the repository root path as a file target.** The repo root path
+  (`/Users/skg7on/Workspace/Projects/HPActor/`) is the **main checkout** — files
+  written there land on `main`, not your worktree branch.
+- **Always use the worktree path for writes.** The worktree lives at
+  `/Users/skg7on/Workspace/Projects/HPActor/.worktrees/<name>/`. Use this absolute
+  path, or use paths relative to the current working directory (which the harness
+  sets to the worktree root).
+- **Verify before writing.** Before creating or modifying any file, confirm the
+  session working directory is the worktree: `pwd` should print
+  `.../HPActor/.worktrees/<name>`, NOT `.../HPActor` (the main checkout).
+- **Prefer relative paths** (e.g., `tests/unit/core/test_smoke.cpp`) — they resolve
+  against the worktree root automatically.
+- **When subagents or scripts run commands**, they inherit the session's CWD. If a
+  subagent uses an absolute path, it must derive it from `pwd` at runtime, never
+  from a hardcoded string.
+- **Before committing, verify the branch:** `git branch --show-current` must show
+  the worktree branch, not `main`.
+- **After any task that writes files**, run `git status` to confirm all changes
+  appear in the worktree and no untracked files appear in the main checkout.
+
+**Example — correct:**
+```bash
+# Write to worktree (CWD is already the worktree root)
+Write file_path="tests/unit/core/test_smoke.cpp" ...
+# Or with absolute worktree path
+Write file_path="/Users/skg7on/Workspace/Projects/HPActor/.worktrees/test-reorg-gtest/tests/unit/core/test_smoke.cpp" ...
+```
+
+**Example — WRONG (leaks to main):**
+```bash
+# NEVER do this — this is the main checkout, not the worktree
+Write file_path="/Users/skg7on/Workspace/Projects/HPActor/tests/unit/core/test_smoke.cpp" ...
+```
+
 ## Build Commands
 
 ```bash
