@@ -22,6 +22,20 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Recommended production milestone: Production Reliability Plane foundation, starting with delivery semantics, bounded mailboxes/backpressure, DLQ, tracing, health, and graceful shutdown.
 - Status: architecture and backlog only; runtime implementation is still pending.
 
+**Failure Envelope Phase 1:** ✅ Complete (2026-05-20, 9 commits)
+- `FailureReason` enum (23 values in 10 semantic ranges) + `FailureSource` enum (12 subsystem origins) in `include/hpactor/types/failure_reason.hpp`.
+- `FailureEnvelope` struct with full correlation metadata (actor_id, sender, receiver, message_id, trace, retryable, timestamp, source, detail) in `include/hpactor/types/failure_envelope.hpp`.
+- `make_failure_envelope()` factory function with monotonic clock timestamp capture.
+- `EnqueueResult::failure_reason()` — maps `EnqueueResultCode` → `FailureReason`.
+- `error::failure_reason()` — maps `errors::` codes → `FailureReason`.
+- `try_deliver_local()` builds `FailureEnvelope` on both failure paths (ActorNotFound + mailbox rejection), emits `kDeliveryFailure` metric event and structured log warning.
+- `kDeliveryFailure = 20` added to `MetricEventType`; aggregator stub added.
+- 2 new test suites: `test_failure_reason` (retryable, to_string, enum mapping) and `test_failure_envelope` (construction, factory, truncation, null termination).
+- 153 tests pass (150 existing + 2 new: test_failure_reason, test_failure_envelope).
+- Design spec: `docs/architecture/production/structured-failure-envelope-design.md`. Implementation plan: `docs/superpowers/plans/2026-05-20-failure-envelope-phase1.md`.
+- Phase 2 (DLQ integration), Phase 3 (RPC + spawn), Phase 4 (CLI) remain.
+- Branch: `task/failure-envelope-spec`.
+
 **Service Discovery:** ✅ Complete (2026-05-08, 15 commits, ~2000 lines)
 - Pluggable `IServiceDiscovery` interface — 4 backends: `UdpRegistrar` (same-host, refactored), `GossipMembership` (cross-server SWIM protocol), `HybridDiscovery` (composes both), `StaticDiscovery` (fixed topology)
 - `ActorLocationCache` — TTL cache for ActorId → EndPoint resolution, integrated into `ActorProxy::send()`

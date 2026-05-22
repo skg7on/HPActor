@@ -14,7 +14,9 @@
 
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/log/logger.hpp>
 #include <hpactor/net/frame.hpp>
+#include <hpactor/spawn.hpp>
 
 #include <hpactor/messages.pb.h>
 
@@ -53,6 +55,12 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req,
         response.error_code = spawn_errors::success;
     } else {
         response.error_code = result.error().code();
+        // Log spawn failure with canonical failure reason
+        auto reason = failure_reason(response.error_code);
+        HPACTOR_LOG_WARNING(log::LogCategory::kActor, ActorId{0}, 0, "spawn_failure",
+                            log::field_lit("type", req.actor_type_name.c_str()),
+                            log::field_lit("reason", to_string(reason)),
+                            log::field("retryable", retryable(reason)));
     }
 
     if (transport_ != nullptr) {
@@ -63,14 +71,15 @@ void SpawnReceiver::handle_spawn_request(const SpawnRequest& req,
 
         net::WireFrame response_frame;
         net::to_proto(response_frame.pb_frame.mutable_sender(), address());
-        response_frame.pb_frame.mutable_receiver()->CopyFrom(frame.pb_frame.sender());
+        response_frame.pb_frame.mutable_receiver()->CopyFrom(
+            frame.pb_frame.sender());
         response_frame.pb_frame.set_message_id(frame.pb_frame.message_id());
         response_frame.pb_frame.set_flags(net::WireFrame::RpcResponse);
-        response_frame.pb_frame.set_type_tag(static_cast<uint32_t>(TypeTag::SpawnResponseTag));
+        response_frame.pb_frame.set_type_tag(
+            static_cast<uint32_t>(TypeTag::SpawnResponseTag));
         auto serialized = system().proto_registry().serialize(pb_resp);
         response_frame.pb_frame.set_payload(
-            reinterpret_cast<const char*>(serialized.data()),
-            serialized.size());
+            reinterpret_cast<const char*>(serialized.data()), serialized.size());
 
         transport_->send(net::from_proto(response_frame.pb_frame.receiver()),
                          response_frame.encode());

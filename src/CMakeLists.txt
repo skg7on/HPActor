@@ -38,6 +38,7 @@ add_library(hpactor_lib SHARED
     config/binary_loader.cpp
     core/proto_type_registry.cpp
     types/typed_message.cpp
+    types/failure_reason.cpp
     net/event_loop.cpp
     net/acceptor.cpp
     net/connection.cpp
@@ -140,6 +141,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/actor_commands.cpp
     cli/commands/system_commands.cpp
     cli/commands/misc_commands.cpp
+    cli/commands/failure_commands.cpp
 )
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------

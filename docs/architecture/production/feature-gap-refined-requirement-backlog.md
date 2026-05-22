@@ -178,8 +178,10 @@ Tests:
 ### AR-003: Structured Actor Failure Envelope
 
 Priority: `P0`
-Status: `Missing`
+Status: `Designed`
 Release lane: `Foundation`
+
+Design: [Structured Failure Envelope Design](structured-failure-envelope-design.md)
 
 Gap:
 
@@ -191,16 +193,12 @@ Architecture requirement:
 
 Add a shared `FailureEnvelope`:
 
-- actor id
-- sender address
-- receiver address
-- message id
-- trace id
-- reason code
-- retryable flag
-- timestamp
-- subsystem source
-- human-readable detail
+- `FailureReason` enum shared by all failure paths (route, lifecycle, resource,
+  time, policy, transport, dedup, shutdown, reliable messaging, spawn).
+- `FailureEnvelope` struct: actor id, sender address, receiver address, message
+  id, trace id, reason code, retryable flag, timestamp, subsystem source,
+  human-readable detail.
+- `FailureSource` enum identifying which subsystem produced the failure.
 
 Runtime contract:
 
