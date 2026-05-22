@@ -1,0 +1,32 @@
+add_executable(test_integration_actor
+    test_actor_system.cpp
+    test_actor_context.cpp
+    test_actor_context_schedule.cpp
+    test_actor_context_try_send.cpp
+    test_actor_mailbox.cpp
+    test_actor_system_backpressure.cpp
+    test_event_based_actor.cpp
+    test_blocking_actor.cpp
+    test_daemon_actor.cpp
+    test_stateful_actor.cpp
+    test_typed_actor.cpp
+    test_proto_stateful_actor.cpp
+    test_unified_message_passing.cpp
+    test_link_monitor.cpp
+    test_lifecycle_actor.cpp
+    test_is_system_actor.cpp
+    test_drain_policy.cpp
+    test_drain_timeout.cpp
+    test_actor_stop.cpp
+    test_shutdown_coordinator.cpp
+    test_drain_integration.cpp
+    test_scoped_actor.cpp
+    test_local_actor.cpp
+    test_spawn_receiver_construct.cpp
+    test_actor_ref_cache.cpp
+    test_backpressure_signals.cpp
+)
+target_link_libraries(test_integration_actor
+    hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main
+)
+gtest_discover_tests(test_integration_actor PROPERTIES TIMEOUT 35)

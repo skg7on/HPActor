@@ -1,0 +1,71 @@
+// Copyright 2026 HPActor Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+#include <hpactor/actor/spawn_receiver.hpp>
+#include <hpactor/core/actor_system.hpp>
+#include <hpactor/net/transport.hpp>
+
+#include <gtest/gtest.h>
+
+using namespace hpactor;
+
+namespace {
+struct NullTransport : public net::Transport {
+    bool try_send(const ActorAddress&, const StreamBuffer&) override {
+        return true;
+    }
+    void send(const ActorAddress&, const StreamBuffer&) override {}
+    net::ConnectionPtr connect(EndPoint, const std::string&, uint16_t) override {
+        return nullptr;
+    }
+    net::ConnectionPtr connect(EndPoint) override {
+        return nullptr;
+    }
+    void listen(uint16_t) override {}
+    void stop_listening() override {}
+    bool is_connected(EndPoint) const override {
+        return false;
+    }
+    EndPoint endpoint() const override {
+        return {};
+    }
+    void close_connection(EndPoint) override {}
+    void set_rpc_handler(rpc_response_handler) override {}
+};
+} // namespace
+
+class SpawnReceiverConstructTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+        Config cfg;
+        cfg.scheduler_threads = 0;
+        system_ = std::make_unique<ActorSystem>(cfg);
+    }
+    void TearDown() override {
+        if (system_) {
+            ShutdownOptions opts;
+            opts.ingress_timeout = std::chrono::milliseconds(10);
+            opts.actor_drain_timeout = std::chrono::milliseconds(10);
+            opts.cluster_leave_timeout = std::chrono::milliseconds(10);
+            system_->shutdown(opts);
+        }
+    }
+    std::unique_ptr<ActorSystem> system_;
+};
+
+TEST_F(SpawnReceiverConstructTest, ConstructAndMakeBehavior) {
+    ActorTypeRegistry registry;
+    NullTransport transport;
+    SpawnReceiver receiver(*system_, registry, &transport);
+    auto behavior = receiver.make_behavior();
+    (void)behavior;
+    SUCCEED();
+}
+
+TEST_F(SpawnReceiverConstructTest, ConstructWithoutTransport) {
+    ActorTypeRegistry registry;
+    SpawnReceiver receiver(*system_, registry, nullptr);
+    auto behavior = receiver.make_behavior();
+    (void)behavior;
+    SUCCEED();
+}

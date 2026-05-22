@@ -1,4 +1,4 @@
-# TODO(Task 12): add_subdirectory(actor)
+add_subdirectory(actor)
 # TODO(Task 13): add_subdirectory(sched)
 # TODO(Task 13): add_subdirectory(mailbox)
 # TODO(Task 13): add_subdirectory(supervision)
