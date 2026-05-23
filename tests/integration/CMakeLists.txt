@@ -1,4 +1,5 @@
 add_subdirectory(actor)
+add_subdirectory(net)
 add_subdirectory(sched)
 add_subdirectory(mailbox)
 add_subdirectory(supervision)

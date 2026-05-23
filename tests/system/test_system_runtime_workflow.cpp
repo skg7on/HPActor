@@ -9,8 +9,7 @@
 
 #include "system_test_fixture.hpp"
 
-#include <cassert>
-#include <cstdio>
+#include <gtest/gtest.h>
 
 using namespace hpactor;
 
@@ -28,7 +27,7 @@ HPACTOR_REGISTER_ACTOR("ForwardingActor", ForwardingActor);
 // Test 1: Multi-actor send/reply chain with live scheduler
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_multi_actor_deliver_messages() {
+TEST(RuntimeWorkflow, MultiActorDeliverMessages) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
@@ -54,64 +53,58 @@ static void test_multi_actor_deliver_messages() {
             return actor2->handler_count >= 1 && actor3->handler_count >= 1;
         },
         5000);
-    assert(done);
+    EXPECT_TRUE(done);
 
-    assert(actor2->handler_count >= 1);
-    assert(actor3->handler_count >= 1);
-
-    std::printf("PASS: test_multi_actor_deliver_messages\n");
+    EXPECT_GE(actor2->handler_count, 1);
+    EXPECT_GE(actor3->handler_count, 1);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 2: Lifecycle transitions are observable after spawn
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_lifecycle_transitions_observable() {
+TEST(RuntimeWorkflow, LifecycleTransitionsObservable) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
     auto a1 = system.spawn<test::CountingActor>();
     auto* actor = static_cast<test::CountingActor*>(a1.get().get());
     auto* lc = actor->as_lifecycle();
-    assert(lc != nullptr);
+    EXPECT_NE(lc, nullptr);
 
     // spawn<>() transitions to kActive
-    assert(lc->state() == LifecycleState::kActive);
+    EXPECT_EQ(lc->state(), LifecycleState::kActive);
 
     // Manual transition to kDraining
     bool ok = lc->transition(LifecycleState::kDraining);
-    assert(ok);
-    assert(lc->state() == LifecycleState::kDraining);
-
-    std::printf("PASS: test_lifecycle_transitions_observable\n");
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(lc->state(), LifecycleState::kDraining);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 3: actor_count reflects live actors
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_actor_count_reflects_live_actors() {
+TEST(RuntimeWorkflow, ActorCountReflectsLiveActors) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
     // Initially: system_actor_ is null (default-constructed Actor)
     size_t initial = system.actor_count();
-    assert(initial == 0);
+    EXPECT_EQ(initial, 0);
 
     auto a1 = system.spawn<test::CountingActor>();
     auto a2 = system.spawn<test::CountingActor>();
 
     size_t after_spawn = system.actor_count();
-    assert(after_spawn >= initial + 2);
-
-    std::printf("PASS: test_actor_count_reflects_live_actors\n");
+    EXPECT_GE(after_spawn, initial + 2);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 4: Link and unlink API works
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_link_unlink_api() {
+TEST(RuntimeWorkflow, LinkUnlinkApi) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
@@ -123,22 +116,20 @@ static void test_link_unlink_api() {
     // Link A1 → A2
     actor1->link_to(a2.address());
     auto linked = actor1->context()->linked_actors();
-    assert(!linked.empty());
-    assert(linked[0] == a2.address());
+    EXPECT_FALSE(linked.empty());
+    EXPECT_EQ(linked[0], a2.address());
 
     // Unlink
     actor1->unlink_from(a2.address());
     linked = actor1->context()->linked_actors();
-    assert(linked.empty());
-
-    std::printf("PASS: test_link_unlink_api\n");
+    EXPECT_TRUE(linked.empty());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 5: For_each_actor enumerates all spawned actors
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_for_each_actor_enumerates_all() {
+TEST(RuntimeWorkflow, ForEachActorEnumeratesAll) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
@@ -151,16 +142,5 @@ static void test_for_each_actor_enumerates_all() {
         [&](ActorId /*id*/, AbstractActor& /*actor*/) { count++; });
 
     // 3 user + system_actor
-    assert(count >= 3);
-    std::printf("PASS: test_for_each_actor_enumerates_all\n");
-}
-
-int main() {
-    test_multi_actor_deliver_messages();
-    test_lifecycle_transitions_observable();
-    test_actor_count_reflects_live_actors();
-    test_link_unlink_api();
-    test_for_each_actor_enumerates_all();
-    std::printf("\nAll runtime workflow system tests passed.\n");
-    return 0;
+    EXPECT_GE(count, 3);
 }

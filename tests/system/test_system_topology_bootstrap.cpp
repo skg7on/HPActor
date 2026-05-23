@@ -5,13 +5,13 @@
 // Validates TOML → ActorFactoryRegistry → spawn_configured → SystemInit →
 // shutdown
 
+#include <gtest/gtest.h>
+
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 #include "system_test_fixture.hpp"
 
-#include <cassert>
-#include <cstdio>
 #include <string>
 
 using namespace hpactor;
@@ -38,15 +38,15 @@ static std::string data_path(const char* filename) {
 // Test 1: Load a 3-actor TOML topology, verify all actors spawned
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_topology_spawns_all_actors() {
+TEST(TopologyBootstrap, TopologySpawnsAllActors) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
     auto result = system.load_topology(data_path("system_test_topology.toml"));
-    assert(result.has_value());
+    EXPECT_TRUE(result.has_value());
 
     size_t count = system.actor_count();
-    assert(count >= 3);
+    EXPECT_GE(count, 3);
 
     std::vector<ActorId> actor_ids;
     system.for_each_actor(
@@ -54,27 +54,25 @@ static void test_topology_spawns_all_actors() {
 
     for (auto id : actor_ids) {
         auto actor = system.get_actor(id);
-        assert(actor != nullptr);
+        EXPECT_NE(actor, nullptr);
     }
 
     for (const char* name : {"alpha", "beta", "gamma"}) {
         auto addr = system.registry().get(name);
-        assert(addr.id != ActorId(0));
+        EXPECT_NE(addr.id, ActorId(0));
     }
-
-    std::printf("PASS: test_topology_spawns_all_actors\n");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 2: All topology actors alive after bootstrap
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_all_actors_alive_after_bootstrap() {
+TEST(TopologyBootstrap, AllActorsAliveAfterBootstrap) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
     auto result = system.load_topology(data_path("system_test_topology.toml"));
-    assert(result.has_value());
+    EXPECT_TRUE(result.has_value());
 
     // Poll: at least 3 user actors exist and have lifecycle
     bool all_alive = test::assert_eventually(
@@ -92,25 +90,23 @@ static void test_all_actors_alive_after_bootstrap() {
         },
         5000);
 
-    assert(all_alive);
+    EXPECT_TRUE(all_alive);
 
     // Verify all three named actors are in registry
     auto alpha_addr = system.registry().get("alpha");
     auto beta_addr = system.registry().get("beta");
     auto gamma_addr = system.registry().get("gamma");
 
-    assert(alpha_addr.id != ActorId(0));
-    assert(beta_addr.id != ActorId(0));
-    assert(gamma_addr.id != ActorId(0));
-
-    std::printf("PASS: test_all_actors_alive_after_bootstrap\n");
+    EXPECT_NE(alpha_addr.id, ActorId(0));
+    EXPECT_NE(beta_addr.id, ActorId(0));
+    EXPECT_NE(gamma_addr.id, ActorId(0));
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 3: Clean shutdown after topology boot
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_clean_shutdown_after_topology_load() {
+TEST(TopologyBootstrap, CleanShutdownAfterTopologyLoad) {
     Config cfg = test::config_with_scheduler(1);
     cfg.shutdown_drain =
         DrainConfig{DrainPolicy::ImmediateStop, std::chrono::milliseconds{500}};
@@ -118,10 +114,10 @@ static void test_clean_shutdown_after_topology_load() {
 
     auto load_result = system.load_topology(data_path("system_test_topology."
                                                       "toml"));
-    assert(load_result.has_value());
+    EXPECT_TRUE(load_result.has_value());
 
-    assert(system.is_running());
-    assert(system.shutdown_phase() == ShutdownPhase::Running);
+    EXPECT_TRUE(system.is_running());
+    EXPECT_EQ(system.shutdown_phase(), ShutdownPhase::Running);
 
     // Transition actors to kActive (spawn_configured leaves them in kStarting)
     // and set ImmediateStop for fast shutdown.
@@ -143,39 +139,27 @@ static void test_clean_shutdown_after_topology_load() {
     opts.force_after_timeout = true;
 
     auto shutdown_result = system.shutdown(opts);
-    assert(shutdown_result.has_value());
+    EXPECT_TRUE(shutdown_result.has_value());
 
     // After shutdown, all non-system actors should be stopped
     system.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
         if (auto* lc = actor.as_lifecycle()) {
             LifecycleState s = lc->state();
-            assert(s == LifecycleState::kStopped || s == LifecycleState::kStopping);
+            EXPECT_TRUE(s == LifecycleState::kStopped ||
+                        s == LifecycleState::kStopping);
         }
     });
-
-    std::printf("PASS: test_clean_shutdown_after_topology_load\n");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 4: Unknown behavior returns error
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_unknown_behavior_returns_error() {
+TEST(TopologyBootstrap, UnknownBehaviorReturnsError) {
     Config cfg = test::minimal_config();
     ActorSystem system(cfg);
 
     // supervisor_tree.toml uses "ParentActor" and "ChildActor" — unregistered
     auto result = system.load_topology(data_path("supervisor_tree.toml"));
-    assert(!result.has_value());
-
-    std::printf("PASS: test_unknown_behavior_returns_error\n");
-}
-
-int main() {
-    test_topology_spawns_all_actors();
-    test_all_actors_alive_after_bootstrap();
-    test_clean_shutdown_after_topology_load();
-    test_unknown_behavior_returns_error();
-    std::printf("\nAll topology bootstrap system tests passed.\n");
-    return 0;
+    EXPECT_FALSE(result.has_value());
 }
