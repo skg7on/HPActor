@@ -8,6 +8,7 @@
 
 #include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_state.hpp>
+#include <hpactor/actor/quarantine_reason.hpp>
 #include <hpactor/types/types.hpp> // complete error type needed for value members
 
 namespace hpactor {
@@ -62,6 +63,29 @@ class LifecycleActor {
     // Returns false if the transition is illegal or CAS fails.
     bool transition(LifecycleState to);
 
+    // ── Quarantine ─────────────────────────────────────
+    /// Transition the actor into kQuarantined with the given reason.
+    /// Stores the reason and timestamp for observability.
+    /// Returns false if the transition is illegal or CAS fails.
+    bool transition_to_quarantined(QuarantineReason reason);
+
+    /// Operator override: release from quarantine via
+    /// kQuarantined → kStopped. The supervisor or operator is
+    /// expected to restart the actor through kStarting → kActive.
+    bool transition_from_quarantined();
+
+    bool is_quarantined() const noexcept {
+        return state() == LifecycleState::kQuarantined;
+    }
+    QuarantineReason quarantine_reason() const noexcept {
+        return quarantine_reason_;
+    }
+
+    /// Timestamp when the actor was quarantined (monotonic clock).
+    std::chrono::steady_clock::time_point quarantined_at() const noexcept {
+        return quarantined_at_;
+    }
+
     // ── Virtual hooks (default = no-op) ────────────────
     virtual void on_start() {}
     virtual void on_drain() {}
@@ -71,6 +95,7 @@ class LifecycleActor {
     virtual void on_fail(error err);
     virtual void on_recover() {}
     virtual void on_restart() {}
+    virtual void on_quarantined(QuarantineReason /*reason*/) {}
 
     // NOTE: LifecycleActor does NOT override as_lifecycle().
     // Each lifecycle actor class must explicitly override
@@ -84,6 +109,8 @@ class LifecycleActor {
     std::atomic<uint64_t> incarnation_;
     error failure_reason_{0};
     DrainConfig drain_config_{};
+    QuarantineReason quarantine_reason_{QuarantineReason::SupervisionEscalation};
+    std::chrono::steady_clock::time_point quarantined_at_{};
 };
 
 } // namespace hpactor

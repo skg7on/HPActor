@@ -34,11 +34,13 @@ add_library(hpactor_lib SHARED
     config/parsers/dead_letters_config_parser.cpp
     config/parsers/tracing_config_parser.cpp
     config/parsers/shutdown_config_parser.cpp
+    config/parsers/quarantine_parser.cpp
     config/binary_serializer.cpp
     config/binary_loader.cpp
     core/proto_type_registry.cpp
     types/typed_message.cpp
     types/failure_reason.cpp
+    actor/quarantine_reason.cpp
     net/event_loop.cpp
     net/acceptor.cpp
     net/connection.cpp

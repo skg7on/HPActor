@@ -81,6 +81,30 @@ void Aggregator::ensure_families_registered() {
                                                           "Dead-letter records "
                                                           "lost.",
                                                           MetricType::kCounter);
+    quarantine_total_family_ = &registry_.register_family("hpactor_actor_"
+                                                          "quarantine_total",
+                                                          "Actor quarantine "
+                                                          "transitions.",
+                                                          MetricType::kCounter);
+    unquarantine_total_family_ = &registry_.register_family("hpactor_actor_"
+                                                            "unquarantine_"
+                                                            "total",
+                                                            "Actor "
+                                                            "unquarantine "
+                                                            "transitions.",
+                                                            MetricType::kCounter);
+    circuit_state_family_ = &registry_.register_family("hpactor_actor_circuit_"
+                                                       "state",
+                                                       "Per-actor circuit "
+                                                       "breaker state "
+                                                       "(0=closed, 1=open, "
+                                                       "2=half-open).",
+                                                       MetricType::kGauge);
+    circuit_trips_family_ = &registry_.register_family("hpactor_actor_circuit_"
+                                                       "trips_total",
+                                                       "Total circuit breaker "
+                                                       "trip events.",
+                                                       MetricType::kCounter);
 }
 
 LabelSet Aggregator::make_actor_labels(ActorId id) {
@@ -230,6 +254,32 @@ void Aggregator::on_event(const MetricEvent& e) {
         case MetricEventType::kDeliveryFailure:
             // lifecycle, rejection, drain, and delivery failure stubs
             break;
+        case MetricEventType::kActorQuarantined: {
+            auto& c = registry_.get_or_create<CounterValue>(
+                *quarantine_total_family_, make_actor_labels(e.actor_id));
+            c.total.fetch_add(1, std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kActorUnquarantined: {
+            auto& c = registry_.get_or_create<CounterValue>(
+                *unquarantine_total_family_, make_actor_labels(e.actor_id));
+            c.total.fetch_add(1, std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kCircuitStateChange: {
+            {
+                auto& g = registry_.get_or_create<GaugeValue>(
+                    *circuit_state_family_, make_actor_labels(e.actor_id));
+                g.value.store(static_cast<int64_t>(e.code),
+                              std::memory_order_relaxed);
+            }
+            {
+                auto& c = registry_.get_or_create<CounterValue>(
+                    *circuit_trips_family_, make_actor_labels(e.actor_id));
+                c.total.fetch_add(1, std::memory_order_relaxed);
+            }
+            break;
+        }
     }
 }
 

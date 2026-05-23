@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/actor/quarantine_policy.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
@@ -70,6 +71,7 @@ struct ActorDef {
     uint32_t mailbox_capacity{0};
     ResourceSpec resources;
     MailboxPolicyDef mailbox;
+    QuarantinePolicy quarantine;
     std::unordered_map<std::string, std::string> args;
 };
 
@@ -114,6 +116,7 @@ struct SystemDef {
     std::string discovery_backend;
     std::vector<std::string> imports;
     hpactor::tracing::TraceConfig tracing;
+    hpactor::QuarantinePolicy quarantine_defaults;
 };
 
 // -----------------------------------------------------------------------------

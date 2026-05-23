@@ -15,8 +15,11 @@
 #pragma once
 
 #include <hpactor/actor/actor_state.hpp>
+#include <hpactor/actor/circuit_breaker.hpp>
 #include <hpactor/actor/drain_config.hpp>
+#include <hpactor/actor/failure_rate_tracker.hpp>
 #include <hpactor/actor/local_actor.hpp>
+#include <hpactor/actor/quarantine_policy.hpp>
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -235,6 +238,38 @@ class EventBasedActor : public LocalActor {
     // Dead-letter all messages currently in the mailbox (ImmediateStop).
     void drain_all_immediate();
 
+    // ── Quarantine & circuit breaker ────────────────────
+
+    /// Configure quarantine and circuit breaker for this actor.
+    /// Must be called before the actor starts processing messages.
+    void configure_quarantine(const QuarantinePolicy& policy);
+
+    /// Whether quarantine/circuit breaker is enabled for this actor.
+    [[nodiscard]] bool quarantine_enabled() const noexcept {
+        return quarantine_enabled_;
+    }
+
+    [[nodiscard]] const QuarantinePolicy& quarantine_policy() const noexcept {
+        return quarantine_policy_;
+    }
+
+    /// Access the circuit breaker tracker for evaluation in the
+    /// delivery path. Only valid when quarantine_enabled() is true.
+    [[nodiscard]] CircuitBreakerTracker* circuit_breaker() noexcept {
+        return quarantine_enabled_ ? &circuit_breaker_ : nullptr;
+    }
+
+    /// Access the failure rate tracker. Only valid when
+    /// quarantine_enabled() is true.
+    [[nodiscard]] FailureRateTracker* failure_rate_tracker() noexcept {
+        return quarantine_enabled_ ? &failure_rate_tracker_ : nullptr;
+    }
+
+    /// Record a processing result (success or failure) for circuit
+    /// breaker state transitions and rate tracking. Must only be
+    /// called when quarantine is enabled.
+    void record_circuit_breaker_result(bool success);
+
     // System message handlers invoked from receive().
     bool handle_link_msg(const TypedMessage& msg);
     bool handle_unlink_msg(const TypedMessage& msg);
@@ -313,6 +348,12 @@ class EventBasedActor : public LocalActor {
     sched::TimerHandle drain_timer_handle_{};
 
     bool handlers_initialized_ = false;
+
+    // Quarantine & circuit breaker (opt-in via QuarantinePolicy::enabled)
+    bool quarantine_enabled_{false};
+    QuarantinePolicy quarantine_policy_{};
+    CircuitBreakerTracker circuit_breaker_{};
+    FailureRateTracker failure_rate_tracker_{};
 
     using ProtoHandlerMap =
         std::unordered_map<TypeTag, ProtoHandler, std::hash<TypeTag>, std::equal_to<>,

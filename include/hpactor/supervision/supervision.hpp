@@ -15,6 +15,7 @@
 #pragma once
 #include <chrono>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/quarantine_policy.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/mem/std_allocator.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
@@ -27,7 +28,7 @@
 namespace hpactor {
 
 // SupervisionDirective - directive from supervisor to child on failure
-enum class SupervisionDirective { Restart, Stop, Escalate };
+enum class SupervisionDirective { Restart, Stop, Escalate, Quarantine };
 
 // ChildFailure - information about a child actor failure
 struct ChildFailure {
@@ -42,6 +43,10 @@ struct SupervisionPolicy {
     Strategy strategy = Strategy::OneForOne;
     uint32_t max_restarts = 10;
     std::chrono::milliseconds restart_interval{5000};
+    /// Optional quarantine escalation policy. When set and enabled,
+    /// max_restarts exceeded transitions the child to kQuarantined
+    /// instead of stopping it.
+    QuarantinePolicy quarantine;
 };
 
 // Supervisor - interface for supervision strategy

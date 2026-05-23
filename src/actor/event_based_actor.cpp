@@ -15,6 +15,7 @@
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/quarantine_reason.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
@@ -24,6 +25,7 @@
 #include <hpactor/messages.pb.h>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
+#include <hpactor/types/failure_envelope.hpp>
 
 #include <chrono>
 #include <cstring>
@@ -58,6 +60,19 @@ class ReceiveSpanGuard {
 
 EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
     : LocalActor(ctx, sys) {}
+
+void EventBasedActor::configure_quarantine(const QuarantinePolicy& policy) {
+    quarantine_policy_ = policy;
+    quarantine_enabled_ = policy.enabled;
+    if (policy.enabled) {
+        auto window_ms = static_cast<uint32_t>(policy.observation_window.count());
+        failure_rate_tracker_.bucket_interval_ms =
+            window_ms / FailureRateTracker::kNumBuckets;
+        if (failure_rate_tracker_.bucket_interval_ms == 0) {
+            failure_rate_tracker_.bucket_interval_ms = 1;
+        }
+    }
+}
 
 void EventBasedActor::on_activate() {}
 
@@ -140,6 +155,28 @@ void EventBasedActor::receive(TypedMessage& msg) {
         if (auto* lc = as_lifecycle()) {
             if (!lc->accepts_user_msgs() &&
                 lc->state() != LifecycleState::kDraining) {
+                // Quarantine-specific: build FailureEnvelope and emit metrics.
+                if (lc->is_quarantined()) {
+                    if (metrics_ring_buffer_) [[unlikely]] {
+                        FailureEnvelope env = make_failure_envelope(
+                            FailureReason::Quarantined, id(), msg.sender_address(),
+                            ActorAddress{}, MessageId{0}, TraceContext{},
+                            FailureSource::ActorRuntime, "actor is quarantined");
+                        metrics::MetricEvent evt{};
+                        evt.timestamp_ns = env.timestamp_ns;
+                        evt.actor_id = id();
+                        evt.event_type = metrics::MetricEventType::kDeliveryFailure;
+                        evt.code = static_cast<uint8_t>(FailureReason::Quarantined);
+                        evt.value_hi = 1;
+                        metrics_ring_buffer_->try_push(evt);
+                    }
+                    if (logger_) [[unlikely]] {
+                        HPACTOR_LOG_WARNING(
+                            log::LogCategory::kActor, id(), 0, "quarantine_reject",
+                            log::field_lit("reason",
+                                           to_string(lc->quarantine_reason())));
+                    }
+                }
                 return;
             }
         }
@@ -234,6 +271,13 @@ void EventBasedActor::receive(TypedMessage& msg) {
                 TypedMessage reply_msg(it->first, response);
                 ctx->reply(std::move(reply_msg));
             }
+            if (quarantine_enabled_) {
+                record_circuit_breaker_result(true);
+            }
+        } else {
+            if (quarantine_enabled_) {
+                record_circuit_breaker_result(false);
+            }
         }
         if (metrics_ring_buffer_) [[unlikely]] {
             auto t1 = std::chrono::steady_clock::now();
@@ -251,6 +295,10 @@ void EventBasedActor::receive(TypedMessage& msg) {
     // Fall through to Behavior-based handling
     if (behavior_) {
         behavior_(msg);
+    }
+
+    if (quarantine_enabled_) {
+        record_circuit_breaker_result(true);
     }
 
     if (metrics_ring_buffer_) [[unlikely]] {
@@ -528,6 +576,65 @@ void EventBasedActor::cancel_drain_timer() {
     if (drain_timer_handle_.valid() && scheduler_) {
         scheduler_->cancel_timer(drain_timer_handle_);
         drain_timer_handle_ = sched::TimerHandle{};
+    }
+}
+
+void EventBasedActor::record_circuit_breaker_result(bool success) {
+    if (!quarantine_enabled_)
+        return;
+
+    auto now = std::chrono::steady_clock::now();
+    auto& cb = circuit_breaker_;
+    auto& tracker = failure_rate_tracker_;
+
+    // Advance rate tracker buckets.
+    tracker.advance_buckets(now);
+
+    if (success) {
+        // Half-open probe succeeded — close the circuit.
+        if (cb.state == CircuitBreakerState::kHalfOpen) {
+            cb.state = CircuitBreakerState::kClosed;
+            cb.trip_count = 0;
+            cb.half_open_probe_in_flight = false;
+        }
+        return;
+    }
+
+    // Failure: record in rate tracker.
+    tracker.record_failure();
+    auto window_ms =
+        static_cast<uint32_t>(quarantine_policy_.observation_window.count());
+
+    // EMA update: smooth factor α = 2 / (N + 1), N ≈ 10.
+    static constexpr double kAlpha = 2.0 / 11.0;
+    double current_rate = tracker.failure_rate(window_ms);
+    cb.failure_ema = kAlpha * current_rate + (1.0 - kAlpha) * cb.failure_ema;
+    cb.last_evaluation = now;
+
+    double threshold =
+        static_cast<double>(quarantine_policy_.failure_rate_threshold);
+
+    if (threshold > 0.0 && cb.failure_ema > threshold) {
+        if (cb.state == CircuitBreakerState::kClosed) {
+            // Trip the circuit.
+            cb.state = CircuitBreakerState::kOpen;
+            cb.opened_at = now;
+            cb.trip_count++;
+        } else if (cb.state == CircuitBreakerState::kHalfOpen) {
+            // Probe failed — re-open.
+            cb.state = CircuitBreakerState::kOpen;
+            cb.opened_at = now;
+            cb.half_open_probe_in_flight = false;
+            cb.trip_count++;
+        }
+
+        // Escalate to quarantine after max trips.
+        auto max_trips = quarantine_policy_.max_circuit_trips;
+        if (max_trips > 0 && cb.trip_count >= max_trips) {
+            if (auto* lc = as_lifecycle()) {
+                lc->transition_to_quarantined(QuarantineReason::CircuitBreakerTrip);
+            }
+        }
     }
 }
 

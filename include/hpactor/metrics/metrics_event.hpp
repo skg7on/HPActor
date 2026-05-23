@@ -40,8 +40,11 @@ enum class MetricEventType : uint8_t {
     kActorDrainStart = 17,
     kActorDrainComplete = 18,
     kActorDrainTimeout = 19,
-    kDeliveryFailure = 20, ///< Delivery failure event — \c code carries
-                           ///< FailureReason.
+    kDeliveryFailure = 20,    ///< Delivery failure event — \c code carries
+                              ///< FailureReason.
+    kActorQuarantined = 21,   ///< Actor transitioned to kQuarantined.
+    kActorUnquarantined = 22, ///< Actor released from quarantine.
+    kCircuitStateChange = 23, ///< Circuit breaker state changed.
 };
 
 struct alignas(32) MetricEvent {

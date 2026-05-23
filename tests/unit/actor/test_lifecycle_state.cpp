@@ -169,3 +169,79 @@ TEST(LifecycleStateTest, IncarnationBumps) {
     a.bump_incarnation();
     EXPECT_EQ(a.incarnation(), 2u);
 }
+
+// -- kQuarantined transition tests --
+
+TEST(LifecycleStateTest, ActiveToQuarantined) {
+    TestLifecycleActor a;
+    a.transition(LifecycleState::kActive);
+    bool ok = a.transition(LifecycleState::kQuarantined);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(a.state(), LifecycleState::kQuarantined);
+}
+
+TEST(LifecycleStateTest, FailedToQuarantined) {
+    TestLifecycleActor a;
+    a.transition(LifecycleState::kActive);
+    a.transition(LifecycleState::kFailed);
+    bool ok = a.transition(LifecycleState::kQuarantined);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(a.state(), LifecycleState::kQuarantined);
+}
+
+TEST(LifecycleStateTest, RecoveringToQuarantined) {
+    TestLifecycleActor a;
+    a.transition(LifecycleState::kActive);
+    a.transition(LifecycleState::kFailed);
+    a.transition(LifecycleState::kRecovering);
+    bool ok = a.transition(LifecycleState::kQuarantined);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(a.state(), LifecycleState::kQuarantined);
+}
+
+TEST(LifecycleStateTest, QuarantinedToStopped) {
+    TestLifecycleActor a;
+    a.transition(LifecycleState::kActive);
+    a.transition(LifecycleState::kQuarantined);
+    bool ok = a.transition(LifecycleState::kStopped);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(a.state(), LifecycleState::kStopped);
+}
+
+TEST(LifecycleStateTest, QuarantinedToActiveIllegal) {
+    TestLifecycleActor a;
+    a.transition(LifecycleState::kActive);
+    a.transition(LifecycleState::kQuarantined);
+    bool ok = a.transition(LifecycleState::kActive);
+    EXPECT_FALSE(ok);
+    EXPECT_EQ(a.state(), LifecycleState::kQuarantined);
+}
+
+TEST(LifecycleStateTest, QuarantinedNoUserMsgs) {
+    TestLifecycleActor a;
+    a.transition(LifecycleState::kActive);
+    a.transition(LifecycleState::kQuarantined);
+    EXPECT_FALSE(a.accepts_user_msgs());
+}
+
+TEST(LifecycleStateTest, QuarantinedAcceptsSystemMsgs) {
+    TestLifecycleActor a;
+    a.transition(LifecycleState::kActive);
+    a.transition(LifecycleState::kQuarantined);
+    EXPECT_TRUE(a.accepts_system_msgs());
+}
+
+TEST(LifecycleStateTest, QuarantinedStateString) {
+    TestLifecycleActor a;
+    a.transition(LifecycleState::kActive);
+    a.transition(LifecycleState::kQuarantined);
+    EXPECT_EQ(std::string(a.state_string()), "quarantined");
+}
+
+TEST(LifecycleStateTest, StartingToQuarantinedIllegal) {
+    TestLifecycleActor a;
+    // kStarting cannot transition directly to kQuarantined.
+    bool ok = a.transition(LifecycleState::kQuarantined);
+    EXPECT_FALSE(ok);
+    EXPECT_EQ(a.state(), LifecycleState::kStarting);
+}

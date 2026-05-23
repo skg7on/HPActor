@@ -434,6 +434,107 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
         return r;
     }
 
+    // Quarantine gate: reject user messages for quarantined actors.
+    // System messages (TypeTag < 0x1000) bypass quarantine.
+    if (static_cast<uint32_t>(msg.type_id()) >= 0x1000) {
+        auto actor = get_actor(target);
+        if (actor != nullptr) {
+            auto* lc = actor->as_lifecycle();
+            if (lc != nullptr && lc->is_quarantined()) {
+                mailbox::EnqueueResult r;
+                r.code = mailbox::EnqueueResultCode::Rejected;
+                r.target = target;
+                if (metrics_ring_buffer_) [[unlikely]] {
+                    FailureEnvelope env = make_failure_envelope(
+                        FailureReason::Quarantined, target, msg.sender_address(),
+                        ActorAddress{endpoint_, ActorType{0}, target, 0},
+                        MessageId{options.message_id}, TraceContext{},
+                        FailureSource::ActorRuntime, "target actor is quarantined");
+                    metrics::MetricEvent evt{};
+                    evt.timestamp_ns = env.timestamp_ns;
+                    evt.actor_id = target;
+                    evt.event_type = metrics::MetricEventType::kDeliveryFailure;
+                    evt.code = static_cast<uint8_t>(FailureReason::Quarantined);
+                    evt.value_hi = 1;
+                    metrics_ring_buffer_->try_push(evt);
+                }
+                return r;
+            }
+
+            // Circuit breaker evaluation.
+            auto* eba = actor->is_event_based_actor()
+                            ? static_cast<EventBasedActor*>(actor.get())
+                            : nullptr;
+            if (eba != nullptr) {
+                auto* cb = eba->circuit_breaker();
+                if (cb != nullptr) {
+                    auto now = std::chrono::steady_clock::now();
+                    if (cb->state == CircuitBreakerState::kOpen) {
+                        auto elapsed =
+                            std::chrono::duration_cast<std::chrono::milliseconds>(
+                                now - cb->opened_at);
+                        if (elapsed >= eba->quarantine_policy().cooldown_period) {
+                            cb->state = CircuitBreakerState::kHalfOpen;
+                            cb->half_open_at = now;
+                            cb->half_open_probe_in_flight = true;
+                            // Allow the probe through.
+                        } else {
+                            mailbox::EnqueueResult r;
+                            r.code = mailbox::EnqueueResultCode::Rejected;
+                            r.target = target;
+                            if (metrics_ring_buffer_) [[unlikely]] {
+                                FailureEnvelope env = make_failure_envelope(
+                                    FailureReason::CircuitOpen, target,
+                                    msg.sender_address(),
+                                    ActorAddress{endpoint_, ActorType{0}, target, 0},
+                                    MessageId{options.message_id},
+                                    TraceContext{}, FailureSource::ActorRuntime,
+                                    "circuit breaker open");
+                                metrics::MetricEvent evt{};
+                                evt.timestamp_ns = env.timestamp_ns;
+                                evt.actor_id = target;
+                                evt.event_type =
+                                    metrics::MetricEventType::kDeliveryFailure;
+                                evt.code = static_cast<uint8_t>(
+                                    FailureReason::CircuitOpen);
+                                evt.value_hi = 1;
+                                metrics_ring_buffer_->try_push(evt);
+                            }
+                            return r;
+                        }
+                    } else if (cb->state == CircuitBreakerState::kHalfOpen) {
+                        if (cb->half_open_probe_in_flight) {
+                            mailbox::EnqueueResult r;
+                            r.code = mailbox::EnqueueResultCode::Rejected;
+                            r.target = target;
+                            if (metrics_ring_buffer_) [[unlikely]] {
+                                FailureEnvelope env = make_failure_envelope(
+                                    FailureReason::CircuitOpen, target,
+                                    msg.sender_address(),
+                                    ActorAddress{endpoint_, ActorType{0}, target, 0},
+                                    MessageId{options.message_id},
+                                    TraceContext{}, FailureSource::ActorRuntime,
+                                    "circuit breaker half-open");
+                                metrics::MetricEvent evt{};
+                                evt.timestamp_ns = env.timestamp_ns;
+                                evt.actor_id = target;
+                                evt.event_type =
+                                    metrics::MetricEventType::kDeliveryFailure;
+                                evt.code = static_cast<uint8_t>(
+                                    FailureReason::CircuitOpen);
+                                evt.value_hi = 1;
+                                metrics_ring_buffer_->try_push(evt);
+                            }
+                            return r;
+                        }
+                        cb->half_open_probe_in_flight = true;
+                        // Allow the probe through.
+                    }
+                }
+            }
+        }
+    }
+
     mailbox::MailboxEnvelopeMeta meta;
     meta.sender = msg.sender_address();
     meta.type_tag = msg.type_id();
@@ -672,6 +773,15 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
         case sched::DispatchPolicy::DedicatedPool:
             scheduler_->register_dedicated_pool(id, hints.pool_size);
             break;
+    }
+
+    // Configure quarantine & circuit breaker for this actor
+    if (def.quarantine.enabled) {
+        if (auto* eba = actor->is_event_based_actor()
+                            ? static_cast<EventBasedActor*>(actor.get())
+                            : nullptr) {
+            eba->configure_quarantine(def.quarantine);
+        }
     }
 
     // Activate the actor (DaemonActor starts its thread here, etc.)

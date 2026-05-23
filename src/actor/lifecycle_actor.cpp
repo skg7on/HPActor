@@ -4,6 +4,8 @@
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <chrono>
+
 namespace hpactor {
 
 void LifecycleActor::on_fail(error /*err*/) {
@@ -52,9 +54,23 @@ bool LifecycleActor::transition(LifecycleState to) {
         on_restart();
     } else if (to == LifecycleState::kRecovering) {
         on_recover();
+    } else if (to == LifecycleState::kQuarantined) {
+        quarantined_at_ = std::chrono::steady_clock::now();
+        on_quarantined(quarantine_reason_);
     }
 
     return true;
+}
+
+bool LifecycleActor::transition_to_quarantined(QuarantineReason reason) {
+    quarantine_reason_ = reason;
+    return transition(LifecycleState::kQuarantined);
+}
+
+bool LifecycleActor::transition_from_quarantined() {
+    if (state() != LifecycleState::kQuarantined)
+        return false;
+    return transition(LifecycleState::kStopped);
 }
 
 } // namespace hpactor
