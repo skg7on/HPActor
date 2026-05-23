@@ -1,0 +1,18 @@
+add_executable(test_unit_sched
+    test_chaselev_deque.cpp
+    test_multi_priority_work_queue.cpp
+    test_edf_queue.cpp
+    test_a2ws.cpp
+    test_calendar_queue.cpp
+    test_coroutine_task.cpp
+    test_coroutine_frame_pool.cpp
+    test_actor_state.cpp
+    test_actor_state_transfer.cpp
+    test_mailbox_awaiter.cpp
+    test_mpsc_actor_mailbox.cpp
+    test_scheduler_control.cpp
+    test_dispatch_policy.cpp
+    test_hybrid_scheduler.cpp
+)
+target_link_libraries(test_unit_sched hpactor hpactor_test_support GTest::gtest_main pthread)
+gtest_discover_tests(test_unit_sched)

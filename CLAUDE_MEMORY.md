@@ -272,8 +272,11 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 **Coverage Badge:** ✅ Complete (2026-05-17, PRs #106-108)
 - Automated coverage reporting with badge in README
 
-**Tests:** ✅ 140 tests passing (152 test source files)
-- 16 test subdirectories: actor (29), cli (6), config (7), core (2), examples (1), log (7), mailbox (11), mem (14), metrics (2), net (19), ref (3), rpc (1), sched (18), spawn (5), supervision (5), tracing (12), +1 top-level
+**Tests:** ✅ 803 GTest cases passing (154 test source files across 3 tiers)
+- Three-tier structure using Google Test framework (vendored in `third_party/googletest/`)
+- **unit** (71 files): actor (3), adt (1), cli (6), config (1), core (2), log (6), mailbox (9), mem (15), net (5), ref (1), sched (14), spawn (1), supervision (2), tracing (5)
+- **integration** (62 files): actor (26), cli (2), config (6), log (1), mailbox (2), metrics (3), ref (3), rpc (1), sched (4), spawn (4), supervision (3), tracing (7)
+- **system** (21 files): examples (1), net (20)
 
 **Documentation:** ✅ Complete
 - Architecture: `docs/architecture/production/production-reliability-plane.md` (24x7 production reliability roadmap)
@@ -338,7 +341,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Phase 0-16 Complete** (140 tests passing, 152 test source files)
+**Phase 0-16 Complete** (803 GTest cases passing, 154 test source files)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -428,7 +431,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `src/rpc/rpc_channel.cpp` — RpcChannel implementation
 - `src/mem/` — segment_provider.cpp, slab_cache.cpp, thread_local_allocator.cpp, memory_config.cpp, memory_tracker.cpp, hibernation_manager.cpp, guard_page.cpp, compaction.cpp, zram.cpp
 - `tools/toml-compiler/` — AOT compiler executable (compiler.cpp)
-- Tests: `tests/{actor,cli,config,core,examples,log,mailbox,metrics,net,ref,rpc,sched,spawn,supervision,tracing,mem}/`
+- Tests: `tests/{unit,integration,system}/` — three-tier structure (unit/unit tests, integration/component integration, system/end-to-end) using Google Test
 
 ## Build Commands
 
@@ -438,7 +441,17 @@ cmake -S . -B build -GNinja
 ninja -C build
 
 # Run tests
-ctest --output-on-failure
+ctest --output-on-failure --parallel 8
+
+# Run a single test binary
+./build/tests/unit/core/test_unit_core
+
+# Run GTest with filter (tests are individual GTest cases via ctest)
+./build/tests/unit/core/test_unit_core --gtest_list_tests
+./build/tests/unit/core/test_unit_core --gtest_filter="*ActorId*"
+
+# Run specific GTest case through ctest
+ctest -R "ActorIdDefaultConstruction" --output-on-failure
 
 # With sanitizers
 cmake -DENABLE_TSAN=ON ..  # ThreadSanitizer

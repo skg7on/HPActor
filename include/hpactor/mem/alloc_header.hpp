@@ -40,10 +40,12 @@ struct alignas(8) CanaryFooter {
 
     static void stamp(AllocHeader* header, size_t block_sz) noexcept;
 
-    // block_sz: the total block size (user_size + overhead), from size_for_class()
+    // block_sz: the total block size (user_size + overhead), from
+    // size_for_class()
     static CanaryFooter* from_header(AllocHeader* header, size_t block_sz) noexcept {
-        return reinterpret_cast<CanaryFooter*>(
-            reinterpret_cast<std::byte*>(header) + block_sz - sizeof(CanaryFooter));
+        auto* base = reinterpret_cast<char*>(header);
+        return reinterpret_cast<CanaryFooter*>(base + block_sz -
+                                               sizeof(CanaryFooter));
     }
 
     static bool verify(const AllocHeader* header, size_t block_sz) noexcept {
@@ -63,8 +65,8 @@ struct alignas(32) AllocHeader {
     };
     uint32_t incarnation{0};
     uint32_t magic{kAllocMagic};
-    uint8_t  size_class{0};
-    uint8_t  generation{0};
+    uint8_t size_class{0};
+    uint8_t generation{0};
     uint16_t flags{0};
     uint32_t _padding{0};
     uint64_t timestamp{0};
@@ -83,26 +85,32 @@ struct alignas(32) AllocHeader {
     }
 
     void* user_data() noexcept {
-        return reinterpret_cast<std::byte*>(this) + sizeof(AllocHeader);
+        return reinterpret_cast<char*>(this) + sizeof(AllocHeader);
     }
 
     static AllocHeader* from_user_data(void* user_ptr) noexcept {
-        return reinterpret_cast<AllocHeader*>(
-            static_cast<std::byte*>(user_ptr) - sizeof(AllocHeader));
+        return reinterpret_cast<AllocHeader*>(static_cast<char*>(user_ptr) -
+                                              sizeof(AllocHeader));
     }
 
     static std::byte* user_ptr(std::byte* block) noexcept {
-        return block + sizeof(AllocHeader);
+        return reinterpret_cast<std::byte*>(reinterpret_cast<char*>(block) +
+                                            sizeof(AllocHeader));
     }
 
     // Returns pointer to the CanaryFooter for this block
     std::byte* footer_ptr() const noexcept {
-        return reinterpret_cast<std::byte*>(const_cast<AllocHeader*>(this))
-               + block_size() - sizeof(CanaryFooter);
+        auto* base = reinterpret_cast<char*>(const_cast<AllocHeader*>(this));
+        return reinterpret_cast<std::byte*>(base + block_size() -
+                                            sizeof(CanaryFooter));
     }
 
-    bool is_live() const noexcept { return magic == kAllocMagic; }
-    bool is_freed() const noexcept { return magic == kFreedMagic; }
+    bool is_live() const noexcept {
+        return magic == kAllocMagic;
+    }
+    bool is_freed() const noexcept {
+        return magic == kFreedMagic;
+    }
 
     size_t block_size() const noexcept {
         return mem::block_size(static_cast<SizeClass>(size_class));
