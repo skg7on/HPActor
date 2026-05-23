@@ -7,14 +7,14 @@
 // message flow: SubmitOrder → InventoryReserve → PaymentAuthorize →
 // OrderFulfill, plus error scenarios.
 
+#include <gtest/gtest.h>
+
 #include <hpactor/core/actor_system.hpp>
 
 #include <examples/order_platform/messages.hpp>
 
 #include "system_test_fixture.hpp"
 
-#include <cassert>
-#include <cstdio>
 #include <string>
 
 using namespace hpactor;
@@ -24,7 +24,7 @@ using namespace hpactor::examples::order_platform;
 // Test 1: Happy path — all message types encode and decode correctly
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_order_platform_message_roundtrips() {
+TEST(OrderPlatform, OrderPlatformMessageRoundtrips) {
     // SubmitOrder
     {
         SubmitOrderPayload in;
@@ -36,17 +36,17 @@ static void test_order_platform_message_roundtrips() {
 
         auto encoded = encode_submit_order(in);
         SubmitOrderPayload out;
-        assert(decode_submit_order(encoded, out));
-        assert(out.order_id == "ord-001");
-        assert(out.customer_id == "cust-alice");
-        assert(out.scenario == ScenarioKind::HappyPath);
-        assert(out.lines.size() == 2);
-        assert(out.lines[0].sku == "sku-A");
-        assert(out.lines[0].quantity == 2);
-        assert(out.lines[0].unit_cents == 2999);
-        assert(out.lines[1].sku == "sku-B");
-        assert(out.lines[1].quantity == 1);
-        assert(out.lines[1].unit_cents == 1599);
+        EXPECT_TRUE(decode_submit_order(encoded, out));
+        EXPECT_EQ(out.order_id, "ord-001");
+        EXPECT_EQ(out.customer_id, "cust-alice");
+        EXPECT_EQ(out.scenario, ScenarioKind::HappyPath);
+        EXPECT_EQ(out.lines.size(), 2u);
+        EXPECT_EQ(out.lines[0].sku, "sku-A");
+        EXPECT_EQ(out.lines[0].quantity, 2);
+        EXPECT_EQ(out.lines[0].unit_cents, 2999);
+        EXPECT_EQ(out.lines[1].sku, "sku-B");
+        EXPECT_EQ(out.lines[1].quantity, 1);
+        EXPECT_EQ(out.lines[1].unit_cents, 1599);
     }
 
     // OrderStatus
@@ -59,10 +59,10 @@ static void test_order_platform_message_roundtrips() {
 
         auto encoded = encode_order_status(in);
         OrderStatusPayload out;
-        assert(decode_order_status(encoded, out));
-        assert(out.order_id == "ord-002");
-        assert(out.status == OrderStatus::PaymentFailed);
-        assert(out.detail == "card_declined");
+        EXPECT_TRUE(decode_order_status(encoded, out));
+        EXPECT_EQ(out.order_id, "ord-002");
+        EXPECT_EQ(out.status, OrderStatus::PaymentFailed);
+        EXPECT_EQ(out.detail, "card_declined");
     }
 
     // InventoryReserve
@@ -73,10 +73,10 @@ static void test_order_platform_message_roundtrips() {
 
         auto encoded = encode_inventory_reserve(in);
         InventoryReservePayload out;
-        assert(decode_inventory_reserve(encoded, out));
-        assert(out.order_id == "ord-003");
-        assert(out.lines.size() == 1);
-        assert(out.lines[0].sku == "sku-C");
+        EXPECT_TRUE(decode_inventory_reserve(encoded, out));
+        EXPECT_EQ(out.order_id, "ord-003");
+        EXPECT_EQ(out.lines.size(), 1u);
+        EXPECT_EQ(out.lines[0].sku, "sku-C");
     }
 
     // PaymentAuthorize
@@ -89,10 +89,10 @@ static void test_order_platform_message_roundtrips() {
 
         auto encoded = encode_payment_authorize(in);
         PaymentAuthorizePayload out;
-        assert(decode_payment_authorize(encoded, out));
-        assert(out.order_id == "ord-004");
-        assert(out.customer_id == "cust-bob");
-        assert(out.amount_cents == 9900);
+        EXPECT_TRUE(decode_payment_authorize(encoded, out));
+        EXPECT_EQ(out.order_id, "ord-004");
+        EXPECT_EQ(out.customer_id, "cust-bob");
+        EXPECT_EQ(out.amount_cents, 9900);
     }
 
     // QueryOrder
@@ -102,18 +102,16 @@ static void test_order_platform_message_roundtrips() {
 
         auto encoded = encode_query_order(in);
         QueryOrderPayload out;
-        assert(decode_query_order(encoded, out));
-        assert(out.order_id == "ord-005");
+        EXPECT_TRUE(decode_query_order(encoded, out));
+        EXPECT_EQ(out.order_id, "ord-005");
     }
-
-    std::printf("PASS: test_order_platform_message_roundtrips\n");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 2: Failure scenarios — all ScenarioKind values parse correctly
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_all_failure_scenarios_parse() {
+TEST(OrderPlatform, AllFailureScenariosParse) {
     struct Case {
         const char* input;
         ScenarioKind expected;
@@ -130,20 +128,18 @@ static void test_all_failure_scenarios_parse() {
 
     for (auto& tc : cases) {
         ScenarioKind s = scenario_from_string(tc.input);
-        assert(s == tc.expected);
+        EXPECT_EQ(s, tc.expected);
     }
 
     // Unknown string defaults to HappyPath
-    assert(scenario_from_string("bogus-value") == ScenarioKind::HappyPath);
-
-    std::printf("PASS: test_all_failure_scenarios_parse\n");
+    EXPECT_EQ(scenario_from_string("bogus-value"), ScenarioKind::HappyPath);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 3: Bounded message encoding — consumer-side simulate a full order flow
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_simulated_order_flow() {
+TEST(OrderPlatform, SimulatedOrderFlow) {
     // Simulated order flow through encode/decode:
     // Coordinator → Inventory → Payment → Fulfillment
 
@@ -157,8 +153,8 @@ static void test_simulated_order_flow() {
     auto encoded_order = encode_submit_order(order);
 
     SubmitOrderPayload decoded;
-    assert(decode_submit_order(encoded_order, decoded));
-    assert(decoded.scenario == ScenarioKind::HappyPath);
+    EXPECT_TRUE(decode_submit_order(encoded_order, decoded));
+    EXPECT_EQ(decoded.scenario, ScenarioKind::HappyPath);
 
     // 2. Inventory reserve
     InventoryReservePayload reserve;
@@ -168,9 +164,9 @@ static void test_simulated_order_flow() {
     }
     auto encoded_reserve = encode_inventory_reserve(reserve);
     InventoryReservePayload decoded_reserve;
-    assert(decode_inventory_reserve(encoded_reserve, decoded_reserve));
-    assert(decoded_reserve.order_id == "sim-001");
-    assert(decoded_reserve.lines.size() == 1);
+    EXPECT_TRUE(decode_inventory_reserve(encoded_reserve, decoded_reserve));
+    EXPECT_EQ(decoded_reserve.order_id, "sim-001");
+    EXPECT_EQ(decoded_reserve.lines.size(), 1u);
 
     // 3. Payment authorize
     PaymentAuthorizePayload payment;
@@ -181,8 +177,8 @@ static void test_simulated_order_flow() {
 
     auto encoded_payment = encode_payment_authorize(payment);
     PaymentAuthorizePayload decoded_payment;
-    assert(decode_payment_authorize(encoded_payment, decoded_payment));
-    assert(decoded_payment.amount_cents == 5000);
+    EXPECT_TRUE(decode_payment_authorize(encoded_payment, decoded_payment));
+    EXPECT_EQ(decoded_payment.amount_cents, 5000);
 
     // 4. Order fulfilled status
     OrderStatusPayload fulfilled;
@@ -192,84 +188,69 @@ static void test_simulated_order_flow() {
 
     auto encoded_status = encode_order_status(fulfilled);
     OrderStatusPayload decoded_status;
-    assert(decode_order_status(encoded_status, decoded_status));
-    assert(decoded_status.status == OrderStatus::Completed);
-    assert(decoded_status.order_id == "sim-001");
-
-    std::printf("PASS: test_simulated_order_flow\n");
+    EXPECT_TRUE(decode_order_status(encoded_status, decoded_status));
+    EXPECT_EQ(decoded_status.status, OrderStatus::Completed);
+    EXPECT_EQ(decoded_status.order_id, "sim-001");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 4: Malformed payloads are rejected
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_malformed_payloads_rejected() {
+TEST(OrderPlatform, MalformedPayloadsRejected) {
     // SubmitOrder with truncated payload
     {
         StreamBuffer truncated{0x00, 0x00, 0x00, 0x04, 'o'};
         SubmitOrderPayload out;
-        assert(!decode_submit_order(truncated, out));
+        EXPECT_FALSE(decode_submit_order(truncated, out));
     }
 
     // QueryOrder with truncated payload
     {
         StreamBuffer truncated{0x00, 0x00, 0x00, 0x02, 'x'};
         QueryOrderPayload out;
-        assert(!decode_query_order(truncated, out));
+        EXPECT_FALSE(decode_query_order(truncated, out));
     }
 
     // InventoryReserve with empty payload
     {
         StreamBuffer empty;
         InventoryReservePayload out;
-        assert(!decode_inventory_reserve(empty, out));
+        EXPECT_FALSE(decode_inventory_reserve(empty, out));
     }
 
     // PaymentAuthorize with garbage
     {
         StreamBuffer garbage{0xFF, 0xFF, 0xFF, 0xFF, 0x00};
         PaymentAuthorizePayload out;
-        assert(!decode_payment_authorize(garbage, out));
+        EXPECT_FALSE(decode_payment_authorize(garbage, out));
     }
 
     // OrderStatus with truncated payload
     {
         StreamBuffer truncated{0x00, 0x00, 0x00, 0x08, 'o', 'r', 'd'};
         OrderStatusPayload out;
-        assert(!decode_order_status(truncated, out));
+        EXPECT_FALSE(decode_order_status(truncated, out));
     }
-
-    std::printf("PASS: test_malformed_payloads_rejected\n");
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 5: OrderStatus to_string conversion
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_order_status_to_string() {
-    assert(to_string(OrderStatus::Received) == std::string("received"));
-    assert(to_string(OrderStatus::InventoryReserved) == std::string("inventory_"
-                                                                    "reserve"
-                                                                    "d"));
-    assert(to_string(OrderStatus::PaymentAuthorized) == std::string("payment_"
-                                                                    "authorize"
-                                                                    "d"));
-    assert(to_string(OrderStatus::Completed) == std::string("completed"));
-    assert(to_string(OrderStatus::PaymentFailed) == std::string("payment_"
-                                                                "failed"));
-    assert(to_string(OrderStatus::PaymentTimedOut) == std::string("payment_"
-                                                                  "timed_out"));
-    assert(to_string(OrderStatus::Overloaded) == std::string("overloaded"));
-
-    std::printf("PASS: test_order_status_to_string\n");
-}
-
-int main() {
-    test_order_platform_message_roundtrips();
-    test_all_failure_scenarios_parse();
-    test_simulated_order_flow();
-    test_malformed_payloads_rejected();
-    test_order_status_to_string();
-    std::printf("\nAll order platform system tests passed.\n");
-    return 0;
+TEST(OrderPlatform, OrderStatusToString) {
+    EXPECT_EQ(to_string(OrderStatus::Received), std::string("received"));
+    EXPECT_EQ(to_string(OrderStatus::InventoryReserved), std::string("inventory"
+                                                                     "_reserve"
+                                                                     "d"));
+    EXPECT_EQ(to_string(OrderStatus::PaymentAuthorized), std::string("payment_"
+                                                                     "authorize"
+                                                                     "d"));
+    EXPECT_EQ(to_string(OrderStatus::Completed), std::string("completed"));
+    EXPECT_EQ(to_string(OrderStatus::PaymentFailed), std::string("payment_"
+                                                                 "failed"));
+    EXPECT_EQ(to_string(OrderStatus::PaymentTimedOut), std::string("payment_"
+                                                                   "timed_"
+                                                                   "out"));
+    EXPECT_EQ(to_string(OrderStatus::Overloaded), std::string("overloaded"));
 }

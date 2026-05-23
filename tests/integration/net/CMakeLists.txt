@@ -1,0 +1,17 @@
+add_executable(test_integration_net
+    test_event_loop.cpp
+    test_tcp_transport_comprehensive.cpp
+    test_http_gateway.cpp
+    test_reactor_dispatcher.cpp
+    test_tls_connection.cpp
+    test_unix_domain_socket.cpp
+    test_uds_integration.cpp
+    test_http_connection.cpp
+)
+target_link_libraries(test_integration_net hpactor pthread hpactor_test_support GTest::gtest_main)
+gtest_discover_tests(test_integration_net PROPERTIES TIMEOUT 30)
+
+# test_iouring_backend depends on liburing (Linux-only, requires ENABLE_PROACTOR=ON)
+if(liburing_FOUND)
+    target_sources(test_integration_net PRIVATE test_iouring_backend.cpp)
+endif()

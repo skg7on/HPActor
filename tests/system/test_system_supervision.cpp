@@ -4,14 +4,13 @@
 // System test: Supervision & Failure Recovery
 // Validates SelfSupervisingActor → child failure → restart → death propagation
 
+#include <gtest/gtest.h>
+
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/supervision/supervision.hpp>
 
 #include "system_test_fixture.hpp"
-
-#include <cassert>
-#include <cstdio>
 
 using namespace hpactor;
 
@@ -27,7 +26,7 @@ HPACTOR_REGISTER_ACTOR("FailingActor", FailingActor);
 // Test 1: SelfSupervisingActor with 1 child — child fails, restart occurs
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_supervisor_restarts_failed_child() {
+TEST(Supervision, SupervisorRestartsFailedChild) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
@@ -59,20 +58,18 @@ static void test_supervisor_restarts_failed_child() {
             return child_ptr->as_lifecycle()->state() == LifecycleState::kFailed;
         },
         5000);
-    assert(failed);
+    EXPECT_TRUE(failed);
 
     // The supervisor should have received the DownMsg and attempted restart
     // Child failure is observable
-    assert(child_ptr->messages_processed >= 2);
-
-    std::printf("PASS: test_supervisor_restarts_failed_child\n");
+    EXPECT_GE(child_ptr->messages_processed, 2);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 2: Multiple children under one supervisor
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_supervisor_with_multiple_children() {
+TEST(Supervision, SupervisorWithMultipleChildren) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
@@ -102,22 +99,20 @@ static void test_supervisor_with_multiple_children() {
     bool f3_failed = test::assert_eventually(
         [&]() { return f3->as_lifecycle()->state() == LifecycleState::kFailed; },
         5000);
-    assert(f3_failed);
+    EXPECT_TRUE(f3_failed);
 
     // Child1 and child2 should still be functional
     auto* c1 = static_cast<test::CountingActor*>(child1.get().get());
     auto* c2 = static_cast<test::CountingActor*>(child2.get().get());
-    assert(c1->as_lifecycle()->state() == LifecycleState::kActive);
-    assert(c2->as_lifecycle()->state() == LifecycleState::kActive);
-
-    std::printf("PASS: test_supervisor_with_multiple_children\n");
+    EXPECT_EQ(c1->as_lifecycle()->state(), LifecycleState::kActive);
+    EXPECT_EQ(c2->as_lifecycle()->state(), LifecycleState::kActive);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 3: Supervisor decides restart directive on child failure
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_supervisor_decides_restart_directive() {
+TEST(Supervision, SupervisorDecidesRestartDirective) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
@@ -133,30 +128,17 @@ static void test_supervisor_decides_restart_directive() {
     // The SelfSupervisingActor::on_failure is protected. Verify the
     // supervision policy produces reasonable defaults instead.
     SupervisionPolicy default_policy2;
-    assert(default_policy2.strategy == SupervisionPolicy::Strategy::OneForOne);
-    assert(default_policy2.max_restarts == 10);
-
-    std::printf("PASS: test_supervisor_decides_restart_directive\n");
+    EXPECT_EQ(default_policy2.strategy, SupervisionPolicy::Strategy::OneForOne);
+    EXPECT_EQ(default_policy2.max_restarts, 10);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 4: SupervisionPolicy defaults are reasonable
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_supervision_policy_defaults() {
+TEST(Supervision, SupervisionPolicyDefaults) {
     SupervisionPolicy default_policy;
-    assert(default_policy.strategy == SupervisionPolicy::Strategy::OneForOne);
-    assert(default_policy.max_restarts == 10);
-    assert(default_policy.restart_interval == std::chrono::milliseconds{5000});
-
-    std::printf("PASS: test_supervision_policy_defaults\n");
-}
-
-int main() {
-    test_supervisor_restarts_failed_child();
-    test_supervisor_with_multiple_children();
-    test_supervisor_decides_restart_directive();
-    test_supervision_policy_defaults();
-    std::printf("\nAll supervision system tests passed.\n");
-    return 0;
+    EXPECT_EQ(default_policy.strategy, SupervisionPolicy::Strategy::OneForOne);
+    EXPECT_EQ(default_policy.max_restarts, 10);
+    EXPECT_EQ(default_policy.restart_interval, std::chrono::milliseconds{5000});
 }

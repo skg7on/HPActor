@@ -9,8 +9,7 @@
 
 #include "system_test_fixture.hpp"
 
-#include <cassert>
-#include <cstdio>
+#include <gtest/gtest.h>
 
 using namespace hpactor;
 
@@ -21,11 +20,11 @@ HPACTOR_REGISTER_ACTOR("CountingActor", CountingActor);
 // Test 1: Shutdown with no user actors completes successfully
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_shutdown_no_user_actors() {
+TEST(GracefulShutdown, ShutdownNoUserActors) {
     Config cfg = test::config_with_scheduler(0);
     ActorSystem system(cfg);
 
-    assert(system.is_running());
+    EXPECT_TRUE(system.is_running());
 
     ShutdownOptions opts;
     opts.ingress_timeout = std::chrono::milliseconds{100};
@@ -34,17 +33,15 @@ static void test_shutdown_no_user_actors() {
     opts.force_after_timeout = true;
 
     auto result = system.shutdown(opts);
-    assert(result.has_value());
-    assert(system.shutdown_phase() == ShutdownPhase::Stopped);
-
-    std::printf("PASS: test_shutdown_no_user_actors\n");
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(system.shutdown_phase(), ShutdownPhase::Stopped);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 2: Shutdown with ImmediateStop actors drains them
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_shutdown_with_immediate_stop() {
+TEST(GracefulShutdown, ShutdownWithImmediateStop) {
     Config cfg = test::config_with_scheduler(0);
     ActorSystem system(cfg);
 
@@ -65,25 +62,23 @@ static void test_shutdown_with_immediate_stop() {
     opts.force_after_timeout = true;
 
     auto result = system.shutdown(opts);
-    assert(result.has_value());
+    EXPECT_TRUE(result.has_value());
 
     // Actor should be stopped
     LifecycleState s = actor->as_lifecycle()->state();
-    assert(s == LifecycleState::kStopped || s == LifecycleState::kStopping);
-
-    std::printf("PASS: test_shutdown_with_immediate_stop\n");
+    EXPECT_TRUE(s == LifecycleState::kStopped || s == LifecycleState::kStopping);
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 3: Shutdown phase transitions are observable
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_shutdown_phase_transitions() {
+TEST(GracefulShutdown, ShutdownPhaseTransitions) {
     Config cfg = test::config_with_scheduler(0);
     ActorSystem system(cfg);
 
-    assert(system.shutdown_phase() == ShutdownPhase::Running);
-    assert(system.is_ready());
+    EXPECT_EQ(system.shutdown_phase(), ShutdownPhase::Running);
+    EXPECT_TRUE(system.is_ready());
 
     ShutdownOptions opts;
     opts.ingress_timeout = std::chrono::milliseconds{100};
@@ -93,32 +88,28 @@ static void test_shutdown_phase_transitions() {
 
     // shutdown() sets DrainingIngress first
     auto result = system.shutdown(opts);
-    assert(result.has_value());
-    assert(system.shutdown_phase() == ShutdownPhase::Stopped);
-    assert(!system.is_ready());
-
-    std::printf("PASS: test_shutdown_phase_transitions\n");
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(system.shutdown_phase(), ShutdownPhase::Stopped);
+    EXPECT_TRUE(!system.is_ready());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 4: Default shutdown (no args) succeeds
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_default_shutdown_succeeds() {
+TEST(GracefulShutdown, DefaultShutdownSucceeds) {
     Config cfg = test::config_with_scheduler(0);
     ActorSystem system(cfg);
 
     auto result = system.shutdown();
-    assert(result.has_value());
-
-    std::printf("PASS: test_default_shutdown_succeeds\n");
+    EXPECT_TRUE(result.has_value());
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 5: Drain config can be set per-actor
 // ═══════════════════════════════════════════════════════════════════════════════
 
-static void test_per_actor_drain_config() {
+TEST(GracefulShutdown, PerActorDrainConfig) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
 
@@ -129,18 +120,6 @@ static void test_per_actor_drain_config() {
     system.set_drain_config(a1.id(), dc);
 
     auto configured = actor->as_lifecycle()->drain_config();
-    assert(configured.policy == DrainPolicy::DropUserMessages);
-    assert(configured.timeout == std::chrono::milliseconds{10000});
-
-    std::printf("PASS: test_per_actor_drain_config\n");
-}
-
-int main() {
-    test_shutdown_no_user_actors();
-    test_shutdown_with_immediate_stop();
-    test_shutdown_phase_transitions();
-    test_default_shutdown_succeeds();
-    test_per_actor_drain_config();
-    std::printf("\nAll graceful shutdown system tests passed.\n");
-    return 0;
+    EXPECT_EQ(configured.policy, DrainPolicy::DropUserMessages);
+    EXPECT_EQ(configured.timeout, std::chrono::milliseconds{10000});
 }
