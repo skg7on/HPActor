@@ -14,10 +14,11 @@
 
 #pragma once
 
-#include <hpactor/mem/size_class.hpp>
 #include <hpactor/mem/alloc_header.hpp>
 #include <hpactor/mem/freelist.hpp>
+#include <hpactor/mem/memory_region.hpp>
 #include <hpactor/mem/segment_provider.hpp>
+#include <hpactor/mem/size_class.hpp>
 
 #include <atomic>
 #include <cstddef>
@@ -27,7 +28,8 @@
 namespace hpactor::mem {
 
 // Per-size-class slab cache. Manages one or more slabs of the same size class.
-// Uses bump allocation for virgin memory + lock-free freelist for recycled blocks.
+// Uses bump allocation for virgin memory + lock-free freelist for recycled
+// blocks.
 class SlabCache {
   public:
     struct Stats {
@@ -36,7 +38,8 @@ class SlabCache {
         std::atomic<uint64_t> slab_acquire_count{0};
     };
 
-    explicit SlabCache(SizeClass sc) : size_class_(sc) {}
+    explicit SlabCache(SizeClass sc, RegionType region = RegionType::kInternal)
+        : size_class_(sc), region_(region) {}
 
     ~SlabCache();
 
@@ -51,14 +54,24 @@ class SlabCache {
     // Free a block back to this cache.
     void deallocate(void* user_ptr) noexcept;
 
-    SizeClass size_class() const noexcept { return size_class_; }
-    uint32_t live_count() const noexcept { return live_count_.load(); }
-    const Stats& stats() const noexcept { return stats_; }
+    SizeClass size_class() const noexcept {
+        return size_class_;
+    }
+    RegionType region() const noexcept {
+        return region_;
+    }
+    uint32_t live_count() const noexcept {
+        return live_count_.load();
+    }
+    const Stats& stats() const noexcept {
+        return stats_;
+    }
 
   private:
     void refill();
 
     SizeClass size_class_;
+    RegionType region_{RegionType::kInternal};
     uint8_t current_generation_{0};
 
     std::byte* current_slab_{nullptr};

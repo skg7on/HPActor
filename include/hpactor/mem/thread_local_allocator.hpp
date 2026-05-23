@@ -14,16 +14,18 @@
 
 #pragma once
 
-#include <hpactor/mem/slab_cache.hpp>
+#include <hpactor/mem/memory_region.hpp>
 #include <hpactor/mem/size_class.hpp>
+#include <hpactor/mem/slab_cache.hpp>
 
 #include <array>
 #include <cstddef>
 
 namespace hpactor::mem {
 
-// Per-thread allocator. Owns a SlabCache for each size class.
-// The hot allocation path is bump-pointer or freelist pop — no locks.
+// Per-thread allocator. Owns a SlabCache for each (RegionType × SizeClass)
+// combination. The hot allocation path is bump-pointer or freelist pop — no
+// locks.
 class ThreadLocalAllocator {
   public:
     ThreadLocalAllocator();
@@ -34,20 +36,34 @@ class ThreadLocalAllocator {
     ThreadLocalAllocator(ThreadLocalAllocator&&) = delete;
     ThreadLocalAllocator& operator=(ThreadLocalAllocator&&) = delete;
 
-    // Allocate from a specific size class. Returns user-data pointer.
-    void* allocate(SizeClass sc, ActorId owner) noexcept;
+    // Region-aware allocation from a specific size class.
+    void* allocate(RegionType region, SizeClass sc, ActorId owner) noexcept;
 
-    // Allocate by user-requested byte size (auto-selects size class).
-    void* allocate_bytes(size_t user_bytes, ActorId owner) noexcept;
+    // Region-aware allocation by user-requested byte size.
+    void* allocate(RegionType region, size_t user_bytes, ActorId owner) noexcept;
 
-    // Deallocate a block.
+    // Backward-compatible: allocate with default region (kInternal).
+    void* allocate(SizeClass sc, ActorId owner) noexcept {
+        return allocate(RegionType::kInternal, sc, owner);
+    }
+
+    // Backward-compatible: allocate by bytes with default region.
+    void* allocate_bytes(size_t user_bytes, ActorId owner) noexcept {
+        return allocate(RegionType::kInternal, user_bytes, owner);
+    }
+
+    // Deallocate a block. Routes to origin SlabCache for cross-thread frees.
     void deallocate(void* user_ptr) noexcept;
 
-    // Stats for a specific size class.
+    // Stats for a specific size class (default region).
     const SlabCache::Stats& stats(SizeClass sc) const noexcept;
 
+    // Stats for a specific region and size class.
+    const SlabCache::Stats& stats(RegionType region, SizeClass sc) const noexcept;
+
   private:
-    std::array<SlabCache*, kNumSizeClasses> caches_;
+    using CacheRow = std::array<SlabCache*, kNumSizeClasses>;
+    std::array<CacheRow, kNumRegionTypes> caches_{};
 };
 
 } // namespace hpactor::mem

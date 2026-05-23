@@ -73,6 +73,8 @@ add_library(hpactor_lib SHARED
     mem/slab_cache.cpp
     mem/thread_local_allocator.cpp
     mem/memory_config.cpp
+    mem/memory_region.cpp
+    mem/memory_telemetry.cpp
     mem/memory_tracker.cpp
     mem/hibernation_manager.cpp
     mem/guard_page.cpp

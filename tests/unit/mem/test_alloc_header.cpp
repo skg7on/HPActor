@@ -38,7 +38,7 @@ TEST(AllocHeaderTest, StampHeader) {
     EXPECT_EQ(hdr->magic, kAllocMagic);
     EXPECT_EQ(hdr->size_class, static_cast<uint8_t>(SizeClass::k128B));
     EXPECT_EQ(hdr->generation, 0U);
-    EXPECT_EQ(hdr->flags, 0U);
+    EXPECT_EQ(hdr->flags, flags_for_region(RegionType::kInternal));
 }
 
 TEST(AllocHeaderTest, UserDataReturnsPointerAfterHeader) {
@@ -126,4 +126,54 @@ TEST(AllocHeaderTest, FooterPtrAndUserPtrHelpers) {
 
     EXPECT_EQ(hdr->footer_ptr(), reinterpret_cast<std::byte*>(ftr));
     EXPECT_EQ(AllocHeader::user_ptr(buffer), hdr->user_data());
+}
+
+TEST(AllocHeaderTest, RegionDefaultsToInternal) {
+    constexpr size_t bs = block_size(SizeClass::k128B);
+    alignas(alignof(AllocHeader)) std::byte buffer[bs];
+
+    AllocHeader* hdr =
+        AllocHeader::stamp(buffer, SizeClass::k128B, hpactor::ActorId{42});
+    EXPECT_EQ(hdr->region(), RegionType::kInternal);
+    EXPECT_FALSE(hdr->is_fallback());
+}
+
+TEST(AllocHeaderTest, RegionAndFallbackStamping) {
+    constexpr size_t bs = block_size(SizeClass::k128B);
+    alignas(alignof(AllocHeader)) std::byte buffer[bs];
+
+    AllocHeader* msg_hdr =
+        AllocHeader::stamp(buffer, SizeClass::k128B, hpactor::ActorId{42},
+                           RegionType::kMessage, true);
+    EXPECT_EQ(msg_hdr->region(), RegionType::kMessage);
+    EXPECT_TRUE(msg_hdr->is_fallback());
+
+    static_assert(sizeof(AllocHeader) == 32, "AllocHeader must stay 32 bytes");
+}
+
+TEST(AllocHeaderTest, SetRegionChangesRegion) {
+    constexpr size_t bs = block_size(SizeClass::k64B);
+    alignas(alignof(AllocHeader)) std::byte buffer[bs];
+
+    AllocHeader* hdr =
+        AllocHeader::stamp(buffer, SizeClass::k64B, hpactor::ActorId{1});
+    EXPECT_EQ(hdr->region(), RegionType::kInternal);
+
+    hdr->set_region(RegionType::kNetwork);
+    EXPECT_EQ(hdr->region(), RegionType::kNetwork);
+    EXPECT_FALSE(hdr->is_fallback());
+}
+
+TEST(AllocHeaderTest, MarkFallbackPreservesRegion) {
+    constexpr size_t bs = block_size(SizeClass::k32B);
+    alignas(alignof(AllocHeader)) std::byte buffer[bs];
+
+    AllocHeader* hdr = AllocHeader::stamp(
+        buffer, SizeClass::k32B, hpactor::ActorId{1}, RegionType::kCoroutine);
+    EXPECT_EQ(hdr->region(), RegionType::kCoroutine);
+    EXPECT_FALSE(hdr->is_fallback());
+
+    hdr->mark_fallback();
+    EXPECT_TRUE(hdr->is_fallback());
+    EXPECT_EQ(hdr->region(), RegionType::kCoroutine);
 }

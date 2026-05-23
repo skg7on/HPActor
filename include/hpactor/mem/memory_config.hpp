@@ -52,7 +52,6 @@ inline constexpr uint32_t kDefaultSampleRate = 128;
 extern thread_local ThreadLocalAllocator* t_tla;
 
 // Current actor ID — set by the scheduler before dispatching actor work.
-// Used by SlabAllocated::operator new to attribute allocations correctly.
 extern thread_local ActorId t_current_actor_id;
 
 inline void set_thread_allocator(ThreadLocalAllocator* tla) {
@@ -72,43 +71,19 @@ inline ActorId current_actor_id() {
 }
 
 // =========================================================================
-// Global convenience API
+// Global convenience API (implemented in memory_config.cpp)
 // =========================================================================
 
-// Allocate memory from a typed region, auto-selecting size class.
-inline void* allocate(RegionType /*region*/, size_t user_bytes, ActorId owner) {
-    if (t_tla) {
-        return t_tla->allocate_bytes(user_bytes, owner);
-    }
-    HPACTOR_LOG_WARNING(log::LogCategory::kMemory, ActorId{0},
-                        static_cast<uint32_t>(log::LogEventId::kMemoryAlloc),
-                        "allocation fallback to malloc",
-                        log::field("size", static_cast<uint64_t>(user_bytes)));
-    return std::malloc(user_bytes); // NOLINT: intentional fallback
-}
+// Allocate memory from a typed region. The single admission point for all
+// managed allocations: reserves region capacity, allocates via TLA or
+// fallback, commits to region registry and memory tracker.
+void* allocate(RegionType region, size_t user_bytes, ActorId owner) noexcept;
 
-// Allocate from a specific size class.
-inline void* allocate_class(SizeClass sc, ActorId owner) {
-    if (t_tla) {
-        return t_tla->allocate(sc, owner);
-    }
-    HPACTOR_LOG_WARNING(
-        log::LogCategory::kMemory, ActorId{0},
-        static_cast<uint32_t>(log::LogEventId::kMemoryAlloc),
-        "allocation fallback to malloc",
-        log::field("size", static_cast<uint64_t>(size_for_class(sc))));
-    return std::malloc(size_for_class(sc)); // NOLINT: intentional fallback
-}
+// Allocate from a specific size class (defaults to kInternal region).
+void* allocate_class(SizeClass sc, ActorId owner) noexcept;
 
-// Deallocate memory previously allocated via allocate() or allocate_class().
-inline void deallocate(void* user_ptr) {
-    if (!user_ptr)
-        return;
-    if (t_tla) {
-        t_tla->deallocate(user_ptr);
-        return;
-    }
-    std::free(user_ptr); // NOLINT: intentional fallback
-}
+// Deallocate memory. Records region free, routes to origin cache for
+// cross-thread frees, handles fallback deallocations safely.
+void deallocate(void* user_ptr) noexcept;
 
 } // namespace hpactor::mem

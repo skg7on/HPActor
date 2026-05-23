@@ -78,3 +78,30 @@ TEST(ThreadLocalAllocatorTest, ConcurrentAllocationMultipleThreads) {
         t.join();
     }
 }
+
+TEST(ThreadLocalAllocatorTest, RegionSpecificAllocation) {
+    ThreadLocalAllocator tla;
+
+    void* msg =
+        tla.allocate(RegionType::kMessage, SizeClass::k64B, hpactor::ActorId{55});
+    ASSERT_NE(msg, nullptr);
+    auto* hdr = AllocHeader::from_user_data(msg);
+    EXPECT_EQ(hdr->region(), RegionType::kMessage);
+    tla.deallocate(msg);
+}
+
+TEST(ThreadLocalAllocatorTest, RegionStatsTrackPerRegionAndSizeClass) {
+    ThreadLocalAllocator tla;
+
+    const auto& stats_msg = tla.stats(RegionType::kMessage, SizeClass::k32B);
+    const auto before = stats_msg.alloc_count.load();
+
+    void* p =
+        tla.allocate(RegionType::kMessage, SizeClass::k32B, hpactor::ActorId{99});
+    ASSERT_NE(p, nullptr);
+
+    const auto after = stats_msg.alloc_count.load();
+    EXPECT_EQ(after, before + 1);
+
+    tla.deallocate(p);
+}

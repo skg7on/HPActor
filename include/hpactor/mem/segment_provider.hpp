@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/mem/memory_region.hpp>
 #include <hpactor/mem/size_class.hpp>
 
 #include <cstddef>
@@ -33,6 +34,17 @@ class SegmentProvider {
         size_t size;
     };
 
+    struct SlabInfo {
+        void* segment_base{nullptr};
+        void* slab_base{nullptr};
+        size_t segment_size{0};
+        size_t slab_size{0};
+        void* owner_cache{nullptr};
+        RegionType region{RegionType::kInternal};
+        SizeClass size_class{SizeClass::k32B};
+        bool found{false};
+    };
+
     struct Stats {
         size_t total_allocated{0};
         size_t active_segments{0};
@@ -48,6 +60,13 @@ class SegmentProvider {
 
     // Look up which segment a pointer belongs to.
     SegmentInfo lookup(void* ptr) const;
+
+    // Register slab ownership so cross-thread frees can route to origin cache.
+    void register_slab_owner(void* slab, size_t slab_size, void* owner_cache,
+                             RegionType region, SizeClass sc);
+
+    // Look up slab metadata for a pointer (interior-pointer aware).
+    SlabInfo lookup_slab(void* ptr) const;
 
     // Size of a slab for a given size class.
     size_t slab_size(SizeClass sc) const;
@@ -74,12 +93,20 @@ class SegmentProvider {
         }
     };
 
+    struct SlabRecord {
+        uint32_t segment_index{0};
+        size_t slab_size_bytes{0};
+        void* owner_cache{nullptr};
+        RegionType region{RegionType::kInternal};
+        SizeClass size_class{SizeClass::k32B};
+    };
+
     void* carve_from_segment(SizeClass sc);
     void* allocate_new_segment(size_t size);
 
     mutable std::mutex mutex_;
     std::vector<Segment> segments_;
-    std::unordered_map<void*, uint32_t> addr_to_segment_;
+    std::unordered_map<void*, SlabRecord> slab_records_;
 };
 
 } // namespace hpactor::mem

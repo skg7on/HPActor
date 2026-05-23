@@ -17,34 +17,55 @@
 namespace hpactor::mem {
 
 ThreadLocalAllocator::ThreadLocalAllocator() {
-    for (uint8_t i = 0; i < kNumSizeClasses; ++i) {
-        caches_[i] = new SlabCache(static_cast<SizeClass>(i));
+    for (uint8_t r = 0; r < kNumRegionTypes; ++r) {
+        for (uint8_t s = 0; s < kNumSizeClasses; ++s) {
+            caches_[r][s] = new SlabCache(static_cast<SizeClass>(s),
+                                          static_cast<RegionType>(r));
+        }
     }
 }
 
 ThreadLocalAllocator::~ThreadLocalAllocator() {
-    for (uint8_t i = 0; i < kNumSizeClasses; ++i) {
-        delete caches_[i];
+    for (uint8_t r = 0; r < kNumRegionTypes; ++r) {
+        for (uint8_t s = 0; s < kNumSizeClasses; ++s) {
+            delete caches_[r][s];
+        }
     }
 }
 
-void* ThreadLocalAllocator::allocate(SizeClass sc, ActorId owner) noexcept {
-    return caches_[static_cast<uint8_t>(sc)]->allocate(owner);
+void* ThreadLocalAllocator::allocate(RegionType region, SizeClass sc,
+                                     ActorId owner) noexcept {
+    return caches_[static_cast<uint8_t>(region)][static_cast<uint8_t>(sc)]->allocate(
+        owner);
 }
 
-void* ThreadLocalAllocator::allocate_bytes(size_t user_bytes, ActorId owner) noexcept {
+void* ThreadLocalAllocator::allocate(RegionType region, size_t user_bytes,
+                                     ActorId owner) noexcept {
     SizeClass sc = class_for_size(user_bytes);
-    return allocate(sc, owner);
+    return allocate(region, sc, owner);
 }
 
 void ThreadLocalAllocator::deallocate(void* user_ptr) noexcept {
     auto* hdr = AllocHeader::from_user_data(user_ptr);
-    SizeClass sc = static_cast<SizeClass>(hdr->size_class);
-    caches_[static_cast<uint8_t>(sc)]->deallocate(user_ptr);
+    auto slab = SegmentProvider::instance().lookup_slab(hdr);
+    if (slab.found && slab.owner_cache) {
+        static_cast<SlabCache*>(slab.owner_cache)->deallocate(user_ptr);
+        return;
+    }
+    const auto region = hdr->region();
+    const auto sc = static_cast<SizeClass>(hdr->size_class);
+    caches_[static_cast<uint8_t>(region)][static_cast<uint8_t>(sc)]->deallocate(
+        user_ptr);
 }
 
 const SlabCache::Stats& ThreadLocalAllocator::stats(SizeClass sc) const noexcept {
-    return caches_[static_cast<uint8_t>(sc)]->stats();
+    return caches_[static_cast<uint8_t>(RegionType::kInternal)][static_cast<uint8_t>(sc)]
+        ->stats();
+}
+
+const SlabCache::Stats&
+ThreadLocalAllocator::stats(RegionType region, SizeClass sc) const noexcept {
+    return caches_[static_cast<uint8_t>(region)][static_cast<uint8_t>(sc)]->stats();
 }
 
 } // namespace hpactor::mem

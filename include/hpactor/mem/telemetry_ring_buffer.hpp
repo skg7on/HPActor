@@ -19,6 +19,15 @@
 
 namespace hpactor::mem {
 
+enum class AllocationEventType : uint8_t {
+    kAlloc = 0,
+    kFree = 1,
+    kCorruption = 2,
+    kHibernateIn = 3,
+    kHibernateOut = 4,
+    kRejected = 5,
+};
+
 // Allocation event for telemetry. Compact (32 bytes) for ring buffer density.
 struct AllocationEvent {
     uint64_t timestamp;  // rdtsc or monotonic ns

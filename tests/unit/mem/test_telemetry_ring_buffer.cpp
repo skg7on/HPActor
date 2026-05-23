@@ -13,7 +13,10 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <hpactor/mem/memory_config.hpp>
+#include <hpactor/mem/memory_telemetry.hpp>
 #include <hpactor/mem/telemetry_ring_buffer.hpp>
+#include <hpactor/mem/thread_local_allocator.hpp>
 
 #include <atomic>
 #include <thread>
@@ -93,4 +96,34 @@ TEST(TelemetryRingBufferTest, ConcurrentMultiProducerWithConsumer) {
     consumer.join();
 
     EXPECT_EQ(total_drained.load(), kTotal);
+}
+
+TEST(MemoryTelemetryTest, EmitsSampledAllocatorEvents) {
+    auto& telemetry = MemoryTelemetry::instance();
+    telemetry.set_sample_rate(1);
+
+    ThreadLocalAllocator tla;
+    set_thread_allocator(&tla);
+
+    void* ptr = allocate(RegionType::kMessage, 32, hpactor::ActorId{901000});
+    ASSERT_NE(ptr, nullptr);
+    deallocate(ptr);
+
+    int alloc_events = 0;
+    int free_events = 0;
+    telemetry.drain([&](const AllocationEvent& event) {
+        if (event.actor_id == 901000 &&
+            event.event_type == static_cast<uint8_t>(AllocationEventType::kAlloc)) {
+            ++alloc_events;
+        }
+        if (event.actor_id == 901000 &&
+            event.event_type == static_cast<uint8_t>(AllocationEventType::kFree)) {
+            ++free_events;
+        }
+    });
+    EXPECT_EQ(alloc_events, 1);
+    EXPECT_EQ(free_events, 1);
+
+    telemetry.set_sample_rate(MemoryTelemetry::kDefaultSampleRate);
+    set_thread_allocator(nullptr);
 }
