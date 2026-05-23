@@ -3,6 +3,7 @@
 **Status:** Proposed design; implementation not started
 **Requirement ID:** AI-ACC-001
 **Parent Architecture:** [Distributed AI Model Inference and Training Architecture](distributed-ai-model-inference-training-architecture.md)
+**Detailed Spec:** [Accelerator Resource Plane Detailed Design Spec](accelerator-resource-plane-detailed-design-spec.md)
 **Related Requirements:** [AI-DIST-001](model-placement-coordinator-design.md), [AI-DIST-002](model-shard-group-readiness-stale-routes-design.md), [AI-DIST-MLX-001](mlx-distributed-rendezvous-adapter-design.md), [AI-TRN-001](training-job-worker-group-lifecycle-design.md), [AI-TRN-002](training-rank-rendezvous-checkpoint-design.md), [AI-OPS-001](ai-admin-cli-operations-design.md), [AI-TST-001](ai-fault-injection-chaos-testing-design.md)
 
 ## 1. Executive Summary
