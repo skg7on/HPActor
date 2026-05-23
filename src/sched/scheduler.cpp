@@ -412,12 +412,15 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     } else {
         actor_state.set(ActorState::kIdle);
         // Double-check: a message may have arrived between the empty check
-        // and setting Idle.  notify_ready() will CAS Idle→Ready and enqueue.
-        // If we lost the race, our CAS fails and we skip the redundant enqueue.
+        // and setting Idle.  Push directly to a worker queue, bypassing the
+        // state gate in notify_ready() which would skip kReady actors.
         if (!mailbox->empty()) {
             expected = ActorState::kIdle;
-            if (actor_state.cas(expected, ActorState::kReady))
-                notify_ready(item.actor, 0, INT64_MAX);
+            if (actor_state.cas(expected, ActorState::kReady)) {
+                static std::atomic<uint32_t> rr2{0};
+                uint32_t v2 = rr2.fetch_add(1, std::memory_order_relaxed);
+                workers_[v2 % num_workers_].queues[0].push_bottom(item);
+            }
         }
     }
 }
