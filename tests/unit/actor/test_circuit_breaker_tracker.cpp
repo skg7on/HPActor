@@ -68,5 +68,4 @@ TEST(CircuitBreakerTrackerTest, ToStringHalfOpen) {
 TEST(CircuitBreakerTrackerTest, EmaDefaults) {
     CircuitBreakerTracker t;
     EXPECT_DOUBLE_EQ(t.failure_ema, 0.0);
-    EXPECT_DOUBLE_EQ(t.timeout_ema, 0.0);
 }

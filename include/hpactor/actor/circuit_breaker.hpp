@@ -35,16 +35,13 @@ constexpr const char* to_string(CircuitBreakerState state) noexcept {
 /// Per-actor circuit breaker tracker.
 ///
 /// Owned by the actor, mutated only from the scheduler thread. Tracks
-/// state, trip count, cooldown expiry, and EMA failure/timeout rates.
+/// state, trip count, cooldown expiry, and EMA failure rate.
 struct CircuitBreakerTracker {
     CircuitBreakerState state{CircuitBreakerState::kClosed};
     uint32_t trip_count{0};
     bool half_open_probe_in_flight{false};
     std::chrono::steady_clock::time_point opened_at{};
-    std::chrono::steady_clock::time_point half_open_at{};
     double failure_ema{0.0};
-    double timeout_ema{0.0};
-    std::chrono::steady_clock::time_point last_evaluation{};
 };
 
 } // namespace hpactor

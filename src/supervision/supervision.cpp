@@ -88,8 +88,6 @@ void SupervisorActor::handle_child_down(TypeTag /*tag*/,
         case SupervisionDirective::Escalate:
             break;
         case SupervisionDirective::Quarantine:
-            // Child is transitioned to kQuarantined; remove from active
-            // children list but keep in registry for inspection.
             children_.erase(std::remove_if(children_.begin(), children_.end(),
                                            [&child_id](const Actor& a) {
                                                return a.id() == child_id;

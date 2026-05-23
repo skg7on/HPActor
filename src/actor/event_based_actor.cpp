@@ -63,7 +63,6 @@ EventBasedActor::EventBasedActor(ActorContext* ctx, ActorSystem& sys)
 
 void EventBasedActor::configure_quarantine(const QuarantinePolicy& policy) {
     quarantine_policy_ = policy;
-    quarantine_enabled_ = policy.enabled;
     if (policy.enabled) {
         auto window_ms = static_cast<uint32_t>(policy.observation_window.count());
         failure_rate_tracker_.bucket_interval_ms =
@@ -271,11 +270,11 @@ void EventBasedActor::receive(TypedMessage& msg) {
                 TypedMessage reply_msg(it->first, response);
                 ctx->reply(std::move(reply_msg));
             }
-            if (quarantine_enabled_) {
+            if (quarantine_policy_.enabled) [[unlikely]] {
                 record_circuit_breaker_result(true);
             }
         } else {
-            if (quarantine_enabled_) {
+            if (quarantine_policy_.enabled) [[unlikely]] {
                 record_circuit_breaker_result(false);
             }
         }
@@ -297,7 +296,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
         behavior_(msg);
     }
 
-    if (quarantine_enabled_) {
+    if (quarantine_policy_.enabled) [[unlikely]] {
         record_circuit_breaker_result(true);
     }
 
@@ -580,60 +579,49 @@ void EventBasedActor::cancel_drain_timer() {
 }
 
 void EventBasedActor::record_circuit_breaker_result(bool success) {
-    if (!quarantine_enabled_)
+    if (!quarantine_policy_.enabled)
         return;
 
-    auto now = std::chrono::steady_clock::now();
-    auto& cb = circuit_breaker_;
-    auto& tracker = failure_rate_tracker_;
-
-    // Advance rate tracker buckets.
-    tracker.advance_buckets(now);
-
     if (success) {
-        // Half-open probe succeeded — close the circuit.
-        if (cb.state == CircuitBreakerState::kHalfOpen) {
-            cb.state = CircuitBreakerState::kClosed;
-            cb.trip_count = 0;
-            cb.half_open_probe_in_flight = false;
+        if (circuit_breaker_.state == CircuitBreakerState::kHalfOpen) {
+            circuit_breaker_.state = CircuitBreakerState::kClosed;
+            circuit_breaker_.trip_count = 0;
+            circuit_breaker_.half_open_probe_in_flight = false;
         }
         return;
     }
 
-    // Failure: record in rate tracker.
-    tracker.record_failure();
+    double threshold =
+        static_cast<double>(quarantine_policy_.failure_rate_threshold);
+    if (threshold <= 0.0)
+        return;
+
+    auto now = std::chrono::steady_clock::now();
+    failure_rate_tracker_.advance_buckets(now);
+    failure_rate_tracker_.record_failure();
     auto window_ms =
         static_cast<uint32_t>(quarantine_policy_.observation_window.count());
 
-    // EMA update: smooth factor α = 2 / (N + 1), N ≈ 10.
     static constexpr double kAlpha = 2.0 / 11.0;
-    double current_rate = tracker.failure_rate(window_ms);
-    cb.failure_ema = kAlpha * current_rate + (1.0 - kAlpha) * cb.failure_ema;
-    cb.last_evaluation = now;
+    circuit_breaker_.failure_ema =
+        kAlpha * failure_rate_tracker_.failure_rate(window_ms) +
+        (1.0 - kAlpha) * circuit_breaker_.failure_ema;
 
-    double threshold =
-        static_cast<double>(quarantine_policy_.failure_rate_threshold);
+    if (circuit_breaker_.failure_ema <= threshold)
+        return;
 
-    if (threshold > 0.0 && cb.failure_ema > threshold) {
-        if (cb.state == CircuitBreakerState::kClosed) {
-            // Trip the circuit.
-            cb.state = CircuitBreakerState::kOpen;
-            cb.opened_at = now;
-            cb.trip_count++;
-        } else if (cb.state == CircuitBreakerState::kHalfOpen) {
-            // Probe failed — re-open.
-            cb.state = CircuitBreakerState::kOpen;
-            cb.opened_at = now;
-            cb.half_open_probe_in_flight = false;
-            cb.trip_count++;
-        }
+    if (circuit_breaker_.state == CircuitBreakerState::kClosed ||
+        circuit_breaker_.state == CircuitBreakerState::kHalfOpen) {
+        circuit_breaker_.state = CircuitBreakerState::kOpen;
+        circuit_breaker_.opened_at = now;
+        circuit_breaker_.half_open_probe_in_flight = false;
+        circuit_breaker_.trip_count++;
+    }
 
-        // Escalate to quarantine after max trips.
-        auto max_trips = quarantine_policy_.max_circuit_trips;
-        if (max_trips > 0 && cb.trip_count >= max_trips) {
-            if (auto* lc = as_lifecycle()) {
-                lc->transition_to_quarantined(QuarantineReason::CircuitBreakerTrip);
-            }
+    auto max_trips = quarantine_policy_.max_circuit_trips;
+    if (max_trips > 0 && circuit_breaker_.trip_count >= max_trips) {
+        if (auto* lc = as_lifecycle()) {
+            lc->transition_to_quarantined(QuarantineReason::CircuitBreakerTrip);
         }
     }
 }

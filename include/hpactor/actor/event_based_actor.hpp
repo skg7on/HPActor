@@ -246,7 +246,7 @@ class EventBasedActor : public LocalActor {
 
     /// Whether quarantine/circuit breaker is enabled for this actor.
     [[nodiscard]] bool quarantine_enabled() const noexcept {
-        return quarantine_enabled_;
+        return quarantine_policy_.enabled;
     }
 
     [[nodiscard]] const QuarantinePolicy& quarantine_policy() const noexcept {
@@ -256,13 +256,13 @@ class EventBasedActor : public LocalActor {
     /// Access the circuit breaker tracker for evaluation in the
     /// delivery path. Only valid when quarantine_enabled() is true.
     [[nodiscard]] CircuitBreakerTracker* circuit_breaker() noexcept {
-        return quarantine_enabled_ ? &circuit_breaker_ : nullptr;
+        return quarantine_policy_.enabled ? &circuit_breaker_ : nullptr;
     }
 
     /// Access the failure rate tracker. Only valid when
     /// quarantine_enabled() is true.
     [[nodiscard]] FailureRateTracker* failure_rate_tracker() noexcept {
-        return quarantine_enabled_ ? &failure_rate_tracker_ : nullptr;
+        return quarantine_policy_.enabled ? &failure_rate_tracker_ : nullptr;
     }
 
     /// Record a processing result (success or failure) for circuit
@@ -350,7 +350,6 @@ class EventBasedActor : public LocalActor {
     bool handlers_initialized_ = false;
 
     // Quarantine & circuit breaker (opt-in via QuarantinePolicy::enabled)
-    bool quarantine_enabled_{false};
     QuarantinePolicy quarantine_policy_{};
     CircuitBreakerTracker circuit_breaker_{};
     FailureRateTracker failure_rate_tracker_{};

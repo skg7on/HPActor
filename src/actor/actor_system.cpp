@@ -467,17 +467,15 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                             : nullptr;
             if (eba != nullptr) {
                 auto* cb = eba->circuit_breaker();
-                if (cb != nullptr) {
-                    auto now = std::chrono::steady_clock::now();
+                if (cb != nullptr && cb->state != CircuitBreakerState::kClosed) {
                     if (cb->state == CircuitBreakerState::kOpen) {
+                        auto now = std::chrono::steady_clock::now();
                         auto elapsed =
                             std::chrono::duration_cast<std::chrono::milliseconds>(
                                 now - cb->opened_at);
                         if (elapsed >= eba->quarantine_policy().cooldown_period) {
                             cb->state = CircuitBreakerState::kHalfOpen;
-                            cb->half_open_at = now;
                             cb->half_open_probe_in_flight = true;
-                            // Allow the probe through.
                         } else {
                             mailbox::EnqueueResult r;
                             r.code = mailbox::EnqueueResultCode::Rejected;
@@ -528,7 +526,6 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                             return r;
                         }
                         cb->half_open_probe_in_flight = true;
-                        // Allow the probe through.
                     }
                 }
             }
