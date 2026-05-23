@@ -15,6 +15,8 @@ enum class LifecycleState : uint8_t {
     kStopped = 4,
     kFailed = 5,
     kRecovering = 6,
+    kQuarantined = 7, ///< Isolated — rejects user messages, accepts system
+                      ///< messages.
 };
 
 struct StateDef {
@@ -37,8 +39,9 @@ constexpr StateDef kStateMachine[] = {
      "active",
      true,
      true,
-     3,
-     {LifecycleState::kDraining, LifecycleState::kStopping, LifecycleState::kFailed}},
+     4,
+     {LifecycleState::kDraining, LifecycleState::kStopping,
+      LifecycleState::kFailed, LifecycleState::kQuarantined}},
     {LifecycleState::kDraining,
      "draining",
      false,
@@ -56,20 +59,21 @@ constexpr StateDef kStateMachine[] = {
      "failed",
      false,
      true,
-     3,
+     4,
      {LifecycleState::kStarting, LifecycleState::kStopped,
-      LifecycleState::kRecovering}},
+      LifecycleState::kRecovering, LifecycleState::kQuarantined}},
     {LifecycleState::kRecovering,
      "recovering",
      false,
      true,
-     2,
-     {LifecycleState::kActive, LifecycleState::kFailed}},
+     3,
+     {LifecycleState::kActive, LifecycleState::kFailed, LifecycleState::kQuarantined}},
+    {LifecycleState::kQuarantined, "quarantined", false, true, 1, {LifecycleState::kStopped}},
 };
 
-static_assert(sizeof(kStateMachine) / sizeof(StateDef) == 7, "kStateMachine "
+static_assert(sizeof(kStateMachine) / sizeof(StateDef) == 8, "kStateMachine "
                                                              "must have "
-                                                             "exactly 7 "
+                                                             "exactly 8 "
                                                              "entries");
 
 } // namespace hpactor

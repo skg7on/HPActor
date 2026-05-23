@@ -52,6 +52,10 @@ class Aggregator {
     MetricFamily* mailbox_dead_letter_family_ = nullptr;
     MetricFamily* backpressure_signal_family_ = nullptr;
     MetricFamily* dead_letter_lost_family_ = nullptr;
+    MetricFamily* quarantine_total_family_ = nullptr;
+    MetricFamily* unquarantine_total_family_ = nullptr;
+    MetricFamily* circuit_state_family_ = nullptr;
+    MetricFamily* circuit_trips_family_ = nullptr;
 
     int64_t active_actors_{0};
 
