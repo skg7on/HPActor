@@ -18,8 +18,10 @@
 
 namespace hpactor {
 
-/// Why an actor was placed into quarantine. Distinct from FailureReason —
-/// this classifies the trigger, not the delivery outcome.
+/// \brief Why an actor was placed into quarantine.
+///
+/// Distinct from \c FailureReason — this classifies the trigger that
+/// caused the quarantine, not the delivery outcome seen by senders.
 enum class QuarantineReason : uint8_t {
     SupervisionEscalation = 0, ///< max_restarts exceeded in observation window
     CircuitBreakerTrip = 1,    ///< failure/timeout rate threshold exceeded

@@ -240,34 +240,65 @@ class EventBasedActor : public LocalActor {
 
     // ── Quarantine & circuit breaker ────────────────────
 
-    /// Configure quarantine and circuit breaker for this actor.
-    /// Must be called before the actor starts processing messages.
+    /// \brief Configure quarantine and circuit breaker for this actor.
+    ///
+    /// Initializes the \c FailureRateTracker bucket interval from the
+    /// policy's observation window. Must be called before the actor
+    /// starts processing messages (typically from
+    /// \c ActorSystem::spawn_configured).
+    ///
+    /// \param[in] policy The per-actor quarantine and circuit breaker
+    ///                   policy. Copied into the actor.
+    /// \note Thread safety: call once before the actor is activated.
+    ///       Not safe for concurrent reconfiguration.
     void configure_quarantine(const QuarantinePolicy& policy);
 
-    /// Whether quarantine/circuit breaker is enabled for this actor.
+    /// \brief Whether quarantine or circuit breaker is enabled for this actor.
+    ///
+    /// \return \c quarantine_policy_.enabled — \c false by default.
     [[nodiscard]] bool quarantine_enabled() const noexcept {
         return quarantine_policy_.enabled;
     }
 
+    /// \brief Read-only access to the actor's quarantine policy.
+    ///
+    /// \return A const reference to the stored \c QuarantinePolicy.
     [[nodiscard]] const QuarantinePolicy& quarantine_policy() const noexcept {
         return quarantine_policy_;
     }
 
-    /// Access the circuit breaker tracker for evaluation in the
-    /// delivery path. Only valid when quarantine_enabled() is true.
+    /// \brief Access the circuit breaker tracker.
+    ///
+    /// \return Pointer to the \c CircuitBreakerTracker, or \c nullptr
+    ///         if quarantine is not enabled for this actor.
+    /// \note Thread safety: the returned pointer is valid for the
+    ///       actor's lifetime. Only the owning scheduler thread may
+    ///       mutate the tracker.
     [[nodiscard]] CircuitBreakerTracker* circuit_breaker() noexcept {
         return quarantine_policy_.enabled ? &circuit_breaker_ : nullptr;
     }
 
-    /// Access the failure rate tracker. Only valid when
-    /// quarantine_enabled() is true.
+    /// \brief Access the failure rate tracker.
+    ///
+    /// \return Pointer to the \c FailureRateTracker, or \c nullptr
+    ///         if quarantine is not enabled for this actor.
+    /// \note Thread safety: same contract as \c circuit_breaker().
     [[nodiscard]] FailureRateTracker* failure_rate_tracker() noexcept {
         return quarantine_policy_.enabled ? &failure_rate_tracker_ : nullptr;
     }
 
-    /// Record a processing result (success or failure) for circuit
-    /// breaker state transitions and rate tracking. Must only be
-    /// called when quarantine is enabled.
+    /// \brief Record a message-processing outcome for the circuit breaker.
+    ///
+    /// Must only be called when \c quarantine_enabled() is \c true.
+    /// On success in \c kHalfOpen, closes the circuit. On failure,
+    /// advances the rate tracker, updates the EMA, and trips the
+    /// circuit or escalates to quarantine if thresholds are exceeded.
+    ///
+    /// \param[in] success \c true if the message handler completed
+    ///                    without error; \c false if deserialization
+    ///                    or processing failed.
+    /// \note Thread safety: must be called from the owning scheduler
+    ///       thread (same thread as \c receive()).
     void record_circuit_breaker_result(bool success);
 
     // System message handlers invoked from receive().

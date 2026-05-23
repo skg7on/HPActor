@@ -28,7 +28,14 @@
 namespace hpactor {
 
 // SupervisionDirective - directive from supervisor to child on failure
-enum class SupervisionDirective { Restart, Stop, Escalate, Quarantine };
+enum class SupervisionDirective {
+    Restart,    ///< Restart the child (within restart policy limits).
+    Stop,       ///< Stop the child permanently.
+    Escalate,   ///< Escalate the failure to the parent supervisor.
+    Quarantine, ///< Transition the child to \c kQuarantined instead of
+                ///< stopping. Requires \c QuarantinePolicy::enabled on
+                ///< the supervisor's policy.
+};
 
 // ChildFailure - information about a child actor failure
 struct ChildFailure {
@@ -43,9 +50,12 @@ struct SupervisionPolicy {
     Strategy strategy = Strategy::OneForOne;
     uint32_t max_restarts = 10;
     std::chrono::milliseconds restart_interval{5000};
-    /// Optional quarantine escalation policy. When set and enabled,
-    /// max_restarts exceeded transitions the child to kQuarantined
-    /// instead of stopping it.
+    /// \brief Optional quarantine escalation policy.
+    ///
+    /// When \c enabled and the child exceeds \c max_restarts within
+    /// the restart window, the supervisor issues
+    /// \c SupervisionDirective::Quarantine instead of \c Stop.
+    /// Defaults to disabled — existing behavior is preserved.
     QuarantinePolicy quarantine;
 };
 

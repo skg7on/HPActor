@@ -64,25 +64,52 @@ class LifecycleActor {
     bool transition(LifecycleState to);
 
     // ── Quarantine ─────────────────────────────────────
-    /// Transition the actor into kQuarantined with the given reason.
-    /// Stores the reason and timestamp for observability.
-    /// Returns false if the transition is illegal or CAS fails.
+
+    /// \brief Transition the actor into \c kQuarantined.
+    ///
+    /// Stores the reason and a monotonic timestamp for observability.
+    /// The \c on_quarantined() hook is invoked after the CAS succeeds.
+    ///
+    /// \param[in] reason Why the actor is being quarantined.
+    /// \return \c true if the transition succeeded (legal + CAS won).
+    ///         \c false if the state does not permit this transition
+    ///         or a concurrent writer changed the state.
+    /// \note Thread safety: callable from the owning scheduler thread
+    ///       or from the supervisor thread that owns this child.
     bool transition_to_quarantined(QuarantineReason reason);
 
-    /// Operator override: release from quarantine via
-    /// kQuarantined → kStopped. The supervisor or operator is
-    /// expected to restart the actor through kStarting → kActive.
+    /// \brief Operator override: release from quarantine.
+    ///
+    /// Transitions \c kQuarantined → \c kStopped. The supervisor or
+    /// operator must restart the actor through \c kStarting → \c kActive.
+    ///
+    /// \return \c true if the transition succeeded. \c false if the
+    ///         actor is not currently quarantined or the CAS fails.
+    /// \note Thread safety: callable from CLI or admin threads.
+    ///       The \c state_ CAS provides synchronization.
     bool transition_from_quarantined();
 
-    bool is_quarantined() const noexcept {
+    /// \brief Whether the actor is currently in \c kQuarantined state.
+    [[nodiscard]] bool is_quarantined() const noexcept {
         return state() == LifecycleState::kQuarantined;
     }
-    QuarantineReason quarantine_reason() const noexcept {
+
+    /// \brief Reason the actor was quarantined.
+    ///
+    /// \return The \c QuarantineReason stored by the most recent call
+    ///         to \c transition_to_quarantined(). The value is
+    ///         meaningless if \c is_quarantined() is \c false.
+    [[nodiscard]] QuarantineReason quarantine_reason() const noexcept {
         return quarantine_reason_;
     }
 
-    /// Timestamp when the actor was quarantined (monotonic clock).
-    std::chrono::steady_clock::time_point quarantined_at() const noexcept {
+    /// \brief Monotonic timestamp of the quarantine transition.
+    ///
+    /// \return The \c steady_clock::time_point captured when
+    ///         \c transition_to_quarantined() succeeded. The value
+    ///         is meaningless if \c is_quarantined() is \c false.
+    [[nodiscard]] std::chrono::steady_clock::time_point
+    quarantined_at() const noexcept {
         return quarantined_at_;
     }
 
@@ -95,6 +122,17 @@ class LifecycleActor {
     virtual void on_fail(error err);
     virtual void on_recover() {}
     virtual void on_restart() {}
+
+    /// \brief Hook invoked after the actor transitions to \c kQuarantined.
+    ///
+    /// Override to perform quarantine-specific cleanup (e.g., flush
+    /// pending work, notify dependents). The default implementation
+    /// is a no-op.
+    ///
+    /// \param[in] reason The \c QuarantineReason that triggered the
+    ///                   quarantine. Available via \c quarantine_reason().
+    /// \note Called from the CAS path in \c transition(), under the
+    ///       owning scheduler thread or supervisor thread.
     virtual void on_quarantined(QuarantineReason /*reason*/) {}
 
     // NOTE: LifecycleActor does NOT override as_lifecycle().

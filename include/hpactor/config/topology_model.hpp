@@ -71,6 +71,8 @@ struct ActorDef {
     uint32_t mailbox_capacity{0};
     ResourceSpec resources;
     MailboxPolicyDef mailbox;
+    /// Per-actor quarantine and circuit breaker policy. Defaults to
+    /// disabled — set \c enabled = true in TOML to activate.
     QuarantinePolicy quarantine;
     std::unordered_map<std::string, std::string> args;
 };
@@ -116,6 +118,8 @@ struct SystemDef {
     std::string discovery_backend;
     std::vector<std::string> imports;
     hpactor::tracing::TraceConfig tracing;
+    /// System-level defaults for per-actor quarantine policies.
+    /// Individual actor definitions in TOML can override these values.
     hpactor::QuarantinePolicy quarantine_defaults;
 };
 

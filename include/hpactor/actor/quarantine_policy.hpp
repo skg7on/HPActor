@@ -19,37 +19,45 @@
 
 namespace hpactor {
 
-/// Per-actor quarantine and circuit breaker policy.
+/// \brief Per-actor quarantine and circuit breaker policy.
 ///
 /// All thresholds default to 0 (disabled). Circuit breaker tracking,
-/// failure-rate windows, and quarantine escalation are only allocated
-/// when \c enabled is true.
+/// failure-rate windows, and quarantine escalation are only active
+/// when \c enabled is \c true. TOML-configurable per-actor or via
+/// system-level defaults in \c [system.quarantine].
+///
+/// \note Thread safety: immutable after actor construction. Reads
+///       from the scheduler thread require no synchronization.
 struct QuarantinePolicy {
-    /// Master switch — when false, no quarantine/circuit-breaker overhead.
+    /// Master switch — when \c false, no quarantine or circuit breaker
+    /// overhead is incurred.
     bool enabled = false;
 
-    /// When true, exceeding max_restarts quarantines instead of stopping.
+    /// When \c true and \c enabled, exceeding \c max_restarts within
+    /// the supervision window quarantines the child instead of stopping it.
     bool escalate_on_max_restarts = true;
 
-    /// Failures/sec threshold for circuit breaker. 0 = disabled.
+    /// Failures/sec threshold for circuit breaker trip. 0 disables
+    /// failure-rate tripping.
     uint32_t failure_rate_threshold = 0;
 
-    /// Timeouts/sec threshold for circuit breaker. 0 = disabled.
+    /// Timeouts/sec threshold for circuit breaker trip. 0 disables
+    /// timeout-rate tripping.
     uint32_t timeout_rate_threshold = 0;
 
     /// Mailbox pressure ratio (0.0–1.0) for sustained overload detection.
-    /// 0.0 = disabled.
+    /// 0.0 disables pressure-based tripping.
     float mailbox_pressure_threshold = 0.0f;
 
-    /// How long the circuit breaker stays open before transitioning to
-    /// half-open.
+    /// Duration the circuit breaker remains \c kOpen before transitioning
+    /// to \c kHalfOpen.
     std::chrono::milliseconds cooldown_period{30'000};
 
-    /// Sliding window over which failure/timeout rates are computed.
+    /// Sliding window over which failure and timeout rates are computed.
     std::chrono::milliseconds observation_window{10'000};
 
     /// Number of consecutive circuit trips before escalating to quarantine.
-    /// 0 = never escalate from circuit breaker alone.
+    /// 0 disables circuit-to-quarantine escalation.
     uint32_t max_circuit_trips = 3;
 };
 

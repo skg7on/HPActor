@@ -20,34 +20,47 @@
 
 namespace hpactor {
 
-/// Per-actor sliding-window failure and timeout rate tracker.
+/// \brief Sliding-window failure and timeout rate tracker.
 ///
-/// Divides the observation window into \c kNumBuckets time slices. Each
-/// bucket accumulates failure and timeout counts. Rates are computed as
-/// events/sec summed across the current window.
+/// Divides the observation window into \c kNumBuckets equal time
+/// slices. Each bucket accumulates failure and timeout counts. Rates
+/// are computed as events/sec summed across the non-expired window.
 ///
-/// Single-writer: only the scheduler thread that owns the actor.
+/// \note Thread safety: single-writer — only the owning actor's
+///       scheduler thread calls these methods.
 struct FailureRateTracker {
+    /// Number of time-slice buckets in the sliding window.
     static constexpr size_t kNumBuckets = 10;
 
+    /// Per-bucket failure counts. Index \c current_bucket is the
+    /// active slice.
     std::array<uint32_t, kNumBuckets> failure_buckets{};
+    /// Per-bucket timeout counts.
     std::array<uint32_t, kNumBuckets> timeout_buckets{};
+    /// Index of the current (active) bucket.
     size_t current_bucket{0};
-    uint32_t bucket_interval_ms{1000}; // observation_window / kNumBuckets
+    /// Duration of each bucket in milliseconds. Derived from
+    /// \c observation_window / \c kNumBuckets.
+    uint32_t bucket_interval_ms{1000};
+    /// Monotonic timestamp of the last bucket advancement.
     std::chrono::steady_clock::time_point last_bucket_advance{};
 
-    /// Record a processing failure in the current bucket.
+    /// \brief Record a processing failure in the current bucket.
     void record_failure() {
         failure_buckets[current_bucket]++;
     }
 
-    /// Record a timeout in the current bucket.
+    /// \brief Record a timeout in the current bucket.
     void record_timeout() {
         timeout_buckets[current_bucket]++;
     }
 
-    /// Advance buckets if enough time has elapsed. Old buckets are zeroed.
-    /// \param now Current steady_clock time.
+    /// \brief Advance buckets if enough time has elapsed.
+    ///
+    /// Stale buckets are zeroed as the window slides forward. If the
+    /// entire window has expired, all buckets are cleared.
+    ///
+    /// \param[in] now Current \c steady_clock time.
     void advance_buckets(std::chrono::steady_clock::time_point now) {
         if (bucket_interval_ms == 0)
             return;
@@ -60,7 +73,6 @@ struct FailureRateTracker {
         if (steps == 0)
             return;
         if (steps >= kNumBuckets) {
-            // Entire window expired — clear all.
             for (size_t i = 0; i < kNumBuckets; ++i) {
                 failure_buckets[i] = 0;
                 timeout_buckets[i] = 0;
@@ -76,8 +88,11 @@ struct FailureRateTracker {
         last_bucket_advance = now;
     }
 
-    /// Failures/sec over the observation window.
-    /// \param window_ms Total observation window in milliseconds.
+    /// \brief Failures per second over the observation window.
+    ///
+    /// \param[in] window_ms Total observation window in milliseconds.
+    /// \return Sum of all bucket failure counts divided by the window
+    ///         duration, in events/sec. Returns 0.0 if \p window_ms is 0.
     [[nodiscard]] double failure_rate(uint32_t window_ms) const {
         if (window_ms == 0)
             return 0.0;
@@ -88,8 +103,11 @@ struct FailureRateTracker {
         return static_cast<double>(total) * 1000.0 / static_cast<double>(window_ms);
     }
 
-    /// Timeouts/sec over the observation window.
-    /// \param window_ms Total observation window in milliseconds.
+    /// \brief Timeouts per second over the observation window.
+    ///
+    /// \param[in] window_ms Total observation window in milliseconds.
+    /// \return Sum of all bucket timeout counts divided by the window
+    ///         duration, in events/sec. Returns 0.0 if \p window_ms is 0.
     [[nodiscard]] double timeout_rate(uint32_t window_ms) const {
         if (window_ms == 0)
             return 0.0;

@@ -19,18 +19,24 @@
 
 namespace hpactor {
 
-/// Circuit breaker state machine — per-actor, single-writer (scheduler
-/// thread).
+/// \brief Circuit breaker state machine for per-actor failure protection.
+///
+/// \c kClosed is normal operation. \c kOpen rejects all user messages
+/// until the cooldown expires. \c kHalfOpen admits a single probe
+/// message to test recovery.
+///
+/// \note Thread safety: single-writer — only the owning actor's
+///       scheduler thread mutates the state.
 enum class CircuitBreakerState : uint8_t {
     kClosed = 0,   ///< Normal operation — messages flow through.
-    kOpen = 1,     ///< All user messages rejected with CircuitOpen.
+    kOpen = 1,     ///< All user messages rejected with \c CircuitOpen.
     kHalfOpen = 2, ///< Single probe message allowed through.
 };
 
-/// \brief Human-readable string for the circuit breaker state.
+/// \brief Human-readable string for a circuit breaker state.
 ///
 /// \param[in] state The circuit breaker state.
-/// \return "closed", "open", or "half_open".
+/// \return \c "closed", \c "open", or \c "half_open". Never \c nullptr.
 constexpr const char* to_string(CircuitBreakerState state) noexcept {
     switch (state) {
         case CircuitBreakerState::kClosed:
@@ -43,15 +49,27 @@ constexpr const char* to_string(CircuitBreakerState state) noexcept {
     return "unknown";
 }
 
-/// Per-actor circuit breaker tracker.
+/// \brief Per-actor circuit breaker tracker.
 ///
-/// Owned by the actor, mutated only from the scheduler thread. Tracks
-/// state, trip count, cooldown expiry, and EMA failure rate.
+/// Owned by the actor and mutated only from the scheduler thread.
+/// Tracks state transitions, trip count, cooldown timing, and an
+/// exponential moving average of the failure rate.
+///
+/// \note Thread safety: single-writer (scheduler thread). No locking
+///       required for read or write.
 struct CircuitBreakerTracker {
+    /// Current circuit breaker state.
     CircuitBreakerState state{CircuitBreakerState::kClosed};
+    /// Number of times the circuit has tripped (Open) in the current
+    /// episode.
     uint32_t trip_count{0};
+    /// \c true when a half-open probe message is in flight. Prevents
+    /// more than one probe at a time.
     bool half_open_probe_in_flight{false};
+    /// Monotonic timestamp when the circuit last transitioned to
+    /// \c kOpen. Used for cooldown expiry.
     std::chrono::steady_clock::time_point opened_at{};
+    /// Exponential moving average of the failure rate (failures/sec).
     double failure_ema{0.0};
 };
 
