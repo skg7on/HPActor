@@ -43,8 +43,7 @@ struct alignas(8) CanaryFooter {
     // block_sz: the total block size (user_size + overhead), from
     // size_for_class()
     static CanaryFooter* from_header(AllocHeader* header, size_t block_sz) noexcept {
-        // codeql[cpp/suspicious-add-sizeof] std::byte has sizeof 1
-        auto* base = reinterpret_cast<std::byte*>(header);
+        auto* base = reinterpret_cast<char*>(header);
         return reinterpret_cast<CanaryFooter*>(base + block_sz -
                                                sizeof(CanaryFooter));
     }
@@ -86,26 +85,24 @@ struct alignas(32) AllocHeader {
     }
 
     void* user_data() noexcept {
-        // codeql[cpp/suspicious-add-sizeof] std::byte has sizeof 1
-        return reinterpret_cast<std::byte*>(this) + sizeof(AllocHeader);
+        return reinterpret_cast<char*>(this) + sizeof(AllocHeader);
     }
 
     static AllocHeader* from_user_data(void* user_ptr) noexcept {
-        // codeql[cpp/suspicious-add-sizeof] std::byte has sizeof 1
-        return reinterpret_cast<AllocHeader*>(static_cast<std::byte*>(user_ptr) -
+        return reinterpret_cast<AllocHeader*>(static_cast<char*>(user_ptr) -
                                               sizeof(AllocHeader));
     }
 
     static std::byte* user_ptr(std::byte* block) noexcept {
-        // codeql[cpp/suspicious-add-sizeof] std::byte has sizeof 1
-        return block + sizeof(AllocHeader);
+        return reinterpret_cast<std::byte*>(reinterpret_cast<char*>(block) +
+                                            sizeof(AllocHeader));
     }
 
     // Returns pointer to the CanaryFooter for this block
     std::byte* footer_ptr() const noexcept {
-        // codeql[cpp/suspicious-add-sizeof] std::byte has sizeof 1
-        auto* base = reinterpret_cast<std::byte*>(const_cast<AllocHeader*>(this));
-        return base + block_size() - sizeof(CanaryFooter);
+        auto* base = reinterpret_cast<char*>(const_cast<AllocHeader*>(this));
+        return reinterpret_cast<std::byte*>(base + block_size() -
+                                            sizeof(CanaryFooter));
     }
 
     bool is_live() const noexcept {

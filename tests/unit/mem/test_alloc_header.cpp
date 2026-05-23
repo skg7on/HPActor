@@ -49,7 +49,8 @@ TEST(AllocHeaderTest, UserDataReturnsPointerAfterHeader) {
         AllocHeader::stamp(buffer, SizeClass::k128B, hpactor::ActorId{42});
     void* user = hdr->user_data();
     EXPECT_EQ(static_cast<std::byte*>(user), &buffer[sizeof(AllocHeader)]);
-    EXPECT_EQ(static_cast<std::byte*>(user), buffer + sizeof(AllocHeader));
+    EXPECT_EQ(static_cast<char*>(user),
+              reinterpret_cast<char*>(buffer) + sizeof(AllocHeader));
 }
 
 TEST(AllocHeaderTest, StampFooterAndCanary) {
@@ -63,8 +64,8 @@ TEST(AllocHeaderTest, StampFooterAndCanary) {
     EXPECT_EQ(ftr->magic, kAllocMagic);
 
     // Verify footer is at the end of the block
-    // codeql[cpp/suspicious-add-sizeof] std::byte has sizeof 1
-    EXPECT_EQ(reinterpret_cast<std::byte*>(ftr), buffer + bs - sizeof(CanaryFooter));
+    EXPECT_EQ(reinterpret_cast<char*>(ftr),
+              reinterpret_cast<char*>(buffer) + bs - sizeof(CanaryFooter));
 }
 
 TEST(AllocHeaderTest, CanaryVerification) {
