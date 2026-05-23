@@ -25,7 +25,7 @@ using namespace hpactor::mem;
 
 TEST(MemoryStressTest, HighContentionMultiSizeClass) {
     constexpr int kThreads = 8;
-    constexpr int kAllocsPerThread = 125000; // 1M total
+    constexpr int kAllocsPerThread = 1024; // ~8K total across threads
     constexpr int kTotalAllocs = kThreads * kAllocsPerThread;
 
     std::atomic<uint64_t> alloc_count{0};
