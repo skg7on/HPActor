@@ -40,8 +40,7 @@ namespace hpactor::mem {
 ///
 /// Allocations <= 4KB use the thread-local slab cache (bump + freelist).
 /// Oversized allocations fall back to std::malloc / std::free.
-template <typename T>
-class MemStdAllocator {
+template <typename T> class MemStdAllocator {
   public:
     using value_type = T;
     using size_type = std::size_t;
@@ -85,14 +84,8 @@ class MemStdAllocator {
             return static_cast<T*>(ptr);
         }
 
-        void* ptr = nullptr;
         ActorId owner = (owner_ptr_ != nullptr) ? *owner_ptr_ : owner_val_;
-        if (t_tla) {
-            ptr = t_tla->allocate_bytes(bytes, owner);
-        } else {
-            // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)
-            ptr = std::malloc(bytes);
-        }
+        void* ptr = mem::allocate(region_, bytes, owner);
         if (!ptr) {
             std::abort();
         }
@@ -111,21 +104,17 @@ class MemStdAllocator {
             return;
         }
 
-        if (t_tla) {
-            t_tla->deallocate(ptr);
-        } else {
-            // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)
-            std::free(ptr);
-        }
+        mem::deallocate(ptr);
     }
 
     ActorId owner() const noexcept {
         return (owner_ptr_ != nullptr) ? *owner_ptr_ : owner_val_;
     }
-    RegionType region() const noexcept { return region_; }
+    RegionType region() const noexcept {
+        return region_;
+    }
 
-    template <typename U>
-    friend class MemStdAllocator;
+    template <typename U> friend class MemStdAllocator;
 
   private:
     const ActorId* owner_ptr_{nullptr};
@@ -134,14 +123,12 @@ class MemStdAllocator {
 };
 
 template <typename T, typename U>
-bool operator==(const MemStdAllocator<T>& a,
-                const MemStdAllocator<U>& b) noexcept {
+bool operator==(const MemStdAllocator<T>& a, const MemStdAllocator<U>& b) noexcept {
     return a.owner() == b.owner();
 }
 
 template <typename T, typename U>
-bool operator!=(const MemStdAllocator<T>& a,
-                const MemStdAllocator<U>& b) noexcept {
+bool operator!=(const MemStdAllocator<T>& a, const MemStdAllocator<U>& b) noexcept {
     return !(a == b);
 }
 
@@ -149,8 +136,7 @@ bool operator!=(const MemStdAllocator<T>& a,
 // MemDeleter — custom deleter for std::unique_ptr that routes deallocation
 // through the slab allocator instead of ::operator delete.
 // =========================================================================
-template <typename T>
-struct MemDeleter {
+template <typename T> struct MemDeleter {
     void operator()(T* ptr) const noexcept {
         if (ptr) {
             ptr->~T();
@@ -160,8 +146,7 @@ struct MemDeleter {
 };
 
 // Unique pointer alias using slab deallocation.
-template <typename T>
-using MemUniquePtr = std::unique_ptr<T, MemDeleter<T>>;
+template <typename T> using MemUniquePtr = std::unique_ptr<T, MemDeleter<T>>;
 
 // =========================================================================
 // allocate_shared — std::allocate_shared wrapper with MemStdAllocator.
@@ -170,20 +155,18 @@ using MemUniquePtr = std::unique_ptr<T, MemDeleter<T>>;
 
 /// Value-based owner.
 template <typename T, typename... Args>
-std::shared_ptr<T> allocate_shared(ActorId owner, RegionType region,
-                                   Args&&... args) {
-    return std::allocate_shared<T>(
-        MemStdAllocator<T>(owner, region),
-        std::forward<Args>(args)...);
+std::shared_ptr<T>
+allocate_shared(ActorId owner, RegionType region, Args&&... args) {
+    return std::allocate_shared<T>(MemStdAllocator<T>(owner, region),
+                                   std::forward<Args>(args)...);
 }
 
 /// Pointer-based owner — tracks the live ActorId (for actor members).
 template <typename T, typename... Args>
-std::shared_ptr<T> allocate_shared(const ActorId* owner_ptr,
-                                   RegionType region, Args&&... args) {
-    return std::allocate_shared<T>(
-        MemStdAllocator<T>(owner_ptr, region),
-        std::forward<Args>(args)...);
+std::shared_ptr<T>
+allocate_shared(const ActorId* owner_ptr, RegionType region, Args&&... args) {
+    return std::allocate_shared<T>(MemStdAllocator<T>(owner_ptr, region),
+                                   std::forward<Args>(args)...);
 }
 
 // =========================================================================
@@ -193,8 +176,7 @@ std::shared_ptr<T> allocate_shared(const ActorId* owner_ptr,
 
 /// Value-based owner.
 template <typename T, typename... Args>
-MemUniquePtr<T> allocate_unique(ActorId owner, RegionType region,
-                                Args&&... args) {
+MemUniquePtr<T> allocate_unique(ActorId owner, RegionType region, Args&&... args) {
     void* mem = allocate(region, sizeof(T), owner);
     if (!mem) {
         std::abort();
@@ -205,10 +187,9 @@ MemUniquePtr<T> allocate_unique(ActorId owner, RegionType region,
 
 /// Pointer-based owner — tracks the live ActorId.
 template <typename T, typename... Args>
-MemUniquePtr<T> allocate_unique(const ActorId* owner_ptr,
-                                RegionType region, Args&&... args) {
-    ActorId owner =
-        (owner_ptr != nullptr) ? *owner_ptr : ActorId{};
+MemUniquePtr<T>
+allocate_unique(const ActorId* owner_ptr, RegionType region, Args&&... args) {
+    ActorId owner = (owner_ptr != nullptr) ? *owner_ptr : ActorId{};
     return allocate_unique<T>(owner, region, std::forward<Args>(args)...);
 }
 
@@ -220,8 +201,7 @@ MemUniquePtr<T> allocate_unique(const ActorId* owner_ptr,
 // Requires t_tla and t_current_actor_id to be set on the calling thread
 // (the scheduler does this before dispatching actor work).
 // =========================================================================
-template <typename Derived>
-class SlabAllocated {
+template <typename Derived> class SlabAllocated {
   public:
     // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)
     static void* operator new(size_t size) {
@@ -230,17 +210,18 @@ class SlabAllocated {
             ptr = t_tla->allocate_bytes(size, current_actor_id());
         }
         if (!ptr) {
-            ptr = ::operator new(size);  // NOLINT
+            ptr = ::operator new(size); // NOLINT
         }
         return ptr;
     }
 
     static void operator delete(void* ptr) noexcept {
-        if (!ptr) return;
+        if (!ptr)
+            return;
         if (t_tla) {
             t_tla->deallocate(ptr);
         } else {
-            ::operator delete(ptr);  // NOLINT
+            ::operator delete(ptr); // NOLINT
         }
     }
 

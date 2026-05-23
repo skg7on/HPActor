@@ -120,5 +120,5 @@ TEST_F(MPSCActorMailboxTest, PushConvenienceMethod) {
     auto* node = mb.dequeue();
     ASSERT_NE(node, nullptr);
     EXPECT_FALSE(node->payload().empty());
-    delete node;
+    mem::deallocate(node);
 }

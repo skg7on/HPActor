@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/mem/memory_region.hpp>
 #include <hpactor/mem/size_class.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -24,6 +25,13 @@ namespace hpactor::mem {
 
 inline constexpr uint32_t kAllocMagic = 0xAC70AC70;
 inline constexpr uint32_t kFreedMagic = 0xDEADDEAD;
+
+inline constexpr uint16_t kAllocRegionMask = 0x0007;
+inline constexpr uint16_t kAllocFallbackFlag = 0x0008;
+
+inline constexpr uint16_t flags_for_region(RegionType region) noexcept {
+    return static_cast<uint16_t>(region) & kAllocRegionMask;
+}
 
 // Forward declaration
 struct AllocHeader;
@@ -71,14 +79,19 @@ struct alignas(32) AllocHeader {
     uint32_t _padding{0};
     uint64_t timestamp{0};
 
-    static AllocHeader* stamp(void* block, SizeClass sc, ActorId owner) noexcept {
+    static AllocHeader* stamp(void* block, SizeClass sc, ActorId owner,
+                              RegionType region = RegionType::kInternal,
+                              bool fallback = false) noexcept {
         auto* h = static_cast<AllocHeader*>(block);
         h->owner_id = owner.value();
         h->incarnation = 0;
         h->magic = kAllocMagic;
         h->size_class = static_cast<uint8_t>(sc);
         h->generation = 0;
-        h->flags = 0;
+        h->flags = flags_for_region(region);
+        if (fallback) {
+            h->flags |= kAllocFallbackFlag;
+        }
         h->_padding = 0;
         h->timestamp = 0;
         return h;
@@ -118,6 +131,23 @@ struct alignas(32) AllocHeader {
 
     size_t user_size() const noexcept {
         return mem::size_for_class(static_cast<SizeClass>(size_class));
+    }
+
+    RegionType region() const noexcept {
+        return static_cast<RegionType>(flags & kAllocRegionMask);
+    }
+
+    void set_region(RegionType region) noexcept {
+        flags = static_cast<uint16_t>((flags & ~kAllocRegionMask) |
+                                      flags_for_region(region));
+    }
+
+    bool is_fallback() const noexcept {
+        return (flags & kAllocFallbackFlag) != 0;
+    }
+
+    void mark_fallback() noexcept {
+        flags |= kAllocFallbackFlag;
     }
 };
 

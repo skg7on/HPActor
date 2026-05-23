@@ -50,6 +50,7 @@
 
 #include <atomic>
 #include <chrono>
+#include <hpactor/mem/std_allocator.hpp>
 #include <memory>
 #include <mutex>
 #include <thread>
@@ -475,7 +476,9 @@ class ActorSystem {
 template <typename T, typename... Args>
 Actor ActorSystem::spawn(Args&&... args) {
     ActorId id(next_actor_id_.fetch_add(1));
-    auto actor = std::make_shared<T>(nullptr, *this, std::forward<Args>(args)...);
+    auto actor = std::allocate_shared<T>(
+        mem::MemStdAllocator<T>(id, mem::RegionType::kActor), nullptr, *this,
+        std::forward<Args>(args)...);
     actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
     if constexpr (requires { T::kActorTypeName; }) {
         actor->set_type_name(T::kActorTypeName);

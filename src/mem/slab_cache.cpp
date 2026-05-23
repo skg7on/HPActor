@@ -81,7 +81,7 @@ void* SlabCache::allocate(ActorId owner) noexcept {
         if (bump_offset_ + bs <= slab_size_) {
             auto* raw = current_slab_ + bump_offset_;
             bump_offset_ += bs;
-            auto* hdr = AllocHeader::stamp(raw, size_class_, owner);
+            auto* hdr = AllocHeader::stamp(raw, size_class_, owner, region_);
             hdr->generation = current_generation_;
             CanaryFooter::stamp(hdr, bs);
             stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
@@ -128,6 +128,8 @@ void SlabCache::refill() {
         slab_size_ = SegmentProvider::instance().slab_size(size_class_);
         bump_offset_ = 0;
         slabs_.push_back(current_slab_);
+        SegmentProvider::instance().register_slab_owner(
+            current_slab_, slab_size_, this, region_, size_class_);
         stats_.slab_acquire_count.fetch_add(1, std::memory_order_relaxed);
     }
 }
