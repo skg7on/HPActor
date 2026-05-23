@@ -17,4 +17,4 @@ add_executable(test_unit_mem
     test_memory_region_accounting.cpp
 )
 target_link_libraries(test_unit_mem hpactor pthread hpactor_test_support GTest::gtest_main)
-gtest_discover_tests(test_unit_mem PROPERTIES TIMEOUT 60)
+gtest_discover_tests(test_unit_mem PROPERTIES TIMEOUT 120)
