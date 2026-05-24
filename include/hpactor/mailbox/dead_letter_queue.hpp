@@ -40,6 +40,7 @@ enum class DeadLetterReason : uint8_t {
     NoDropRejected,
     DrainTimeout = 12,    // message dropped because drain deadline expired
     DrainPolicyDrop = 13, // message dropped by DropUserMessages policy
+    Expired = 14,         // message deadline expired before delivery
 };
 
 enum class DeadLetterSource : uint8_t {
@@ -82,6 +83,8 @@ failure_reason(DeadLetterReason reason) noexcept {
             return FailureReason::Timeout;
         case DeadLetterReason::DrainPolicyDrop:
             return FailureReason::Dropped;
+        case DeadLetterReason::Expired:
+            return FailureReason::Expired;
     }
     return FailureReason::Unknown;
 }

@@ -228,7 +228,9 @@ void Aggregator::on_event(const MetricEvent& e) {
         case MetricEventType::kActorDrainComplete:
         case MetricEventType::kActorDrainTimeout:
         case MetricEventType::kDeliveryFailure:
-            // lifecycle, rejection, drain, and delivery failure stubs
+        case MetricEventType::kDeliveryDuplicate:
+        case MetricEventType::kDeliveryExpired:
+            // delivery outcome stubs
             break;
     }
 }

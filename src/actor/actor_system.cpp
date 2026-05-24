@@ -22,6 +22,8 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 
+#include <chrono>
+
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/log/log_manager.hpp>
@@ -76,6 +78,10 @@ ActorSystem::ActorSystem(const Config& config)
     // Initialize dead-letter queue
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
+
+    // Initialize receiver dedup cache for at-least-once delivery
+    dedup_cache_ = std::make_unique<mailbox::DedupCache>(
+        mailbox::DedupCache::Config{});
 
     // Initialize metrics subsystem (before scheduler so instrumentation is
     // ready)
@@ -432,6 +438,80 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
             metrics_ring_buffer_->try_push(evt);
         }
         return r;
+    }
+
+    // Stamp deadline onto the message so the scheduler can enforce it at
+    // dequeue time without re-deriving it from MailboxEnvelopeMeta.
+    msg.set_deadline_ns(deadline_ns);
+
+    // Dedup check for at-least-once and stronger delivery modes.
+    if (mailbox::is_tracked_delivery(options.delivery_mode) && dedup_cache_ &&
+        options.message_id != 0) {
+        ActorId sender_id = msg.sender_address().id;
+        if (dedup_cache_->is_duplicate(endpoint_, sender_id,
+                                        MessageId{options.message_id})) {
+            // Duplicate suppressed — return Accepted so the sender sees
+            // a successful delivery.
+            if (metrics_ring_buffer_) [[unlikely]] {
+                uint64_t ts_ns = static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch())
+                        .count());
+                metrics::MetricEvent evt{};
+                evt.timestamp_ns = ts_ns;
+                evt.actor_id = target;
+                evt.event_type = metrics::MetricEventType::kDeliveryDuplicate;
+                evt.code = static_cast<uint8_t>(FailureReason::Duplicate);
+                evt.value_hi = 1;
+                metrics_ring_buffer_->try_push(evt);
+            }
+            return {mailbox::EnqueueResultCode::Accepted, target};
+        }
+    }
+
+    // Enqueue-time deadline check for observable-best-effort and stronger
+    // modes. BestEffort skips this check (checked at dequeue only).
+    {
+        uint64_t now_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        if (options.delivery_mode >=
+                mailbox::DeliveryMode::ObservableBestEffort &&
+            mailbox::is_expired(deadline_ns, now_ns)) {
+            // Build failure envelope for expired message
+            if (metrics_ring_buffer_) [[unlikely]] {
+                FailureEnvelope env = make_failure_envelope(
+                    FailureReason::Expired, target, msg.sender_address(),
+                    ActorAddress{endpoint_, ActorType{0}, target, 0},
+                    MessageId{options.message_id}, msg.trace_context(),
+                    FailureSource::ActorRuntime,
+                    "message deadline expired before enqueue");
+                metrics::MetricEvent evt{};
+                evt.timestamp_ns = env.timestamp_ns;
+                evt.actor_id = target;
+                evt.event_type = metrics::MetricEventType::kDeliveryExpired;
+                evt.code = static_cast<uint8_t>(FailureReason::Expired);
+                evt.value_hi = 1;
+                metrics_ring_buffer_->try_push(evt);
+            }
+            // Dead-letter the expired message when DLQ is enabled
+            if (dead_letters_) {
+                mailbox::DeadLetterRecord dl;
+                dl.reason = mailbox::DeadLetterReason::Expired;
+                dl.source = mailbox::DeadLetterSource::LocalDelivery;
+                dl.sender = msg.sender_address();
+                dl.target = ActorAddress{endpoint_, ActorType{0}, target, 0};
+                dl.type_tag = msg.type_id();
+                dl.message_id = options.message_id;
+                dl.frame_flags = options.flags;
+                dl.priority = priority;
+                dl.deadline_ns = deadline_ns;
+                dl.payload_sample = msg.payload();
+                (void)dead_letter(std::move(dl));
+            }
+            return {mailbox::EnqueueResultCode::Rejected, target};
+        }
     }
 
     mailbox::MailboxEnvelopeMeta meta;

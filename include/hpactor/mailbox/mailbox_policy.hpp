@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/typed_message.hpp>
+#include <hpactor/mailbox/delivery_mode.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/failure_reason.hpp>
 #include <hpactor/types/types.hpp>
@@ -76,6 +77,7 @@ struct DeliveryOptions {
     bool no_drop = false;
     bool allow_blocking = false;
     bool emit_backpressure = true;
+    DeliveryMode delivery_mode = DeliveryMode::BestEffort;
     uint64_t message_id = 0;
     uint32_t flags = 0;
 };
@@ -224,6 +226,21 @@ inline const char* to_string(OverflowPolicy policy) noexcept {
             return "block_when_allowed";
     }
     return "reject_newest";
+}
+
+/// \brief Check whether a message deadline has expired.
+///
+/// \param[in] deadline_ns Absolute deadline in nanoseconds (monotonic clock).
+///                        Use INT64_MAX for no deadline.
+/// \param[in] now_ns Current monotonic timestamp in nanoseconds.
+/// \return true if the deadline has passed and the message should be dropped.
+/// \note Thread safety: constexpr and lock-free — safe to call from any
+///       thread without synchronization.
+[[nodiscard]] constexpr bool is_expired(int64_t deadline_ns,
+                                         uint64_t now_ns) noexcept {
+    return deadline_ns >= 0 &&
+           deadline_ns != INT64_MAX &&
+           static_cast<uint64_t>(deadline_ns) < now_ns;
 }
 
 inline const char* to_string(MailboxPressureState state) noexcept {

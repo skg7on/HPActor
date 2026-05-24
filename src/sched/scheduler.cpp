@@ -17,9 +17,11 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/sched/dedicated_thread_pool.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
+#include <chrono>
 #include <variant>
 
 #if HPACTOR_SUPPORT_COROUTINES
@@ -289,6 +291,26 @@ void HybridScheduler::process_actor(ActorId actor) {
 
     TypedMessage msg;
     if (mailbox->try_pop(msg)) {
+        // Dequeue-time deadline check: drop expired messages before
+        // they reach the actor handler.
+        uint64_t now_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {
+            if (metrics_ring_buffer_) [[unlikely]] {
+                metrics::MetricEvent evt{};
+                evt.timestamp_ns = now_ns;
+                evt.actor_id = actor;
+                evt.event_type = metrics::MetricEventType::kDeliveryExpired;
+                evt.code = static_cast<uint8_t>(FailureReason::Expired);
+                evt.value_hi = 1;
+                metrics_ring_buffer_->try_push(evt);
+            }
+            // Loop to check for more messages
+            process_actor(actor);
+            return;
+        }
         actor_ptr->receive(msg);
     }
 }
@@ -398,7 +420,25 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
 
     TypedMessage msg;
     if (mailbox->try_pop(msg)) {
-        actor->receive(msg);
+        // Dequeue-time deadline check: drop expired messages before
+        // they reach the actor handler.
+        uint64_t now_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {
+            if (metrics_ring_buffer_) [[unlikely]] {
+                metrics::MetricEvent evt{};
+                evt.timestamp_ns = now_ns;
+                evt.actor_id = item.actor;
+                evt.event_type = metrics::MetricEventType::kDeliveryExpired;
+                evt.code = static_cast<uint8_t>(FailureReason::Expired);
+                evt.value_hi = 1;
+                metrics_ring_buffer_->try_push(evt);
+            }
+        } else {
+            actor->receive(msg);
+        }
     }
 
     if (!mailbox->empty()) {
