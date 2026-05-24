@@ -1,6 +1,8 @@
 add_executable(test_integration_net
     test_event_loop.cpp
     test_tcp_transport_comprehensive.cpp
+    test_registrar_framing.cpp
+    test_udp_registrar_packets.cpp
     test_http_gateway.cpp
     test_reactor_dispatcher.cpp
     test_tls_connection.cpp

@@ -13,6 +13,10 @@ add_executable(test_system
     test_system_observability.cpp
     test_system_loopback_network.cpp
     test_system_order_platform.cpp
+    test_system_tcp_transport.cpp
+    test_system_registrar_server.cpp
+    test_system_registrar_client.cpp
+    test_system_udp_registrar.cpp
 )
 target_link_libraries(test_system hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main)
 target_compile_definitions(test_system PRIVATE

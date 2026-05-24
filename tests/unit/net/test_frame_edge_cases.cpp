@@ -47,9 +47,9 @@ TEST(FrameEdgeTest, DecodeTruncatedPayload) {
     StreamBuffer truncated;
     const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'C'};
     truncated.append(magic.data(), 4);
-    uint32_t big_len = htonl(100);
-    truncated.append(reinterpret_cast<const uint8_t*>(&big_len), 4);
-    truncated.append(reinterpret_cast<const uint8_t*>("abcd"), 4);
+    uint32_t big_len = htonl(100u);
+    truncated.append(reinterpret_cast<const uint8_t*>(&big_len), 4u);
+    truncated.append(reinterpret_cast<const uint8_t*>("abcd"), 4u);
     WireFrame f = WireFrame::decode(truncated);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
     EXPECT_EQ(f.pb_frame.message_id(), 0u);
@@ -61,9 +61,9 @@ TEST(FrameEdgeTest, DecodeGarbageProtobuf) {
     const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'C'};
     garbage.append(magic.data(), 4);
     // Payload of 20 bytes of garbage
-    uint32_t payload_len = htonl(20);
-    garbage.append(reinterpret_cast<const uint8_t*>(&payload_len), 4);
-    for (int i = 0; i < 20; ++i)
+    uint32_t payload_len = htonl(20u);
+    garbage.append(reinterpret_cast<const uint8_t*>(&payload_len), 4u);
+    for (size_t i = 0; i < 20; ++i)
         garbage.push_back(static_cast<uint8_t>(0xFF));
     WireFrame f = WireFrame::decode(garbage);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
@@ -80,8 +80,8 @@ TEST(FrameEdgeTest, DecodeSpanOverload) {
     WireFrame original;
     to_proto(original.pb_frame.mutable_sender(), sender);
     to_proto(original.pb_frame.mutable_receiver(), receiver);
-    original.pb_frame.set_payload("test", 4);
-    original.pb_frame.set_message_id(42);
+    original.pb_frame.set_payload("test", 4u);
+    original.pb_frame.set_message_id(42u);
 
     StreamBuffer encoded = original.encode();
     // Decode via span overload
@@ -101,8 +101,8 @@ TEST(FrameEdgeTest, DecodeExactBoundaryPayload) {
     WireFrame original;
     to_proto(original.pb_frame.mutable_sender(), sender);
     to_proto(original.pb_frame.mutable_receiver(), receiver);
-    original.pb_frame.set_payload("exact", 5);
-    original.pb_frame.set_message_id(99);
+    original.pb_frame.set_payload("exact", 5u);
+    original.pb_frame.set_message_id(99u);
 
     StreamBuffer encoded = original.encode();
     WireFrame decoded = WireFrame::decode(encoded);
@@ -115,8 +115,8 @@ TEST(FrameEdgeTest, DecodeZeroLengthPayload) {
     StreamBuffer zero_payload;
     const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'C'};
     zero_payload.append(magic.data(), 4);
-    uint32_t zero_len = htonl(0);
-    zero_payload.append(reinterpret_cast<const uint8_t*>(&zero_len), 4);
+    uint32_t zero_len = htonl(0u);
+    zero_payload.append(reinterpret_cast<const uint8_t*>(&zero_len), 4u);
     WireFrame f = WireFrame::decode(zero_payload);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
     EXPECT_EQ(f.pb_frame.message_id(), 0u);
