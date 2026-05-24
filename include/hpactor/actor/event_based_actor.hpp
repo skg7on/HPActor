@@ -49,9 +49,12 @@ namespace log {
 class Logger;
 } // namespace log
 
-// Internal handler storage — type-erased to avoid template bloat in the map
+/// \brief Internal type-erased protobuf handler storage.
+///
+/// Avoids template bloat in the handler map by storing deserialization
+/// and invocation as type-erased \c std::function objects.
 struct ProtoHandler {
-    std::string type_name;
+    std::string type_name; ///< Fully-qualified protobuf message type name.
 
     ProtoHandler() = default;
     ProtoHandler(ProtoHandler&&) = default;
@@ -59,35 +62,51 @@ struct ProtoHandler {
     ProtoHandler(const ProtoHandler&) = delete;
     ProtoHandler& operator=(const ProtoHandler&) = delete;
 
-    // Deserialize bytes into a shared_ptr<void> holding the concrete protobuf
-    // type
+    /// \brief Deserialize bytes into a \c shared_ptr<void> holding the
+    ///        concrete protobuf type.
     std::function<std::shared_ptr<void>(const StreamBuffer&)> deserialize;
 
-    // Invoke the handler with a deserialized message.
-    // Returns serialized response bytes (empty for fire-and-forget).
+    /// \brief Invoke the handler with a deserialized message.
+    ///
+    /// Returns serialized response bytes (empty for fire-and-forget).
     std::function<StreamBuffer(std::shared_ptr<void>)> invoke;
 };
 
-// -----------------------------------------------------------------------------
-// EventBasedActor - cooperatively scheduled actor with behavior-based
-// handling, proto handler dispatch, and optional coroutine support (C++20)
-// -----------------------------------------------------------------------------
+/// \brief Cooperatively scheduled actor with behavior-based handling,
+///        protobuf handler dispatch, and optional coroutine support.
+///
+/// The primary actor type for most use cases. Supports become() semantics,
+/// fire-and-forget protobuf handlers via \c on<T>(), request-response
+/// handlers via \c on_request<ReqT, ResT>(), and opt-in quarantine with
+/// circuit breaker.
+///
+/// \note Thread safety: All message handling and state transitions execute
+///       on a single scheduler worker thread.
 class EventBasedActor : public LocalActor {
   public:
+    /// \brief Replace the current behavior.
+    ///
+    /// Subsequent messages are dispatched to \p bh.
+    /// \param[in] bh New behavior to install.
     void become(Behavior bh);
+
+    /// \brief Remove the current behavior, effectively dropping all messages.
     void become_empty();
 
     void receive(TypedMessage& msg) override;
 
-    // Type query for safe downcasting without RTTI
+    /// \brief RTTI-free query for \c EventBasedActor subclasses.
     bool is_event_based_actor() const override {
         return true;
     }
 
-    // Proto handler registration (absorbed from ProtoActor)
-    // Users override register_handlers() and call these in the override.
-
-    // Register a fire-and-forget handler for a protobuf message type
+    /// \brief Register a fire-and-forget handler for a protobuf message type.
+    ///
+    /// Called from \c register_handlers(). The handler is invoked on each
+    /// incoming message of type \p ProtoMsgT.
+    /// \tparam ProtoMsgT Protobuf message type.
+    /// \param[in] handler Callable invoked with a const reference to the
+    ///                    deserialized message.
     template <typename ProtoMsgT>
     void on(std::function<void(const ProtoMsgT&)> handler) {
         TypeTag tag = type_tag_for<ProtoMsgT>();
@@ -114,7 +133,15 @@ class EventBasedActor : public LocalActor {
         proto_handlers_[tag] = std::move(entry);
     }
 
-    // Register a request-response handler for protobuf types
+    /// \brief Register a request-response handler for protobuf types.
+    ///
+    /// Called from \c register_handlers(). The handler receives a
+    /// deserialized request and returns a response that is automatically
+    /// serialized and sent back to the caller.
+    /// \tparam ReqT Request protobuf message type.
+    /// \tparam ResT Response protobuf message type.
+    /// \param[in] handler Callable invoked with a const reference to the
+    ///                    request; must return a \c ResT by value.
     template <typename ReqT, typename ResT>
     void on_request(std::function<ResT(const ReqT&)> handler) {
         TypeTag tag = type_tag_for<ReqT>();
@@ -143,10 +170,17 @@ class EventBasedActor : public LocalActor {
         proto_handlers_[tag] = std::move(entry);
     }
 
-    // Dispatch an incoming protobuf message by TypeTag
+    /// \brief Dispatch an incoming protobuf message by \c TypeTag.
+    ///
+    /// Looks up the handler registered for \p tag and invokes it with the
+    /// deserialized payload.
+    /// \param[in] tag Type tag identifying the protobuf message type.
+    /// \param[in] payload Serialized protobuf message bytes.
     void on_proto_message(TypeTag tag, const StreamBuffer& payload);
 
-    // Check if this actor can handle a given TypeTag
+    /// \brief Returns \c true if this actor has a handler for \p tag.
+    ///
+    /// \param[in] tag Type tag to check.
     [[nodiscard]] bool handles(TypeTag tag) const {
         return proto_handlers_.find(tag) != proto_handlers_.end();
     }
@@ -230,12 +264,16 @@ class EventBasedActor : public LocalActor {
         return !mailbox_ || mailbox_->empty();
     }
 
-    // Drain helpers
-    // Returns true if the message should be processed normally.
-    // Returns false if the message was dead-lettered by the drain policy.
+    /// \brief Process one message under the actor's drain policy.
+    ///
+    /// \param[in,out] msg The message to process or dead-letter.
+    /// \return \c true if the message should be processed normally.
+    /// \retval false The message was dead-lettered by the drain policy.
     bool drain_one(TypedMessage& msg);
 
-    // Dead-letter all messages currently in the mailbox (ImmediateStop).
+    /// \brief Dead-letter all messages currently in the mailbox.
+    ///
+    /// Used for \c DrainPolicy::ImmediateStop.
     void drain_all_immediate();
 
     // ── Quarantine & circuit breaker ────────────────────
@@ -334,14 +372,21 @@ class EventBasedActor : public LocalActor {
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
     log::Logger* logger_{nullptr};
 
+    /// \brief Override to return the actor's initial behavior.
+    ///
+    /// Default returns an empty (no-op) behavior.
     virtual Behavior make_behavior() {
         return {};
     }
 
-    // Users override this to call on<T>() / on_request<ReqT,ResT>()
+    /// \brief Override to register protobuf handlers.
+    ///
+    /// Call \c on<T>() and \c on_request<ReqT,ResT>() from this override.
     virtual void register_handlers() {}
 
-    // Called by the framework after construction to set up handlers
+    /// \brief Called by the framework after construction.
+    ///
+    /// Invokes \c register_handlers() and sets up the protobuf dispatch table.
     void initialize_proto_handlers();
 
   public:

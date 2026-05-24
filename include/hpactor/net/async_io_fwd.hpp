@@ -1,4 +1,17 @@
 // Copyright 2026 HPActor Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include <hpactor/types/types.hpp>
@@ -49,8 +62,8 @@ inline uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type) {
 }
 
 // Decode user_data back into fd, actor, and op_type
-inline void decode_user_data(uint64_t user_data, int& fd, ActorId& actor,
-                              uint32_t& op_type) {
+inline void
+decode_user_data(uint64_t user_data, int& fd, ActorId& actor, uint32_t& op_type) {
     fd = static_cast<int>(user_data & 0xFFFFFFFFULL);
     actor = ActorId(static_cast<uint32_t>((user_data >> 32) & 0xFFFFULL));
     op_type = static_cast<uint32_t>((user_data >> 56) & 0xFFULL);
@@ -60,7 +73,8 @@ inline void decode_user_data(uint64_t user_data, int& fd, ActorId& actor,
 // ActorSystem::enqueue_completion.  Returns false if the payload size
 // does not match sizeof(OpCompletion).
 inline bool unpack_completion(const StreamBuffer& payload, OpCompletion& out) {
-    if (payload.size() != sizeof(OpCompletion)) return false;
+    if (payload.size() != sizeof(OpCompletion))
+        return false;
     std::memcpy(&out, payload.data(), sizeof(OpCompletion));
     return true;
 }

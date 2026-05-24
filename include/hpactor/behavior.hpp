@@ -20,29 +20,50 @@ namespace hpactor {
 
 class TypedMessage;
 
-// -----------------------------------------------------------------------------
-// overloaded - helper for std::visit with lambdas (C++20 backport)
-// -----------------------------------------------------------------------------
+/// \brief Helper for \c std::visit with lambdas (C++20 backport of
+///        P0051R3 \c overloaded pattern).
+///
+/// Usage: \code{.cpp}
+/// std::visit(overloaded{
+///     [](int i) { ... },
+///     [](std::string s) { ... },
+/// }, my_variant);
+/// \endcode
 template <class... Ts> struct overloaded : Ts... {
     using Ts::operator()...;
 };
 template <class... Ts> overloaded(Ts...) -> overloaded<Ts...>;
 
-// -----------------------------------------------------------------------------
-// Behavior - handler function for message processing
-// -----------------------------------------------------------------------------
+/// \brief Message handler function wrapper with \c become() support.
+///
+/// The primary unit of actor behavior. Each \c Behavior wraps a callable
+/// that receives a \c TypedMessage. Actors change behavior by assigning a
+/// new \c Behavior (the "become" pattern). A default-constructed \c Behavior
+/// is empty and evaluates to \c false.
+///
+/// \note Thread safety: Assigning and invoking a \c Behavior must happen on
+///       the actor's scheduler thread. No internal synchronization.
 class Behavior {
   public:
+    /// \brief Signature of the wrapped handler function.
     using handler_type = std::function<void(TypedMessage&)>;
 
+    /// \brief Construct an empty behavior that drops all messages.
     Behavior() = default;
 
+    /// \brief Construct a behavior wrapping \p handler.
+    /// \param[in] handler Callable invoked for each message.
     explicit Behavior(handler_type handler) : handler_(std::move(handler)) {}
 
+    /// \brief Returns \c true if a handler is set.
     explicit operator bool() const {
         return handler_ != nullptr;
     }
 
+    /// \brief Invoke the wrapped handler with \p msg.
+    ///
+    /// No-op if the behavior is empty.
+    /// \param[in,out] msg The incoming typed message.
     void operator()(TypedMessage& msg) const {
         if (handler_) {
             handler_(msg);

@@ -26,27 +26,23 @@ namespace hpactor {
 
 namespace net {
 
-// -----------------------------------------------------------------------------
-// TransportError - error codes for network operations
-// -----------------------------------------------------------------------------
+/// \brief Error codes for network transport operations.
 enum class TransportError {
-    Success = 0,
-    ConnectionFailed = 1,
-    Timeout = 2,
-    SerializationFailed = 3,
-    BufferOverflow = 4,
-    NotConnected = 5,
+    Success = 0,             ///< Operation completed successfully.
+    ConnectionFailed = 1,    ///< Connection attempt failed.
+    Timeout = 2,             ///< Operation timed out.
+    SerializationFailed = 3, ///< Message serialization error.
+    BufferOverflow = 4,      ///< Send buffer capacity exceeded.
+    NotConnected = 5,        ///< No active connection to the target.
 };
 
-// -----------------------------------------------------------------------------
-// ConnectionState - state of a network connection
-// -----------------------------------------------------------------------------
+/// \brief States of a network connection lifecycle.
 enum class ConnectionState {
-    Disconnected = 0,
-    Connecting = 1,
-    Handshake = 2,
-    Connected = 3,
-    Error = 4,
+    Disconnected = 0, ///< No connection established.
+    Connecting = 1,   ///< Connection in progress.
+    Handshake = 2,    ///< TLS/protocol handshake in progress.
+    Connected = 3,    ///< Connection established and ready.
+    Error = 4,        ///< Connection is in an error state.
 };
 
 // Forward declarations
@@ -54,58 +50,85 @@ class Connection;
 using ConnectionPtr = std::shared_ptr<Connection>;
 class EventLoop;
 
-// -----------------------------------------------------------------------------
-// Connection callback types
-// -----------------------------------------------------------------------------
-// Callback for when connection becomes ready
+/// \brief Callback invoked when a connection becomes ready.
 using connection_ready_handler = std::function<void(ConnectionPtr)>;
-// Callback for incoming frames — receives a complete WireFrame envelope
-// (magic + length header + protobuf payload) as an owning StreamBuffer.
+
+/// \brief Callback for incoming frames.
+///
+/// Receives a complete \c WireFrame envelope (magic + length header +
+/// protobuf payload) as an owning \c StreamBuffer.
 using frame_handler = std::function<void(StreamBuffer)>;
-// Callback for connection errors
+
+/// \brief Callback for connection errors.
 using connection_error_handler = std::function<void(ConnectionPtr, const error&)>;
 
-// -----------------------------------------------------------------------------
-// Connection - represents a connection to a remote node
-// -----------------------------------------------------------------------------
-// Owns the socket fd, local/remote endpoints, and event loop reference.
-// Derived classes implement protocol-specific read/framing via handle_read().
-// -----------------------------------------------------------------------------
+/// \brief Abstract network connection.
+///
+/// Owns the socket file descriptor, local/remote endpoints, and event loop
+/// reference. Derived classes implement protocol-specific read/framing
+/// via \c handle_read().
+///
+/// \note Thread safety: \c send(), \c close(), and \c handle_read() are
+///       called from the event loop thread. State transitions use
+///       \c set_state() which is not internally synchronized.
 class Connection : public std::enable_shared_from_this<Connection> {
   public:
+    /// \brief Construct a connection.
+    ///
+    /// \param[in] fd Socket file descriptor (must be non-blocking for async
+    /// I/O).
+    /// \param[in] local_endpoint Local endpoint of this connection.
+    /// \param[in] remote_endpoint Remote endpoint.
+    /// \param[in] loop Owning \c EventLoop.
     Connection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                EventLoop* loop);
     virtual ~Connection();
 
+    /// \brief Socket file descriptor.
     int fd() const {
         return fd_;
     }
+    /// \brief Local endpoint address.
     EndPoint local_endpoint() const {
         return local_endpoint_;
     }
+    /// \brief Remote endpoint address.
     EndPoint remote_endpoint() const {
         return remote_endpoint_;
     }
+    /// \brief Owning event loop.
     EventLoop* event_loop() const {
         return loop_;
     }
+    /// \brief Current connection state.
     ConnectionState state() const {
         return state_;
     }
 
-    // Send data on this connection
+    /// \brief Send data on this connection.
+    ///
+    /// \param[in] data Data to transmit.
     virtual void send(const StreamBuffer& data) = 0;
 
-    // Close this connection
+    /// \brief Close this connection.
     virtual void close() = 0;
 
-    // Protocol-specific read/framing — called when fd is readable
+    /// \brief Protocol-specific read and frame parsing.
+    ///
+    /// Called by \c EventLoop when the socket file descriptor is readable.
+    /// Implementations must handle edge-triggered semantics.
+    /// \note Thread safety: Called from the event loop thread.
     virtual void handle_read() = 0;
 
-    // Handle send completion (called by EventLoop on async_send completion)
+    /// \brief Handle completion of an async send operation.
+    ///
+    /// Called by \c EventLoop via the send completion callback.
+    /// \param[in] result Result code from the send operation.
     virtual void handle_send_completion(int result);
 
-    // Transition to a new state
+    /// \brief Transition to a new connection state.
+    ///
+    /// \param[in] new_state Target state.
     void set_state(ConnectionState new_state);
 
   protected:
@@ -116,61 +139,85 @@ class Connection : public std::enable_shared_from_this<Connection> {
     ConnectionState state_ = ConnectionState::Disconnected;
 };
 
-// Connection pointer type
 using ConnectionPtr = std::shared_ptr<Connection>;
 
-// -----------------------------------------------------------------------------
-// Transport - abstraction for network communication
-// -----------------------------------------------------------------------------
-// The Transport interface provides connection management and message sending
-// for distributed actor communication. Each Transport is associated with
-// a specific node and handles all outgoing connections to remote nodes.
-// -----------------------------------------------------------------------------
+/// \brief Abstract interface for network communication.
+///
+/// Provides connection management and message sending for distributed
+/// actor communication. Each \c Transport is associated with a specific
+/// node and handles all outgoing connections to remote nodes.
+///
+/// \note Thread safety: Implementations are called from the network thread
+///       and must synchronize internal connection state.
 class Transport {
   public:
     virtual ~Transport() = default;
 
-    // Connect to a remote node using explicit host/port (blocking)
-    // Returns a Connection pointer on success, nullptr on failure
+    /// \brief Connect to a remote node using explicit host/port.
+    ///
+    /// Blocking. Returns the connection on success.
+    /// \param[in] remote_endpoint Logical endpoint of the remote node.
+    /// \param[in] host Hostname or IP address.
+    /// \param[in] port TCP port.
+    /// \return Connection pointer, or \c nullptr on failure.
     virtual ConnectionPtr
     connect(EndPoint remote_endpoint, const std::string& host, uint16_t port) = 0;
 
-    // Connect to a remote node using registry lookup (DNS resolution if needed)
-    // Returns ConnectionPtr on success, nullptr on failure
+    /// \brief Connect to a remote node using registry lookup.
+    ///
+    /// Resolves the host via DNS if needed, then connects. Blocking.
+    /// \param[in] remote_endpoint Logical endpoint of the remote node.
+    /// \return Connection pointer, or \c nullptr on failure.
     virtual ConnectionPtr connect(EndPoint remote_endpoint) = 0;
 
-    // Start listening for incoming connections (non-blocking)
+    /// \brief Start listening for incoming connections (non-blocking).
+    ///
+    /// \param[in] port TCP port to bind.
     virtual void listen(uint16_t port) = 0;
 
-    // Stop listening
+    /// \brief Stop accepting incoming connections.
     virtual void stop_listening() = 0;
 
-    // Try to send a message to a remote actor.
-    // Returns true if the message was accepted by the transport layer
-    // (either sent immediately or queued for later delivery).
-    // Returns false if the transport cannot accept the message
-    // (no connection, queue full, shutting down).
+    /// \brief Try to send a message to a remote actor.
+    ///
+    /// \param[in] target Destination actor address.
+    /// \param[in] encoded Serialized message payload.
+    /// \return \c true if the message was accepted by the transport
+    ///         (either sent immediately or queued for later delivery).
+    /// \retval false No connection, queue full, or transport shutting down.
     virtual bool
     try_send(const ActorAddress& target, const StreamBuffer& encoded) = 0;
 
-    // Send a message to a remote actor (fire-and-forget).
-    // Default implementation calls try_send() and discards the result.
-    // The encoded parameter contains the serialized message.
+    /// \brief Send a message to a remote actor (fire-and-forget).
+    ///
+    /// Default implementation calls \c try_send() and discards the result.
+    /// \param[in] target Destination actor address.
+    /// \param[in] encoded Serialized message payload.
     virtual void send(const ActorAddress& target, const StreamBuffer& encoded) {
         (void)try_send(target, encoded);
     }
 
-    // Check if connected to a specific node
+    /// \brief Check if connected to a specific remote node.
+    ///
+    /// \param[in] remote_endpoint Remote node endpoint.
+    /// \return \c true if an active connection exists.
     virtual bool is_connected(EndPoint remote_endpoint) const = 0;
 
-    // Get this transport's node ID
+    /// \brief This transport's local endpoint.
     virtual EndPoint endpoint() const = 0;
 
-    // Close connection to a specific node
+    /// \brief Close the connection to a specific remote node.
+    ///
+    /// \param[in] remote_endpoint Remote node endpoint.
     virtual void close_connection(EndPoint remote_endpoint) = 0;
 
-    // Set RPC response handler - called when RPC response frames are received
+    /// \brief RPC response handler signature.
     using rpc_response_handler = std::function<void(const RpcResponseFrame&)>;
+
+    /// \brief Set the handler for incoming RPC response frames.
+    ///
+    /// Called by \c ActorSystem when creating the RPC channel.
+    /// \param[in] handler Callback for each \c RpcResponseFrame.
     virtual void set_rpc_handler(rpc_response_handler handler) = 0;
 };
 

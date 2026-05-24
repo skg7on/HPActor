@@ -1,4 +1,17 @@
 // Copyright 2026 HPActor Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include <hpactor/core/actor_system.hpp>
@@ -21,7 +34,7 @@ namespace net {
 //   - TimerFired events -> timer handler callback
 //   - I/O completions (Send/Recv/Accept/Connect/RecvFrom/SendTo) -> ActorSystem
 class ProactorDispatcher {
-public:
+  public:
     // Timer handler callback - called when a TimerFired completion arrives.
     // The user_data from the completion identifies which timer expired.
     using timer_handler = std::function<void(uint64_t user_data)>;
@@ -79,7 +92,7 @@ public:
         }
     }
 
-private:
+  private:
     void deliver_to_actor(const OpCompletion& completion) {
         active_ops_.erase(completion.fd);
         if (completion_callback_) {

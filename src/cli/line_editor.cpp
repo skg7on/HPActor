@@ -1,9 +1,20 @@
 // Copyright 2026 HPActor Contributors
-// Licensed under the Apache License, Version 2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
-#include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/lexer.hpp>
+#include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli/token.hpp>
 
 extern "C" {
@@ -40,7 +51,8 @@ LineEditor::~LineEditor() {
 std::string LineEditor::readline(const std::string& prompt) {
     install_callbacks();
     char* line = linenoise(prompt.c_str());
-    if (line == nullptr) return {};
+    if (line == nullptr)
+        return {};
     std::string result(line);
     linenoiseFree(line);
     return result;
@@ -66,7 +78,8 @@ void LineEditor::save_history() const {
 }
 
 void LineEditor::install_callbacks() {
-    if (callbacks_installed_) return;
+    if (callbacks_installed_)
+        return;
     linenoiseSetCompletionCallback(on_completion);
     linenoiseSetHintsCallback(on_hints);
     linenoiseSetFreeHintsCallback(on_free_hints);
@@ -77,16 +90,17 @@ std::vector<std::string> LineEditor::tokenize_partial(const std::string& buf) {
     auto tokens = Lexer::tokenize(buf);
     std::vector<std::string> words;
     for (auto& t : tokens) {
-        if (t.type == TokenType::Eof) continue;
+        if (t.type == TokenType::Eof)
+            continue;
         words.push_back(std::move(t.value));
     }
     return words;
 }
 
-void LineEditor::on_completion(const char* buf,
-                               linenoiseCompletions* lc) {
+void LineEditor::on_completion(const char* buf, linenoiseCompletions* lc) {
     auto* self = current_;
-    if (!self || !self->root_) return;
+    if (!self || !self->root_)
+        return;
 
     auto words = tokenize_partial(buf);
     size_t len = strlen(buf);
@@ -98,19 +112,24 @@ void LineEditor::on_completion(const char* buf,
     const CommandNode* node = self->root_;
     std::vector<std::string> consumed;
     size_t i = 0;
-    if (i < words.size() && words[i] == "/") ++i;
+    if (i < words.size() && words[i] == "/")
+        ++i;
 
-    size_t words_to_consume = ends_with_space ? words.size() : (words.size() > 0 ? words.size() - 1 : 0);
+    size_t words_to_consume =
+        ends_with_space ? words.size() : (words.size() > 0 ? words.size() - 1 : 0);
     for (; i < words_to_consume; ++i) {
         std::string param;
         auto* child = node->find_child(words[i], param);
-        if (!child) child = node->find_child_prefix(words[i]);
+        if (!child)
+            child = node->find_child_prefix(words[i]);
         if (!child) {
             std::vector<std::string> matches;
             node->collect_completions(words[i], matches);
             std::string prefix = "/";
-            for (auto& w : consumed) prefix += w + " ";
-            for (auto& m : matches) linenoiseAddCompletion(lc, (prefix + m).c_str());
+            for (auto& w : consumed)
+                prefix += w + " ";
+            for (auto& m : matches)
+                linenoiseAddCompletion(lc, (prefix + m).c_str());
             return;
         }
         // Use the matched keyword for prefix matches (e.g. "act"→"actor"),
@@ -120,7 +139,8 @@ void LineEditor::on_completion(const char* buf,
     }
 
     std::string partial;
-    if (!ends_with_space && !words.empty()) partial = words.back();
+    if (!ends_with_space && !words.empty())
+        partial = words.back();
 
     // Exact keyword match: advance into the node so sub-commands appear.
     // Include the matched keyword in the prefix.
@@ -137,38 +157,43 @@ void LineEditor::on_completion(const char* buf,
 
     // Build full prefix: leading "/" + consumed tokens with trailing space.
     std::string prefix = "/";
-    for (auto& w : consumed) prefix += w + " ";
+    for (auto& w : consumed)
+        prefix += w + " ";
 
     std::vector<std::string> matches;
     node->collect_completions(partial, matches);
-    for (auto& m : matches) linenoiseAddCompletion(lc, (prefix + m).c_str());
+    for (auto& m : matches)
+        linenoiseAddCompletion(lc, (prefix + m).c_str());
 }
 
-char* LineEditor::on_hints(const char* buf,
-                           int* color,
-                           int* bold) {
+char* LineEditor::on_hints(const char* buf, int* color, int* bold) {
     auto* self = current_;
-    if (!self || !self->root_) return nullptr;
+    if (!self || !self->root_)
+        return nullptr;
 
     auto words = tokenize_partial(buf);
     size_t len = strlen(buf);
-    if (len == 0) return nullptr;
+    if (len == 0)
+        return nullptr;
     bool ends_with_space = (buf[len - 1] == ' ');
 
     const CommandNode* node = self->root_;
     size_t i = 0;
     // Skip leading "/"
-    if (i < words.size() && words[i] == "/") ++i;
+    if (i < words.size() && words[i] == "/")
+        ++i;
 
     // Consume fully-typed tokens, using prefix match as fallback so
     // partial commands like "/act" show hints for "/actor".
-    size_t words_to_consume = ends_with_space ? words.size() : (words.size() > 0 ? words.size() - 1 : 0);
+    size_t words_to_consume =
+        ends_with_space ? words.size() : (words.size() > 0 ? words.size() - 1 : 0);
     for (; i < words_to_consume; ++i) {
         std::string param;
         auto* child = node->find_child(words[i], param);
         if (!child) {
             child = node->find_child_prefix(words[i]);
-            if (!child) return nullptr; // no match, no hint possible
+            if (!child)
+                return nullptr; // no match, no hint possible
         }
         node = child;
     }
@@ -193,11 +218,14 @@ char* LineEditor::on_hints(const char* buf,
 
     // Find first non-parameter child whose keyword starts with partial
     for (auto& child : node->children) {
-        if (child->is_parameter) continue;
+        if (child->is_parameter)
+            continue;
         if (partial.empty() || child->keyword.starts_with(partial)) {
             std::string hint_text = child->keyword.substr(partial.size());
-            if (color) *color = 90;   // bright black = gray
-            if (bold) *bold = 0;
+            if (color)
+                *color = 90; // bright black = gray
+            if (bold)
+                *bold = 0;
             return strdup(hint_text.c_str());
         }
     }
@@ -205,7 +233,8 @@ char* LineEditor::on_hints(const char* buf,
 }
 
 void LineEditor::on_free_hints(void* hint) {
-    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc) — C API callback, must free strdup result
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc) — C API callback, must free
+    // strdup result
     free(hint);
 }
 
