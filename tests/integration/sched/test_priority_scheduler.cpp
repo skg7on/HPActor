@@ -58,7 +58,7 @@ TEST(PrioritySchedulerTest, SchedulerCreation) {
 }
 
 TEST(PrioritySchedulerTest, NotifyReadyWithPriorities) {
-    Config config{.scheduler_threads = 2,
+    Config config{.scheduler_threads = 0,
                   .max_queue_depth = 1024,
                   .cli = {},
                   .mailbox = {},
@@ -78,7 +78,7 @@ TEST(PrioritySchedulerTest, NotifyReadyWithPriorities) {
 }
 
 TEST(PrioritySchedulerTest, NotifyReadyWithDeadlines) {
-    Config config{.scheduler_threads = 2,
+    Config config{.scheduler_threads = 0,
                   .max_queue_depth = 1024,
                   .cli = {},
                   .mailbox = {},

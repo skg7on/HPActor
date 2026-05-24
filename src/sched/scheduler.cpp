@@ -52,7 +52,8 @@ HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                  TimerBackend timer_backend, bool start_paused)
     : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
       workers_(num_workers), a2ws_(num_workers), workers_paused_(start_paused),
-      dedicated_(std::make_unique<DedicatedStorage>()) {
+      dedicated_(std::make_unique<DedicatedStorage>()),
+      pinned_ready_(num_workers) {
     switch (timer_backend) {
         case TimerBackend::TimingWheel:
             timer_backend_.emplace<TimingWheel>(1'000'000, 4);
@@ -158,21 +159,38 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
             return; // another thread won the race
     }
 
-    // Round-robin across workers for fair initial placement.
-    // The atomic counter avoids the stale hint issue where get_victim always
-    // returns the same value because record_attempt is only called on steals.
+    // Determine target worker: use pinning map if set, otherwise round-robin.
     if (num_workers_ == 0)
         return;
-    static std::atomic<uint32_t> rr_counter{0};
-    uint32_t victim = rr_counter.fetch_add(1, std::memory_order_relaxed);
+    uint32_t victim;
+    bool is_pinned = false;
+    {
+        std::lock_guard<std::mutex> lock(pinned_mutex_);
+        auto it = pinned_actors_.find(actor);
+        if (it != pinned_actors_.end()) {
+            victim = it->second % num_workers_;
+            is_pinned = true;
+        }
+    }
+    if (!is_pinned) {
+        static std::atomic<uint32_t> rr_counter{0};
+        victim = rr_counter.fetch_add(1, std::memory_order_relaxed) %
+                 num_workers_;
+    }
 
-    // If deadline is INT64_MAX, use priority queue; otherwise use EDF queue
+    // When workers are paused and actor is pinned, use the side deque so
+    // run_actor() / run_one_on_worker() can drive execution deterministically.
+    if (is_pinned && workers_paused_.load(std::memory_order_acquire)) {
+        std::lock_guard<std::mutex> lock(pinned_mutex_);
+        pinned_ready_[victim].push_back(item);
+        return;
+    }
+
+    // Normal path: ChaseLev or EDF
     if (deadline_ns == INT64_MAX) {
-        // Push to priority queue using A2WS-selected victim
-        workers_[victim % num_workers_].queues[priority].push_bottom(item);
+        workers_[victim].queues[priority].push_bottom(item);
     } else {
-        // Push to EDF queue for deadline-ordered processing
-        workers_[victim % num_workers_].edf_queue.push(deadline_ns, item);
+        workers_[victim].edf_queue.push(deadline_ns, item);
     }
 }
 
@@ -642,6 +660,18 @@ void HybridScheduler::pause_workers() noexcept {
 }
 
 void HybridScheduler::resume_workers() noexcept {
+    // Flush pinned-ready deques back to the normal worker queues so
+    // running workers can process any actors that were enqueued while
+    // the scheduler was paused.
+    {
+        std::lock_guard<std::mutex> lock(pinned_mutex_);
+        for (uint32_t w = 0; w < num_workers_; ++w) {
+            for (auto& item : pinned_ready_[w]) {
+                workers_[w].queues[0].push_bottom(item);
+            }
+            pinned_ready_[w].clear();
+        }
+    }
     workers_paused_.store(false, std::memory_order_release);
     {
         std::lock_guard<std::mutex> lock(worker_control_mutex_);
@@ -700,6 +730,90 @@ SchedulerDrainResult HybridScheduler::drain_ready(size_t max_items) {
     }
     result.idle = false;
     return result;
+}
+
+void HybridScheduler::pin_actor_to_worker(ActorId actor, uint32_t worker_id) {
+    std::lock_guard<std::mutex> lock(pinned_mutex_);
+    pinned_actors_[actor] = worker_id;
+}
+
+void HybridScheduler::unpin_actor(ActorId actor) {
+    std::lock_guard<std::mutex> lock(pinned_mutex_);
+    pinned_actors_.erase(actor);
+}
+
+bool HybridScheduler::run_actor(ActorId actor) {
+    if (!workers_paused_.load(std::memory_order_acquire)) {
+        return false;
+    }
+    uint32_t worker_id;
+    {
+        std::lock_guard<std::mutex> lock(pinned_mutex_);
+        auto it = pinned_actors_.find(actor);
+        if (it == pinned_actors_.end()) {
+            return false;
+        }
+        worker_id = it->second % num_workers_;
+        auto& dq = pinned_ready_[worker_id];
+        for (auto iter = dq.begin(); iter != dq.end(); ++iter) {
+            if (iter->actor == actor) {
+                WorkItem item = *iter;
+                dq.erase(iter);
+                uint32_t saved_id = tl_current_worker_id;
+                tl_current_worker_id = worker_id;
+                execute_actor(item);
+                tl_current_worker_id = saved_id;
+                return true;
+            }
+        }
+    }
+    return false;
+}
+
+bool HybridScheduler::run_one_on_worker(uint32_t worker_id) {
+    if (!workers_paused_.load(std::memory_order_acquire)) {
+        return false;
+    }
+    if (worker_id >= num_workers_) {
+        return false;
+    }
+
+    WorkItem item;
+
+    // Check pinned-ready deque first
+    {
+        std::lock_guard<std::mutex> lock(pinned_mutex_);
+        if (!pinned_ready_[worker_id].empty()) {
+            item = pinned_ready_[worker_id].front();
+            pinned_ready_[worker_id].pop_front();
+            uint32_t saved_id = tl_current_worker_id;
+            tl_current_worker_id = worker_id;
+            execute_actor(item);
+            tl_current_worker_id = saved_id;
+            return true;
+        }
+    }
+
+    // Then check the worker's EDF and priority queues via steal_top
+    auto& worker = workers_[worker_id];
+    if (pop_edf(item, worker_id)) {
+        uint32_t saved_id = tl_current_worker_id;
+        tl_current_worker_id = worker_id;
+        execute_actor(item);
+        tl_current_worker_id = saved_id;
+        return true;
+    }
+    for (uint32_t p = 0; p < num_priorities_; ++p) {
+        if (worker.queues[p].steal_top(item)) {
+            uint32_t saved_id = tl_current_worker_id;
+            tl_current_worker_id = worker_id;
+            execute_actor(item);
+            tl_current_worker_id = saved_id;
+            return true;
+        }
+    }
+
+    return false;
 }
 
 void HybridScheduler::unregister_dedicated(ActorId actor) {
