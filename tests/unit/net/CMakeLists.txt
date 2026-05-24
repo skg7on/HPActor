@@ -1,5 +1,6 @@
 add_executable(test_unit_net
     test_frame.cpp
+    test_frame_edge_cases.cpp
     test_communication_endpoint.cpp
     test_http_parser.cpp
     test_http_serializer.cpp

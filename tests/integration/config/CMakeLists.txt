@@ -1,6 +1,7 @@
 add_executable(test_integration_config
     test_toml_parser.cpp
     test_toml_parser_registry.cpp
+    test_tracing_config_parser.cpp
     test_bootstrap_engine.cpp
     test_mailbox_config.cpp
     test_shutdown_config.cpp

@@ -233,9 +233,8 @@ char* LineEditor::on_hints(const char* buf, int* color, int* bold) {
 }
 
 void LineEditor::on_free_hints(void* hint) {
-    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc) — C API callback, must free
-    // strdup result
-    free(hint);
+    // NOLINTNEXTLINE(cppcoreguidelines-no-malloc)
+    free(hint); // C API callback, must free strdup result
 }
 
 } // namespace hpactor::cli

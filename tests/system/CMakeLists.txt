@@ -7,6 +7,7 @@ add_executable(test_system
     test_system_topology_bootstrap.cpp
     test_system_runtime_workflow.cpp
     test_system_supervision.cpp
+    test_system_supervision_directives.cpp
     test_system_backpressure.cpp
     test_system_graceful_shutdown.cpp
     test_system_observability.cpp
