@@ -99,9 +99,13 @@ cmake -DENABLE_ASAN=ON ..  # AddressSanitizer
 # Build options
 cmake -DENABLE_EXAMPLES=OFF ..    # Disable examples (default ON)
 cmake -DENABLE_PROACTOR=ON ..     # Enable proactor backend
+cmake -DENABLE_MEMORY_TRACKING=OFF .. # Disable per-actor memory tracking (default ON)
 cmake -DENABLE_MEMORY_DEBUG=ON .. # Enable memory poisoning + canary verification
 cmake -DENABLE_ACTOR_METRICS=OFF .. # Disable actor-level metrics (default ON)
+cmake -DENABLE_ACTOR_LOGGING=OFF .. # Disable structured actor logging (default ON)
+cmake -DENABLE_ACTOR_TRACING=OFF .. # Disable distributed tracing (default ON)
 cmake -DENABLE_CLI=OFF ..       # Disable interactive CLI subsystem (default ON, runtime opt-in via cli.enabled)
+cmake -DENABLE_COVERAGE=ON ..   # Enable gcov/llvm-cov style coverage instrumentation
 ```
 
 ## Architecture
@@ -195,8 +199,15 @@ AbstractActor (interface base)
 
 ### Production Architecture Backlog
 
-The production reliability docs are architecture requirements, not implemented
-runtime features yet. Key files:
+The production reliability docs are architecture requirements and design
+backlog. Do not assume a backlog item is runtime behavior until code proves it.
+Current implemented foundations include scheduled messages, delivery-mode
+configuration, receiver deduplication, structured failure envelopes, bounded
+mailboxes, DLQ, distributed tracing, HTTP gateway, graceful shutdown, actor
+lifecycle, and actor quarantine. Durable outbox/inbox, ACK/NACK retry, cluster
+control, security, and operations-plane admin APIs remain design/backlog.
+
+Key files:
 
 | Document | Purpose |
 |----------|---------|
@@ -315,8 +326,8 @@ environments. The following rules prevent flaky tests:
 
 - `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
-- `tests/` — 154 test source files in three-tier structure (unit, integration, system) using Google Test
-- `examples/` — 13 API usage examples
+- `tests/` — 187 test source files in three-tier structure (unit, integration, system) using Google Test; 29 GTest binaries are discovered through CTest
+- `examples/` — 12 API usage examples
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
 - `third_party/` — vendored dependencies (googletest v1.14.0, llhttp, toml++)
 - `cmake/` — CMake modules (gtest, protobuf codegen, toml++ interface target)
