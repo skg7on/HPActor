@@ -111,13 +111,19 @@ target_include_directories(hpactor_lib
 
 # ---- vendored C sources (llhttp) -------------------------------------------
 
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
+    set(LLHTTP_CLANG_FLAGS "-Wno-implicit-int-conversion")
+else()
+    set(LLHTTP_CLANG_FLAGS "")
+endif()
+
 set_source_files_properties(
     ../third_party/llhttp/llhttp.c
     ../third_party/llhttp/api.c
     ../third_party/llhttp/http.c
     PROPERTIES
         LANGUAGE C
-        COMPILE_FLAGS "-Wno-error -Wno-conversion -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
+        COMPILE_FLAGS "-Wno-error -Wno-conversion -Wno-sign-conversion -Wno-unused-parameter -Wno-sign-compare -Wno-unused-variable ${LLHTTP_CLANG_FLAGS}"
 )
 
 # ---- exceptions for toml++ TUs ---------------------------------------------

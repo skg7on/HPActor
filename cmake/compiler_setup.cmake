@@ -96,7 +96,7 @@ endif()
 
 add_compile_options(
     -fno-exceptions
-    -fno-rtti
+    $<$<COMPILE_LANGUAGE:CXX>:-fno-rtti>
     -Werror
     -Wall
     -Wextra
