@@ -22,6 +22,7 @@
 #include <hpactor/supervision/supervision.hpp>
 
 #include "system_test_fixture.hpp"
+#include "scheduler_test_driver.hpp"
 
 using namespace hpactor;
 
@@ -40,6 +41,7 @@ HPACTOR_REGISTER_ACTOR("FailingActor", FailingActor);
 TEST(Supervision, SupervisorRestartsFailedChild) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
+    test::SchedulerTestDriver driver(system);
 
     SupervisionPolicy policy;
     policy.strategy = SupervisionPolicy::Strategy::OneForOne;
@@ -54,7 +56,18 @@ TEST(Supervision, SupervisorRestartsFailedChild) {
     auto* sup = static_cast<SelfSupervisingActor*>(supervisor.get().get());
     sup->add_child(child);
 
-    // Send messages to trigger failure
+    // Drain spawn-time notify_ready items.  spawn_configured() calls
+    // notify_ready() which parks the actor in kReady state.  Until that
+    // is drained the actor state gate in notify_ready will drop every
+    // subsequent notification.
+    driver.drain(10);
+
+    // Pin child for deterministic execution
+    driver.pin_actor_to_worker(child.address().id, 0);
+
+    // Send messages to trigger failure.  Both go to the mailbox, but only
+    // the first triggers notify_ready (mailbox was empty).  The second is
+    // enqueued silently.
     TypedMessage msg1(TypeTag(0x1001), StreamBuffer{});
     msg1.set_sender_address(supervisor.address());
     child_ptr->context()->send(child.address(), std::move(msg1));
@@ -63,16 +76,18 @@ TEST(Supervision, SupervisorRestartsFailedChild) {
     msg2.set_sender_address(supervisor.address());
     child_ptr->context()->send(child.address(), std::move(msg2));
 
-    // Poll: child should be in kFailed after processing messages
-    bool failed = test::assert_eventually(
-        [&]() {
-            return child_ptr->as_lifecycle()->state() == LifecycleState::kFailed;
-        },
-        5000);
-    EXPECT_TRUE(failed);
+    // Execute message 1 via pinned-ready queue.
+    EXPECT_TRUE(driver.run_actor(child.address().id));
 
-    // The supervisor should have received the DownMsg and attempted restart
-    // Child failure is observable
+    // Message 2 was re-enqueued directly to the worker's ChaseLev by
+    // execute_actor.  Drain one more item to process it.
+    EXPECT_TRUE(driver.run_one_on_worker(0));
+
+    // Child should now be in kFailed after processing both messages.
+    EXPECT_EQ(child_ptr->as_lifecycle()->state(), LifecycleState::kFailed);
+
+    // The supervisor should have received the DownMsg and attempted restart.
+    // Child failure is observable.
     EXPECT_GE(child_ptr->messages_processed, 2);
 }
 
@@ -83,6 +98,7 @@ TEST(Supervision, SupervisorRestartsFailedChild) {
 TEST(Supervision, SupervisorWithMultipleChildren) {
     Config cfg = test::config_with_scheduler(1);
     ActorSystem system(cfg);
+    test::SchedulerTestDriver driver(system);
 
     SupervisionPolicy policy;
     policy.strategy = SupervisionPolicy::Strategy::OneForOne;
@@ -101,18 +117,24 @@ TEST(Supervision, SupervisorWithMultipleChildren) {
     sup->add_child(child2);
     sup->add_child(child3);
 
+    // Drain spawn-time notify_ready items so subsequent notifications
+    // reach the pinned-ready deque.
+    driver.drain(10);
+
+    // Pin child3 for deterministic execution
+    driver.pin_actor_to_worker(child3.address().id, 0);
+
     // Send a message to child3 to trigger its failure
     TypedMessage msg(TypeTag(0x1001), StreamBuffer{});
     msg.set_sender_address(supervisor.address());
     f3->context()->send(child3.address(), std::move(msg));
 
-    // Poll for child3 failure
-    bool f3_failed = test::assert_eventually(
-        [&]() { return f3->as_lifecycle()->state() == LifecycleState::kFailed; },
-        5000);
-    EXPECT_TRUE(f3_failed);
+    // Deterministically execute child3 — it processes the message and
+    // transitions to kFailed synchronously.  No polling needed.
+    EXPECT_TRUE(driver.run_actor(child3.address().id));
+    EXPECT_EQ(f3->as_lifecycle()->state(), LifecycleState::kFailed);
 
-    // Child1 and child2 should still be functional
+    // Child1 and child2 should still be functional (never touched)
     auto* c1 = static_cast<test::CountingActor*>(child1.get().get());
     auto* c2 = static_cast<test::CountingActor*>(child2.get().get());
     EXPECT_EQ(c1->as_lifecycle()->state(), LifecycleState::kActive);

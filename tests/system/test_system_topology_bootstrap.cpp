@@ -21,6 +21,7 @@
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 
+#include "scheduler_test_driver.hpp"
 #include "system_test_fixture.hpp"
 
 #include <string>
@@ -80,28 +81,25 @@ TEST(TopologyBootstrap, TopologySpawnsAllActors) {
 
 TEST(TopologyBootstrap, AllActorsAliveAfterBootstrap) {
     Config cfg = test::config_with_scheduler(1);
+    cfg.scheduler_start_paused = true;
     ActorSystem system(cfg);
+    test::SchedulerTestDriver driver(system);
 
     auto result = system.load_topology(data_path("system_test_topology.toml"));
     EXPECT_TRUE(result.has_value());
 
-    // Poll: at least 3 user actors exist and have lifecycle
-    bool all_alive = test::assert_eventually(
-        [&]() {
-            if (system.actor_count() < 3)
-                return false;
-            bool ok = true;
-            system.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
-                if (actor.is_system_actor())
-                    return;
-                if (!actor.as_lifecycle())
-                    ok = false;
-            });
-            return ok;
-        },
-        5000);
+    // load_topology() → spawn_configured() → notify_ready() parks each
+    // actor in kReady.  Drain the ready queue so actors process their
+    // spawn-init work and transition to kActive synchronously.
+    driver.drain();
 
-    EXPECT_TRUE(all_alive);
+    // All user actors should have lifecycle after drain
+    EXPECT_GE(system.actor_count(), 3);
+    system.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
+        if (actor.is_system_actor())
+            return;
+        EXPECT_NE(actor.as_lifecycle(), nullptr);
+    });
 
     // Verify all three named actors are in registry
     auto alpha_addr = system.registry().get("alpha");

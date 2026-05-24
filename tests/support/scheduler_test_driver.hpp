@@ -65,6 +65,31 @@ class SchedulerTestDriver {
         return predicate();
     }
 
+    /// \brief Pin an actor to a specific worker for deterministic execution.
+    void pin_actor_to_worker(ActorId actor, uint32_t worker_id) {
+        scheduler_->pin_actor_to_worker(actor, worker_id);
+    }
+
+    /// \brief Unpin a previously pinned actor.
+    void unpin_actor(ActorId actor) {
+        scheduler_->unpin_actor(actor);
+    }
+
+    /// \brief Execute exactly one pinned actor.
+    ///
+    /// The actor must have been pinned via \c pin_actor_to_worker().
+    /// Returns \c true if the actor was found and executed.
+    bool run_actor(ActorId actor) {
+        return scheduler_->run_actor(actor);
+    }
+
+    /// \brief Execute one ready item from a specific worker.
+    ///
+    /// Returns \c true if an item was executed.
+    bool run_one_on_worker(uint32_t worker_id) {
+        return scheduler_->run_one_on_worker(worker_id);
+    }
+
   private:
     sched::IScheduler* scheduler_;
 };

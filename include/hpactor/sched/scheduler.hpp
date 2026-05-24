@@ -28,6 +28,7 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
+#include <deque>
 #include <functional>
 #include <memory>
 #include <mutex>
@@ -181,6 +182,37 @@ class IScheduler {
         result.idle = false;
         return result;
     }
+
+    // ── Actor-to-worker pinning (deterministic test control) ──────────────
+
+    /// \brief Pin an actor to a specific worker.
+    ///
+    /// When pinned, \c notify_ready() routes this actor to the specified
+    /// worker instead of round-robin.  When workers are paused, the work
+    /// item is placed in a side queue so \c run_actor() can execute it
+    /// deterministically.
+    virtual void pin_actor_to_worker(ActorId /*actor*/, uint32_t /*worker_id*/) {}
+
+    /// \brief Remove worker pinning for an actor.
+    virtual void unpin_actor(ActorId /*actor*/) {}
+
+    /// \brief Execute exactly one pinned actor.
+    ///
+    /// The actor must have been pinned via \c pin_actor_to_worker() and
+    /// workers must be paused.  Returns \c true if the actor was found
+    /// and executed.
+    virtual bool run_actor(ActorId /*actor*/) {
+        return false;
+    }
+
+    /// \brief Execute one ready item from a specific worker.
+    ///
+    /// Workers must be paused.  Checks the worker's pinned-ready deque
+    /// first, then its EDF and priority queues.  Returns \c true if an
+    /// item was executed.
+    virtual bool run_one_on_worker(uint32_t /*worker_id*/) {
+        return false;
+    }
 };
 
 /// \brief Work-stealing hybrid scheduler with priority queues.
@@ -241,6 +273,12 @@ class HybridScheduler : public IScheduler {
     bool workers_paused() const noexcept override;
     bool run_one_ready() override;
     SchedulerDrainResult drain_ready(size_t max_items) override;
+
+    // Actor-to-worker pinning (deterministic test control)
+    void pin_actor_to_worker(ActorId actor, uint32_t worker_id) override;
+    void unpin_actor(ActorId actor) override;
+    bool run_actor(ActorId actor) override;
+    bool run_one_on_worker(uint32_t worker_id) override;
 
     /// \brief Try to steal work from another worker.
     ///
@@ -337,6 +375,11 @@ class HybridScheduler : public IScheduler {
 
     struct DedicatedStorage;
     std::unique_ptr<DedicatedStorage> dedicated_;
+
+    // ── Actor-to-worker pinning (deterministic test control) ──────────────
+    mutable std::mutex pinned_mutex_;
+    std::unordered_map<ActorId, uint32_t> pinned_actors_;
+    std::vector<std::deque<WorkItem>> pinned_ready_;
 };
 
 } // namespace hpactor::sched
