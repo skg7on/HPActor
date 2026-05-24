@@ -99,7 +99,10 @@ TEST_F(BlockingActorTest, ReceivesMessage) {
     msg.set_sender_address(sender.address());
     ctx.send(addr, std::move(msg));
 
-    // Give the blocking actor time to process.
+    // BlockingActor runs on its own dedicated thread outside the
+    // scheduler; a brief sleep is needed for the dedicated thread to
+    // pick up the message.  SchedulerTestDriver cannot control
+    // dedicated-thread actors.
     std::this_thread::sleep_for(std::chrono::milliseconds{100});
     SUCCEED();
 }
@@ -107,10 +110,6 @@ TEST_F(BlockingActorTest, ReceivesMessage) {
 TEST_F(BlockingActorTest, StateAfterSpawn) {
     auto actor = system_->spawn<TestBlockingActor>();
 
-    // Poll until we can verify the actor exists and is accessible.
-    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
-    while (std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds{1});
-    }
+    // Actor pointer is valid immediately after spawn — no polling needed.
     ASSERT_NE(actor.get().get(), nullptr);
 }
