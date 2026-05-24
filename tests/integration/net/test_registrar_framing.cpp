@@ -164,11 +164,12 @@ TEST_F(RegistrarFramingTest, SelfSyncOnBadMagic) {
     conn->set_message_handler(
         [&](TcpMessageType, const StreamBuffer&) { msg_count++; });
 
-    // Write garbage bytes followed by a valid frame
-    uint8_t garbage[] = {0xFF, 0xEE, 0xDD};
-    write(client_fd_, garbage, sizeof(garbage));
+    // Write garbage bytes AND valid frame in a single write() so
+    // edge-triggered epoll delivers everything in one event batch.
+    StreamBuffer combined;
+    uint8_t garbage[] = {0xFF, 0xEE, 0xDD, 0xCC};
+    combined.insert(combined.end(), garbage, garbage + sizeof(garbage));
 
-    // Now write a valid Register frame
     StreamBuffer payload{'o', 'k'};
     StreamBuffer frame;
     frame.resize(TcpHeaderSize + payload.size());
@@ -179,7 +180,9 @@ TEST_F(RegistrarFramingTest, SelfSyncOnBadMagic) {
     uint32_t len_be = htonl(static_cast<uint32_t>(payload.size()));
     memcpy(frame.data() + 6, &len_be, 4);
     memcpy(frame.data() + TcpHeaderSize, payload.data(), payload.size());
-    write(client_fd_, frame.data(), frame.size());
+    combined.insert(combined.end(), frame.begin(), frame.end());
+
+    write(client_fd_, combined.data(), combined.size());
 
     // Drive EventLoop
     int waited = 0;
@@ -242,7 +245,9 @@ TEST_F(RegistrarFramingTest, MultipleMessagesHandledInOrder) {
         received_types.push_back(type);
     });
 
-    // Write two frames back-to-back
+    // Build three frames in a single StreamBuffer so edge-triggered
+    // epoll delivers them all in one batch.
+    StreamBuffer combined;
     for (size_t i = 0; i < 3; ++i) {
         StreamBuffer payload{static_cast<uint8_t>('0' + i)};
         StreamBuffer frame;
@@ -256,8 +261,9 @@ TEST_F(RegistrarFramingTest, MultipleMessagesHandledInOrder) {
         uint32_t len_be = htonl(static_cast<uint32_t>(payload.size()));
         memcpy(frame.data() + 6, &len_be, 4);
         memcpy(frame.data() + TcpHeaderSize, payload.data(), payload.size());
-        write(client_fd_, frame.data(), frame.size());
+        combined.insert(combined.end(), frame.begin(), frame.end());
     }
+    write(client_fd_, combined.data(), combined.size());
 
     int waited = 0;
     while (received_types.size() < 3 && waited < 2000) {
