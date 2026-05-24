@@ -18,6 +18,7 @@
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/mailbox/delivery_mode.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 
@@ -87,6 +88,19 @@ struct SystemMailboxDef {
 };
 
 // -----------------------------------------------------------------------------
+// DeliveryConfig — system-wide delivery defaults from [system.delivery]
+// -----------------------------------------------------------------------------
+struct DeliveryConfig {
+    hpactor::mailbox::DeliveryMode default_mode =
+        hpactor::mailbox::DeliveryMode::BestEffort;
+    uint32_t max_retries = 3;
+    uint32_t retry_backoff_ms = 100;
+    uint32_t retry_backoff_max_ms = 10000;
+    uint32_t dedup_window_ms = 300000;
+    uint32_t dedup_max_entries = 65536;
+};
+
+// -----------------------------------------------------------------------------
 // SystemDef — global system configuration from TOML [system] section
 //
 // Maps to hpactor::Config at bootstrap time. Defaults match Config struct
@@ -115,6 +129,7 @@ struct SystemDef {
     bool shutdown_force_after_timeout{true};
     SystemMailboxDef mailbox;
     hpactor::mailbox::DeadLetterConfig dead_letters;
+    DeliveryConfig delivery;
     std::string discovery_backend;
     std::vector<std::string> imports;
     hpactor::tracing::TraceConfig tracing;

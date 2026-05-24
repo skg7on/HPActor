@@ -9,6 +9,9 @@ add_executable(test_unit_mailbox
     test_mailbox_overflow_policies.cpp
     test_mailbox_policy.cpp
     test_dead_letter_failure.cpp
+    test_delivery_mode.cpp
+    test_is_expired.cpp
+    test_dedup_cache.cpp
 )
 target_link_libraries(test_unit_mailbox hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_mailbox)

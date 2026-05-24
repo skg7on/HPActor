@@ -53,7 +53,8 @@ class TypedMessage {
           parsed_(std::move(other.parsed_)),
           sender_address_(other.sender_address_),
           trace_context_(other.trace_context_),
-          has_trace_context_(other.has_trace_context_) {
+          has_trace_context_(other.has_trace_context_),
+          deadline_ns_(other.deadline_ns_) {
         // mpsc_next is left default-initialized in the moved-from object
     }
     TypedMessage& operator=(TypedMessage&& other) noexcept {
@@ -63,6 +64,7 @@ class TypedMessage {
         sender_address_ = other.sender_address_;
         trace_context_ = other.trace_context_;
         has_trace_context_ = other.has_trace_context_;
+        deadline_ns_ = other.deadline_ns_;
         // mpsc_next intentionally not touched — ownership transferred
         return *this;
     }
@@ -140,6 +142,11 @@ class TypedMessage {
         has_trace_context_ = false;
     }
 
+    // Deadline for delivery, in nanoseconds (monotonic clock).
+    // INT64_MAX means no deadline. Set from MailboxEnvelopeMeta at push time.
+    int64_t deadline_ns() const noexcept { return deadline_ns_; }
+    void set_deadline_ns(int64_t ns) noexcept { deadline_ns_ = ns; }
+
     // MPSC mailbox intrusive link. Must be named mpsc_next for MPSCMailbox<T>.
     std::atomic<TypedMessage*> mpsc_next{nullptr};
 
@@ -150,6 +157,7 @@ class TypedMessage {
     ActorAddress sender_address_;
     TraceContext trace_context_;
     bool has_trace_context_ = false;
+    int64_t deadline_ns_ = INT64_MAX;
 };
 
 } // namespace hpactor

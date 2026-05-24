@@ -28,6 +28,7 @@
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/mailbox/dedup_cache.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -457,6 +458,11 @@ class ActorSystem {
     /// \return \c true if a record was available.
     bool pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept;
 
+    // Receiver dedup cache for at-least-once delivery
+    mailbox::DedupCache* dedup_cache() { return dedup_cache_.get(); }
+    const mailbox::DedupCache* dedup_cache() const { return dedup_cache_.get(); }
+
+    // Build a MailboxConfig from system-wide defaults in Config::mailbox.
     // ── Mailbox configuration ─────────────────────────────────────────────
 
     /// \brief Build a \c MailboxConfig from system-wide defaults.
@@ -668,6 +674,9 @@ class ActorSystem {
 
     // Dead-letter queue
     std::unique_ptr<mailbox::DeadLetterQueue> dead_letters_;
+
+    // Receiver dedup cache for at-least-once delivery
+    std::unique_ptr<mailbox::DedupCache> dedup_cache_;
 
     // Tracing subsystem
     tracing::TraceConfig tracing_config_;

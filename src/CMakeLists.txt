@@ -20,6 +20,7 @@ add_library(hpactor_lib SHARED
     ref/actor_ref.cpp
     supervision/supervision.cpp
     mailbox/dead_letter_queue.cpp
+    mailbox/dedup_cache.cpp
     config/actor_factory_registry.cpp
     config/toml_parser.cpp
     config/toml_table_view.cpp
@@ -34,6 +35,7 @@ add_library(hpactor_lib SHARED
     config/parsers/dead_letters_config_parser.cpp
     config/parsers/tracing_config_parser.cpp
     config/parsers/shutdown_config_parser.cpp
+    config/parsers/delivery_config_parser.cpp
     config/parsers/quarantine_parser.cpp
     config/binary_serializer.cpp
     config/binary_loader.cpp
