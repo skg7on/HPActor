@@ -10,15 +10,15 @@
 
 A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, multi-priority queues, and an application-defined two-tier slab memory allocator for deterministic response times without GC pauses.
 
-## Recent Work (May 11-18, 2026)
+## Recent Work (May 17-24, 2026)
 
-The last week moved a large part of the production reliability roadmap from design into runtime support:
+The last week pushed the production reliability foundation further into runtime code and made the test harness much more representative:
 
-- **Lifecycle and graceful stop**: `LifecycleActor`, drain policies, drain-aware dispatch, `ActorContext::stop()`, `ActorSystem::shutdown()`, and CLI `/system drain` / `/system stop`.
-- **Backpressure and DLQ**: Bounded mailbox admission, producer-facing `EnqueueResult`, actor-system dead-letter capture, DLQ snapshots/pop, drain-related dead-letter reasons, and mailbox policy TOML parsing.
-- **Observability**: Structured logging X-Macro cleanup, distributed tracing, lifecycle/dead-letter metric aggregation, CI and coverage badges, and coverage workflow publishing.
-- **Example coverage**: `13_order_platform` now demonstrates a multi-actor order pipeline, failure scenarios, remote payment spawn, DLQ visibility, an ops probe, and TOML role configs.
-- **Test and CI hardening**: Deterministic scheduler worker-control support, low-coverage test expansion across core subsystems, TimingWheel initialization fixes, and safer logger lifetime across repeated `ActorSystem` instances.
+- **Delivery semantics and failure reporting**: `DeliveryMode`, receiver-side `DedupCache`, delivery-deadline expiry, canonical `FailureReason` / `FailureEnvelope`, DLQ failure mapping, and CLI `/failure reasons` / `/failure summary`.
+- **Actor containment**: per-actor `QuarantinePolicy`, circuit breaker tracking, failure-rate and timeout windows, supervision quarantine directives, quarantine metrics, and `[system.quarantine]` TOML defaults.
+- **Memory and shared ADTs**: typed memory-region accounting with hard-limit admission, `MemoryPressure` failure mapping, shared `Id<Tag, T>` identifiers, `NodeIdentity`, and shared MPSC ring-buffer extraction.
+- **Test and coverage infrastructure**: vendored Google Test, a three-tier `unit` / `integration` / `system` layout, 29 GTest binaries, 187 test source files, 1083 source-level GTest cases, `ENABLE_COVERAGE`, and broader network/system coverage.
+- **Build, docs, and API polish**: CMake split into focused modules, GCC 15 flag guards, project logo, full Apache 2.0 headers, and stricter Doxygen on new and core public APIs.
 
 ## Features
 
@@ -29,6 +29,7 @@ The last week moved a large part of the production reliability roadmap from desi
 - **Unified Message Passing**: `TypedMessage` wraps any protobuf payload with sender address for request/response routing
 - **ActorRefCache**: Lock-free LRU cache for resolved `ActorRef` lookups, O(1) amortized
 - **Error Reply**: `reply_with_error()` / `reply_with_result()` for structured error handling across the network
+- **Opaque Identifiers**: Shared `Id<Tag, T>` template backs `ActorId`, `MessageId`, `AlarmHandle`, and timer IDs to prevent accidental cross-domain comparisons
 
 ### Protobuf-Native Programming Model
 - **proto_actor**: Base class with template handler registration — `on<T>()` for fire-and-forget, `on_request<ReqT, ResT>()` for request-response
@@ -49,12 +50,14 @@ The last week moved a large part of the production reliability roadmap from desi
 - **MPSCActorMailbox\<T\>**: Edge-triggered CAS wakeup — no lost wakeups, no spurious rescheduling
 - **Bounded Admission**: Configurable capacity, high/low watermarks, overflow policies (RejectNewest, DropNewest, DropOldest, DeadLetter, and more)
 - **Backpressure Signals**: `EnqueueResult` with pressure ratio, retry-after hint, and upstream `BackpressureMode` (local, remote, both)
+- **Delivery Modes**: `DeliveryMode` declares best-effort, observable best-effort, at-least-once, and durable-at-least-once policy intent for runtime delivery paths
+- **Deadlines and Deduplication**: delivery-deadline expiry maps to canonical failure reasons, and `DedupCache` suppresses duplicate `(source node, source actor, message id)` tuples for tracked delivery
 - **Dead-Letter Queue**: Bounded record capture with reason/source tracking, payload sampling, snapshot and pop APIs
 - **Swap-in Interface**: `IMailbox<T>` allows replacing the mailbox implementation without touching actor code
 
 ### Memory Management
 - **Two-Tier Slab Allocator**: mmap-backed SegmentProvider (Tier 0) → per-thread SlabCache with bump+freelist (Tier 1), 8 size classes (32B–4KB)
-- **Typed Memory Regions**: Separate allocation pools for actors, messages, coroutines, network buffers, internal structures, and hibernation
+- **Typed Memory Regions**: Separate allocation pools for actors, messages, coroutines, network buffers, internal structures, and hibernation, with per-region hard limits, high-water pressure state, and rejected-allocation counters
 - **Thread-Local Hot Path**: Bump pointer allocation < 25ns, lock-free CAS freelist recycle < 32ns
 - **Per-Actor Observability**: 64-byte cache-line-aligned atomic counter array indexed by ActorId, lock-free telemetry ring buffer
 - **Debugging**: Memory poisoning (0xAA), canary verification on alloc/free, guard pages with SIGSEGV/SIGBUS handler
@@ -64,6 +67,7 @@ The last week moved a large part of the production reliability roadmap from desi
 
 ### Observability & Metrics
 - **Actor-Level Metrics**: Native OpenMetrics exposition — mailbox depth, message processing latency, actor lifecycle counters, scheduler steals, supervision restarts — served via HTTP `/metrics` endpoint for Prometheus/Grafana
+- **Failure and Containment Events**: Delivery failures, quarantines, and unquarantines feed the metrics aggregator with canonical reason labels
 - **Out-of-Band Instrumentation**: Lock-free `MpscRingBuffer<T>` with CAS-based event writes — zero hot-path overhead for user actors
 - **OpenMetrics Format**: `# HELP`/`# TYPE` metadata, `Counter`/`Gauge`/`Histogram` with exponential bucketing, Prometheus-compatible output
 - **Per-Actor Labeling**: `actor_id` and `actor_type` labels for drill-down debugging, configurable cardinality via `per_actor_labels`
@@ -93,7 +97,15 @@ The last week moved a large part of the production reliability roadmap from desi
 - **Reliability Plane Roadmap**: `docs/architecture/production/production-reliability-plane.md` organizes the next evolution into data plane, control plane, and operations plane work
 - **Refined Requirement Backlog**: `docs/architecture/production/feature-gap-refined-requirement-backlog.md` maps subsystem gaps to architecture requirements, dependencies, acceptance evidence, observability, and tests
 - **Design Docs**: delivery semantics, DLQ, cluster failure model, sharding/placement, reliable messaging, durable state, graceful shutdown/rolling upgrade, security, operations/SRE, dynamic config, and chaos/reliability testing
-- **Implementation Status**: Scheduled messages, bounded mailboxes, dead-letter queue, distributed tracing, HTTP gateway, graceful shutdown, and actor lifecycle are implemented. Cluster control, security, and operations plane remain in design.
+- **Implementation Status**: Scheduled messages, delivery-mode configuration, receiver deduplication, structured failure envelopes, bounded mailboxes, dead-letter queue, distributed tracing, HTTP gateway, graceful shutdown, actor lifecycle, and actor quarantine are implemented. Durable outbox/inbox, ACK/NACK retry, cluster control, security, and operations-plane admin APIs remain in design.
+
+### Failure Semantics & Containment
+- **Canonical Reasons**: `FailureReason` and `FailureSource` provide a shared failure vocabulary across actor send, mailbox admission, RPC, spawn, transport, DLQ, tracing, metrics, and CLI output
+- **FailureEnvelope**: Compact stack-friendly failure carrier with actor/sender/receiver/message/trace metadata, retryability, monotonic timestamp, source, and bounded detail text
+- **Failure Mappings**: `EnqueueResultCode`, `errors::`, spawn errors, and `DeadLetterReason` map back to canonical failure reasons
+- **Circuit Breakers**: per-actor `CircuitBreakerTracker` transitions Closed -> Open -> HalfOpen based on failure and timeout observations, with cooldown and probe handling
+- **Quarantine**: `QuarantinePolicy` can escalate repeatedly failing actors from supervision restart loops into message rejection with explicit `Quarantined` / `CircuitOpen` reasons
+- **CLI Visibility**: `/failure reasons` lists reason codes and retryability; `/failure summary` reports the wired mappings and delivery-failure metric status
 
 ### Actor Lifecycle
 - **ActorState**: Atomic state machine (Idle → Ready → Running → IOWaiting → Terminated) with CAS transitions
@@ -271,11 +283,12 @@ ActorRef (std::variant)
 cmake -S . -B build -GNinja
 ninja -C build
 
-# Run tests (150 CTest targets)
+# Run discovered GTest cases via CTest
 ctest --output-on-failure --parallel 8
 
-# Run a single test
-./build/tests/test_<name>
+# Run a single GTest binary or case
+./build/tests/unit/core/test_unit_core
+./build/tests/unit/core/test_unit_core --gtest_filter="*ActorId*"
 ```
 
 ### Build Options
@@ -289,8 +302,10 @@ ctest --output-on-failure --parallel 8
 | `-DENABLE_MEMORY_TRACKING=OFF` | Disable per-actor memory tracking (default ON) |
 | `-DENABLE_MEMORY_DEBUG=ON` | Enable memory poisoning + canary verification (default OFF) |
 | `-DENABLE_ACTOR_METRICS=OFF` | Disable actor-level metrics subsystem (default ON) |
+| `-DENABLE_ACTOR_LOGGING=OFF` | Disable structured actor logging subsystem (default ON) |
 | `-DENABLE_ACTOR_TRACING=OFF` | Disable distributed tracing subsystem (default ON) |
 | `-DENABLE_CLI=OFF` | Disable interactive CLI subsystem (default ON) |
+| `-DENABLE_COVERAGE=ON` | Enable gcov/llvm-cov style coverage instrumentation |
 
 ## Design Constraints
 
@@ -308,8 +323,8 @@ Actors spend most of their time waiting for messages or I/O. C++20 stackless cor
 ### Header-only types, linked runtime
 Actor types, behaviors, and message definitions are header-only templates — zero overhead, inlined by the compiler. The actor runtime (scheduler, event loop, connection pool) is compiled into a shared library. This separation means actors pay no abstraction cost while the runtime can evolve independently.
 
-### constexpr ActorId initialization
-`ActorId` has a `constexpr` constructor enabling constant initialization of well-known actor IDs (e.g., `SpawnReceiverId`). This avoids static initialization order problems and makes test fixtures simpler.
+### constexpr opaque ID initialization
+`ActorId`, `MessageId`, `AlarmHandle`, and timer IDs are aliases over the shared `Id<Tag, T>` template. They keep well-known IDs constant-initializable (e.g., `SpawnReceiverId`) while preventing accidental comparisons between unrelated identifier domains.
 
 ### Lock-free mailbox earned through testing
 The mailbox uses a Vyukov MPSC queue with an edge-trigger `CAS` wakeup mechanism. This was designed through iterative testing rather than upfront theory — the "swap-in mailbox interface" means the implementation can be replaced if the lock-free approach proves problematic on new hardware.
@@ -326,12 +341,12 @@ The codebase uses LLVM style (`clang-format`) with strict warnings (`-Wall -Wext
 ```
 include/hpactor/
 ├── actor/          — Actor base classes, behaviors, typed actors, lifecycle, drain
-├── adt/            — Shared data structures (StreamBuffer)
+├── adt/            — Shared data structures (Id, NodeIdentity, MpscRingBuffer, StreamBuffer)
 ├── cli/            — CLI subsystem (CliActor, CommandNode, Lexer, OutputFormatter, Pager, commands)
 ├── config/         — TOML config topology parser, binary format, actor factory registry
 ├── core/           — ActorSystem, ActorContext, mailbox, registry, config
 ├── log/            — Structured logging (LogManager, LogRingBuffer, LogDrain, sinks, formatters)
-├── mailbox/        — MPSCMailbox, MPSCActorMailbox, DeadLetterQueue, MailboxPolicy
+├── mailbox/        — MPSCMailbox, MPSCActorMailbox, DeliveryMode, DedupCache, DeadLetterQueue, MailboxPolicy
 ├── metrics/        — MpscRingBuffer, MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
 ├── net/            — EventLoop, TLS, connection pool, registrar, reactor/proactor
 ├── ref/            — Actor references (address, ref, proxy, cache)
@@ -349,12 +364,14 @@ include/hpactor/
 
 src/
 ├── actor/          — ActorSystem, EventBasedActor, SpawnReceiver, ProtoActor
+├── adt/            — Shared runtime data-structure implementations
 ├── cli/            — CliActor, lexer, command_node, formatters (pretty/json/tabular), pager
 ├── config/         — TOML parser, binary serializer/loader, factory registry, subsystem parsers
 ├── log/            — LogManager, LogDrain, sinks, formatters
 ├── metrics/        — MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
 ├── tracing/        — TraceManager, exporters (memory, JSON, OTLP), sampler, context parser
 ├── core/           — serialization.cpp (protobuf-based)
+├── mailbox/        — DedupCache and mailbox support implementations
 ├── net/            — EventLoop, TcpTransport, TLS, connection pool, frame
 ├── ref/            — ActorRef, ActorProxy implementations
 ├── rpc/            — RpcChannel implementation
@@ -373,7 +390,7 @@ protos/hpactor/
 
 tools/toml-compiler/ — AOT compiler: TOML topology → binary format
 docs/architecture/production/ — Production reliability roadmap, missing design docs, and refined requirement backlog
-tests/              — 150 CTest targets across actor(29), cli(7), config(7), core(2), examples(1), log(7), mailbox(11), mem(15), metrics(3), net(24), ref(3), rpc(1), sched(18), spawn(5), supervision(5), tracing(12)
+tests/              — 29 GTest binaries across unit, integration, and system tiers; 187 test source files and 1083 source-level GTest cases
 examples/           — 12 API usage examples, including the full order platform scenario
 third_party/        — Vendored dependencies (llhttp, toml++)
 cmake/              — CMake modules (protobuf codegen, toml++ interface target)
@@ -381,18 +398,20 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 
 ## Status
 
-### Complete (150 CTest targets configured)
+### Complete (29 GTest binaries configured)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
 - **Actor References**: ActorRef (local/proxy variant), ActorRefCache (LRU resolution cache)
+- **Shared ADTs**: Opaque typed identifiers, shared MPSC ring buffer, stream buffer, and node identity primitives
 - **Scheduled Messages**: `context()->schedule(delay, msg)` for timer-based self-delivery with `AlarmHandle` cancellation
 - **Supervision**: OneForOne, AllForOne, SupervisorActor, SelfSupervisingActor
 - **Scheduling**: HybridScheduler with work-stealing + EDF + timing wheel + coroutine frame pool
 - **Coroutines**: CoroutineTask, MailboxAwaiter, TimerAwaiter, YieldAwaiter
+- **Delivery Semantics Foundation**: delivery modes, delivery deadlines, receiver deduplication cache, and canonical failure mapping
 - **Mailbox**: MPSCMailbox (Vyukov lock-free), MPSCActorMailbox (edge-triggered CAS), bounded admission, backpressure signals
 - **Dead-Letter Queue**: Bounded record capture with reason/source tracking, payload sampling, snapshot and pop APIs
-- **Memory Management**: Two-tier slab allocator (mmap → thread-local slabs), typed regions, hibernation with ZRAM hints, compaction with fragmentation budget, per-actor observability, memory poisoning + canaries + guard pages
+- **Memory Management**: Two-tier slab allocator (mmap → thread-local slabs), typed regions with pressure admission, hibernation with ZRAM hints, compaction with fragmentation budget, per-actor observability, memory poisoning + canaries + guard pages
 - **Network**: TLS 1.3, connection pooling, UDS support, reactor/proactor backends
 - **HTTP Gateway**: HTTPGatewayActor with route registration, HttpClient for outbound requests, request/reply correlation
 - **Service Discovery**: Pluggable IServiceDiscovery with 4 backends (Gossip SWIM, UdpRegistrar, Hybrid, Static) + ActorLocationCache
@@ -405,22 +424,25 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Structured Logging**: MPSC ring buffer, batched drain, pluggable sinks (stderr, file, rotating), text/JSON formatters
 - **Distributed Tracing**: W3C TraceContext propagation, actor receive spans, memory/JSON/OTLP exporters, parent-based sampling
 - **Actor Lifecycle**: LifecycleActor mixin with constexpr state machine, message gate, supervision integration
+- **Failure Semantics**: FailureReason, FailureSource, FailureEnvelope, mappings from mailbox/errors/spawn/DLQ, and CLI failure commands
+- **Actor Quarantine and Circuit Breakers**: opt-in quarantine policies, per-actor circuit breaker state, failure/timeout tracking, and quarantine metrics
 - **Graceful Shutdown**: DrainPolicy, phase-machine coordinator, CLI drain/stop commands, TOML config
 - **Deterministic Test Support**: Scheduler worker pause/resume/step driver plus CI-oriented test design constraints for race-prone subsystems
+- **Google Test Harness**: Vendored Google Test, tiered test binaries, discovered GTest cases, and system-level network/registrar coverage
 - **CI and Coverage**: GitHub Actions CI, coverage workflow, README badges, and stabilized gcc-debug / clang-release test paths
 - **Order Platform Example**: Full-featured multi-actor order pipeline demonstrating stateful actors, bounded mailboxes, DLQ, tracing, HTTP gateway, remote spawn, and ops probe
 
 ### Designed / Backlogged
 
 - **Production Reliability Plane**: Data/control/operations plane roadmap for 24x7 operation
-- **Reliable Messaging**: ACK/NACK, retry, deduplication, durable outbox/inbox
+- **Reliable Messaging Completion**: ACK/NACK, automatic retry, retry exhaustion policy, durable outbox/inbox recovery
 - **Durable Actor State**: Snapshot, event sourcing, recovery
-- **Cluster Control**: Failure model, quarantine/fencing, sharding, placement, handoff, and rolling upgrade design
+- **Cluster Control**: Node failure model, node quarantine/fencing, sharding, placement, handoff, and rolling upgrade design
 - **Production Operations**: Health endpoints, authenticated admin API, security/audit, config reload, chaos/soak/fuzz testing
 
 ### Next Steps
 
-- Production reliability plane: health/readiness/liveness endpoints, cluster failure model (quarantine/fencing), security (mTLS, auth, audit)
+- Production reliability plane: health/readiness/liveness endpoints, cluster node failure model (node quarantine/fencing), security (mTLS, auth, audit)
 - Typed RPC API (`call<Request, Response>` with serialization)
 - Argument deserialization for passing constructor args through remote spawn
 - Proactor backend production hardening (IoUringBackend, GcdBackend)
