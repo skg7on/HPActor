@@ -26,16 +26,24 @@ namespace hpactor {
 // Forward declaration
 class ActorSystem;
 
-// -----------------------------------------------------------------------------
-// Actor - opaque handle to a local actor
-// -----------------------------------------------------------------------------
+/// \brief Opaque handle to a local actor.
+///
+/// Wraps a \c shared_ptr<AbstractActor>. Lightweight to copy; the underlying
+/// actor is reference-counted. A default-constructed \c Actor is empty and
+/// evaluates to \c false.
 class Actor {
   public:
+    /// \brief Construct an empty (invalid) handle.
     Actor() = default;
 
+    /// \brief Construct a handle from an actor pointer.
+    /// \param[in] ptr Shared pointer to an \c AbstractActor.
     explicit Actor(std::shared_ptr<AbstractActor> ptr)
         : actor_(std::move(ptr)) {}
 
+    /// \brief Globally-unique actor identifier.
+    ///
+    /// Returns \c ActorId{} when the handle is empty.
     ActorId id() const {
         if (actor_) {
             return actor_->id();
@@ -43,6 +51,7 @@ class Actor {
         return ActorId{};
     }
 
+    /// \brief Actor type tag.
     ActorType type() const {
         if (actor_) {
             return actor_->type();
@@ -50,6 +59,7 @@ class Actor {
         return ActorType{0};
     }
 
+    /// \brief Full network-addressable identity.
     ActorAddress address() const {
         if (actor_) {
             return actor_->address();
@@ -57,10 +67,12 @@ class Actor {
         return ActorAddress{};
     }
 
+    /// \brief Implicit conversion to \c ActorAddress.
     operator ActorAddress() const {
         return address();
     }
 
+    /// \brief Returns \c true if the handle is non-empty.
     explicit operator bool() const {
         return actor_ != nullptr;
     }
@@ -69,7 +81,7 @@ class Actor {
         actor_.swap(other.actor_);
     }
 
-    // Access the underlying actor (for internal use)
+    /// \brief Access the underlying \c AbstractActor pointer (internal use).
     std::shared_ptr<AbstractActor> get() const {
         return actor_;
     }
@@ -78,25 +90,25 @@ class Actor {
     std::shared_ptr<AbstractActor> actor_;
 };
 
-// -----------------------------------------------------------------------------
-// ActorRef - unified reference to a local or remote actor
-// -----------------------------------------------------------------------------
-// ActorRef provides location-transparent access to actors. It can hold
-// either a local Actor or a remote ActorProxy, and dispatches operations
-// appropriately based on the underlying reference type.
-// -----------------------------------------------------------------------------
+/// \brief Unified, location-transparent reference to an actor.
+///
+/// Holds either a local \c Actor or a remote \c ActorProxy in a variant.
+/// All send operations dispatch to the correct path transparently.
+///
+/// \note Thread safety: \c send() delegates to the underlying actor or
+///       proxy which synchronize internally.
 class ActorRef {
   public:
-    // Default constructor creates an invalid reference
+    /// \brief Construct an invalid reference.
     ActorRef() = default;
 
-    // Construct from a local actor
+    /// \brief Construct from a local actor.
     ActorRef(Actor actor) : ref_(std::move(actor)) {}
 
-    // Construct from a remote actor proxy
+    /// \brief Construct from a remote actor proxy.
     ActorRef(ActorProxy proxy) : ref_(std::move(proxy)) {}
 
-    // Get the actor's address
+    /// \brief Get the actor's address (local or remote).
     ActorAddress address() const {
         if (is_local()) {
             return std::get<Actor>(ref_).address();
@@ -105,12 +117,12 @@ class ActorRef {
         }
     }
 
-    // Check if this is a local actor
+    /// \brief Returns \c true if this reference is to a local actor.
     bool is_local() const {
         return std::holds_alternative<Actor>(ref_);
     }
 
-    // Check if this actor is valid
+    /// \brief Returns \c true if the reference is valid (local or remote).
     explicit operator bool() const {
         if (is_local()) {
             return static_cast<bool>(std::get<Actor>(ref_));
@@ -119,21 +131,34 @@ class ActorRef {
         }
     }
 
-    // Get the endpoint where this actor resides
+    /// \brief Network endpoint where this actor resides.
     EndPoint endpoint() const {
         return address().endpoint;
     }
 
-    // Send a message to this actor
+    /// \brief Send a message to this actor.
+    ///
+    /// For local actors, delivers directly to the mailbox. For remote actors,
+    /// serializes and sends over the transport.
+    /// \param[in] target Destination address (usually the actor's own).
+    /// \param[in] msg Message to send (moved).
     void send(const ActorAddress& target, TypedMessage msg);
 
-    // Try-send returning an admission result.
-    // For local actors, delegates to ActorSystem::try_deliver_local().
-    // For remote actors, delegates to ActorProxy::try_send() (best-effort).
+    /// \brief Try-send returning an admission result.
+    ///
+    /// For local actors, delegates to \c ActorSystem::try_deliver_local().
+    /// For remote actors, delegates to \c ActorProxy::try_send() (best-effort).
+    ///
+    /// \param[in] target Destination address.
+    /// \param[in] msg Message to send.
+    /// \param[in] options Delivery options (deadline, priority, idempotency).
+    /// \return \c EnqueueResult describing the admission outcome.
     mailbox::EnqueueResult try_send(const ActorAddress& target, TypedMessage msg,
                                     mailbox::DeliveryOptions options = {});
 
-    // Access underlying Actor (for internal use)
+    /// \brief Access underlying \c Actor (internal use).
+    ///
+    /// Returns \c nullptr if this is a remote reference.
     Actor* get_actor() {
         if (is_local()) {
             return &std::get<Actor>(ref_);
@@ -141,7 +166,9 @@ class ActorRef {
         return nullptr;
     }
 
-    // Access underlying ActorProxy (for internal use)
+    /// \brief Access underlying \c ActorProxy (internal use).
+    ///
+    /// Returns \c nullptr if this is a local reference.
     ActorProxy* get_proxy() {
         if (!is_local()) {
             return &std::get<ActorProxy>(ref_);

@@ -18,15 +18,19 @@
 
 namespace hpactor {
 
-// -----------------------------------------------------------------------------
-// Well-known system actor IDs
-// Reserved range: 0xFFFF0000 - 0xFFFFFFFF
-// -----------------------------------------------------------------------------
+/// \brief Well-known system actor identifiers.
+///
+/// System actors occupy the reserved ID range \c 0xFFFF0000 – \c 0xFFFFFFFF.
+/// These are pre-assigned so that remote nodes and subsystems can address
+/// them without discovery.
 
-constexpr ActorId SpawnReceiverId = ActorId(0xFFFF0001); // Handles spawn
-                                                         // requests
+/// \brief Actor ID of the \c SpawnReceiver system actor.
+///
+/// Handles remote spawn requests and routes \c SpawnRequest / \c SpawnResponse
+/// messages.
+constexpr ActorId SpawnReceiverId = ActorId(0xFFFF0001);
 
-// System actor type (used in ActorAddress for system actors)
+/// \brief Type tag used in \c ActorAddress for system actors.
 constexpr ActorType SystemActorType = 0xFFFF0000;
 
 } // namespace hpactor

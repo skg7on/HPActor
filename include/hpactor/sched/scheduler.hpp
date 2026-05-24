@@ -52,23 +52,33 @@ namespace hpactor::sched {
 
 class DedicatedThreadPool; // forward decl
 
-// -----------------------------------------------------------------------------
-// TimerHandle and timer_callback types
-// -----------------------------------------------------------------------------
+/// \brief Opaque handle for a scheduled timer.
 using TimerHandle = Id<TimerTag>;
 
+/// \brief Callback invoked when a timer fires.
 using timer_callback = std::function<void()>;
 
-enum class TimerBackend : uint8_t { TimingWheel = 0, CalendarQueue = 1 };
-
-struct SchedulerDrainResult {
-    size_t executed = 0;
-    bool idle = true;
+/// \brief Timer backend implementation selector.
+enum class TimerBackend : uint8_t {
+    TimingWheel = 0,   ///< Hierarchical timing wheel (O(1) insert/cancel).
+    CalendarQueue = 1, ///< Calendar queue (good for sparse timers).
 };
 
-// -----------------------------------------------------------------------------
-// IScheduler: interface for actor schedulers
-// -----------------------------------------------------------------------------
+/// \brief Result of draining the ready queue.
+struct SchedulerDrainResult {
+    size_t executed = 0; ///< Number of work items executed.
+    bool idle = true;    ///< \c true if no more ready actors remain.
+};
+
+/// \brief Abstract interface for actor schedulers.
+///
+/// The scheduler is the core execution engine — it routes ready actors to
+/// worker threads, manages timers, and supports dedicated-thread and
+/// dedicated-pool execution contexts.
+///
+/// \note Thread safety: \c notify_ready(), \c notify_idle(), and timer
+///       methods are safe from any thread. Worker control methods are
+///       intended for test harness use.
 class IScheduler {
   public:
     virtual ~IScheduler() = default;
@@ -76,51 +86,81 @@ class IScheduler {
     virtual void set_metrics_ring_buffer(void* /*buf*/) {}
     virtual void set_logger(void* /*logger*/) noexcept {}
 
-    // Start the scheduler
+    /// \brief Start all worker threads.
     virtual void start() = 0;
 
-    // Stop the scheduler
+    /// \brief Stop all worker threads and timer advancement.
     virtual void stop() = 0;
 
-    // Thread-safe; may be called from any thread including I/O threads
-    // Notify scheduler that an actor is ready to run at given priority
+    /// \brief Notify the scheduler that an actor is ready to run.
+    ///
+    /// Safe from any thread, including I/O threads.
+    /// \param[in] actor Actor ID.
+    /// \param[in] priority 0–3 (0 = highest).
+    /// \param[in] deadline_ns Absolute deadline in nanoseconds.
     virtual void
     notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) = 0;
 
-    // Notify scheduler that an actor has become idle (blocked on I/O, etc.)
+    /// \brief Notify that an actor has become idle (blocked on I/O, etc.).
+    ///
+    /// Safe from any thread.
+    /// \param[in] actor Actor ID.
     virtual void notify_idle(ActorId actor) = 0;
 
-    // Voluntarily yield — re-enqueue actor at same priority for cooperative
-    // multitasking
+    /// \brief Voluntarily yield — re-enqueue at the same priority for
+    ///        cooperative multitasking.
+    ///
+    /// \param[in] actor Actor ID.
+    /// \param[in] priority Current priority level.
     virtual void yield(ActorId actor, uint8_t priority) = 0;
 
-    // Schedule a one-shot timer to fire after delay_ns
+    /// \brief Schedule a one-shot timer.
+    ///
+    /// \param[in] cb Callback invoked when the timer fires.
+    /// \param[in] delay_ns Delay in nanoseconds from now.
+    /// \return Handle that can be used to cancel.
     virtual TimerHandle schedule_after(timer_callback cb, int64_t delay_ns) = 0;
 
-    // Schedule a recurring timer to fire every interval_ns
+    /// \brief Schedule a recurring timer.
+    ///
+    /// \param[in] cb Callback invoked every \p interval_ns.
+    /// \param[in] interval_ns Interval in nanoseconds.
+    /// \return Handle that can be used to cancel.
     virtual TimerHandle schedule_every(timer_callback cb, int64_t interval_ns) = 0;
 
-    // Cancel a previously scheduled timer
+    /// \brief Cancel a previously scheduled timer.
+    ///
+    /// \param[in] handle Timer handle returned by \c schedule_after() or
+    ///                   \c schedule_every().
     virtual void cancel_timer(TimerHandle handle) = 0;
 
-    // Number of worker threads
+    /// \brief Number of worker threads.
     virtual size_t worker_count() const = 0;
 
-    // Check if scheduler is running
+    /// \brief Returns \c true while workers are running.
     virtual bool is_running() const = 0;
 
-    // Register an actor that needs a dedicated OS thread.
-    // cpu_affinity: -1 = no affinity, >=0 = pin to specific core.
+    /// \brief Register an actor that needs a dedicated OS thread.
+    ///
+    /// \param[in] actor Actor ID.
+    /// \param[in] cpu_affinity -1 = no affinity, >= 0 = pin to specific core.
     virtual void register_dedicated_thread(ActorId actor, int cpu_affinity) = 0;
 
-    // Register an actor that needs a dedicated worker pool.
-    // The scheduler creates or reuses a DedicatedThreadPool of the given size.
+    /// \brief Register an actor that needs a dedicated worker pool.
+    ///
+    /// The scheduler creates or reuses a \c DedicatedThreadPool of the
+    /// given size.
+    /// \param[in] actor Actor ID.
+    /// \param[in] pool_size Number of threads in the pool.
     virtual void register_dedicated_pool(ActorId actor, uint32_t pool_size) = 0;
 
-    // Shutdown a dedicated execution context for an actor.
+    /// \brief Shutdown a dedicated execution context for an actor.
+    ///
+    /// \param[in] actor Actor ID.
     virtual void unregister_dedicated(ActorId actor) = 0;
 
-    // Worker control (intended for deterministic testing).
+    // ── Worker control (deterministic testing) ─────────────────────────────
+
     virtual void pause_workers() noexcept {}
     virtual void resume_workers() noexcept {}
     virtual bool workers_paused() const noexcept {
@@ -143,20 +183,28 @@ class IScheduler {
     }
 };
 
-// -----------------------------------------------------------------------------
-// HybridScheduler: work-stealing scheduler with priority queues
-// -----------------------------------------------------------------------------
-// Each worker has its own ChaseLev deque. Work-stealing is done by trying
-// to pop from the target worker's deque when local work is exhausted.
-// Priority levels 0-3 (0 = highest).
-//
-// Uses MultiPriorityWorkQueue for priority-based local enqueue.
-// Work-stealing is attempted in round-robin order across workers.
-// -----------------------------------------------------------------------------
+/// \brief Work-stealing hybrid scheduler with priority queues.
+///
+/// Each worker thread owns a \c ChaselevDeque for local work and an
+/// \c EDFQueue for deadline-ordered execution. When a worker's local
+/// queues are empty it steals from other workers via A2WS (Adaptive
+/// Two-Level Work Stealing).
+///
+/// Supports three timer backends: \c TimingWheel (default, O(1)
+/// insert/cancel) and \c CalendarQueue.
+///
+/// \note Thread safety: The public interface is internally synchronized.
+///       Worker threads run the \c worker_loop() which is not reentrant.
 class HybridScheduler : public IScheduler {
   public:
-    // num_priorities: number of priority levels (default 4, priorities 0..N-1)
-    // ActorSystem reference is held for processing actors
+    /// \brief Construct the scheduler.
+    ///
+    /// \param[in] system Owning \c ActorSystem.
+    /// \param[in] num_workers Number of worker threads.
+    /// \param[in] num_priorities Number of priority levels (default 4,
+    ///                          priorities 0 to N-1, 0 = highest).
+    /// \param[in] timer_backend Timer implementation to use.
+    /// \param[in] start_paused Start with workers paused (for testing).
     explicit HybridScheduler(ActorSystem& system, uint32_t num_workers,
                              uint32_t num_priorities = 4,
                              TimerBackend timer_backend = TimerBackend::TimingWheel,
@@ -194,39 +242,47 @@ class HybridScheduler : public IScheduler {
     bool run_one_ready() override;
     SchedulerDrainResult drain_ready(size_t max_items) override;
 
-    // Try to steal work from another worker (called when local queue is empty)
+    /// \brief Try to steal work from another worker.
+    ///
+    /// Called when the worker's local queue is empty.
+    /// \param[out] out Set to the stolen work item on success.
+    /// \return \c true if work was successfully stolen.
     bool try_steal(WorkItem& out);
 
-    // Process one actor (called by worker loop)
+    /// \brief Process one actor (called by worker loop).
     void process_actor(ActorId actor);
 
-    // Execute an actor (handles coroutine resumption when available)
-    // TODO(Task 4.2): Integrate coroutine resumption when get_coroutine() is
-    // available
+    /// \brief Execute an actor from a work item.
+    ///
+    /// Handles coroutine resumption when available.
     void execute_actor(const WorkItem& item);
 
-    // Timing wheel integration
-    // Schedule a timer to fire after delay_ns (in nanoseconds)
-    // Returns timer ID that can be used to cancel
+    /// \brief Schedule a timer with nanosecond resolution.
+    ///
+    /// \param[in] delay_ns Delay in nanoseconds from now.
+    /// \param[in] callback Callback to invoke when the timer fires.
+    /// \return Timer identifier for cancellation.
     uint64_t schedule_timer(int64_t delay_ns, timer_callback callback);
 
-    // Advance time - processes expired timers
+    /// \brief Advance time and process expired timers.
+    ///
+    /// Called by the timer advancement thread.
+    /// \param[in] now_ns Current time in nanoseconds.
     void advance_time(int64_t now_ns);
 
   private:
     struct alignas(64) WorkerState {
-        // Using unique_ptr array to avoid move semantics issues with
-        // ChaselevDeque
         std::unique_ptr<ChaselevDeque<WorkItem>[]> queues;
         uint32_t index;
         EDFQueue edf_queue; // For deadline-ordered work
     };
 
   public:
-    // A2WS access for WorkerThread
+    /// \brief A2WS victim selection (accessible by \c WorkerThread).
     A2WS& a2ws() {
         return a2ws_;
     }
+    /// \brief Worker state vector.
     std::vector<WorkerState>& workers() {
         return workers_;
     }
@@ -241,11 +297,7 @@ class HybridScheduler : public IScheduler {
     void worker_loop(uint32_t worker_id);
     bool pop_local(WorkItem& out, uint32_t worker_id);
     bool pop_edf(WorkItem& out, uint32_t worker_id);
-
-    // Thread-local worker identification
     uint32_t current_worker_id() const;
-
-    // Exponential backoff when no work available
     void backoff();
 
     ActorSystem& system_;
@@ -255,10 +307,8 @@ class HybridScheduler : public IScheduler {
     std::vector<WorkerState> workers_;
     std::vector<std::thread> worker_threads_;
 
-    // Adaptive two-level work stealing
     A2WS a2ws_;
 
-    // Timer backend (TimingWheel or CalendarQueue via variant dispatch)
     std::variant<TimingWheel, CalendarQueue> timer_backend_;
 
     void set_metrics_ring_buffer(void* buf) noexcept override {
@@ -270,7 +320,6 @@ class HybridScheduler : public IScheduler {
         logger_ = static_cast<log::Logger*>(logger);
     }
 
-    // For recurring timer cancellation: maps timer ID to cancellation flag
     std::unordered_map<uint64_t, std::shared_ptr<std::atomic<bool>>> recurring_cancellations_;
     std::mutex cancellation_mutex_;
 
@@ -278,18 +327,14 @@ class HybridScheduler : public IScheduler {
 
     log::Logger* logger_{nullptr};
 
-    // Worker control
     std::atomic<bool> workers_paused_{false};
     std::atomic<uint32_t> active_worker_dispatches_{0};
     std::atomic<uint32_t> parked_worker_count_{0};
     std::mutex worker_control_mutex_;
     std::condition_variable worker_control_cv_;
 
-    // Timer advancement thread
     std::thread timer_thread_;
 
-    // Dedicated execution storage (PIMPL to avoid incomplete-type-in-container
-    // issue with libc++'s noexcept default constructors)
     struct DedicatedStorage;
     std::unique_ptr<DedicatedStorage> dedicated_;
 };

@@ -43,25 +43,37 @@ namespace mailbox {
 template <typename T> class MPSCActorMailbox;
 } // namespace mailbox
 
-// -----------------------------------------------------------------------------
-// AbstractActor - base class for all actors
-// -----------------------------------------------------------------------------
+/// \brief Polymorphic base class for all actor types.
+///
+/// Owns identity, linking/monitoring, lifecycle queries, and the virtual
+/// interface that the scheduler, transport, and supervision layers call.
+/// Subclasses define how messages are received and dispatched.
+///
+/// \note Thread safety: Identity fields (id, type, address) are set once
+///       during spawn and read-only thereafter. Linking and monitoring
+///       methods delegate to \c ActorContext which synchronizes internally.
 class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
   public:
     virtual ~AbstractActor() = default;
 
+    /// \brief Globally-unique actor identifier assigned at spawn.
     ActorId id() const {
         return id_;
     }
+    /// \brief Pointer to the actor's \c ActorId for consumers that need
+    ///        an address without copying.
     const ActorId* id_ptr() const {
         return &id_;
     }
+    /// \brief Actor type tag.
     ActorType type() const {
         return type_;
     }
+    /// \brief Full network-addressable identity.
     ActorAddress address() const {
         return address_;
     }
+    /// \brief Owning \c ActorSystem reference.
     ActorSystem& system() {
         return system_;
     }
@@ -69,35 +81,54 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
         return system_;
     }
 
-    // Set actor address (called by ActorSystem during spawn)
+    /// \brief Set actor address. Called by \c ActorSystem during spawn.
     void set_address(ActorAddress addr) {
         address_ = addr;
         id_ = addr.id;
         type_ = addr.type;
     }
 
-    // Set scheduler and mailbox (called by ActorSystem during spawn)
+    /// \brief Set scheduler back-reference. Called by \c ActorSystem during
+    /// spawn.
     virtual void set_scheduler(sched::IScheduler* scheduler);
+    /// \brief Set mailbox back-reference. Called by \c ActorSystem during
+    /// spawn.
     virtual void set_mailbox(mailbox::MPSCActorMailbox<TypedMessage>* mailbox);
 
-    // Linking - death sharing
+    /// \brief Establish bidirectional death sharing with \p other.
+    ///
+    /// When either actor terminates, the other receives a \c DownMsg.
+    /// \param[in] other Target actor address.
     void link_to(const ActorAddr& other);
+    /// \brief Remove a previously established link.
+    /// \param[in] other Target actor address.
     void unlink_from(const ActorAddr& other);
 
-    // Monitoring - receive down messages
+    /// \brief Register one-way death monitoring of \p target.
+    ///
+    /// When \p target terminates this actor receives a \c DownMsg.
+    /// \param[in] target Actor to monitor.
     void monitor(const ActorAddr& target);
+    /// \brief Cancel a previously established monitor.
+    /// \param[in] target Actor to stop monitoring.
     void demonitor(const ActorAddr& target);
 
-    // Receive message (called by scheduler)
+    /// \brief Receive and process a message.
+    ///
+    /// Called by the scheduler on the actor's assigned worker thread.
+    /// \param[in,out] msg The incoming typed message.
+    /// \note Thread safety: Called from a single scheduler thread at a time.
+    ///       Implementations must not block the calling thread.
     virtual void receive(TypedMessage& msg) = 0;
 
-    // Type query for safe downcasting without RTTI
+    /// \brief RTTI-free query for \c EventBasedActor subclasses.
     virtual bool is_event_based_actor() const {
         return false;
     }
 
-    // Lifecycle query — RTTI-free downcast to LifecycleActor mixin.
-    // Returns nullptr for actors that don't opt into lifecycle management.
+    /// \brief RTTI-free downcast to the \c LifecycleActor mixin.
+    ///
+    /// Returns \c nullptr for actors that do not opt into lifecycle management.
     virtual LifecycleActor* as_lifecycle() {
         return nullptr;
     }
@@ -105,52 +136,77 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
         return nullptr;
     }
 
-    // Returns true for system actors that should drain last during node
-    // shutdown. MetricsActor, CliActor, SpawnReceiver override this to return
-    // true.
+    /// \brief Returns \c true for system actors that drain last during node
+    ///        shutdown. \c MetricsActor, \c CliActor, and \c SpawnReceiver
+    ///        override this.
     virtual bool is_system_actor() const {
         return false;
     }
 
-    // Dispatch policy — tells the scheduler how to execute this actor.
-    // Default: Cooperative (M:N work-stealing pool).
+    /// \brief Dispatch policy telling the scheduler how to execute this actor.
+    ///
+    /// \return \c Cooperative (default, M:N work-stealing pool).
     virtual sched::DispatchPolicy dispatch_policy() const {
         return sched::DispatchPolicy::Cooperative;
     }
+    /// \brief Dispatch hints (CPU affinity, pool size) for dedicated actors.
     virtual sched::DispatchHints dispatch_hints() const {
         return {};
     }
 
+    /// \brief Human-readable type name for metrics and CLI introspection.
     virtual std::string_view type_name() const {
         return type_name_;
     }
+    /// \brief Set the type name. Called by \c ActorSystem during spawn.
     void set_type_name(std::string name) {
         type_name_ = std::move(name);
     }
 
+    /// \brief Set the metrics ring buffer pointer for out-of-band events.
+    ///
+    /// Default no-op. Overridden by actors that emit metric events.
+    /// \param[in] buf Opaque pointer to an \c MpscRingBuffer<MetricEvent>.
     virtual void set_metrics_ring_buffer(void* /*buf*/) {}
+    /// \brief Set the logger pointer for structured logging.
+    ///
+    /// Default no-op. Overridden by actors that log from the hot path.
+    /// \param[in] logger Opaque pointer to a \c Logger instance.
     virtual void set_logger(void* /*logger*/) noexcept {}
 
-    // CLI introspection interface.
-    // Returns lightweight inspectable metadata. Called from actor's own thread.
+    /// \brief Return lightweight inspectable metadata for CLI introspection.
+    ///
+    /// Called from the actor's own thread via \c InspectStateRequest.
     virtual cli::ActorMeta to_metadata() const;
 
-    // Returns opaque serialized state blob. Default empty.
+    /// \brief Return an opaque serialized state blob.
+    ///
+    /// Default returns empty. Stateful actors override this for hibernation.
     virtual std::vector<uint8_t> serialize_state() const {
         return {};
     }
 
-    // Returns mailbox snapshot. Default empty. Override in mailbox-owning
-    // actors.
+    /// \brief Return a snapshot of the actor's mailbox.
+    ///
+    /// Default returns empty. Override in mailbox-owning actors for CLI
+    /// inspection.
     virtual cli::MboxSnapshot mailbox_snapshot() const {
         return {};
     }
 
   protected:
+    /// \brief Construct an actor with its identity and owning system.
+    ///
+    /// Called by subclasses and \c ActorSystem::spawn().
+    /// \param[in] id Globally-unique actor identifier.
+    /// \param[in] type Actor type tag.
+    /// \param[in] sys Owning \c ActorSystem reference.
     AbstractActor(ActorId id, ActorType type, ActorSystem& sys);
 
-    // Overridden by LocalActor to return the ActorContext.
-    // Returns nullptr for actors without a context (e.g., system actor).
+    /// \brief Return the actor's \c ActorContext.
+    ///
+    /// Overridden by \c LocalActor. Returns \c nullptr for actors without
+    /// a context (e.g., the system pseudo-actor).
     virtual ActorContext* actor_context() {
         return nullptr;
     }
