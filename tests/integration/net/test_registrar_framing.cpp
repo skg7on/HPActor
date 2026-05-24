@@ -16,6 +16,7 @@
 
 #include <atomic>
 #include <optional>
+#include <vector>
 
 using namespace hpactor;
 using namespace hpactor::net;
@@ -25,6 +26,39 @@ namespace {
 void make_nonblocking(int fd) {
     int flags = fcntl(fd, F_GETFL, 0);
     fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+}
+
+// Drive the EventLoop for up to timeout_ms waiting for a condition.
+// Calls update_fd after each wait cycle to re-arm edge-triggered epoll
+// events so the read handler can be invoked again for remaining data.
+bool drive_until(EventLoop& loop, int fd, std::function<bool()> cond,
+                 int timeout_ms = 2000) {
+    int waited = 0;
+    while (!cond() && waited < timeout_ms) {
+        loop.wait(50);
+        loop.process_completions();
+        // Re-arm: on epoll edge-triggered, a single write() produces one
+        // event. If the read handler returned early (self-sync byte-slip),
+        // update_fd re-arms EPOLLIN so the next wait() fires it again.
+        loop.update_fd(fd, EventLoop::Event::Read);
+        waited += 50;
+    }
+    return cond();
+}
+
+// Build a framed registrar message.
+StreamBuffer build_frame(TcpMessageType type, const StreamBuffer& payload) {
+    StreamBuffer frame;
+    frame.resize(TcpHeaderSize + payload.size());
+    uint32_t magic_be = htonl(TcpRegistrarMagic);
+    memcpy(frame.data(), &magic_be, 4);
+    frame[4] = TcpRegistrarVersion;
+    frame[5] = static_cast<uint8_t>(type);
+    uint32_t len_be = htonl(static_cast<uint32_t>(payload.size()));
+    memcpy(frame.data() + 6, &len_be, 4);
+    if (!payload.empty())
+        memcpy(frame.data() + TcpHeaderSize, payload.data(), payload.size());
+    return frame;
 }
 
 } // anonymous namespace
@@ -59,22 +93,15 @@ class RegistrarFramingTest : public ::testing::Test {
 TEST_F(RegistrarFramingTest, AcceptedRegistersWithLoop) {
     EventLoop loop;
     auto conn = RegistrarConnection::accepted(server_fd_, server_ep_, &loop);
-
-    // accepted() calls register_with_loop() which registers fd for Read
     EXPECT_TRUE(loop.has_event(server_fd_, EventLoop::Event::Read));
 }
 
 TEST_F(RegistrarFramingTest, AcceptedVsConnectingRegistration) {
     EventLoop loop;
-    // accepted() registers the fd with the EventLoop for read events
     auto accepted_conn =
         RegistrarConnection::accepted(server_fd_, server_ep_, &loop);
-    // connecting() does NOT register — verified by not crashing on close
-    // We can verify this indirectly: connecting fds don't get read
-    // notifications
     auto connecting_conn =
         RegistrarConnection::connecting(client_fd_, server_ep_, &loop);
-    // Both should construct without crash
     EXPECT_EQ(accepted_conn->fd(), server_fd_);
     EXPECT_EQ(connecting_conn->fd(), client_fd_);
 }
@@ -83,8 +110,7 @@ TEST_F(RegistrarFramingTest, CloseDoesNotCrashOnAlreadyClosedFd) {
     EventLoop loop;
     auto conn = RegistrarConnection::accepted(server_fd_, server_ep_, &loop);
     conn->close();
-    // Double close should not crash (fd_ = -1 guard in close())
-    conn->close();
+    conn->close(); // double close — fd_ = -1 guard
     SUCCEED();
 }
 
@@ -93,9 +119,7 @@ TEST_F(RegistrarFramingTest, CloseDoesNotCrashOnAlreadyClosedFd) {
 TEST_F(RegistrarFramingTest, SendMessageEncodesFrameCorrectly) {
     EventLoop loop;
     auto conn = RegistrarConnection::accepted(server_fd_, server_ep_, &loop);
-
     StreamBuffer payload{'t', 'e', 's', 't'};
-    // We can't easily inspect write_buffer_ but send_message should not crash
     conn->send_message(TcpMessageType::Register, payload);
     SUCCEED();
 }
@@ -103,7 +127,6 @@ TEST_F(RegistrarFramingTest, SendMessageEncodesFrameCorrectly) {
 TEST_F(RegistrarFramingTest, SendMessageWithNullLoopNoCrash) {
     auto conn = RegistrarConnection::connecting(client_fd_, server_ep_, nullptr);
     StreamBuffer payload{'x'};
-    // fd_ < 0 or !loop_ check at top of send_message — should no-op
     conn->send_message(TcpMessageType::Heartbeat, payload);
     SUCCEED();
 }
@@ -121,29 +144,12 @@ TEST_F(RegistrarFramingTest, MessageHandlerCalledOnValidFrame) {
         received_payload = std::string(data.begin(), data.end());
     });
 
-    // Write a valid frame to the other end of the socketpair
     StreamBuffer payload{'h', 'e', 'l', 'l', 'o'};
-    StreamBuffer frame;
-    frame.resize(TcpHeaderSize + payload.size());
-    uint32_t magic_be = htonl(TcpRegistrarMagic);
-    memcpy(frame.data(), &magic_be, 4);
-    frame[4] = TcpRegistrarVersion;
-    frame[5] = static_cast<uint8_t>(TcpMessageType::Heartbeat);
-    uint32_t len_be = htonl(static_cast<uint32_t>(payload.size()));
-    memcpy(frame.data() + 6, &len_be, 4);
-    memcpy(frame.data() + TcpHeaderSize, payload.data(), payload.size());
+    auto frame = build_frame(TcpMessageType::Heartbeat, payload);
+    write(client_fd_, frame.data(), frame.size());
 
-    ssize_t written = write(client_fd_, frame.data(), frame.size());
-    ASSERT_EQ(written, static_cast<ssize_t>(frame.size()));
-
-    // Drive EventLoop to process the read
-    int waited = 0;
-    while (!received_type.has_value() && waited < 2000) {
-        loop.wait(50);
-        loop.process_completions();
-        waited += 50;
-    }
-
+    EXPECT_TRUE(drive_until(loop, server_fd_,
+                            [&] { return received_type.has_value(); }));
     EXPECT_TRUE(received_type.has_value());
     if (received_type.has_value()) {
         EXPECT_EQ(received_type.value(), TcpMessageType::Heartbeat);
@@ -155,6 +161,11 @@ TEST_F(RegistrarFramingTest, MessageHandlerCalledOnValidFrame) {
 }
 
 // ── Self-synchronizing magic recovery ────────────────────────────
+//
+// Writes garbage bytes followed by a valid frame in a single write().
+// handle_read_event() will encounter the bad magic, self-sync via
+// byte-slip, and return. drive_until() re-arms the fd via update_fd()
+// after each wait cycle so edge-triggered epoll re-fires the handler.
 
 TEST_F(RegistrarFramingTest, SelfSyncOnBadMagic) {
     EventLoop loop;
@@ -164,34 +175,19 @@ TEST_F(RegistrarFramingTest, SelfSyncOnBadMagic) {
     conn->set_message_handler(
         [&](TcpMessageType, const StreamBuffer&) { msg_count++; });
 
-    // Write garbage bytes AND valid frame in a single write() so
-    // edge-triggered epoll delivers everything in one event batch.
+    // Combine garbage + valid frame into one write so recv() never
+    // hits EAGAIN (which triggers disconnect) before processing the
+    // valid frame.
     StreamBuffer combined;
     uint8_t garbage[] = {0xFF, 0xEE, 0xDD, 0xCC};
     combined.insert(combined.end(), garbage, garbage + sizeof(garbage));
-
     StreamBuffer payload{'o', 'k'};
-    StreamBuffer frame;
-    frame.resize(TcpHeaderSize + payload.size());
-    uint32_t magic_be = htonl(TcpRegistrarMagic);
-    memcpy(frame.data(), &magic_be, 4);
-    frame[4] = TcpRegistrarVersion;
-    frame[5] = static_cast<uint8_t>(TcpMessageType::Register);
-    uint32_t len_be = htonl(static_cast<uint32_t>(payload.size()));
-    memcpy(frame.data() + 6, &len_be, 4);
-    memcpy(frame.data() + TcpHeaderSize, payload.data(), payload.size());
+    auto frame = build_frame(TcpMessageType::Register, payload);
     combined.insert(combined.end(), frame.begin(), frame.end());
-
     write(client_fd_, combined.data(), combined.size());
 
-    // Drive EventLoop
-    int waited = 0;
-    while (msg_count.load() == 0 && waited < 2000) {
-        loop.wait(50);
-        loop.process_completions();
-        waited += 50;
-    }
-
+    EXPECT_TRUE(
+        drive_until(loop, server_fd_, [&] { return msg_count.load() == 1; }));
     EXPECT_EQ(msg_count.load(), 1);
 }
 
@@ -204,37 +200,29 @@ TEST_F(RegistrarFramingTest, DisconnectOnRecvZero) {
     std::atomic<bool> disconnected{false};
     conn->set_disconnect_handler([&]() { disconnected = true; });
 
-    // Close the other end of socketpair to trigger EOF (recv returns 0)
     ::close(client_fd_);
     client_fd_ = -1;
 
-    // Drive EventLoop — will read EOF and trigger disconnect
-    int waited = 0;
-    while (!disconnected.load() && waited < 2000) {
-        loop.wait(50);
-        loop.process_completions();
-        waited += 50;
-    }
-
+    EXPECT_TRUE(drive_until(loop, server_fd_, [&] { return disconnected.load(); }));
     EXPECT_TRUE(disconnected.load());
 }
 
-// ── Send completion callback ─────────────────────────────────────
+// ── Send multiple messages ───────────────────────────────────────
 
 TEST_F(RegistrarFramingTest, SendMultipleMessagesDoesNotCrash) {
     EventLoop loop;
     auto conn = RegistrarConnection::accepted(server_fd_, server_ep_, &loop);
 
-    // Send several messages back-to-back — should not crash
     StreamBuffer payload1{'d', 'a', 't', 'a'};
     StreamBuffer payload2{'m', 'o', 'r', 'e'};
     conn->send_message(TcpMessageType::Register, payload1);
     conn->send_message(TcpMessageType::Heartbeat, payload2);
-
     SUCCEED();
 }
 
-// ── Multiple messages ────────────────────────────────────────────
+// ── Multiple messages (read side) ────────────────────────────────
+//
+// Combined write of three frames + update_fd re-arming for epoll compat.
 
 TEST_F(RegistrarFramingTest, MultipleMessagesHandledInOrder) {
     EventLoop loop;
@@ -245,34 +233,19 @@ TEST_F(RegistrarFramingTest, MultipleMessagesHandledInOrder) {
         received_types.push_back(type);
     });
 
-    // Build three frames in a single StreamBuffer so edge-triggered
-    // epoll delivers them all in one batch.
     StreamBuffer combined;
-    for (size_t i = 0; i < 3; ++i) {
-        StreamBuffer payload{static_cast<uint8_t>('0' + i)};
-        StreamBuffer frame;
-        frame.resize(TcpHeaderSize + payload.size());
-        uint32_t magic_be = htonl(TcpRegistrarMagic);
-        memcpy(frame.data(), &magic_be, 4);
-        frame[4] = TcpRegistrarVersion;
-        frame[5] = static_cast<uint8_t>(
-            i == 0 ? TcpMessageType::Register
-                   : (i == 1 ? TcpMessageType::Heartbeat : TcpMessageType::Accept));
-        uint32_t len_be = htonl(static_cast<uint32_t>(payload.size()));
-        memcpy(frame.data() + 6, &len_be, 4);
-        memcpy(frame.data() + TcpHeaderSize, payload.data(), payload.size());
+    TcpMessageType types[] = {TcpMessageType::Register,
+                              TcpMessageType::Heartbeat, TcpMessageType::Accept};
+    for (auto t : types) {
+        StreamBuffer payload{static_cast<uint8_t>('x')};
+        auto frame = build_frame(t, payload);
         combined.insert(combined.end(), frame.begin(), frame.end());
     }
     write(client_fd_, combined.data(), combined.size());
 
-    int waited = 0;
-    while (received_types.size() < 3 && waited < 2000) {
-        loop.wait(50);
-        loop.process_completions();
-        waited += 50;
-    }
-
-    ASSERT_EQ(received_types.size(), 3u);
+    EXPECT_TRUE(drive_until(loop, server_fd_,
+                            [&] { return received_types.size() >= 3; }));
+    ASSERT_GE(received_types.size(), 3u);
     EXPECT_EQ(received_types[0], TcpMessageType::Register);
     EXPECT_EQ(received_types[1], TcpMessageType::Heartbeat);
     EXPECT_EQ(received_types[2], TcpMessageType::Accept);
