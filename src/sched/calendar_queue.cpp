@@ -1,5 +1,17 @@
 // Copyright 2026 HPActor Contributors
-// Licensed under the Apache License, Version 2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #include <hpactor/sched/calendar_queue.hpp>
 
 #include <algorithm>
@@ -36,17 +48,16 @@ void CalendarQueue::BucketList::unlink(Timer* t) {
 }
 
 CalendarQueue::CalendarQueue(const CalendarQueueConfig& cfg)
-    : fine_bucket_ns_(cfg.fine_bucket_ns)
-    , coarse_bucket_ns_(cfg.fine_bucket_ns * cfg.fine_buckets)
-    , remote_bucket_ns_(coarse_bucket_ns_ * cfg.coarse_buckets)
-    , max_advance_buckets_(cfg.max_advance_buckets)
-{
+    : fine_bucket_ns_(cfg.fine_bucket_ns),
+      coarse_bucket_ns_(cfg.fine_bucket_ns * cfg.fine_buckets),
+      remote_bucket_ns_(coarse_bucket_ns_ * cfg.coarse_buckets),
+      max_advance_buckets_(cfg.max_advance_buckets) {
     if ((cfg.fine_buckets & (cfg.fine_buckets - 1)) != 0 ||
         (cfg.coarse_buckets & (cfg.coarse_buckets - 1)) != 0 ||
         (cfg.remote_buckets & (cfg.remote_buckets - 1)) != 0) {
         std::abort();
     }
-    fine_mask_   = cfg.fine_buckets - 1;
+    fine_mask_ = cfg.fine_buckets - 1;
     coarse_mask_ = cfg.coarse_buckets - 1;
     remote_mask_ = cfg.remote_buckets - 1;
     fine_wheel_.resize(cfg.fine_buckets);
@@ -84,18 +95,22 @@ uint64_t CalendarQueue::schedule_at(int64_t expire_ns, TimerCallback cb) {
 void CalendarQueue::insert_timer(Timer* timer, int64_t now_ns) {
     int64_t expire = std::max(timer->expire_ns, now_ns + fine_bucket_ns_);
 
-    if (expire < now_ns + fine_bucket_ns_ * static_cast<int64_t>(fine_wheel_.size())) {
+    if (expire <
+        now_ns + fine_bucket_ns_ * static_cast<int64_t>(fine_wheel_.size())) {
         uint32_t b = static_cast<uint32_t>(expire / fine_bucket_ns_) & fine_mask_;
         timer->bucket_idx = b;
         timer->wheel_level = 0;
         fine_wheel_[b].push_back(timer);
-    } else if (expire < now_ns + coarse_bucket_ns_ * static_cast<int64_t>(coarse_wheel_.size())) {
-        uint32_t b = static_cast<uint32_t>(expire / coarse_bucket_ns_) & coarse_mask_;
+    } else if (expire < now_ns + coarse_bucket_ns_ *
+                                     static_cast<int64_t>(coarse_wheel_.size())) {
+        uint32_t b =
+            static_cast<uint32_t>(expire / coarse_bucket_ns_) & coarse_mask_;
         timer->bucket_idx = b;
         timer->wheel_level = 1;
         coarse_wheel_[b].push_back(timer);
     } else {
-        uint32_t b = static_cast<uint32_t>(expire / remote_bucket_ns_) & remote_mask_;
+        uint32_t b =
+            static_cast<uint32_t>(expire / remote_bucket_ns_) & remote_mask_;
         timer->bucket_idx = b;
         timer->wheel_level = 2;
         remote_wheel_[b].push_back(timer);
@@ -105,14 +120,22 @@ void CalendarQueue::insert_timer(Timer* timer, int64_t now_ns) {
 bool CalendarQueue::cancel(uint64_t timer_id) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
     auto it = timer_map_.find(timer_id);
-    if (it == timer_map_.end()) return false;
+    if (it == timer_map_.end())
+        return false;
     Timer* timer = it->second;
     timer_map_.erase(it);
     switch (timer->wheel_level) {
-    case 0: fine_wheel_[timer->bucket_idx].unlink(timer);   break;
-    case 1: coarse_wheel_[timer->bucket_idx].unlink(timer); break;
-    case 2: remote_wheel_[timer->bucket_idx].unlink(timer); break;
-    default: break;
+        case 0:
+            fine_wheel_[timer->bucket_idx].unlink(timer);
+            break;
+        case 1:
+            coarse_wheel_[timer->bucket_idx].unlink(timer);
+            break;
+        case 2:
+            remote_wheel_[timer->bucket_idx].unlink(timer);
+            break;
+        default:
+            break;
     }
     delete timer;
     return true;
@@ -142,7 +165,8 @@ void CalendarQueue::cascade_remote(int64_t now_ns) {
 
 uint32_t CalendarQueue::advance(int64_t now_ns) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    if (now_ns <= last_advance_ns_) return 0;
+    if (now_ns <= last_advance_ns_)
+        return 0;
     if (last_advance_ns_ == 0) {
         last_advance_ns_ = now_ns;
         return 0;
@@ -153,7 +177,6 @@ uint32_t CalendarQueue::advance(int64_t now_ns) {
 
     while (last_advance_ns_ + fine_bucket_ns_ <= now_ns &&
            buckets_processed < max_advance_buckets_) {
-
         auto& bucket = fine_wheel_[current_fine_];
         Timer* t = bucket.head;
         while (t) {

@@ -87,6 +87,13 @@ void SupervisorActor::handle_child_down(TypeTag /*tag*/,
             break;
         case SupervisionDirective::Escalate:
             break;
+        case SupervisionDirective::Quarantine:
+            children_.erase(std::remove_if(children_.begin(), children_.end(),
+                                           [&child_id](const Actor& a) {
+                                               return a.id() == child_id;
+                                           }),
+                            children_.end());
+            break;
     }
 }
 

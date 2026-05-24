@@ -1,4 +1,17 @@
 // Copyright 2026 HPActor Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include <hpactor/net/async_io_fwd.hpp>
@@ -28,7 +41,7 @@ namespace net {
 // dispatcher performs the synchronous I/O operation and delivers a
 // completion event to the actor's mailbox.
 class ReactorDispatcher {
-public:
+  public:
     // Completion handler callback - called when I/O completes
     using completion_handler = std::function<void(OpCompletion)>;
 
@@ -53,17 +66,17 @@ public:
         ActorId actor;
         OpType type;
         int buf_count = 0;
-        iovec saved_bufs[16];         // buffers for recv operations
-        std::vector<uint8_t> data;    // concatenated data for send operations
-        sockaddr_storage addr = {};   // target address for sendto/recvfrom
+        iovec saved_bufs[16];       // buffers for recv operations
+        std::vector<uint8_t> data;  // concatenated data for send operations
+        sockaddr_storage addr = {}; // target address for sendto/recvfrom
         socklen_t addrlen = 0;
     };
 
     // Register pending I/O operations.
     // The dispatcher will perform the I/O when on_readiness fires.
 
-    void register_recv(int fd, ActorId actor, OpType type,
-                       iovec* bufs, int buf_count) {
+    void
+    register_recv(int fd, ActorId actor, OpType type, iovec* bufs, int buf_count) {
         PendingIO op;
         op.actor = actor;
         op.type = type;
@@ -75,8 +88,8 @@ public:
         pending_ops_[fd] = std::move(op);
     }
 
-    void register_send(int fd, ActorId actor, OpType type,
-                       const iovec* bufs, int buf_count) {
+    void register_send(int fd, ActorId actor, OpType type, const iovec* bufs,
+                       int buf_count) {
         PendingIO op;
         op.actor = actor;
         op.type = type;
@@ -98,9 +111,8 @@ public:
         pending_ops_[fd] = std::move(op);
     }
 
-    void register_sendto(int fd, ActorId actor, OpType type,
-                         const iovec* bufs, int buf_count,
-                         const sockaddr* addr, socklen_t addrlen) {
+    void register_sendto(int fd, ActorId actor, OpType type, const iovec* bufs,
+                         int buf_count, const sockaddr* addr, socklen_t addrlen) {
         PendingIO op;
         op.actor = actor;
         op.type = type;
@@ -208,7 +220,7 @@ public:
         }
     }
 
-private:
+  private:
     void do_recv(OpCompletion& completion, int fd, PendingIO& op) {
         ssize_t total_n = 0;
         int last_err = 0;
@@ -264,8 +276,7 @@ private:
         completion.type = OpType::RecvFrom;
         completion.result = (last_err != 0) ? -last_err : static_cast<int>(total_n);
         if (total_n > 0) {
-            std::memcpy(&completion.src_addr, &op.addr,
-                        sizeof(completion.src_addr));
+            std::memcpy(&completion.src_addr, &op.addr, sizeof(completion.src_addr));
         }
     }
 
@@ -300,8 +311,8 @@ private:
 
         while (total_n < static_cast<ssize_t>(op.data.size())) {
             ssize_t n = ::sendto(fd, op.data.data() + total_n,
-                                 op.data.size() - static_cast<size_t>(total_n), 0,
-                                 reinterpret_cast<const sockaddr*>(&op.addr),
+                                 op.data.size() - static_cast<size_t>(total_n),
+                                 0, reinterpret_cast<const sockaddr*>(&op.addr),
                                  op.addrlen);
             if (n < 0) {
                 if (errno == EAGAIN || errno == EWOULDBLOCK) {

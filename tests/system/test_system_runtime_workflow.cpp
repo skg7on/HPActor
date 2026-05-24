@@ -1,12 +1,24 @@
 // Copyright 2026 HPActor Contributors
-// SPDX-License-Identifier: Apache-2.0
 //
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 // System test: Multi-Actor Runtime Workflow
 // Validates spawn → send/reply → lifecycle → link/monitor → scheduled delivery
 
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 
+#include "scheduler_test_driver.hpp"
 #include "system_test_fixture.hpp"
 
 #include <gtest/gtest.h>
@@ -28,7 +40,11 @@ HPACTOR_REGISTER_ACTOR("ForwardingActor", ForwardingActor);
 // ═══════════════════════════════════════════════════════════════════════════════
 
 TEST(RuntimeWorkflow, MultiActorDeliverMessages) {
+    // Scheduler started paused so no worker races with the test driver.
+    // The driver drains the ready queue synchronously via run_one_ready()
+    // — no timing assumptions or polling needed.
     Config cfg = test::config_with_scheduler(1);
+    cfg.scheduler_start_paused = true;
     ActorSystem system(cfg);
 
     auto a1 = system.spawn<test::CountingActor>();
@@ -47,12 +63,13 @@ TEST(RuntimeWorkflow, MultiActorDeliverMessages) {
     msg2.set_sender_address(a1.address());
     system.deliver_local(a3.id(), std::move(msg2));
 
-    // Poll until the scheduler processes both messages
-    bool done = test::assert_eventually(
-        [&]() {
-            return actor2->handler_count >= 1 && actor3->handler_count >= 1;
-        },
-        5000);
+    // Deterministically drain the ready queue until both actors process
+    // their messages. No polling or sleep — drain_until() calls
+    // run_one_ready() in a tight loop.
+    hpactor::test::SchedulerTestDriver driver(system);
+    bool done = driver.drain_until([&]() {
+        return actor2->handler_count >= 1 && actor3->handler_count >= 1;
+    });
     EXPECT_TRUE(done);
 
     EXPECT_GE(actor2->handler_count, 1);

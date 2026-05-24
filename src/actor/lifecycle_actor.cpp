@@ -1,8 +1,21 @@
 // Copyright 2026 HPActor Contributors
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/types/types.hpp>
+
+#include <chrono>
 
 namespace hpactor {
 
@@ -52,9 +65,23 @@ bool LifecycleActor::transition(LifecycleState to) {
         on_restart();
     } else if (to == LifecycleState::kRecovering) {
         on_recover();
+    } else if (to == LifecycleState::kQuarantined) {
+        quarantined_at_ = std::chrono::steady_clock::now();
+        on_quarantined(quarantine_reason_);
     }
 
     return true;
+}
+
+bool LifecycleActor::transition_to_quarantined(QuarantineReason reason) {
+    quarantine_reason_ = reason;
+    return transition(LifecycleState::kQuarantined);
+}
+
+bool LifecycleActor::transition_from_quarantined() {
+    if (state() != LifecycleState::kQuarantined)
+        return false;
+    return transition(LifecycleState::kStopped);
 }
 
 } // namespace hpactor

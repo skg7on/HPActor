@@ -1,12 +1,25 @@
 // Copyright 2026 HPActor Contributors
-// Licensed under the Apache License, Version 2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
 #pragma once
 
 #include <cstdint>
 #include <string>
 #include <vector>
 
-// Forward-declare linenoise C types to avoid pulling linenoise.h into public headers.
+// Forward-declare linenoise C types to avoid pulling linenoise.h into public
+// headers.
 struct linenoiseCompletions;
 
 namespace hpactor::cli {
@@ -20,7 +33,7 @@ struct LineEditorConfig {
 };
 
 class LineEditor {
-public:
+  public:
     LineEditor(const LineEditorConfig& cfg, const CommandNode* root);
     ~LineEditor();
 
@@ -31,21 +44,21 @@ public:
     void add_history(const std::string& line) const;
     void load_history() const;
     void save_history() const;
-    void set_root(const CommandNode* root) { root_ = root; }
+    void set_root(const CommandNode* root) {
+        root_ = root;
+    }
 
-private:
-    // linenoise completion callback (global, no ctx — uses current_ editor pointer).
-    // Called on Tab to populate completions.
-    static void on_completion(const char* buf,
-                              struct linenoiseCompletions* lc);
+  private:
+    // linenoise completion callback (global, no ctx — uses current_ editor
+    // pointer). Called on Tab to populate completions.
+    static void on_completion(const char* buf, struct linenoiseCompletions* lc);
 
     // linenoise hints callback (global, no ctx — uses current_ editor pointer).
     // Called on each keystroke; returns gray hint string.
-    static char* on_hints(const char* buf,
-                          int* color,
-                          int* bold);
+    static char* on_hints(const char* buf, int* color, int* bold);
 
-    // linenoise free-hints callback (global). Frees the string returned by on_hints.
+    // linenoise free-hints callback (global). Frees the string returned by
+    // on_hints.
     static void on_free_hints(void* hint);
 
     void install_callbacks();

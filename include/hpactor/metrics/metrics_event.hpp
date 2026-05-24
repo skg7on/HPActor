@@ -40,10 +40,13 @@ enum class MetricEventType : uint8_t {
     kActorDrainStart = 17,
     kActorDrainComplete = 18,
     kActorDrainTimeout = 19,
-    kDeliveryFailure = 20, ///< Delivery failure event — \c code carries
-                           ///< FailureReason.
-    kDeliveryDuplicate = 21, ///< Duplicate message suppressed at receiver.
-    kDeliveryExpired = 22,   ///< Message expired before handler execution.
+    kDeliveryFailure = 20,    ///< Delivery failure event — \c code carries
+                              ///< FailureReason.
+    kDeliveryDuplicate = 21,  ///< Duplicate message suppressed at receiver.
+    kDeliveryExpired = 22,    ///< Message expired before handler execution.
+    kActorQuarantined = 23,   ///< Actor transitioned to kQuarantined.
+    kActorUnquarantined = 24, ///< Actor released from quarantine.
+    kCircuitStateChange = 25, ///< Circuit breaker state changed.
 };
 
 struct alignas(32) MetricEvent {

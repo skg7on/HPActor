@@ -1,5 +1,16 @@
 // Copyright 2026 HPActor Contributors
-// SPDX-License-Identifier: Apache-2.0
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
 
 #pragma once
 
@@ -15,6 +26,8 @@ enum class LifecycleState : uint8_t {
     kStopped = 4,
     kFailed = 5,
     kRecovering = 6,
+    kQuarantined = 7, ///< Isolated — rejects user messages, accepts system
+                      ///< messages.
 };
 
 struct StateDef {
@@ -37,8 +50,9 @@ constexpr StateDef kStateMachine[] = {
      "active",
      true,
      true,
-     3,
-     {LifecycleState::kDraining, LifecycleState::kStopping, LifecycleState::kFailed}},
+     4,
+     {LifecycleState::kDraining, LifecycleState::kStopping,
+      LifecycleState::kFailed, LifecycleState::kQuarantined}},
     {LifecycleState::kDraining,
      "draining",
      false,
@@ -56,20 +70,21 @@ constexpr StateDef kStateMachine[] = {
      "failed",
      false,
      true,
-     3,
+     4,
      {LifecycleState::kStarting, LifecycleState::kStopped,
-      LifecycleState::kRecovering}},
+      LifecycleState::kRecovering, LifecycleState::kQuarantined}},
     {LifecycleState::kRecovering,
      "recovering",
      false,
      true,
-     2,
-     {LifecycleState::kActive, LifecycleState::kFailed}},
+     3,
+     {LifecycleState::kActive, LifecycleState::kFailed, LifecycleState::kQuarantined}},
+    {LifecycleState::kQuarantined, "quarantined", false, true, 1, {LifecycleState::kStopped}},
 };
 
-static_assert(sizeof(kStateMachine) / sizeof(StateDef) == 7, "kStateMachine "
+static_assert(sizeof(kStateMachine) / sizeof(StateDef) == 8, "kStateMachine "
                                                              "must have "
-                                                             "exactly 7 "
+                                                             "exactly 8 "
                                                              "entries");
 
 } // namespace hpactor

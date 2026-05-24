@@ -754,6 +754,15 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
             break;
     }
 
+    // Configure quarantine & circuit breaker for this actor
+    if (def.quarantine.enabled) {
+        if (auto* eba = actor->is_event_based_actor()
+                            ? static_cast<EventBasedActor*>(actor.get())
+                            : nullptr) {
+            eba->configure_quarantine(def.quarantine);
+        }
+    }
+
     // Activate the actor (DaemonActor starts its thread here, etc.)
     local->on_activate();
 

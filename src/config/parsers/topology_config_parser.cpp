@@ -114,6 +114,27 @@ static ActorDef parse_actor(const TomlTableView& tbl) {
         });
     }
 
+    auto quarantine = tbl.table("quarantine");
+    if (quarantine.valid()) {
+        def.quarantine.enabled = quarantine.read_bool("enabled", false);
+        def.quarantine.escalate_on_max_restarts =
+            quarantine.read_bool("escalate_on_max_restarts", true);
+        def.quarantine.failure_rate_threshold =
+            quarantine.read_uint32("failure_rate_threshold", 0);
+        def.quarantine.timeout_rate_threshold =
+            quarantine.read_uint32("timeout_rate_threshold", 0);
+        def.quarantine.mailbox_pressure_threshold = static_cast<float>(
+            quarantine.read_double("mailbox_pressure_threshold", 0.0));
+        def.quarantine.cooldown_period =
+            std::chrono::milliseconds(static_cast<int64_t>(
+                quarantine.read_uint32("cooldown_period_ms", 30000)));
+        def.quarantine.observation_window =
+            std::chrono::milliseconds(static_cast<int64_t>(
+                quarantine.read_uint32("observation_window_ms", 10000)));
+        def.quarantine.max_circuit_trips =
+            quarantine.read_uint32("max_circuit_trips", 3);
+    }
+
     return def;
 }
 

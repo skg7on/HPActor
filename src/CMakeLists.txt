@@ -36,11 +36,13 @@ add_library(hpactor_lib SHARED
     config/parsers/tracing_config_parser.cpp
     config/parsers/shutdown_config_parser.cpp
     config/parsers/delivery_config_parser.cpp
+    config/parsers/quarantine_parser.cpp
     config/binary_serializer.cpp
     config/binary_loader.cpp
     core/proto_type_registry.cpp
     types/typed_message.cpp
     types/failure_reason.cpp
+    actor/quarantine_reason.cpp
     net/event_loop.cpp
     net/acceptor.cpp
     net/connection.cpp
@@ -111,13 +113,19 @@ target_include_directories(hpactor_lib
 
 # ---- vendored C sources (llhttp) -------------------------------------------
 
+if(CMAKE_C_COMPILER_ID MATCHES "Clang|AppleClang")
+    set(LLHTTP_CLANG_FLAGS "-Wno-implicit-int-conversion")
+else()
+    set(LLHTTP_CLANG_FLAGS "")
+endif()
+
 set_source_files_properties(
     ../third_party/llhttp/llhttp.c
     ../third_party/llhttp/api.c
     ../third_party/llhttp/http.c
     PROPERTIES
         LANGUAGE C
-        COMPILE_FLAGS "-Wno-error -Wno-conversion -Wno-sign-conversion -Wno-implicit-int-conversion -Wno-unused-parameter -Wno-sign-compare"
+        COMPILE_FLAGS "-Wno-error -Wno-conversion -Wno-sign-conversion -Wno-unused-parameter -Wno-sign-compare -Wno-unused-variable ${LLHTTP_CLANG_FLAGS}"
 )
 
 # ---- exceptions for toml++ TUs ---------------------------------------------
