@@ -25,11 +25,17 @@ option(ENABLE_MEMORY_DEBUG "Enable memory poisoning, canaries, and guard pages" 
 option(ENABLE_CLI "Enable interactive CLI subsystem" ON)
 option(ENABLE_ACTOR_LOGGING "Enable structured actor logging subsystem" ON)
 option(ENABLE_ACTOR_TRACING "Enable distributed tracing subsystem" ON)
+option(ENABLE_COVERAGE "Enable code coverage instrumentation (gcc/clang)" OFF)
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
 # =============================================================================
 include(cmake/compiler_setup.cmake)
+
+# =============================================================================
+# Coverage instrumentation
+# =============================================================================
+include(cmake/coverage.cmake)
 
 # =============================================================================
 # Dependencies (protobuf, OpenSSL, vendored libs, codegen)
