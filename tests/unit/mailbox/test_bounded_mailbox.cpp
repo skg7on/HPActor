@@ -171,3 +171,153 @@ TEST_F(BoundedMailboxTest, SnapshotReflectsState) {
     EXPECT_EQ(s.total_enqueued, 2);
     EXPECT_EQ(s.total_rejected, 1);
 }
+
+// ---------------------------------------------------------------------------
+// Byte budget tests
+// ---------------------------------------------------------------------------
+
+class ByteBudgetTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+        cfg.capacity.max_messages = 100; // high count cap — byte budget gates
+        cfg.high_watermark = 0.80;
+    }
+
+    hpactor::mailbox::MailboxConfig cfg;
+    MockScheduler scheduler;
+};
+
+TEST_F(ByteBudgetTest, ByteBudgetRejectsWhenExceeded) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    // Byte budget = sizeof(TypedMessage) + 10 bytes of payload.
+    uint64_t sz = estimate_message_bytes(
+        TypedMessage(TypeTag::User, StreamBuffer{0})); // overhead
+    cfg.capacity.max_bytes = sz + 15;
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    // First message: 10-byte payload. Should fit (sz + 10 <= sz + 15).
+    auto r1 = mb.try_push(
+        TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
+        meta);
+    EXPECT_TRUE(r1.accepted());
+
+    // Second message: 6-byte payload. Should exceed budget (sz+10 + sz+6 > sz+15).
+    auto r2 = mb.try_push(
+        TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6}), meta);
+    EXPECT_FALSE(r2.accepted());
+    EXPECT_EQ(r2.code, EnqueueResultCode::Rejected);
+
+    // Only first message should be queued.
+    TypedMessage out;
+    EXPECT_TRUE(mb.try_pop(out));
+    EXPECT_EQ(out.payload().size(), 10u);
+    EXPECT_FALSE(mb.try_pop(out));
+}
+
+TEST_F(ByteBudgetTest, CombinedCountAndByteBudget) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    uint64_t sz = estimate_message_bytes(
+        TypedMessage(TypeTag::User, StreamBuffer{0}));
+    cfg.capacity.max_messages = 1; // count limit hit first
+    cfg.capacity.max_bytes = sz + 1000; // generous byte limit
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    auto r1 = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta);
+    EXPECT_TRUE(r1.accepted());
+
+    // Count limit rejects, even though byte budget is far from exhausted.
+    auto r2 = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_FALSE(r2.accepted());
+    EXPECT_EQ(r2.code, EnqueueResultCode::Rejected);
+}
+
+TEST_F(ByteBudgetTest, UnlimitedBytesPreservesCountOnly) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.capacity.max_bytes = 0; // unlimited
+    cfg.capacity.max_messages = 1;
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    auto r1 = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta);
+    EXPECT_TRUE(r1.accepted());
+
+    auto r2 = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_FALSE(r2.accepted());
+}
+
+TEST_F(ByteBudgetTest, DequeueReleasesBytes) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    uint64_t sz = estimate_message_bytes(
+        TypedMessage(TypeTag::User, StreamBuffer{0}));
+    cfg.capacity.max_bytes = sz + 15;
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    // Fill budget.
+    auto r1 = mb.try_push(
+        TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
+        meta);
+    EXPECT_TRUE(r1.accepted());
+
+    // Dequeue frees bytes.
+    TypedMessage out;
+    EXPECT_TRUE(mb.try_pop(out));
+
+    // Now a message of the same size should fit again.
+    auto r2 = mb.try_push(
+        TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6, 7, 8, 9, 0}),
+        meta);
+    EXPECT_TRUE(r2.accepted());
+}
+
+TEST_F(ByteBudgetTest, SnapshotReflectsByteBudget) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    uint64_t sz = estimate_message_bytes(
+        TypedMessage(TypeTag::User, StreamBuffer{0}));
+    cfg.capacity.max_bytes = sz * 4; // generous — fits several messages
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3}), meta);
+    mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{4, 5, 6}), meta);
+
+    auto s = mb.snapshot();
+    EXPECT_EQ(s.byte_capacity, sz * 4);
+    EXPECT_GT(s.queued_bytes, 0u);
+    EXPECT_EQ(s.depth, 2u);
+
+    TypedMessage out;
+    mb.try_pop(out);
+    mb.try_pop(out);
+
+    auto s2 = mb.snapshot();
+    EXPECT_EQ(s2.queued_bytes, 0u);
+    EXPECT_EQ(s2.depth, 0u);
+}

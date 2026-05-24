@@ -196,7 +196,6 @@ template <typename T> class MPSCActorMailbox {
         bool was_empty = empty();
         mailbox_.enqueue(node);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
-        queued_bytes_.fetch_add(meta.estimated_bytes, std::memory_order_relaxed);
         update_max_depth();
         update_pressure_state();
 
@@ -300,6 +299,8 @@ template <typename T> class MPSCActorMailbox {
     // Must update reservation counters to keep dequeue accounting consistent.
     void inject_for_test(T* node) noexcept {
         reserved_messages_.fetch_add(1, std::memory_order_relaxed);
+        queued_bytes_.fetch_add(estimate_node_bytes(*node),
+                                std::memory_order_release);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
         mailbox_.enqueue(node);
         mailbox_was_empty_.store(false, std::memory_order_release);
@@ -333,25 +334,43 @@ template <typename T> class MPSCActorMailbox {
     }
 
   private:
-    // Try to reserve one message slot via CAS.
-    // Byte budget tracking is deferred; bytes param reserved for future use.
-    // Returns false when at hard capacity.
-    bool try_reserve(uint64_t /*bytes*/) noexcept {
-        uint32_t cap = config_.capacity.max_messages;
-        if (cap == 0)
-            return true; // unlimited
+    // Try to reserve one message slot + byte budget via CAS.
+    // Two-phase reservation: count first, then bytes with rollback on failure.
+    // Returns false when at hard count or byte capacity.
+    bool try_reserve(uint64_t bytes) noexcept {
+        uint32_t msg_cap = config_.capacity.max_messages;
+        uint64_t byte_cap = config_.capacity.max_bytes;
 
-        uint32_t current = reserved_messages_.load(std::memory_order_acquire);
-        while (true) {
-            if (current >= cap) {
-                return false;
-            }
-            if (reserved_messages_.compare_exchange_weak(
-                    current, current + 1, std::memory_order_acq_rel,
-                    std::memory_order_acquire)) {
-                return true;
-            }
+        // Phase 1: count reservation (unchanged logic).
+        if (msg_cap > 0) {
+            uint32_t cur = reserved_messages_.load(std::memory_order_acquire);
+            do {
+                if (cur >= msg_cap)
+                    return false;
+            } while (!reserved_messages_.compare_exchange_weak(
+                cur, cur + 1, std::memory_order_acq_rel,
+                std::memory_order_acquire));
         }
+
+        // Phase 2: byte budget reservation.
+        if (byte_cap > 0) {
+            uint64_t cur = queued_bytes_.load(std::memory_order_acquire);
+            do {
+                if (cur + bytes > byte_cap) {
+                    if (msg_cap > 0)
+                        reserved_messages_.fetch_sub(1,
+                                                     std::memory_order_release);
+                    return false;
+                }
+            } while (!queued_bytes_.compare_exchange_weak(
+                cur, cur + bytes, std::memory_order_acq_rel,
+                std::memory_order_acquire));
+            return true;
+        }
+
+        // Unlimited bytes: still track for observability.
+        queued_bytes_.fetch_add(bytes, std::memory_order_release);
+        return true;
     }
 
     // Release a previously reserved slot + bytes.
@@ -364,7 +383,9 @@ template <typename T> class MPSCActorMailbox {
 
     // Try to reserve a system message slot via CAS on the protected reserve.
     // Only used when the normal capacity pool is exhausted.
-    bool try_reserve_system(uint64_t /*bytes*/) noexcept {
+    // System messages bypass the byte budget but still track bytes for
+    // snapshot accuracy — the count cap (default 32) already bounds memory.
+    bool try_reserve_system(uint64_t bytes) noexcept {
         uint32_t limit = config_.protected_system_messages;
         if (limit == 0)
             return false;
@@ -378,6 +399,7 @@ template <typename T> class MPSCActorMailbox {
             if (reserved_system_messages_.compare_exchange_weak(
                     current, current + 1, std::memory_order_acq_rel,
                     std::memory_order_acquire)) {
+                queued_bytes_.fetch_add(bytes, std::memory_order_release);
                 return true;
             }
         }
@@ -386,7 +408,7 @@ template <typename T> class MPSCActorMailbox {
     // Release a previously reserved system slot + bytes.
     void release_system_reservation(uint64_t bytes) noexcept {
         reserved_system_messages_.fetch_sub(1, std::memory_order_release);
-        if (bytes > 0 && config_.capacity.max_bytes > 0) {
+        if (bytes > 0) {
             queued_bytes_.fetch_sub(bytes, std::memory_order_release);
         }
     }
