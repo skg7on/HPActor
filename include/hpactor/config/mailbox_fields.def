@@ -12,6 +12,7 @@ HPACTOR_MAILBOX_FIELD(default_byte_capacity,   uint64_t,                        
 HPACTOR_MAILBOX_FIELD(default_policy,          hpactor::mailbox::OverflowPolicy,   "overflow_policy",         hpactor::mailbox::OverflowPolicy::RejectNewest)
 HPACTOR_MAILBOX_FIELD(high_watermark,          double,                                "high_watermark",          0.80)
 HPACTOR_MAILBOX_FIELD(low_watermark,           double,                                "low_watermark",           0.50)
+HPACTOR_MAILBOX_FIELD(critical_watermark,     double,                                "critical_watermark",      1.00)
 HPACTOR_MAILBOX_FIELD(protected_system_messages, uint32_t,                            "protected_system_messages", 32)
 HPACTOR_MAILBOX_FIELD(max_overflow_depth,      uint32_t,                            "max_overflow_depth",      0)
 HPACTOR_MAILBOX_FIELD(signal_min_interval_ms,  uint32_t,                            "signal_min_interval_ms",  100)

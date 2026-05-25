@@ -72,13 +72,25 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
             return result<void>::make();
 
         out.mailbox.default_capacity = mt.read_uint32("default_capacity", 1024);
-        out.mailbox.default_byte_capacity = static_cast<uint64_t>(
-            mt.value("default_byte_capacity").as_int64(0));
+        out.mailbox.default_byte_capacity =
+            static_cast<uint64_t>(mt.value("default_byte_capacity").as_int64(0));
         out.mailbox.default_policy =
             parse_overflow_policy(mt.read_string("default_policy", "reject_"
                                                                    "newest"));
         out.mailbox.high_watermark = mt.read_double("high_watermark", 0.80);
         out.mailbox.low_watermark = mt.read_double("low_watermark", 0.50);
+        out.mailbox.critical_watermark = mt.read_double("critical_watermark", 1.00);
+
+        if (out.mailbox.low_watermark < 0.0) {
+            out.mailbox.low_watermark = 0.50;
+        }
+        if (out.mailbox.high_watermark < out.mailbox.low_watermark) {
+            out.mailbox.high_watermark = 0.80;
+        }
+        if (out.mailbox.critical_watermark < out.mailbox.high_watermark ||
+            out.mailbox.critical_watermark > 1.0) {
+            out.mailbox.critical_watermark = 1.00;
+        }
         out.mailbox.protected_system_messages =
             mt.read_uint32("protected_system_messages", 32);
         out.mailbox.backpressure_mode =

@@ -192,8 +192,8 @@ TEST_F(ByteBudgetTest, ByteBudgetRejectsWhenExceeded) {
     using namespace hpactor::mailbox;
 
     // Byte budget = sizeof(TypedMessage) + 10 bytes of payload.
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0})); // overhead
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0})); // overhead
     cfg.capacity.max_bytes = sz + 15;
 
     MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
@@ -207,7 +207,8 @@ TEST_F(ByteBudgetTest, ByteBudgetRejectsWhenExceeded) {
         meta);
     EXPECT_TRUE(r1.accepted());
 
-    // Second message: 6-byte payload. Should exceed budget (sz+10 + sz+6 > sz+15).
+    // Second message: 6-byte payload. Should exceed budget (sz+10 + sz+6 >
+    // sz+15).
     auto r2 = mb.try_push(
         TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6}), meta);
     EXPECT_FALSE(r2.accepted());
@@ -224,9 +225,9 @@ TEST_F(ByteBudgetTest, CombinedCountAndByteBudget) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0}));
-    cfg.capacity.max_messages = 1; // count limit hit first
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0}));
+    cfg.capacity.max_messages = 1;      // count limit hit first
     cfg.capacity.max_bytes = sz + 1000; // generous byte limit
 
     MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
@@ -266,8 +267,8 @@ TEST_F(ByteBudgetTest, DequeueReleasesBytes) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0}));
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0}));
     cfg.capacity.max_bytes = sz + 15;
 
     MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
@@ -292,12 +293,17 @@ TEST_F(ByteBudgetTest, DequeueReleasesBytes) {
     EXPECT_TRUE(r2.accepted());
 }
 
+TEST(MailboxPolicyTest, DefaultCriticalWatermarkIsCapacity) {
+    hpactor::mailbox::MailboxConfig cfg;
+    EXPECT_DOUBLE_EQ(cfg.critical_watermark, 1.0);
+}
+
 TEST_F(ByteBudgetTest, SnapshotReflectsByteBudget) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0}));
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0}));
     cfg.capacity.max_bytes = sz * 4; // generous — fits several messages
 
     MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);

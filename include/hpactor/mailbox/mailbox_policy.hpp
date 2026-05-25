@@ -62,6 +62,7 @@ struct MailboxConfig {
     BackpressureMode backpressure_mode = BackpressureMode::LocalAndRemoteSignal;
     double high_watermark = 0.80;
     double low_watermark = 0.50;
+    double critical_watermark = 1.00;
     uint32_t protected_system_messages = 32;
     uint32_t max_overflow_depth = 0;
     uint32_t signal_min_interval_ms = 100;
@@ -91,6 +92,14 @@ struct MailboxEnvelopeMeta {
     uint32_t flags = 0;
     uint64_t estimated_bytes = 0;
     uint64_t sequence = 0;
+};
+
+enum class BackpressureReason : uint8_t {
+    HighWatermark,
+    HardCapacity,
+    ByteCapacity,
+    OverflowPolicy,
+    NodeMemoryPressure,
 };
 
 enum class EnqueueResultCode : uint8_t {
@@ -142,6 +151,10 @@ struct EnqueueResult {
     ActorId target;
     uint32_t depth = 0;
     uint32_t capacity = 0;
+    uint64_t bytes = 0;
+    uint64_t byte_capacity = 0;
+    BackpressureReason pressure_reason = BackpressureReason::HighWatermark;
+    MailboxPressureState pressure_state = MailboxPressureState::Normal;
     double pressure_ratio = 0.0;
     std::chrono::milliseconds retry_after{0};
     TypeTag affected_type = TypeTag::Invalid;
@@ -174,14 +187,6 @@ struct EnqueueResult {
     [[nodiscard]] FailureReason failure_reason() const noexcept {
         return mailbox::failure_reason(code);
     }
-};
-
-enum class BackpressureReason : uint8_t {
-    HighWatermark,
-    HardCapacity,
-    ByteCapacity,
-    OverflowPolicy,
-    NodeMemoryPressure,
 };
 
 struct BackpressureSignal {
@@ -237,10 +242,9 @@ inline const char* to_string(OverflowPolicy policy) noexcept {
 /// \return true if the deadline has passed and the message should be dropped.
 /// \note Thread safety: constexpr and lock-free — safe to call from any
 ///       thread without synchronization.
-[[nodiscard]] constexpr bool is_expired(int64_t deadline_ns,
-                                         uint64_t now_ns) noexcept {
-    return deadline_ns >= 0 &&
-           deadline_ns != INT64_MAX &&
+[[nodiscard]] constexpr bool
+is_expired(int64_t deadline_ns, uint64_t now_ns) noexcept {
+    return deadline_ns >= 0 && deadline_ns != INT64_MAX &&
            static_cast<uint64_t>(deadline_ns) < now_ns;
 }
 
