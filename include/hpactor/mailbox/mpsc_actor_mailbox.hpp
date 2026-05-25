@@ -19,6 +19,7 @@
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
+#include <hpactor/mailbox/overflow_queue.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
@@ -41,6 +42,7 @@ template <typename T> class MPSCActorMailbox {
         if (config_.capacity.max_messages == 0) {
             config_.capacity.max_messages = 1024;
         }
+        overflow_queue_.set_max_depth(config_.max_overflow_depth);
     }
 
     ~MPSCActorMailbox() {
@@ -62,6 +64,7 @@ template <typename T> class MPSCActorMailbox {
         if (config_.capacity.max_messages == 0) {
             config_.capacity.max_messages = 1024;
         }
+        overflow_queue_.set_max_depth(config_.max_overflow_depth);
     }
     const MailboxConfig& config() const noexcept {
         return config_;
@@ -143,10 +146,55 @@ template <typename T> class MPSCActorMailbox {
                         }
                         return make_result(EnqueueResultCode::ReroutedToDeadLetter);
 
+                    case OverflowPolicy::RejectNewest:
+                        total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                        if (metrics_ring_buffer_) [[unlikely]] {
+                            metrics::MetricEvent evt{};
+                            evt.actor_id = actor_id_;
+                            evt.event_type =
+                                metrics::MetricEventType::kMailboxRejected;
+                            evt.value_hi = 1;
+                            metrics_ring_buffer_->try_push(evt);
+                        }
+                        return make_result(EnqueueResultCode::Rejected);
+
+                    case OverflowPolicy::SignalOnly: {
+                        total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                        if (metrics_ring_buffer_) [[unlikely]] {
+                            metrics::MetricEvent evt{};
+                            evt.actor_id = actor_id_;
+                            evt.event_type =
+                                metrics::MetricEventType::kMailboxRejected;
+                            evt.value_hi = 1;
+                            metrics_ring_buffer_->try_push(evt);
+                        }
+                        auto result =
+                            make_result(EnqueueResultCode::Rejected);
+                        result.retry_after = std::chrono::milliseconds(
+                            config_.signal_min_interval_ms);
+                        return result;
+                    }
+
+                    case OverflowPolicy::SpillToOverflowQueue: {
+                        if (overflow_queue_.try_push(std::move(msg))) {
+                            return make_result(
+                                EnqueueResultCode::ReroutedToOverflow);
+                        }
+                        total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                        if (metrics_ring_buffer_) [[unlikely]] {
+                            metrics::MetricEvent evt{};
+                            evt.actor_id = actor_id_;
+                            evt.event_type =
+                                metrics::MetricEventType::kMailboxRejected;
+                            evt.value_hi = 1;
+                            metrics_ring_buffer_->try_push(evt);
+                        }
+                        return make_result(EnqueueResultCode::Rejected);
+                    }
+
                     default:
-                        // RejectNewest, DropLowestPriority,
-                        // SpillToOverflowQueue, SignalOnly,
-                        // BlockWhenAllowed
+                        // DropLowestPriority, BlockWhenAllowed — not yet
+                        // implemented; reject with full observability.
                         total_rejected_.fetch_add(1, std::memory_order_relaxed);
                         if (metrics_ring_buffer_) [[unlikely]] {
                             metrics::MetricEvent evt{};
@@ -199,7 +247,12 @@ template <typename T> class MPSCActorMailbox {
     }
 
     // Enqueue an already-reserved node (reservation was done externally).
-    void enqueue_reserved(T* node, const MailboxEnvelopeMeta& meta) noexcept {
+    //
+    // When suppress_wakeup is true, skips the continuation callback and
+    // scheduler notification — used by drain_overflow() to avoid re-entrant
+    // coroutine resume while the actor is already active on the call stack.
+    void enqueue_reserved(T* node, const MailboxEnvelopeMeta& meta,
+                          bool suppress_wakeup = false) noexcept {
         bool was_empty = empty();
         mailbox_.enqueue(node);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
@@ -222,7 +275,7 @@ template <typename T> class MPSCActorMailbox {
             evt.value_hi = 1;
             metrics_ring_buffer_->try_push(evt);
         }
-        if (was_empty) {
+        if (was_empty && !suppress_wakeup) {
             bool expected = true;
             if (mailbox_was_empty_.compare_exchange_strong(
                     expected, false, std::memory_order_acq_rel,
@@ -265,6 +318,10 @@ template <typename T> class MPSCActorMailbox {
             if (empty()) {
                 mailbox_was_empty_.store(true, std::memory_order_release);
             }
+
+            // Drain from overflow queue back into main mailbox now that a
+            // slot has freed up.
+            drain_overflow();
         }
         unlock_consumer();
 
@@ -343,6 +400,14 @@ template <typename T> class MPSCActorMailbox {
         s.total_dropped = total_dropped_.load(std::memory_order_acquire);
         s.total_dead_letters = total_dead_letters_.load(std::memory_order_acquire);
         s.max_depth = max_depth_.load(std::memory_order_acquire);
+        {
+            auto oq_snap = overflow_queue_.snapshot();
+            s.overflow_depth = oq_snap.depth;
+            s.overflow_max_depth = oq_snap.max_depth;
+            s.overflow_total_pushed = oq_snap.total_pushed;
+            s.overflow_total_popped = oq_snap.total_popped;
+            s.overflow_total_lost = oq_snap.total_lost;
+        }
         s.high_priority_depth = 0;
         s.pressure_state =
             to_string(pressure_state_.load(std::memory_order_acquire));
@@ -506,6 +571,28 @@ template <typename T> class MPSCActorMailbox {
         return r;
     }
 
+    // Drain messages from overflow queue back into the main mailbox.
+    // Called after each dequeue when capacity may have freed up.
+    //
+    // Uses suppress_wakeup to avoid re-entrant coroutine resume while the
+    // actor is already active on the dequeue() call stack.
+    void drain_overflow() noexcept {
+        while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {
+            if (!try_reserve(0)) break;
+            T overflow_msg;
+            if (!overflow_queue_.try_pop(overflow_msg)) {
+                release_reservation(0);
+                break;
+            }
+            MailboxEnvelopeMeta meta;
+            meta.estimated_bytes = estimate_node_bytes(overflow_msg);
+            enqueue_reserved(
+                new (mem::allocate(mem::RegionType::kMessage, sizeof(T),
+                                   actor_id_)) T(std::move(overflow_msg)),
+                meta, /*suppress_wakeup=*/true);
+        }
+    }
+
     // Update max_depth_ tracking via CAS.
     void update_max_depth() noexcept {
         uint64_t depth = static_cast<uint64_t>(mailbox_.count());
@@ -578,6 +665,7 @@ template <typename T> class MPSCActorMailbox {
     ActorContinuationCallback continuation_callback_;
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
     log::Logger* logger_ = nullptr;
+    OverflowQueue<T> overflow_queue_;
 };
 
 } // namespace hpactor::mailbox

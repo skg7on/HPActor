@@ -227,3 +227,169 @@ TEST_F(OverflowPolicyTest, DropOldestFreesByteBudget) {
     EXPECT_TRUE(b.try_pop(out));
     EXPECT_FALSE(b.try_pop(out));
 }
+
+TEST_F(OverflowPolicyTest, RejectNewestRejectsAtCapacity) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    MailboxConfig cfg;
+    cfg.capacity.max_messages = 1;
+    cfg.overflow_policy = OverflowPolicy::RejectNewest;
+    MPSCActorMailbox<TypedMessage> mbox(ActorId{7}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    auto r1 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta);
+    EXPECT_TRUE(r1.accepted());
+
+    auto r2 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_EQ(r2.code, EnqueueResultCode::Rejected);
+    EXPECT_FALSE(r2.accepted());
+    EXPECT_TRUE(r2.retryable());
+
+    auto s = mbox.snapshot();
+    EXPECT_EQ(s.total_enqueued, 1);
+    EXPECT_EQ(s.total_rejected, 1);
+    EXPECT_EQ(s.total_dropped, 0);
+}
+
+TEST_F(OverflowPolicyTest, SignalOnlyRejectsWithRetryAfter) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    MailboxConfig cfg;
+    cfg.capacity.max_messages = 1;
+    cfg.overflow_policy = OverflowPolicy::SignalOnly;
+    cfg.signal_min_interval_ms = 250;
+    MPSCActorMailbox<TypedMessage> mbox(ActorId{8}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    auto r1 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta);
+    EXPECT_TRUE(r1.accepted());
+
+    auto r2 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_EQ(r2.code, EnqueueResultCode::Rejected);
+    EXPECT_EQ(r2.retry_after.count(), 250);
+
+    auto s = mbox.snapshot();
+    EXPECT_EQ(s.total_rejected, 1);
+}
+
+TEST_F(OverflowPolicyTest, SignalOnlySystemMessageReserveNotRejected) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    MailboxConfig cfg;
+    cfg.capacity.max_messages = 1;
+    cfg.protected_system_messages = 1;
+    cfg.overflow_policy = OverflowPolicy::SignalOnly;
+    MPSCActorMailbox<TypedMessage> mbox(ActorId{9}, &scheduler, cfg);
+
+    // Fill normal capacity with user message
+    MailboxEnvelopeMeta user_meta;
+    user_meta.type_tag = TypeTag::User;
+    auto r1 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), user_meta);
+    EXPECT_TRUE(r1.accepted());
+
+    // System message uses protected reserve, not overflow policy
+    MailboxEnvelopeMeta sys_meta;
+    sys_meta.type_tag = TypeTag::DownMsg;
+    auto r2 = mbox.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{9}), sys_meta);
+    EXPECT_TRUE(r2.accepted());
+
+    auto s = mbox.snapshot();
+    EXPECT_EQ(s.total_enqueued, 2);
+    EXPECT_EQ(s.total_rejected, 0);
+}
+
+TEST_F(OverflowPolicyTest, SpillToOverflowQueueWhenFull) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    MailboxConfig cfg;
+    cfg.capacity.max_messages = 1;
+    cfg.overflow_policy = OverflowPolicy::SpillToOverflowQueue;
+    cfg.max_overflow_depth = 16;
+    MPSCActorMailbox<TypedMessage> mbox(ActorId{10}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    auto r1 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta);
+    EXPECT_TRUE(r1.accepted());
+
+    auto r2 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_EQ(r2.code, EnqueueResultCode::ReroutedToOverflow);
+    EXPECT_TRUE(r2.retryable());
+
+    auto s = mbox.snapshot();
+    EXPECT_EQ(s.total_enqueued, 1);
+    EXPECT_EQ(s.total_rejected, 0);
+    EXPECT_EQ(s.overflow_depth, 1);
+    EXPECT_EQ(s.overflow_total_pushed, 1);
+}
+
+TEST_F(OverflowPolicyTest, SpillToOverflowDrainsOnDequeue) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    MailboxConfig cfg;
+    cfg.capacity.max_messages = 1;
+    cfg.overflow_policy = OverflowPolicy::SpillToOverflowQueue;
+    cfg.max_overflow_depth = 16;
+    MPSCActorMailbox<TypedMessage> mbox(ActorId{11}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    // Fill main mailbox
+    mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta);
+    // Spill to overflow
+    mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+
+    auto s_before = mbox.snapshot();
+    EXPECT_EQ(s_before.overflow_depth, 1);
+
+    // Dequeue the main message — should drain overflow back in
+    TypedMessage out;
+    EXPECT_TRUE(mbox.try_pop(out));
+    EXPECT_EQ(out.payload()[0], 1);
+
+    // Second message should now be in the main mailbox
+    EXPECT_TRUE(mbox.try_pop(out));
+    EXPECT_EQ(out.payload()[0], 2);
+
+    auto s_after = mbox.snapshot();
+    EXPECT_EQ(s_after.overflow_depth, 0);
+}
+
+TEST_F(OverflowPolicyTest, OverflowQueueAlwaysAcceptsSpills) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    MailboxConfig cfg;
+    cfg.capacity.max_messages = 1;
+    cfg.overflow_policy = OverflowPolicy::SpillToOverflowQueue;
+    cfg.max_overflow_depth = 1;
+    MPSCActorMailbox<TypedMessage> mbox(ActorId{12}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    // Fill main capacity
+    mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta);
+    // First spill — overflow queue accepts
+    auto r1 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_EQ(r1.code, EnqueueResultCode::ReroutedToOverflow);
+    // Second spill — overflow queue still accepts (evicts oldest from overflow)
+    auto r2 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{3}), meta);
+    EXPECT_EQ(r2.code, EnqueueResultCode::ReroutedToOverflow);
+
+    // The overflow queue always accepts; oldest in overflow may be evicted.
+    auto s = mbox.snapshot();
+    EXPECT_EQ(s.overflow_depth, 1);
+    EXPECT_GE(s.overflow_total_pushed, 2);
+}

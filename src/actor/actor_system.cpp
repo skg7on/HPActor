@@ -376,6 +376,8 @@ mailbox::MailboxConfig ActorSystem::mailbox_config_for_spawn() const {
     cfg.high_watermark = config_.mailbox.high_watermark;
     cfg.low_watermark = config_.mailbox.low_watermark;
     cfg.protected_system_messages = config_.mailbox.protected_system_messages;
+    cfg.max_overflow_depth = config_.mailbox.max_overflow_depth;
+    cfg.signal_min_interval_ms = config_.mailbox.signal_min_interval_ms;
     cfg.backpressure_mode = config_.mailbox.backpressure_mode;
     return cfg;
 }
@@ -576,12 +578,18 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
     }
 
     // Emit backpressure signal when target mailbox is under soft pressure
-    if (result.code == mailbox::EnqueueResultCode::AcceptedWithSoftPressure &&
-        options.emit_backpressure) {
+    // or when SignalOnly policy rejected the message.
+    bool should_signal =
+        (result.code == mailbox::EnqueueResultCode::AcceptedWithSoftPressure) ||
+        (result.code == mailbox::EnqueueResultCode::Rejected &&
+         result.retry_after.count() > 0);
+    if (should_signal && options.emit_backpressure) {
         mailbox::BackpressureSignal signal;
         signal.target = ActorAddress{endpoint_, ActorType{0}, target, 0};
         signal.sender = meta.sender;
-        signal.reason = mailbox::BackpressureReason::HighWatermark;
+        signal.reason = result.code == mailbox::EnqueueResultCode::Rejected
+                            ? mailbox::BackpressureReason::OverflowPolicy
+                            : mailbox::BackpressureReason::HighWatermark;
         signal.depth = result.depth;
         signal.capacity = result.capacity;
         signal.pressure_ratio = result.pressure_ratio;

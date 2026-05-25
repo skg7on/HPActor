@@ -7,6 +7,7 @@ add_executable(test_unit_mailbox
     test_mailbox_stress.cpp
     test_bounded_mailbox.cpp
     test_mailbox_overflow_policies.cpp
+    test_mailbox_overflow_queue.cpp
     test_mailbox_policy.cpp
     test_dead_letter_failure.cpp
     test_delivery_mode.cpp
