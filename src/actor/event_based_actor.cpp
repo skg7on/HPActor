@@ -215,6 +215,19 @@ void EventBasedActor::receive(TypedMessage& msg) {
                 auto ms = mailbox_snapshot();
                 auto* pb_mbox = reply.mutable_mailbox();
                 pb_mbox->set_depth(ms.depth);
+                pb_mbox->set_total_enqueued(ms.total_enqueued);
+                pb_mbox->set_total_dequeued(ms.total_dequeued);
+                pb_mbox->set_max_depth(ms.max_depth);
+                pb_mbox->set_high_priority_depth(ms.high_priority_depth);
+                pb_mbox->set_capacity(ms.capacity);
+                pb_mbox->set_queued_bytes(ms.queued_bytes);
+                pb_mbox->set_byte_capacity(ms.byte_capacity);
+                pb_mbox->set_pressure_ratio_ppm(ms.pressure_ratio_ppm);
+                pb_mbox->set_total_rejected(ms.total_rejected);
+                pb_mbox->set_total_dropped(ms.total_dropped);
+                pb_mbox->set_total_dead_letters(ms.total_dead_letters);
+                pb_mbox->set_pressure_state(ms.pressure_state);
+                pb_mbox->set_overflow_policy(ms.overflow_policy);
             }
 
             if (req.include_state()) {

@@ -83,8 +83,18 @@ class ActorShowCommand final : public ICommand {
         kv["Behavior"] = reply->metadata().behavior_name();
 
         if (reply->has_mailbox()) {
-            kv["Mailbox depth"] = std::to_string(reply->mailbox().depth());
-            kv["Mailbox max"] = std::to_string(reply->mailbox().max_depth());
+            const auto& mailbox = reply->mailbox();
+            kv["Mailbox depth"] = std::to_string(mailbox.depth()) + "/" +
+                                  std::to_string(mailbox.capacity());
+            kv["Mailbox bytes"] = std::to_string(mailbox.queued_bytes()) + "/" +
+                                  std::to_string(mailbox.byte_capacity());
+            kv["Mailbox pressure"] = mailbox.pressure_state();
+            kv["Mailbox overflow"] = mailbox.overflow_policy();
+            kv["Mailbox rejected"] = std::to_string(mailbox.total_rejected());
+            kv["Mailbox dropped"] = std::to_string(mailbox.total_dropped());
+            kv["Mailbox dead letters"] =
+                std::to_string(mailbox.total_dead_letters());
+            kv["Mailbox max"] = std::to_string(mailbox.max_depth());
         }
 
         ctx.output->key_value(kv);
