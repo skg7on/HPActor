@@ -315,6 +315,7 @@ template <typename T> class MPSCActorMailbox {
                 release_reservation(estimate_node_bytes(*node));
             }
             total_dequeued_.fetch_add(1, std::memory_order_relaxed);
+            update_pressure_state();
             if (empty()) {
                 mailbox_was_empty_.store(true, std::memory_order_release);
             }
@@ -388,11 +389,8 @@ template <typename T> class MPSCActorMailbox {
         s.queued_bytes = queued_bytes_.load(std::memory_order_acquire);
         s.byte_capacity = config_.capacity.max_bytes;
 
-        if (s.capacity > 0) {
-            double ratio =
-                static_cast<double>(s.depth) / static_cast<double>(s.capacity);
-            s.pressure_ratio_ppm = static_cast<uint32_t>(ratio * 1'000'000.0);
-        }
+        double ratio = pressure_ratio();
+        s.pressure_ratio_ppm = static_cast<uint32_t>(ratio * 1'000'000.0);
 
         s.total_enqueued = total_enqueued_.load(std::memory_order_acquire);
         s.total_dequeued = total_dequeued_.load(std::memory_order_acquire);
@@ -430,8 +428,7 @@ template <typename T> class MPSCActorMailbox {
                 if (cur >= msg_cap)
                     return false;
             } while (!reserved_messages_.compare_exchange_weak(
-                cur, cur + 1, std::memory_order_acq_rel,
-                std::memory_order_acquire));
+                cur, cur + 1, std::memory_order_acq_rel, std::memory_order_acquire));
         }
 
         // Phase 2: byte budget reservation.
@@ -440,8 +437,7 @@ template <typename T> class MPSCActorMailbox {
             do {
                 if (cur + bytes > byte_cap) {
                     if (msg_cap > 0)
-                        reserved_messages_.fetch_sub(1,
-                                                     std::memory_order_release);
+                        reserved_messages_.fetch_sub(1, std::memory_order_release);
                     return false;
                 }
             } while (!queued_bytes_.compare_exchange_weak(
@@ -520,6 +516,7 @@ template <typename T> class MPSCActorMailbox {
         }
 
         total_dropped_.fetch_add(1, std::memory_order_relaxed);
+        update_pressure_state();
         if (metrics_ring_buffer_) [[unlikely]] {
             metrics::MetricEvent evt{};
             evt.actor_id = actor_id_;
@@ -543,30 +540,82 @@ template <typename T> class MPSCActorMailbox {
         return true;
     }
 
+    double pressure_ratio() const noexcept {
+        const uint32_t cap = config_.capacity.max_messages;
+        const uint32_t depth = static_cast<uint32_t>(mailbox_.count());
+        double count_ratio = 0.0;
+        if (cap > 0) {
+            count_ratio = static_cast<double>(depth) / static_cast<double>(cap);
+        }
+
+        double byte_ratio = 0.0;
+        const uint64_t byte_cap = config_.capacity.max_bytes;
+        if (byte_cap > 0) {
+            byte_ratio =
+                static_cast<double>(queued_bytes_.load(std::memory_order_acquire)) /
+                static_cast<double>(byte_cap);
+        }
+
+        return count_ratio > byte_ratio ? count_ratio : byte_ratio;
+    }
+
+    MailboxPressureState
+    next_pressure_state(double ratio, bool hard_failure) const noexcept {
+        if (hard_failure || ratio >= config_.critical_watermark) {
+            return MailboxPressureState::HardPressure;
+        }
+
+        auto current = pressure_state_.load(std::memory_order_acquire);
+        if (current == MailboxPressureState::HardPressure ||
+            current == MailboxPressureState::Recovering) {
+            if (ratio < config_.low_watermark) {
+                return MailboxPressureState::Normal;
+            }
+            return MailboxPressureState::Recovering;
+        }
+
+        if (ratio >= config_.high_watermark) {
+            return MailboxPressureState::SoftPressure;
+        }
+        if (ratio < config_.low_watermark) {
+            return MailboxPressureState::Normal;
+        }
+        return current;
+    }
+
     // Determine the result code after accepting a message, based on current
     // watermarks.
     EnqueueResultCode pressure_code_after_accept() const noexcept {
-        uint32_t cap = config_.capacity.max_messages;
-        if (cap == 0)
-            return EnqueueResultCode::Accepted;
-        uint32_t depth = static_cast<uint32_t>(mailbox_.count());
-        double ratio = static_cast<double>(depth) / static_cast<double>(cap);
-        if (ratio >= config_.high_watermark) {
+        auto state = pressure_state_.load(std::memory_order_acquire);
+        if (state == MailboxPressureState::SoftPressure ||
+            state == MailboxPressureState::HardPressure ||
+            state == MailboxPressureState::Recovering) {
             return EnqueueResultCode::AcceptedWithSoftPressure;
         }
         return EnqueueResultCode::Accepted;
     }
 
     // Fill an EnqueueResult from the given code and current state.
-    EnqueueResult make_result(EnqueueResultCode code) const noexcept {
+    EnqueueResult
+    make_result(EnqueueResultCode code,
+                BackpressureReason reason = BackpressureReason::HighWatermark) const noexcept {
         EnqueueResult r;
         r.code = code;
         r.target = actor_id_;
         r.depth = static_cast<uint32_t>(mailbox_.count());
         r.capacity = config_.capacity.max_messages;
-        if (r.capacity > 0) {
-            r.pressure_ratio =
-                static_cast<double>(r.depth) / static_cast<double>(r.capacity);
+        r.bytes = queued_bytes_.load(std::memory_order_acquire);
+        r.byte_capacity = config_.capacity.max_bytes;
+        r.pressure_ratio = pressure_ratio();
+        r.pressure_reason = reason;
+        r.pressure_state = pressure_state_.load(std::memory_order_acquire);
+
+        auto base = std::chrono::milliseconds(config_.signal_min_interval_ms);
+        if (r.pressure_state == MailboxPressureState::HardPressure) {
+            r.retry_after = base * 2;
+        } else if (r.pressure_state == MailboxPressureState::SoftPressure ||
+                   r.pressure_state == MailboxPressureState::Recovering) {
+            r.retry_after = base;
         }
         return r;
     }
@@ -606,22 +655,10 @@ template <typename T> class MPSCActorMailbox {
     }
 
     // Update pressure state based on current depth vs watermarks.
-    void update_pressure_state() noexcept {
-        uint32_t cap = config_.capacity.max_messages;
-        if (cap == 0) {
-            pressure_state_.store(MailboxPressureState::Normal,
-                                  std::memory_order_release);
-            return;
-        }
-        uint32_t depth = static_cast<uint32_t>(mailbox_.count());
-        double ratio = static_cast<double>(depth) / static_cast<double>(cap);
-        if (ratio >= config_.high_watermark) {
-            pressure_state_.store(MailboxPressureState::SoftPressure,
-                                  std::memory_order_release);
-        } else {
-            pressure_state_.store(MailboxPressureState::Normal,
-                                  std::memory_order_release);
-        }
+    void update_pressure_state(bool hard_failure = false) noexcept {
+        const double ratio = pressure_ratio();
+        pressure_state_.store(next_pressure_state(ratio, hard_failure),
+                              std::memory_order_release);
     }
 
     // Estimate bytes for a node.  Uses the TypedMessage-specific helper when T
