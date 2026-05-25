@@ -359,6 +359,54 @@ TEST_F(BoundedMailboxTest, CountCapacityFailureReportsHardCapacity) {
     EXPECT_EQ(rejected.pressure_state, MailboxPressureState::HardPressure);
 }
 
+TEST_F(BoundedMailboxTest, BackpressureSignalBudgetRateLimitsSameSeverity) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.signal_min_interval_ms = 100;
+    MPSCActorMailbox<TypedMessage> mb(ActorId{92}, &scheduler, cfg);
+
+    auto first = mb.try_acquire_backpressure_signal(
+        1'000'000'000ULL, MailboxPressureState::SoftPressure);
+    ASSERT_TRUE(first.has_value());
+    if (!first)
+        return;
+    uint64_t first_seq = first.value();
+
+    auto second = mb.try_acquire_backpressure_signal(
+        1'050'000'000ULL, MailboxPressureState::SoftPressure);
+    EXPECT_FALSE(second.has_value());
+
+    auto third = mb.try_acquire_backpressure_signal(
+        1'101'000'000ULL, MailboxPressureState::SoftPressure);
+    ASSERT_TRUE(third.has_value());
+    if (!third)
+        return;
+    EXPECT_GT(third.value(), first_seq);
+}
+
+TEST_F(BoundedMailboxTest, BackpressureSignalBudgetAllowsEscalation) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.signal_min_interval_ms = 100;
+    MPSCActorMailbox<TypedMessage> mb(ActorId{93}, &scheduler, cfg);
+
+    auto soft = mb.try_acquire_backpressure_signal(
+        2'000'000'000ULL, MailboxPressureState::SoftPressure);
+    ASSERT_TRUE(soft.has_value());
+    if (!soft)
+        return;
+    uint64_t soft_seq = soft.value();
+
+    auto hard = mb.try_acquire_backpressure_signal(
+        2'010'000'000ULL, MailboxPressureState::HardPressure);
+    ASSERT_TRUE(hard.has_value());
+    if (!hard)
+        return;
+    EXPECT_GT(hard.value(), soft_seq);
+}
+
 TEST_F(ByteBudgetTest, ByteCapacityFailureReportsByteCapacity) {
     using namespace hpactor;
     using namespace hpactor::mailbox;

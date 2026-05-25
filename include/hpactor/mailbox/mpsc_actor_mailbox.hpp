@@ -27,6 +27,7 @@
 
 #include <atomic>
 #include <functional>
+#include <optional>
 #include <type_traits>
 
 namespace hpactor::mailbox {
@@ -426,7 +427,57 @@ template <typename T> class MPSCActorMailbox {
         return s;
     }
 
+    std::optional<uint64_t>
+    try_acquire_backpressure_signal(uint64_t now_ns,
+                                    MailboxPressureState state) noexcept {
+        const uint64_t interval_ns =
+            static_cast<uint64_t>(config_.signal_min_interval_ms) * 1'000'000ULL;
+        const auto severity = pressure_severity(state);
+
+        uint64_t last =
+            last_backpressure_signal_ns_.load(std::memory_order_acquire);
+        uint8_t last_severity =
+            last_backpressure_signal_severity_.load(std::memory_order_acquire);
+
+        while (true) {
+            const bool first = last == 0;
+            const bool interval_elapsed = now_ns >= last + interval_ns;
+            const bool escalation = severity > last_severity;
+
+            if (!first && !interval_elapsed && !escalation) {
+                return std::nullopt;
+            }
+
+            if (last_backpressure_signal_ns_.compare_exchange_weak(
+                    last, now_ns, std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
+                last_backpressure_signal_severity_.store(
+                    severity, std::memory_order_release);
+                return backpressure_signal_sequence_.fetch_add(
+                           1, std::memory_order_acq_rel) +
+                       1;
+            }
+
+            last_severity =
+                last_backpressure_signal_severity_.load(std::memory_order_acquire);
+        }
+    }
+
   private:
+    static uint8_t pressure_severity(MailboxPressureState state) noexcept {
+        switch (state) {
+            case MailboxPressureState::Normal:
+                return 0;
+            case MailboxPressureState::Recovering:
+                return 1;
+            case MailboxPressureState::SoftPressure:
+                return 2;
+            case MailboxPressureState::HardPressure:
+                return 3;
+        }
+        return 0;
+    }
+
     enum class ReservationResult : uint8_t {
         Reserved,
         CountCapacity,
@@ -718,6 +769,9 @@ template <typename T> class MPSCActorMailbox {
     std::atomic<uint64_t> total_dead_letters_{0};
     std::atomic<uint64_t> max_depth_{0};
     std::atomic<MailboxPressureState> pressure_state_{MailboxPressureState::Normal};
+    std::atomic<uint64_t> last_backpressure_signal_ns_{0};
+    std::atomic<uint8_t> last_backpressure_signal_severity_{0};
+    std::atomic<uint64_t> backpressure_signal_sequence_{0};
     ActorContinuationCallback continuation_callback_;
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
     log::Logger* logger_ = nullptr;
