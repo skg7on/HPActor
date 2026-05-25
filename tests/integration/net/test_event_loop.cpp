@@ -468,10 +468,6 @@ TEST_F(EventLoopTest, AsyncSendErrorOnClosedFd) {
     ::close(fds[1]);
 }
 
-TEST_F(EventLoopTest, AsyncRecvEmptyBufferSkip) {
-    GTEST_SKIP() << "Platform-dependent";
-}
-
 TEST_F(EventLoopTest, AsyncSendMultiIovec) {
     EventLoop loop;
     std::optional<OpCompletion> captured;
