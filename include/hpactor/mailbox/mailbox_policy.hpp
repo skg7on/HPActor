@@ -156,7 +156,8 @@ struct EnqueueResult {
 
     [[nodiscard]] bool accepted() const noexcept {
         return code == EnqueueResultCode::Accepted ||
-               code == EnqueueResultCode::AcceptedWithSoftPressure;
+               code == EnqueueResultCode::AcceptedWithSoftPressure ||
+               code == EnqueueResultCode::ReroutedToOverflow;
     }
 
     [[nodiscard]] bool retryable() const noexcept {

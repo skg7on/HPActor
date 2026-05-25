@@ -84,6 +84,10 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
         out.mailbox.backpressure_mode =
             parse_backpressure_mode(mt.read_string("backpressure", "local_and_"
                                                                    "remote"));
+        out.mailbox.max_overflow_depth =
+            mt.read_uint32("max_overflow_depth", 0);
+        out.mailbox.signal_min_interval_ms =
+            mt.read_uint32("signal_min_interval_ms", 100);
 
         return result<void>::make();
     }

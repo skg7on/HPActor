@@ -48,6 +48,11 @@ struct MboxSnapshot {
     uint64_t total_dead_letters = 0;
     uint64_t max_depth = 0;
     uint32_t high_priority_depth = 0;
+    uint32_t overflow_depth = 0;         ///< Current overflow queue depth (SpillToOverflowQueue policy only).
+    uint32_t overflow_max_depth = 0;     ///< Configured max overflow queue depth (0 = unlimited).
+    uint64_t overflow_total_pushed = 0;  ///< Cumulative messages spilled to the overflow queue.
+    uint64_t overflow_total_popped = 0;  ///< Cumulative messages drained from overflow back to main mailbox.
+    uint64_t overflow_total_lost = 0;    ///< Cumulative overflow entries silently evicted on overflow.
     std::string pressure_state;
     std::string overflow_policy;
 };
