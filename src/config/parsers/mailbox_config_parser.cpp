@@ -72,8 +72,8 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
             return result<void>::make();
 
         out.mailbox.default_capacity = mt.read_uint32("default_capacity", 1024);
-        out.mailbox.default_byte_capacity =
-            mt.read_uint32("default_byte_capacity", 0);
+        out.mailbox.default_byte_capacity = static_cast<uint64_t>(
+            mt.value("default_byte_capacity").as_int64(0));
         out.mailbox.default_policy =
             parse_overflow_policy(mt.read_string("default_policy", "reject_"
                                                                    "newest"));

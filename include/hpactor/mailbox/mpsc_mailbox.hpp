@@ -50,79 +50,82 @@ template <typename T> class MPSCMailbox {
     }
 
     // Consumer: dequeue oldest node, or nullptr if empty.
+    //
+    // Single-consumer: only one thread may call dequeue() at a time.
+    // Callers must serialize through an external lock when the consumer
+    // path can be entered from multiple contexts (e.g. normal dispatch
+    // and overflow-driven drop_one_oldest).
     T* dequeue() noexcept {
-        for (;;) {
-            // Quick return path for empty queue.
-            if (count_.load(std::memory_order_acquire) == 0)
-                return nullptr;
+        T* t = tail_.load(std::memory_order_acquire);
+        T* next = t->mpsc_next.load(std::memory_order_acquire);
 
-            T* tail = tail_.load(std::memory_order_acquire);
-            T* next = tail->mpsc_next.load(std::memory_order_acquire);
-            if (next == nullptr) {
-                // Count says non-empty but stub->next is null:
-                // elements are orphaned.  Try to recover through
-                // the last-dequeued node's forward link.
-                T* ld = last_dequeued_.load(std::memory_order_acquire);
-                if (ld) {
-                    next = ld->mpsc_next.load(std::memory_order_acquire);
-                    if (next) {
-                        // Restore the chain: stub -> recovered
-                        tail->mpsc_next.store(next,
-                                              std::memory_order_release);
-                        continue; // retry from the top
-                    }
-                }
-                return nullptr;
-            }
+        if (next == nullptr) {
+            // Queue might be empty, or a producer is mid-enqueue (exchanged
+            // head but hasn't linked prev->mpsc_next yet — the new element
+            // is not yet reachable from the stub).
+            if (head_.load(std::memory_order_acquire) == t)
+                return nullptr; // truly empty
 
-            T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
-            if (next_next == nullptr) {
-                T* head = head_.load(std::memory_order_acquire);
-                if (head != next) {
-                    do {
-                        next_next = next->mpsc_next.load(
-                            std::memory_order_acquire);
-                    } while (next_next == nullptr);
-                }
-            }
+            // Producer is mid-enqueue on the first element after empty.
+            // Spin until it finishes linking; the window is a few
+            // instructions wide.
+            do {
+                next = t->mpsc_next.load(std::memory_order_acquire);
+            } while (next == nullptr);
+        }
 
-            tail->mpsc_next.store(next_next, std::memory_order_release);
-
-            if (next_next == nullptr) {
-                T* head = head_.load(std::memory_order_acquire);
-                if (head != next) {
+        // Read forward link of the element we're about to dequeue.
+        T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
+        if (next_next == nullptr) {
+            // next may be the only live element, or a producer that
+            // enqueued after next is still writing its forward link.
+            T* h = head_.load(std::memory_order_acquire);
+            if (h != next) {
+                do {
                     next_next = next->mpsc_next.load(
                         std::memory_order_acquire);
-                    if (next_next) {
-                        tail->mpsc_next.store(next_next,
-                                              std::memory_order_release);
-                    }
-                }
+                } while (next_next == nullptr);
             }
-
-            if (next_next == tail) {
-                tail->mpsc_next.store(nullptr, std::memory_order_release);
-            }
-
-            // Save last dequeued for orphan recovery.
-            last_dequeued_.store(next, std::memory_order_release);
-
-            // Fix dangling head_ pointer: if head_ still points to the
-            // node we are about to free, reset it to the stub so that
-            // the next producer's head_.exchange() does not write to
-            // freed memory (mpsc_next.store).
-            {
-                T* h = head_.load(std::memory_order_acquire);
-                if (h == next) {
-                    head_.compare_exchange_strong(
-                        next, static_cast<T*>(&stub_),
-                        std::memory_order_release, std::memory_order_relaxed);
-                }
-            }
-
-            count_.fetch_sub(1, std::memory_order_release);
-            return next;
         }
+
+        // Advance stub past the dequeued element.
+        t->mpsc_next.store(next_next, std::memory_order_release);
+
+        // If the element we just dequeued was the last live node and a
+        // producer has since enqueued a new node whose forward link we
+        // missed, catch up.
+        if (next_next == nullptr) {
+            T* h = head_.load(std::memory_order_acquire);
+            if (h != next) {
+                next_next = next->mpsc_next.load(std::memory_order_acquire);
+                if (next_next) {
+                    t->mpsc_next.store(next_next,
+                                       std::memory_order_release);
+                }
+            }
+        }
+
+        // Reset the stub forward link when the queue drained to the
+        // stub itself (should not happen in normal operation, but guard
+        // against a corrupted chain).
+        if (next_next == t) {
+            t->mpsc_next.store(nullptr, std::memory_order_release);
+        }
+
+        // Fix dangling head_: if head_ still points to the node we are
+        // returning, reset it to the stub so the next producer's
+        // head_.exchange() writes to stub.mpsc_next, not freed memory.
+        {
+            T* h = head_.load(std::memory_order_acquire);
+            if (h == next) {
+                head_.compare_exchange_strong(
+                    next, static_cast<T*>(&stub_),
+                    std::memory_order_release, std::memory_order_relaxed);
+            }
+        }
+
+        count_.fetch_sub(1, std::memory_order_release);
+        return next;
     }
 
     // Consumer: try dequeue once (non-blocking) — same as dequeue
@@ -147,7 +150,6 @@ template <typename T> class MPSCMailbox {
     alignas(64) std::atomic<T*> tail_; // always stub (dummy)
     alignas(64) Stub stub_;            // dummy anchor
     std::atomic<int64_t> count_;       // element count
-    std::atomic<T*> last_dequeued_{nullptr}; // for orphan recovery
 };
 
 } // namespace hpactor::mailbox

@@ -196,3 +196,34 @@ TEST_F(OverflowPolicyTest, SnapshotReflectsDropCounters) {
     EXPECT_EQ(s.total_dropped, 1);
     EXPECT_EQ(s.total_dead_letters, 0);
 }
+
+TEST_F(OverflowPolicyTest, DropOldestFreesByteBudget) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    uint64_t sz = estimate_message_bytes(
+        TypedMessage(TypeTag::User, StreamBuffer{0}));
+
+    MailboxConfig cfg;
+    cfg.capacity.max_messages = 1;
+    cfg.capacity.max_bytes = sz + 10;
+    cfg.overflow_policy = OverflowPolicy::DropOldest;
+    MPSCActorMailbox<TypedMessage> b(ActorId{7}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    // Fill the single slot and byte budget.
+    auto r1 = b.try_push(
+        TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6, 7, 8}), meta);
+    EXPECT_TRUE(r1.accepted());
+
+    // Second message: DropOldest evicts the first, freeing bytes for this one.
+    auto r2 = b.try_push(
+        TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6, 7, 8}), meta);
+    EXPECT_TRUE(r2.accepted());
+
+    TypedMessage out;
+    EXPECT_TRUE(b.try_pop(out));
+    EXPECT_FALSE(b.try_pop(out));
+}

@@ -43,6 +43,13 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    ~MPSCActorMailbox() {
+        if (pending_free_) {
+            pending_free_->~T();
+            mem::deallocate(pending_free_);
+        }
+    }
+
     // Set the continuation callback to resume the actor's coroutine
     void set_continuation_callback(ActorContinuationCallback callback) {
         continuation_callback_ = std::move(callback);
@@ -196,7 +203,6 @@ template <typename T> class MPSCActorMailbox {
         bool was_empty = empty();
         mailbox_.enqueue(node);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
-        queued_bytes_.fetch_add(meta.estimated_bytes, std::memory_order_relaxed);
         update_max_depth();
         update_pressure_state();
 
@@ -232,8 +238,16 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
-    // Consumer: dequeue one message
+    // Consumer: dequeue one message.
+    //
+    // Acquires the consumer spinlock so that only one thread (scheduler
+    // dispatch or overflow-driven drop_one_oldest) operates on the
+    // underlying MPSC queue at a time.
+    //
+    // The returned node is owned by the caller, who must free it via
+    // mem::deallocate (see try_pop).
     T* dequeue() noexcept {
+        lock_consumer();
         T* node = mailbox_.dequeue();
         if (node != nullptr) {
             // Release from the correct reservation pool.
@@ -252,6 +266,8 @@ template <typename T> class MPSCActorMailbox {
                 mailbox_was_empty_.store(true, std::memory_order_release);
             }
         }
+        unlock_consumer();
+
         if (metrics_ring_buffer_) [[unlikely]] {
             metrics::MetricEvent evt{};
             evt.actor_id = actor_id_;
@@ -300,6 +316,8 @@ template <typename T> class MPSCActorMailbox {
     // Must update reservation counters to keep dequeue accounting consistent.
     void inject_for_test(T* node) noexcept {
         reserved_messages_.fetch_add(1, std::memory_order_relaxed);
+        queued_bytes_.fetch_add(estimate_node_bytes(*node),
+                                std::memory_order_release);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
         mailbox_.enqueue(node);
         mailbox_was_empty_.store(false, std::memory_order_release);
@@ -333,25 +351,43 @@ template <typename T> class MPSCActorMailbox {
     }
 
   private:
-    // Try to reserve one message slot via CAS.
-    // Byte budget tracking is deferred; bytes param reserved for future use.
-    // Returns false when at hard capacity.
-    bool try_reserve(uint64_t /*bytes*/) noexcept {
-        uint32_t cap = config_.capacity.max_messages;
-        if (cap == 0)
-            return true; // unlimited
+    // Try to reserve one message slot + byte budget via CAS.
+    // Two-phase reservation: count first, then bytes with rollback on failure.
+    // Returns false when at hard count or byte capacity.
+    bool try_reserve(uint64_t bytes) noexcept {
+        uint32_t msg_cap = config_.capacity.max_messages;
+        uint64_t byte_cap = config_.capacity.max_bytes;
 
-        uint32_t current = reserved_messages_.load(std::memory_order_acquire);
-        while (true) {
-            if (current >= cap) {
-                return false;
-            }
-            if (reserved_messages_.compare_exchange_weak(
-                    current, current + 1, std::memory_order_acq_rel,
-                    std::memory_order_acquire)) {
-                return true;
-            }
+        // Phase 1: count reservation (unchanged logic).
+        if (msg_cap > 0) {
+            uint32_t cur = reserved_messages_.load(std::memory_order_acquire);
+            do {
+                if (cur >= msg_cap)
+                    return false;
+            } while (!reserved_messages_.compare_exchange_weak(
+                cur, cur + 1, std::memory_order_acq_rel,
+                std::memory_order_acquire));
         }
+
+        // Phase 2: byte budget reservation.
+        if (byte_cap > 0) {
+            uint64_t cur = queued_bytes_.load(std::memory_order_acquire);
+            do {
+                if (cur + bytes > byte_cap) {
+                    if (msg_cap > 0)
+                        reserved_messages_.fetch_sub(1,
+                                                     std::memory_order_release);
+                    return false;
+                }
+            } while (!queued_bytes_.compare_exchange_weak(
+                cur, cur + bytes, std::memory_order_acq_rel,
+                std::memory_order_acquire));
+            return true;
+        }
+
+        // Unlimited bytes: still track for observability.
+        queued_bytes_.fetch_add(bytes, std::memory_order_release);
+        return true;
     }
 
     // Release a previously reserved slot + bytes.
@@ -364,7 +400,9 @@ template <typename T> class MPSCActorMailbox {
 
     // Try to reserve a system message slot via CAS on the protected reserve.
     // Only used when the normal capacity pool is exhausted.
-    bool try_reserve_system(uint64_t /*bytes*/) noexcept {
+    // System messages bypass the byte budget but still track bytes for
+    // snapshot accuracy — the count cap (default 32) already bounds memory.
+    bool try_reserve_system(uint64_t bytes) noexcept {
         uint32_t limit = config_.protected_system_messages;
         if (limit == 0)
             return false;
@@ -378,6 +416,7 @@ template <typename T> class MPSCActorMailbox {
             if (reserved_system_messages_.compare_exchange_weak(
                     current, current + 1, std::memory_order_acq_rel,
                     std::memory_order_acquire)) {
+                queued_bytes_.fetch_add(bytes, std::memory_order_release);
                 return true;
             }
         }
@@ -386,17 +425,22 @@ template <typename T> class MPSCActorMailbox {
     // Release a previously reserved system slot + bytes.
     void release_system_reservation(uint64_t bytes) noexcept {
         reserved_system_messages_.fetch_sub(1, std::memory_order_release);
-        if (bytes > 0 && config_.capacity.max_bytes > 0) {
+        if (bytes > 0) {
             queued_bytes_.fetch_sub(bytes, std::memory_order_release);
         }
     }
 
     // Drop the oldest message from the mailbox to free a slot.
     // Returns true if a message was successfully dropped.
+    // Uses deferred free: the dropped node is kept alive until the next
+    // consumer operation to avoid a stale head_ write from producers.
     bool drop_one_oldest() noexcept {
+        lock_consumer();
         T* node = mailbox_.dequeue();
-        if (!node)
+        if (!node) {
+            unlock_consumer();
             return false;
+        }
 
         // Release from the correct pool and update drop counter.
         if constexpr (std::is_same_v<T, TypedMessage>) {
@@ -419,12 +463,17 @@ template <typename T> class MPSCActorMailbox {
             metrics_ring_buffer_->try_push(evt);
         }
 
-        node->~T();
-        mem::deallocate(node);
-
         if (empty()) {
             mailbox_was_empty_.store(true, std::memory_order_release);
         }
+        unlock_consumer();
+
+        // Deferred free: the previously dropped node is safe to reclaim.
+        if (pending_free_) {
+            pending_free_->~T();
+            mem::deallocate(pending_free_);
+        }
+        pending_free_ = node;
 
         return true;
     }
@@ -498,10 +547,23 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    // Consumer spinlock: serialises dequeue() and drop_one_oldest() so
+    // the underlying Vyukov MPSC queue sees exactly one consumer.
+    void lock_consumer() noexcept {
+        while (consumer_lock_.test_and_set(std::memory_order_acquire)) {
+            // spin — the critical section is a single dequeue (tens of ns)
+        }
+    }
+    void unlock_consumer() noexcept {
+        consumer_lock_.clear(std::memory_order_release);
+    }
+
     ActorId actor_id_;
     sched::IScheduler* scheduler_;
     MPSCMailbox<T> mailbox_;
     MailboxConfig config_;
+    std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT;
+    T* pending_free_{nullptr}; // deferred-free: freed on next consumer op
     std::atomic<bool> mailbox_was_empty_{true};
     std::atomic<uint32_t> reserved_messages_{0};
     std::atomic<uint32_t> reserved_system_messages_{0};
