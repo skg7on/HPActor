@@ -20,21 +20,57 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Refined feature-gap backlog: `feature-gap-refined-requirement-backlog.md`, with requirement cards by subsystem covering gap, architecture requirement, runtime contract, dependencies, acceptance evidence, observability, and tests.
 - Missing design docs added: actor delivery semantics, cluster failure model, dead-letter queue, cluster sharding/placement, reliable messaging, durable actor state, graceful shutdown/rolling upgrade, security, operations/SRE, dynamic config/parser IoC, and chaos/reliability testing.
 - Recommended production milestone: Production Reliability Plane foundation, starting with delivery semantics, bounded mailboxes/backpressure, DLQ, tracing, health, and graceful shutdown.
-- Status: architecture and backlog only; runtime implementation is still pending.
+- Status: roadmap and backlog remain authoritative. Runtime foundations now implemented include scheduled messages, delivery-mode configuration, receiver deduplication, structured failure envelopes, bounded mailboxes, DLQ, distributed tracing, HTTP gateway, graceful shutdown, actor lifecycle, and actor quarantine. Durable outbox/inbox, ACK/NACK retry, cluster control, security, and operations-plane admin APIs remain design/backlog.
 
-**Failure Envelope Phase 1:** ✅ Complete (2026-05-20, 9 commits)
+**Failure Semantics & Delivery Foundation:** ✅ Complete (2026-05-20 to 2026-05-24)
 - `FailureReason` enum (23 values in 10 semantic ranges) + `FailureSource` enum (12 subsystem origins) in `include/hpactor/types/failure_reason.hpp`.
 - `FailureEnvelope` struct with full correlation metadata (actor_id, sender, receiver, message_id, trace, retryable, timestamp, source, detail) in `include/hpactor/types/failure_envelope.hpp`.
 - `make_failure_envelope()` factory function with monotonic clock timestamp capture.
 - `EnqueueResult::failure_reason()` — maps `EnqueueResultCode` → `FailureReason`.
 - `error::failure_reason()` — maps `errors::` codes → `FailureReason`.
-- `try_deliver_local()` builds `FailureEnvelope` on both failure paths (ActorNotFound + mailbox rejection), emits `kDeliveryFailure` metric event and structured log warning.
-- `kDeliveryFailure = 20` added to `MetricEventType`; aggregator stub added.
-- 2 new test suites: `test_failure_reason` (retryable, to_string, enum mapping) and `test_failure_envelope` (construction, factory, truncation, null termination).
-- 153 tests pass (150 existing + 2 new: test_failure_reason, test_failure_envelope).
+- Spawn errors and `DeadLetterReason` values map back to canonical failure reasons.
+- `DeliveryMode` defines best-effort, observable best-effort, at-least-once, and durable-at-least-once policy intent.
+- Receiver-side `DedupCache` suppresses duplicate `(source_node, source_actor, message_id)` tuples for tracked delivery.
+- Delivery-deadline expiry maps to canonical `Expired` failure semantics.
+- `try_deliver_local()` builds `FailureEnvelope` on failure paths, emits `kDeliveryFailure` metric event, and structured log warnings.
+- CLI `/failure reasons` and `/failure summary` expose reason codes, retryability, and mapping status.
+- Coverage includes `test_failure_reason`, `test_failure_envelope`, `test_delivery_mode`, `test_dedup_cache`, `test_is_expired`, spawn failure mapping, and delivery semantics integration tests.
 - Design spec: `docs/architecture/production/structured-failure-envelope-design.md`. Implementation plan: `docs/superpowers/plans/2026-05-20-failure-envelope-phase1.md`.
-- Phase 2 (DLQ integration), Phase 3 (RPC + spawn), Phase 4 (CLI) remain.
-- Branch: `task/failure-envelope-spec`.
+- Delivery semantics design/plan: `docs/superpowers/specs/2026-05-24-msg001-delivery-semantics-design.md` and `docs/superpowers/plans/2026-05-24-msg001-delivery-semantics-impl.md`.
+
+**Actor Quarantine & Circuit Breaker:** ✅ Complete (2026-05-23)
+- `QuarantinePolicy` configures opt-in per-actor quarantine and circuit-breaker behavior.
+- `CircuitBreakerTracker` tracks Closed/Open/HalfOpen state, cooldown timing, probe admission, trip count, and failure-rate EMA.
+- `FailureRateTracker` computes failure and timeout rates over an observation window.
+- `FailureReason::Quarantined` and `FailureReason::CircuitOpen` added to lifecycle failure range.
+- Supervision can escalate repeatedly failing actors into quarantine instead of restart loops.
+- Metrics include quarantine/unquarantine events.
+- TOML `[system.quarantine]` parser provides system-level defaults with per-actor overrides.
+- Design/plan: `docs/architecture/production/actor-quarantine-circuit-breaker-design.md` and `docs/superpowers/plans/2026-05-23-actor-quarantine-circuit-breaker-impl.md`.
+
+**Shared ADT Extraction:** ✅ Complete (2026-05-18 to 2026-05-20)
+- `Id<Tag, T>` template plus tag types back opaque identifiers such as ActorId, MessageId, AlarmHandle, and timer IDs.
+- `NodeIdentity` deduplicates node/member identity fields across discovery and registrar code.
+- `adt::MpscRingBuffer` extracted as a shared per-slot publish/sequence ring buffer used by metrics/logging/telemetry-style paths.
+- `DispatchPolicy` enum deduplicated into the shared type layer.
+- Config schema fields for system/mailbox/dispatcher settings moved to X-macro tables.
+- Design/plan: `docs/superpowers/specs/2026-05-18-shared-adt-extraction-design.md` and `docs/superpowers/plans/2026-05-18-shared-adt-extraction-plan.md`.
+
+**Memory Region Accounting & Pressure Admission:** ✅ Complete (2026-05-23)
+- `MemoryRegionRegistry` tracks typed region stats, hard limits, high-water pressure state, corruption events, and rejected allocation counts.
+- Alloc headers preserve allocation region and fallback provenance.
+- SegmentProvider, SlabCache, ThreadLocalAllocator, and std allocator paths participate in region accounting.
+- ActorSystem memory config exposes region limits and admission hooks.
+- Coverage includes `test_memory_region_accounting`, expanded alloc header tests, telemetry ring buffer tests, and allocator pressure paths.
+- Plan: `docs/superpowers/plans/2026-05-22-memory-region-accounting-pressure-impl.md`.
+
+**Test Reorganization & Coverage Infrastructure:** ✅ Complete (2026-05-22 to 2026-05-24)
+- Google Test v1.14.0 vendored under `third_party/googletest/`.
+- Tests reorganized into `tests/unit`, `tests/integration`, and `tests/system` with tier-level CMake files and `gtest_discover_tests`.
+- Current tree contains 29 GTest binaries, 187 test source files, and 1083 source-level `TEST`/`TEST_F`/`TEST_P` definitions.
+- Added 51 network subsystem system/integration tests and 66 additional low-coverage tests across CLI, config, ref, supervision, net, and system paths.
+- Coverage workflow now has an `ENABLE_COVERAGE` CMake option and gcov branch coverage support.
+- Design/plan: `docs/superpowers/specs/2026-05-21-test-reorganization-design.md`, `docs/superpowers/plans/2026-05-22-test-reorganization-impl.md`, and `docs/superpowers/specs/2026-05-24-coverage-cmake-option-design.md`.
 
 **Service Discovery:** ✅ Complete (2026-05-08, 15 commits, ~2000 lines)
 - Pluggable `IServiceDiscovery` interface — 4 backends: `UdpRegistrar` (same-host, refactored), `GossipMembership` (cross-server SWIM protocol), `HybridDiscovery` (composes both), `StaticDiscovery` (fixed topology)
@@ -74,7 +110,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - AllocHeader (32B) + CanaryFooter (8B) on every block — owner ActorId, incarnation counter, magic canary, generation
 - Lock-free CAS freelist for block recycling, CAS-based MPSC TelemetryRingBuffer for allocation events
 - MemoryTracker — per-actor shadow counters (64B-aligned, lock-free), 1M actor capacity
-- Typed memory regions: kActor, kMessage, kCoroutine, kNetwork, kInternal, kHibernate
+- Typed memory regions: kActor, kMessage, kCoroutine, kNetwork, kInternal, kHibernate, with per-region accounting and pressure admission.
 - ThreadLocalAllocator per WorkerThread, global mem::allocate()/mem::deallocate() API
 - Memory poisoning (0xAA) + canary verification (debug mode), guard pages with SIGSEGV/SIGBUS handler
 - Hibernatable interface, HibernationRegistry (ActorId → serialized buffer), ActorState::kHibernating
@@ -272,11 +308,12 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 **Coverage Badge:** ✅ Complete (2026-05-17, PRs #106-108)
 - Automated coverage reporting with badge in README
 
-**Tests:** ✅ 803 GTest cases passing (154 test source files across 3 tiers)
-- Three-tier structure using Google Test framework (vendored in `third_party/googletest/`)
-- **unit** (71 files): actor (3), adt (1), cli (6), config (1), core (2), log (6), mailbox (9), mem (15), net (5), ref (1), sched (14), spawn (1), supervision (2), tracing (5)
-- **integration** (62 files): actor (26), cli (2), config (6), log (1), mailbox (2), metrics (3), ref (3), rpc (1), sched (4), spawn (4), supervision (3), tracing (7)
-- **system** (21 files): examples (1), net (20)
+**Tests:** ✅ 29 GTest binaries configured (187 test source files across 3 tiers)
+- Current tree contains 1083 source-level `TEST`/`TEST_F`/`TEST_P` definitions.
+- Three-tier structure using Google Test framework (vendored in `third_party/googletest/`).
+- **unit** (95 files): actor (6), adt (1), cli (8), config (1), core (4), log (6), mailbox (13), mem (16), net (17), ref (1), sched (14), spawn (1), supervision (2), tracing (5).
+- **integration** (78 files): actor (27), cli (2), config (7), log (1), mailbox (2), metrics (3), net (11), ref (4), rpc (1), sched (4), spawn (5), supervision (4), tracing (7).
+- **system** (14 files): examples (1), plus cross-subsystem backpressure, graceful shutdown, loopback network, observability, order platform, registrar, runtime workflow, supervision, TCP transport, topology bootstrap, and UDP registrar tests.
 
 **Documentation:** ✅ Complete
 - Architecture: `docs/architecture/production/production-reliability-plane.md` (24x7 production reliability roadmap)
@@ -321,6 +358,18 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Spec: `docs/superpowers/specs/2026-05-05-actor-cli-interactive-design.md` (CLI interactive detailed spec)
 - Plan: `docs/superpowers/plans/2026-05-04-actor-metrics-impl.md` (metrics implementation plan)
 - Plan: `docs/superpowers/plans/2026-05-05-actor-cli-interactive-impl.md` (CLI interactive implementation plan)
+- Spec: `docs/superpowers/specs/2026-05-18-shared-adt-extraction-design.md` (shared ADT extraction)
+- Plan: `docs/superpowers/plans/2026-05-18-shared-adt-extraction-plan.md` (shared ADT extraction implementation)
+- Architecture: `docs/architecture/production/structured-failure-envelope-design.md` (canonical failure envelope)
+- Plan: `docs/superpowers/plans/2026-05-20-failure-envelope-phase1.md` (failure envelope implementation)
+- Spec: `docs/superpowers/specs/2026-05-21-test-reorganization-design.md` (three-tier Google Test reorganization)
+- Plan: `docs/superpowers/plans/2026-05-22-test-reorganization-impl.md` (Google Test migration)
+- Plan: `docs/superpowers/plans/2026-05-22-memory-region-accounting-pressure-impl.md` (memory region accounting and pressure admission)
+- Architecture: `docs/architecture/production/actor-quarantine-circuit-breaker-design.md` (actor quarantine and circuit breaker)
+- Plan: `docs/superpowers/plans/2026-05-23-actor-quarantine-circuit-breaker-impl.md` (actor quarantine implementation)
+- Spec: `docs/superpowers/specs/2026-05-24-msg001-delivery-semantics-design.md` (delivery mode, dedup, and deadline semantics)
+- Plan: `docs/superpowers/plans/2026-05-24-msg001-delivery-semantics-impl.md` (delivery semantics implementation)
+- Spec: `docs/superpowers/specs/2026-05-24-coverage-cmake-option-design.md` (coverage CMake option)
 
 ## Key Decisions
 
@@ -331,17 +380,17 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Pluggable service discovery: IServiceDiscovery interface with 4 backends (gossip, registrar, static, hybrid)
 - Decentralized membership via SWIM gossip protocol — no single point of failure
 - Production reliability roadmap is organized into data plane, control plane, and operations plane.
-- Production backlog priority begins with explicit delivery semantics, bounded mailboxes, dead-letter queues, tracing correlation, health checks, and graceful shutdown.
-- Typed memory regions with per-region back-pressure and observability
+- Production reliability foundation now includes delivery modes, receiver deduplication, failure envelopes, bounded mailboxes, DLQ, tracing correlation, graceful shutdown, lifecycle, and actor quarantine.
+- Typed memory regions with per-region pressure admission and observability.
 - Hibernation via serialization + madvise(MADV_PAGEOUT) to ZRAM for cold storage
 - Actors are relocatable by ActorId, enabling slab compaction without dangling pointers
-- Header-only library, C++20, no external dependencies (except OpenSSL for TLS)
+- Header-only actor-facing APIs with compiled runtime, C++20, system OpenSSL/Protobuf, and vendored llhttp/toml++/GoogleTest.
 - No exceptions (-fno-exceptions), no RTTI (-fno-rtti)
-- constexpr ActorId constructor for constant initialization
+- Opaque `Id<Tag, T>` aliases keep ActorId, MessageId, AlarmHandle, and timer IDs constant-initializable without cross-domain comparisons.
 
 ## Current Progress
 
-**Phase 0-16 Complete** (803 GTest cases passing, 154 test source files)
+**Core Runtime Foundation Complete** (1083 source-level GTest cases, 187 test source files in current tree)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -380,11 +429,10 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 **Next Steps (remaining items)**
 - Production Reliability Plane remaining:
   - health/readiness/liveness endpoints
-  - structured delivery results (explicit success/failure for sends)
-  - reliable messaging (ACK/NACK, retry, dedup, durable outbox/inbox)
+  - reliable messaging completion (ACK/NACK, automatic retry, retry exhaustion policy, durable outbox/inbox)
   - durable actor state (snapshot, event sourcing, recovery)
 - Cluster control follow-up:
-  - cluster failure model with quarantine/fencing
+  - cluster node failure model with node quarantine/fencing
   - protocol/feature negotiation for rolling upgrades
   - sharding, placement, and rebalance protocol
 - Production operations follow-up:
@@ -403,11 +451,13 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 **Source Reorganization**
 - `include/hpactor/` — header-only library, organized by architectural group:
   - `actor/` — Actor base classes, behaviors, typed actors, spawn
+  - `adt/` — Shared ADTs (Id, tags, NodeIdentity, MpscRingBuffer, StreamBuffer)
   - `config/` — TOML topology config (topology_model, actor_factory, actor_factory_registry, toml_parser, binary_format, binary_serializer, binary_loader, actor_args)
   - `ref/` — Actor references (address, ref, proxy)
   - `net/` — Networking (event loop, TLS, connection pool, transports)
   - `supervision/` — Supervision strategies
   - `core/` — Core runtime (actor_system, mailbox, registry)
+  - `mailbox/` — MPSC mailboxes, delivery modes, dedup cache, mailbox policy, DLQ
   - `sched/` — Scheduling subsystem (work_queue, edf_queue, a2ws, timing_wheel, coroutine_frame_pool)
   - `types/` — Type system (types, types_fwd, serialization)
   - `rpc/` — RPC channel (rpc_channel.hpp)
@@ -417,11 +467,13 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `log/` — Structured logging (log_ring_buffer, logger, log_drain, log_sink, log_formatter, log_manager, log_config)
   - `tracing/` — Distributed tracing (trace_context, span, span_guard, trace_manager, trace_exporter, trace_config)
 - `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
+- `src/adt/` — shared ADT implementations
 - `src/cli/` — cli_actor.cpp, lexer.cpp, command_node.cpp, pretty_formatter.cpp, json_formatter.cpp, tabular_formatter.cpp, pager.cpp
 - `src/metrics/` — metrics_registry.cpp, metrics_aggregator.cpp, metrics_formatter.cpp, metrics_actor.cpp
 - `src/log/` — log_manager.cpp, log_drain.cpp, log_sinks.cpp
 - `src/tracing/` — trace_manager.cpp, trace_exporter.cpp
 - `src/config/` — actor_factory_registry.cpp, toml_parser.cpp, binary_serializer.cpp, binary_loader.cpp
+- `src/mailbox/` — dedup cache and mailbox support implementations
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
 - `src/sched/` — scheduler.cpp, worker_thread.cpp, edf_queue.cpp, a2ws.cpp, timing_wheel.cpp, coroutine_frame_pool.cpp
@@ -431,7 +483,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `src/rpc/rpc_channel.cpp` — RpcChannel implementation
 - `src/mem/` — segment_provider.cpp, slab_cache.cpp, thread_local_allocator.cpp, memory_config.cpp, memory_tracker.cpp, hibernation_manager.cpp, guard_page.cpp, compaction.cpp, zram.cpp
 - `tools/toml-compiler/` — AOT compiler executable (compiler.cpp)
-- Tests: `tests/{unit,integration,system}/` — three-tier structure (unit/unit tests, integration/component integration, system/end-to-end) using Google Test
+- Tests: `tests/{unit,integration,system}/` — three-tier structure with 29 GTest binaries and 187 test source files.
 
 ## Build Commands
 
@@ -463,6 +515,13 @@ cmake -DENABLE_EXAMPLES=OFF ..
 # Memory management options
 cmake -DENABLE_MEMORY_TRACKING=OFF ..  # Disable per-actor tracking (default ON)
 cmake -DENABLE_MEMORY_DEBUG=ON ..     # Enable poisoning + canaries (default OFF)
+
+# Runtime subsystem options
+cmake -DENABLE_ACTOR_METRICS=OFF ..   # Disable actor-level metrics (default ON)
+cmake -DENABLE_ACTOR_LOGGING=OFF ..   # Disable structured logging (default ON)
+cmake -DENABLE_ACTOR_TRACING=OFF ..   # Disable distributed tracing (default ON)
+cmake -DENABLE_CLI=OFF ..             # Disable interactive CLI subsystem (default ON)
+cmake -DENABLE_COVERAGE=ON ..         # Enable coverage instrumentation
 ```
 
 ## Known Issues
