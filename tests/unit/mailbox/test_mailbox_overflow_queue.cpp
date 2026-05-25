@@ -179,7 +179,12 @@ TEST(OverflowQueueTest, ConcurrentProducerConsumer) {
             if (q.try_pop(val)) {
                 consumed.fetch_add(1, std::memory_order_relaxed);
             } else if (producer_done.load(std::memory_order_acquire)) {
-                // No more messages and producer is done — nothing left.
+                // TOCTOU: producer may have finished pushing between the
+                // failed try_pop and the producer_done load.  Drain any
+                // messages that arrived in that window before breaking.
+                while (q.try_pop(val)) {
+                    consumed.fetch_add(1, std::memory_order_relaxed);
+                }
                 break;
             }
         }
