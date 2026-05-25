@@ -341,6 +341,44 @@ TEST_F(BoundedMailboxTest, PressureStateUsesLowHighCriticalHysteresis) {
     EXPECT_EQ(mb.snapshot().pressure_state, "normal");
 }
 
+TEST_F(BoundedMailboxTest, CountCapacityFailureReportsHardCapacity) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.capacity.max_messages = 1;
+    MPSCActorMailbox<TypedMessage> mb(ActorId{90}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    ASSERT_TRUE(
+        mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta).accepted());
+    auto rejected = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_EQ(rejected.code, EnqueueResultCode::Rejected);
+    EXPECT_EQ(rejected.pressure_reason, BackpressureReason::HardCapacity);
+    EXPECT_EQ(rejected.pressure_state, MailboxPressureState::HardPressure);
+}
+
+TEST_F(ByteBudgetTest, ByteCapacityFailureReportsByteCapacity) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    const uint64_t base =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{}));
+    cfg.capacity.max_messages = 100;
+    cfg.capacity.max_bytes = base + 1;
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{91}, &scheduler, cfg);
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    auto rejected =
+        mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1, 2}), meta);
+    EXPECT_EQ(rejected.code, EnqueueResultCode::Rejected);
+    EXPECT_EQ(rejected.pressure_reason, BackpressureReason::ByteCapacity);
+    EXPECT_EQ(rejected.pressure_state, MailboxPressureState::HardPressure);
+}
+
 TEST_F(ByteBudgetTest, BytePressureDrivesPressureState) {
     using namespace hpactor;
     using namespace hpactor::mailbox;

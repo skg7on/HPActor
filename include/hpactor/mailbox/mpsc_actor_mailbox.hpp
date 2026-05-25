@@ -81,7 +81,8 @@ template <typename T> class MPSCActorMailbox {
         }
 
         // Primary reservation attempt through normal capacity pool.
-        if (!try_reserve(meta.estimated_bytes)) {
+        auto reserve_result = try_reserve(meta.estimated_bytes);
+        if (reserve_result != ReservationResult::Reserved) {
             // System messages get a second chance through the protected
             // reserve.
             bool sys_reserved = false;
@@ -90,6 +91,11 @@ template <typename T> class MPSCActorMailbox {
             }
 
             if (!sys_reserved) {
+                update_pressure_state(true);
+                auto reserve_reason = reserve_result == ReservationResult::ByteCapacity
+                                          ? BackpressureReason::ByteCapacity
+                                          : BackpressureReason::HardCapacity;
+
                 // Apply overflow policy when both pools are exhausted.
                 switch (config_.overflow_policy) {
                     case OverflowPolicy::DropNewest:
@@ -102,12 +108,14 @@ template <typename T> class MPSCActorMailbox {
                             evt.value_hi = 1;
                             metrics_ring_buffer_->try_push(evt);
                         }
-                        return make_result(EnqueueResultCode::DroppedNewest);
+                        return make_result(EnqueueResultCode::DroppedNewest,
+                                           BackpressureReason::OverflowPolicy);
 
                     case OverflowPolicy::DropOldest:
                         if (drop_one_oldest()) {
                             // Freed a slot — retry normal reservation.
-                            if (!try_reserve(meta.estimated_bytes)) {
+                            if (try_reserve(meta.estimated_bytes) !=
+                                ReservationResult::Reserved) {
                                 total_rejected_.fetch_add(
                                     1, std::memory_order_relaxed);
                                 if (metrics_ring_buffer_) [[unlikely]] {
@@ -118,7 +126,8 @@ template <typename T> class MPSCActorMailbox {
                                     evt.value_hi = 1;
                                     metrics_ring_buffer_->try_push(evt);
                                 }
-                                return make_result(EnqueueResultCode::Rejected);
+                                return make_result(EnqueueResultCode::Rejected,
+                                                   reserve_reason);
                             }
                             // Fall through to enqueue below.
                             break;
@@ -132,7 +141,8 @@ template <typename T> class MPSCActorMailbox {
                             evt.value_hi = 1;
                             metrics_ring_buffer_->try_push(evt);
                         }
-                        return make_result(EnqueueResultCode::Rejected);
+                        return make_result(EnqueueResultCode::Rejected,
+                                           reserve_reason);
 
                     case OverflowPolicy::DeadLetter:
                         total_dead_letters_.fetch_add(1, std::memory_order_relaxed);
@@ -144,7 +154,8 @@ template <typename T> class MPSCActorMailbox {
                             evt.value_hi = 1;
                             metrics_ring_buffer_->try_push(evt);
                         }
-                        return make_result(EnqueueResultCode::ReroutedToDeadLetter);
+                        return make_result(EnqueueResultCode::ReroutedToDeadLetter,
+                                           BackpressureReason::OverflowPolicy);
 
                     case OverflowPolicy::RejectNewest:
                         total_rejected_.fetch_add(1, std::memory_order_relaxed);
@@ -204,7 +215,8 @@ template <typename T> class MPSCActorMailbox {
                             evt.value_hi = 1;
                             metrics_ring_buffer_->try_push(evt);
                         }
-                        return make_result(EnqueueResultCode::Rejected);
+                        return make_result(EnqueueResultCode::Rejected,
+                                           reserve_reason);
                 }
             }
         }
@@ -230,7 +242,8 @@ template <typename T> class MPSCActorMailbox {
     // memory).  Prefer try_push() for new code.
     void enqueue(T* node) noexcept {
         uint64_t bytes = estimate_node_bytes(*node);
-        if (!try_reserve(bytes)) {
+        if (try_reserve(bytes) != ReservationResult::Reserved) {
+            update_pressure_state(true);
             total_rejected_.fetch_add(1, std::memory_order_relaxed);
             if (metrics_ring_buffer_) [[unlikely]] {
                 metrics::MetricEvent evt{};
@@ -414,10 +427,16 @@ template <typename T> class MPSCActorMailbox {
     }
 
   private:
+    enum class ReservationResult : uint8_t {
+        Reserved,
+        CountCapacity,
+        ByteCapacity,
+    };
+
     // Try to reserve one message slot + byte budget via CAS.
     // Two-phase reservation: count first, then bytes with rollback on failure.
-    // Returns false when at hard count or byte capacity.
-    bool try_reserve(uint64_t bytes) noexcept {
+    // Returns the specific capacity reason on failure.
+    ReservationResult try_reserve(uint64_t bytes) noexcept {
         uint32_t msg_cap = config_.capacity.max_messages;
         uint64_t byte_cap = config_.capacity.max_bytes;
 
@@ -426,7 +445,7 @@ template <typename T> class MPSCActorMailbox {
             uint32_t cur = reserved_messages_.load(std::memory_order_acquire);
             do {
                 if (cur >= msg_cap)
-                    return false;
+                    return ReservationResult::CountCapacity;
             } while (!reserved_messages_.compare_exchange_weak(
                 cur, cur + 1, std::memory_order_acq_rel, std::memory_order_acquire));
         }
@@ -438,17 +457,17 @@ template <typename T> class MPSCActorMailbox {
                 if (cur + bytes > byte_cap) {
                     if (msg_cap > 0)
                         reserved_messages_.fetch_sub(1, std::memory_order_release);
-                    return false;
+                    return ReservationResult::ByteCapacity;
                 }
             } while (!queued_bytes_.compare_exchange_weak(
                 cur, cur + bytes, std::memory_order_acq_rel,
                 std::memory_order_acquire));
-            return true;
+            return ReservationResult::Reserved;
         }
 
         // Unlimited bytes: still track for observability.
         queued_bytes_.fetch_add(bytes, std::memory_order_release);
-        return true;
+        return ReservationResult::Reserved;
     }
 
     // Release a previously reserved slot + bytes.
