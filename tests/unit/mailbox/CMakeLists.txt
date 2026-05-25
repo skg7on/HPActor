@@ -24,24 +24,26 @@ gtest_discover_tests(test_unit_mailbox)
 # resolves to Relacy's fake atomic header instead of the system one.
 # This avoids ODR conflicts between rl::atomic and std::atomic while
 # still providing full instrumentation.
-add_executable(test_mpsc_relacy
-    test_mpsc_relacy.cpp
-)
-target_include_directories(test_mpsc_relacy BEFORE PRIVATE
-    ${CMAKE_SOURCE_DIR}/third_party/relacy/include/relacy/fakestd
-)
-target_include_directories(test_mpsc_relacy SYSTEM PRIVATE
-    ${CMAKE_SOURCE_DIR}/third_party/relacy/include
-)
-target_include_directories(test_mpsc_relacy PRIVATE
-    ${CMAKE_SOURCE_DIR}/include
-)
-# Relacy uses typeid and throw internally — override the project-wide
-# -fno-rtti and -fno-exceptions for this target.
-target_compile_options(test_mpsc_relacy PRIVATE
-    -fexceptions
-    -frtti
-    -Wno-error=missing-field-initializers
-    -Wno-error=conversion
-    -Wno-error=return-type
-)
+if(ENABLE_RELACY_TESTS)
+    add_executable(test_mpsc_relacy
+        test_mpsc_relacy.cpp
+    )
+    target_include_directories(test_mpsc_relacy BEFORE PRIVATE
+        ${CMAKE_SOURCE_DIR}/third_party/relacy/include/relacy/fakestd
+    )
+    target_include_directories(test_mpsc_relacy SYSTEM PRIVATE
+        ${CMAKE_SOURCE_DIR}/third_party/relacy/include
+    )
+    target_include_directories(test_mpsc_relacy PRIVATE
+        ${CMAKE_SOURCE_DIR}/include
+    )
+    # Relacy uses typeid and throw internally — override the project-wide
+    # -fno-rtti and -fno-exceptions for this target.
+    target_compile_options(test_mpsc_relacy PRIVATE
+        -fexceptions
+        -frtti
+        -Wno-error=missing-field-initializers
+        -Wno-error=conversion
+        -Wno-error=return-type
+    )
+endif()
