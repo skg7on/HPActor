@@ -459,8 +459,12 @@ class ActorSystem {
     bool pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept;
 
     // Receiver dedup cache for at-least-once delivery
-    mailbox::DedupCache* dedup_cache() { return dedup_cache_.get(); }
-    const mailbox::DedupCache* dedup_cache() const { return dedup_cache_.get(); }
+    mailbox::DedupCache* dedup_cache() {
+        return dedup_cache_.get();
+    }
+    const mailbox::DedupCache* dedup_cache() const {
+        return dedup_cache_.get();
+    }
 
     // Build a MailboxConfig from system-wide defaults in Config::mailbox.
     // ── Mailbox configuration ─────────────────────────────────────────────
@@ -501,6 +505,25 @@ class ActorSystem {
     /// handler.
     /// \param[in] signal Backpressure signal from a downstream mailbox.
     void signal_backpressure(const mailbox::BackpressureSignal& signal);
+
+    void
+    maybe_emit_backpressure_signal(mailbox::MPSCActorMailbox<TypedMessage>* mailbox,
+                                   const mailbox::EnqueueResult& result,
+                                   const mailbox::MailboxEnvelopeMeta& meta,
+                                   bool emit_requested);
+
+    void emit_local_backpressure_signal(const mailbox::BackpressureSignal& signal,
+                                        mailbox::MailboxPressureState state);
+
+    void emit_remote_backpressure_signal(const mailbox::BackpressureSignal& signal,
+                                         mailbox::MailboxPressureState state);
+
+    bool handle_remote_backpressure_signal(const net::WireFrame& frame);
+
+    using BackpressureSignalWireSink =
+        std::function<bool(const ActorAddress&, const StreamBuffer&)>;
+    void
+    set_backpressure_signal_wire_sink_for_test(BackpressureSignalWireSink sink);
 
     // ── I/O completion ────────────────────────────────────────────────────
 
@@ -641,6 +664,7 @@ class ActorSystem {
 
     // Network components (owned)
     std::unique_ptr<net::TcpTransport> transport_;
+    BackpressureSignalWireSink backpressure_signal_wire_sink_for_test_;
     std::shared_ptr<net::UdpRegistrar> registrar_;
     std::shared_ptr<net::IServiceDiscovery> discovery_;
     std::shared_ptr<net::ActorLocationCache> location_cache_;

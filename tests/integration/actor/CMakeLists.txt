@@ -25,6 +25,7 @@ add_executable(test_integration_actor
     test_spawn_receiver_construct.cpp
     test_actor_ref_cache.cpp
     test_backpressure_signals.cpp
+    test_remote_backpressure_signals.cpp
     test_delivery_semantics.cpp
 )
 target_link_libraries(test_integration_actor

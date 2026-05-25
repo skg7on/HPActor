@@ -117,3 +117,72 @@ TEST_F(BackpressureSignalsTest, NoSignalWhenBelowWatermark) {
     EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Accepted);
     EXPECT_FALSE(signaled);
 }
+
+TEST_F(BackpressureSignalsTest, DisabledModeSuppressesLocalSignal) {
+    Config cfg;
+    cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
+    cfg.mailbox.default_capacity = 2;
+    cfg.mailbox.high_watermark = 0.50;
+    cfg.mailbox.backpressure_mode = mailbox::BackpressureMode::Disabled;
+    ActorSystem system(cfg);
+
+    auto sender = system.spawn<EventBasedActor>();
+    auto target = system.spawn<EventBasedActor>();
+
+    auto* sender_local = static_cast<LocalActor*>(sender.get().get());
+    bool signaled = false;
+    sender_local->context()->on_backpressure(
+        [&](const mailbox::BackpressureSignal&) { signaled = true; });
+
+    auto result = sender_local->context()->try_send(
+        target.address(), TypedMessage(TypeTag::User, StreamBuffer{1}));
+    EXPECT_TRUE(result.accepted());
+    EXPECT_FALSE(signaled);
+}
+
+TEST_F(BackpressureSignalsTest, HardCapacityFailureSignalsRetryAfter) {
+    // Build a system with rate limiting disabled so the rejection signal is
+    // always delivered even when the first acceptance also fired.
+    Config cfg;
+    cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
+    cfg.mailbox.default_capacity = 2;
+    cfg.mailbox.high_watermark = 0.50;
+    cfg.mailbox.signal_min_interval_ms = 0;
+    ActorSystem system(cfg);
+
+    auto sender = system.spawn<EventBasedActor>();
+    auto target = system.spawn<EventBasedActor>();
+
+    auto* sender_local = static_cast<LocalActor*>(sender.get().get());
+    auto* sender_ctx = sender_local->context();
+
+    mailbox::BackpressureSignal observed;
+    bool signaled = false;
+    sender_ctx->on_backpressure([&](const mailbox::BackpressureSignal& signal) {
+        observed = signal;
+        signaled = true;
+    });
+
+    ASSERT_TRUE(sender_ctx
+                    ->try_send(target.address(),
+                               TypedMessage(TypeTag::User, StreamBuffer{1}))
+                    .accepted());
+    ASSERT_TRUE(sender_ctx
+                    ->try_send(target.address(),
+                               TypedMessage(TypeTag::User, StreamBuffer{2}))
+                    .accepted());
+    auto rejected = sender_ctx->try_send(
+        target.address(), TypedMessage(TypeTag::User, StreamBuffer{3}));
+
+    EXPECT_FALSE(rejected.accepted());
+    EXPECT_TRUE(signaled);
+    EXPECT_EQ(observed.reason, mailbox::BackpressureReason::HardCapacity);
+    EXPECT_EQ(observed.target.id, target.id());
+    EXPECT_EQ(observed.sender.id, sender.id());
+    EXPECT_EQ(observed.depth, 2u);
+    EXPECT_EQ(observed.capacity, 2u);
+    EXPECT_GE(observed.pressure_ratio, 1.0);
+    EXPECT_GT(observed.sequence, 0u);
+}
