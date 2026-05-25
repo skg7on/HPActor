@@ -21,6 +21,7 @@ add_library(hpactor_lib SHARED
     supervision/supervision.cpp
     mailbox/dead_letter_queue.cpp
     mailbox/dedup_cache.cpp
+    mailbox/backpressure_signal_serialization.cpp
     config/actor_factory_registry.cpp
     config/toml_parser.cpp
     config/toml_table_view.cpp
