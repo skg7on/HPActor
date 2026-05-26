@@ -1,0 +1,20 @@
+// -*-C++-*-
+
+#ifndef INCLUDED_RL_ATOMIC
+#define INCLUDED_RL_ATOMIC
+
+namespace rl {
+template <class T>
+struct atomic;
+struct atomic_flag;
+}
+
+namespace std
+{
+    using rl::atomic;
+    using rl::atomic_flag;
+}
+
+#define ATOMIC_FLAG_INIT RL_ATOMIC_FLAG_INIT
+
+#endif

@@ -1,0 +1,150 @@
+#//===-- fakestd/thread ------------------------------------------*- C++ -*-===//
+#
+#ifndef RL_THREAD
+#define RL_THREAD
+
+#include "../relacy.hpp"
+#include "../pthread.h"
+
+#if __cplusplus >= 202002L
+#include <compare>
+#endif
+
+#include <iosfwd>
+#include <memory>
+#include <tuple>
+
+namespace std {
+
+struct thread_impl {
+    pthread_t handle;
+    rl::thread_id_t tid;
+    std::function<void(void)> fn;
+    void* args{nullptr};
+
+    ~thread_impl() {
+        if (args)
+            free(args);
+    }
+};
+
+struct thread {
+    struct id {
+        bool operator==(const id& other) const {
+            return id_ == other.id_;
+        }
+#if __cplusplus >= 202002L
+        auto operator<=>(const id& other) const {
+            return id_ <=> other.id_;
+        }
+#else
+        bool operator!=(const id& other) const {
+            return !(*this == other);
+        }
+#endif
+        friend std::ostream& operator<<(std::ostream& os, const id& id) {
+            return os << "thread::id{" << id.id_ << "}";
+        }
+        long id_;
+    };
+    static unsigned int hardware_concurrency() noexcept { return 1; }
+
+    thread::id get_id() const noexcept {
+        if (impl_) {
+            return thread::id{impl_->tid};
+        } else {
+            return thread::id{};
+        }
+    }
+
+#if __cplusplus >= 201703L
+    // thread(Fn, Args...) is available in c++11; implementing it in c++11 is
+    // not trivial; for Relacy, we only expose it in C++17 since utilities like
+    // index_sequence and apply are not available in c++11
+
+    template <typename F, typename... Args, std::size_t... Is>
+    static auto InvokeTupleImpl(std::tuple<F, Args...>& t, std::index_sequence<Is...>) {
+        return std::invoke(std::get<0>(t), std::get<Is + 1>(t)...);
+    }
+
+    template <typename F, typename... Args>
+    static auto InvokeTuple(std::tuple<F, Args...>& t) {
+        return InvokeTupleImpl(t, std::index_sequence_for<Args...>{});
+    }
+
+    // Cannot pass rl::debug_info to the constructor that takes Args&&...
+    template <class F, class... Args> thread(F&& fn, Args&&... args) {
+        impl_ = (thread_impl*)malloc(sizeof(thread_impl));
+        new (impl_) thread_impl{};
+
+        using FnAndArgs = std::tuple<typename std::decay<F>::type, typename std::decay<Args>::type...>;
+        impl_->args = (FnAndArgs*)malloc(sizeof(FnAndArgs));
+        new (impl_->args) FnAndArgs((F&&)fn, (Args&&)args...);
+
+        impl_->fn = [impl = impl_]() {
+            InvokeTuple(*(FnAndArgs*)impl->args);
+        };
+        rl_pthread_create(&impl_->handle, nullptr, thread_fn, impl_, $, &impl_->tid);
+    }
+#endif
+
+    template <class F> thread(F&& fn, rl::debug_info info DEFAULTED_DEBUG_INFO) {
+        impl_ = (thread_impl*)malloc(sizeof(thread_impl));
+        new (impl_) thread_impl{};
+        impl_->fn = (F&&)fn;
+        rl_pthread_create(&impl_->handle, nullptr, thread_fn, impl_, info, &impl_->tid);
+    }
+
+    thread() noexcept {}
+    thread(thread&& other) {
+        std::swap(impl_, other.impl_);
+    }
+    thread& operator=(thread&& other) noexcept {
+        if (this != &other) {
+            std::swap(impl_, other.impl_);
+        }
+        return *this;
+    }
+    ~thread() {
+        if (impl_) {
+            impl_->~thread_impl();
+            free(impl_);
+        }
+    }
+
+    static void* thread_fn(void* data) {
+        thread_impl* self = (thread_impl*)data;
+        self->fn();
+        return nullptr;
+    }
+
+    void join() {
+        if (impl_) {
+            void* ret;
+            pthread_join(impl_->handle, &ret);
+        }
+    }
+
+    thread_impl* impl_ = nullptr;
+};
+namespace this_thread {
+    static thread::id get_id() {
+        return thread::id{rl::ctx().current_thread()};
+    }
+    static void yield() { pthread_yield(); }
+
+    template <class T>
+    static void sleep_for(T) {/* NOT IMPLEMENTED*/}
+}
+
+template <>
+struct hash<thread::id> {
+    size_t operator()(const thread::id& id) const noexcept {
+        return hash<long>{}(id.id_);
+    }
+};
+
+} // namespace std
+
+#endif
+// vim: ft=cpp

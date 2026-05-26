@@ -26,6 +26,8 @@ option(ENABLE_CLI "Enable interactive CLI subsystem" ON)
 option(ENABLE_ACTOR_LOGGING "Enable structured actor logging subsystem" ON)
 option(ENABLE_ACTOR_TRACING "Enable distributed tracing subsystem" ON)
 option(ENABLE_COVERAGE "Enable code coverage instrumentation (gcc/clang)" OFF)
+option(ENABLE_TESTS "Build tests" ON)
+option(ENABLE_RELACY_TESTS "Build relacy-based exhaustive verification tests" OFF)
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
@@ -84,8 +86,10 @@ add_subdirectory(src)
 # AOT compiler — depends on hpactor_lib, so must come after src/
 add_subdirectory(tools/toml-compiler)
 
-enable_testing()
-add_subdirectory(tests)
+if(ENABLE_TESTS)
+    enable_testing()
+    add_subdirectory(tests)
+endif()
 
 if(ENABLE_EXAMPLES)
     add_subdirectory(examples)

@@ -115,12 +115,45 @@ template <typename T> class MPSCMailbox {
         // Fix dangling head_: if head_ still points to the node we are
         // returning, reset it to the stub so the next producer's
         // head_.exchange() writes to stub.mpsc_next, not freed memory.
+        //
+        // If a producer concurrently exchanged head_ from next to a new
+        // node, it wrote the new node to next->mpsc_next, overwriting
+        // the next_next we captured earlier.  In that case the CAS fails
+        // and we must splice the overwritten chain back so the new
+        // element remains reachable from the stub.
         {
             T* h = head_.load(std::memory_order_acquire);
             if (h == next) {
-                head_.compare_exchange_strong(
-                    next, static_cast<T*>(&stub_),
-                    std::memory_order_release, std::memory_order_relaxed);
+                if (!head_.compare_exchange_strong(
+                        next, static_cast<T*>(&stub_),
+                        std::memory_order_release,
+                        std::memory_order_relaxed)) {
+                    // CAS failed — a producer exchanged head_ from next
+                    // and wrote a new node to next->mpsc_next.
+                    T* updated =
+                        next->mpsc_next.load(std::memory_order_acquire);
+                    if (updated && updated != next_next) {
+                        // Splice updated (the producer's new node) into
+                        // the chain reachable from the stub.  next_next
+                        // was the original successor; walk it to find
+                        // its tail, then link tail → updated so that
+                        // FIFO order is preserved.
+                        if (next_next) {
+                            T* tail = next_next;
+                            T* tn;
+                            while ((tn = tail->mpsc_next.load(
+                                        std::memory_order_acquire))
+                                   != nullptr) {
+                                tail = tn;
+                            }
+                            tail->mpsc_next.store(
+                                updated, std::memory_order_release);
+                        } else {
+                            t->mpsc_next.store(
+                                updated, std::memory_order_release);
+                        }
+                    }
+                }
             }
         }
 
