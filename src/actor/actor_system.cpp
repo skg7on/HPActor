@@ -303,13 +303,14 @@ bool pressure_result_should_signal(const mailbox::EnqueueResult& result) noexcep
 void ActorSystem::maybe_emit_backpressure_signal(
     mailbox::MPSCActorMailbox<TypedMessage>* mailbox,
     const mailbox::EnqueueResult& result,
-    const mailbox::MailboxEnvelopeMeta& meta, bool emit_requested) {
+    const mailbox::MailboxEnvelopeMeta& meta, bool emit_requested,
+    mailbox::BackpressureMode backpressure_mode) {
     if (!emit_requested || mailbox == nullptr ||
         !pressure_result_should_signal(result)) {
         return;
     }
 
-    const auto mode = mailbox->config().backpressure_mode;
+    const auto mode = backpressure_mode;
     const bool sender_is_remote =
         meta.sender.endpoint != endpoint_ && meta.sender.id != ActorId{0};
 
@@ -324,8 +325,12 @@ void ActorSystem::maybe_emit_backpressure_signal(
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now().time_since_epoch())
             .count());
-    auto sequence =
-        mailbox->try_acquire_backpressure_signal(now_ns, result.pressure_state);
+    // Force past the rate limiter when the message was rejected — the sender
+    // must always be notified of dropped messages regardless of how recently
+    // a soft-pressure warning was issued.
+    const bool is_rejection = !result.accepted();
+    auto sequence = mailbox->try_acquire_backpressure_signal(
+        now_ns, result.pressure_state, is_rejection);
     if (!sequence.has_value()) {
         return;
     }
@@ -351,7 +356,7 @@ void ActorSystem::maybe_emit_backpressure_signal(
 
 void ActorSystem::emit_local_backpressure_signal(
     const mailbox::BackpressureSignal& signal, mailbox::MailboxPressureState state) {
-    if (metrics_ring_buffer_) [[unlikely]] {
+    if (metrics_ring_buffer_) {
         metrics::MetricEvent evt{};
         evt.actor_id = signal.target.id;
         evt.event_type = metrics::MetricEventType::kBackpressureSignal;
@@ -382,6 +387,29 @@ void ActorSystem::emit_remote_backpressure_signal(
         return;
     }
 
+    // Emit metrics unconditionally — the signal was generated and we need
+    // observability regardless of whether the wire send succeeds.
+    if (metrics_ring_buffer_) {
+        metrics::MetricEvent evt{};
+        evt.actor_id = signal.target.id;
+        evt.event_type = metrics::MetricEventType::kBackpressureSignal;
+        evt.code = static_cast<uint8_t>(signal.reason);
+        evt.aux = static_cast<uint8_t>(state);
+        evt.value_hi = 1;
+        metrics_ring_buffer_->try_push(evt);
+    }
+
+    if (logger_ && state == mailbox::MailboxPressureState::HardPressure) {
+        HPACTOR_LOG_WARNING(
+            log::LogCategory::kMailbox, signal.target.id, 0,
+            "backpressure_signal_remote_sent",
+            log::field("sender", signal.sender.id.value()),
+            log::field("depth", static_cast<uint64_t>(signal.depth)),
+            log::field("capacity", static_cast<uint64_t>(signal.capacity)),
+            log::field("retry_after_ms",
+                       static_cast<uint64_t>(signal.retry_after.count())));
+    }
+
     net::WireFrame frame;
     net::to_proto(frame.pb_frame.mutable_sender(), signal.target);
     net::to_proto(frame.pb_frame.mutable_receiver(), signal.sender);
@@ -399,16 +427,11 @@ void ActorSystem::emit_remote_backpressure_signal(
         sent = transport_->try_send(signal.sender, encoded);
     }
 
-    if (sent) {
-        if (metrics_ring_buffer_) [[unlikely]] {
-            metrics::MetricEvent evt{};
-            evt.actor_id = signal.target.id;
-            evt.event_type = metrics::MetricEventType::kBackpressureSignal;
-            evt.code = static_cast<uint8_t>(signal.reason);
-            evt.aux = static_cast<uint8_t>(state);
-            evt.value_hi = 1;
-            metrics_ring_buffer_->try_push(evt);
-        }
+    if (!sent && logger_) {
+        HPACTOR_LOG_WARNING(
+            log::LogCategory::kMailbox, signal.target.id, 0,
+            "backpressure_signal_remote_send_failed",
+            log::field("sender", signal.sender.id.value()));
     }
 }
 
@@ -544,6 +567,19 @@ ActorSystem::mailbox_config_for_actor_def(const config::ActorDef& def) const {
     }
     cfg.priority_aware = def.mailbox.priority_aware;
     cfg.max_overflow_depth = def.mailbox.max_overflow_depth;
+    if (def.mailbox.high_watermark > 0.0) {
+        cfg.high_watermark = def.mailbox.high_watermark;
+    }
+    if (def.mailbox.low_watermark > 0.0) {
+        cfg.low_watermark = def.mailbox.low_watermark;
+    }
+    if (def.mailbox.critical_watermark > 0.0) {
+        cfg.critical_watermark = def.mailbox.critical_watermark;
+    }
+    if (def.mailbox.signal_min_interval_ms != 0) {
+        cfg.signal_min_interval_ms = def.mailbox.signal_min_interval_ms;
+    }
+    cfg.backpressure_mode = def.mailbox.backpressure_mode;
     return cfg;
 }
 
@@ -576,7 +612,7 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
         r.code = mailbox::EnqueueResultCode::ActorNotFound;
         r.target = target;
         // Build failure envelope for observability
-        if (metrics_ring_buffer_) [[unlikely]] {
+        if (metrics_ring_buffer_) {
             FailureEnvelope env = make_failure_envelope(
                 FailureReason::NoRoute, target, msg.sender_address(),
                 ActorAddress{endpoint_, ActorType{0}, target, 0},
@@ -605,7 +641,7 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                        MessageId{options.message_id})) {
             // Duplicate suppressed — return Accepted so the sender sees
             // a successful delivery.
-            if (metrics_ring_buffer_) [[unlikely]] {
+            if (metrics_ring_buffer_) {
                 uint64_t ts_ns = static_cast<uint64_t>(
                     std::chrono::duration_cast<std::chrono::nanoseconds>(
                         std::chrono::steady_clock::now().time_since_epoch())
@@ -632,7 +668,7 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
         if (options.delivery_mode >= mailbox::DeliveryMode::ObservableBestEffort &&
             mailbox::is_expired(deadline_ns, now_ns)) {
             // Build failure envelope for expired message
-            if (metrics_ring_buffer_) [[unlikely]] {
+            if (metrics_ring_buffer_) {
                 FailureEnvelope env = make_failure_envelope(
                     FailureReason::Expired, target, msg.sender_address(),
                     ActorAddress{endpoint_, ActorType{0}, target, 0},
@@ -677,6 +713,11 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
         meta.flags |= net::WireFrame::NoDrop;
     }
 
+    // Capture backpressure mode before try_push so the signal emission
+    // uses the config that was active at enqueue time, avoiding a data
+    // race with a concurrent set_config call.
+    const auto bp_mode = mailbox->config().backpressure_mode;
+
     auto result = mailbox->try_push(std::move(msg), meta);
 
     // Capture dead letter when mailbox rejects and policy is DeadLetter
@@ -701,7 +742,7 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
 
     // Build failure envelope for mailbox rejection
     if (!result.accepted()) {
-        if (metrics_ring_buffer_) [[unlikely]] {
+        if (metrics_ring_buffer_) {
             FailureEnvelope env = make_failure_envelope(
                 result.failure_reason(), target, meta.sender,
                 ActorAddress{endpoint_, ActorType{0}, target, 0},
@@ -715,7 +756,7 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
             evt.value_hi = 1;
             metrics_ring_buffer_->try_push(evt);
         }
-        if (logger_) [[unlikely]] {
+        if (logger_) {
             HPACTOR_LOG_WARNING(
                 log::LogCategory::kActor, target, 0, "delivery_failure",
                 log::field_lit("reason", to_string(result.failure_reason())),
@@ -728,7 +769,8 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
     }
 
     // Emit backpressure signal when warranted.
-    maybe_emit_backpressure_signal(mailbox, result, meta, options.emit_backpressure);
+    maybe_emit_backpressure_signal(mailbox, result, meta, options.emit_backpressure,
+                                   bp_mode);
 
     return result;
 }

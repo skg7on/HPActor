@@ -65,6 +65,16 @@ template <typename T> class MPSCActorMailbox {
         if (config_.capacity.max_messages == 0) {
             config_.capacity.max_messages = 1024;
         }
+        // Guard against misconfiguration: critical_watermark <= 0 would
+        // cause perpetual HardPressure (ratio >= 0 is always true).
+        if (config_.critical_watermark <= 0.0) {
+            config_.critical_watermark = (config_.high_watermark > 0.0)
+                                              ? config_.high_watermark * 2.0
+                                              : 1.0;
+        }
+        if (config_.critical_watermark < config_.high_watermark) {
+            config_.critical_watermark = config_.high_watermark;
+        }
         overflow_queue_.set_max_depth(config_.max_overflow_depth);
     }
     const MailboxConfig& config() const noexcept {
@@ -431,7 +441,8 @@ template <typename T> class MPSCActorMailbox {
 
     std::optional<uint64_t>
     try_acquire_backpressure_signal(uint64_t now_ns,
-                                    MailboxPressureState state) noexcept {
+                                    MailboxPressureState state,
+                                    bool force = false) noexcept {
         const uint64_t interval_ns =
             static_cast<uint64_t>(config_.signal_min_interval_ms) * 1'000'000ULL;
         const auto severity = pressure_severity(state);
@@ -446,7 +457,7 @@ template <typename T> class MPSCActorMailbox {
             const bool interval_elapsed = now_ns >= last + interval_ns;
             const bool escalation = severity > last_severity;
 
-            if (!first && !interval_elapsed && !escalation) {
+            if (!force && !first && !interval_elapsed && !escalation) {
                 return std::nullopt;
             }
 
