@@ -20,14 +20,34 @@
 namespace hpactor {
 
 void ProtoTypeRegistry::register_system_types() {
-    register_type<::hpactor::DownMessage>(TypeTag::DownMsg, "hpactor.DownMessage");
-    register_type<::hpactor::ExitMessage>(TypeTag::ExitMsg, "hpactor.ExitMessage");
-    register_type<::hpactor::LinkMessage>(TypeTag::LinkMsg, "hpactor.LinkMessage");
-    register_type<::hpactor::UnlinkMessage>(TypeTag::UnlinkMsg, "hpactor.UnlinkMessage");
-    register_type<::hpactor::SpawnRequestMessage>(TypeTag::SpawnRequestTag,
-                                                   "hpactor.SpawnRequestMessage");
+    register_type<::hpactor::DownMessage>(TypeTag::DownMsg, "hpactor."
+                                                            "DownMessage");
+    register_type<::hpactor::ExitMessage>(TypeTag::ExitMsg, "hpactor."
+                                                            "ExitMessage");
+    register_type<::hpactor::LinkMessage>(TypeTag::LinkMsg, "hpactor."
+                                                            "LinkMessage");
+    register_type<::hpactor::UnlinkMessage>(TypeTag::UnlinkMsg, "hpactor."
+                                                                "UnlinkMessag"
+                                                                "e");
+    register_type<::hpactor::SpawnRequestMessage>(TypeTag::SpawnRequestTag, "hp"
+                                                                            "ac"
+                                                                            "to"
+                                                                            "r."
+                                                                            "Sp"
+                                                                            "aw"
+                                                                            "nR"
+                                                                            "eq"
+                                                                            "ue"
+                                                                            "st"
+                                                                            "Me"
+                                                                            "ss"
+                                                                            "ag"
+                                                                            "e");
     register_type<::hpactor::SpawnResponseMessage>(TypeTag::SpawnResponseTag,
-                                                    "hpactor.SpawnResponseMessage");
+                                                   "hpactor."
+                                                   "SpawnResponseMessage");
+    register_type<::hpactor::BackpressureSignalMessage>(
+        TypeTag::BackpressureSignalTag, "hpactor.BackpressureSignalMessage");
 }
 
 } // namespace hpactor

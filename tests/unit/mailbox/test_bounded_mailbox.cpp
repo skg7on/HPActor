@@ -192,8 +192,8 @@ TEST_F(ByteBudgetTest, ByteBudgetRejectsWhenExceeded) {
     using namespace hpactor::mailbox;
 
     // Byte budget = sizeof(TypedMessage) + 10 bytes of payload.
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0})); // overhead
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0})); // overhead
     cfg.capacity.max_bytes = sz + 15;
 
     MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
@@ -207,7 +207,8 @@ TEST_F(ByteBudgetTest, ByteBudgetRejectsWhenExceeded) {
         meta);
     EXPECT_TRUE(r1.accepted());
 
-    // Second message: 6-byte payload. Should exceed budget (sz+10 + sz+6 > sz+15).
+    // Second message: 6-byte payload. Should exceed budget (sz+10 + sz+6 >
+    // sz+15).
     auto r2 = mb.try_push(
         TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6}), meta);
     EXPECT_FALSE(r2.accepted());
@@ -224,9 +225,9 @@ TEST_F(ByteBudgetTest, CombinedCountAndByteBudget) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0}));
-    cfg.capacity.max_messages = 1; // count limit hit first
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0}));
+    cfg.capacity.max_messages = 1;      // count limit hit first
     cfg.capacity.max_bytes = sz + 1000; // generous byte limit
 
     MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
@@ -266,8 +267,8 @@ TEST_F(ByteBudgetTest, DequeueReleasesBytes) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0}));
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0}));
     cfg.capacity.max_bytes = sz + 15;
 
     MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);
@@ -292,12 +293,171 @@ TEST_F(ByteBudgetTest, DequeueReleasesBytes) {
     EXPECT_TRUE(r2.accepted());
 }
 
+TEST(MailboxPolicyTest, DefaultCriticalWatermarkIsCapacity) {
+    hpactor::mailbox::MailboxConfig cfg;
+    EXPECT_DOUBLE_EQ(cfg.critical_watermark, 1.0);
+}
+
+TEST_F(BoundedMailboxTest, PressureStateUsesLowHighCriticalHysteresis) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.capacity.max_messages = 4;
+    cfg.high_watermark = 0.50;
+    cfg.low_watermark = 0.25;
+    cfg.critical_watermark = 1.00;
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{88}, &scheduler, cfg);
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    EXPECT_EQ(mb.snapshot().pressure_state, "normal");
+
+    EXPECT_TRUE(
+        mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta).accepted());
+    EXPECT_EQ(mb.snapshot().pressure_state, "normal");
+
+    auto soft = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_TRUE(soft.accepted());
+    EXPECT_EQ(soft.pressure_state, MailboxPressureState::SoftPressure);
+    EXPECT_EQ(mb.snapshot().pressure_state, "soft_pressure");
+
+    EXPECT_TRUE(
+        mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{3}), meta).accepted());
+    auto hard = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{4}), meta);
+    EXPECT_TRUE(hard.accepted());
+    EXPECT_EQ(hard.pressure_state, MailboxPressureState::HardPressure);
+    EXPECT_EQ(mb.snapshot().pressure_state, "hard_pressure");
+
+    TypedMessage out;
+    EXPECT_TRUE(mb.try_pop(out));
+    EXPECT_EQ(mb.snapshot().pressure_state, "recovering");
+
+    EXPECT_TRUE(mb.try_pop(out));
+    EXPECT_TRUE(mb.try_pop(out));
+    EXPECT_EQ(mb.snapshot().pressure_state, "recovering");
+
+    EXPECT_TRUE(mb.try_pop(out));
+    EXPECT_EQ(mb.snapshot().pressure_state, "normal");
+}
+
+TEST_F(BoundedMailboxTest, CountCapacityFailureReportsHardCapacity) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.capacity.max_messages = 1;
+    MPSCActorMailbox<TypedMessage> mb(ActorId{90}, &scheduler, cfg);
+
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    ASSERT_TRUE(
+        mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), meta).accepted());
+    auto rejected = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{2}), meta);
+    EXPECT_EQ(rejected.code, EnqueueResultCode::Rejected);
+    EXPECT_EQ(rejected.pressure_reason, BackpressureReason::HardCapacity);
+    EXPECT_EQ(rejected.pressure_state, MailboxPressureState::HardPressure);
+}
+
+TEST_F(BoundedMailboxTest, BackpressureSignalBudgetRateLimitsSameSeverity) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.signal_min_interval_ms = 100;
+    MPSCActorMailbox<TypedMessage> mb(ActorId{92}, &scheduler, cfg);
+
+    auto first = mb.try_acquire_backpressure_signal(
+        1'000'000'000ULL, MailboxPressureState::SoftPressure);
+    ASSERT_TRUE(first.has_value());
+    if (!first)
+        return;
+    uint64_t first_seq = first.value();
+
+    auto second = mb.try_acquire_backpressure_signal(
+        1'050'000'000ULL, MailboxPressureState::SoftPressure);
+    EXPECT_FALSE(second.has_value());
+
+    auto third = mb.try_acquire_backpressure_signal(
+        1'101'000'000ULL, MailboxPressureState::SoftPressure);
+    ASSERT_TRUE(third.has_value());
+    if (!third)
+        return;
+    EXPECT_GT(third.value(), first_seq);
+}
+
+TEST_F(BoundedMailboxTest, BackpressureSignalBudgetAllowsEscalation) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.signal_min_interval_ms = 100;
+    MPSCActorMailbox<TypedMessage> mb(ActorId{93}, &scheduler, cfg);
+
+    auto soft = mb.try_acquire_backpressure_signal(
+        2'000'000'000ULL, MailboxPressureState::SoftPressure);
+    ASSERT_TRUE(soft.has_value());
+    if (!soft)
+        return;
+    uint64_t soft_seq = soft.value();
+
+    auto hard = mb.try_acquire_backpressure_signal(
+        2'010'000'000ULL, MailboxPressureState::HardPressure);
+    ASSERT_TRUE(hard.has_value());
+    if (!hard)
+        return;
+    EXPECT_GT(hard.value(), soft_seq);
+}
+
+TEST_F(ByteBudgetTest, ByteCapacityFailureReportsByteCapacity) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    const uint64_t base =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{}));
+    cfg.capacity.max_messages = 100;
+    cfg.capacity.max_bytes = base + 1;
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{91}, &scheduler, cfg);
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    auto rejected =
+        mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{1, 2}), meta);
+    EXPECT_EQ(rejected.code, EnqueueResultCode::Rejected);
+    EXPECT_EQ(rejected.pressure_reason, BackpressureReason::ByteCapacity);
+    EXPECT_EQ(rejected.pressure_state, MailboxPressureState::HardPressure);
+}
+
+TEST_F(ByteBudgetTest, BytePressureDrivesPressureState) {
+    using namespace hpactor;
+    using namespace hpactor::mailbox;
+
+    cfg.capacity.max_messages = 100;
+    cfg.high_watermark = 0.50;
+    cfg.low_watermark = 0.25;
+    cfg.critical_watermark = 1.00;
+
+    const uint64_t base =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{}));
+    cfg.capacity.max_bytes = (base + 10) * 2;
+
+    MPSCActorMailbox<TypedMessage> mb(ActorId{89}, &scheduler, cfg);
+    MailboxEnvelopeMeta meta;
+    meta.type_tag = TypeTag::User;
+
+    auto r1 = mb.try_push(
+        TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3, 4, 5, 6, 7, 8, 9, 10}),
+        meta);
+    EXPECT_TRUE(r1.accepted());
+    EXPECT_EQ(r1.pressure_state, MailboxPressureState::SoftPressure);
+    EXPECT_GE(r1.pressure_ratio, 0.50);
+}
+
 TEST_F(ByteBudgetTest, SnapshotReflectsByteBudget) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0}));
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0}));
     cfg.capacity.max_bytes = sz * 4; // generous — fits several messages
 
     MPSCActorMailbox<TypedMessage> mb(ActorId{77}, &scheduler, cfg);

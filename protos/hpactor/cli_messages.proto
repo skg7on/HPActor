@@ -34,6 +34,15 @@ message MailboxSnapshot {
     uint64 total_dequeued = 3;
     uint64 max_depth = 4;
     uint32 high_priority_depth = 5;
+    uint32 capacity = 6;
+    uint64 queued_bytes = 7;
+    uint64 byte_capacity = 8;
+    uint32 pressure_ratio_ppm = 9;
+    uint64 total_rejected = 10;
+    uint64 total_dropped = 11;
+    uint64 total_dead_letters = 12;
+    string pressure_state = 13;
+    string overflow_policy = 14;
 }
 
 message ChildInfo {

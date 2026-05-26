@@ -41,3 +41,17 @@ message SpawnResponseMessage {
   PbActorAddress actor_addr = 1;
   uint32 error_code = 2;
 }
+
+message BackpressureSignalMessage {
+  PbActorAddress target = 1;
+  PbActorAddress sender = 2;
+  uint32 reason = 3;
+  uint32 pressure_state = 4;
+  uint32 depth = 5;
+  uint32 capacity = 6;
+  uint64 bytes = 7;
+  uint64 byte_capacity = 8;
+  double pressure_ratio = 9;
+  uint64 retry_after_ms = 10;
+  uint64 sequence = 11;
+}

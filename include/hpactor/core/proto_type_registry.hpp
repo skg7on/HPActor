@@ -39,9 +39,10 @@ namespace hpactor {
 // Usage:
 //   TypeTag tag = MessageTraits<MyProtoMsg>::tag();
 // -----------------------------------------------------------------------------
-template <typename ProtoMsgT>
-struct MessageTraits {
-    static TypeTag tag() { return TypeTag::Invalid; }
+template <typename ProtoMsgT> struct MessageTraits {
+    static TypeTag tag() {
+        return TypeTag::Invalid;
+    }
 };
 
 // -----------------------------------------------------------------------------
@@ -50,10 +51,13 @@ struct MessageTraits {
 // -----------------------------------------------------------------------------
 #define HPACTOR_SYSTEM_MESSAGE(ProtoMsg, TagValue)                             \
     template <> struct MessageTraits<ProtoMsg> {                               \
-        static constexpr TypeTag tag() { return TagValue; }                    \
+        static constexpr TypeTag tag() {                                       \
+            return TagValue;                                                   \
+        }                                                                      \
     };
 
-// Forward-declare protobuf-generated types (defined in messages.proto, common.proto).
+// Forward-declare protobuf-generated types (defined in messages.proto,
+// common.proto).
 class DownMessage;
 class ExitMessage;
 class LinkMessage;
@@ -62,15 +66,18 @@ class SpawnRequestMessage;
 class SpawnResponseMessage;
 class MetricsRequest;
 class MetricsResponse;
+class BackpressureSignalMessage;
 
-HPACTOR_SYSTEM_MESSAGE(::hpactor::DownMessage,            TypeTag::DownMsg)
-HPACTOR_SYSTEM_MESSAGE(::hpactor::ExitMessage,            TypeTag::ExitMsg)
-HPACTOR_SYSTEM_MESSAGE(::hpactor::LinkMessage,            TypeTag::LinkMsg)
-HPACTOR_SYSTEM_MESSAGE(::hpactor::UnlinkMessage,          TypeTag::UnlinkMsg)
-HPACTOR_SYSTEM_MESSAGE(::hpactor::SpawnRequestMessage,    TypeTag::SpawnRequestTag)
-HPACTOR_SYSTEM_MESSAGE(::hpactor::SpawnResponseMessage,   TypeTag::SpawnResponseTag)
-HPACTOR_SYSTEM_MESSAGE(::hpactor::MetricsRequest,         TypeTag::MetricsRequestTag)
-HPACTOR_SYSTEM_MESSAGE(::hpactor::MetricsResponse,        TypeTag::MetricsResponseTag)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::DownMessage, TypeTag::DownMsg)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::ExitMessage, TypeTag::ExitMsg)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::LinkMessage, TypeTag::LinkMsg)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::UnlinkMessage, TypeTag::UnlinkMsg)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::SpawnRequestMessage, TypeTag::SpawnRequestTag)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::SpawnResponseMessage, TypeTag::SpawnResponseTag)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::MetricsRequest, TypeTag::MetricsRequestTag)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::MetricsResponse, TypeTag::MetricsResponseTag)
+HPACTOR_SYSTEM_MESSAGE(::hpactor::BackpressureSignalMessage,
+                       TypeTag::BackpressureSignalTag)
 
 #undef HPACTOR_SYSTEM_MESSAGE
 
@@ -78,7 +85,7 @@ HPACTOR_SYSTEM_MESSAGE(::hpactor::MetricsResponse,        TypeTag::MetricsRespon
 // MessageRegistry — singleton for allocating user TypeTags.
 // -----------------------------------------------------------------------------
 class MessageRegistry {
-public:
+  public:
     static MessageRegistry& instance() {
         static MessageRegistry reg;
         return reg;
@@ -90,7 +97,7 @@ public:
         return static_cast<TypeTag>(tag_val);
     }
 
-private:
+  private:
     MessageRegistry() : next_user_tag_(static_cast<uint32_t>(TypeTag::User)) {}
     std::atomic<uint32_t> next_user_tag_;
 };
@@ -107,15 +114,14 @@ private:
 //   proto_registry().register_type<ProtoMsg>(tag, name)
 // during ActorSystem initialization with the tag from MessageTraits.
 // -----------------------------------------------------------------------------
-#define HPACTOR_MESSAGE(ProtoMsg)                                              \
-    template <> struct ::hpactor::MessageTraits<ProtoMsg> {                    \
-        static ::hpactor::TypeTag tag() {                                      \
-            static const ::hpactor::TypeTag t = [] {                           \
-                return ::hpactor::MessageRegistry::instance()                  \
-                    .allocate(#ProtoMsg);                                       \
-            }();                                                               \
-            return t;                                                          \
-        }                                                                      \
+#define HPACTOR_MESSAGE(ProtoMsg)                                                  \
+    template <> struct ::hpactor::MessageTraits<ProtoMsg> {                        \
+        static ::hpactor::TypeTag tag() {                                          \
+            static const ::hpactor::TypeTag t = [] {                               \
+                return ::hpactor::MessageRegistry::instance().allocate(#ProtoMsg); \
+            }();                                                                   \
+            return t;                                                              \
+        }                                                                          \
     };
 
 // -----------------------------------------------------------------------------
@@ -133,12 +139,12 @@ private:
 //   HPACTOR_MESSAGE_WITH_ID(ChatJoinRoom,      0x00002001)
 // -----------------------------------------------------------------------------
 #define HPACTOR_MESSAGE_WITH_ID(ProtoMsg, TagValue)                            \
-    static_assert((TagValue) >= 0x00001000,                                     \
-                  "User TypeTags must be >= 0x1000 (system range is 0x00-0xFF)");\
+    static_assert((TagValue) >= 0x00001000, "User TypeTags must be >= 0x1000 " \
+                                            "(system range is 0x00-0xFF)");    \
     template <> struct ::hpactor::MessageTraits<ProtoMsg> {                    \
         static constexpr ::hpactor::TypeTag tag() {                            \
-            return static_cast<::hpactor::TypeTag>(TagValue);                   \
-        }                                                                       \
+            return static_cast<::hpactor::TypeTag>(TagValue);                  \
+        }                                                                      \
     };
 
 // -----------------------------------------------------------------------------
@@ -151,15 +157,15 @@ private:
 // initialization before any actors begin processing messages.
 // -----------------------------------------------------------------------------
 class ProtoTypeRegistry {
-public:
-    template<typename ProtoMsgT>
+  public:
+    template <typename ProtoMsgT>
     void register_type(TypeTag tag, const std::string& type_name) {
         static_assert(std::is_base_of_v<google::protobuf::Message, ProtoMsgT>,
                       "ProtoMsgT must be a protobuf message type");
         Entry entry;
         entry.type_name = type_name;
-        entry.prototype = mem::allocate_shared<ProtoMsgT>(
-            ActorId{}, mem::RegionType::kInternal);
+        entry.prototype =
+            mem::allocate_shared<ProtoMsgT>(ActorId{}, mem::RegionType::kInternal);
         registry_[tag] = std::move(entry);
     }
 
@@ -169,28 +175,33 @@ public:
 
     [[nodiscard]] std::string type_name(TypeTag tag) const {
         auto it = registry_.find(tag);
-        if (it != registry_.end()) return it->second.type_name;
+        if (it != registry_.end())
+            return it->second.type_name;
         return {};
     }
 
-    [[nodiscard]] std::unique_ptr<google::protobuf::Message> create(TypeTag tag) const {
+    [[nodiscard]] std::unique_ptr<google::protobuf::Message>
+    create(TypeTag tag) const {
         auto it = registry_.find(tag);
-        if (it == registry_.end() || !it->second.prototype) return nullptr;
+        if (it == registry_.end() || !it->second.prototype)
+            return nullptr;
         return std::unique_ptr<google::protobuf::Message>(
             it->second.prototype->New());
     }
 
-    [[nodiscard]] std::unique_ptr<google::protobuf::Message> deserialize(
-        TypeTag tag, const StreamBuffer& data) const {
+    [[nodiscard]] std::unique_ptr<google::protobuf::Message>
+    deserialize(TypeTag tag, const StreamBuffer& data) const {
         auto msg = create(tag);
-        if (!msg) return nullptr;
+        if (!msg)
+            return nullptr;
         if (!msg->ParseFromArray(data.data(), static_cast<int>(data.size()))) {
             return nullptr;
         }
         return msg;
     }
 
-    [[nodiscard]] StreamBuffer serialize(const google::protobuf::Message& msg) const {
+    [[nodiscard]] StreamBuffer
+    serialize(const google::protobuf::Message& msg) const {
         auto size = msg.ByteSizeLong();
         StreamBuffer result(size);
         if (!msg.SerializeToArray(result.data(), static_cast<int>(size))) {
@@ -199,7 +210,8 @@ public:
         return result;
     }
 
-    [[nodiscard]] StreamBuffer encode_wire(TypeTag tag, const google::protobuf::Message& msg) const {
+    [[nodiscard]] StreamBuffer
+    encode_wire(TypeTag tag, const google::protobuf::Message& msg) const {
         StreamBuffer payload = serialize(msg);
         StreamBuffer result(payload.size() + 4);
         uint32_t tag_val = static_cast<uint32_t>(tag);
@@ -215,12 +227,12 @@ public:
 
     [[nodiscard]] std::pair<TypeTag, std::unique_ptr<google::protobuf::Message>>
     decode_wire(const StreamBuffer& data) const {
-        if (data.size() < 4) return {TypeTag::Invalid, nullptr};
-        uint32_t tag_val =
-            (static_cast<uint32_t>(data[0]) << 24) |
-            (static_cast<uint32_t>(data[1]) << 16) |
-            (static_cast<uint32_t>(data[2]) << 8) |
-            static_cast<uint32_t>(data[3]);
+        if (data.size() < 4)
+            return {TypeTag::Invalid, nullptr};
+        uint32_t tag_val = (static_cast<uint32_t>(data[0]) << 24) |
+                           (static_cast<uint32_t>(data[1]) << 16) |
+                           (static_cast<uint32_t>(data[2]) << 8) |
+                           static_cast<uint32_t>(data[3]);
         TypeTag tag = static_cast<TypeTag>(tag_val);
         StreamBuffer payload(data.begin() + 4, data.end());
         auto msg = deserialize(tag, payload);
@@ -229,7 +241,7 @@ public:
 
     void register_system_types();
 
-private:
+  private:
     struct Entry {
         std::string type_name;
         std::shared_ptr<google::protobuf::Message> prototype;
