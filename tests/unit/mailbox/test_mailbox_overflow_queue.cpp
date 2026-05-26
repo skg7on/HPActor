@@ -184,6 +184,8 @@ TEST(OverflowQueueTest, ConcurrentProducerConsumer) {
             } else if (producer_done.load(std::memory_order_acquire)) {
                 // No more messages and producer is done — nothing left.
                 break;
+            } else {
+                std::this_thread::yield();
             }
         }
     });
