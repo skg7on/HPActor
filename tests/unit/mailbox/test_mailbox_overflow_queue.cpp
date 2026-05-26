@@ -73,7 +73,8 @@ TEST(OverflowQueueTest, TryPopEmptyReturnsFalse) {
 TEST(OverflowQueueTest, MaxDepthZeroUnlimited) {
     OverflowQueue<int> q(0);
     for (int i = 0; i < 1000; ++i) {
-        EXPECT_TRUE(q.try_push(std::move(i)));
+        int val = i;
+        EXPECT_TRUE(q.try_push(std::move(val)));
     }
     EXPECT_EQ(q.depth(), 1000);
 
@@ -111,7 +112,8 @@ TEST(OverflowQueueTest, MaxDepthEnforcesBoundedCapacity) {
 TEST(OverflowQueueTest, SetMaxDepthDynamically) {
     OverflowQueue<int> q(5);
     for (int i = 0; i < 5; ++i) {
-        q.try_push(std::move(i));
+        int val = i;
+        q.try_push(std::move(val));
     }
     EXPECT_EQ(q.depth(), 5);
 
@@ -125,7 +127,7 @@ TEST(OverflowQueueTest, SetMaxDepthDynamically) {
 
     int out = 0;
     EXPECT_TRUE(q.try_pop(out));
-    EXPECT_EQ(out, 1);  // 0 was evicted
+    EXPECT_EQ(out, 1); // 0 was evicted
     EXPECT_TRUE(q.try_pop(out));
     EXPECT_EQ(out, 2);
     EXPECT_TRUE(q.try_pop(out));
@@ -160,7 +162,7 @@ TEST(OverflowQueueTest, SnapshotCounters) {
 }
 
 TEST(OverflowQueueTest, ConcurrentProducerConsumer) {
-    OverflowQueue<int> q(0);  // unlimited depth to avoid producer-side eviction
+    OverflowQueue<int> q(0); // unlimited depth to avoid producer-side eviction
     constexpr int kMessages = 1000;
 
     std::atomic<int> consumed{0};
@@ -168,7 +170,8 @@ TEST(OverflowQueueTest, ConcurrentProducerConsumer) {
 
     std::thread producer([&]() {
         for (int i = 0; i < kMessages; ++i) {
-            q.try_push(std::move(i));
+            int val = i;
+            q.try_push(std::move(val));
         }
         producer_done.store(true, std::memory_order_release);
     });

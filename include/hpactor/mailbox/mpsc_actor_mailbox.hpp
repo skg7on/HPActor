@@ -168,7 +168,8 @@ template <typename T> class MPSCActorMailbox {
                             evt.value_hi = 1;
                             metrics_ring_buffer_->try_push(evt);
                         }
-                        return make_result(EnqueueResultCode::Rejected);
+                        return make_result(EnqueueResultCode::Rejected,
+                                           reserve_reason);
 
                     case OverflowPolicy::SignalOnly: {
                         total_rejected_.fetch_add(1, std::memory_order_relaxed);
@@ -180,8 +181,8 @@ template <typename T> class MPSCActorMailbox {
                             evt.value_hi = 1;
                             metrics_ring_buffer_->try_push(evt);
                         }
-                        auto result =
-                            make_result(EnqueueResultCode::Rejected);
+                        auto result = make_result(EnqueueResultCode::Rejected,
+                                                  reserve_reason);
                         result.retry_after = std::chrono::milliseconds(
                             config_.signal_min_interval_ms);
                         return result;
@@ -189,8 +190,8 @@ template <typename T> class MPSCActorMailbox {
 
                     case OverflowPolicy::SpillToOverflowQueue: {
                         if (overflow_queue_.try_push(std::move(msg))) {
-                            return make_result(
-                                EnqueueResultCode::ReroutedToOverflow);
+                            return make_result(EnqueueResultCode::ReroutedToOverflow,
+                                               reserve_reason);
                         }
                         total_rejected_.fetch_add(1, std::memory_order_relaxed);
                         if (metrics_ring_buffer_) [[unlikely]] {
@@ -201,7 +202,8 @@ template <typename T> class MPSCActorMailbox {
                             evt.value_hi = 1;
                             metrics_ring_buffer_->try_push(evt);
                         }
-                        return make_result(EnqueueResultCode::Rejected);
+                        return make_result(EnqueueResultCode::Rejected,
+                                           reserve_reason);
                     }
 
                     default:
@@ -697,7 +699,8 @@ template <typename T> class MPSCActorMailbox {
     // actor is already active on the dequeue() call stack.
     void drain_overflow() noexcept {
         while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {
-            if (!try_reserve(0)) break;
+            if (try_reserve(0) != ReservationResult::Reserved)
+                break;
             T overflow_msg;
             if (!overflow_queue_.try_pop(overflow_msg)) {
                 release_reservation(0);
@@ -705,10 +708,10 @@ template <typename T> class MPSCActorMailbox {
             }
             MailboxEnvelopeMeta meta;
             meta.estimated_bytes = estimate_node_bytes(overflow_msg);
-            enqueue_reserved(
-                new (mem::allocate(mem::RegionType::kMessage, sizeof(T),
-                                   actor_id_)) T(std::move(overflow_msg)),
-                meta, /*suppress_wakeup=*/true);
+            enqueue_reserved(new (mem::allocate(mem::RegionType::kMessage,
+                                                sizeof(T), actor_id_))
+                                 T(std::move(overflow_msg)),
+                             meta, /*suppress_wakeup=*/true);
         }
     }
 
