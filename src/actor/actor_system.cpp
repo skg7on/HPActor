@@ -366,7 +366,7 @@ void ActorSystem::emit_local_backpressure_signal(
         metrics_ring_buffer_->try_push(evt);
     }
 
-    if (logger_ && state == mailbox::MailboxPressureState::HardPressure) {
+    if (state == mailbox::MailboxPressureState::HardPressure) {
         HPACTOR_LOG_WARNING(
             log::LogCategory::kMailbox, signal.target.id, 0,
             "backpressure_signal_sent",
@@ -399,7 +399,7 @@ void ActorSystem::emit_remote_backpressure_signal(
         metrics_ring_buffer_->try_push(evt);
     }
 
-    if (logger_ && state == mailbox::MailboxPressureState::HardPressure) {
+    if (state == mailbox::MailboxPressureState::HardPressure) {
         HPACTOR_LOG_WARNING(
             log::LogCategory::kMailbox, signal.target.id, 0,
             "backpressure_signal_remote_sent",
@@ -427,7 +427,7 @@ void ActorSystem::emit_remote_backpressure_signal(
         sent = transport_->try_send(signal.sender, encoded);
     }
 
-    if (!sent && logger_) {
+    if (!sent) {
         HPACTOR_LOG_WARNING(
             log::LogCategory::kMailbox, signal.target.id, 0,
             "backpressure_signal_remote_send_failed",
@@ -724,8 +724,8 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
 // result.  Idempotent — does nothing when the result is accepted.
 void emit_rejection_observability(
     hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
-    hpactor::log::Logger* logger, hpactor::EndPoint endpoint,
-    hpactor::ActorId target, const hpactor::mailbox::MailboxEnvelopeMeta& meta,
+    hpactor::EndPoint endpoint, hpactor::ActorId target,
+    const hpactor::mailbox::MailboxEnvelopeMeta& meta,
     const hpactor::mailbox::EnqueueResult& result,
     const hpactor::mailbox::DeliveryOptions& options,
     hpactor::mailbox::OverflowPolicy overflow_policy) {
@@ -767,20 +767,18 @@ void emit_rejection_observability(
     }
 
     // Structured log warning.
-    if (logger) {
-        HPACTOR_LOG_WARNING(
-            hpactor::log::LogCategory::kActor, target, 0, "delivery_failure",
-            hpactor::log::field_lit("reason",
-                                    hpactor::to_string(result.failure_reason())),
-            hpactor::log::field(
-                "retryable",
-                result.failure_reason() != hpactor::FailureReason::Unknown &&
-                    hpactor::retryable(result.failure_reason())),
-            hpactor::log::field("depth",
-                                static_cast<uint64_t>(result.depth)),
-            hpactor::log::field("capacity",
-                                static_cast<uint64_t>(result.capacity)));
-    }
+    HPACTOR_LOG_WARNING(
+        hpactor::log::LogCategory::kActor, target, 0, "delivery_failure",
+        hpactor::log::field_lit("reason",
+                                hpactor::to_string(result.failure_reason())),
+        hpactor::log::field(
+            "retryable",
+            result.failure_reason() != hpactor::FailureReason::Unknown &&
+                hpactor::retryable(result.failure_reason())),
+        hpactor::log::field("depth",
+                            static_cast<uint64_t>(result.depth)),
+        hpactor::log::field("capacity",
+                            static_cast<uint64_t>(result.capacity)));
 }
 
 } // namespace
@@ -828,7 +826,7 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
     auto result = mailbox->try_push(std::move(msg), meta);
 
     emit_rejection_observability(dead_letters_.get(), metrics_ring_buffer_.get(),
-                                 logger_, endpoint_, target, meta, result, options,
+                                 endpoint_, target, meta, result, options,
                                  mailbox->config().overflow_policy);
 
     maybe_emit_backpressure_signal(mailbox, result, meta, options.emit_backpressure,
