@@ -510,7 +510,8 @@ class ActorSystem {
     maybe_emit_backpressure_signal(mailbox::MPSCActorMailbox<TypedMessage>* mailbox,
                                    const mailbox::EnqueueResult& result,
                                    const mailbox::MailboxEnvelopeMeta& meta,
-                                   bool emit_requested);
+                                   bool emit_requested,
+                                   mailbox::BackpressureMode backpressure_mode);
 
     void emit_local_backpressure_signal(const mailbox::BackpressureSignal& signal,
                                         mailbox::MailboxPressureState state);

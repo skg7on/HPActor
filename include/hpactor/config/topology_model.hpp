@@ -58,6 +58,12 @@ struct MailboxPolicyDef {
         hpactor::mailbox::OverflowPolicy::RejectNewest;
     bool priority_aware{false};
     uint32_t max_overflow_depth{0};
+    double high_watermark{0.0};
+    double low_watermark{0.0};
+    double critical_watermark{0.0};
+    uint32_t signal_min_interval_ms{0};
+    hpactor::mailbox::BackpressureMode backpressure_mode{
+        hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal};
 };
 
 // -----------------------------------------------------------------------------
