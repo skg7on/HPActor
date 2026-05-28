@@ -111,17 +111,17 @@ static ActorDef parse_actor(const TomlTableView& tbl) {
         def.mailbox.priority_aware = mailbox.read_bool("priority_aware", false);
         def.mailbox.max_overflow_depth =
             mailbox.read_uint32("max_overflow_depth", 0);
-        def.mailbox.high_watermark =
-            mailbox.read_double("high_watermark", 0.0);
-        def.mailbox.low_watermark =
-            mailbox.read_double("low_watermark", 0.0);
+        def.mailbox.high_watermark = mailbox.read_double("high_watermark", 0.0);
+        def.mailbox.low_watermark = mailbox.read_double("low_watermark", 0.0);
         def.mailbox.critical_watermark =
             mailbox.read_double("critical_watermark", 0.0);
         def.mailbox.signal_min_interval_ms =
             mailbox.read_uint32("signal_min_interval_ms", 0);
         def.mailbox.backpressure_mode =
-            parse_backpressure_mode(mailbox.read_string(
-                "backpressure", "local_and_remote"));
+            parse_backpressure_mode(mailbox.read_string("backpressure", "local_"
+                                                                        "and_"
+                                                                        "remot"
+                                                                        "e"));
     }
 
     auto args = tbl.table("args");

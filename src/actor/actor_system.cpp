@@ -302,9 +302,8 @@ bool pressure_result_should_signal(const mailbox::EnqueueResult& result) noexcep
 
 void ActorSystem::maybe_emit_backpressure_signal(
     mailbox::MPSCActorMailbox<TypedMessage>* mailbox,
-    const mailbox::EnqueueResult& result,
-    const mailbox::MailboxEnvelopeMeta& meta, bool emit_requested,
-    mailbox::BackpressureMode backpressure_mode) {
+    const mailbox::EnqueueResult& result, const mailbox::MailboxEnvelopeMeta& meta,
+    bool emit_requested, mailbox::BackpressureMode backpressure_mode) {
     if (!emit_requested || mailbox == nullptr ||
         !pressure_result_should_signal(result)) {
         return;
@@ -428,10 +427,9 @@ void ActorSystem::emit_remote_backpressure_signal(
     }
 
     if (!sent) {
-        HPACTOR_LOG_WARNING(
-            log::LogCategory::kMailbox, signal.target.id, 0,
-            "backpressure_signal_remote_send_failed",
-            log::field("sender", signal.sender.id.value()));
+        HPACTOR_LOG_WARNING(log::LogCategory::kMailbox, signal.target.id, 0,
+                            "backpressure_signal_remote_send_failed",
+                            log::field("sender", signal.sender.id.value()));
     }
 }
 
@@ -602,7 +600,8 @@ reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
         dl.reason = hpactor::mailbox::DeadLetterReason::ActorNotFound;
         dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
         dl.sender = msg.sender_address();
-        dl.target = hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
+        dl.target =
+            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
         dl.type_tag = msg.type_id();
         dl.message_id = options.message_id;
         dl.frame_flags = options.flags;
@@ -636,8 +635,7 @@ reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
 // If the message is a tracked duplicate, record the metric and return an
 // Accepted result.  Returns nullopt when the message is not a duplicate.
 [[nodiscard]] std::optional<hpactor::mailbox::EnqueueResult>
-try_accept_duplicate(MetricBuf* metrics,
-                     hpactor::mailbox::DedupCache* dedup_cache,
+try_accept_duplicate(MetricBuf* metrics, hpactor::mailbox::DedupCache* dedup_cache,
                      hpactor::EndPoint endpoint, hpactor::ActorId target,
                      const hpactor::TypedMessage& msg,
                      const hpactor::mailbox::DeliveryOptions& options) {
@@ -676,8 +674,7 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
                    const hpactor::TypedMessage& msg,
                    const hpactor::mailbox::DeliveryOptions& options,
                    uint8_t priority, int64_t deadline_ns) {
-    if (options.delivery_mode <
-        hpactor::mailbox::DeliveryMode::ObservableBestEffort) {
+    if (options.delivery_mode < hpactor::mailbox::DeliveryMode::ObservableBestEffort) {
         return std::nullopt;
     }
     uint64_t now_ns = static_cast<uint64_t>(
@@ -707,7 +704,8 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
         dl.reason = hpactor::mailbox::DeadLetterReason::Expired;
         dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
         dl.sender = msg.sender_address();
-        dl.target = hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
+        dl.target =
+            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
         dl.type_tag = msg.type_id();
         dl.message_id = options.message_id;
         dl.frame_flags = options.flags;
@@ -722,13 +720,13 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
 
 // Emit metrics, logging, and dead-letter dispatch for a rejected enqueue
 // result.  Idempotent — does nothing when the result is accepted.
-void emit_rejection_observability(
-    hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
-    hpactor::EndPoint endpoint, hpactor::ActorId target,
-    const hpactor::mailbox::MailboxEnvelopeMeta& meta,
-    const hpactor::mailbox::EnqueueResult& result,
-    const hpactor::mailbox::DeliveryOptions& options,
-    hpactor::mailbox::OverflowPolicy overflow_policy) {
+void emit_rejection_observability(hpactor::mailbox::DeadLetterQueue* dlq,
+                                  MetricBuf* metrics, hpactor::EndPoint endpoint,
+                                  hpactor::ActorId target,
+                                  const hpactor::mailbox::MailboxEnvelopeMeta& meta,
+                                  const hpactor::mailbox::EnqueueResult& result,
+                                  const hpactor::mailbox::DeliveryOptions& options,
+                                  hpactor::mailbox::OverflowPolicy overflow_policy) {
     if (result.accepted()) {
         return;
     }
@@ -739,7 +737,8 @@ void emit_rejection_observability(
         dl.reason = hpactor::mailbox::DeadLetterReason::OverflowPolicy;
         dl.source = hpactor::mailbox::DeadLetterSource::MailboxAdmission;
         dl.sender = meta.sender;
-        dl.target = hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
+        dl.target =
+            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
         dl.type_tag = meta.type_tag;
         dl.message_id = meta.message_id;
         dl.frame_flags = meta.flags;
@@ -772,13 +771,10 @@ void emit_rejection_observability(
         hpactor::log::field_lit("reason",
                                 hpactor::to_string(result.failure_reason())),
         hpactor::log::field(
-            "retryable",
-            result.failure_reason() != hpactor::FailureReason::Unknown &&
-                hpactor::retryable(result.failure_reason())),
-        hpactor::log::field("depth",
-                            static_cast<uint64_t>(result.depth)),
-        hpactor::log::field("capacity",
-                            static_cast<uint64_t>(result.capacity)));
+            "retryable", result.failure_reason() != hpactor::FailureReason::Unknown &&
+                             hpactor::retryable(result.failure_reason())),
+        hpactor::log::field("depth", static_cast<uint64_t>(result.depth)),
+        hpactor::log::field("capacity", static_cast<uint64_t>(result.capacity)));
 }
 
 } // namespace
@@ -792,22 +788,21 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                mailbox::DeliveryOptions options) {
     auto* mailbox = get_mailbox(target);
     if (mailbox == nullptr) {
-        return reject_missing_actor(dead_letters_.get(), metrics_ring_buffer_.get(),
-                                    endpoint_, target, msg, options, priority,
-                                    deadline_ns);
+        return reject_missing_actor(dead_letters_.get(),
+                                    metrics_ring_buffer_.get(), endpoint_,
+                                    target, msg, options, priority, deadline_ns);
     }
 
     msg.set_deadline_ns(deadline_ns);
 
-    if (auto dup = try_accept_duplicate(metrics_ring_buffer_.get(),
-                                        dedup_cache_.get(), endpoint_, target, msg,
-                                        options)) {
+    if (auto dup =
+            try_accept_duplicate(metrics_ring_buffer_.get(), dedup_cache_.get(),
+                                 endpoint_, target, msg, options)) {
         return *dup;
     }
-    if (auto expired =
-            try_reject_expired(dead_letters_.get(), metrics_ring_buffer_.get(),
-                               endpoint_, target, msg, options, priority,
-                               deadline_ns)) {
+    if (auto expired = try_reject_expired(
+            dead_letters_.get(), metrics_ring_buffer_.get(), endpoint_, target,
+            msg, options, priority, deadline_ns)) {
         return *expired;
     }
 
@@ -829,8 +824,8 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                  endpoint_, target, meta, result, options,
                                  mailbox->config().overflow_policy);
 
-    maybe_emit_backpressure_signal(mailbox, result, meta, options.emit_backpressure,
-                                   bp_mode);
+    maybe_emit_backpressure_signal(mailbox, result, meta,
+                                   options.emit_backpressure, bp_mode);
 
     return result;
 }
