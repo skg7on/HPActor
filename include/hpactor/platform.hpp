@@ -29,3 +29,6 @@ using byte_t = unsigned char;
 
 inline constexpr size_t default_mailbox_capacity = 1024;
 } // namespace hpactor
+
+#define HPACTOR_LIKELY(x)   __builtin_expect(!!(x), 1)
+#define HPACTOR_UNLIKELY(x) __builtin_expect(!!(x), 0)
