@@ -14,6 +14,7 @@ add_executable(test_unit_mailbox
     test_is_expired.cpp
     test_dedup_cache.cpp
     test_backpressure_signal_serialization.cpp
+    test_reservation_manager.cpp
 )
 target_link_libraries(test_unit_mailbox hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_mailbox)
