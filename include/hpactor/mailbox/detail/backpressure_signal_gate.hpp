@@ -27,8 +27,9 @@ class BackpressureSignalGate {
   public:
     BackpressureSignalGate() = default;
 
-    std::optional<uint64_t> try_acquire(uint64_t now_ns, MailboxPressureState state,
-                                        uint32_t interval_ms) noexcept {
+    std::optional<uint64_t>
+    try_acquire(uint64_t now_ns, MailboxPressureState state,
+                uint32_t interval_ms, bool force = false) noexcept {
         const uint64_t interval_ns =
             static_cast<uint64_t>(interval_ms) * 1'000'000ULL;
         const auto severity = PressureStateMachine::severity(state);
@@ -41,7 +42,7 @@ class BackpressureSignalGate {
             const bool interval_elapsed = now_ns >= last + interval_ns;
             const bool escalation = severity > last_severity;
 
-            if (!first && !interval_elapsed && !escalation)
+            if (!force && !first && !interval_elapsed && !escalation)
                 return std::nullopt;
 
             if (last_signal_ns_.compare_exchange_weak(last, now_ns,

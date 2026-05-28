@@ -32,6 +32,20 @@ static DispatchPolicy parse_dispatch_policy(const std::string& s) {
 }
 
 // ---------------------------------------------------------------------------
+// BackpressureMode string parsing
+// ---------------------------------------------------------------------------
+static hpactor::mailbox::BackpressureMode
+parse_backpressure_mode(const std::string& s) {
+    if (s == "disabled")
+        return hpactor::mailbox::BackpressureMode::Disabled;
+    if (s == "local")
+        return hpactor::mailbox::BackpressureMode::LocalSignal;
+    if (s == "remote")
+        return hpactor::mailbox::BackpressureMode::RemoteSignal;
+    return hpactor::mailbox::BackpressureMode::LocalAndRemoteSignal;
+}
+
+// ---------------------------------------------------------------------------
 // OverflowPolicy string parsing
 // ---------------------------------------------------------------------------
 static hpactor::mailbox::OverflowPolicy
@@ -97,6 +111,17 @@ static ActorDef parse_actor(const TomlTableView& tbl) {
         def.mailbox.priority_aware = mailbox.read_bool("priority_aware", false);
         def.mailbox.max_overflow_depth =
             mailbox.read_uint32("max_overflow_depth", 0);
+        def.mailbox.high_watermark = mailbox.read_double("high_watermark", 0.0);
+        def.mailbox.low_watermark = mailbox.read_double("low_watermark", 0.0);
+        def.mailbox.critical_watermark =
+            mailbox.read_double("critical_watermark", 0.0);
+        def.mailbox.signal_min_interval_ms =
+            mailbox.read_uint32("signal_min_interval_ms", 0);
+        def.mailbox.backpressure_mode =
+            parse_backpressure_mode(mailbox.read_string("backpressure", "local_"
+                                                                        "and_"
+                                                                        "remot"
+                                                                        "e"));
     }
 
     auto args = tbl.table("args");

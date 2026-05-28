@@ -169,12 +169,10 @@ void EventBasedActor::receive(TypedMessage& msg) {
                         evt.value_hi = 1;
                         metrics_ring_buffer_->try_push(evt);
                     }
-                    if (logger_) [[unlikely]] {
-                        HPACTOR_LOG_WARNING(
-                            log::LogCategory::kActor, id(), 0, "quarantine_reject",
-                            log::field_lit("reason",
-                                           to_string(lc->quarantine_reason())));
-                    }
+                    HPACTOR_LOG_WARNING(
+                        log::LogCategory::kActor, id(), 0, "quarantine_reject",
+                        log::field_lit("reason",
+                                       to_string(lc->quarantine_reason())));
                 }
                 return;
             }
