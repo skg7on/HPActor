@@ -1,0 +1,53 @@
+// Copyright 2026 HPActor Contributors
+//
+// Licensed under the Apache License, Version 2.0 (the "License");
+// you may not use this file except in compliance with the License.
+// You may obtain a copy of the License at
+//
+//     http://www.apache.org/licenses/LICENSE-2.0
+//
+// Unless required by applicable law or agreed to in writing, software
+// distributed under the License is distributed on an "AS IS" BASIS,
+// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
+// See the License for the specific language governing permissions and
+// limitations under the License.
+
+#pragma once
+
+#include <hpactor/mailbox/detail/handlers/dead_letter_handler.hpp>
+#include <hpactor/mailbox/detail/handlers/drop_newest_handler.hpp>
+#include <hpactor/mailbox/detail/handlers/drop_oldest_handler.hpp>
+#include <hpactor/mailbox/detail/handlers/reject_newest_handler.hpp>
+#include <hpactor/mailbox/detail/handlers/signal_only_handler.hpp>
+#include <hpactor/mailbox/detail/handlers/spill_to_overflow_handler.hpp>
+#include <hpactor/mailbox/detail/overflow_handler_interface.hpp>
+#include <hpactor/mailbox/mailbox_policy.hpp>
+
+#include <memory>
+
+namespace hpactor::mailbox::detail {
+
+template <typename T>
+[[nodiscard]] std::unique_ptr<IOverflowHandler<T>>
+make_overflow_handler(OverflowPolicy policy) {
+    switch (policy) {
+        case OverflowPolicy::RejectNewest:
+            return std::make_unique<RejectNewestHandler<T>>();
+        case OverflowPolicy::DropNewest:
+            return std::make_unique<DropNewestHandler<T>>();
+        case OverflowPolicy::DropOldest:
+            return std::make_unique<DropOldestHandler<T>>();
+        case OverflowPolicy::DeadLetter:
+            return std::make_unique<DeadLetterHandler<T>>();
+        case OverflowPolicy::SignalOnly:
+            return std::make_unique<SignalOnlyHandler<T>>();
+        case OverflowPolicy::SpillToOverflowQueue:
+            return std::make_unique<SpillToOverflowHandler<T>>();
+        case OverflowPolicy::DropLowestPriority:
+        case OverflowPolicy::BlockWhenAllowed:
+        default:
+            return std::make_unique<RejectNewestHandler<T>>();
+    }
+}
+
+} // namespace hpactor::mailbox::detail
