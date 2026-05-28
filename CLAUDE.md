@@ -108,6 +108,16 @@ cmake -DENABLE_CLI=OFF ..       # Disable interactive CLI subsystem (default ON,
 cmake -DENABLE_COVERAGE=ON ..   # Enable gcov/llvm-cov style coverage instrumentation
 ```
 
+## Build Verification Discipline
+
+After code modifications, do not rebuild the whole project by default. Prefer
+the narrowest verification that covers the changed surface, such as a targeted
+`ninja` target, one test binary, or `ctest -R <pattern> --output-on-failure`.
+Run a full configure/build/test cycle only when it is necessary because the
+change affects shared build configuration, generated files, broad public
+headers, cross-cutting runtime behavior, or when the user explicitly asks for
+full-project verification.
+
 ## Architecture
 
 HPActor is a C++20 event-based actor framework inspired by CAF (C++ Actor Framework).
