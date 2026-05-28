@@ -17,6 +17,7 @@ add_executable(test_unit_mailbox
     test_reservation_manager.cpp
     test_pressure_state_machine.cpp
     test_backpressure_signal_gate.cpp
+    test_overflow_handlers.cpp
 )
 target_link_libraries(test_unit_mailbox hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_mailbox)
