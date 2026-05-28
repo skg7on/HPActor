@@ -268,6 +268,8 @@ void Aggregator::on_event(const MetricEvent& e) {
             c.total.fetch_add(1, std::memory_order_relaxed);
             break;
         }
+        case MetricEventType::kFaultInjected:
+            break;
         case MetricEventType::kCircuitStateChange: {
             {
                 auto& g = registry_.get_or_create<GaugeValue>(

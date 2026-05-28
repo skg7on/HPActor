@@ -28,6 +28,7 @@ option(ENABLE_ACTOR_TRACING "Enable distributed tracing subsystem" ON)
 option(ENABLE_COVERAGE "Enable code coverage instrumentation (gcc/clang)" OFF)
 option(ENABLE_TESTS "Build tests" ON)
 option(ENABLE_RELACY_TESTS "Build relacy-based exhaustive verification tests" OFF)
+option(ENABLE_FAULT_INJECTION "Enable deterministic fault injection hooks" ON)
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
@@ -71,6 +72,7 @@ set(HPACTOR_ENABLE_MEMORY_DEBUG ${ENABLE_MEMORY_DEBUG})
 set(HPACTOR_ENABLE_CLI ${ENABLE_CLI})
 set(HPACTOR_ENABLE_ACTOR_LOGGING ${ENABLE_ACTOR_LOGGING})
 set(HPACTOR_ENABLE_ACTOR_TRACING ${ENABLE_ACTOR_TRACING})
+set(HPACTOR_ENABLE_FAULT_INJECTION ${ENABLE_FAULT_INJECTION})
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/include/hpactor/hpactor_config.hpp.in

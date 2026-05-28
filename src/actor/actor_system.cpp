@@ -207,6 +207,8 @@ ActorSystem::ActorSystem(const Config& config)
         auto spawned = spawn<cli::CliActor>(config_.cli);
         cli_actor_ = std::static_pointer_cast<cli::CliActor>(spawned.get());
     }
+
+    fault_controller_.install_thread_local();
 }
 
 ActorSystem::~ActorSystem() {
@@ -231,6 +233,7 @@ ActorSystem::~ActorSystem() {
     if (trace_manager_) {
         trace_manager_->stop();
     }
+    fault_controller_.remove_thread_local();
     scheduler_->stop();
 }
 

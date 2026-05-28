@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/typed_message.hpp>
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/detail/backpressure_signal_gate.hpp>
 #include <hpactor/mailbox/detail/overflow_handler_factory.hpp>
@@ -170,6 +171,9 @@ template <typename T> class MPSCActorMailbox {
     }
 
     void enqueue(T* node) noexcept {
+        FAULT_INJECT("hpactor.mailbox.enqueue.fail") {
+            return;  // caller sees this as rejected
+        }
         uint64_t bytes = estimate_node_bytes(*node);
         if (reservation_.try_reserve(bytes, config_.capacity.max_messages,
                                      config_.capacity.max_bytes) !=
@@ -231,6 +235,14 @@ template <typename T> class MPSCActorMailbox {
     T* dequeue() noexcept {
         lock_consumer();
         T* node = mailbox_.dequeue();
+        FAULT_INJECT("hpactor.mailbox.dequeue.drop") {
+            // Silently drop: release reservation but return null to caller
+            if (node != nullptr) {
+                reservation_.release(estimate_node_bytes(*node));
+            }
+            unlock_consumer();
+            return nullptr;
+        }
         if (node != nullptr) {
             uint64_t bytes = estimate_node_bytes(*node);
             if constexpr (std::is_same_v<T, TypedMessage>) {

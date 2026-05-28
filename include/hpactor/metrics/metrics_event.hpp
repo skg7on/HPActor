@@ -47,6 +47,7 @@ enum class MetricEventType : uint8_t {
     kActorQuarantined = 23,   ///< Actor transitioned to kQuarantined.
     kActorUnquarantined = 24, ///< Actor released from quarantine.
     kCircuitStateChange = 25, ///< Circuit breaker state changed.
+    kFaultInjected = 26,       ///< Fault injection fired.
 };
 
 struct alignas(32) MetricEvent {
