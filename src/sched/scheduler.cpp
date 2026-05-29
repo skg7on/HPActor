@@ -37,8 +37,8 @@ HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                  uint32_t num_priorities,
                                  TimerBackend timer_backend, bool start_paused)
     : system_(system), ready_gate_(system),
-      placement_(num_workers, num_priorities), num_workers_(num_workers),
-      workers_paused_(start_paused) {
+      placement_(num_workers, num_priorities), executor_(system, ready_gate_),
+      num_workers_(num_workers), workers_paused_(start_paused) {
     switch (timer_backend) {
         case TimerBackend::TimingWheel:
             timer_backend_.emplace<TimingWheel>(1'000'000, 4);
@@ -158,43 +158,6 @@ bool HybridScheduler::pop_edf(WorkItem& out, uint32_t worker_id) {
     return placement_.pop_edf(worker_id, out);
 }
 
-void HybridScheduler::process_actor(ActorId actor) {
-    auto actor_ptr = system_.get_actor(actor);
-    if (!actor_ptr) {
-        return;
-    }
-
-    auto mailbox = system_.get_mailbox(actor);
-    if (!mailbox) {
-        return;
-    }
-
-    TypedMessage msg;
-    if (mailbox->try_pop(msg)) {
-        // Dequeue-time deadline check: drop expired messages before
-        // they reach the actor handler.
-        uint64_t now_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {
-            if (metrics_ring_buffer_) [[unlikely]] {
-                metrics::MetricEvent evt{};
-                evt.timestamp_ns = now_ns;
-                evt.actor_id = actor;
-                evt.event_type = metrics::MetricEventType::kDeliveryExpired;
-                evt.code = static_cast<uint8_t>(FailureReason::Expired);
-                evt.value_hi = 1;
-                metrics_ring_buffer_->try_push(evt);
-            }
-            // Loop to check for more messages
-            process_actor(actor);
-            return;
-        }
-        actor_ptr->receive(msg);
-    }
-}
-
 void HybridScheduler::execute_actor(const WorkItem& item) {
     auto actor_ptr = system_.get_actor(item.actor);
     if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
@@ -272,66 +235,16 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     }
 #endif // HPACTOR_SUPPORT_COROUTINES
 
-    // Behavior-based scheduling — state-aware CAS dispatch.
-    // Uses the same ActorState machine as the coroutine path:
-    // Idle -> Ready -> Running -> Idle (if empty) / Ready (if more work).
-    auto& actor_state = actor->actor_state();
+    ActorExecutionContext execution_context{
+        tl_current_worker_id,
+        metrics_ring_buffer_,
+        logger_,
+    };
 
-    // First transition: kIdle → kReady (if actor is idle on first pickup)
-    if (actor_state.is_idle()) {
-        actor_state.set(ActorState::kReady);
-    }
-
-    // Transition: Ready → Running
-    uint32_t expected = ActorState::kReady;
-    if (!actor_state.cas(expected, ActorState::kRunning)) {
-        if (actor_state.is_terminated()) {
-            actor->set_exit_reason(errors::actor_down);
-            actor->on_exit();
-        }
-        return;
-    }
-
-    auto mailbox = system_.get_mailbox(item.actor);
-    if (!mailbox) {
-        actor_state.set(ActorState::kIdle);
-        return;
-    }
-
-    TypedMessage msg;
-    if (mailbox->try_pop(msg)) {
-        // Dequeue-time deadline check: drop expired messages before
-        // they reach the actor handler.
-        uint64_t now_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {
-            if (metrics_ring_buffer_) [[unlikely]] {
-                metrics::MetricEvent evt{};
-                evt.timestamp_ns = now_ns;
-                evt.actor_id = item.actor;
-                evt.event_type = metrics::MetricEventType::kDeliveryExpired;
-                evt.code = static_cast<uint8_t>(FailureReason::Expired);
-                evt.value_hi = 1;
-                metrics_ring_buffer_->try_push(evt);
-            }
-        } else {
-            actor->receive(msg);
-        }
-    }
-
-    if (!mailbox->empty()) {
-        actor_state.set(ActorState::kReady);
-        enqueue_admitted(item, 0);
-    } else {
-        actor_state.set(ActorState::kIdle);
-        if (!mailbox->empty()) {
-            expected = ActorState::kIdle;
-            if (actor_state.cas(expected, ActorState::kReady)) {
-                enqueue_admitted(item, 0);
-            }
-        }
+    auto result = executor_.run_behavior(*actor, item, execution_context);
+    if (result.disposition == ActorRunDisposition::RequeueReady) {
+        enqueue_admitted(WorkItem{item.actor, result.deadline_ns, item.sequence},
+                         result.priority);
     }
 }
 

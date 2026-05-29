@@ -20,6 +20,7 @@
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/a2ws.hpp>
+#include <hpactor/sched/actor_execution_engine.hpp>
 #include <hpactor/sched/actor_ready_gate.hpp>
 #include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/edf_queue.hpp>
@@ -289,9 +290,6 @@ class HybridScheduler : public IScheduler {
     /// \return \c true if work was successfully stolen.
     bool try_steal(WorkItem& out);
 
-    /// \brief Process one actor (called by worker loop).
-    void process_actor(ActorId actor);
-
     /// \brief Execute an actor from a work item.
     ///
     /// Handles coroutine resumption when available.
@@ -336,6 +334,7 @@ class HybridScheduler : public IScheduler {
     ActorSystem& system_;
     ActorReadyGate ready_gate_;
     WorkPlacementScheduler placement_;
+    ActorExecutionEngine executor_;
     uint32_t num_workers_;
     std::atomic<bool> running_{false};
     std::vector<std::thread> worker_threads_;
