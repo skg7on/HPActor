@@ -40,7 +40,7 @@ FaultSchedule build_schedule_from_seed(uint64_t seed) {
 
 size_t run_scenario(const FaultSchedule& schedule) {
     FaultController fc;
-    fc.install_thread_local();
+    fc.install();
     fc.load(schedule);
     fc.enable("*");
 
@@ -51,7 +51,7 @@ size_t run_scenario(const FaultSchedule& schedule) {
         if (fc.check("hpactor.mailbox.enqueue.fail"))
             ++fire_count;
     }
-    fc.remove_thread_local();
+    fc.remove();
     return fire_count;
 }
 

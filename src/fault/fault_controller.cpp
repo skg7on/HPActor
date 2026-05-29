@@ -21,7 +21,7 @@
 
 namespace hpactor::fault {
 
-thread_local FaultController* FaultController::tls_instance_ = nullptr;
+FaultController* FaultController::instance_ = nullptr;
 
 FaultController::FaultController()
     : enabled_(false)
@@ -119,12 +119,12 @@ FaultControllerSnapshot FaultController::snapshot() const {
     return snap;
 }
 
-void FaultController::install_thread_local() {
-    tls_instance_ = this;
+void FaultController::install() {
+    instance_ = this;
 }
 
-void FaultController::remove_thread_local() {
-    tls_instance_ = nullptr;
+void FaultController::remove() {
+    instance_ = nullptr;
 }
 
 } // namespace hpactor::fault

@@ -18,7 +18,7 @@ TEST(FaultMailboxIntegration, ActorSystemInstallsThreadLocal) {
     ::hpactor::ActorSystem system(cfg);
 
     // After ActorSystem construction, the thread-local controller is set
-    auto* fc = FaultController::thread_local_instance();
+    auto* fc = FaultController::instance();
     ASSERT_NE(fc, nullptr);
     EXPECT_EQ(fc, &system.fault_controller());
 }

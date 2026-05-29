@@ -208,7 +208,7 @@ ActorSystem::ActorSystem(const Config& config)
         cli_actor_ = std::static_pointer_cast<cli::CliActor>(spawned.get());
     }
 
-    fault_controller_.install_thread_local();
+    fault_controller_.install();
 }
 
 ActorSystem::~ActorSystem() {
@@ -233,7 +233,7 @@ ActorSystem::~ActorSystem() {
     if (trace_manager_) {
         trace_manager_->stop();
     }
-    fault_controller_.remove_thread_local();
+    fault_controller_.remove();
     scheduler_->stop();
 }
 

@@ -11,10 +11,10 @@ namespace {
 class FaultControllerTest : public ::testing::Test {
   protected:
     void SetUp() override {
-        fc_.install_thread_local();
+        fc_.install();
     }
     void TearDown() override {
-        fc_.remove_thread_local();
+        fc_.remove();
     }
     FaultController fc_;
 };

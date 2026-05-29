@@ -59,15 +59,15 @@ class FaultController {
 
     uint64_t faults_fired() const noexcept { return faults_fired_; }
 
-    void install_thread_local();
-    void remove_thread_local();
+    void install();
+    void remove();
 
-    static FaultController* thread_local_instance() {
-        return tls_instance_;
+    static FaultController* instance() {
+        return instance_;
     }
 
   private:
-    static thread_local FaultController* tls_instance_;
+    static FaultController* instance_;
 
     bool enabled_;
     std::string active_scope_;

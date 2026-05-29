@@ -20,7 +20,7 @@
 
 #if HPACTOR_ENABLE_FAULT_INJECTION
 #    define FAULT_INJECT(path)                                                 \
-        if (auto* _fc = ::hpactor::fault::FaultController::thread_local_instance(); \
+        if (auto* _fc = ::hpactor::fault::FaultController::instance(); \
             HPACTOR_UNLIKELY(_fc != nullptr && _fc->check(path)))
 #else
 #    define FAULT_INJECT(path) if (false)
