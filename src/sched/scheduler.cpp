@@ -18,31 +18,12 @@
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
-#include <hpactor/sched/dedicated_thread_pool.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <chrono>
 #include <variant>
 
-#if HPACTOR_SUPPORT_COROUTINES
-#    include <hpactor/sched/coroutine_task.hpp>
-#endif
-
 namespace hpactor::sched {
-
-// DedicatedStorage: holds per-actor dedicated execution state.
-// Defined in .cpp to allow DedicatedThreadPool to remain incomplete in the
-// header (libc++ noexcept containers require complete types).
-struct HybridScheduler::DedicatedStorage {
-    // Dedicated thread tracking (thread lifecycle managed by DaemonActor)
-    std::unordered_set<ActorId> dedicated_thread_actors_;
-    std::unordered_map<ActorId, int> dedicated_thread_affinity_;
-    std::mutex dedicated_mutex_;
-
-    // Dedicated thread pools (pool_size -> pool)
-    std::unordered_map<uint32_t, std::unique_ptr<DedicatedThreadPool>> dedicated_pools_;
-    std::unordered_map<ActorId, uint32_t> actor_pool_map_; // actor -> pool_size
-};
 
 // Thread-local pointer to the current worker executing on this thread
 thread_local uint32_t tl_current_worker_id = UINT32_MAX;
@@ -50,10 +31,9 @@ thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                  uint32_t num_priorities,
                                  TimerBackend timer_backend, bool start_paused)
-    : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
-      workers_(num_workers), a2ws_(num_workers), workers_paused_(start_paused),
-      dedicated_(std::make_unique<DedicatedStorage>()),
-      pinned_ready_(num_workers) {
+    : system_(system), ready_gate_(system),
+      placement_(num_workers, num_priorities), executor_(system, ready_gate_),
+      num_workers_(num_workers), workers_paused_(start_paused) {
     switch (timer_backend) {
         case TimerBackend::TimingWheel:
             timer_backend_.emplace<TimingWheel>(1'000'000, 4);
@@ -61,11 +41,6 @@ HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
         case TimerBackend::CalendarQueue:
             timer_backend_.emplace<CalendarQueue>();
             break;
-    }
-    for (uint32_t i = 0; i < num_workers; ++i) {
-        workers_[i].queues =
-            std::make_unique<ChaselevDeque<WorkItem>[]>(num_priorities);
-        workers_[i].index = i;
     }
 }
 
@@ -75,8 +50,8 @@ void HybridScheduler::start() {
     }
     running_.store(true, std::memory_order_release);
 
-    worker_threads_.reserve(workers_.size());
-    for (size_t i = 0; i < workers_.size(); ++i) {
+    worker_threads_.reserve(placement_.worker_count());
+    for (size_t i = 0; i < placement_.worker_count(); ++i) {
         worker_threads_.emplace_back(
             [this, i] { worker_loop(static_cast<uint32_t>(i)); });
     }
@@ -112,6 +87,29 @@ void HybridScheduler::stop() {
     }
 }
 
+bool HybridScheduler::try_admit_ready(ActorId actor) noexcept {
+    return ready_gate_.try_mark_ready(actor).accepted();
+}
+
+bool HybridScheduler::try_mark_yield_ready(ActorId actor) noexcept {
+    auto actor_ptr = system_.get_actor(actor);
+    if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
+        return false;
+    }
+    auto* eb = static_cast<EventBasedActor*>(actor_ptr.get());
+    return ready_gate_.mark_ready_already_admitted(*eb).accepted();
+}
+
+void HybridScheduler::enqueue_admitted(const WorkItem& item, uint8_t priority) {
+    placement_.enqueue_admitted(item, priority,
+                                workers_paused_.load(std::memory_order_acquire),
+                                [this](const WorkItem& dedicated_item) {
+                                    mark_dispatch_begin();
+                                    execute_actor(dedicated_item);
+                                    mark_dispatch_end();
+                                });
+}
+
 void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
                                    int64_t deadline_ns) {
     if (!running_.load(std::memory_order_acquire)) {
@@ -120,78 +118,11 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
 
     WorkItem item{actor, deadline_ns, 0};
 
-    DedicatedThreadPool* dedicated_pool = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(dedicated_->dedicated_mutex_);
-
-        if (dedicated_->dedicated_thread_actors_.find(actor) !=
-            dedicated_->dedicated_thread_actors_.end()) {
-            return;
-        }
-
-        auto actor_pool = dedicated_->actor_pool_map_.find(actor);
-        if (actor_pool != dedicated_->actor_pool_map_.end()) {
-            auto pool = dedicated_->dedicated_pools_.find(actor_pool->second);
-            if (pool != dedicated_->dedicated_pools_.end()) {
-                dedicated_pool = pool->second.get();
-            }
-        }
-    }
-
-    if (dedicated_pool != nullptr) {
-        dedicated_pool->enqueue(actor, [this, item]() { execute_actor(item); });
+    if (!try_admit_ready(actor)) {
         return;
     }
 
-    // Cooperative path: gate on actor state to prevent double-enqueue.
-    // If the actor is already executing (Running) or enqueued (Ready),
-    // a second WorkItem would be redundant.  CAS Idle→Ready atomically.
-    auto actor_ptr = system_.get_actor(actor);
-    if (actor_ptr && actor_ptr->is_event_based_actor()) {
-        auto* eb = static_cast<EventBasedActor*>(actor_ptr.get());
-        auto& state = eb->actor_state();
-        uint32_t current = state.get();
-        if (current == ActorState::kReady || current == ActorState::kRunning)
-            return;
-        if (current == ActorState::kTerminated)
-            return;
-        if (!state.cas(current, ActorState::kReady))
-            return; // another thread won the race
-    }
-
-    // Determine target worker: use pinning map if set, otherwise round-robin.
-    if (num_workers_ == 0)
-        return;
-    uint32_t victim;
-    bool is_pinned = false;
-    {
-        std::lock_guard<std::mutex> lock(pinned_mutex_);
-        auto it = pinned_actors_.find(actor);
-        if (it != pinned_actors_.end()) {
-            victim = it->second % num_workers_;
-            is_pinned = true;
-        }
-    }
-    if (!is_pinned) {
-        static std::atomic<uint32_t> rr_counter{0};
-        victim = rr_counter.fetch_add(1, std::memory_order_relaxed) %
-                 num_workers_;
-    }
-
-    // When workers are paused and actor is pinned, use the side deque so
-    // run_actor() / run_one_on_worker() can drive execution deterministically.
-    if (is_pinned && workers_paused_.load(std::memory_order_acquire)) {
-        std::lock_guard<std::mutex> lock(pinned_mutex_);
-        pinned_ready_[victim].push_back(item);
-        return;
-    }
-
-    // Normal path: ChaseLev or EDF
-    if (deadline_ns == INT64_MAX) {
-        workers_[victim].queues[priority].push_bottom(item);
-    } else {
-        workers_[victim].edf_queue.push(deadline_ns, item);
-    }
+    enqueue_admitted(item, priority);
 }
 
 void HybridScheduler::notify_idle(ActorId actor) {
@@ -201,136 +132,25 @@ void HybridScheduler::notify_idle(ActorId actor) {
 }
 
 void HybridScheduler::yield(ActorId actor, uint8_t priority) {
-    notify_ready(actor, priority, INT64_MAX);
+    if (!running_.load(std::memory_order_acquire)) {
+        return;
+    }
+    if (!try_mark_yield_ready(actor)) {
+        return;
+    }
+    enqueue_admitted(WorkItem{actor, INT64_MAX, 0}, priority);
 }
 
 bool HybridScheduler::try_steal(WorkItem& out) {
-    // Use A2WS for adaptive victim selection
-    for (uint32_t attempt = 0; attempt < num_workers_; ++attempt) {
-        // Get next victim from A2WS
-        uint32_t victim_idx = a2ws_.get_victim(attempt % num_workers_);
-
-        auto& victim = workers_[victim_idx];
-
-        // Try EDF queue first (deadline-ordered work has highest urgency)
-        if (victim.edf_queue.pop(out)) {
-            a2ws_.record_steal(attempt % num_workers_, victim_idx);
-            if (metrics_ring_buffer_) [[unlikely]] {
-                metrics::MetricEvent evt{};
-                evt.actor_id = out.actor;
-                evt.event_type = metrics::MetricEventType::kSchedulerSteal;
-                evt.value_hi = victim_idx;
-                metrics_ring_buffer_->try_push(evt);
-            }
-            HPACTOR_LOG_DEBUG(
-                log::LogCategory::kScheduler, out.actor,
-                static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
-                "work stolen",
-                log::field("from_worker", static_cast<uint64_t>(victim_idx)),
-                log::field("to_worker",
-                           static_cast<uint64_t>(tl_current_worker_id)));
-            return true;
-        }
-
-        // Try each priority level from highest to lowest
-        for (uint32_t p = 0; p < num_priorities_; ++p) {
-            if (victim.queues[p].steal_top(out)) {
-                a2ws_.record_steal(attempt % num_workers_, victim_idx);
-                if (metrics_ring_buffer_) [[unlikely]] {
-                    metrics::MetricEvent evt{};
-                    evt.actor_id = out.actor;
-                    evt.event_type = metrics::MetricEventType::kSchedulerSteal;
-                    evt.value_hi = victim_idx;
-                    metrics_ring_buffer_->try_push(evt);
-                }
-                HPACTOR_LOG_DEBUG(
-                    log::LogCategory::kScheduler, out.actor,
-                    static_cast<uint32_t>(log::LogEventId::kSchedulerSteal),
-                    "work stolen",
-                    log::field("from_worker", static_cast<uint64_t>(victim_idx)),
-                    log::field("to_worker",
-                               static_cast<uint64_t>(tl_current_worker_id)));
-                return true;
-            }
-        }
-
-        // Record failed attempt
-        a2ws_.record_attempt(attempt % num_workers_, victim_idx, false);
-    }
-    return false;
+    return placement_.try_steal(tl_current_worker_id, out);
 }
 
 bool HybridScheduler::pop_local(WorkItem& out, uint32_t worker_id) {
-    auto& worker = workers_[worker_id];
-
-    // Check EDF queue first for deadline-ordered work
-    if (pop_edf(out, worker_id)) {
-        return true;
-    }
-
-    // Check priority queues from highest to lowest
-    for (uint32_t p = 0; p < num_priorities_; ++p) {
-        if (worker.queues[p].pop_bottom(out)) {
-            return true;
-        }
-    }
-    return false;
+    return placement_.pop_local(worker_id, out);
 }
 
 bool HybridScheduler::pop_edf(WorkItem& out, uint32_t worker_id) {
-    auto& worker = workers_[worker_id];
-
-    // Check EDF queue
-    if (worker.edf_queue.empty()) {
-        return false;
-    }
-
-    // Check if earliest deadline is urgent (within next ~10ms)
-    // For now, just return the earliest deadline item
-    int64_t deadline;
-    if (worker.edf_queue.peek(deadline)) {
-        // In a real implementation, we'd check if deadline < now + threshold
-        // For simplicity, just process EDF items when they exist
-        return worker.edf_queue.pop(out);
-    }
-    return false;
-}
-
-void HybridScheduler::process_actor(ActorId actor) {
-    auto actor_ptr = system_.get_actor(actor);
-    if (!actor_ptr) {
-        return;
-    }
-
-    auto mailbox = system_.get_mailbox(actor);
-    if (!mailbox) {
-        return;
-    }
-
-    TypedMessage msg;
-    if (mailbox->try_pop(msg)) {
-        // Dequeue-time deadline check: drop expired messages before
-        // they reach the actor handler.
-        uint64_t now_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {
-            if (metrics_ring_buffer_) [[unlikely]] {
-                metrics::MetricEvent evt{};
-                evt.timestamp_ns = now_ns;
-                evt.actor_id = actor;
-                evt.event_type = metrics::MetricEventType::kDeliveryExpired;
-                evt.code = static_cast<uint8_t>(FailureReason::Expired);
-                evt.value_hi = 1;
-                metrics_ring_buffer_->try_push(evt);
-            }
-            // Loop to check for more messages
-            process_actor(actor);
-            return;
-        }
-        actor_ptr->receive(msg);
-    }
+    return placement_.pop_edf(worker_id, out);
 }
 
 void HybridScheduler::execute_actor(const WorkItem& item) {
@@ -359,127 +179,17 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     // mem::current_actor_id() can attribute allocations to the correct actor.
     mem::set_current_actor_id(item.actor);
 
-#if HPACTOR_SUPPORT_COROUTINES
-    if (system_.use_coroutines()) {
-        // C++20 coroutine path (runtime opt-in via Config::use_coroutines)
-        // Lazily start the coroutine on first pickup
-        actor->ensure_coroutine_started();
+    ActorExecutionContext execution_context{
+        tl_current_worker_id,
+        metrics_ring_buffer_,
+        logger_,
+    };
 
-        auto& coroutine = actor->get_actor_coroutine();
-        if (!coroutine)
-            return;
-
-        auto& promise = coroutine.task().handle().promise();
-
-        // First transition: kIdle/kIOWaiting → kReady (if needed)
-        // This handles the case where actor is picked up after suspending
-        // on mailbox (kIdle) or on timer/IO (kIOWaiting).
-        if (promise.actor_state->is_idle() || promise.actor_state->is_io_waiting()) {
-            promise.actor_state->set(ActorState::kReady);
-        }
-
-        // Transition: Ready → Running
-        // If not in Ready state (already Running/Terminated), skip
-        uint32_t expected = ActorState::kReady;
-        if (!promise.actor_state->cas(expected, ActorState::kRunning)) {
-            if (promise.actor_state->is_terminated()) {
-                actor->set_exit_reason(errors::actor_down);
-                actor->on_exit();
-            }
-            // Already running or terminated by another path — skip
-            return;
-        }
-
-        // Resume the coroutine
-        coroutine.resume();
-
-        // Post-resume: coroutine suspended (Idle/IOWaiting) or terminated.
-        // Note: cannot access promise after resume() returns if coroutine
-        // terminated — the promise is destroyed with the coroutine frame. Use
-        // coroutine.done() which checks internal handle state (not the
-        // promise).
-        if (coroutine.done()) {
-            actor->on_exit();
-        }
-        // If idle or IOWaiting, the actor will be re-woken by:
-        // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue →
-        // notify_ready)
-        // - TimerAwaiter callback (EventLoop → notify_ready)
-        // Nothing to do here for suspended actors
-        return;
-    }
-#endif // HPACTOR_SUPPORT_COROUTINES
-
-    // Behavior-based scheduling — state-aware CAS dispatch.
-    // Uses the same ActorState machine as the coroutine path:
-    // Idle -> Ready -> Running -> Idle (if empty) / Ready (if more work).
-    auto& actor_state = actor->actor_state();
-
-    // First transition: kIdle → kReady (if actor is idle on first pickup)
-    if (actor_state.is_idle()) {
-        actor_state.set(ActorState::kReady);
-    }
-
-    // Transition: Ready → Running
-    uint32_t expected = ActorState::kReady;
-    if (!actor_state.cas(expected, ActorState::kRunning)) {
-        if (actor_state.is_terminated()) {
-            actor->set_exit_reason(errors::actor_down);
-            actor->on_exit();
-        }
-        return;
-    }
-
-    auto mailbox = system_.get_mailbox(item.actor);
-    if (!mailbox) {
-        actor_state.set(ActorState::kIdle);
-        return;
-    }
-
-    TypedMessage msg;
-    if (mailbox->try_pop(msg)) {
-        // Dequeue-time deadline check: drop expired messages before
-        // they reach the actor handler.
-        uint64_t now_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {
-            if (metrics_ring_buffer_) [[unlikely]] {
-                metrics::MetricEvent evt{};
-                evt.timestamp_ns = now_ns;
-                evt.actor_id = item.actor;
-                evt.event_type = metrics::MetricEventType::kDeliveryExpired;
-                evt.code = static_cast<uint8_t>(FailureReason::Expired);
-                evt.value_hi = 1;
-                metrics_ring_buffer_->try_push(evt);
-            }
-        } else {
-            actor->receive(msg);
-        }
-    }
-
-    if (!mailbox->empty()) {
-        // More messages waiting — re-enqueue directly.
-        // We set kReady and push to a worker queue, bypassing the state
-        // gate in notify_ready() (which would skip kReady actors).
-        actor_state.set(ActorState::kReady);
-        static std::atomic<uint32_t> rr{0};
-        uint32_t v = rr.fetch_add(1, std::memory_order_relaxed);
-        workers_[v % num_workers_].queues[0].push_bottom(item);
-    } else {
-        actor_state.set(ActorState::kIdle);
-        // Double-check: a message may have arrived between the empty check
-        // and setting Idle.  Push directly to a worker queue, bypassing the
-        // state gate in notify_ready() which would skip kReady actors.
-        if (!mailbox->empty()) {
-            expected = ActorState::kIdle;
-            if (actor_state.cas(expected, ActorState::kReady)) {
-                static std::atomic<uint32_t> rr2{0};
-                uint32_t v2 = rr2.fetch_add(1, std::memory_order_relaxed);
-                workers_[v2 % num_workers_].queues[0].push_bottom(item);
-            }
-        }
+    auto result =
+        executor_.run(*actor, item, execution_context, system_.use_coroutines());
+    if (result.disposition == ActorRunDisposition::RequeueReady) {
+        enqueue_admitted(WorkItem{item.actor, result.deadline_ns, item.sequence},
+                         result.priority);
     }
 }
 
@@ -518,14 +228,6 @@ void HybridScheduler::worker_loop(uint32_t worker_id) {
 
         // Try local pop first (owner operation - wait-free)
         if (pop_local(item, worker_id)) {
-            mark_dispatch_begin();
-            execute_actor(item);
-            mark_dispatch_end();
-            continue;
-        }
-
-        // Check EDF queue for deadline-ordered work
-        if (pop_edf(item, worker_id)) {
             mark_dispatch_begin();
             execute_actor(item);
             mark_dispatch_end();
@@ -634,21 +336,11 @@ void HybridScheduler::cancel_timer(TimerHandle handle) {
 }
 
 void HybridScheduler::register_dedicated_thread(ActorId actor, int cpu_affinity) {
-    std::lock_guard<std::mutex> lock(dedicated_->dedicated_mutex_);
-    dedicated_->dedicated_thread_actors_.insert(actor);
-    if (cpu_affinity >= 0) {
-        dedicated_->dedicated_thread_affinity_[actor] = cpu_affinity;
-    }
+    placement_.register_dedicated_thread(actor, cpu_affinity);
 }
 
 void HybridScheduler::register_dedicated_pool(ActorId actor, uint32_t pool_size) {
-    std::lock_guard<std::mutex> lock(dedicated_->dedicated_mutex_);
-    auto& pool = dedicated_->dedicated_pools_[pool_size];
-    if (!pool) {
-        pool = std::make_unique<DedicatedThreadPool>(pool_size);
-        pool->start();
-    }
-    dedicated_->actor_pool_map_[actor] = pool_size;
+    placement_.register_dedicated_pool(actor, pool_size);
 }
 
 void HybridScheduler::pause_workers() noexcept {
@@ -660,18 +352,7 @@ void HybridScheduler::pause_workers() noexcept {
 }
 
 void HybridScheduler::resume_workers() noexcept {
-    // Flush pinned-ready deques back to the normal worker queues so
-    // running workers can process any actors that were enqueued while
-    // the scheduler was paused.
-    {
-        std::lock_guard<std::mutex> lock(pinned_mutex_);
-        for (uint32_t w = 0; w < num_workers_; ++w) {
-            for (auto& item : pinned_ready_[w]) {
-                workers_[w].queues[0].push_bottom(item);
-            }
-            pinned_ready_[w].clear();
-        }
-    }
+    placement_.flush_pinned_to_shared();
     workers_paused_.store(false, std::memory_order_release);
     {
         std::lock_guard<std::mutex> lock(worker_control_mutex_);
@@ -684,23 +365,7 @@ bool HybridScheduler::workers_paused() const noexcept {
 }
 
 bool HybridScheduler::pop_any_ready(WorkItem& out) {
-    // Scan all workers, stealing from each. We must use steal_top() rather
-    // than pop_bottom() because the caller (e.g., run_one_ready from test
-    // thread) is not the owning worker of any queue.
-    for (uint32_t w = 0; w < num_workers_; ++w) {
-        auto& worker = workers_[w];
-        // Check EDF first
-        if (pop_edf(out, w)) {
-            return true;
-        }
-        // Check priority queues, highest to lowest
-        for (uint32_t p = 0; p < num_priorities_; ++p) {
-            if (worker.queues[p].steal_top(out)) {
-                return true;
-            }
-        }
-    }
-    return false;
+    return placement_.pop_any_for_test(out);
 }
 
 bool HybridScheduler::run_one_ready() {
@@ -733,94 +398,46 @@ SchedulerDrainResult HybridScheduler::drain_ready(size_t max_items) {
 }
 
 void HybridScheduler::pin_actor_to_worker(ActorId actor, uint32_t worker_id) {
-    std::lock_guard<std::mutex> lock(pinned_mutex_);
-    pinned_actors_[actor] = worker_id;
+    placement_.pin_actor_to_worker(actor, worker_id);
 }
 
 void HybridScheduler::unpin_actor(ActorId actor) {
-    std::lock_guard<std::mutex> lock(pinned_mutex_);
-    pinned_actors_.erase(actor);
+    placement_.unpin_actor(actor);
 }
 
 bool HybridScheduler::run_actor(ActorId actor) {
     if (!workers_paused_.load(std::memory_order_acquire)) {
         return false;
     }
+    WorkItem item;
     uint32_t worker_id;
-    {
-        std::lock_guard<std::mutex> lock(pinned_mutex_);
-        auto it = pinned_actors_.find(actor);
-        if (it == pinned_actors_.end()) {
-            return false;
-        }
-        worker_id = it->second % num_workers_;
-        auto& dq = pinned_ready_[worker_id];
-        for (auto iter = dq.begin(); iter != dq.end(); ++iter) {
-            if (iter->actor == actor) {
-                WorkItem item = *iter;
-                dq.erase(iter);
-                uint32_t saved_id = tl_current_worker_id;
-                tl_current_worker_id = worker_id;
-                execute_actor(item);
-                tl_current_worker_id = saved_id;
-                return true;
-            }
-        }
+    if (!placement_.take_pinned_for_test(actor, item, worker_id)) {
+        return false;
     }
-    return false;
+    uint32_t saved_id = tl_current_worker_id;
+    tl_current_worker_id = worker_id;
+    execute_actor(item);
+    tl_current_worker_id = saved_id;
+    return true;
 }
 
 bool HybridScheduler::run_one_on_worker(uint32_t worker_id) {
     if (!workers_paused_.load(std::memory_order_acquire)) {
         return false;
     }
-    if (worker_id >= num_workers_) {
+    WorkItem item;
+    if (!placement_.pop_one_on_worker_for_test(worker_id, item)) {
         return false;
     }
-
-    WorkItem item;
-
-    // Check pinned-ready deque first
-    {
-        std::lock_guard<std::mutex> lock(pinned_mutex_);
-        if (!pinned_ready_[worker_id].empty()) {
-            item = pinned_ready_[worker_id].front();
-            pinned_ready_[worker_id].pop_front();
-            uint32_t saved_id = tl_current_worker_id;
-            tl_current_worker_id = worker_id;
-            execute_actor(item);
-            tl_current_worker_id = saved_id;
-            return true;
-        }
-    }
-
-    // Then check the worker's EDF and priority queues via steal_top
-    auto& worker = workers_[worker_id];
-    if (pop_edf(item, worker_id)) {
-        uint32_t saved_id = tl_current_worker_id;
-        tl_current_worker_id = worker_id;
-        execute_actor(item);
-        tl_current_worker_id = saved_id;
-        return true;
-    }
-    for (uint32_t p = 0; p < num_priorities_; ++p) {
-        if (worker.queues[p].steal_top(item)) {
-            uint32_t saved_id = tl_current_worker_id;
-            tl_current_worker_id = worker_id;
-            execute_actor(item);
-            tl_current_worker_id = saved_id;
-            return true;
-        }
-    }
-
-    return false;
+    uint32_t saved_id = tl_current_worker_id;
+    tl_current_worker_id = worker_id;
+    execute_actor(item);
+    tl_current_worker_id = saved_id;
+    return true;
 }
 
 void HybridScheduler::unregister_dedicated(ActorId actor) {
-    std::lock_guard<std::mutex> lock(dedicated_->dedicated_mutex_);
-    dedicated_->dedicated_thread_actors_.erase(actor);
-    dedicated_->dedicated_thread_affinity_.erase(actor);
-    dedicated_->actor_pool_map_.erase(actor);
+    placement_.unregister_dedicated(actor);
 }
 
 } // namespace hpactor::sched

@@ -16,7 +16,7 @@
 
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
-#include <hpactor/sched/scheduler.hpp>
+#include <hpactor/sched/scheduler_interfaces.hpp>
 #include <hpactor/types/types.hpp>
 
 #if HPACTOR_SUPPORT_COROUTINES
@@ -31,7 +31,8 @@ namespace hpactor::sched {
 // priority. Used for cooperative multitasking after processing a message.
 class YieldAwaiter {
   public:
-    YieldAwaiter(IScheduler* scheduler, ActorId actor_id, uint8_t priority = 0) noexcept
+    YieldAwaiter(IActorYieldScheduler* scheduler, ActorId actor_id,
+                 uint8_t priority = 0) noexcept
         : scheduler_(scheduler), actor_id_(actor_id), priority_(priority) {}
 
     bool await_ready() const noexcept {
@@ -48,7 +49,7 @@ class YieldAwaiter {
     void await_resume() noexcept {}
 
   private:
-    IScheduler* scheduler_;
+    IActorYieldScheduler* scheduler_;
     ActorId actor_id_;
     uint8_t priority_;
     std::coroutine_handle<> continuation_;
@@ -58,7 +59,7 @@ class YieldAwaiter {
 // Extracts actor_id from the coroutine's promise.
 class SchedulerYield {
   public:
-    explicit SchedulerYield(IScheduler* scheduler, uint8_t priority = 0) noexcept
+    explicit SchedulerYield(IActorYieldScheduler* scheduler, uint8_t priority = 0) noexcept
         : scheduler_(scheduler), priority_(priority) {}
 
     bool await_ready() const noexcept {
@@ -76,7 +77,7 @@ class SchedulerYield {
     void await_resume() noexcept {}
 
   private:
-    IScheduler* scheduler_;
+    IActorYieldScheduler* scheduler_;
     uint8_t priority_;
     std::coroutine_handle<> continuation_;
 };

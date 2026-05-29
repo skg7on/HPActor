@@ -15,26 +15,25 @@
 #pragma once
 
 #include <hpactor/actor/actor_fwd.hpp>
-#include <hpactor/adt/id.hpp>
-#include <hpactor/adt/tags.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/a2ws.hpp>
+#include <hpactor/sched/actor_execution_engine.hpp>
+#include <hpactor/sched/actor_ready_gate.hpp>
 #include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/edf_queue.hpp>
+#include <hpactor/sched/scheduler_interfaces.hpp>
 #include <hpactor/sched/timing_wheel.hpp>
+#include <hpactor/sched/work_placement_scheduler.hpp>
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
-#include <deque>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
-#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -52,12 +51,6 @@ class Logger;
 namespace hpactor::sched {
 
 class DedicatedThreadPool; // forward decl
-
-/// \brief Opaque handle for a scheduled timer.
-using TimerHandle = Id<TimerTag>;
-
-/// \brief Callback invoked when a timer fires.
-using timer_callback = std::function<void()>;
 
 /// \brief Timer backend implementation selector.
 enum class TimerBackend : uint8_t {
@@ -80,7 +73,9 @@ struct SchedulerDrainResult {
 /// \note Thread safety: \c notify_ready(), \c notify_idle(), and timer
 ///       methods are safe from any thread. Worker control methods are
 ///       intended for test harness use.
-class IScheduler {
+class IScheduler : public IActorReadyNotifier,
+                   public ITimerService,
+                   public IActorYieldScheduler {
   public:
     virtual ~IScheduler() = default;
 
@@ -287,9 +282,6 @@ class HybridScheduler : public IScheduler {
     /// \return \c true if work was successfully stolen.
     bool try_steal(WorkItem& out);
 
-    /// \brief Process one actor (called by worker loop).
-    void process_actor(ActorId actor);
-
     /// \brief Execute an actor from a work item.
     ///
     /// Handles coroutine resumption when available.
@@ -309,23 +301,16 @@ class HybridScheduler : public IScheduler {
     void advance_time(int64_t now_ns);
 
   private:
-    struct alignas(64) WorkerState {
-        std::unique_ptr<ChaselevDeque<WorkItem>[]> queues;
-        uint32_t index;
-        EDFQueue edf_queue; // For deadline-ordered work
-    };
-
   public:
-    /// \brief A2WS victim selection (accessible by \c WorkerThread).
+    friend class WorkerThread;
+
     A2WS& a2ws() {
-        return a2ws_;
-    }
-    /// \brief Worker state vector.
-    std::vector<WorkerState>& workers() {
-        return workers_;
+        return placement_.a2ws();
     }
 
-    friend class WorkerThread;
+    bool try_admit_ready(ActorId actor) noexcept;
+    bool try_mark_yield_ready(ActorId actor) noexcept;
+    void enqueue_admitted(const WorkItem& item, uint8_t priority);
 
     void wait_if_paused(uint32_t worker_id);
     bool pop_any_ready(WorkItem& out);
@@ -339,13 +324,12 @@ class HybridScheduler : public IScheduler {
     void backoff();
 
     ActorSystem& system_;
+    ActorReadyGate ready_gate_;
+    WorkPlacementScheduler placement_;
+    ActorExecutionEngine executor_;
     uint32_t num_workers_;
-    uint32_t num_priorities_;
     std::atomic<bool> running_{false};
-    std::vector<WorkerState> workers_;
     std::vector<std::thread> worker_threads_;
-
-    A2WS a2ws_;
 
     std::variant<TimingWheel, CalendarQueue> timer_backend_;
 
@@ -372,14 +356,6 @@ class HybridScheduler : public IScheduler {
     std::condition_variable worker_control_cv_;
 
     std::thread timer_thread_;
-
-    struct DedicatedStorage;
-    std::unique_ptr<DedicatedStorage> dedicated_;
-
-    // ── Actor-to-worker pinning (deterministic test control) ──────────────
-    mutable std::mutex pinned_mutex_;
-    std::unordered_map<ActorId, uint32_t> pinned_actors_;
-    std::vector<std::deque<WorkItem>> pinned_ready_;
 };
 
 } // namespace hpactor::sched
