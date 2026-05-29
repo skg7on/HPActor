@@ -342,7 +342,8 @@ void TcpTransport::stop_listening() {
 }
 
 bool TcpTransport::try_send(const ActorAddress& target, const StreamBuffer& encoded) {
-    FAULT_INJECT("hpactor.transport.send.drop") { // NOLINT(readability-simplify-boolean-expr)
+    // NOLINTNEXTLINE(readability-simplify-boolean-expr)
+    FAULT_INJECT("hpactor.transport.send.drop") {
         return true; // claim success, silently drop
     }
     auto pool = get_or_create_pool(target.endpoint);
