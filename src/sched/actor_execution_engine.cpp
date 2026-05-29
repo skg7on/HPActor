@@ -11,6 +11,10 @@
 
 #include <chrono>
 
+#if HPACTOR_SUPPORT_COROUTINES
+#    include <hpactor/sched/coroutine_task.hpp>
+#endif
+
 namespace hpactor::sched {
 
 namespace {
@@ -94,13 +98,71 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
     return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};
 }
 
-ActorExecutionEngine::ActorExecutionEngine(ActorSystem& system,
-                                           ActorReadyGate& ready_gate) noexcept
-    : behavior_runner_(system, ready_gate) {}
+#if HPACTOR_SUPPORT_COROUTINES
+CoroutineActorRunner::CoroutineActorRunner(ActorSystem& system) noexcept
+    : system_(system) {}
 
 ActorRunResult
-ActorExecutionEngine::run_behavior(EventBasedActor& actor, const WorkItem& item,
-                                   const ActorExecutionContext& context) noexcept {
+CoroutineActorRunner::run(EventBasedActor& actor, const WorkItem& item,
+                          const ActorExecutionContext& context) noexcept {
+    (void)item;
+    (void)context;
+    (void)system_;
+
+    actor.ensure_coroutine_started();
+
+    auto& coroutine = actor.get_actor_coroutine();
+    if (!coroutine) {
+        return {ActorRunDisposition::Skipped, 0, INT64_MAX};
+    }
+
+    auto& promise = coroutine.task().handle().promise();
+    if (promise.actor_state->is_idle() || promise.actor_state->is_io_waiting()) {
+        promise.actor_state->set(ActorState::kReady);
+    }
+
+    uint32_t expected = ActorState::kReady;
+    if (!promise.actor_state->cas(expected, ActorState::kRunning)) {
+        if (promise.actor_state->is_terminated()) {
+            actor.set_exit_reason(errors::actor_down);
+            actor.on_exit();
+            return {ActorRunDisposition::Terminated, 0, INT64_MAX};
+        }
+        return {ActorRunDisposition::Skipped, 0, INT64_MAX};
+    }
+
+    coroutine.resume();
+
+    if (coroutine.done()) {
+        actor.on_exit();
+        return {ActorRunDisposition::Terminated, 0, INT64_MAX};
+    }
+
+    return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};
+}
+#endif
+
+ActorExecutionEngine::ActorExecutionEngine(ActorSystem& system,
+                                           ActorReadyGate& ready_gate) noexcept
+    : behavior_runner_(system, ready_gate)
+#if HPACTOR_SUPPORT_COROUTINES
+      ,
+      coroutine_runner_(system)
+#endif
+{
+}
+
+ActorRunResult
+ActorExecutionEngine::run(EventBasedActor& actor, const WorkItem& item,
+                          const ActorExecutionContext& context,
+                          bool use_coroutines) noexcept {
+#if HPACTOR_SUPPORT_COROUTINES
+    if (use_coroutines) {
+        return coroutine_runner_.run(actor, item, context);
+    }
+#else
+    (void)use_coroutines;
+#endif
     return behavior_runner_.run(actor, item, context);
 }
 

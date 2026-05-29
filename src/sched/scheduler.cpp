@@ -184,64 +184,14 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     // mem::current_actor_id() can attribute allocations to the correct actor.
     mem::set_current_actor_id(item.actor);
 
-#if HPACTOR_SUPPORT_COROUTINES
-    if (system_.use_coroutines()) {
-        // C++20 coroutine path (runtime opt-in via Config::use_coroutines)
-        // Lazily start the coroutine on first pickup
-        actor->ensure_coroutine_started();
-
-        auto& coroutine = actor->get_actor_coroutine();
-        if (!coroutine)
-            return;
-
-        auto& promise = coroutine.task().handle().promise();
-
-        // First transition: kIdle/kIOWaiting → kReady (if needed)
-        // This handles the case where actor is picked up after suspending
-        // on mailbox (kIdle) or on timer/IO (kIOWaiting).
-        if (promise.actor_state->is_idle() || promise.actor_state->is_io_waiting()) {
-            promise.actor_state->set(ActorState::kReady);
-        }
-
-        // Transition: Ready → Running
-        // If not in Ready state (already Running/Terminated), skip
-        uint32_t expected = ActorState::kReady;
-        if (!promise.actor_state->cas(expected, ActorState::kRunning)) {
-            if (promise.actor_state->is_terminated()) {
-                actor->set_exit_reason(errors::actor_down);
-                actor->on_exit();
-            }
-            // Already running or terminated by another path — skip
-            return;
-        }
-
-        // Resume the coroutine
-        coroutine.resume();
-
-        // Post-resume: coroutine suspended (Idle/IOWaiting) or terminated.
-        // Note: cannot access promise after resume() returns if coroutine
-        // terminated — the promise is destroyed with the coroutine frame. Use
-        // coroutine.done() which checks internal handle state (not the
-        // promise).
-        if (coroutine.done()) {
-            actor->on_exit();
-        }
-        // If idle or IOWaiting, the actor will be re-woken by:
-        // - MailboxAwaiter edge-trigger (MPSCActorMailbox::enqueue →
-        // notify_ready)
-        // - TimerAwaiter callback (EventLoop → notify_ready)
-        // Nothing to do here for suspended actors
-        return;
-    }
-#endif // HPACTOR_SUPPORT_COROUTINES
-
     ActorExecutionContext execution_context{
         tl_current_worker_id,
         metrics_ring_buffer_,
         logger_,
     };
 
-    auto result = executor_.run_behavior(*actor, item, execution_context);
+    auto result =
+        executor_.run(*actor, item, execution_context, system_.use_coroutines());
     if (result.disposition == ActorRunDisposition::RequeueReady) {
         enqueue_admitted(WorkItem{item.actor, result.deadline_ns, item.sequence},
                          result.priority);

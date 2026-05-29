@@ -5,6 +5,7 @@
 #pragma once
 
 #include <hpactor/actor/actor_fwd.hpp>
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
@@ -51,15 +52,32 @@ class BehaviorActorRunner {
     ActorReadyGate& ready_gate_;
 };
 
+#if HPACTOR_SUPPORT_COROUTINES
+class CoroutineActorRunner {
+  public:
+    explicit CoroutineActorRunner(ActorSystem& system) noexcept;
+
+    ActorRunResult run(EventBasedActor& actor, const WorkItem& item,
+                       const ActorExecutionContext& context) noexcept;
+
+  private:
+    ActorSystem& system_;
+};
+#endif
+
 class ActorExecutionEngine {
   public:
     ActorExecutionEngine(ActorSystem& system, ActorReadyGate& ready_gate) noexcept;
 
-    ActorRunResult run_behavior(EventBasedActor& actor, const WorkItem& item,
-                                const ActorExecutionContext& context) noexcept;
+    ActorRunResult
+    run(EventBasedActor& actor, const WorkItem& item,
+        const ActorExecutionContext& context, bool use_coroutines) noexcept;
 
   private:
     BehaviorActorRunner behavior_runner_;
+#if HPACTOR_SUPPORT_COROUTINES
+    CoroutineActorRunner coroutine_runner_;
+#endif
 };
 
 } // namespace hpactor::sched
