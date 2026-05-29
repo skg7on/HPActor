@@ -45,6 +45,7 @@
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 #include <hpactor/types/types.hpp>
@@ -359,6 +360,15 @@ class ActorSystem {
 
     /// \brief Apply a new tracing configuration at runtime.
     void apply_tracing_config(const tracing::TraceConfig& config);
+
+    // ── Fault injection ───────────────────────────────────────────────────
+
+    fault::FaultController& fault_controller() noexcept {
+        return fault_controller_;
+    }
+    const fault::FaultController& fault_controller() const noexcept {
+        return fault_controller_;
+    }
 
     // ── Actor lookup ──────────────────────────────────────────────────────
 
@@ -706,6 +716,9 @@ class ActorSystem {
     // Tracing subsystem
     tracing::TraceConfig tracing_config_;
     std::unique_ptr<tracing::TraceManager> trace_manager_;
+
+    // Fault injection
+    fault::FaultController fault_controller_;
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;

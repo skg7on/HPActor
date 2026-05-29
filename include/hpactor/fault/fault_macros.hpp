@@ -14,21 +14,14 @@
 
 #pragma once
 
-#include <cstddef>
+#include <hpactor/fault/fault_controller.hpp>
+#include <hpactor/hpactor_config.hpp>
+#include <hpactor/platform.hpp>
 
-#ifdef __linux__
-#    define HPACTOR_PLATFORM_LINUX 1
-#elif defined(__APPLE__)
-#    define HPACTOR_PLATFORM_MACOS 1
+#if HPACTOR_ENABLE_FAULT_INJECTION
+#    define FAULT_INJECT(path)                                                 \
+        if (auto* _fc = ::hpactor::fault::FaultController::instance(); \
+            HPACTOR_UNLIKELY(_fc != nullptr && _fc->check(path)))
 #else
-#    define HPACTOR_PLATFORM_UNKNOWN 1
+#    define FAULT_INJECT(path) if (false)
 #endif
-
-namespace hpactor {
-using byte_t = unsigned char;
-
-inline constexpr size_t default_mailbox_capacity = 1024;
-} // namespace hpactor
-
-#define HPACTOR_LIKELY(x)   __builtin_expect(!!(x), 1)
-#define HPACTOR_UNLIKELY(x) __builtin_expect(!!(x), 0)

@@ -85,6 +85,10 @@ add_library(hpactor_lib SHARED
     mem/guard_page.cpp
     mem/compaction.cpp
     mem/zram.cpp
+    fault/fault_point_registry.cpp
+    fault/fault_schedule.cpp
+    fault/fault_controller.cpp
+    fault/fault_points.cpp
     rpc/rpc_channel.cpp
     metrics/metrics_registry.cpp
     metrics/metrics_aggregator.cpp
@@ -155,6 +159,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/system_commands.cpp
     cli/commands/misc_commands.cpp
     cli/commands/failure_commands.cpp
+    cli/commands/fault_commands.cpp
 )
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------

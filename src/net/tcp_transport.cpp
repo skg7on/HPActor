@@ -14,6 +14,7 @@
 
 #include <hpactor/net/tcp_transport.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/logger.hpp>
 
 #include <cstring>
@@ -341,6 +342,9 @@ void TcpTransport::stop_listening() {
 }
 
 bool TcpTransport::try_send(const ActorAddress& target, const StreamBuffer& encoded) {
+    FAULT_INJECT("hpactor.transport.send.drop") {
+        return true;  // claim success, silently drop
+    }
     auto pool = get_or_create_pool(target.endpoint);
     return pool->try_send(target, encoded);
 }

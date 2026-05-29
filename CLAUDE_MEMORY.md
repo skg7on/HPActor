@@ -48,6 +48,23 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - TOML `[system.quarantine]` parser provides system-level defaults with per-actor overrides.
 - Design/plan: `docs/architecture/production/actor-quarantine-circuit-breaker-design.md` and `docs/superpowers/plans/2026-05-23-actor-quarantine-circuit-breaker-impl.md`.
 
+**Deterministic Fault Injection Hooks:** ✅ Complete (2026-05-28)
+- `FaultController` — runtime opt-in controller owned by ActorSystem, disabled by default.
+- `FaultSchedule` — pre-computed schedule of `(domain, tick, path, action, target)` entries with Builder API.
+- `FaultPoint` / `FaultPointRegistry` — global trie with self-registration via static `FaultPointRegistrar` objects.
+- `FaultDomain` — 9 per-subsystem tick counters (Mailbox, Transport, Scheduler, Allocator, Storage, Timer, Gossip, Config, Actor).
+- `FaultAction` — 5 actions: Fail, Drop, Delay, Corrupt, Panic.
+- `FAULT_INJECT(path)` macro — predictable cold branch via `HPACTOR_UNLIKELY`; `ENABLE_FAULT_INJECTION=OFF` eliminates all overhead.
+- Hierarchical dot-separated path naming with wildcard scope matching (`hpactor.transport.*`).
+- 12 initial fault points across mailbox, transport, allocator, scheduler, actor, and gossip subsystems.
+- FAULT_INJECT sites wired into `MPSCActorMailbox` (enqueue/dequeue) and `TcpTransport` (try_send).
+- `kFaultInjected` (26) metric event type.
+- CLI `/fault status`, `/fault list`, `/fault clear` commands.
+- `ENABLE_FAULT_INJECTION` CMake option (default ON).
+- Seed replay determinism: same seed → same schedule → same failure.
+- Design spec: `docs/superpowers/specs/2026-05-28-fault-injection-hooks-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-05-28-fault-injection-hooks-impl.md`.
+
 **Shared ADT Extraction:** ✅ Complete (2026-05-18 to 2026-05-20)
 - `Id<Tag, T>` template plus tag types back opaque identifiers such as ActorId, MessageId, AlarmHandle, and timer IDs.
 - `NodeIdentity` deduplicates node/member identity fields across discovery and registrar code.
