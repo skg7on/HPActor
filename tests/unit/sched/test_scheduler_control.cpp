@@ -151,3 +151,55 @@ TEST_F(SchedulerControlTest, RunOneReadyRejectsWhenWorkersNotPaused) {
     bool executed = sched->run_one_ready();
     EXPECT_FALSE(executed);
 }
+
+TEST_F(SchedulerControlTest, PinnedActorRequeueStaysOnPinnedWorker) {
+    cfg.scheduler_threads = 2;
+    ActorSystem system(cfg);
+
+    auto actor = system.spawn<CountingActor>();
+    auto* sched = system.scheduler();
+    auto* ca = static_cast<CountingActor*>(actor.get().get());
+
+    ASSERT_NE(sched, nullptr);
+    sched->pin_actor_to_worker(actor.id(), 1);
+
+    for (int i = 0; i < 3; ++i) {
+        system.deliver_local(actor.id(),
+                             TypedMessage(TypeTag::User, StreamBuffer{1}));
+    }
+
+    EXPECT_EQ(ca->received(), 0);
+    EXPECT_TRUE(sched->run_actor(actor.id()));
+    EXPECT_EQ(ca->received(), 1);
+    EXPECT_TRUE(sched->run_actor(actor.id()));
+    EXPECT_EQ(ca->received(), 2);
+    EXPECT_TRUE(sched->run_actor(actor.id()));
+    EXPECT_EQ(ca->received(), 3);
+    EXPECT_FALSE(sched->run_actor(actor.id()));
+}
+
+TEST_F(SchedulerControlTest, YieldFromRunningActorRequeuesAdmittedWork) {
+    cfg.scheduler_threads = 1;
+    ActorSystem system(cfg);
+
+    auto actor = system.spawn<CountingActor>();
+    auto* sched = system.scheduler();
+    auto* ca = static_cast<CountingActor*>(actor.get().get());
+    auto* eba = static_cast<EventBasedActor*>(actor.get().get());
+
+    ASSERT_NE(sched, nullptr);
+
+    // Drain the spawn-time readiness item, which has no mailbox work.
+    static_cast<void>(sched->run_one_ready());
+    EXPECT_TRUE(eba->actor_state().is_idle());
+
+    eba->actor_state().set(ActorState::kRunning);
+    system.deliver_local(actor.id(), TypedMessage(TypeTag::User, StreamBuffer{1}));
+    EXPECT_EQ(ca->received(), 0);
+
+    sched->yield(actor.id(), 0);
+
+    EXPECT_TRUE(eba->actor_state().is_ready());
+    EXPECT_TRUE(sched->run_one_ready());
+    EXPECT_EQ(ca->received(), 1);
+}
