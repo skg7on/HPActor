@@ -7,6 +7,7 @@ add_executable(test_unit_sched
     test_coroutine_task.cpp
     test_coroutine_frame_pool.cpp
     test_actor_state.cpp
+    test_actor_ready_gate.cpp
     test_actor_state_transfer.cpp
     test_mailbox_awaiter.cpp
     test_mpsc_actor_mailbox.cpp

@@ -66,6 +66,7 @@ add_library(hpactor_lib SHARED
     net/http_gateway.cpp
     net/http_client.cpp
     net/http_connection.cpp
+    sched/actor_ready_gate.cpp
     sched/scheduler.cpp
     sched/worker_thread.cpp
     sched/edf_queue.cpp

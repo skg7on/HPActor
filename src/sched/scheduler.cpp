@@ -50,8 +50,9 @@ thread_local uint32_t tl_current_worker_id = UINT32_MAX;
 HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                  uint32_t num_priorities,
                                  TimerBackend timer_backend, bool start_paused)
-    : system_(system), num_workers_(num_workers), num_priorities_(num_priorities),
-      workers_(num_workers), a2ws_(num_workers), workers_paused_(start_paused),
+    : system_(system), ready_gate_(system), num_workers_(num_workers),
+      num_priorities_(num_priorities), workers_(num_workers),
+      a2ws_(num_workers), workers_paused_(start_paused),
       dedicated_(std::make_unique<DedicatedStorage>()),
       pinned_ready_(num_workers) {
     switch (timer_backend) {
@@ -113,31 +114,7 @@ void HybridScheduler::stop() {
 }
 
 bool HybridScheduler::try_admit_ready(ActorId actor) noexcept {
-    auto actor_ptr = system_.get_actor(actor);
-    if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
-        return actor_ptr != nullptr;
-    }
-
-    auto* eb = static_cast<EventBasedActor*>(actor_ptr.get());
-    auto& state = eb->actor_state();
-
-    for (;;) {
-        uint32_t current = state.get();
-        if (current == ActorState::kReady || current == ActorState::kRunning ||
-            current == ActorState::kTerminated) {
-            return false;
-        }
-
-        if (current == ActorState::kIdle || current == ActorState::kIOWaiting) {
-            uint32_t expected = current;
-            if (state.cas(expected, ActorState::kReady)) {
-                return true;
-            }
-            continue;
-        }
-
-        return false;
-    }
+    return ready_gate_.try_mark_ready(actor).accepted();
 }
 
 bool HybridScheduler::try_mark_yield_ready(ActorId actor) noexcept {
@@ -145,11 +122,8 @@ bool HybridScheduler::try_mark_yield_ready(ActorId actor) noexcept {
     if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
         return false;
     }
-
     auto* eb = static_cast<EventBasedActor*>(actor_ptr.get());
-    auto& state = eb->actor_state();
-    uint32_t expected = ActorState::kRunning;
-    return state.cas(expected, ActorState::kReady);
+    return ready_gate_.mark_ready_already_admitted(*eb).accepted();
 }
 
 void HybridScheduler::enqueue_admitted(const WorkItem& item, uint8_t priority) {

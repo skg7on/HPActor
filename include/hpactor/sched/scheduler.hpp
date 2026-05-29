@@ -20,6 +20,7 @@
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/a2ws.hpp>
+#include <hpactor/sched/actor_ready_gate.hpp>
 #include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/timing_wheel.hpp>
@@ -343,6 +344,7 @@ class HybridScheduler : public IScheduler {
     void backoff();
 
     ActorSystem& system_;
+    ActorReadyGate ready_gate_;
     uint32_t num_workers_;
     uint32_t num_priorities_;
     std::atomic<bool> running_{false};
