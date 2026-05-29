@@ -23,7 +23,9 @@
 #include <thread>
 #include <vector>
 
-namespace hpactor::mem { class ThreadLocalAllocator; }
+namespace hpactor::mem {
+class ThreadLocalAllocator;
+}
 namespace hpactor::sched {
 
 // Forward declaration
@@ -114,13 +116,16 @@ class WorkerThread {
     }
 
     // Per-thread memory allocator accessor
-    mem::ThreadLocalAllocator* allocator() { return allocator_; }
+    mem::ThreadLocalAllocator* allocator() {
+        return allocator_;
+    }
 
     // Try to steal work using A2WS victim selection
     bool try_steal(WorkItem& out);
 
   private:
     void thread_loop();
+    void backoff();
 
     Config config_;
     std::thread thread_;

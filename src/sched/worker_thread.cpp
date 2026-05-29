@@ -17,6 +17,9 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/worker_thread.hpp>
 
+#include <chrono>
+#include <thread>
+
 namespace hpactor::sched {
 
 // Thread-local pointer to the current worker's frame pool
@@ -146,17 +149,27 @@ void WorkerThread::thread_loop() {
             continue;
         }
 
-        // Local queue empty - this worker is a donation candidate
+        // Local empty - try stealing from another worker
+        if (try_steal(item)) {
+            process(item);
+            continue;
+        }
+
+        // No work available - mark as donation candidate and backoff
         increment_donations();
+        backoff();
+    }
+}
 
-        // TODO: Work-stealing would be implemented here
-        // - Select victim using round-robin
-        // - Try to steal from victim's queue
-        // - If steal succeeds, process the item
+void WorkerThread::backoff() {
+    static thread_local uint32_t count = 0;
+    uint32_t c = count++;
 
-        // Backoff when no work available
-        // In a real implementation, this would use exponential backoff
-        // or yield/pause instructions
+    if (c < 4) {
+        std::this_thread::yield();
+    } else {
+        uint32_t backoff_us = std::min<uint32_t>(1024u, 10u << (c - 4));
+        std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
     }
 }
 
