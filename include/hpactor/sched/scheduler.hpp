@@ -24,6 +24,7 @@
 #include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/timing_wheel.hpp>
+#include <hpactor/sched/work_placement_scheduler.hpp>
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
@@ -310,23 +311,12 @@ class HybridScheduler : public IScheduler {
     void advance_time(int64_t now_ns);
 
   private:
-    struct alignas(64) WorkerState {
-        std::unique_ptr<ChaselevDeque<WorkItem>[]> queues;
-        uint32_t index;
-        EDFQueue edf_queue; // For deadline-ordered work
-    };
-
   public:
-    /// \brief A2WS victim selection (accessible by \c WorkerThread).
-    A2WS& a2ws() {
-        return a2ws_;
-    }
-    /// \brief Worker state vector.
-    std::vector<WorkerState>& workers() {
-        return workers_;
-    }
-
     friend class WorkerThread;
+
+    A2WS& a2ws() {
+        return placement_.a2ws();
+    }
 
     bool try_admit_ready(ActorId actor) noexcept;
     bool try_mark_yield_ready(ActorId actor) noexcept;
@@ -345,13 +335,10 @@ class HybridScheduler : public IScheduler {
 
     ActorSystem& system_;
     ActorReadyGate ready_gate_;
+    WorkPlacementScheduler placement_;
     uint32_t num_workers_;
-    uint32_t num_priorities_;
     std::atomic<bool> running_{false};
-    std::vector<WorkerState> workers_;
     std::vector<std::thread> worker_threads_;
-
-    A2WS a2ws_;
 
     std::variant<TimingWheel, CalendarQueue> timer_backend_;
 
@@ -378,14 +365,6 @@ class HybridScheduler : public IScheduler {
     std::condition_variable worker_control_cv_;
 
     std::thread timer_thread_;
-
-    struct DedicatedStorage;
-    std::unique_ptr<DedicatedStorage> dedicated_;
-
-    // ── Actor-to-worker pinning (deterministic test control) ──────────────
-    mutable std::mutex pinned_mutex_;
-    std::unordered_map<ActorId, uint32_t> pinned_actors_;
-    std::vector<std::deque<WorkItem>> pinned_ready_;
 };
 
 } // namespace hpactor::sched
