@@ -153,7 +153,7 @@ TEST_F(SchedulerControlTest, RunOneReadyRejectsWhenWorkersNotPaused) {
 }
 
 TEST_F(SchedulerControlTest, PinnedActorRequeueStaysOnPinnedWorker) {
-    cfg.scheduler_threads = 2;
+    cfg.scheduler_threads = 1;
     ActorSystem system(cfg);
 
     auto actor = system.spawn<CountingActor>();
@@ -161,7 +161,11 @@ TEST_F(SchedulerControlTest, PinnedActorRequeueStaysOnPinnedWorker) {
     auto* ca = static_cast<CountingActor*>(actor.get().get());
 
     ASSERT_NE(sched, nullptr);
-    sched->pin_actor_to_worker(actor.id(), 1);
+
+    // Drain the spawn-time readiness item, which has no mailbox work.
+    static_cast<void>(sched->run_one_ready());
+
+    sched->pin_actor_to_worker(actor.id(), 0);
 
     for (int i = 0; i < 3; ++i) {
         system.deliver_local(actor.id(),

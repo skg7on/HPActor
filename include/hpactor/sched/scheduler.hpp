@@ -327,6 +327,10 @@ class HybridScheduler : public IScheduler {
 
     friend class WorkerThread;
 
+    bool try_admit_ready(ActorId actor) noexcept;
+    bool try_mark_yield_ready(ActorId actor) noexcept;
+    void enqueue_admitted(const WorkItem& item, uint8_t priority);
+
     void wait_if_paused(uint32_t worker_id);
     bool pop_any_ready(WorkItem& out);
     void mark_dispatch_begin() noexcept;

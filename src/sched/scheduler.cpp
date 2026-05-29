@@ -112,6 +112,80 @@ void HybridScheduler::stop() {
     }
 }
 
+bool HybridScheduler::try_admit_ready(ActorId actor) noexcept {
+    auto actor_ptr = system_.get_actor(actor);
+    if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
+        return actor_ptr != nullptr;
+    }
+
+    auto* eb = static_cast<EventBasedActor*>(actor_ptr.get());
+    auto& state = eb->actor_state();
+
+    for (;;) {
+        uint32_t current = state.get();
+        if (current == ActorState::kReady || current == ActorState::kRunning ||
+            current == ActorState::kTerminated) {
+            return false;
+        }
+
+        if (current == ActorState::kIdle || current == ActorState::kIOWaiting) {
+            uint32_t expected = current;
+            if (state.cas(expected, ActorState::kReady)) {
+                return true;
+            }
+            continue;
+        }
+
+        return false;
+    }
+}
+
+bool HybridScheduler::try_mark_yield_ready(ActorId actor) noexcept {
+    auto actor_ptr = system_.get_actor(actor);
+    if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
+        return false;
+    }
+
+    auto* eb = static_cast<EventBasedActor*>(actor_ptr.get());
+    auto& state = eb->actor_state();
+    uint32_t expected = ActorState::kRunning;
+    return state.cas(expected, ActorState::kReady);
+}
+
+void HybridScheduler::enqueue_admitted(const WorkItem& item, uint8_t priority) {
+    if (num_workers_ == 0) {
+        return;
+    }
+
+    uint32_t victim = 0;
+    bool is_pinned = false;
+    {
+        std::lock_guard<std::mutex> lock(pinned_mutex_);
+        auto it = pinned_actors_.find(item.actor);
+        if (it != pinned_actors_.end()) {
+            victim = it->second % num_workers_;
+            is_pinned = true;
+        }
+    }
+
+    if (!is_pinned) {
+        static std::atomic<uint32_t> rr_counter{0};
+        victim = rr_counter.fetch_add(1, std::memory_order_relaxed) % num_workers_;
+    }
+
+    if (is_pinned && workers_paused_.load(std::memory_order_acquire)) {
+        std::lock_guard<std::mutex> lock(pinned_mutex_);
+        pinned_ready_[victim].push_back(item);
+        return;
+    }
+
+    if (item.deadline_ns == INT64_MAX) {
+        workers_[victim].queues[priority].push_bottom(item);
+    } else {
+        workers_[victim].edf_queue.push(item.deadline_ns, item);
+    }
+}
+
 void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
                                    int64_t deadline_ns) {
     if (!running_.load(std::memory_order_acquire)) {
@@ -143,55 +217,11 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
         return;
     }
 
-    // Cooperative path: gate on actor state to prevent double-enqueue.
-    // If the actor is already executing (Running) or enqueued (Ready),
-    // a second WorkItem would be redundant.  CAS Idle→Ready atomically.
-    auto actor_ptr = system_.get_actor(actor);
-    if (actor_ptr && actor_ptr->is_event_based_actor()) {
-        auto* eb = static_cast<EventBasedActor*>(actor_ptr.get());
-        auto& state = eb->actor_state();
-        uint32_t current = state.get();
-        if (current == ActorState::kReady || current == ActorState::kRunning)
-            return;
-        if (current == ActorState::kTerminated)
-            return;
-        if (!state.cas(current, ActorState::kReady))
-            return; // another thread won the race
-    }
-
-    // Determine target worker: use pinning map if set, otherwise round-robin.
-    if (num_workers_ == 0)
-        return;
-    uint32_t victim;
-    bool is_pinned = false;
-    {
-        std::lock_guard<std::mutex> lock(pinned_mutex_);
-        auto it = pinned_actors_.find(actor);
-        if (it != pinned_actors_.end()) {
-            victim = it->second % num_workers_;
-            is_pinned = true;
-        }
-    }
-    if (!is_pinned) {
-        static std::atomic<uint32_t> rr_counter{0};
-        victim = rr_counter.fetch_add(1, std::memory_order_relaxed) %
-                 num_workers_;
-    }
-
-    // When workers are paused and actor is pinned, use the side deque so
-    // run_actor() / run_one_on_worker() can drive execution deterministically.
-    if (is_pinned && workers_paused_.load(std::memory_order_acquire)) {
-        std::lock_guard<std::mutex> lock(pinned_mutex_);
-        pinned_ready_[victim].push_back(item);
+    if (!try_admit_ready(actor)) {
         return;
     }
 
-    // Normal path: ChaseLev or EDF
-    if (deadline_ns == INT64_MAX) {
-        workers_[victim].queues[priority].push_bottom(item);
-    } else {
-        workers_[victim].edf_queue.push(deadline_ns, item);
-    }
+    enqueue_admitted(item, priority);
 }
 
 void HybridScheduler::notify_idle(ActorId actor) {
@@ -201,7 +231,13 @@ void HybridScheduler::notify_idle(ActorId actor) {
 }
 
 void HybridScheduler::yield(ActorId actor, uint8_t priority) {
-    notify_ready(actor, priority, INT64_MAX);
+    if (!running_.load(std::memory_order_acquire)) {
+        return;
+    }
+    if (!try_mark_yield_ready(actor)) {
+        return;
+    }
+    enqueue_admitted(WorkItem{actor, INT64_MAX, 0}, priority);
 }
 
 bool HybridScheduler::try_steal(WorkItem& out) {
@@ -460,24 +496,14 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
     }
 
     if (!mailbox->empty()) {
-        // More messages waiting — re-enqueue directly.
-        // We set kReady and push to a worker queue, bypassing the state
-        // gate in notify_ready() (which would skip kReady actors).
         actor_state.set(ActorState::kReady);
-        static std::atomic<uint32_t> rr{0};
-        uint32_t v = rr.fetch_add(1, std::memory_order_relaxed);
-        workers_[v % num_workers_].queues[0].push_bottom(item);
+        enqueue_admitted(item, 0);
     } else {
         actor_state.set(ActorState::kIdle);
-        // Double-check: a message may have arrived between the empty check
-        // and setting Idle.  Push directly to a worker queue, bypassing the
-        // state gate in notify_ready() which would skip kReady actors.
         if (!mailbox->empty()) {
             expected = ActorState::kIdle;
             if (actor_state.cas(expected, ActorState::kReady)) {
-                static std::atomic<uint32_t> rr2{0};
-                uint32_t v2 = rr2.fetch_add(1, std::memory_order_relaxed);
-                workers_[v2 % num_workers_].queues[0].push_bottom(item);
+                enqueue_admitted(item, 0);
             }
         }
     }
@@ -747,6 +773,8 @@ bool HybridScheduler::run_actor(ActorId actor) {
         return false;
     }
     uint32_t worker_id;
+    WorkItem item;
+    bool found = false;
     {
         std::lock_guard<std::mutex> lock(pinned_mutex_);
         auto it = pinned_actors_.find(actor);
@@ -757,17 +785,21 @@ bool HybridScheduler::run_actor(ActorId actor) {
         auto& dq = pinned_ready_[worker_id];
         for (auto iter = dq.begin(); iter != dq.end(); ++iter) {
             if (iter->actor == actor) {
-                WorkItem item = *iter;
+                item = *iter;
                 dq.erase(iter);
-                uint32_t saved_id = tl_current_worker_id;
-                tl_current_worker_id = worker_id;
-                execute_actor(item);
-                tl_current_worker_id = saved_id;
-                return true;
+                found = true;
+                break;
             }
         }
     }
-    return false;
+    if (!found) {
+        return false;
+    }
+    uint32_t saved_id = tl_current_worker_id;
+    tl_current_worker_id = worker_id;
+    execute_actor(item);
+    tl_current_worker_id = saved_id;
+    return true;
 }
 
 bool HybridScheduler::run_one_on_worker(uint32_t worker_id) {
@@ -779,6 +811,7 @@ bool HybridScheduler::run_one_on_worker(uint32_t worker_id) {
     }
 
     WorkItem item;
+    bool from_pinned = false;
 
     // Check pinned-ready deque first
     {
@@ -786,12 +819,15 @@ bool HybridScheduler::run_one_on_worker(uint32_t worker_id) {
         if (!pinned_ready_[worker_id].empty()) {
             item = pinned_ready_[worker_id].front();
             pinned_ready_[worker_id].pop_front();
-            uint32_t saved_id = tl_current_worker_id;
-            tl_current_worker_id = worker_id;
-            execute_actor(item);
-            tl_current_worker_id = saved_id;
-            return true;
+            from_pinned = true;
         }
+    }
+    if (from_pinned) {
+        uint32_t saved_id = tl_current_worker_id;
+        tl_current_worker_id = worker_id;
+        execute_actor(item);
+        tl_current_worker_id = saved_id;
+        return true;
     }
 
     // Then check the worker's EDF and priority queues via steal_top
