@@ -25,6 +25,9 @@ namespace hpactor::sched {
 // Thread-local pointer to the current worker's frame pool
 thread_local CoroutineFramePool* tl_frame_pool = nullptr;
 
+// Thread-local worker ID (declared in scheduler.cpp, used by placement layer)
+extern thread_local uint32_t tl_current_worker_id;
+
 WorkerThread::WorkerThread(const Config& config)
     : config_(config), local_queue_(config.priority_levels) {
     allocator_ = new mem::ThreadLocalAllocator();
@@ -78,12 +81,6 @@ bool WorkerThread::steal(WorkItem& out) {
     return false;
 }
 
-void WorkerThread::process(const WorkItem& item) {
-    // Process the actor - actual implementation would call actor's receive
-    // This is a placeholder that would be wired to ActorSystem
-    (void)item;
-}
-
 size_t WorkerThread::depth() const {
     return local_queue_.depth_approx();
 }
@@ -102,56 +99,45 @@ void WorkerThread::release_frame(CoroutineFramePool::Frame* frame) {
 }
 
 bool WorkerThread::try_steal(WorkItem& out) {
-    if (!owner_) {
-        return false;
-    }
-
-    uint32_t my_id = config_.worker_index;
-
-    // Try up to victim_scan_limit victims via the placement scheduler.
-    for (uint32_t attempt = 0; attempt < config_.victim_scan_limit; ++attempt) {
-        uint32_t victim_idx = owner_->placement_.a2ws().get_victim(my_id);
-
-        if (victim_idx >= owner_->placement_.worker_count()) {
-            break;
-        }
-
-        auto& workers = owner_->placement_.workers();
-        auto& victim = workers[victim_idx];
-
-        // Try EDF queue first
-        if (victim.edf_queue.pop(out)) {
-            owner_->placement_.a2ws().record_steal(my_id, victim_idx);
-            return true;
-        }
-
-        // Try each priority level
-        for (uint32_t p = 0; p < 4; ++p) {
-            if (victim.queues[p].steal_top(out)) {
-                owner_->placement_.a2ws().record_steal(my_id, victim_idx);
-                return true;
-            }
-        }
-
-        owner_->placement_.a2ws().record_attempt(my_id, victim_idx, false);
+    if (owner_) {
+        return owner_->try_steal(out);
     }
     return false;
 }
 
 void WorkerThread::thread_loop() {
+    tl_current_worker_id = config_.worker_index;
+
     while (!stop_requested_.load(std::memory_order_acquire) &&
            running_.load(std::memory_order_acquire)) {
-        WorkItem item;
+        // Check if paused (test harness)
+        if (pause_handler_) {
+            pause_handler_();
+        }
 
-        // Try to pop from local queue first (owner pop - fast path)
-        if (pop(item)) {
-            process(item);
+        WorkItem item;
+        bool got_work = false;
+
+        // Local pop: use placement queues when attached to scheduler,
+        // local queue when standalone.
+        if (owner_) {
+            got_work = owner_->pop_local(item, config_.worker_index);
+        } else {
+            got_work = pop(item);
+        }
+
+        if (got_work) {
+            if (processor_) {
+                processor_(item);
+            }
             continue;
         }
 
         // Local empty - try stealing from another worker
         if (try_steal(item)) {
-            process(item);
+            if (processor_) {
+                processor_(item);
+            }
             continue;
         }
 

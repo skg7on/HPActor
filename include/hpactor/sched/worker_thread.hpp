@@ -20,6 +20,7 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <thread>
 #include <vector>
 
@@ -76,8 +77,19 @@ class WorkerThread {
     // Try to steal from this worker (steal_top - thief operation)
     bool steal(WorkItem& out);
 
-    // Process a single work item
-    void process(const WorkItem& item);
+    // Work processor callback — invoked for each work item.
+    // When set, thread_loop() calls this instead of processing locally.
+    using WorkProcessor = std::function<void(const WorkItem&)>;
+    void set_work_processor(WorkProcessor proc) {
+        processor_ = std::move(proc);
+    }
+
+    // Pause handler — blocks until the worker should proceed.
+    // Used by test harness to pause/resume workers deterministically.
+    using PauseHandler = std::function<void()>;
+    void set_pause_handler(PauseHandler handler) {
+        pause_handler_ = std::move(handler);
+    }
 
     // Worker index
     uint32_t index() const {
@@ -146,6 +158,12 @@ class WorkerThread {
 
     // Coroutine frame pool
     CoroutineFramePool* frame_pool_{nullptr};
+
+    // Pluggable work processor (set by scheduler)
+    WorkProcessor processor_;
+
+    // Pluggable pause handler (set by scheduler for test harness)
+    PauseHandler pause_handler_;
 };
 
 } // namespace hpactor::sched

@@ -19,6 +19,7 @@
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/sched/worker_thread.hpp>
 
 #include <chrono>
 #include <variant>
@@ -52,8 +53,18 @@ void HybridScheduler::start() {
 
     worker_threads_.reserve(placement_.worker_count());
     for (size_t i = 0; i < placement_.worker_count(); ++i) {
-        worker_threads_.emplace_back(
-            [this, i] { worker_loop(static_cast<uint32_t>(i)); });
+        WorkerThread::Config cfg;
+        cfg.worker_index = static_cast<uint32_t>(i);
+        auto worker = std::make_unique<WorkerThread>(cfg);
+        worker->set_owner(this);
+        worker->set_work_processor([this](const WorkItem& item) {
+            mark_dispatch_begin();
+            execute_actor(item);
+            mark_dispatch_end();
+        });
+        worker->set_pause_handler([this] { wait_if_paused(0); });
+        worker->start();
+        worker_threads_.push_back(std::move(worker));
     }
 
     // Start timer advancement thread
@@ -75,9 +86,8 @@ void HybridScheduler::stop() {
     // Wake any workers parked in wait_if_paused so they see running_ == false
     // and exit their loop.
     resume_workers();
-    for (auto& t : worker_threads_) {
-        if (t.joinable())
-            t.join();
+    for (auto& worker : worker_threads_) {
+        worker->stop();
     }
     worker_threads_.clear();
 
@@ -215,54 +225,8 @@ void HybridScheduler::mark_dispatch_end() noexcept {
     active_worker_dispatches_.fetch_sub(1, std::memory_order_release);
 }
 
-void HybridScheduler::worker_loop(uint32_t worker_id) {
-    tl_current_worker_id = worker_id; // set thread-local
-
-    HPACTOR_LOG_DEBUG(log::LogCategory::kScheduler, ActorId{0}, 0, "worker started",
-                      log::field("worker_id", static_cast<uint64_t>(worker_id)));
-
-    while (running_.load(std::memory_order_acquire)) {
-        wait_if_paused(worker_id);
-
-        WorkItem item;
-
-        // Try local pop first (owner operation - wait-free)
-        if (pop_local(item, worker_id)) {
-            mark_dispatch_begin();
-            execute_actor(item);
-            mark_dispatch_end();
-            continue;
-        }
-
-        // Local empty - try stealing (lock-free but may fail)
-        if (try_steal(item)) {
-            mark_dispatch_begin();
-            execute_actor(item);
-            mark_dispatch_end();
-            continue;
-        }
-
-        // No work available - backoff
-        backoff();
-    }
-}
-
 uint32_t HybridScheduler::current_worker_id() const {
     return tl_current_worker_id;
-}
-
-void HybridScheduler::backoff() {
-    // Exponential backoff: yield for small counts, sleep for larger
-    static thread_local uint32_t count = 0;
-    uint32_t c = count++;
-
-    if (c < 4) {
-        std::this_thread::yield();
-    } else {
-        // Sleep for a short interval (exponential, capped)
-        uint32_t backoff_us = std::min<uint32_t>(1024u, 10u << (c - 4));
-        std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
-    }
 }
 
 uint64_t

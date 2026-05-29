@@ -18,6 +18,9 @@
 
 #include <gtest/gtest.h>
 
+#include <chrono>
+#include <thread>
+
 using hpactor::ActorId;
 using namespace hpactor::sched;
 
@@ -132,11 +135,25 @@ TEST(WorkerThreadTest, AcquireReleaseFrame) {
     worker.release_frame(nullptr); // safety: nullptr release is no-op
 }
 
-TEST(WorkerThreadTest, ProcessNoop) {
+TEST(WorkerThreadTest, WorkProcessor) {
     WorkerThread::Config cfg;
     WorkerThread worker(cfg);
-    WorkItem item;
-    item.actor = ActorId{0};
-    worker.process(item);
-    SUCCEED();
+    std::atomic<bool> called{false};
+    WorkItem sent_item;
+    sent_item.actor = ActorId{0};
+    worker.set_work_processor([&](const WorkItem& item) {
+        called.store(true);
+        EXPECT_EQ(item.actor, ActorId{0});
+    });
+    // Push work so the loop can pop and invoke the processor
+    worker.push(0, sent_item);
+    worker.start();
+    // Poll until the processor is invoked
+    auto start = std::chrono::steady_clock::now();
+    while (!called.load() &&
+           std::chrono::steady_clock::now() - start < std::chrono::seconds(5)) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
+    worker.stop();
+    EXPECT_TRUE(called.load());
 }
