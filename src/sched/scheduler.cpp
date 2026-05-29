@@ -18,15 +18,10 @@
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
-#include <hpactor/sched/dedicated_thread_pool.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <chrono>
 #include <variant>
-
-#if HPACTOR_SUPPORT_COROUTINES
-#    include <hpactor/sched/coroutine_task.hpp>
-#endif
 
 namespace hpactor::sched {
 

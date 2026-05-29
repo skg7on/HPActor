@@ -18,7 +18,7 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
-#include <hpactor/sched/scheduler.hpp>
+#include <hpactor/sched/scheduler_interfaces.hpp>
 
 #include <atomic>
 #include <cstdint>
@@ -90,10 +90,11 @@ template <typename T> class MailboxAwaiter {
 // Wires to HybridScheduler::schedule_timer() for real timer integration
 class TimerAwaiter {
   public:
-    TimerAwaiter(int64_t delay_ns, HybridScheduler& scheduler, ActorId actor_id,
+    TimerAwaiter(int64_t delay_ns, ITimerService& timer_service,
+                 IActorReadyNotifier& ready_notifier, ActorId actor_id,
                  uint8_t priority = 0) noexcept
-        : scheduler_(scheduler), actor_id_(actor_id), delay_ns_(delay_ns),
-          priority_(priority) {}
+        : timer_service_(timer_service), ready_notifier_(ready_notifier),
+          actor_id_(actor_id), delay_ns_(delay_ns), priority_(priority) {}
 
     bool await_ready() const noexcept {
         return false;
@@ -109,9 +110,11 @@ class TimerAwaiter {
         promise.set_io_waiting();
 
         // Schedule timer — on expiry, actor is re-woken via notify_ready
-        timer_id_ = scheduler_.schedule_timer(delay_ns_, [this] {
-            scheduler_.notify_ready(actor_id_, priority_, INT64_MAX);
-        });
+        timer_handle_ = timer_service_.schedule_after(
+            [this] {
+                ready_notifier_.notify_ready(actor_id_, priority_, INT64_MAX);
+            },
+            delay_ns_);
 
         return true;
     }
@@ -121,15 +124,16 @@ class TimerAwaiter {
     }
 
     void await_cancel() noexcept {
-        scheduler_.cancel_timer(TimerHandle{timer_id_});
+        timer_service_.cancel_timer(timer_handle_);
     }
 
   private:
-    HybridScheduler& scheduler_;
+    ITimerService& timer_service_;
+    IActorReadyNotifier& ready_notifier_;
     ActorId actor_id_;
     int64_t delay_ns_;
     uint8_t priority_;
-    uint64_t timer_id_{0};
+    TimerHandle timer_handle_{};
     std::coroutine_handle<> continuation_;
 };
 

@@ -15,8 +15,6 @@
 #pragma once
 
 #include <hpactor/actor/actor_fwd.hpp>
-#include <hpactor/adt/id.hpp>
-#include <hpactor/adt/tags.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/sched/a2ws.hpp>
@@ -24,6 +22,7 @@
 #include <hpactor/sched/actor_ready_gate.hpp>
 #include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/edf_queue.hpp>
+#include <hpactor/sched/scheduler_interfaces.hpp>
 #include <hpactor/sched/timing_wheel.hpp>
 #include <hpactor/sched/work_placement_scheduler.hpp>
 #include <hpactor/sched/work_queue.hpp>
@@ -31,13 +30,10 @@
 #include <atomic>
 #include <condition_variable>
 #include <cstdint>
-#include <deque>
-#include <functional>
 #include <memory>
 #include <mutex>
 #include <thread>
 #include <unordered_map>
-#include <unordered_set>
 #include <variant>
 #include <vector>
 
@@ -55,12 +51,6 @@ class Logger;
 namespace hpactor::sched {
 
 class DedicatedThreadPool; // forward decl
-
-/// \brief Opaque handle for a scheduled timer.
-using TimerHandle = Id<TimerTag>;
-
-/// \brief Callback invoked when a timer fires.
-using timer_callback = std::function<void()>;
 
 /// \brief Timer backend implementation selector.
 enum class TimerBackend : uint8_t {
@@ -83,7 +73,9 @@ struct SchedulerDrainResult {
 /// \note Thread safety: \c notify_ready(), \c notify_idle(), and timer
 ///       methods are safe from any thread. Worker control methods are
 ///       intended for test harness use.
-class IScheduler {
+class IScheduler : public IActorReadyNotifier,
+                   public ITimerService,
+                   public IActorYieldScheduler {
   public:
     virtual ~IScheduler() = default;
 
