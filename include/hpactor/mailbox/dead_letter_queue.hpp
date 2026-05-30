@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <deque>
 #include <mutex>
+#include <vector>
 
 namespace hpactor::mailbox {
 
@@ -185,6 +186,14 @@ class DeadLetterQueue {
 
     bool try_push(DeadLetterRecord&& record) noexcept;
     bool try_pop(DeadLetterRecord& out) noexcept;
+    const DeadLetterConfig& config() const noexcept {
+        return config_;
+    }
+
+    std::vector<DeadLetterRecord> snapshot_records() const;
+
+    bool try_pop_at(size_t index, DeadLetterRecord& out) noexcept;
+
     DeadLetterQueueSnapshot snapshot() const noexcept;
 
   private:
