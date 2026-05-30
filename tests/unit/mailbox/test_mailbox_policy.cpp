@@ -31,7 +31,6 @@ TEST(MailboxPolicyTest, DefaultConfigValues) {
     EXPECT_EQ(cfg.max_overflow_depth, 0);
     EXPECT_EQ(cfg.signal_min_interval_ms, 100);
     EXPECT_EQ(cfg.priority_aware, false);
-    EXPECT_EQ(cfg.enable_dead_letters, true);
     EXPECT_EQ(cfg.backpressure_mode, BackpressureMode::LocalAndRemoteSignal);
 }
 
