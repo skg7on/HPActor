@@ -19,6 +19,7 @@
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <charconv>
 #include <chrono>
 #include <iomanip>
 #include <map>
@@ -30,7 +31,29 @@ namespace hpactor {
 namespace cli {
 namespace {
 
-// ── helpers ──────────────────────────────────────────────────────────────
+// Parse a non-negative integer from a string using from_chars (no exceptions).
+// Returns 0 and sets ok=false on parse failure.
+template <typename T> T parse_uint(std::string_view s, bool& ok) noexcept {
+    T value = 0;
+    auto [ptr, ec] = std::from_chars(s.data(), s.data() + s.size(), value);
+    ok = (ec == std::errc{} && ptr == s.data() + s.size());
+    return value;
+}
+
+// Resolve the dead-letter queue from a command context.
+// Returns nullptr and emits an error if unavailable.
+mailbox::DeadLetterQueue* resolve_dlq(CommandContext& ctx) {
+    auto* system = ctx.system;
+    if (!system) {
+        ctx.output->error("No actor system available");
+        return nullptr;
+    }
+    auto* dlq = system->dead_letter_queue();
+    if (!dlq) {
+        ctx.output->raw("Dead-letter queue is not enabled.");
+    }
+    return dlq;
+}
 
 std::string format_age_ns(uint64_t timestamp_ns) {
     if (timestamp_ns == 0)
@@ -63,11 +86,6 @@ std::string trace_id_str(uint64_t hi, uint64_t lo) {
     return ss.str();
 }
 
-// NOTE: ActorId uses Id<ActorIdTag, uint64_t>. Use .value() to get the
-// uint64_t for display: std::to_string(id.value())
-
-// ── /dlq list ────────────────────────────────────────────────────────────
-
 class DlqListCommand final : public ICommand {
   public:
     std::string_view path() const noexcept override {
@@ -81,23 +99,21 @@ class DlqListCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        auto* system = ctx.system;
-        if (!system) {
-            ctx.output->error("No actor system available");
+        auto* dlq = resolve_dlq(ctx);
+        if (!dlq)
             return result<void>::make();
-        }
-        auto* dlq = system->dead_letter_queue();
-        if (!dlq) {
-            ctx.output->raw("Dead-letter queue is not enabled.");
-            return result<void>::make();
-        }
 
         auto records = dlq->snapshot_records();
         auto reason_filter = ctx.get_param("reason");
         auto source_filter = ctx.get_param("source");
         uint32_t limit_val = 50;
         if (auto lim = ctx.get_param("limit")) {
-            limit_val = static_cast<uint32_t>(std::stoul(*lim));
+            bool ok = false;
+            limit_val = static_cast<uint32_t>(parse_uint<uint64_t>(*lim, ok));
+            if (!ok) {
+                ctx.output->error("Invalid --limit value: " + *lim);
+                return result<void>::make();
+            }
         }
 
         std::vector<size_t> filtered;
@@ -140,8 +156,6 @@ class DlqListCommand final : public ICommand {
     }
 };
 
-// ── /dlq show --index N ──────────────────────────────────────────────────
-
 class DlqShowCommand final : public ICommand {
   public:
     std::string_view path() const noexcept override {
@@ -155,22 +169,21 @@ class DlqShowCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        auto* system = ctx.system;
-        if (!system) {
-            ctx.output->error("No actor system available");
+        auto* dlq = resolve_dlq(ctx);
+        if (!dlq)
             return result<void>::make();
-        }
-        auto* dlq = system->dead_letter_queue();
-        if (!dlq) {
-            ctx.output->raw("Dead-letter queue is not enabled.");
-            return result<void>::make();
-        }
+
         auto idx_str = ctx.get_param("index");
         if (!idx_str) {
             ctx.output->error("Usage: /dlq show --index N");
             return result<void>::make();
         }
-        size_t index = std::stoul(*idx_str);
+        bool ok = false;
+        size_t index = parse_uint<size_t>(*idx_str, ok);
+        if (!ok) {
+            ctx.output->error("Invalid index: " + *idx_str);
+            return result<void>::make();
+        }
 
         auto records = dlq->snapshot_records();
         if (index >= records.size()) {
@@ -198,7 +211,6 @@ class DlqShowCommand final : public ICommand {
         ctx.output->header("Dead-Letter Record #" + std::to_string(index));
         ctx.output->key_value(kv);
 
-        // Payload hex dump (first 128 bytes)
         if (r.payload_size > 0 && !r.payload_sample.empty()) {
             std::stringstream hex;
             const auto& buf = r.payload_sample;
@@ -213,7 +225,6 @@ class DlqShowCommand final : public ICommand {
             ctx.output->raw(hex.str());
         }
 
-        // Failure envelope summary
         auto env = r.to_failure_envelope();
         std::map<std::string, std::string> env_kv;
         env_kv["FailureReason"] = std::string(to_string(env.reason));
@@ -224,8 +235,6 @@ class DlqShowCommand final : public ICommand {
         return result<void>::make();
     }
 };
-
-// ── /dlq replay --index N ────────────────────────────────────────────────
 
 class DlqReplayCommand final : public ICommand {
   public:
@@ -240,22 +249,21 @@ class DlqReplayCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        auto* system = ctx.system;
-        if (!system) {
-            ctx.output->error("No actor system available");
+        auto* dlq = resolve_dlq(ctx);
+        if (!dlq)
             return result<void>::make();
-        }
-        auto* dlq = system->dead_letter_queue();
-        if (!dlq) {
-            ctx.output->raw("Dead-letter queue is not enabled.");
-            return result<void>::make();
-        }
+
         auto idx_str = ctx.get_param("index");
         if (!idx_str) {
             ctx.output->error("Usage: /dlq replay --index N");
             return result<void>::make();
         }
-        size_t index = std::stoul(*idx_str);
+        bool ok = false;
+        size_t index = parse_uint<size_t>(*idx_str, ok);
+        if (!ok) {
+            ctx.output->error("Invalid index: " + *idx_str);
+            return result<void>::make();
+        }
 
         mailbox::DeadLetterRecord r;
         if (!dlq->try_pop_at(index, r)) {
@@ -268,16 +276,15 @@ class DlqReplayCommand final : public ICommand {
             return result<void>::make();
         }
 
-        // Reconstruct TypedMessage from stored payload and deliver.
         TypedMessage msg(r.type_tag, r.payload_sample);
-        system->deliver_local(r.target.id, std::move(msg));
+        msg.set_sender_address(r.sender);
+        ctx.system->deliver_local(r.target.id, std::move(msg), r.priority,
+                                  r.deadline_ns);
         ctx.output->raw("Replayed record #" + std::to_string(index) +
                         " to actor " + std::to_string(r.target.id.value()));
         return result<void>::make();
     }
 };
-
-// ── /dlq export ──────────────────────────────────────────────────────────
 
 class DlqExportCommand final : public ICommand {
   public:
@@ -292,21 +299,19 @@ class DlqExportCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        auto* system = ctx.system;
-        if (!system) {
-            ctx.output->error("No actor system available");
+        auto* dlq = resolve_dlq(ctx);
+        if (!dlq)
             return result<void>::make();
-        }
-        auto* dlq = system->dead_letter_queue();
-        if (!dlq) {
-            ctx.output->raw("Dead-letter queue is not enabled.");
-            return result<void>::make();
-        }
 
         auto records = dlq->snapshot_records();
         uint32_t limit_val = 100;
         if (auto lim = ctx.get_param("limit")) {
-            limit_val = static_cast<uint32_t>(std::stoul(*lim));
+            bool ok = false;
+            limit_val = static_cast<uint32_t>(parse_uint<uint64_t>(*lim, ok));
+            if (!ok) {
+                ctx.output->error("Invalid --limit value: " + *lim);
+                return result<void>::make();
+            }
         }
         bool json = ctx.get_param("format").value_or("text") == "json";
 
@@ -341,8 +346,6 @@ class DlqExportCommand final : public ICommand {
         return result<void>::make();
     }
 };
-
-// ── registration ─────────────────────────────────────────────────────────
 
 const CommandRegistration<DlqListCommand> kRegisterDlqList;
 const CommandRegistration<DlqShowCommand> kRegisterDlqShow;

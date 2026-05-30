@@ -591,6 +591,22 @@ namespace {
 
 using MetricBuf = hpactor::metrics::MpscRingBuffer<hpactor::metrics::MetricEvent>;
 
+// Populate the trace fields on a DeadLetterRecord from a TraceContext.
+// TraceId and SpanId are stored as big-endian byte arrays (W3C format);
+// convert to uint64_t fields for the DLQ record.
+void set_dlq_trace_fields(hpactor::mailbox::DeadLetterRecord& dl,
+                          const hpactor::TraceContext& tc) noexcept {
+    uint64_t hi = 0, lo = 0, sp = 0;
+    for (size_t i = 0; i < 8; ++i) {
+        hi = (hi << 8) | tc.trace_id.bytes[i];
+        lo = (lo << 8) | tc.trace_id.bytes[i + 8];
+        sp = (sp << 8) | tc.span_id.bytes[i];
+    }
+    dl.trace_id_hi = hi;
+    dl.trace_id_lo = lo;
+    dl.span_id = sp;
+}
+
 // Build the EnqueueResult + observability for a missing-actor target.
 [[nodiscard]] hpactor::mailbox::EnqueueResult
 reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
@@ -616,16 +632,7 @@ reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
                 std::chrono::steady_clock::now().time_since_epoch())
                 .count());
         if (msg.has_trace_context()) {
-            const auto& tc = msg.trace_context();
-            uint64_t hi = 0, lo = 0, sp = 0;
-            for (size_t i = 0; i < 8; ++i) {
-                hi = (hi << 8) | tc.trace_id.bytes[i];
-                lo = (lo << 8) | tc.trace_id.bytes[i + 8];
-                sp = (sp << 8) | tc.span_id.bytes[i];
-            }
-            dl.trace_id_hi = hi;
-            dl.trace_id_lo = lo;
-            dl.span_id = sp;
+            set_dlq_trace_fields(dl, msg.trace_context());
         }
         (void)dlq->try_push(std::move(dl));
     }
@@ -733,16 +740,7 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
         dl.payload_sample = msg.payload();
         dl.timestamp_ns = now_ns;
         if (msg.has_trace_context()) {
-            const auto& tc = msg.trace_context();
-            uint64_t hi = 0, lo = 0, sp = 0;
-            for (size_t i = 0; i < 8; ++i) {
-                hi = (hi << 8) | tc.trace_id.bytes[i];
-                lo = (lo << 8) | tc.trace_id.bytes[i + 8];
-                sp = (sp << 8) | tc.span_id.bytes[i];
-            }
-            dl.trace_id_hi = hi;
-            dl.trace_id_lo = lo;
-            dl.span_id = sp;
+            set_dlq_trace_fields(dl, msg.trace_context());
         }
         (void)dlq->try_push(std::move(dl));
     }
@@ -786,15 +784,7 @@ void emit_rejection_observability(
                 .count());
         dl.payload_sample = msg_payload;
         if (msg_has_trace) {
-            uint64_t hi = 0, lo = 0, sp = 0;
-            for (size_t i = 0; i < 8; ++i) {
-                hi = (hi << 8) | msg_trace.trace_id.bytes[i];
-                lo = (lo << 8) | msg_trace.trace_id.bytes[i + 8];
-                sp = (sp << 8) | msg_trace.span_id.bytes[i];
-            }
-            dl.trace_id_hi = hi;
-            dl.trace_id_lo = lo;
-            dl.span_id = sp;
+            set_dlq_trace_fields(dl, msg_trace);
         }
         (void)dlq->try_push(std::move(dl));
     }
@@ -868,7 +858,8 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
     }
 
     const auto bp_mode = mailbox->config().backpressure_mode;
-    StreamBuffer msg_payload = msg.payload();
+    // Extract payload and trace before the move — needed for DLQ on rejection.
+    const StreamBuffer& msg_payload = msg.payload();
     TraceContext msg_trace;
     bool msg_has_trace = msg.has_trace_context();
     if (msg_has_trace) {
@@ -876,10 +867,12 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
     }
     auto result = mailbox->try_push(std::move(msg), meta);
 
-    emit_rejection_observability(dead_letters_.get(), metrics_ring_buffer_.get(),
-                                 endpoint_, target, msg_payload, msg_trace,
-                                 msg_has_trace, meta, result, options,
-                                 mailbox->config().overflow_policy);
+    if (!result.accepted()) {
+        emit_rejection_observability(
+            dead_letters_.get(), metrics_ring_buffer_.get(), endpoint_, target,
+            msg_payload, msg_trace, msg_has_trace, meta, result, options,
+            mailbox->config().overflow_policy);
+    }
 
     maybe_emit_backpressure_signal(mailbox, result, meta,
                                    options.emit_backpressure, bp_mode);
