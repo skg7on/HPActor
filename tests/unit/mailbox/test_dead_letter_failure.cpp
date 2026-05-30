@@ -80,3 +80,19 @@ TEST(DeadLetterFailureTest, ToFailureEnvelope) {
     EXPECT_EQ(env.timestamp_ns, 12345);
     EXPECT_EQ(env.retryable, true); // MailboxFull is retryable
 }
+
+TEST(DeadLetterFailureTest, ToStringDeadLetterReason) {
+    using namespace hpactor::mailbox;
+    EXPECT_STREQ(to_string(DeadLetterReason::MailboxFull), "MailboxFull");
+    EXPECT_STREQ(to_string(DeadLetterReason::OverflowPolicy), "OverflowPolicy");
+    EXPECT_STREQ(to_string(DeadLetterReason::Expired), "Expired");
+    EXPECT_STREQ(to_string(DeadLetterReason::DrainTimeout), "DrainTimeout");
+}
+
+TEST(DeadLetterFailureTest, ToStringDeadLetterSource) {
+    using namespace hpactor::mailbox;
+    EXPECT_STREQ(to_string(DeadLetterSource::LocalDelivery), "LocalDelivery");
+    EXPECT_STREQ(to_string(DeadLetterSource::MailboxAdmission), "MailboxAdmissi"
+                                                                "on");
+    EXPECT_STREQ(to_string(DeadLetterSource::Replay), "Replay");
+}
