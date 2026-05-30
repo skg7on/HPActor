@@ -30,7 +30,9 @@ extern thread_local uint32_t tl_current_worker_id;
 
 WorkerThread::WorkerThread(const Config& config)
     : config_(config), local_queue_(config.priority_levels) {
-    allocator_ = new mem::ThreadLocalAllocator();
+    if (config_.enable_thread_allocator) {
+        allocator_ = new mem::ThreadLocalAllocator();
+    }
 }
 
 WorkerThread::~WorkerThread() {

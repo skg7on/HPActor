@@ -52,6 +52,7 @@ class WorkerThread {
         uint32_t priority_levels = 4;
         uint32_t steal_threshold = 10;  // attempts before becoming active thief
         uint32_t victim_scan_limit = 4; // max victims to scan per steal attempt
+        bool enable_thread_allocator = true; // set false for scheduler workers
     };
 
     explicit WorkerThread(const Config& config);

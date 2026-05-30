@@ -55,6 +55,7 @@ void HybridScheduler::start() {
     for (size_t i = 0; i < placement_.worker_count(); ++i) {
         WorkerThread::Config cfg;
         cfg.worker_index = static_cast<uint32_t>(i);
+        cfg.enable_thread_allocator = false; // slab caches are not thread-safe
         auto worker = std::make_unique<WorkerThread>(cfg);
         worker->set_owner(this);
         worker->set_work_processor([this](const WorkItem& item) {
