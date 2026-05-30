@@ -14,6 +14,7 @@
 
 #include <hpactor/net/wireframe_connection.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/net/event_loop.hpp>
 
@@ -163,6 +164,9 @@ void WireFrameConnection::close() {
 }
 
 void WireFrameConnection::handle_read() {
+    FAULT_INJECT("hpactor.wireframe.handle_read.drop") {
+        return;
+    }
     // Phase 1 — accumulate header bytes (8 bytes: magic + payload length).
     // Read header first so we know the exact payload length before allocating
     // buffer space for it.
@@ -247,6 +251,9 @@ void WireFrameConnection::send_raw(const StreamBuffer& data) {
 }
 
 void WireFrameConnection::flush_write_buffer() {
+    FAULT_INJECT("hpactor.wireframe.flush_write_buffer.drop") {
+        return;
+    }
     if (fd_ < 0 || loop_ == nullptr || write_buffer_.empty()) {
         return;
     }

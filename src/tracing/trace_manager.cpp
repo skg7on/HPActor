@@ -19,6 +19,8 @@
 #include <hpactor/tracing/otlp_exporter.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
+
 #include <chrono>
 
 namespace hpactor::tracing {
@@ -70,6 +72,9 @@ uint64_t TraceManager::now_ns() noexcept {
 }
 
 void TraceManager::start() {
+    FAULT_INJECT("hpactor.tracing.start.fail") {
+        return;
+    }
     if (!config_.enabled || running_.exchange(true)) {
         return;
     }
@@ -95,6 +100,9 @@ void TraceManager::stop() {
 }
 
 void TraceManager::force_flush() {
+    FAULT_INJECT("hpactor.tracing.force_flush.fail") {
+        return;
+    }
     drain_once();
 }
 
@@ -116,6 +124,9 @@ TraceContext TraceManager::child_context(const TraceContext& parent) {
 }
 
 SpanHandle TraceManager::start_span(const SpanStart& start) {
+    FAULT_INJECT("hpactor.tracing.start_span.drop") {
+        return SpanHandle{};
+    }
     SpanHandle handle;
     if (!config_.enabled) {
         return handle;
@@ -147,6 +158,9 @@ SpanHandle TraceManager::start_span(const SpanStart& start) {
 }
 
 void TraceManager::finish_span(SpanHandle& span, SpanStatus status) noexcept {
+    FAULT_INJECT("hpactor.tracing.finish_span.drop") {
+        return;
+    }
     if (!span.recording) {
         return;
     }
@@ -171,6 +185,9 @@ void TraceManager::finish_span(SpanHandle& span, SpanStatus status) noexcept {
 
 void TraceManager::inject_message_context(TypedMessage& msg, const ActorContext* ctx,
                                           bool allow_root) {
+    FAULT_INJECT("hpactor.tracing.inject_context.corrupt") {
+        return;  // leave message without trace context
+    }
     if (!config_.enabled || msg.has_trace_context()) {
         return;
     }
@@ -184,6 +201,9 @@ void TraceManager::inject_message_context(TypedMessage& msg, const ActorContext*
 }
 
 void TraceManager::drain_once() {
+    FAULT_INJECT("hpactor.tracing.drain_once.fail") {
+        return;
+    }
     if (!exporter_) {
         return;
     }

@@ -94,5 +94,65 @@ TEST(FaultSchedule, WithTarget) {
     EXPECT_EQ(schedule.entries()[0].target.value(), target);
 }
 
+TEST(FaultSchedule, ExpandRandomGeneratesEntriesAtProbability) {
+    FaultSchedule schedule;
+    std::mt19937 rng(42);
+
+    schedule.expand_random(FaultDomain::kTransport,
+                           "hpactor.transport.send.drop",
+                           FaultAction::kDrop,
+                           /*probability=*/0.1,
+                           /*max_ticks=*/1000,
+                           rng);
+
+    size_t count = schedule.size();
+    EXPECT_GT(count, 50);
+    EXPECT_LT(count, 150);
+
+    for (const auto& entry : schedule.entries()) {
+        EXPECT_EQ(entry.domain, FaultDomain::kTransport);
+        EXPECT_EQ(entry.path, "hpactor.transport.send.drop");
+        EXPECT_EQ(entry.action, FaultAction::kDrop);
+        EXPECT_LT(entry.at_tick, 1000);
+    }
+}
+
+TEST(FaultSchedule, ExpandRandomDeterministic) {
+    FaultSchedule s1, s2;
+    std::mt19937 rng1(12345);
+    std::mt19937 rng2(12345);
+
+    s1.expand_random(FaultDomain::kTransport, "hpactor.transport.send.drop",
+                     FaultAction::kDrop, 0.05, 500, rng1);
+    s2.expand_random(FaultDomain::kTransport, "hpactor.transport.send.drop",
+                     FaultAction::kDrop, 0.05, 500, rng2);
+
+    EXPECT_EQ(s1.size(), s2.size());
+    for (size_t i = 0; i < s1.size(); ++i) {
+        EXPECT_EQ(s1.entries()[i].at_tick, s2.entries()[i].at_tick);
+    }
+}
+
+TEST(FaultSchedule, SortOrdersByDomainThenTick) {
+    FaultSchedule schedule;
+
+    schedule.add_entry(FaultScheduleEntry{
+        FaultDomain::kTransport, 5, "b", FaultAction::kDrop, {}, {}});
+    schedule.add_entry(FaultScheduleEntry{
+        FaultDomain::kMailbox, 10, "a", FaultAction::kFail, {}, {}});
+    schedule.add_entry(FaultScheduleEntry{
+        FaultDomain::kMailbox, 3, "c", FaultAction::kDrop, {}, {}});
+
+    schedule.sort();
+
+    const auto& entries = schedule.entries();
+    EXPECT_EQ(entries[0].domain, FaultDomain::kMailbox);
+    EXPECT_EQ(entries[0].at_tick, 3);
+    EXPECT_EQ(entries[1].domain, FaultDomain::kMailbox);
+    EXPECT_EQ(entries[1].at_tick, 10);
+    EXPECT_EQ(entries[2].domain, FaultDomain::kTransport);
+    EXPECT_EQ(entries[2].at_tick, 5);
+}
+
 } // anonymous namespace
 } // namespace hpactor::fault

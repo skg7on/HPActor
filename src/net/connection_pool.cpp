@@ -17,6 +17,7 @@
 #include <hpactor/spawn.hpp>
 
 #include <hpactor/common.pb.h>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/messages.pb.h>
 
@@ -42,6 +43,9 @@ ConnectionPtr ConnectionPool::get_connection() {
 }
 
 void ConnectionPool::send(const ActorAddress& target, const StreamBuffer& encoded) {
+    FAULT_INJECT("hpactor.connection_pool.send.drop") {
+        return;
+    }
     if (shutting_down_.load()) {
         return;
     }
@@ -58,6 +62,9 @@ void ConnectionPool::send(const ActorAddress& target, const StreamBuffer& encode
 
 bool ConnectionPool::try_send(const ActorAddress& target,
                               const StreamBuffer& encoded) {
+    FAULT_INJECT("hpactor.connection_pool.try_send.fail") {
+        return false;
+    }
     if (shutting_down_.load()) {
         return false;
     }
@@ -152,6 +159,17 @@ void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
 }
 
 void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
+    FAULT_INJECT("hpactor.connection_pool.frame.drop") {
+        return;
+    }
+    FAULT_INJECT("hpactor.transport.recv.drop") {
+        return;
+    }
+    FAULT_INJECT("hpactor.transport.recv.corrupt") {
+        if (frame_data.size() > 0) {
+            frame_data.data()[0] ^= 0xFF;
+        }
+    }
     WireFrame frame = WireFrame::decode(frame_data);
 
     // Check for RPC response
@@ -199,6 +217,9 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
 }
 
 void ConnectionPool::schedule_reconnect() {
+    FAULT_INJECT("hpactor.connection_pool.reconnect.drop") {
+        return;
+    }
     if (shutting_down_.load()) {
         return;
     }
@@ -225,6 +246,9 @@ void ConnectionPool::schedule_reconnect() {
 }
 
 void ConnectionPool::flush_pending() {
+    FAULT_INJECT("hpactor.connection_pool.flush.drop") {
+        return;
+    }
     std::lock_guard<std::mutex> lock(mutex_);
     while (!pending_messages_.empty() && !active_connections_.empty()) {
         auto& msg = pending_messages_.front();

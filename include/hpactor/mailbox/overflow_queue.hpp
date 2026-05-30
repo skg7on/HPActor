@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <hpactor/fault/fault_macros.hpp>
+
 #include <cstdint>
 #include <deque>
 #include <mutex>
@@ -83,6 +85,9 @@ class OverflowQueue {
     /// \retval true Always returns true.
     /// \note Thread safety: acquires internal mutex.
     bool try_push(T&& msg) noexcept {
+        FAULT_INJECT("hpactor.mailbox.overflow.push.drop") {
+            return false;
+        }
         std::lock_guard<std::mutex> lock(mutex_);
         if (max_depth_ > 0 && queue_.size() >= max_depth_) {
             if (!queue_.empty()) {

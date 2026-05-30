@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/sched/timing_wheel.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 
 #include <chrono>
 
@@ -43,6 +44,9 @@ TimingWheel::~TimingWheel() {
 }
 
 uint64_t TimingWheel::schedule(int64_t delay_ns, TimerCallback callback) {
+    FAULT_INJECT("hpactor.timing_wheel.schedule.fail") {
+        return 0;
+    }
     return schedule_at(current_time_.load(std::memory_order_relaxed) + delay_ns,
                        std::move(callback));
 }
@@ -64,6 +68,9 @@ TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {
 }
 
 bool TimingWheel::cancel(uint64_t timer_id) {
+    FAULT_INJECT("hpactor.timing_wheel.cancel.fail") {
+        return false;
+    }
     Timer* timer = remove_timer(timer_id);
     if (timer) {
         timer->cancelled = true;
@@ -130,6 +137,9 @@ TimingWheel::Timer* TimingWheel::remove_timer(uint64_t timer_id) {
 }
 
 uint32_t TimingWheel::advance(int64_t now_ns) {
+    FAULT_INJECT("hpactor.timing_wheel.advance.skip") {
+        return 0;
+    }
     int64_t old_time = current_time_.load(std::memory_order_relaxed);
     if (now_ns <= old_time) {
         return 0;

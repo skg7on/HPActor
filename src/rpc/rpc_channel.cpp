@@ -16,6 +16,8 @@
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
+
 namespace hpactor {
 
 // -----------------------------------------------------------------------------
@@ -62,6 +64,9 @@ void RpcChannel::abort() {
 }
 
 void RpcChannel::on_response(const RpcResponseFrame& response) {
+    FAULT_INJECT("hpactor.rpc.response.delay") {
+        _fc->stall(hpactor::fault::FaultDomain::kRpc, 3);
+    }
     std::unique_ptr<PendingCall> call;
     uint64_t key = response.msg_id.value();
     {
@@ -80,6 +85,7 @@ void RpcChannel::on_response(const RpcResponseFrame& response) {
 }
 
 void RpcChannel::on_timeout(MessageId msg_id) {
+    FAULT_INJECT("hpactor.rpc.timeout.drop") { return; }
     PendingCall* call_ptr = nullptr;
     uint64_t key = msg_id.value();
     {
@@ -105,6 +111,7 @@ void RpcChannel::on_timeout(MessageId msg_id) {
 }
 
 void RpcChannel::schedule_retry(PendingCall* call) {
+    FAULT_INJECT("hpactor.rpc.retry.drop") { return; }
     int64_t delay_ns = call->timeout.count() * 1000000;
     scheduler_->schedule_after(
         [this, msg_id = call->msg_id]() { on_timeout(msg_id); }, delay_ns);
@@ -112,6 +119,9 @@ void RpcChannel::schedule_retry(PendingCall* call) {
 }
 
 void RpcChannel::send_request(PendingCall& call, bool is_retry) {
+    FAULT_INJECT("hpactor.rpc.send.delay") {
+        _fc->stall(hpactor::fault::FaultDomain::kRpc, 5);
+    }
     net::WireFrame frame;
     net::to_proto(frame.pb_frame.mutable_sender(), ActorAddress{});
     net::to_proto(frame.pb_frame.mutable_receiver(), call.target);

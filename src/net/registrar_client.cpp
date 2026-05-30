@@ -15,6 +15,8 @@
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/net/registrar_serialization.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
+
 #include <arpa/inet.h>
 #include <ifaddrs.h>
 #include <net/if.h>
@@ -99,6 +101,7 @@ void RegistrarClient::start() {
         // Schedule heartbeat using EventLoop
         heartbeat_timer_ = loop_->run_every(
             [this]() {
+                FAULT_INJECT("hpactor.discovery.heartbeat.drop") { return; }
                 if (connected_.load() && server_connection_) {
                     // Build heartbeat message (no payload, just header)
                     StreamBuffer message;
@@ -146,6 +149,7 @@ void RegistrarClient::stop() {
 }
 
 void RegistrarClient::attempt_connection() {
+    FAULT_INJECT("hpactor.discovery.connect.fail") { return; }
     if (!running_.load()) {
         return;
     }
@@ -247,6 +251,7 @@ void RegistrarClient::attempt_connection() {
 }
 
 void RegistrarClient::send_registration() {
+    FAULT_INJECT("hpactor.discovery.register.drop") { return; }
     if (!server_connection_ || !connected_.load()) {
         return;
     }

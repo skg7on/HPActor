@@ -17,8 +17,10 @@
 #include <hpactor/fault/fault_types.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <algorithm>
 #include <cstdint>
 #include <optional>
+#include <random>
 #include <string>
 #include <variant>
 #include <vector>
@@ -49,6 +51,18 @@ class FaultSchedule {
 
     void add_entry(FaultScheduleEntry entry);
     void clear();
+    void sort();
+
+    template <typename RNG>
+    FaultSchedule& expand_random(
+        FaultDomain domain,
+        std::string_view path,
+        FaultAction action,
+        double probability,
+        uint64_t max_ticks,
+        RNG& rng,
+        FaultPayload payload = {},
+        std::optional<ActorId> target = std::nullopt);
 
     const std::vector<FaultScheduleEntry>& entries() const noexcept {
         return entries_;

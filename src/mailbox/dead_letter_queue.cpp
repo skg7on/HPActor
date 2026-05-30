@@ -14,6 +14,8 @@
 
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
+
 namespace hpactor::mailbox {
 
 DeadLetterQueue::DeadLetterQueue(DeadLetterConfig config) : config_(config) {
@@ -34,6 +36,9 @@ void DeadLetterQueue::trim_payload(DeadLetterRecord& record) const {
 }
 
 bool DeadLetterQueue::try_push(DeadLetterRecord&& record) noexcept {
+    FAULT_INJECT("hpactor.mailbox.dlq.push.drop") {
+        return false;
+    }
     if (!config_.enabled) {
         return false;
     }

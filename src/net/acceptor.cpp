@@ -14,6 +14,7 @@
 
 #include <hpactor/net/acceptor.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
@@ -58,6 +59,9 @@ void Acceptor::set_accept_handler(accept_handler handler) {
 
 bool TcpAcceptor::listen(uint16_t port, uint16_t port_range,
                          const std::string& bind_address) {
+    FAULT_INJECT("hpactor.acceptor.listen.fail") {
+        return false;
+    }
     int fd = ::socket(AF_INET, SOCK_STREAM, 0);
     if (fd < 0) {
         return false;
@@ -115,6 +119,9 @@ bool TcpAcceptor::listen(uint16_t port, uint16_t port_range,
 }
 
 void TcpAcceptor::handle_read() {
+    FAULT_INJECT("hpactor.acceptor.accept.drop") {
+        return;
+    }
     struct sockaddr_storage client_addr{};
     socklen_t client_len = sizeof(client_addr);
 
@@ -159,6 +166,9 @@ void TcpAcceptor::handle_read() {
 // -----------------------------------------------------------------------------
 
 bool UnixDomainAcceptor::listen(const std::string& path) {
+    FAULT_INJECT("hpactor.acceptor.listen.fail") {
+        return false;
+    }
     // Remove stale socket file if it exists
     ::unlink(path.c_str());
 
@@ -206,6 +216,9 @@ void UnixDomainAcceptor::close() {
 }
 
 void UnixDomainAcceptor::handle_read() {
+    FAULT_INJECT("hpactor.acceptor.accept.drop") {
+        return;
+    }
     struct sockaddr_un client_addr{};
     socklen_t client_len = sizeof(client_addr);
 

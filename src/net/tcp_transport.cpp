@@ -346,6 +346,17 @@ bool TcpTransport::try_send(const ActorAddress& target, const StreamBuffer& enco
     FAULT_INJECT("hpactor.transport.send.drop") {
         return true; // claim success, silently drop
     }
+    FAULT_INJECT("hpactor.transport.send.delay") {
+        _fc->stall(hpactor::fault::FaultDomain::kTransport, /*delay_ticks=*/3);
+    }
+    FAULT_INJECT("hpactor.transport.send.corrupt") {
+        if (encoded.size() > 0) {
+            StreamBuffer corrupted(encoded);
+            corrupted.data()[0] ^= 0xFF;
+            auto pool = get_or_create_pool(target.endpoint);
+            return pool->try_send(target, corrupted);
+        }
+    }
     auto pool = get_or_create_pool(target.endpoint);
     return pool->try_send(target, encoded);
 }
@@ -359,6 +370,9 @@ bool TcpTransport::is_connected(EndPoint remote_endpoint) const {
 }
 
 void TcpTransport::close_connection(EndPoint remote_endpoint) {
+    FAULT_INJECT("hpactor.transport.connection.reset") {
+        return;  // pretend to close but don't
+    }
     auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
         it->second->abort();

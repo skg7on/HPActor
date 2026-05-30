@@ -16,6 +16,7 @@
 #include <hpactor/mem/thread_local_allocator.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/worker_thread.hpp>
+#include <hpactor/fault/fault_controller.hpp>
 
 #include <chrono>
 #include <thread>
@@ -53,7 +54,15 @@ void WorkerThread::start() {
         if (allocator_) {
             mem::set_thread_allocator(allocator_);
         }
+        if (fault_controller_) {
+            reinterpret_cast<::hpactor::fault::FaultController*>(
+                fault_controller_)->install();
+        }
         thread_loop();
+        if (fault_controller_) {
+            reinterpret_cast<::hpactor::fault::FaultController*>(
+                fault_controller_)->remove();
+        }
     });
 }
 

@@ -14,11 +14,14 @@
 
 #include <hpactor/net/actor_location_cache.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
+
 #include <mutex>
 
 namespace hpactor::net {
 
 std::optional<EndPoint> ActorLocationCache::get(ActorId id) const {
+    FAULT_INJECT("hpactor.location_cache.get.fail") { return std::nullopt; }
     std::shared_lock lock(mutex_);
     auto it = cache_.find(id);
     if (it == cache_.end())
@@ -29,11 +32,13 @@ std::optional<EndPoint> ActorLocationCache::get(ActorId id) const {
 }
 
 void ActorLocationCache::put(ActorId id, EndPoint ep, std::chrono::seconds ttl) {
+    FAULT_INJECT("hpactor.location_cache.put.drop") { return; }
     std::unique_lock lock(mutex_);
     cache_[id] = {ep, std::chrono::steady_clock::now() + ttl};
 }
 
 void ActorLocationCache::evict(ActorId id) {
+    FAULT_INJECT("hpactor.location_cache.evict.drop") { return; }
     std::unique_lock lock(mutex_);
     cache_.erase(id);
 }

@@ -136,5 +136,81 @@ TEST_F(FaultControllerTest, Snapshot) {
     EXPECT_EQ(snap.faults_fired, 0u);
 }
 
+TEST_F(FaultControllerTest, PerThreadInstall) {
+    FaultController fc1;
+    FaultController fc2;
+
+    fc1.install();
+    EXPECT_EQ(FaultController::instance(), &fc1);
+
+    fc2.install();
+    EXPECT_EQ(FaultController::instance(), &fc2);
+
+    fc2.remove();
+    EXPECT_EQ(FaultController::instance(), nullptr);
+
+    fc1.remove();
+}
+
+TEST_F(FaultControllerTest, AggregateSnapshotSumsAcrossInstances) {
+    FaultController fc1;
+    FaultController fc2;
+
+    FaultSchedule schedule;
+    add_entry_to(schedule, FaultDomain::kMailbox, 1)
+        .fail("hpactor.mailbox.enqueue.fail", 1);
+
+    fc1.load(schedule);
+    fc1.enable("*");
+    fc1.install();
+
+    fc2.load(schedule);
+    fc2.enable("*");
+    fc2.install();
+
+    fc1.check("hpactor.mailbox.enqueue.fail");
+
+    auto snap = FaultController::aggregate_snapshot();
+    EXPECT_EQ(snap.faults_fired, 1);
+
+    fc1.remove();
+    fc2.remove();
+}
+
+TEST_F(FaultControllerTest, BroadcastLoadToAllInstances) {
+    FaultController fc1;
+    FaultController fc2;
+
+    fc1.install();
+    fc2.install();
+
+    FaultSchedule schedule;
+    add_entry_to(schedule, FaultDomain::kMailbox, 0)
+        .fail("hpactor.mailbox.enqueue.fail", 1);
+
+    fc1.load(schedule);
+    fc1.enable("*");
+
+    EXPECT_TRUE(fc1.is_enabled());
+    EXPECT_TRUE(fc2.is_enabled());
+    EXPECT_EQ(fc1.snapshot().schedule_entry_count, 1);
+    EXPECT_EQ(fc2.snapshot().schedule_entry_count, 1);
+
+    fc1.remove();
+    fc2.remove();
+}
+
+TEST_F(FaultControllerTest, RemoveCleansUp) {
+    FaultController fc;
+    fc.install();
+    EXPECT_EQ(FaultController::instance(), &fc);
+
+    fc.remove();
+    EXPECT_EQ(FaultController::instance(), nullptr);
+
+    auto snap = FaultController::aggregate_snapshot();
+    EXPECT_EQ(snap.faults_fired, 0);
+}
+
 } // anonymous namespace
 } // namespace hpactor::fault

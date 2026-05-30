@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
@@ -24,6 +25,12 @@ void LifecycleActor::on_fail(error /*err*/) {
 }
 
 bool LifecycleActor::transition(LifecycleState to) {
+    FAULT_INJECT("hpactor.actor.lifecycle.transition.fail") {
+        return false;
+    }
+    FAULT_INJECT("hpactor.actor.lifecycle.transition.corrupt") {
+        to = LifecycleState::kFailed;
+    }
     LifecycleState from = state();
 
     // Validate that `to` is in this state's transition list

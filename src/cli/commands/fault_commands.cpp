@@ -99,7 +99,7 @@ class FaultClearCommand final : public ICommand {
         }
         auto& fc = system->fault_controller();
         fc.clear();
-        fc.disable("*");
+        fc.disable();
         ctx.output->raw("Fault schedule cleared, injection disabled");
         return result<void>::make();
     }

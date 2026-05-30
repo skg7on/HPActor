@@ -90,6 +90,12 @@ template <typename T> class MPSCActorMailbox {
     }
 
     EnqueueResult try_push(T&& msg, MailboxEnvelopeMeta meta = {}) noexcept {
+        FAULT_INJECT("hpactor.mailbox.try_push.fail") {
+            EnqueueResult r;
+            r.code = EnqueueResultCode::Rejected;
+            r.target = actor_id_;
+            return r;
+        }
         if (meta.estimated_bytes == 0) {
             meta.estimated_bytes = estimate_node_bytes(msg);
         }
@@ -196,6 +202,9 @@ template <typename T> class MPSCActorMailbox {
 
     void enqueue_reserved(T* node, const MailboxEnvelopeMeta& meta,
                           bool suppress_wakeup = false) noexcept {
+        FAULT_INJECT("hpactor.mailbox.enqueue_reserved.drop") {
+            return;  // drop after capacity committed
+        }
         bool was_empty = empty();
         mailbox_.enqueue(node);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
@@ -351,6 +360,9 @@ template <typename T> class MPSCActorMailbox {
 
   private:
     bool drop_one_oldest() noexcept {
+        FAULT_INJECT("hpactor.mailbox.drop_oldest.fail") {
+            return false;  // eviction failed
+        }
         lock_consumer();
         T* node = mailbox_.dequeue();
         if (!node) {
@@ -390,6 +402,9 @@ template <typename T> class MPSCActorMailbox {
     }
 
     void drain_overflow() noexcept {
+        FAULT_INJECT("hpactor.mailbox.drain_overflow.fail") {
+            return;  // pretend drained
+        }
         while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {
             if (reservation_.try_reserve(0, config_.capacity.max_messages,
                                          config_.capacity.max_bytes) !=

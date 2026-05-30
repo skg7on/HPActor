@@ -128,6 +128,11 @@ class WorkerThread {
         owner_ = owner;
     }
 
+    // Set the fault controller for per-thread fault injection (may be nullptr)
+    void set_fault_controller(void* fc) {
+        fault_controller_ = fc;
+    }
+
     // Per-thread memory allocator accessor
     mem::ThreadLocalAllocator* allocator() {
         return allocator_;
@@ -159,6 +164,9 @@ class WorkerThread {
 
     // Coroutine frame pool
     CoroutineFramePool* frame_pool_{nullptr};
+
+    // Fault controller for per-thread fault injection (may be nullptr)
+    void* fault_controller_{nullptr};
 
     // Pluggable work processor (set by scheduler)
     WorkProcessor processor_;

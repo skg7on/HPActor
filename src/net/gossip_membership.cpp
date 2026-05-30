@@ -17,6 +17,7 @@
 #include <hpactor/gossip.pb.h>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/net/registrar.hpp> // for endpoint_ops, HostResolver
+#include <hpactor/fault/fault_macros.hpp>
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
@@ -147,6 +148,9 @@ Member from_pb_member(const PbGossipMember& pb) {
 
 void async_udp_send(EventLoop* loop, int sock, const StreamBuffer& data,
                     const EndPoint& dest) {
+    FAULT_INJECT("hpactor.gossip.packet.loss") {
+        return;  // silently drop packet
+    }
     if (sock < 0 || data.empty())
         return;
 
@@ -611,6 +615,9 @@ build_piggyback_impl(const GossipConfig& config, uint64_t incarnation,
 // =============================================================================
 
 void GossipMembership::protocol_round() {
+    FAULT_INJECT("hpactor.gossip.protocol_round.delay") {
+        _fc->stall(hpactor::fault::FaultDomain::kGossip, 1);
+    }
     auto now = std::chrono::steady_clock::now();
 
     // ── 1. Pick peers and send Pings ──────────────────────────────────────
@@ -947,6 +954,11 @@ void GossipMembership::handle_join(EndPoint sender, uint64_t inc,
 }
 
 void GossipMembership::handle_sync_rsp(std::vector<Member> members) {
+    FAULT_INJECT("hpactor.gossip.sync_rsp.corrupt") {
+        if (!members.empty()) {
+            members[0].status = MemberStatus::Dead;
+        }
+    }
     // Merge all received members into our table.
     for (auto& m : members) {
         merge_member(m);
@@ -1002,6 +1014,7 @@ void GossipMembership::handle_leave(EndPoint sender, uint64_t inc) {
 // =============================================================================
 
 void GossipMembership::send_ping(EndPoint target) {
+    FAULT_INJECT("hpactor.gossip.ping.drop") { return; }
     std::vector<PiggybackEntry> pb;
     {
         std::shared_lock<std::shared_mutex> lock(members_mutex_);
@@ -1015,6 +1028,7 @@ void GossipMembership::send_ping(EndPoint target) {
 }
 
 void GossipMembership::send_ack(EndPoint target, std::vector<PiggybackEntry> pb) {
+    FAULT_INJECT("hpactor.gossip.ack.drop") { return; }
     StreamBuffer msg =
         encode_message(GossipMessageType::Ack, incarnation_, seq_no_++,
                        config_.local_state.identity.endpoint, pb);
@@ -1043,6 +1057,7 @@ void GossipMembership::send_indirect_ack(EndPoint target, EndPoint orig_target) 
 }
 
 void GossipMembership::send_join(EndPoint seed) {
+    FAULT_INJECT("hpactor.gossip.join.drop") { return; }
     // Join includes self metadata as piggyback.
     std::vector<PiggybackEntry> pb;
     {
@@ -1076,6 +1091,7 @@ void GossipMembership::send_sync_rsp(EndPoint target) {
 }
 
 void GossipMembership::send_leave(EndPoint target) {
+    FAULT_INJECT("hpactor.gossip.leave.drop") { return; }
     std::vector<PiggybackEntry> pb; // empty piggyback for leave
     StreamBuffer msg =
         encode_message(GossipMessageType::Leave, incarnation_, seq_no_++,
@@ -1088,6 +1104,7 @@ void GossipMembership::send_leave(EndPoint target) {
 // =============================================================================
 
 void GossipMembership::mark_suspicious(EndPoint ep) {
+    FAULT_INJECT("hpactor.gossip.mark_suspicious.drop") { return; }
     std::unique_lock<std::shared_mutex> lock(members_mutex_);
     auto it = members_.find(ep);
     if (it != members_.end()) {
@@ -1099,6 +1116,7 @@ void GossipMembership::mark_suspicious(EndPoint ep) {
 }
 
 void GossipMembership::mark_dead(EndPoint ep) {
+    FAULT_INJECT("hpactor.gossip.mark_dead.drop") { return; }
     Member member_to_fire;
     bool should_fire = false;
 
@@ -1125,6 +1143,9 @@ void GossipMembership::mark_dead(EndPoint ep) {
 }
 
 void GossipMembership::merge_member(const Member& remote) {
+    FAULT_INJECT("hpactor.gossip.merge_member.corrupt") {
+        const_cast<Member&>(remote).incarnation += 100;
+    }
     std::unique_lock<std::shared_mutex> lock(members_mutex_);
 
     auto it = members_.find(remote.identity.endpoint);
@@ -1264,6 +1285,9 @@ void GossipMembership::purge_dead_tombstones() {
 std::vector<EndPoint>
 GossipMembership::pick_random_peers(size_t count,
                                     std::unordered_set<EndPoint> exclude) {
+    FAULT_INJECT("hpactor.gossip.pick_random_peers.fail") {
+        return {};
+    }
     auto& ext = extras_for(this);
 
     std::shared_lock<std::shared_mutex> lock(members_mutex_);

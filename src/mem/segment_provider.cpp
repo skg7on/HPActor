@@ -15,6 +15,7 @@
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mem/segment_provider.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/platform.hpp>
 
 #include <algorithm>
@@ -164,6 +165,10 @@ SegmentProvider::SlabInfo SegmentProvider::lookup_slab(void* ptr) const {
 
 void* SegmentProvider::allocate_new_segment(size_t size) {
     size_t alloc_size = (size > kSegmentSize) ? size : kSegmentSize;
+
+    FAULT_INJECT("hpactor.allocator.segment.mmap_fail") {
+        return nullptr;
+    }
 
     void* base = mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
                       MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);

@@ -15,6 +15,7 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mem/slab_cache.hpp>
 
 #include <cstring>
@@ -36,6 +37,11 @@ SlabCache::~SlabCache() {
 void* SlabCache::allocate(ActorId owner) noexcept {
     // 1. Try freelist first
     auto* block = freelist_.pop();
+    FAULT_INJECT("hpactor.allocator.freelist.pop.corrupt") {
+        if (block != nullptr) {
+            block->magic = 0;
+        }
+    }
     if (block) {
 #if HPACTOR_ENABLE_MEMORY_DEBUG
         // Verify canary was not corrupted while block was freed
@@ -122,6 +128,9 @@ void SlabCache::deallocate(void* user_ptr) noexcept {
 }
 
 void SlabCache::refill() {
+    FAULT_INJECT("hpactor.allocator.slab_cache.refill_fail") {
+        return;
+    }
     current_slab_ = static_cast<std::byte*>(
         SegmentProvider::instance().acquire_slab(size_class_));
     if (current_slab_) {

@@ -19,6 +19,7 @@
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/sched/worker_thread.hpp>
 
 #include <chrono>
@@ -64,6 +65,7 @@ void HybridScheduler::start() {
             mark_dispatch_end();
         });
         worker->set_pause_handler([this] { wait_if_paused(0); });
+        worker->set_fault_controller(&system_.fault_controller());
         worker->start();
         worker_threads_.push_back(std::move(worker));
     }
@@ -126,6 +128,12 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
     if (!running_.load(std::memory_order_acquire)) {
         return;
     }
+    FAULT_INJECT("hpactor.scheduler.worker.pause") {
+        _fc->stall(hpactor::fault::FaultDomain::kScheduler, /*delay_ticks=*/5);
+    }
+    FAULT_INJECT("hpactor.scheduler.notify_ready.drop") {
+        return;
+    }
 
     WorkItem item{actor, deadline_ns, 0};
 
@@ -153,10 +161,16 @@ void HybridScheduler::yield(ActorId actor, uint8_t priority) {
 }
 
 bool HybridScheduler::try_steal(WorkItem& out) {
+    FAULT_INJECT("hpactor.scheduler.try_steal.fail") {
+        return false;
+    }
     return placement_.try_steal(tl_current_worker_id, out);
 }
 
 bool HybridScheduler::pop_local(WorkItem& out, uint32_t worker_id) {
+    FAULT_INJECT("hpactor.scheduler.pop_local.fail") {
+        return false;
+    }
     return placement_.pop_local(worker_id, out);
 }
 
@@ -165,6 +179,9 @@ bool HybridScheduler::pop_edf(WorkItem& out, uint32_t worker_id) {
 }
 
 void HybridScheduler::execute_actor(const WorkItem& item) {
+    FAULT_INJECT("hpactor.scheduler.execute_actor.dispatch_skip") {
+        return;
+    }
     auto actor_ptr = system_.get_actor(item.actor);
     if (!actor_ptr || !actor_ptr->is_event_based_actor()) {
         return;

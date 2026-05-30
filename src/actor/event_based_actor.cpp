@@ -26,6 +26,7 @@
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 #include <hpactor/types/failure_envelope.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 
 #include <chrono>
 #include <cstring>
@@ -76,6 +77,12 @@ void EventBasedActor::configure_quarantine(const QuarantinePolicy& policy) {
 void EventBasedActor::on_activate() {}
 
 void EventBasedActor::receive(TypedMessage& msg) {
+    FAULT_INJECT("hpactor.actor.handler.delay") {
+        _fc->stall(hpactor::fault::FaultDomain::kActor, /*delay_ticks=*/5);
+    }
+    FAULT_INJECT("hpactor.actor.receive.drop") {
+        return;
+    }
     auto* ctx = context();
     auto* trace_manager = system().trace_manager();
     tracing::SpanHandle receive_span;
@@ -395,6 +402,9 @@ void EventBasedActor::handle_down_msg(const TypedMessage& msg) {
 }
 
 void EventBasedActor::become(Behavior bh) {
+    FAULT_INJECT("hpactor.actor.become.drop") {
+        return;
+    }
     behavior_ = std::move(bh);
 }
 
@@ -442,6 +452,9 @@ void EventBasedActor::on_deactivate() {
 }
 
 void EventBasedActor::on_exit() {
+    FAULT_INJECT("hpactor.actor.on_exit.drop") {
+        return;
+    }
     auto* ctx = context();
     if (ctx == nullptr) {
         return;
@@ -491,6 +504,9 @@ cli::MboxSnapshot EventBasedActor::mailbox_snapshot() const {
 // ─────────────────────────────────────────────────────────────
 
 bool EventBasedActor::drain_one(TypedMessage& msg) {
+    FAULT_INJECT("hpactor.actor.drain_one.corrupt") {
+        return true; // always process
+    }
     auto* lc = as_lifecycle();
     if (!lc)
         return true; // no lifecycle = process normally
@@ -590,6 +606,9 @@ void EventBasedActor::cancel_drain_timer() {
 }
 
 void EventBasedActor::record_circuit_breaker_result(bool success) {
+    FAULT_INJECT("hpactor.actor.circuit_breaker.record.fail") {
+        success = false;
+    }
     if (!quarantine_policy_.enabled)
         return;
 

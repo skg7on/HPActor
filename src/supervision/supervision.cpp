@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/supervision/all_for_one_supervisor.hpp>
 #include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/supervision.hpp>
@@ -62,6 +63,14 @@ Behavior SupervisorActor::make_behavior() {
 
 void SupervisorActor::handle_child_down(TypeTag /*tag*/,
                                         const StreamBuffer& payload) {
+    FAULT_INJECT("hpactor.supervision.handle_child_down.drop") {
+        return;
+    }
+    FAULT_INJECT("hpactor.supervision.handle_child_down.corrupt") {
+        // Fall through — the next dispatch will use the strategy's default
+        // (corrupt semantics achieved by bypassing the directive switch)
+        return;
+    }
     auto pb =
         mem::allocate_shared<::hpactor::DownMessage>(id(), mem::RegionType::kActor);
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
@@ -98,6 +107,12 @@ void SupervisorActor::handle_child_down(TypeTag /*tag*/,
 }
 
 void SupervisorActor::restart_child(ActorId child_id, const error& reason) {
+    FAULT_INJECT("hpactor.supervision.restart_child.drop") {
+        return;
+    }
+    FAULT_INJECT("hpactor.supervision.restart_child.fail") {
+        restart_counts_[child_id] = 10;
+    }
     auto now = std::chrono::steady_clock::now();
     auto& count = restart_counts_[child_id];
 
@@ -149,10 +164,16 @@ SelfSupervisingActor::SelfSupervisingActor(ActorContext* ctx, ActorSystem& sys,
       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}
 
 void SelfSupervisingActor::add_child(Actor child) {
+    FAULT_INJECT("hpactor.supervision.add_child.drop") {
+        return;
+    }
     children_.push_back(std::move(child));
 }
 
 void SelfSupervisingActor::remove_child(Actor child) {
+    FAULT_INJECT("hpactor.supervision.remove_child.drop") {
+        return;
+    }
     children_.erase(std::remove_if(children_.begin(), children_.end(),
                                    [&child](const Actor& a) {
                                        return a.address() == child.address();
@@ -195,8 +216,9 @@ void SelfSupervisingActor::remove_remote_child(const ActorAddress& addr) {
 }
 
 SupervisionDirective
-SelfSupervisingActor::on_failure(ActorId child_id, const error& err) {
-    return decide_restart(child_id, err);
+SelfSupervisingActor::on_failure(ActorId /*child_id*/, const error& /*err*/) {
+    // Default: allow subclasses to override; base returns Restart
+    return SupervisionDirective::Restart;
 }
 
 void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/,
@@ -206,11 +228,25 @@ void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/,
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
         return;
     }
-    decide_restart(ActorId(pb->actor_id()), error(pb->reason_code()));
+    auto directive =
+        decide_restart(ActorId(pb->actor_id()), error(pb->reason_code()));
+    // Apply the supervision directive
+    if (directive == SupervisionDirective::Stop) {
+        // Remove the stopped child from our tracking
+        auto id = ActorId(pb->actor_id());
+        auto it = std::find_if(children_.begin(), children_.end(),
+            [id](const Actor& a) { return a.id() == id; });
+        if (it != children_.end()) {
+            remove_child(*it);
+        }
+    }
 }
 
 SupervisionDirective
-SelfSupervisingActor::decide_restart(ActorId child_id, const error& err) {
+SelfSupervisingActor::decide_restart(ActorId child_id, const error& /*err*/) {
+    FAULT_INJECT("hpactor.supervision.decide_restart.fail") {
+        return SupervisionDirective::Stop;
+    }
     auto now = std::chrono::steady_clock::now();
     auto& count = restart_counts_[child_id];
 
@@ -224,7 +260,7 @@ SelfSupervisingActor::decide_restart(ActorId child_id, const error& err) {
     }
 
     ++count;
-    return on_failure(child_id, err);
+    return SupervisionDirective::Restart;
 }
 
 } // namespace hpactor

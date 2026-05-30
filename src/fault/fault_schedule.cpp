@@ -24,6 +24,42 @@ void FaultSchedule::clear() {
     entries_.clear();
 }
 
+void FaultSchedule::sort() {
+    std::sort(entries_.begin(), entries_.end(),
+        [](const FaultScheduleEntry& a, const FaultScheduleEntry& b) {
+            if (a.domain != b.domain)
+                return static_cast<uint8_t>(a.domain) <
+                       static_cast<uint8_t>(b.domain);
+            return a.at_tick < b.at_tick;
+        });
+}
+
+template <typename RNG>
+FaultSchedule& FaultSchedule::expand_random(
+    FaultDomain domain,
+    std::string_view path,
+    FaultAction action,
+    double probability,
+    uint64_t max_ticks,
+    RNG& rng,
+    FaultPayload payload,
+    std::optional<ActorId> target) {
+    std::uniform_real_distribution<double> dist(0.0, 1.0);
+    for (uint64_t t = 0; t < max_ticks; ++t) {
+        if (dist(rng) < probability) {
+            FaultScheduleEntry entry{domain, t, std::string(path),
+                                      action, target, payload};
+            entries_.push_back(std::move(entry));
+        }
+    }
+    return *this;
+}
+
+template FaultSchedule& FaultSchedule::expand_random<std::mt19937>(
+    FaultDomain, std::string_view, FaultAction, double, uint64_t, std::mt19937&, FaultPayload, std::optional<ActorId>);
+template FaultSchedule& FaultSchedule::expand_random<std::mt19937_64>(
+    FaultDomain, std::string_view, FaultAction, double, uint64_t, std::mt19937_64&, FaultPayload, std::optional<ActorId>);
+
 FaultSchedule::Builder& FaultSchedule::Builder::fail(std::string_view path,
                                                        int32_t error_code) {
     FaultScheduleEntry entry{domain_, at_tick_, std::string(path),
