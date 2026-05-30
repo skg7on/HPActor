@@ -106,6 +106,7 @@ cmake -DENABLE_ACTOR_LOGGING=OFF .. # Disable structured actor logging (default 
 cmake -DENABLE_ACTOR_TRACING=OFF .. # Disable distributed tracing (default ON)
 cmake -DENABLE_CLI=OFF ..       # Disable interactive CLI subsystem (default ON, runtime opt-in via cli.enabled)
 cmake -DENABLE_COVERAGE=ON ..   # Enable gcov/llvm-cov style coverage instrumentation
+cmake -DENABLE_CLANG_TIDY=ON .. # Enable clang-tidy checks during C++ builds (default OFF)
 ```
 
 ## Build Verification Discipline
