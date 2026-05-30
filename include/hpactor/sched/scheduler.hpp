@@ -51,6 +51,7 @@ class Logger;
 namespace hpactor::sched {
 
 class DedicatedThreadPool; // forward decl
+class WorkerThread;        // forward decl
 
 /// \brief Timer backend implementation selector.
 enum class TimerBackend : uint8_t {
@@ -282,6 +283,17 @@ class HybridScheduler : public IScheduler {
     /// \return \c true if work was successfully stolen.
     bool try_steal(WorkItem& out);
 
+    /// \brief Pop work from the owning worker's local queues.
+    ///
+    /// Called by WorkerThread during the local-pop fast path.
+    /// \param[out] out Set to the popped work item on success.
+    /// \param[in] worker_id Owning worker index.
+    /// \return \c true if work was available.
+    bool pop_local(WorkItem& out, uint32_t worker_id);
+
+    /// \brief Read the current worker ID from thread-local storage.
+    uint32_t current_worker_id() const;
+
     /// \brief Execute an actor from a work item.
     ///
     /// Handles coroutine resumption when available.
@@ -301,27 +313,15 @@ class HybridScheduler : public IScheduler {
     void advance_time(int64_t now_ns);
 
   private:
-  public:
-    friend class WorkerThread;
-
-    A2WS& a2ws() {
-        return placement_.a2ws();
-    }
-
     bool try_admit_ready(ActorId actor) noexcept;
     bool try_mark_yield_ready(ActorId actor) noexcept;
     void enqueue_admitted(const WorkItem& item, uint8_t priority);
 
     void wait_if_paused(uint32_t worker_id);
     bool pop_any_ready(WorkItem& out);
+    bool pop_edf(WorkItem& out, uint32_t worker_id);
     void mark_dispatch_begin() noexcept;
     void mark_dispatch_end() noexcept;
-
-    void worker_loop(uint32_t worker_id);
-    bool pop_local(WorkItem& out, uint32_t worker_id);
-    bool pop_edf(WorkItem& out, uint32_t worker_id);
-    uint32_t current_worker_id() const;
-    void backoff();
 
     ActorSystem& system_;
     ActorReadyGate ready_gate_;
@@ -329,7 +329,7 @@ class HybridScheduler : public IScheduler {
     ActorExecutionEngine executor_;
     uint32_t num_workers_;
     std::atomic<bool> running_{false};
-    std::vector<std::thread> worker_threads_;
+    std::vector<std::unique_ptr<WorkerThread>> worker_threads_;
 
     std::variant<TimingWheel, CalendarQueue> timer_backend_;
 

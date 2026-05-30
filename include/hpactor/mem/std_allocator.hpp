@@ -14,9 +14,12 @@
 
 #pragma once
 
+#include <hpactor/mem/alloc_header.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/mem/memory_region.hpp>
+#include <hpactor/mem/segment_provider.hpp>
 #include <hpactor/mem/size_class.hpp>
+#include <hpactor/mem/slab_cache.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <cstddef>
@@ -220,6 +223,15 @@ template <typename Derived> class SlabAllocated {
             return;
         if (t_tla) {
             t_tla->deallocate(ptr);
+            return;
+        }
+        // t_tla is nullptr — this may be a cross-thread free of a
+        // slab-allocated object. Route to the origin SlabCache when
+        // the pointer belongs to a known slab.
+        auto* header = AllocHeader::from_user_data(ptr);
+        auto slab = SegmentProvider::instance().lookup_slab(header);
+        if (slab.found && slab.owner_cache) {
+            static_cast<SlabCache*>(slab.owner_cache)->deallocate(ptr);
         } else {
             ::operator delete(ptr); // NOLINT
         }

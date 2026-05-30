@@ -20,10 +20,13 @@
 
 #include <atomic>
 #include <cstdint>
+#include <functional>
 #include <thread>
 #include <vector>
 
-namespace hpactor::mem { class ThreadLocalAllocator; }
+namespace hpactor::mem {
+class ThreadLocalAllocator;
+}
 namespace hpactor::sched {
 
 // Forward declaration
@@ -49,6 +52,7 @@ class WorkerThread {
         uint32_t priority_levels = 4;
         uint32_t steal_threshold = 10;  // attempts before becoming active thief
         uint32_t victim_scan_limit = 4; // max victims to scan per steal attempt
+        bool enable_thread_allocator = true; // set false for scheduler workers
     };
 
     explicit WorkerThread(const Config& config);
@@ -74,8 +78,19 @@ class WorkerThread {
     // Try to steal from this worker (steal_top - thief operation)
     bool steal(WorkItem& out);
 
-    // Process a single work item
-    void process(const WorkItem& item);
+    // Work processor callback — invoked for each work item.
+    // When set, thread_loop() calls this instead of processing locally.
+    using WorkProcessor = std::function<void(const WorkItem&)>;
+    void set_work_processor(WorkProcessor proc) {
+        processor_ = std::move(proc);
+    }
+
+    // Pause handler — blocks until the worker should proceed.
+    // Used by test harness to pause/resume workers deterministically.
+    using PauseHandler = std::function<void()>;
+    void set_pause_handler(PauseHandler handler) {
+        pause_handler_ = std::move(handler);
+    }
 
     // Worker index
     uint32_t index() const {
@@ -114,13 +129,16 @@ class WorkerThread {
     }
 
     // Per-thread memory allocator accessor
-    mem::ThreadLocalAllocator* allocator() { return allocator_; }
+    mem::ThreadLocalAllocator* allocator() {
+        return allocator_;
+    }
 
     // Try to steal work using A2WS victim selection
     bool try_steal(WorkItem& out);
 
   private:
     void thread_loop();
+    void backoff();
 
     Config config_;
     std::thread thread_;
@@ -141,6 +159,12 @@ class WorkerThread {
 
     // Coroutine frame pool
     CoroutineFramePool* frame_pool_{nullptr};
+
+    // Pluggable work processor (set by scheduler)
+    WorkProcessor processor_;
+
+    // Pluggable pause handler (set by scheduler for test harness)
+    PauseHandler pause_handler_;
 };
 
 } // namespace hpactor::sched
