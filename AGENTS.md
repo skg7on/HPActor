@@ -52,6 +52,7 @@ cmake -DENABLE_PROACTOR=ON ..     # Enable proactor backend
 cmake -DENABLE_MEMORY_DEBUG=ON .. # Enable memory poisoning + canary verification
 cmake -DENABLE_ACTOR_METRICS=OFF .. # Disable actor-level metrics (default ON)
 cmake -DENABLE_CLI=OFF ..       # Disable interactive CLI subsystem (default ON, runtime opt-in via cli.enabled)
+cmake -DENABLE_CLANG_TIDY=ON .. # Enable clang-tidy checks during C++ builds (default OFF)
 ```
 
 ## Build Verification Discipline

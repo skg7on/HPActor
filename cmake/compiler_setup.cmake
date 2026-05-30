@@ -78,18 +78,24 @@ set(CMAKE_CXX_EXTENSIONS OFF)
 
 # ---- clang-tidy ------------------------------------------------------------
 
-find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
-if(CLANG_TIDY_EXE)
-    execute_process(COMMAND ${CLANG_TIDY_EXE} --version
-        OUTPUT_VARIABLE CLANG_TIDY_VERSION_OUTPUT
-        OUTPUT_STRIP_TRAILING_WHITESPACE)
-    string(REGEX MATCH "version ([0-9]+)\\.[0-9]+" _ "${CLANG_TIDY_VERSION_OUTPUT}")
-    if(CMAKE_MATCH_1 AND CMAKE_MATCH_1 GREATER_EQUAL 20)
-        message(STATUS "clang-tidy ${CMAKE_MATCH_1}.x found — enabling")
-        set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-config-file=${CMAKE_SOURCE_DIR}/.clang-tidy")
+if(ENABLE_CLANG_TIDY)
+    find_program(CLANG_TIDY_EXE NAMES "clang-tidy")
+    if(CLANG_TIDY_EXE)
+        execute_process(COMMAND ${CLANG_TIDY_EXE} --version
+            OUTPUT_VARIABLE CLANG_TIDY_VERSION_OUTPUT
+            OUTPUT_STRIP_TRAILING_WHITESPACE)
+        string(REGEX MATCH "version ([0-9]+)\\.[0-9]+" _ "${CLANG_TIDY_VERSION_OUTPUT}")
+        if(CMAKE_MATCH_1 AND CMAKE_MATCH_1 GREATER_EQUAL 20)
+            message(STATUS "clang-tidy ${CMAKE_MATCH_1}.x found - enabling")
+            set(CMAKE_CXX_CLANG_TIDY "${CLANG_TIDY_EXE};-config-file=${CMAKE_SOURCE_DIR}/.clang-tidy")
+        else()
+            message(STATUS "clang-tidy version ${CMAKE_MATCH_1} (< 20) - skipping")
+        endif()
     else()
-        message(STATUS "clang-tidy version ${CMAKE_MATCH_1} (< 20) — skipping")
+        message(STATUS "clang-tidy requested but not found - skipping")
     endif()
+else()
+    message(STATUS "clang-tidy build checks disabled")
 endif()
 
 # ---- compiler flags --------------------------------------------------------

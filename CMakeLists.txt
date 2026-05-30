@@ -29,6 +29,7 @@ option(ENABLE_COVERAGE "Enable code coverage instrumentation (gcc/clang)" OFF)
 option(ENABLE_TESTS "Build tests" ON)
 option(ENABLE_RELACY_TESTS "Build relacy-based exhaustive verification tests" OFF)
 option(ENABLE_FAULT_INJECTION "Enable deterministic fault injection hooks" ON)
+option(ENABLE_CLANG_TIDY "Run clang-tidy during C++ builds when clang-tidy >= 20 is available" OFF)
 
 # =============================================================================
 # Compiler setup (C++20, coroutines, warnings, sanitizers, clang-tidy)
