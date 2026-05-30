@@ -23,6 +23,7 @@
 #include <hpactor/core/actor_registry.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
@@ -45,7 +46,6 @@
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/sched/scheduler.hpp>
-#include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 #include <hpactor/types/types.hpp>
@@ -467,6 +467,16 @@ class ActorSystem {
     /// \param[out] out Set to the popped record on success.
     /// \return \c true if a record was available.
     bool pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept;
+
+    /// \brief Direct access to the dead-letter queue.
+    ///
+    /// Returns nullptr if dead-letter queue is not initialized.
+    mailbox::DeadLetterQueue* dead_letter_queue() noexcept {
+        return dead_letters_.get();
+    }
+    const mailbox::DeadLetterQueue* dead_letter_queue() const noexcept {
+        return dead_letters_.get();
+    }
 
     // Receiver dedup cache for at-least-once delivery
     mailbox::DedupCache* dedup_cache() {

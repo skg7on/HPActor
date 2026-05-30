@@ -23,6 +23,7 @@
 #include <cstdint>
 #include <deque>
 #include <mutex>
+#include <vector>
 
 namespace hpactor::mailbox {
 
@@ -111,6 +112,60 @@ failure_source(DeadLetterSource source) noexcept {
     return FailureSource::Unknown;
 }
 
+[[nodiscard]] inline const char* to_string(DeadLetterReason reason) noexcept {
+    switch (reason) {
+        case DeadLetterReason::MailboxFull:
+            return "MailboxFull";
+        case DeadLetterReason::MailboxClosed:
+            return "MailboxClosed";
+        case DeadLetterReason::ActorNotFound:
+            return "ActorNotFound";
+        case DeadLetterReason::ActorTerminated:
+            return "ActorTerminated";
+        case DeadLetterReason::MissingRoute:
+            return "MissingRoute";
+        case DeadLetterReason::RemoteNodeUnreachable:
+            return "RemoteNodeUnreachable";
+        case DeadLetterReason::NetworkPartition:
+            return "NetworkPartition";
+        case DeadLetterReason::TransportSendFailed:
+            return "TransportSendFailed";
+        case DeadLetterReason::DecodeFailed:
+            return "DecodeFailed";
+        case DeadLetterReason::OverflowPolicy:
+            return "OverflowPolicy";
+        case DeadLetterReason::NoDropRejected:
+            return "NoDropRejected";
+        case DeadLetterReason::DrainTimeout:
+            return "DrainTimeout";
+        case DeadLetterReason::DrainPolicyDrop:
+            return "DrainPolicyDrop";
+        case DeadLetterReason::Expired:
+            return "Expired";
+    }
+    return "Unknown";
+}
+
+[[nodiscard]] inline const char* to_string(DeadLetterSource source) noexcept {
+    switch (source) {
+        case DeadLetterSource::LocalDelivery:
+            return "LocalDelivery";
+        case DeadLetterSource::RemoteDelivery:
+            return "RemoteDelivery";
+        case DeadLetterSource::ActorProxy:
+            return "ActorProxy";
+        case DeadLetterSource::Transport:
+            return "Transport";
+        case DeadLetterSource::MailboxAdmission:
+            return "MailboxAdmission";
+        case DeadLetterSource::ServiceDiscovery:
+            return "ServiceDiscovery";
+        case DeadLetterSource::Replay:
+            return "Replay";
+    }
+    return "Unknown";
+}
+
 enum class DeadLetterOverflowPolicy : uint8_t {
     DropOldestRecord,
     DropNewestRecord,
@@ -185,6 +240,14 @@ class DeadLetterQueue {
 
     bool try_push(DeadLetterRecord&& record) noexcept;
     bool try_pop(DeadLetterRecord& out) noexcept;
+    const DeadLetterConfig& config() const noexcept {
+        return config_;
+    }
+
+    std::vector<DeadLetterRecord> snapshot_records() const;
+
+    bool try_pop_at(size_t index, DeadLetterRecord& out) noexcept;
+
     DeadLetterQueueSnapshot snapshot() const noexcept;
 
   private:

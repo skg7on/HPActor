@@ -15,10 +15,8 @@ TEST(FaultSchedule, EmptyByDefault) {
 
 TEST(FaultSchedule, AddEntry) {
     FaultSchedule schedule;
-    schedule.add_entry({FaultDomain::kMailbox, 0,
-                        "hpactor.mailbox.enqueue.fail",
-                        FaultAction::kFail, std::nullopt,
-                        FailPayload{-1}});
+    schedule.add_entry({FaultDomain::kMailbox, 0, "hpactor.mailbox.enqueue.fail",
+                        FaultAction::kFail, std::nullopt, FailPayload{-1}});
     EXPECT_EQ(schedule.size(), 1u);
     const auto& e = schedule.entries()[0];
     EXPECT_EQ(e.domain, FaultDomain::kMailbox);
@@ -28,27 +26,19 @@ TEST(FaultSchedule, AddEntry) {
 
 TEST(FaultSchedule, MultipleEntries) {
     FaultSchedule schedule;
-    schedule.add_entry({FaultDomain::kMailbox, 0,
-                        "hpactor.mailbox.enqueue.fail",
-                        FaultAction::kFail, std::nullopt,
-                        FailPayload{-1}});
-    schedule.add_entry({FaultDomain::kTransport, 42,
-                        "hpactor.transport.send.drop",
-                        FaultAction::kDrop, std::nullopt,
-                        std::monostate{}});
-    schedule.add_entry({FaultDomain::kAllocator, 5,
-                        "hpactor.allocator.oom",
-                        FaultAction::kFail, std::nullopt,
-                        FailPayload{12}});
+    schedule.add_entry({FaultDomain::kMailbox, 0, "hpactor.mailbox.enqueue.fail",
+                        FaultAction::kFail, std::nullopt, FailPayload{-1}});
+    schedule.add_entry({FaultDomain::kTransport, 42, "hpactor.transport.send.drop",
+                        FaultAction::kDrop, std::nullopt, std::monostate{}});
+    schedule.add_entry({FaultDomain::kAllocator, 5, "hpactor.allocator.oom",
+                        FaultAction::kFail, std::nullopt, FailPayload{12}});
     EXPECT_EQ(schedule.size(), 3u);
 }
 
 TEST(FaultSchedule, Clear) {
     FaultSchedule schedule;
-    schedule.add_entry({FaultDomain::kMailbox, 0,
-                        "hpactor.mailbox.enqueue.fail",
-                        FaultAction::kFail, std::nullopt,
-                        FailPayload{-1}});
+    schedule.add_entry({FaultDomain::kMailbox, 0, "hpactor.mailbox.enqueue.fail",
+                        FaultAction::kFail, std::nullopt, FailPayload{-1}});
     schedule.clear();
     EXPECT_TRUE(schedule.empty());
 }
@@ -56,11 +46,9 @@ TEST(FaultSchedule, Clear) {
 TEST(FaultSchedule, EntriesPreserveOrder) {
     FaultSchedule schedule;
     for (int i = 0; i < 10; ++i) {
-        schedule.add_entry({FaultDomain::kTransport,
-                            static_cast<uint64_t>(i),
-                            "hpactor.transport.send.drop",
-                            FaultAction::kDrop, std::nullopt,
-                            std::monostate{}});
+        schedule.add_entry({FaultDomain::kTransport, static_cast<uint64_t>(i),
+                            "hpactor.transport.send.drop", FaultAction::kDrop,
+                            std::nullopt, std::monostate{}});
     }
     EXPECT_EQ(schedule.size(), 10u);
     for (size_t i = 0; i < 10; ++i) {
@@ -86,12 +74,11 @@ TEST(FaultSchedule, AllFiveActions) {
 TEST(FaultSchedule, WithTarget) {
     FaultSchedule schedule;
     ActorId target(42);
-    schedule.add_entry({FaultDomain::kMailbox, 0,
-                        "hpactor.mailbox.enqueue.fail",
-                        FaultAction::kFail, target,
-                        FailPayload{-1}});
-    ASSERT_TRUE(schedule.entries()[0].target.has_value());
-    EXPECT_EQ(schedule.entries()[0].target.value(), target);
+    schedule.add_entry({FaultDomain::kMailbox, 0, "hpactor.mailbox.enqueue.fail",
+                        FaultAction::kFail, target, FailPayload{-1}});
+    const auto& opt = schedule.entries()[0].target;
+    ASSERT_TRUE(opt.has_value());
+    EXPECT_EQ(*opt, target); // NOLINT(bugprone-unchecked-optional-access)
 }
 
 } // anonymous namespace

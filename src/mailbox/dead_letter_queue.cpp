@@ -87,4 +87,22 @@ DeadLetterQueueSnapshot DeadLetterQueue::snapshot() const noexcept {
     return s;
 }
 
+std::vector<DeadLetterRecord> DeadLetterQueue::snapshot_records() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    return std::vector<DeadLetterRecord>(records_.begin(), records_.end());
+}
+
+bool DeadLetterQueue::try_pop_at(size_t index, DeadLetterRecord& out) noexcept {
+    std::lock_guard<std::mutex> lock(mutex_);
+    if (index >= records_.size()) {
+        return false;
+    }
+    auto it = records_.begin();
+    std::advance(it, static_cast<long>(index));
+    out = std::move(*it);
+    records_.erase(it);
+    total_popped_++;
+    return true;
+}
+
 } // namespace hpactor::mailbox

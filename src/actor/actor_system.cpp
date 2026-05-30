@@ -591,6 +591,22 @@ namespace {
 
 using MetricBuf = hpactor::metrics::MpscRingBuffer<hpactor::metrics::MetricEvent>;
 
+// Populate the trace fields on a DeadLetterRecord from a TraceContext.
+// TraceId and SpanId are stored as big-endian byte arrays (W3C format);
+// convert to uint64_t fields for the DLQ record.
+void set_dlq_trace_fields(hpactor::mailbox::DeadLetterRecord& dl,
+                          const hpactor::TraceContext& tc) noexcept {
+    uint64_t hi = 0, lo = 0, sp = 0;
+    for (size_t i = 0; i < 8; ++i) {
+        hi = (hi << 8) | tc.trace_id.bytes[i];
+        lo = (lo << 8) | tc.trace_id.bytes[i + 8];
+        sp = (sp << 8) | tc.span_id.bytes[i];
+    }
+    dl.trace_id_hi = hi;
+    dl.trace_id_lo = lo;
+    dl.span_id = sp;
+}
+
 // Build the EnqueueResult + observability for a missing-actor target.
 [[nodiscard]] hpactor::mailbox::EnqueueResult
 reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
@@ -611,6 +627,13 @@ reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
         dl.priority = priority;
         dl.deadline_ns = deadline_ns;
         dl.payload_sample = msg.payload();
+        dl.timestamp_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        if (msg.has_trace_context()) {
+            set_dlq_trace_fields(dl, msg.trace_context());
+        }
         (void)dlq->try_push(std::move(dl));
     }
 
@@ -715,6 +738,10 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
         dl.priority = priority;
         dl.deadline_ns = deadline_ns;
         dl.payload_sample = msg.payload();
+        dl.timestamp_ns = now_ns;
+        if (msg.has_trace_context()) {
+            set_dlq_trace_fields(dl, msg.trace_context());
+        }
         (void)dlq->try_push(std::move(dl));
     }
     return hpactor::mailbox::EnqueueResult{
@@ -723,19 +750,21 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
 
 // Emit metrics, logging, and dead-letter dispatch for a rejected enqueue
 // result.  Idempotent — does nothing when the result is accepted.
-void emit_rejection_observability(hpactor::mailbox::DeadLetterQueue* dlq,
-                                  MetricBuf* metrics, hpactor::EndPoint endpoint,
-                                  hpactor::ActorId target,
-                                  const hpactor::mailbox::MailboxEnvelopeMeta& meta,
-                                  const hpactor::mailbox::EnqueueResult& result,
-                                  const hpactor::mailbox::DeliveryOptions& options,
-                                  hpactor::mailbox::OverflowPolicy overflow_policy) {
+void emit_rejection_observability(
+    hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
+    hpactor::EndPoint endpoint, hpactor::ActorId target,
+    const hpactor::StreamBuffer& msg_payload, const hpactor::TraceContext& msg_trace,
+    bool msg_has_trace, const hpactor::mailbox::MailboxEnvelopeMeta& meta,
+    const hpactor::mailbox::EnqueueResult& result,
+    const hpactor::mailbox::DeliveryOptions& options,
+    hpactor::mailbox::OverflowPolicy overflow_policy) {
     if (result.accepted()) {
         return;
     }
 
     // Dead-letter when the overflow policy mandates it.
-    if (dlq && overflow_policy == hpactor::mailbox::OverflowPolicy::DeadLetter) {
+    if (dlq && dlq->config().enabled &&
+        overflow_policy == hpactor::mailbox::OverflowPolicy::DeadLetter) {
         hpactor::mailbox::DeadLetterRecord dl;
         dl.reason = hpactor::mailbox::DeadLetterReason::OverflowPolicy;
         dl.source = hpactor::mailbox::DeadLetterSource::MailboxAdmission;
@@ -749,6 +778,14 @@ void emit_rejection_observability(hpactor::mailbox::DeadLetterQueue* dlq,
         dl.deadline_ns = meta.deadline_ns;
         dl.mailbox_depth = result.depth;
         dl.mailbox_capacity = result.capacity;
+        dl.timestamp_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        dl.payload_sample = msg_payload;
+        if (msg_has_trace) {
+            set_dlq_trace_fields(dl, msg_trace);
+        }
         (void)dlq->try_push(std::move(dl));
     }
 
@@ -821,11 +858,21 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
     }
 
     const auto bp_mode = mailbox->config().backpressure_mode;
+    // Extract payload and trace before the move — needed for DLQ on rejection.
+    const StreamBuffer& msg_payload = msg.payload();
+    TraceContext msg_trace;
+    bool msg_has_trace = msg.has_trace_context();
+    if (msg_has_trace) {
+        msg_trace = msg.trace_context();
+    }
     auto result = mailbox->try_push(std::move(msg), meta);
 
-    emit_rejection_observability(dead_letters_.get(), metrics_ring_buffer_.get(),
-                                 endpoint_, target, meta, result, options,
-                                 mailbox->config().overflow_policy);
+    if (!result.accepted()) {
+        emit_rejection_observability(
+            dead_letters_.get(), metrics_ring_buffer_.get(), endpoint_, target,
+            msg_payload, msg_trace, msg_has_trace, meta, result, options,
+            mailbox->config().overflow_policy);
+    }
 
     maybe_emit_backpressure_signal(mailbox, result, meta,
                                    options.emit_backpressure, bp_mode);

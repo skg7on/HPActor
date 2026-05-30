@@ -23,6 +23,10 @@
 #include <atomic>
 #include <functional>
 
+namespace hpactor::mailbox {
+class DeadLetterQueue;
+}
+
 namespace hpactor::mailbox::detail {
 
 template <typename T> struct OverflowContext {
@@ -39,6 +43,7 @@ template <typename T> struct OverflowContext {
     uint32_t current_depth;
     uint64_t current_bytes;
     std::function<bool()> drop_oldest_fn;
+    mailbox::DeadLetterQueue* dlq = nullptr;
 };
 
 } // namespace hpactor::mailbox::detail

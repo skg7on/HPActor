@@ -12,7 +12,7 @@ namespace hpactor::fault {
 namespace {
 
 FaultSchedule build_schedule_from_seed(uint64_t seed) {
-    std::mt19937 rng(seed);
+    std::mt19937 rng(static_cast<std::mt19937::result_type>(seed));
     std::uniform_int_distribution<uint64_t> dist(1, 100);
 
     FaultSchedule schedule;
@@ -22,17 +22,13 @@ FaultSchedule build_schedule_from_seed(uint64_t seed) {
     for (int i = 0; i < 50; ++i) {
         uint64_t r = dist(rng);
         if (r <= 10) {
-            schedule.add_entry({FaultDomain::kTransport,
-                                 ++transport_tick,
-                                 "hpactor.transport.send.drop",
-                                 FaultAction::kDrop, std::nullopt,
-                                 std::monostate{}});
+            schedule.add_entry({FaultDomain::kTransport, ++transport_tick,
+                                "hpactor.transport.send.drop", FaultAction::kDrop,
+                                std::nullopt, std::monostate{}});
         } else if (r <= 20) {
-            schedule.add_entry({FaultDomain::kMailbox,
-                                 ++mailbox_tick,
-                                 "hpactor.mailbox.enqueue.fail",
-                                 FaultAction::kFail, std::nullopt,
-                                 FailPayload{-1}});
+            schedule.add_entry({FaultDomain::kMailbox, ++mailbox_tick,
+                                "hpactor.mailbox.enqueue.fail", FaultAction::kFail,
+                                std::nullopt, FailPayload{-1}});
         }
     }
     return schedule;
@@ -77,10 +73,8 @@ TEST(FaultSeedReplay, DifferentSchedulesProduceDifferentBehavior) {
         schedules_differ = true;
     } else {
         for (size_t i = 0; i < sched1.size(); ++i) {
-            if (sched1.entries()[i].at_tick !=
-                    sched2.entries()[i].at_tick ||
-                sched1.entries()[i].domain !=
-                    sched2.entries()[i].domain) {
+            if (sched1.entries()[i].at_tick != sched2.entries()[i].at_tick ||
+                sched1.entries()[i].domain != sched2.entries()[i].domain) {
                 schedules_differ = true;
                 break;
             }

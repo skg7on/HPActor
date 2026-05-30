@@ -67,7 +67,6 @@ struct MailboxConfig {
     uint32_t max_overflow_depth = 0;
     uint32_t signal_min_interval_ms = 100;
     bool priority_aware = false;
-    bool enable_dead_letters = true;
 };
 
 struct MessagePriority {
