@@ -14,14 +14,5 @@
 
 #pragma once
 
-#include <hpactor/fault/fault_controller.hpp>
-#include <hpactor/hpactor_config.hpp>
-#include <hpactor/platform.hpp>
-
-#if HPACTOR_ENABLE_FAULT_INJECTION
-#    define FAULT_INJECT(path)                                                 \
-        if (auto* _fc = ::hpactor::fault::FaultController::instance();         \
-            _fc != nullptr && HPACTOR_UNLIKELY(_fc->check(path)))
-#else
-#    define FAULT_INJECT(path) if (false)
-#endif
+// CLI commands for dead-letter queue: /dlq list, /dlq show, /dlq replay, /dlq
+// export. Auto-registered via file-scope CommandRegistration objects.
