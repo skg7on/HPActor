@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mem/memory_region.hpp>
 
 namespace hpactor::mem {
@@ -44,6 +45,10 @@ MemoryRegionRegistry::pressure_for(uint8_t idx, uint64_t active) const noexcept 
 
 bool MemoryRegionRegistry::try_reserve(RegionType region,
                                        size_t charged_bytes) noexcept {
+    FAULT_INJECT("hpactor.allocator.region.try_reserve.fail") {
+        return false;
+    }
+
     const uint8_t idx = index(region);
     auto& stats = stats_[idx];
     const auto limit_cfg = limits_[idx];
@@ -86,6 +91,9 @@ void MemoryRegionRegistry::cancel_reservation(RegionType region,
 
 void MemoryRegionRegistry::record_free(RegionType region,
                                        size_t charged_bytes) noexcept {
+    FAULT_INJECT("hpactor.allocator.region.record_free.skip") {
+        return;
+    }
     const uint8_t idx = index(region);
     auto& stats = stats_[idx];
     stats.active_bytes.fetch_sub(charged_bytes, std::memory_order_relaxed);

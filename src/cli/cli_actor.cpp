@@ -19,6 +19,7 @@
 #include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 
 #include <chrono>
 #include <cstdio>
@@ -220,6 +221,9 @@ void CliActor::build_command_tree() {
 // ---------------------------------------------------------------------------
 
 void CliActor::execute_tokens(const std::vector<Token>& tokens) {
+    FAULT_INJECT("hpactor.cli.execute_tokens.corrupt") {
+        return;  // silently skip command execution
+    }
     // Reopen formatter for each command
     formatter_ = OutputFormatter::create(config_.default_format);
 
@@ -295,6 +299,9 @@ void CliActor::execute_tokens(const std::vector<Token>& tokens) {
 }
 
 bool CliActor::run_once() {
+    FAULT_INJECT("hpactor.cli.actor.run_once.fail") {
+        return false;  // daemon exits
+    }
     if (!running_) {
         return false;
     }

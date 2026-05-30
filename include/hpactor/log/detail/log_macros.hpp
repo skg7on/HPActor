@@ -37,6 +37,7 @@
     X(kSupervision, "supervision")                                             \
     X(kCli, "cli")                                                             \
     X(kHttp, "http")                                                           \
+    X(kFault, "fault")                                                         \
     X(kUser, "user")
 
 // Ranges: 1000-1099 actor, 1100-1199 mailbox, 1200-1299 memory,

@@ -14,6 +14,8 @@
 
 #include <hpactor/mailbox/dedup_cache.hpp>
 
+#include <hpactor/fault/fault_macros.hpp>
+
 #include <mutex>
 #include <unordered_map>
 
@@ -76,7 +78,11 @@ bool DedupCache::is_duplicate(EndPoint source_node, ActorId source_actor,
     auto it = impl_->entries.find(key);
     if (it != impl_->entries.end()) {
         impl_->hits++;
-        return true;
+        bool result = true;
+        FAULT_INJECT("hpactor.mailbox.dedup.is_duplicate.corrupt") {
+            result = !result;
+        }
+        return result;
     }
 
     // Not found — insert with a zero timestamp.
@@ -97,7 +103,11 @@ bool DedupCache::is_duplicate(EndPoint source_node, ActorId source_actor,
         }
     }
 
-    return false;
+    bool result = false;
+    FAULT_INJECT("hpactor.mailbox.dedup.is_duplicate.corrupt") {
+        result = !result;
+    }
+    return result;
 }
 
 void DedupCache::purge_expired(uint64_t now_ns) noexcept {

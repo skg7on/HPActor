@@ -55,7 +55,24 @@ TEST(FaultPointRegistry, CollectByPrefix) {
 
 TEST(FaultPointRegistry, NonEmptyCatalog) {
     auto& reg = FaultPointRegistry::instance();
-    EXPECT_GE(reg.points().size(), 12u);
+    EXPECT_GE(reg.points().size(), 78u);
+}
+
+TEST(FaultPoint, NewDomainsHaveValidEnumValues) {
+    EXPECT_EQ(static_cast<uint8_t>(FaultDomain::kRpc), 9);
+    EXPECT_EQ(static_cast<uint8_t>(FaultDomain::kSupervision), 10);
+    EXPECT_EQ(static_cast<uint8_t>(FaultDomain::kDiscovery), 11);
+    EXPECT_EQ(static_cast<uint8_t>(FaultDomain::kTracing), 12);
+    EXPECT_EQ(static_cast<uint8_t>(FaultDomain::kMetrics), 13);
+}
+
+TEST(FaultPoint, ToStringHandlesAll14Domains) {
+    for (uint8_t i = 0; i <= 13; ++i) {
+        auto d = static_cast<FaultDomain>(i);
+        auto str = to_string(d);
+        EXPECT_FALSE(str.empty());
+        EXPECT_NE(str, "kUnknown");
+    }
 }
 
 } // anonymous namespace

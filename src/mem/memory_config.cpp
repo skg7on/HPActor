@@ -18,6 +18,7 @@
 #include <hpactor/mem/memory_tracker.hpp>
 #include <hpactor/mem/segment_provider.hpp>
 #include <hpactor/mem/slab_cache.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 
 #include <cstdlib>
 #include <cstring>
@@ -47,6 +48,9 @@ void fallback_deallocate(AllocHeader* header) noexcept {
 } // namespace
 
 void* allocate(RegionType region, size_t user_bytes, ActorId owner) noexcept {
+    FAULT_INJECT("hpactor.allocator.oom") {
+        return nullptr;
+    }
     const SizeClass sc = class_for_size(user_bytes);
     const size_t charged_bytes = size_for_class(sc);
     auto& regions = MemoryRegionRegistry::instance();

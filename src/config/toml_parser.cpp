@@ -20,6 +20,7 @@
 #include <hpactor/config/toml_table_view.hpp>
 #include <hpactor/log/log_category.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 
 #include <toml.hpp>
 
@@ -301,6 +302,9 @@ topological_sort(std::vector<ActorDef> actors) {
 // TomlParser::parse
 // =============================================================================
 result<TopologyModel> TomlParser::parse(const std::string& entrypoint_path) {
+    FAULT_INJECT("hpactor.config.parse.fail") {
+        return result<TopologyModel>::make(error(1, "fault injected parse failure"));
+    }
     fs::path entry_fs(entrypoint_path);
     fs::path base_dir = entry_fs.parent_path();
     if (base_dir.empty())

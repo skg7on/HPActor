@@ -20,6 +20,7 @@
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/hpactor_config.hpp>
 
 #include <chrono>
@@ -105,6 +106,8 @@ ActorSystem::ActorSystem(const Config& config)
     if (logger_) [[unlikely]] {
         scheduler_->set_logger(logger_);
     }
+
+    fault_controller_.set_log_manager(log_manager_.get());
 
     scheduler_->start();
 
@@ -233,8 +236,8 @@ ActorSystem::~ActorSystem() {
     if (trace_manager_) {
         trace_manager_->stop();
     }
-    fault_controller_.remove();
     scheduler_->stop();
+    fault_controller_.remove();
 }
 
 void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
@@ -990,6 +993,9 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
 // -----------------------------------------------------------------------------
 Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
                                     const config::ActorDef& def) {
+    FAULT_INJECT("hpactor.actor.spawn.fail") {
+        return {};
+    }
     ActorId id(next_actor_id_.fetch_add(1));
     actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
     actor->set_type_name(def.behavior);

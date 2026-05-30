@@ -29,19 +29,29 @@ enum class FaultDomain : uint8_t {
     kGossip = 6,
     kConfig = 7,
     kActor = 8,
+    kRpc = 9,
+    kSupervision = 10,
+    kDiscovery = 11,
+    kTracing = 12,
+    kMetrics = 13,
 };
 
 constexpr std::string_view to_string(FaultDomain d) noexcept {
     switch (d) {
-    case FaultDomain::kMailbox:    return "kMailbox";
-    case FaultDomain::kTransport:  return "kTransport";
-    case FaultDomain::kScheduler:  return "kScheduler";
-    case FaultDomain::kAllocator:  return "kAllocator";
-    case FaultDomain::kStorage:    return "kStorage";
-    case FaultDomain::kTimer:      return "kTimer";
-    case FaultDomain::kGossip:     return "kGossip";
-    case FaultDomain::kConfig:     return "kConfig";
-    case FaultDomain::kActor:      return "kActor";
+    case FaultDomain::kMailbox:     return "kMailbox";
+    case FaultDomain::kTransport:   return "kTransport";
+    case FaultDomain::kScheduler:   return "kScheduler";
+    case FaultDomain::kAllocator:   return "kAllocator";
+    case FaultDomain::kStorage:     return "kStorage";
+    case FaultDomain::kTimer:       return "kTimer";
+    case FaultDomain::kGossip:      return "kGossip";
+    case FaultDomain::kConfig:      return "kConfig";
+    case FaultDomain::kActor:       return "kActor";
+    case FaultDomain::kRpc:         return "kRpc";
+    case FaultDomain::kSupervision: return "kSupervision";
+    case FaultDomain::kDiscovery:   return "kDiscovery";
+    case FaultDomain::kTracing:     return "kTracing";
+    case FaultDomain::kMetrics:     return "kMetrics";
     }
     return "kUnknown";
 }

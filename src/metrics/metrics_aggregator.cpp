@@ -15,6 +15,7 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/metrics/metrics_aggregator.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <string>
 
 namespace hpactor::metrics {
@@ -140,6 +141,9 @@ void Aggregator::end_drain() {
 }
 
 void Aggregator::on_event(const MetricEvent& e) {
+    FAULT_INJECT("hpactor.metrics.aggregator.on_event.corrupt") {
+        return;  // silently drop metric event
+    }
     ensure_families_registered();
 
     switch (e.event_type) {

@@ -16,12 +16,17 @@
 
 #include <hpactor/fault/fault_schedule.hpp>
 #include <hpactor/fault/fault_types.hpp>
+#include <hpactor/log/log_manager.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <atomic>
 #include <cstdint>
+#include <memory>
+#include <mutex>
 #include <optional>
 #include <string>
 #include <string_view>
+#include <vector>
 
 namespace hpactor::fault {
 
@@ -30,7 +35,7 @@ struct FaultControllerSnapshot {
     std::string active_scope;
     uint64_t replay_seed;
     size_t schedule_entry_count;
-    uint64_t domain_ticks[9];
+    uint64_t domain_ticks[14];
     uint64_t faults_fired;
 };
 
@@ -42,8 +47,8 @@ class FaultController {
     void clear();
 
     void enable(std::string_view scope_pattern);
-    void disable(std::string_view scope_pattern);
-    bool is_enabled() const noexcept { return enabled_; }
+    void disable();
+    bool is_enabled() const noexcept { return enabled_.load(std::memory_order_acquire); }
 
     bool check(std::string_view path,
                std::optional<ActorId> target = std::nullopt);
@@ -55,27 +60,43 @@ class FaultController {
     void set_replay_seed(uint64_t seed) { replay_seed_ = seed; }
     uint64_t replay_seed() const noexcept { return replay_seed_; }
 
-    FaultControllerSnapshot snapshot() const;
+    void set_log_manager(log::LogManager* lm) { log_manager_ = lm; }
 
-    uint64_t faults_fired() const noexcept { return faults_fired_; }
+    FaultControllerSnapshot snapshot() const;
+    static FaultControllerSnapshot aggregate_snapshot();
+
+    uint64_t faults_fired() const noexcept { return faults_fired_.load(std::memory_order_acquire); }
 
     void install();
     void remove();
 
-    static FaultController* instance() {
-        return instance_;
-    }
+    static FaultController* instance();
 
   private:
-    static FaultController* instance_;
+    static thread_local FaultController* tls_instance_;
 
-    bool enabled_;
+    struct InstanceList {
+        std::mutex mutex;
+        std::vector<FaultController*> instances;
+    };
+    static InstanceList& instance_list();
+
+    void load_impl(const FaultSchedule& schedule);
+    void clear_impl();
+    void enable_impl(std::string_view scope_pattern);
+    void disable_impl();
+
+    std::atomic<bool> enabled_{false};
     std::string active_scope_;
-    FaultSchedule schedule_;
-    size_t schedule_cursor_;
-    uint64_t domain_ticks_[9];
-    uint64_t replay_seed_;
-    uint64_t faults_fired_;
+    // Shared pointer to allow check() to hold a stable snapshot while
+    // load()/clear() swap in a new schedule from the broadcast path.
+    std::shared_ptr<const FaultSchedule> schedule_;
+    // Per-instance cursor, only accessed by the owning thread's check().
+    size_t schedule_cursor_{0};
+    uint64_t domain_ticks_[14]{};
+    uint64_t replay_seed_{0};
+    std::atomic<uint64_t> faults_fired_{0};
+    log::LogManager* log_manager_ = nullptr;
 };
 
 } // namespace hpactor::fault

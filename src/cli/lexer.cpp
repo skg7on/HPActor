@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/cli/lexer.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <cctype>
 
 namespace hpactor {
@@ -42,6 +43,9 @@ std::string Lexer::unescape(const std::string& s) {
 }
 
 std::vector<Token> Lexer::tokenize(const std::string& input) {
+    FAULT_INJECT("hpactor.cli.lexer.tokenize.corrupt") {
+        return {};  // return empty tokens
+    }
     std::vector<Token> tokens;
     size_t i = 0;
     size_t n = input.size();
