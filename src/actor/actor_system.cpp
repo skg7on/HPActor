@@ -553,6 +553,8 @@ mailbox::MailboxConfig ActorSystem::mailbox_config_for_spawn() const {
     cfg.high_watermark = config_.mailbox.high_watermark;
     cfg.low_watermark = config_.mailbox.low_watermark;
     cfg.critical_watermark = config_.mailbox.critical_watermark;
+    cfg.priority_aware = config_.mailbox.priority_aware;
+    cfg.priority_levels = config_.mailbox.priority_levels;
     cfg.protected_system_messages = config_.mailbox.protected_system_messages;
     cfg.max_overflow_depth = config_.mailbox.max_overflow_depth;
     cfg.signal_min_interval_ms = config_.mailbox.signal_min_interval_ms;
@@ -570,6 +572,7 @@ ActorSystem::mailbox_config_for_actor_def(const config::ActorDef& def) const {
         cfg.overflow_policy = def.mailbox.policy;
     }
     cfg.priority_aware = def.mailbox.priority_aware;
+    cfg.priority_levels = def.mailbox.priority_levels;
     cfg.max_overflow_depth = def.mailbox.max_overflow_depth;
     if (def.mailbox.high_watermark > 0.0) {
         cfg.high_watermark = def.mailbox.high_watermark;

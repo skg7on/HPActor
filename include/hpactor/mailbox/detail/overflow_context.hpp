@@ -44,6 +44,7 @@ template <typename T> struct OverflowContext {
     uint64_t current_bytes;
     std::function<bool()> drop_oldest_fn;
     mailbox::DeadLetterQueue* dlq = nullptr;
+    std::function<bool()> drop_lowest_priority_fn;
 };
 
 } // namespace hpactor::mailbox::detail

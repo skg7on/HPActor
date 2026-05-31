@@ -56,7 +56,9 @@ class OverflowHandlerTest : public ::testing::Test {
                                      ActorId{1},
                                      /*current_depth=*/100,
                                      /*current_bytes=*/1024 * 1024,
-                                     /*drop_oldest_fn=*/nullptr};
+                                     /*drop_oldest_fn=*/nullptr,
+                                     /*dlq=*/nullptr,
+                                     /*drop_lowest_priority_fn=*/nullptr};
         return handler.handle(ctx, reason);
     }
 
@@ -131,7 +133,9 @@ TEST_F(OverflowHandlerTest, DropOldestWithSuccessCallback) {
                                  ActorId{1},
                                  /*current_depth=*/100,
                                  /*current_bytes=*/1024 * 1024,
-                                 []() { return true; }};
+                                 []() { return true; },
+                                 /*dlq=*/nullptr,
+                                 /*drop_lowest_priority_fn=*/nullptr};
     auto r = handler.handle(ctx, ReservationResult::CountCapacity);
     EXPECT_EQ(r.code, EnqueueResultCode::DroppedExisting);
 }

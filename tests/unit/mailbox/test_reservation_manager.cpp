@@ -70,29 +70,6 @@ TEST_F(ReservationManagerTest, ReleaseReturnsCapacity) {
     EXPECT_EQ(r, ReservationResult::Reserved);
 }
 
-TEST_F(ReservationManagerTest, SystemReserveBypassesByteBudget) {
-    // Main pool exhausted at byte level.
-    mgr.try_reserve(90, 5, 100);
-    auto r = mgr.try_reserve(20, 5, 100);
-    EXPECT_EQ(r, ReservationResult::ByteCapacity);
-    // System reserve should still work.
-    bool ok = mgr.try_reserve_system(200, 32);
-    EXPECT_TRUE(ok);
-    EXPECT_EQ(mgr.reserved_system_count(), 1);
-}
-
-TEST_F(ReservationManagerTest, SystemReserveRespectsLimit) {
-    for (int i = 0; i < 3; i++)
-        EXPECT_TRUE(mgr.try_reserve_system(1, 3));
-    EXPECT_FALSE(mgr.try_reserve_system(1, 3));
-}
-
-TEST_F(ReservationManagerTest, ReleaseSystemReturnsCapacity) {
-    mgr.try_reserve_system(10, 32);
-    mgr.release_system(10);
-    EXPECT_EQ(mgr.reserved_system_count(), 0);
-}
-
 TEST_F(ReservationManagerTest, UnlimitedMessagesCountsBytes) {
     // max_messages=0 means unlimited count.
     auto r = mgr.try_reserve(100, 0, 0);

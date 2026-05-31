@@ -24,6 +24,7 @@
 #include <hpactor/mailbox/detail/reservation_manager.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
+#include <hpactor/mailbox/multi_lane_queue.hpp>
 #include <hpactor/mailbox/overflow_queue.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -52,12 +53,14 @@ template <typename T> class MPSCActorMailbox {
         overflow_queue_.set_max_depth(config_.max_overflow_depth);
         overflow_handler_ =
             detail::make_overflow_handler<T>(config_.overflow_policy);
+        lanes_.set_num_user_lanes(config_.priority_levels);
     }
 
     ~MPSCActorMailbox() {
-        if (pending_free_) {
-            pending_free_->~T();
-            mem::deallocate(pending_free_);
+        T* p = lanes_.release_pending_free();
+        if (p) {
+            p->~T();
+            mem::deallocate(p);
         }
     }
 
@@ -83,6 +86,7 @@ template <typename T> class MPSCActorMailbox {
         overflow_queue_.set_max_depth(config_.max_overflow_depth);
         overflow_handler_ =
             detail::make_overflow_handler<T>(config_.overflow_policy);
+        lanes_.set_num_user_lanes(config_.priority_levels);
     }
 
     const MailboxConfig& config() const noexcept {
@@ -100,75 +104,96 @@ template <typename T> class MPSCActorMailbox {
             meta.estimated_bytes = estimate_node_bytes(msg);
         }
 
+        uint8_t lane = route_lane(meta);
+
+        // System messages use the dedicated system lane.
+        if (lane == MultiLaneQueue<T>::kSystemLaneSentinel) {
+            if (static_cast<uint32_t>(
+                    lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel))
+                >= config_.protected_system_messages) {
+                update_pressure_state(/*hard_failure=*/true);
+                total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                EnqueueResult r;
+                r.code = EnqueueResultCode::Rejected;
+                r.target = actor_id_;
+                r.depth = static_cast<uint32_t>(lanes_.total_depth());
+                r.capacity = config_.capacity.max_messages;
+                r.bytes = reservation_.queued_bytes();
+                r.byte_capacity = config_.capacity.max_bytes;
+                r.pressure_ratio = pressure_ratio();
+                r.pressure_state = pressure_state_.current_state();
+                return r;
+            }
+            void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+            auto* node = new (raw) T(std::move(msg));
+            system_lane_bytes_.fetch_add(meta.estimated_bytes,
+                                         std::memory_order_relaxed);
+            enqueue_reserved(node, meta,
+                             MultiLaneQueue<T>::kSystemLaneSentinel);
+            return make_result(pressure_state_.code_after_accept());
+        }
+
+        // User messages: reserve capacity, then enqueue to the routed lane.
         auto reserve_result = reservation_.try_reserve(
             meta.estimated_bytes, config_.capacity.max_messages,
             config_.capacity.max_bytes);
 
         if (reserve_result != detail::ReservationResult::Reserved) {
-            bool sys_reserved = false;
-            if (is_system_message(meta.type_tag)) {
-                sys_reserved = reservation_.try_reserve_system(
-                    meta.estimated_bytes, config_.protected_system_messages);
+            update_pressure_state(/*hard_failure=*/true);
+
+            detail::OverflowContext<T> ctx{
+                msg,
+                meta,
+                reservation_,
+                overflow_queue_,
+                total_rejected_,
+                total_dropped_,
+                total_dead_letters_,
+                metrics_ring_buffer_,
+                config_,
+                actor_id_,
+                static_cast<uint32_t>(lanes_.total_depth()),
+                reservation_.queued_bytes(),
+                [this]() { return drop_one_oldest_global(); },
+                nullptr,                                      // dlq
+                [this]() { return drop_one_lowest_priority(); }};  // drop_lowest_priority_fn
+
+            auto result = overflow_handler_->handle(ctx, reserve_result);
+
+            result.pressure_state = pressure_state_.current_state();
+            result.pressure_ratio = pressure_ratio();
+            if (result.retry_after.count() == 0) {
+                auto base =
+                    std::chrono::milliseconds(config_.signal_min_interval_ms);
+                if (result.pressure_state == MailboxPressureState::HardPressure) {
+                    result.retry_after = base * 2;
+                } else if (result.pressure_state ==
+                               MailboxPressureState::SoftPressure ||
+                           result.pressure_state ==
+                               MailboxPressureState::Recovering) {
+                    result.retry_after = base;
+                }
             }
 
-            if (!sys_reserved) {
-                update_pressure_state(/*hard_failure=*/true);
-
-                detail::OverflowContext<T> ctx{
-                    msg,
-                    meta,
-                    reservation_,
-                    overflow_queue_,
-                    total_rejected_,
-                    total_dropped_,
-                    total_dead_letters_,
-                    metrics_ring_buffer_,
-                    config_,
-                    actor_id_,
-                    static_cast<uint32_t>(mailbox_.count()),
-                    reservation_.queued_bytes(),
-                    [this]() { return drop_one_oldest(); }};
-
-                auto result = overflow_handler_->handle(ctx, reserve_result);
-
-                // Handlers only set code/reason/target/depth/capacity/bytes.
-                // Fill in pressure state, ratio, and retry_after that the
-                // original make_result used to provide.
-                result.pressure_state = pressure_state_.current_state();
-                result.pressure_ratio = pressure_ratio();
-                if (result.retry_after.count() == 0) {
-                    auto base =
-                        std::chrono::milliseconds(config_.signal_min_interval_ms);
-                    if (result.pressure_state == MailboxPressureState::HardPressure) {
-                        result.retry_after = base * 2;
-                    } else if (result.pressure_state ==
-                                   MailboxPressureState::SoftPressure ||
-                               result.pressure_state ==
-                                   MailboxPressureState::Recovering) {
-                        result.retry_after = base;
-                    }
+            if (result.code == EnqueueResultCode::DroppedExisting) {
+                reserve_result = reservation_.try_reserve(
+                    meta.estimated_bytes, config_.capacity.max_messages,
+                    config_.capacity.max_bytes);
+                if (reserve_result == detail::ReservationResult::Reserved) {
+                    void* raw = mem::allocate(mem::RegionType::kMessage,
+                                              sizeof(T), actor_id_);
+                    auto* node = new (raw) T(std::move(msg));
+                    enqueue_reserved(node, meta, lane);
+                    return make_result(pressure_state_.code_after_accept());
                 }
-
-                if (result.code == EnqueueResultCode::DroppedExisting) {
-                    reserve_result = reservation_.try_reserve(
-                        meta.estimated_bytes, config_.capacity.max_messages,
-                        config_.capacity.max_bytes);
-                    if (reserve_result == detail::ReservationResult::Reserved) {
-                        void* raw = mem::allocate(mem::RegionType::kMessage,
-                                                  sizeof(T), actor_id_);
-                        auto* node = new (raw) T(std::move(msg));
-                        enqueue_reserved(node, meta);
-                        return make_result(pressure_state_.code_after_accept());
-                    }
-                    result.code = EnqueueResultCode::Rejected;
-                }
-                return result;
+                result.code = EnqueueResultCode::Rejected;
             }
+            return result;
         }
 
         void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
         auto* node = new (raw) T(std::move(msg));
-        enqueue_reserved(node, meta);
+        enqueue_reserved(node, meta, lane);
         return make_result(pressure_state_.code_after_accept());
     }
 
@@ -201,17 +226,18 @@ template <typename T> class MPSCActorMailbox {
     }
 
     void enqueue_reserved(T* node, const MailboxEnvelopeMeta& meta,
+                          uint8_t lane_idx = 0,
                           bool suppress_wakeup = false) noexcept {
         FAULT_INJECT("hpactor.mailbox.enqueue_reserved.drop") {
             return;  // drop after capacity committed
         }
         bool was_empty = empty();
-        mailbox_.enqueue(node);
+        lanes_.enqueue(node, lane_idx);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
         update_max_depth();
         update_pressure_state();
 
-        int64_t depth = mailbox_.count();
+        int64_t depth = lanes_.total_depth();
         if (depth > 1024) [[unlikely]] {
             HPACTOR_LOG_WARNING(
                 log::LogCategory::kMailbox, actor_id_,
@@ -243,26 +269,32 @@ template <typename T> class MPSCActorMailbox {
 
     T* dequeue() noexcept {
         lock_consumer();
-        T* node = mailbox_.dequeue();
+        T* node = lanes_.dequeue();
         FAULT_INJECT("hpactor.mailbox.dequeue.drop") {
-            // Silently drop: release reservation but return null to caller
+            // Silently drop: release reservation but return null to caller.
+            // System messages bypass reservation — skip release for them.
             if (node != nullptr) {
-                reservation_.release(estimate_node_bytes(*node));
+                bool is_sys = false;
+                if constexpr (std::is_same_v<T, TypedMessage>) {
+                    is_sys = is_system_message(node->type_id());
+                }
+                if (!is_sys) {
+                    reservation_.release(estimate_node_bytes(*node));
+                }
             }
             unlock_consumer();
             return nullptr;
         }
         if (node != nullptr) {
             uint64_t bytes = estimate_node_bytes(*node);
+            bool is_sys = false;
             if constexpr (std::is_same_v<T, TypedMessage>) {
-                if (is_system_message(node->type_id()) &&
-                    reservation_.reserved_system_count() > 0) {
-                    reservation_.release_system(bytes);
-                } else {
-                    reservation_.release(bytes);
-                }
-            } else {
+                is_sys = is_system_message(node->type_id());
+            }
+            if (!is_sys) {
                 reservation_.release(bytes);
+            } else {
+                system_lane_bytes_.fetch_sub(bytes, std::memory_order_relaxed);
             }
             total_dequeued_.fetch_add(1, std::memory_order_relaxed);
             update_pressure_state();
@@ -294,7 +326,7 @@ template <typename T> class MPSCActorMailbox {
     }
 
     bool empty() const noexcept {
-        return mailbox_.empty();
+        return lanes_.empty();
     }
 
     bool was_empty() const noexcept {
@@ -317,13 +349,13 @@ template <typename T> class MPSCActorMailbox {
     void inject_for_test(T* node) noexcept {
         reservation_.inject_count(estimate_node_bytes(*node));
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
-        mailbox_.enqueue(node);
+        lanes_.enqueue(node, 0);
         mailbox_was_empty_.store(false, std::memory_order_release);
     }
 
     cli::MboxSnapshot snapshot() const {
         cli::MboxSnapshot s;
-        s.depth = static_cast<uint32_t>(mailbox_.count());
+        s.depth = static_cast<uint32_t>(lanes_.total_depth());
         s.capacity = config_.capacity.max_messages;
         s.queued_bytes = reservation_.queued_bytes();
         s.byte_capacity = config_.capacity.max_bytes;
@@ -345,7 +377,13 @@ template <typename T> class MPSCActorMailbox {
             s.overflow_total_popped = oq_snap.total_popped;
             s.overflow_total_lost = oq_snap.total_lost;
         }
-        s.high_priority_depth = 0;
+        s.system_lane_depth = static_cast<uint32_t>(
+            lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel));
+        s.num_user_lanes = lanes_.num_user_lanes();
+        for (uint8_t i = 0; i < s.num_user_lanes && i < 8; ++i) {
+            s.lane_depths[i] = static_cast<uint32_t>(lanes_.lane_depth(i));
+        }
+        s.high_priority_depth = s.lane_depths[0];
         s.pressure_state = to_string(pressure_state_.current_state());
         s.overflow_policy = to_string(config_.overflow_policy);
         return s;
@@ -359,27 +397,18 @@ template <typename T> class MPSCActorMailbox {
     }
 
   private:
-    bool drop_one_oldest() noexcept {
+    bool drop_one_oldest_global() noexcept {
         FAULT_INJECT("hpactor.mailbox.drop_oldest.fail") {
-            return false;  // eviction failed
+            return false;
         }
         lock_consumer();
-        T* node = mailbox_.dequeue();
+        T* node = lanes_.try_drop_oldest_user_lane();
         if (!node) {
             unlock_consumer();
             return false;
         }
         uint64_t bytes = estimate_node_bytes(*node);
-        if constexpr (std::is_same_v<T, TypedMessage>) {
-            if (is_system_message(node->type_id()) &&
-                reservation_.reserved_system_count() > 0) {
-                reservation_.release_system(bytes);
-            } else {
-                reservation_.release(bytes);
-            }
-        } else {
-            reservation_.release(bytes);
-        }
+        reservation_.release(bytes);
         total_dropped_.fetch_add(1, std::memory_order_relaxed);
         update_pressure_state();
         if (metrics_ring_buffer_) [[unlikely]] {
@@ -393,11 +422,36 @@ template <typename T> class MPSCActorMailbox {
             mailbox_was_empty_.store(true, std::memory_order_release);
         }
         unlock_consumer();
-        if (pending_free_) {
-            pending_free_->~T();
-            mem::deallocate(pending_free_);
+        lanes_.set_pending_free(node);
+        return true;
+    }
+
+    bool drop_one_lowest_priority() noexcept {
+        FAULT_INJECT("hpactor.mailbox.drop_lowest_priority.fail") {
+            return false;
         }
-        pending_free_ = node;
+        lock_consumer();
+        T* node = lanes_.try_drop_from_lowest_user_lane();
+        if (!node) {
+            unlock_consumer();
+            return false;
+        }
+        uint64_t bytes = estimate_node_bytes(*node);
+        reservation_.release(bytes);
+        total_dropped_.fetch_add(1, std::memory_order_relaxed);
+        update_pressure_state();
+        if (metrics_ring_buffer_) [[unlikely]] {
+            metrics::MetricEvent evt{};
+            evt.actor_id = actor_id_;
+            evt.event_type = metrics::MetricEventType::kMailboxDropped;
+            evt.value_hi = 1;
+            metrics_ring_buffer_->try_push(evt);
+        }
+        if (empty()) {
+            mailbox_was_empty_.store(true, std::memory_order_release);
+        }
+        unlock_consumer();
+        lanes_.set_pending_free(node);
         return true;
     }
 
@@ -420,13 +474,16 @@ template <typename T> class MPSCActorMailbox {
             enqueue_reserved(new (mem::allocate(mem::RegionType::kMessage,
                                                 sizeof(T), actor_id_))
                                  T(std::move(overflow_msg)),
-                             meta, /*suppress_wakeup=*/true);
+                             meta, /*lane_idx=*/0, /*suppress_wakeup=*/true);
         }
     }
 
     double pressure_ratio() const noexcept {
         const uint32_t cap = config_.capacity.max_messages;
-        const uint32_t depth = static_cast<uint32_t>(mailbox_.count());
+        // Exclude system lane: max_messages only governs user messages.
+        int64_t user_depth = lanes_.total_depth()
+            - lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel);
+        const uint32_t depth = static_cast<uint32_t>(user_depth > 0 ? user_depth : 0);
         double count_ratio = 0.0;
         if (cap > 0) {
             count_ratio = static_cast<double>(depth) / static_cast<double>(cap);
@@ -434,8 +491,10 @@ template <typename T> class MPSCActorMailbox {
         double byte_ratio = 0.0;
         const uint64_t byte_cap = config_.capacity.max_bytes;
         if (byte_cap > 0) {
-            byte_ratio = static_cast<double>(reservation_.queued_bytes()) /
-                         static_cast<double>(byte_cap);
+            byte_ratio = static_cast<double>(
+                reservation_.queued_bytes()
+                    + system_lane_bytes_.load(std::memory_order_relaxed))
+                / static_cast<double>(byte_cap);
         }
         return count_ratio > byte_ratio ? count_ratio : byte_ratio;
     }
@@ -447,7 +506,7 @@ template <typename T> class MPSCActorMailbox {
     }
 
     void update_max_depth() noexcept {
-        uint64_t depth = static_cast<uint64_t>(mailbox_.count());
+        uint64_t depth = static_cast<uint64_t>(lanes_.total_depth());
         uint64_t prev = max_depth_.load(std::memory_order_acquire);
         while (depth > prev) {
             if (max_depth_.compare_exchange_weak(prev, depth, std::memory_order_acq_rel,
@@ -463,7 +522,7 @@ template <typename T> class MPSCActorMailbox {
         EnqueueResult r;
         r.code = code;
         r.target = actor_id_;
-        r.depth = static_cast<uint32_t>(mailbox_.count());
+        r.depth = static_cast<uint32_t>(lanes_.total_depth());
         r.capacity = config_.capacity.max_messages;
         r.bytes = reservation_.queued_bytes();
         r.byte_capacity = config_.capacity.max_bytes;
@@ -489,6 +548,14 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    uint8_t route_lane(const MailboxEnvelopeMeta& meta) const noexcept {
+        if (is_system_message(meta.type_tag))
+            return MultiLaneQueue<T>::kSystemLaneSentinel;
+        if (!config_.priority_aware)
+            return 0;
+        return std::min<uint8_t>(meta.priority, lanes_.num_user_lanes() - 1);
+    }
+
     void lock_consumer() noexcept {
         while (consumer_lock_.test_and_set(std::memory_order_acquire)) {
         }
@@ -506,11 +573,10 @@ template <typename T> class MPSCActorMailbox {
     // --- Core queue members ---
     ActorId actor_id_;
     sched::IScheduler* scheduler_;
-    MPSCMailbox<T> mailbox_;
+    MultiLaneQueue<T> lanes_{1};
     OverflowQueue<T> overflow_queue_;
     MailboxConfig config_;
     std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT;
-    T* pending_free_{nullptr};
     std::atomic<bool> mailbox_was_empty_{true};
 
     // --- Counters ---
@@ -520,6 +586,7 @@ template <typename T> class MPSCActorMailbox {
     std::atomic<uint64_t> total_dropped_{0};
     std::atomic<uint64_t> total_dead_letters_{0};
     std::atomic<uint64_t> max_depth_{0};
+    std::atomic<uint64_t> system_lane_bytes_{0};
 
     // --- Dependencies ---
     ActorContinuationCallback continuation_callback_;

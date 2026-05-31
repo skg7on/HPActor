@@ -109,6 +109,8 @@ static ActorDef parse_actor(const TomlTableView& tbl) {
             parse_overflow_policy(mailbox.read_string("policy", "reject_"
                                                                 "newest"));
         def.mailbox.priority_aware = mailbox.read_bool("priority_aware", false);
+        def.mailbox.priority_levels =
+            static_cast<uint8_t>(mailbox.read_uint32("priority_levels", 4));
         def.mailbox.max_overflow_depth =
             mailbox.read_uint32("max_overflow_depth", 0);
         def.mailbox.high_watermark = mailbox.read_double("high_watermark", 0.0);
