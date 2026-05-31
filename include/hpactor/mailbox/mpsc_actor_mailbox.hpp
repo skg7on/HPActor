@@ -24,6 +24,7 @@
 #include <hpactor/mailbox/detail/reservation_manager.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
+#include <hpactor/mailbox/multi_lane_queue.hpp>
 #include <hpactor/mailbox/overflow_queue.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -55,9 +56,10 @@ template <typename T> class MPSCActorMailbox {
     }
 
     ~MPSCActorMailbox() {
-        if (pending_free_) {
-            pending_free_->~T();
-            mem::deallocate(pending_free_);
+        T* p = lanes_.release_pending_free();
+        if (p) {
+            p->~T();
+            mem::deallocate(p);
         }
     }
 
@@ -125,7 +127,7 @@ template <typename T> class MPSCActorMailbox {
                     metrics_ring_buffer_,
                     config_,
                     actor_id_,
-                    static_cast<uint32_t>(mailbox_.count()),
+                    static_cast<uint32_t>(lanes_.total_depth()),
                     reservation_.queued_bytes(),
                     [this]() { return drop_one_oldest(); }};
 
@@ -206,12 +208,12 @@ template <typename T> class MPSCActorMailbox {
             return;  // drop after capacity committed
         }
         bool was_empty = empty();
-        mailbox_.enqueue(node);
+        lanes_.enqueue(node, 0);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
         update_max_depth();
         update_pressure_state();
 
-        int64_t depth = mailbox_.count();
+        int64_t depth = lanes_.total_depth();
         if (depth > 1024) [[unlikely]] {
             HPACTOR_LOG_WARNING(
                 log::LogCategory::kMailbox, actor_id_,
@@ -243,7 +245,7 @@ template <typename T> class MPSCActorMailbox {
 
     T* dequeue() noexcept {
         lock_consumer();
-        T* node = mailbox_.dequeue();
+        T* node = lanes_.dequeue();
         FAULT_INJECT("hpactor.mailbox.dequeue.drop") {
             // Silently drop: release reservation but return null to caller
             if (node != nullptr) {
@@ -294,7 +296,7 @@ template <typename T> class MPSCActorMailbox {
     }
 
     bool empty() const noexcept {
-        return mailbox_.empty();
+        return lanes_.empty();
     }
 
     bool was_empty() const noexcept {
@@ -317,13 +319,13 @@ template <typename T> class MPSCActorMailbox {
     void inject_for_test(T* node) noexcept {
         reservation_.inject_count(estimate_node_bytes(*node));
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
-        mailbox_.enqueue(node);
+        lanes_.enqueue(node, 0);
         mailbox_was_empty_.store(false, std::memory_order_release);
     }
 
     cli::MboxSnapshot snapshot() const {
         cli::MboxSnapshot s;
-        s.depth = static_cast<uint32_t>(mailbox_.count());
+        s.depth = static_cast<uint32_t>(lanes_.total_depth());
         s.capacity = config_.capacity.max_messages;
         s.queued_bytes = reservation_.queued_bytes();
         s.byte_capacity = config_.capacity.max_bytes;
@@ -364,7 +366,7 @@ template <typename T> class MPSCActorMailbox {
             return false;  // eviction failed
         }
         lock_consumer();
-        T* node = mailbox_.dequeue();
+        T* node = lanes_.try_drop_from_lowest_user_lane();
         if (!node) {
             unlock_consumer();
             return false;
@@ -393,11 +395,7 @@ template <typename T> class MPSCActorMailbox {
             mailbox_was_empty_.store(true, std::memory_order_release);
         }
         unlock_consumer();
-        if (pending_free_) {
-            pending_free_->~T();
-            mem::deallocate(pending_free_);
-        }
-        pending_free_ = node;
+        lanes_.set_pending_free(node);
         return true;
     }
 
@@ -426,7 +424,7 @@ template <typename T> class MPSCActorMailbox {
 
     double pressure_ratio() const noexcept {
         const uint32_t cap = config_.capacity.max_messages;
-        const uint32_t depth = static_cast<uint32_t>(mailbox_.count());
+        const uint32_t depth = static_cast<uint32_t>(lanes_.total_depth());
         double count_ratio = 0.0;
         if (cap > 0) {
             count_ratio = static_cast<double>(depth) / static_cast<double>(cap);
@@ -447,7 +445,7 @@ template <typename T> class MPSCActorMailbox {
     }
 
     void update_max_depth() noexcept {
-        uint64_t depth = static_cast<uint64_t>(mailbox_.count());
+        uint64_t depth = static_cast<uint64_t>(lanes_.total_depth());
         uint64_t prev = max_depth_.load(std::memory_order_acquire);
         while (depth > prev) {
             if (max_depth_.compare_exchange_weak(prev, depth, std::memory_order_acq_rel,
@@ -463,7 +461,7 @@ template <typename T> class MPSCActorMailbox {
         EnqueueResult r;
         r.code = code;
         r.target = actor_id_;
-        r.depth = static_cast<uint32_t>(mailbox_.count());
+        r.depth = static_cast<uint32_t>(lanes_.total_depth());
         r.capacity = config_.capacity.max_messages;
         r.bytes = reservation_.queued_bytes();
         r.byte_capacity = config_.capacity.max_bytes;
@@ -506,11 +504,10 @@ template <typename T> class MPSCActorMailbox {
     // --- Core queue members ---
     ActorId actor_id_;
     sched::IScheduler* scheduler_;
-    MPSCMailbox<T> mailbox_;
+    MultiLaneQueue<T> lanes_{1};
     OverflowQueue<T> overflow_queue_;
     MailboxConfig config_;
     std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT;
-    T* pending_free_{nullptr};
     std::atomic<bool> mailbox_was_empty_{true};
 
     // --- Counters ---
