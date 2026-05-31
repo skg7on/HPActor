@@ -57,6 +57,7 @@ struct MailboxPolicyDef {
     hpactor::mailbox::OverflowPolicy policy =
         hpactor::mailbox::OverflowPolicy::RejectNewest;
     bool priority_aware{false};
+    uint8_t priority_levels{4};
     uint32_t max_overflow_depth{0};
     double high_watermark{0.0};
     double low_watermark{0.0};

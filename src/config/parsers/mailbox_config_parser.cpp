@@ -91,6 +91,10 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
             out.mailbox.critical_watermark > 1.0) {
             out.mailbox.critical_watermark = 1.00;
         }
+        out.mailbox.priority_aware =
+            mt.read_bool("priority_aware", false);
+        out.mailbox.priority_levels =
+            static_cast<uint8_t>(mt.read_uint32("priority_levels", 4));
         out.mailbox.protected_system_messages =
             mt.read_uint32("protected_system_messages", 32);
         out.mailbox.backpressure_mode =

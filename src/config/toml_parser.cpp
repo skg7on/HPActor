@@ -164,6 +164,8 @@ static void deep_merge(ActorDef& base, const ActorDef& overrides) {
     if (overrides.mailbox.policy != hpactor::mailbox::OverflowPolicy::RejectNewest)
         base.mailbox.policy = overrides.mailbox.policy;
     base.mailbox.priority_aware = overrides.mailbox.priority_aware;
+    if (overrides.mailbox.priority_levels != 4)
+        base.mailbox.priority_levels = overrides.mailbox.priority_levels;
     if (overrides.mailbox.max_overflow_depth != 0)
         base.mailbox.max_overflow_depth = overrides.mailbox.max_overflow_depth;
 
