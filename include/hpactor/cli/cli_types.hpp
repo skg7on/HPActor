@@ -48,6 +48,9 @@ struct MboxSnapshot {
     uint64_t total_dead_letters = 0;
     uint64_t max_depth = 0;
     uint32_t high_priority_depth = 0;
+    uint32_t system_lane_depth = 0;
+    uint32_t lane_depths[8] = {};
+    uint8_t num_user_lanes = 1;
     uint32_t overflow_depth = 0;         ///< Current overflow queue depth (SpillToOverflowQueue policy only).
     uint32_t overflow_max_depth = 0;     ///< Configured max overflow queue depth (0 = unlimited).
     uint64_t overflow_total_pushed = 0;  ///< Cumulative messages spilled to the overflow queue.

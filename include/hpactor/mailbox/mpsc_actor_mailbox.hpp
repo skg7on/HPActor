@@ -368,7 +368,13 @@ template <typename T> class MPSCActorMailbox {
             s.overflow_total_popped = oq_snap.total_popped;
             s.overflow_total_lost = oq_snap.total_lost;
         }
-        s.high_priority_depth = 0;
+        s.system_lane_depth = static_cast<uint32_t>(
+            lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel));
+        s.num_user_lanes = lanes_.num_user_lanes();
+        for (uint8_t i = 0; i < s.num_user_lanes && i < 8; ++i) {
+            s.lane_depths[i] = static_cast<uint32_t>(lanes_.lane_depth(i));
+        }
+        s.high_priority_depth = s.lane_depths[0];
         s.pressure_state = to_string(pressure_state_.current_state());
         s.overflow_policy = to_string(config_.overflow_policy);
         return s;
