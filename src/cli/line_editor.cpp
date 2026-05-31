@@ -97,19 +97,15 @@ std::vector<std::string> LineEditor::tokenize_partial(const std::string& buf) {
     return words;
 }
 
-void LineEditor::on_completion(const char* buf, linenoiseCompletions* lc) {
-    auto* self = current_;
-    if (!self || !self->root_)
-        return;
+CompletionResult LineEditor::compute_completions(const std::string& buf) const {
+    CompletionResult result;
+    if (!root_ || buf.empty())
+        return result;
 
     auto words = tokenize_partial(buf);
-    size_t len = strlen(buf);
-    bool ends_with_space = (len > 0 && buf[len - 1] == ' ');
+    bool ends_with_space = (!buf.empty() && buf.back() == ' ');
 
-    // consumed tracks tokens already matched (exact or prefix-expanded).
-    // linenoise replaces the ENTIRE buffer with the completion string,
-    // so every completion must include the full prefix.
-    const CommandNode* node = self->root_;
+    const CommandNode* node = root_;
     std::vector<std::string> consumed;
     size_t i = 0;
     if (i < words.size() && words[i] == "/")
@@ -123,17 +119,12 @@ void LineEditor::on_completion(const char* buf, linenoiseCompletions* lc) {
         if (!child)
             child = node->find_child_prefix(words[i]);
         if (!child) {
-            std::vector<std::string> matches;
-            node->collect_completions(words[i], matches);
-            std::string prefix = "/";
+            node->collect_completions(words[i], result.matches);
+            result.prefix = "/";
             for (auto& w : consumed)
-                prefix += w + " ";
-            for (auto& m : matches)
-                linenoiseAddCompletion(lc, (prefix + m).c_str());
-            return;
+                result.prefix += w + " ";
+            return result;
         }
-        // Use the matched keyword for prefix matches (e.g. "act"→"actor"),
-        // user input for parameter tokens (e.g. "0x123"→"<id>").
         consumed.push_back(child->is_parameter ? words[i] : child->keyword);
         node = child;
     }
@@ -142,8 +133,6 @@ void LineEditor::on_completion(const char* buf, linenoiseCompletions* lc) {
     if (!ends_with_space && !words.empty())
         partial = words.back();
 
-    // Exact keyword match: advance into the node so sub-commands appear.
-    // Include the matched keyword in the prefix.
     if (!partial.empty()) {
         for (auto& child : node->children) {
             if (!child->is_parameter && child->keyword == partial) {
@@ -155,36 +144,29 @@ void LineEditor::on_completion(const char* buf, linenoiseCompletions* lc) {
         }
     }
 
-    // Build full prefix: leading "/" + consumed tokens with trailing space.
-    std::string prefix = "/";
+    result.prefix = "/";
     for (auto& w : consumed)
-        prefix += w + " ";
+        result.prefix += w + " ";
 
-    std::vector<std::string> matches;
-    node->collect_completions(partial, matches);
-    for (auto& m : matches)
-        linenoiseAddCompletion(lc, (prefix + m).c_str());
+    node->collect_completions(partial, result.matches);
+    return result;
 }
 
-char* LineEditor::on_hints(const char* buf, int* color, int* bold) {
-    auto* self = current_;
-    if (!self || !self->root_)
-        return nullptr;
+HintResult LineEditor::compute_hint(const std::string& buf) const {
+    HintResult result;
+    if (!root_)
+        return result;
 
     auto words = tokenize_partial(buf);
-    size_t len = strlen(buf);
-    if (len == 0)
-        return nullptr;
-    bool ends_with_space = (buf[len - 1] == ' ');
+    if (buf.empty())
+        return result;
+    bool ends_with_space = (buf.back() == ' ');
 
-    const CommandNode* node = self->root_;
+    const CommandNode* node = root_;
     size_t i = 0;
-    // Skip leading "/"
     if (i < words.size() && words[i] == "/")
         ++i;
 
-    // Consume fully-typed tokens, using prefix match as fallback so
-    // partial commands like "/act" show hints for "/actor".
     size_t words_to_consume =
         ends_with_space ? words.size() : (words.size() > 0 ? words.size() - 1 : 0);
     for (; i < words_to_consume; ++i) {
@@ -193,19 +175,16 @@ char* LineEditor::on_hints(const char* buf, int* color, int* bold) {
         if (!child) {
             child = node->find_child_prefix(words[i]);
             if (!child)
-                return nullptr; // no match, no hint possible
+                return result;
         }
         node = child;
     }
 
-    // Determine partial token
     std::string partial;
     if (!ends_with_space && !words.empty()) {
         partial = words.back();
     }
 
-    // If the partial exactly matches a child keyword, the user typed a
-    // complete token — advance to show hints from the next level.
     if (!partial.empty()) {
         for (auto& child : node->children) {
             if (!child->is_parameter && child->keyword == partial) {
@@ -216,20 +195,41 @@ char* LineEditor::on_hints(const char* buf, int* color, int* bold) {
         }
     }
 
-    // Find first non-parameter child whose keyword starts with partial
     for (auto& child : node->children) {
         if (child->is_parameter)
             continue;
         if (partial.empty() || child->keyword.starts_with(partial)) {
-            std::string hint_text = child->keyword.substr(partial.size());
-            if (color)
-                *color = 90; // bright black = gray
-            if (bold)
-                *bold = 0;
-            return strdup(hint_text.c_str());
+            result.text = child->keyword.substr(partial.size());
+            result.active = true;
+            return result;
         }
     }
-    return nullptr;
+    return result;
+}
+
+void LineEditor::on_completion(const char* buf, linenoiseCompletions* lc) {
+    auto* self = current_;
+    if (!self || !self->root_)
+        return;
+
+    auto result = self->compute_completions(buf);
+    for (auto& m : result.matches)
+        linenoiseAddCompletion(lc, (result.prefix + m).c_str());
+}
+
+char* LineEditor::on_hints(const char* buf, int* color, int* bold) {
+    auto* self = current_;
+    if (!self || !self->root_)
+        return nullptr;
+
+    auto hint = self->compute_hint(buf);
+    if (!hint.active)
+        return nullptr;
+    if (color)
+        *color = 90;
+    if (bold)
+        *bold = 0;
+    return strdup(hint.text.c_str());
 }
 
 void LineEditor::on_free_hints(void* hint) {

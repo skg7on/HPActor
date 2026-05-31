@@ -32,6 +32,19 @@ struct LineEditorConfig {
     bool multiline = false;
 };
 
+/// Result of tab-completion computation for a partial input buffer.
+struct CompletionResult {
+    std::string prefix;               ///< Full prefix to prepend to each match.
+    std::vector<std::string> matches; ///< Matching keywords at the current
+                                      ///< level.
+};
+
+/// Result of inline-hint computation for a partial input buffer.
+struct HintResult {
+    std::string text; ///< Remainder of the hinted keyword after typed prefix.
+    bool active = false; ///< When false, no hint should be displayed.
+};
+
 class LineEditor {
   public:
     LineEditor(const LineEditorConfig& cfg, const CommandNode* root);
@@ -47,6 +60,21 @@ class LineEditor {
     void set_root(const CommandNode* root) {
         root_ = root;
     }
+
+    /// Walk the command tree to compute tab completions for \p buf.
+    ///
+    /// Tokenizes the buffer, walks the tree consuming exact and prefix
+    /// matches, then collects matching children at the resolved node.
+    /// The returned prefix includes the leading "/" and all consumed
+    /// tokens so that callers only need to append each match.
+    CompletionResult compute_completions(const std::string& buf) const;
+
+    /// Walk the command tree to compute an inline hint for \p buf.
+    ///
+    /// Finds the first non-parameter child whose keyword starts with
+    /// the partial token at the cursor. The returned text is the
+    /// remainder of the keyword after the already-typed prefix.
+    HintResult compute_hint(const std::string& buf) const;
 
   private:
     // linenoise completion callback (global, no ctx — uses current_ editor
