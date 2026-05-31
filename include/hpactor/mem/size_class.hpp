@@ -14,34 +14,20 @@
 
 #pragma once
 
-#include <cstddef>
-#include <cstdint>
+#include <hpactor/adt/size_class.hpp>
 
 namespace hpactor::mem {
-
-enum class SizeClass : uint8_t {
-    k32B  = 0,
-    k64B  = 1,
-    k128B = 2,
-    k256B = 3,
-    k512B = 4,
-    k1KB  = 5,
-    k2KB  = 6,
-    k4KB  = 7,
-};
-
-inline constexpr uint8_t kNumSizeClasses = 8;
-
-inline constexpr size_t kSizeClassTable[kNumSizeClasses] = {
-    32, 64, 128, 256, 512, 1024, 2048, 4096
-};
+using hpactor::adt::class_for_size;
+using hpactor::adt::kNumSizeClasses;
+using hpactor::adt::kSizeClassTable;
+using hpactor::adt::size_for_class;
+using hpactor::adt::SizeClass;
+} // namespace hpactor::mem
 
 // AllocHeader (32 bytes) + CanaryFooter (8 bytes) = 40 bytes overhead
 inline constexpr size_t kAllocOverhead = 40;
 
-constexpr size_t size_for_class(SizeClass sc) noexcept {
-    return kSizeClassTable[static_cast<uint8_t>(sc)];
-}
+namespace hpactor::mem {
 
 constexpr size_t block_size(SizeClass sc) noexcept {
     return size_for_class(sc) + kAllocOverhead;
@@ -49,15 +35,6 @@ constexpr size_t block_size(SizeClass sc) noexcept {
 
 constexpr size_t user_size(size_t block_sz) noexcept {
     return block_sz - kAllocOverhead;
-}
-
-inline SizeClass class_for_size(size_t user_bytes) noexcept {
-    for (uint8_t i = 0; i < kNumSizeClasses; ++i) {
-        if (user_bytes <= kSizeClassTable[i]) {
-            return static_cast<SizeClass>(i);
-        }
-    }
-    return SizeClass::k4KB;
 }
 
 } // namespace hpactor::mem
