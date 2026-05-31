@@ -62,32 +62,8 @@ template <typename T> class ReservationManager {
         return ReservationResult::Reserved;
     }
 
-    // System message protected reserve — bypasses byte budget.
-    bool try_reserve_system(uint64_t bytes, uint32_t limit) noexcept {
-        if (limit == 0)
-            return false;
-        uint32_t current =
-            reserved_system_messages_.load(std::memory_order_acquire);
-        while (true) {
-            if (current >= limit)
-                return false;
-            if (reserved_system_messages_.compare_exchange_weak(
-                    current, current + 1, std::memory_order_acq_rel,
-                    std::memory_order_acquire)) {
-                queued_bytes_.fetch_add(bytes, std::memory_order_release);
-                return true;
-            }
-        }
-    }
-
     void release(uint64_t bytes) noexcept {
         reserved_messages_.fetch_sub(1, std::memory_order_release);
-        if (bytes > 0)
-            queued_bytes_.fetch_sub(bytes, std::memory_order_release);
-    }
-
-    void release_system(uint64_t bytes) noexcept {
-        reserved_system_messages_.fetch_sub(1, std::memory_order_release);
         if (bytes > 0)
             queued_bytes_.fetch_sub(bytes, std::memory_order_release);
     }
@@ -101,16 +77,12 @@ template <typename T> class ReservationManager {
     uint32_t reserved_count() const noexcept {
         return reserved_messages_.load(std::memory_order_acquire);
     }
-    uint32_t reserved_system_count() const noexcept {
-        return reserved_system_messages_.load(std::memory_order_acquire);
-    }
     uint64_t queued_bytes() const noexcept {
         return queued_bytes_.load(std::memory_order_acquire);
     }
 
   private:
     std::atomic<uint32_t> reserved_messages_{0};
-    std::atomic<uint32_t> reserved_system_messages_{0};
     std::atomic<uint64_t> queued_bytes_{0};
 };
 

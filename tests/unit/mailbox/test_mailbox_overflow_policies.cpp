@@ -127,7 +127,7 @@ TEST_F(OverflowPolicyTest, SystemMessageUsesProtectedReserve) {
     EXPECT_FALSE(c.try_pop(out));
 }
 
-TEST_F(OverflowPolicyTest, DropNewestOnSystemReserveWhenFull) {
+TEST_F(OverflowPolicyTest, SystemLaneRejectsWhenFull) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
@@ -137,22 +137,15 @@ TEST_F(OverflowPolicyTest, DropNewestOnSystemReserveWhenFull) {
     cfg.overflow_policy = OverflowPolicy::DropNewest;
     MPSCActorMailbox<TypedMessage> d(ActorId{4}, &scheduler, cfg);
 
-    // Fill normal capacity
-    MailboxEnvelopeMeta user_meta;
-    user_meta.type_tag = TypeTag::User;
-    auto r1 = d.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), user_meta);
-    EXPECT_TRUE(r1.accepted());
-
-    // Fill system reserve
+    // Fill system lane
     MailboxEnvelopeMeta sys_meta;
     sys_meta.type_tag = TypeTag::DownMsg;
-    auto r2 = d.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{2}), sys_meta);
-    EXPECT_TRUE(r2.accepted());
+    auto r1 = d.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{1}), sys_meta);
+    EXPECT_TRUE(r1.accepted());
 
-    // Both normal and system reserve full — this system message should be
-    // dropped
-    auto r3 = d.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{3}), sys_meta);
-    EXPECT_EQ(r3.code, EnqueueResultCode::DroppedNewest);
+    // System lane full — system messages are rejected (not dropped via overflow)
+    auto r2 = d.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{2}), sys_meta);
+    EXPECT_EQ(r2.code, EnqueueResultCode::Rejected);
 }
 
 TEST_F(OverflowPolicyTest, DeadLetterPolicyReroutes) {
