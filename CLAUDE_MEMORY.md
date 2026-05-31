@@ -48,22 +48,86 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - TOML `[system.quarantine]` parser provides system-level defaults with per-actor overrides.
 - Design/plan: `docs/architecture/production/actor-quarantine-circuit-breaker-design.md` and `docs/superpowers/plans/2026-05-23-actor-quarantine-circuit-breaker-impl.md`.
 
-**Deterministic Fault Injection Hooks:** ✅ Complete (2026-05-28)
+**Deterministic Fault Injection Hooks:** ✅ Complete (2026-05-28, expanded 2026-05-30)
 - `FaultController` — runtime opt-in controller owned by ActorSystem, disabled by default.
 - `FaultSchedule` — pre-computed schedule of `(domain, tick, path, action, target)` entries with Builder API.
 - `FaultPoint` / `FaultPointRegistry` — global trie with self-registration via static `FaultPointRegistrar` objects.
-- `FaultDomain` — 9 per-subsystem tick counters (Mailbox, Transport, Scheduler, Allocator, Storage, Timer, Gossip, Config, Actor).
+- `FaultDomain` — 14 per-subsystem tick counters (Mailbox, Transport, Scheduler, Allocator, Storage, Timer, Gossip, Config, Actor, and 5 more).
 - `FaultAction` — 5 actions: Fail, Drop, Delay, Corrupt, Panic.
 - `FAULT_INJECT(path)` macro — predictable cold branch via `HPACTOR_UNLIKELY`; `ENABLE_FAULT_INJECTION=OFF` eliminates all overhead.
 - Hierarchical dot-separated path naming with wildcard scope matching (`hpactor.transport.*`).
-- 12 initial fault points across mailbox, transport, allocator, scheduler, actor, and gossip subsystems.
-- FAULT_INJECT sites wired into `MPSCActorMailbox` (enqueue/dequeue) and `TcpTransport` (try_send).
+- Expanded to 80 fault injection sites across 14 domains (up from 12 initial).
+- FAULT_INJECT sites wired into `MPSCActorMailbox` (enqueue/dequeue), `TcpTransport` (try_send), and dozens of additional locations.
 - `kFaultInjected` (26) metric event type.
 - CLI `/fault status`, `/fault list`, `/fault clear` commands.
 - `ENABLE_FAULT_INJECTION` CMake option (default ON).
 - Seed replay determinism: same seed → same schedule → same failure.
+- New source files: `src/fault/fault_controller.cpp`, `src/fault/fault_point_registry.cpp`, `src/fault/fault_points.cpp`, `src/fault/fault_schedule.cpp`.
+- New test files: `test_fault_controller`, `test_fault_macro`, `test_fault_point`, `test_fault_schedule`, `test_fault_mailbox`, `test_fault_seed_replay`.
 - Design spec: `docs/superpowers/specs/2026-05-28-fault-injection-hooks-design.md`.
 - Implementation plan: `docs/superpowers/plans/2026-05-28-fault-injection-hooks-impl.md`.
+
+**Mailbox Priority Lanes & MultiLaneQueue (MBX-005):** ✅ Complete (2026-05-30 to 2026-05-31)
+- `MultiLaneQueue<T>` — lock-free multi-lane queue replacing `MPSCMailbox` as the core mailbox data structure. Multiple independent lanes with CAS-based enqueue/dequeue, dedicated system-message lane, priority-aware user lane routing, and `DropLowestPriority` overflow handler.
+- Per-lane depth exposure in `MboxSnapshot` for observability.
+- TOML `[system.mailbox]` config: `priority_aware` bool and `priority_levels` uint32_t, wired via `src/config/parsers/mailbox_config_parser.cpp`.
+- Design spec: `docs/superpowers/specs/2026-05-30-priority-mailbox-lanes-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-05-30-mbx-005-priority-lanes-impl.md`.
+- Test files: `test_multi_lane_queue.cpp`, `test_priority_lanes.cpp`.
+
+**Mailbox Overflow Handler Refactoring:** ✅ Complete (2026-05-28 to 2026-05-31)
+- `IOverflowHandler` interface + `OverflowHandlerFactory` + `OverflowContext` replace monolithic overflow logic.
+- Individual handlers: `RejectNewestHandler`, `DropNewestHandler`, `DropOldestHandler`, `DropLowestPriorityHandler`, `SpillToOverflowHandler`, `DeadLetterHandler`, `SignalOnlyHandler`.
+- `PressureStateMachine` — tracks mailbox pressure (Low/High/Critical) with hysteresis.
+- `ReservationManager` — atomic slot reservation for bounded admission.
+- `BackpressureSignalGate` — coordinates backpressure signal emission (local, remote, both).
+- `BackpressureSignalSerialization` — protobuf serialization for remote backpressure signals.
+- `OverflowQueue` — bounded overflow queue with configurable policies.
+- Test files: `test_overflow_handler_factory`, `test_overflow_handlers`, `test_pressure_state_machine`, `test_reservation_manager`, `test_backpressure_signal_gate`, `test_backpressure_signal_serialization`, `test_mailbox_overflow_queue`, `test_mpsc_relacy`.
+
+**DLQ Handoff & CLI Commands (MBX-004):** ✅ Complete (2026-05-30)
+- DLQ overflow integration — payload, trace context, and timestamp preserved in `DeadLetterRecord` during overflow.
+- `DeadLetterQueue` API extended: `config()` accessor, `snapshot_records()` for atomically consistent snapshots, `try_pop_at()` for targeted record removal.
+- `to_string()` for `DeadLetterReason` and `DeadLetterSource` values.
+- `ActorSystem::dead_letter_queue()` accessor for programmatic DLQ access.
+- CLI `/dlq list [actor_id]`, `/dlq show <index>`, `/dlq replay <index> [target]`, `/dlq export [actor_id]` commands via `src/cli/commands/dlq_commands.cpp`.
+- `DeadLetterQueue` pointer wired into `OverflowContext` for future handler use.
+- Test files: `test_dead_letter_queue.cpp`, `test_dlq_handoff.cpp` (system), `test_dlq_commands.cpp` (unit), `test_dlq_integration.cpp` (integration).
+- Design spec and plan: `docs/superpowers/specs/2026-05-30-dlq-handoff-design.md` and `docs/superpowers/plans/2026-05-30-mbx-004-dlq-handoff-impl.md`.
+
+**Scheduler Decoupling & Hardening:** ✅ Complete (2026-05-29 to 2026-05-30)
+- `ActorExecutionEngine` — extracted coroutine execution logic from the scheduler into a standalone engine (`src/sched/actor_execution_engine.cpp`).
+- `ActorReadyGate` — explicit ready-gate interface decoupling scheduler notification from execution.
+- `IScheduler` / `IWorkPlacementScheduler` / `IWorkerNotification` — narrow interface segregation (`include/hpactor/sched/scheduler_interfaces.hpp`).
+- `WorkPlacementScheduler` — extracted work placement strategy from HybridScheduler.
+- `WorkerThread` replaces raw `std::thread` throughout `HybridScheduler` — fixes cross-thread `SlabCache` corruption from thread-local allocator propagation.
+- `try_steal()` and exponential backoff wired into `WorkerThread::thread_loop`.
+- Awaiter scheduler dependencies narrowed to minimal interfaces.
+- Strict Doxygen on all new scheduler subsystem headers.
+- Test files: `test_actor_ready_gate.cpp`, `test_work_placement_scheduler.cpp`.
+- Design spec: `docs/superpowers/specs/2026-05-29-scheduler-decouple-design.md`.
+- Implementation plan: `docs/superpowers/plans/2026-05-29-scheduler-decouple-impl.md`.
+
+**EdgeOps Telemetry Platform:** ✅ Complete (2026-05-31)
+- New complex demo app (`apps/edgeops_telemetry/`) validating actor lifecycle, message routing, rollup aggregation, alert rule evaluation, backpressure handling, DLQ evidence collection, operator query workflows, and same-host role-mode runbook.
+- EdgeOps-specific message types, alert rules engine, and rollup aggregator.
+- Order platform relocated from `examples/` to `apps/order_platform/`.
+- Full design spec under `docs/app/edgeops-telemetry-platform-design.md`.
+- App design docs consolidated under `docs/app/`.
+- Test files: `test_edgeops_messages.cpp`, `test_system_edgeops_telemetry.cpp`.
+
+**CLI Test Coverage Expansion:** ✅ Complete (2026-05-31)
+- 75 new CLI tests across 6 files targeting low-coverage subsystems.
+- New test files: `test_actor_commands.cpp`, `test_command_utils.cpp`, `test_dlq_commands.cpp`, `test_failure_commands.cpp`, `test_fault_commands.cpp`, `test_help_quit_commands.cpp`, `test_misc_commands.cpp`, `test_system_commands.cpp`.
+- Pure completion/hint logic extracted from line editor callbacks into `cli_test_helpers.hpp` for testability.
+- CLI test simplification: hoisted `find_cmd` helper, fixed timestamp handling, removed dead code.
+
+**Build & Polish:** ✅ Complete (2026-05-29 to 2026-05-31)
+- Clang-tidy made optional: `ENABLE_CLANG_TIDY` CMake option (default OFF).
+- 7 mailbox code review findings addressed.
+- EdgeOps app simplified after review: enum status codes, static rule tables, move semantics.
+- Complete Apache 2.0 license headers on all new files.
+- Clang-tidy DeMorgan false positive suppressed in FAULT_INJECT macro usage.
 
 **Shared ADT Extraction:** ✅ Complete (2026-05-18 to 2026-05-20)
 - `Id<Tag, T>` template plus tag types back opaque identifiers such as ActorId, MessageId, AlarmHandle, and timer IDs.
@@ -84,7 +148,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 **Test Reorganization & Coverage Infrastructure:** ✅ Complete (2026-05-22 to 2026-05-24)
 - Google Test v1.14.0 vendored under `third_party/googletest/`.
 - Tests reorganized into `tests/unit`, `tests/integration`, and `tests/system` with tier-level CMake files and `gtest_discover_tests`.
-- Current tree contains 29 GTest binaries, 187 test source files, and 1083 source-level `TEST`/`TEST_F`/`TEST_P` definitions.
+- Current tree contains 32 GTest binaries, 219 test source files, and 1411 source-level `TEST`/`TEST_F`/`TEST_P` definitions.
 - Added 51 network subsystem system/integration tests and 66 additional low-coverage tests across CLI, config, ref, supervision, net, and system paths.
 - Coverage workflow now has an `ENABLE_COVERAGE` CMake option and gcov branch coverage support.
 - Design/plan: `docs/superpowers/specs/2026-05-21-test-reorganization-design.md`, `docs/superpowers/plans/2026-05-22-test-reorganization-impl.md`, and `docs/superpowers/specs/2026-05-24-coverage-cmake-option-design.md`.
@@ -334,12 +398,12 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 **Coverage Badge:** ✅ Complete (2026-05-17, PRs #106-108)
 - Automated coverage reporting with badge in README
 
-**Tests:** ✅ 29 GTest binaries configured (187 test source files across 3 tiers)
-- Current tree contains 1083 source-level `TEST`/`TEST_F`/`TEST_P` definitions.
+**Tests:** ✅ 32 GTest binaries configured (219 test source files across 3 tiers)
+- Current tree contains 1411 source-level `TEST`/`TEST_F`/`TEST_P` definitions.
 - Three-tier structure using Google Test framework (vendored in `third_party/googletest/`).
-- **unit** (95 files): actor (6), adt (1), cli (8), config (1), core (4), log (6), mailbox (13), mem (16), net (17), ref (1), sched (14), spawn (1), supervision (2), tracing (5).
-- **integration** (78 files): actor (27), cli (2), config (7), log (1), mailbox (2), metrics (3), net (11), ref (4), rpc (1), sched (4), spawn (5), supervision (4), tracing (7).
-- **system** (14 files): examples (1), plus cross-subsystem backpressure, graceful shutdown, loopback network, observability, order platform, registrar, runtime workflow, supervision, TCP transport, topology bootstrap, and UDP registrar tests.
+- **unit** (120 files): actor (6), adt (1), cli (16), config (1), core (4), fault (4), log (6), mailbox (23), mem (16), net (17), ref (1), sched (16), spawn (1), supervision (2), tracing (5).
+- **integration** (82 files): actor (28), cli (3), config (7), fault (2), log (1), mailbox (2), metrics (3), net (11), ref (4), rpc (1), sched (4), spawn (5), supervision (4), tracing (7).
+- **system** (17 files): edgeops (2), examples (1), plus cross-subsystem backpressure, DLQ handoff, graceful shutdown, loopback network, observability, order platform, registrar, runtime workflow, supervision, TCP transport, topology bootstrap, and UDP registrar tests.
 
 **Documentation:** ✅ Complete
 - Architecture: `docs/architecture/production/production-reliability-plane.md` (24x7 production reliability roadmap)
@@ -396,6 +460,15 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Spec: `docs/superpowers/specs/2026-05-24-msg001-delivery-semantics-design.md` (delivery mode, dedup, and deadline semantics)
 - Plan: `docs/superpowers/plans/2026-05-24-msg001-delivery-semantics-impl.md` (delivery semantics implementation)
 - Spec: `docs/superpowers/specs/2026-05-24-coverage-cmake-option-design.md` (coverage CMake option)
+- Spec: `docs/superpowers/specs/2026-05-28-fault-injection-hooks-design.md` (deterministic fault injection hooks)
+- Plan: `docs/superpowers/plans/2026-05-28-fault-injection-hooks-impl.md` (fault injection implementation)
+- Spec: `docs/superpowers/specs/2026-05-29-scheduler-decouple-design.md` (scheduler decoupling and hardening)
+- Plan: `docs/superpowers/plans/2026-05-29-scheduler-decouple-impl.md` (scheduler decoupling implementation)
+- Spec: `docs/superpowers/specs/2026-05-30-dlq-handoff-design.md` (DLQ handoff and CLI commands)
+- Plan: `docs/superpowers/plans/2026-05-30-mbx-004-dlq-handoff-impl.md` (DLQ handoff implementation)
+- Spec: `docs/superpowers/specs/2026-05-30-priority-mailbox-lanes-design.md` (priority mailbox lanes)
+- Plan: `docs/superpowers/plans/2026-05-30-mbx-005-priority-lanes-impl.md` (priority lanes implementation)
+- App Design: `docs/app/edgeops-telemetry-platform-design.md` (EdgeOps telemetry platform app design)
 
 ## Key Decisions
 
@@ -406,7 +479,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Pluggable service discovery: IServiceDiscovery interface with 4 backends (gossip, registrar, static, hybrid)
 - Decentralized membership via SWIM gossip protocol — no single point of failure
 - Production reliability roadmap is organized into data plane, control plane, and operations plane.
-- Production reliability foundation now includes delivery modes, receiver deduplication, failure envelopes, bounded mailboxes, DLQ, tracing correlation, graceful shutdown, lifecycle, and actor quarantine.
+- Production reliability foundation now includes delivery modes, receiver deduplication, failure envelopes, bounded mailboxes, multi-lane priority queues, DLQ with CLI replay/export, tracing correlation, deterministic fault injection (80 sites, 14 domains), graceful shutdown, lifecycle, and actor quarantine.
+- Mailbox core replaced: `MultiLaneQueue<T>` lock-free multi-lane queue supersedes `MPSCMailbox` with dedicated system lane, priority-aware routing, and per-lane depth observability.
 - Typed memory regions with per-region pressure admission and observability.
 - Hibernation via serialization + madvise(MADV_PAGEOUT) to ZRAM for cold storage
 - Actors are relocatable by ActorId, enabling slab compaction without dangling pointers
@@ -416,7 +490,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 
 ## Current Progress
 
-**Core Runtime Foundation Complete** (1083 source-level GTest cases, 187 test source files in current tree)
+**Core Runtime Foundation Complete** (1411 source-level GTest cases, 219 test source files in current tree)
 - Phase 0: Local Message Delivery — actor spawn and local message routing
 - Phase 1: ActorRef and Unified References — ActorRef as variant<Actor, ActorProxy>
 - Phase 2: TCP Transport Implementation — kqueue/epoll event loop, TcpTransport, Connection
@@ -424,7 +498,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Phase 4: Connection Pool and Handshake — TlsContext, TlsConnection, ConnectionPool, TLS handshake, AES-256-CBC encryption
 - Phase 5: Service Discovery — UdpRegistrar, HostResolver, NodeRegistry, static routes, DNS resolution, RegistrarServer/RegistrarClient with TCP registration, heartbeat, failover
 - Phase 6: Remote Actor Spawn — AsyncActor, ActorTypeRegistry, SpawnReceiver, spawn_remote()
-- Scheduling Subsystem: ChaseLev deque, MultiPriorityWorkQueue, EDFQueue, A2WS, TimingWheel, CoroutineFramePool, HybridScheduler, WorkerThread, ActorState, CoroutineTask/CoroutinePromise, awaiters, MPSCMailbox
+- Scheduling Subsystem: ChaseLev deque, MultiPriorityWorkQueue, EDFQueue, A2WS, TimingWheel, CoroutineFramePool, HybridScheduler, WorkerThread, ActorState, CoroutineTask/CoroutinePromise, awaiters, MultiLaneQueue mailbox
 
 **Phase 8: Spawn Serialization Integration** ✅ Complete (2026-04-21)
 - SpawnRequest/SpawnResponse integrated with TypeTag (SpawnRequestTag=5, SpawnResponseTag=6)
@@ -483,8 +557,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `net/` — Networking (event loop, TLS, connection pool, transports)
   - `supervision/` — Supervision strategies
   - `core/` — Core runtime (actor_system, mailbox, registry)
-  - `mailbox/` — MPSC mailboxes, delivery modes, dedup cache, mailbox policy, DLQ
-  - `sched/` — Scheduling subsystem (work_queue, edf_queue, a2ws, timing_wheel, coroutine_frame_pool)
+  - `mailbox/` — MultiLaneQueue, MPSC mailbox, delivery modes, dedup cache, mailbox policy, DLQ, overflow handlers, backpressure signals
+  - `sched/` — Scheduling subsystem (scheduler_interfaces, work_queue, edf_queue, a2ws, timing_wheel, coroutine_frame_pool, actor_execution_engine, actor_ready_gate, work_placement_scheduler)
   - `types/` — Type system (types, types_fwd, serialization)
   - `rpc/` — RPC channel (rpc_channel.hpp)
   - `mem/` — Memory management (alloc_header, size_class, freelist, segment_provider, slab_cache, thread_local_allocator, memory_region, memory_config, memory_tracker, telemetry_ring_buffer, hibernation_registry, hibernatable, guard_page, compaction, zram)
@@ -492,6 +566,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
   - `metrics/` — Metrics subsystem (metrics_ring_buffer, metrics_event, metrics_config, metrics_registry, metrics_aggregator, metrics_formatter, metrics_actor)
   - `log/` — Structured logging (log_ring_buffer, logger, log_drain, log_sink, log_formatter, log_manager, log_config)
   - `tracing/` — Distributed tracing (trace_context, span, span_guard, trace_manager, trace_exporter, trace_config)
+  - `fault/` — Deterministic fault injection (fault_controller, fault_schedule, fault_point, fault_types, fault_macros)
 - `src/actor/` — actor_system.cpp, abstract_actor.cpp, actor_context.cpp, event_based_actor.cpp, local_actor.cpp, spawn_receiver.cpp
 - `src/adt/` — shared ADT implementations
 - `src/cli/` — cli_actor.cpp, lexer.cpp, command_node.cpp, pretty_formatter.cpp, json_formatter.cpp, tabular_formatter.cpp, pager.cpp
@@ -499,10 +574,11 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `src/log/` — log_manager.cpp, log_drain.cpp, log_sinks.cpp
 - `src/tracing/` — trace_manager.cpp, trace_exporter.cpp
 - `src/config/` — actor_factory_registry.cpp, toml_parser.cpp, binary_serializer.cpp, binary_loader.cpp
-- `src/mailbox/` — dedup cache and mailbox support implementations
+- `src/fault/` — fault_controller.cpp, fault_point_registry.cpp, fault_points.cpp, fault_schedule.cpp
+- `src/mailbox/` — dedup cache, overflow handlers, backpressure signal serialization, DLQ support
 - `src/net/` — event_loop.cpp, acceptor.cpp, connection.cpp, tcp_transport.cpp, frame.cpp, tls_context.cpp, tls_connection.cpp, connection_pool.cpp, registrar.cpp
 - `src/ref/` — actor_proxy.cpp, actor_ref.cpp
-- `src/sched/` — scheduler.cpp, worker_thread.cpp, edf_queue.cpp, a2ws.cpp, timing_wheel.cpp, coroutine_frame_pool.cpp
+- `src/sched/` — scheduler.cpp, worker_thread.cpp, actor_execution_engine.cpp, actor_ready_gate.cpp, work_placement_scheduler.cpp, edf_queue.cpp, a2ws.cpp, timing_wheel.cpp, coroutine_frame_pool.cpp
 - `src/spawn.cpp` — AsyncActor implementation
 - `src/actor_type_registry.cpp` — ActorTypeRegistry implementation
 - `src/core/serialization.cpp` — DefaultSerializer implementation
@@ -511,7 +587,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `tools/toml-compiler/` — AOT compiler executable (compiler.cpp)
 - `examples/` — simple API examples
 - `apps/` — complex demo applications that exercise multiple HPActor subsystems
-- Tests: `tests/{unit,integration,system}/` — three-tier structure with 29 GTest binaries and 187 test source files.
+- Tests: `tests/{unit,integration,system}/` — three-tier structure with 32 GTest binaries and 219 test source files.
 
 ## Build Commands
 
