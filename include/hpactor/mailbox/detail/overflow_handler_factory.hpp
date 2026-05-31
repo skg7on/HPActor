@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/mailbox/detail/handlers/dead_letter_handler.hpp>
+#include <hpactor/mailbox/detail/handlers/drop_lowest_priority_handler.hpp>
 #include <hpactor/mailbox/detail/handlers/drop_newest_handler.hpp>
 #include <hpactor/mailbox/detail/handlers/drop_oldest_handler.hpp>
 #include <hpactor/mailbox/detail/handlers/reject_newest_handler.hpp>
@@ -44,6 +45,7 @@ make_overflow_handler(OverflowPolicy policy) {
         case OverflowPolicy::SpillToOverflowQueue:
             return std::make_unique<SpillToOverflowHandler<T>>();
         case OverflowPolicy::DropLowestPriority:
+            return std::make_unique<DropLowestPriorityHandler<T>>();
         case OverflowPolicy::BlockWhenAllowed:
         default:
             return std::make_unique<RejectNewestHandler<T>>();

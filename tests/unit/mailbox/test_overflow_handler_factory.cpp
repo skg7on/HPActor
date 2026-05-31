@@ -39,10 +39,13 @@ TEST(OverflowHandlerFactoryTest, MapsEachEnumToCorrectPolicy) {
         OverflowPolicy::SpillToOverflowQueue);
 }
 
-TEST(OverflowHandlerFactoryTest, UnimplementedPoliciesFallBackToRejectNewest) {
+TEST(OverflowHandlerFactoryTest, DropLowestPriorityPolicyHasDedicatedHandler) {
     EXPECT_EQ(
         make_overflow_handler<TestMsg>(OverflowPolicy::DropLowestPriority)->policy(),
-        OverflowPolicy::RejectNewest);
+        OverflowPolicy::DropLowestPriority);
+}
+
+TEST(OverflowHandlerFactoryTest, UnimplementedPoliciesFallBackToRejectNewest) {
     EXPECT_EQ(
         make_overflow_handler<TestMsg>(OverflowPolicy::BlockWhenAllowed)->policy(),
         OverflowPolicy::RejectNewest);

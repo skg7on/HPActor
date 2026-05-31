@@ -154,7 +154,9 @@ template <typename T> class MPSCActorMailbox {
                 actor_id_,
                 static_cast<uint32_t>(lanes_.total_depth()),
                 reservation_.queued_bytes(),
-                [this]() { return drop_one_oldest(); }};
+                [this]() { return drop_one_oldest(); },
+                nullptr,                                      // dlq
+                [this]() { return drop_one_oldest(); }};       // drop_lowest_priority_fn
 
             auto result = overflow_handler_->handle(ctx, reserve_result);
 
