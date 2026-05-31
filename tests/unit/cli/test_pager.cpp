@@ -104,3 +104,123 @@ TEST(PagerTest, ShowPageLastPage) {
     auto out = fmt.finalize();
     EXPECT_NE(out.find("Page 1 of 1"), std::string::npos);
 }
+
+TEST(PagerTest, ParseInputFirst) {
+    Pager pager(50);
+    std::string arg;
+    EXPECT_EQ(pager.parse_input("f", arg), Pager::Action::Goto);
+    EXPECT_EQ(pager.current_page(), 1);
+}
+
+TEST(PagerTest, ParseInputFirstWord) {
+    Pager pager(50);
+    std::string arg;
+    EXPECT_EQ(pager.parse_input("first", arg), Pager::Action::Goto);
+    EXPECT_EQ(pager.current_page(), 1);
+}
+
+TEST(PagerTest, ParseInputLast) {
+    Pager pager(5);
+    PrettyFormatter fmt;
+    pager.show_page(20, [&](uint32_t, uint32_t) {}, &fmt);
+    std::string arg;
+    EXPECT_EQ(pager.parse_input("l", arg), Pager::Action::Goto);
+    EXPECT_EQ(pager.current_page(), 4);
+}
+
+TEST(PagerTest, ParseInputLastWord) {
+    Pager pager(5);
+    PrettyFormatter fmt;
+    pager.show_page(20, [&](uint32_t, uint32_t) {}, &fmt);
+    std::string arg;
+    EXPECT_EQ(pager.parse_input("last", arg), Pager::Action::Goto);
+    EXPECT_EQ(pager.current_page(), 4);
+}
+
+TEST(PagerTest, ParseInputUnknown) {
+    Pager pager(50);
+    std::string arg;
+    // "x" doesn't match any reserved prefix (n, p, q, f, l, /, g)
+    EXPECT_EQ(pager.parse_input("x", arg), Pager::Action::Unknown);
+}
+
+TEST(PagerTest, ParseInputSearchPreservesArg) {
+    Pager pager(50);
+    std::string arg;
+    EXPECT_EQ(pager.parse_input("/findme", arg), Pager::Action::Search);
+    EXPECT_EQ(arg, "findme");
+}
+
+TEST(PagerTest, ParseInputGotoInvalidNumber) {
+    Pager pager(50);
+    std::string arg;
+    EXPECT_EQ(pager.parse_input("gXYZ", arg), Pager::Action::Goto);
+    EXPECT_EQ(arg, "XYZ");
+}
+
+TEST(PagerTest, TotalPagesZero) {
+    Pager pager(50);
+    EXPECT_EQ(pager.total_pages(), 1u);
+}
+
+TEST(PagerTest, TotalPagesExact) {
+    Pager pager(50);
+    PrettyFormatter fmt;
+    pager.show_page(100, [&](uint32_t, uint32_t) {}, &fmt);
+    EXPECT_EQ(pager.total_pages(), 2u);
+}
+
+TEST(PagerTest, PrevPageAtStart) {
+    Pager pager(5);
+    pager.prev_page();
+    EXPECT_EQ(pager.current_page(), 1);
+}
+
+TEST(PagerTest, PrevPageAfterNext) {
+    Pager pager(5);
+    PrettyFormatter fmt;
+    pager.show_page(20, [&](uint32_t, uint32_t) {}, &fmt);
+    pager.next_page();
+    EXPECT_EQ(pager.current_page(), 2);
+    pager.prev_page();
+    EXPECT_EQ(pager.current_page(), 1);
+}
+
+TEST(PagerTest, NextPageAtEndStops) {
+    Pager pager(10);
+    PrettyFormatter fmt;
+    pager.show_page(10, [&](uint32_t, uint32_t) {}, &fmt);
+    EXPECT_EQ(pager.total_pages(), 1u);
+    pager.next_page();
+    EXPECT_EQ(pager.current_page(), 1);
+}
+
+TEST(PagerTest, GotoPageClampAfterShow) {
+    Pager pager(5);
+    PrettyFormatter fmt;
+    pager.show_page(30, [&](uint32_t, uint32_t) {}, &fmt);
+    pager.goto_page(0);
+    EXPECT_EQ(pager.current_page(), 1);
+    pager.goto_page(999);
+    EXPECT_EQ(pager.current_page(), 6); // clamped to total_pages
+}
+
+TEST(PagerTest, GotoPageAfterShow) {
+    Pager pager(5);
+    PrettyFormatter fmt;
+    pager.show_page(30, [&](uint32_t, uint32_t) {}, &fmt);
+    pager.goto_page(3);
+    EXPECT_EQ(pager.current_page(), 3);
+}
+
+TEST(PagerTest, ShowPageFooterContents) {
+    Pager pager(5);
+    PrettyFormatter fmt;
+    pager.show_page(20, [&](uint32_t, uint32_t) {}, &fmt);
+    auto out = fmt.finalize();
+    EXPECT_NE(out.find("[n]ext"), std::string::npos);
+    EXPECT_NE(out.find("[p]rev"), std::string::npos);
+    EXPECT_NE(out.find("[q]uit"), std::string::npos);
+    EXPECT_NE(out.find("/search"), std::string::npos);
+    EXPECT_NE(out.find("g<num>"), std::string::npos);
+}

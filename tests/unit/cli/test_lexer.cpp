@@ -141,3 +141,120 @@ TEST(LexerTest, MonitorStartWithFilter) {
     EXPECT_TRUE(found_start);
     EXPECT_TRUE(found_filter);
 }
+
+TEST(LexerTest, EscapeTab) {
+    auto tokens = Lexer::tokenize(R"(/actor "hello\tworld" show)");
+    bool found = false;
+    for (auto& t : tokens) {
+        if (t.type == TokenType::Parameter && t.value == "hello\tworld")
+            found = true;
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(LexerTest, EscapeBackslash) {
+    auto tokens = Lexer::tokenize(R"(/actor "hello\\world" show)");
+    bool found = false;
+    for (auto& t : tokens) {
+        if (t.type == TokenType::Parameter && t.value == "hello\\world")
+            found = true;
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(LexerTest, EscapeDoubleQuote) {
+    auto tokens = Lexer::tokenize(R"(/actor "hello\"world" show)");
+    bool found = false;
+    for (auto& t : tokens) {
+        if (t.type == TokenType::Parameter && t.value == "hello\"world")
+            found = true;
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(LexerTest, UnknownEscape) {
+    auto tokens = Lexer::tokenize(R"(/actor "hello\xworld" show)");
+    bool found = false;
+    for (auto& t : tokens) {
+        if (t.type == TokenType::Parameter && t.value == "hello\\xworld")
+            found = true;
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(LexerTest, ConsecutiveEscapes) {
+    auto tokens = Lexer::tokenize(R"(/actor "\\n\\t" show)");
+    bool found = false;
+    for (auto& t : tokens) {
+        if (t.type == TokenType::Parameter && t.value == "\\n\\t")
+            found = true;
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(LexerTest, FlagWithQuotedArg) {
+    auto tokens = Lexer::tokenize(R"(/actor list --message "hello world")");
+    bool found = false;
+    for (auto& t : tokens) {
+        if (t.type == TokenType::FlagWithArg && t.value == "message") {
+            found = true;
+            ASSERT_TRUE(t.arg.has_value() && *t.arg == "hello world");
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(LexerTest, FlagWithEscapedArg) {
+    auto tokens = Lexer::tokenize(R"(/actor list --message "line1\nline2")");
+    bool found = false;
+    for (auto& t : tokens) {
+        if (t.type == TokenType::FlagWithArg && t.value == "message") {
+            found = true;
+            ASSERT_TRUE(t.arg.has_value() && *t.arg == "line1\nline2");
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(LexerTest, MultipleConsecutiveSlashes) {
+    auto tokens = Lexer::tokenize("/ / /help");
+    // Only the first slash at position 0 becomes the "/" keyword
+    EXPECT_EQ(tokens[0].type, TokenType::Keyword);
+    EXPECT_EQ(tokens[0].value, "/");
+}
+
+TEST(LexerTest, QuotedEmptyString) {
+    auto tokens = Lexer::tokenize(R"(/actor "" show)");
+    bool found = false;
+    for (auto& t : tokens) {
+        if (t.type == TokenType::Parameter && t.value.empty())
+            found = true;
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST(LexerTest, AllTokenTypesMixed) {
+    auto tokens = Lexer::tokenize(
+        R"(/actor 0x123 show --verbose --format json --message "hello world")");
+    int keywords = 0, flags = 0, flag_with_args = 0;
+    for (auto& t : tokens) {
+        switch (t.type) {
+            case TokenType::Keyword:
+                keywords++;
+                break;
+            case TokenType::Flag:
+                flags++;
+                break;
+            case TokenType::FlagWithArg:
+                flag_with_args++;
+                break;
+            default:
+                break;
+        }
+    }
+    EXPECT_GE(keywords, 4);       // "/", "actor", "0x123", "show"
+    EXPECT_EQ(flags, 1);          // --verbose
+    EXPECT_EQ(flag_with_args, 2); // --format json, --message "hello world"
+    // Quoted value in --message is consumed as flag arg, not a separate
+    // Parameter
+}
