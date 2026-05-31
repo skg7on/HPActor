@@ -65,6 +65,20 @@ public:
         return nullptr;
     }
 
+    /// Drop one message from the highest-priority non-empty user lane.
+    /// Scans lanes 0..N-1 to find the globally oldest message (within
+    /// each lane, MPSC preserves FIFO, and lower lane index = higher
+    /// priority = typically enqueued first since high-priority messages
+    /// are dispatched to low-index lanes).
+    /// Does NOT touch the system lane.
+    T* try_drop_oldest_user_lane() noexcept {
+        for (uint8_t i = 0; i < num_user_lanes_; ++i) {
+            T* node = user_lanes_[i].dequeue();
+            if (node) return node;
+        }
+        return nullptr;
+    }
+
     /// Drop one message from the lowest-priority non-empty user lane.
     /// Does NOT touch the system lane.
     /// \return The dropped node (caller handles reservation release
@@ -118,7 +132,9 @@ public:
         return num_user_lanes_;
     }
 
-    void set_num_user_lanes(uint8_t n) { num_user_lanes_ = n; }
+    void set_num_user_lanes(uint8_t n) {
+        num_user_lanes_ = (n >= 1 && n <= kMaxUserLanes) ? n : 1;
+    }
 
     // ── Test support ──────────────────────────────────────────────
 

@@ -159,7 +159,9 @@ TEST_F(MultiLaneQueueTest, InjectForTest) {
 TEST_F(MultiLaneQueueTest, ResetClearsAllState) {
     TestNode n{1};
     q.enqueue(&n, 0);
-    q.set_pending_free(new TestNode{5});
+    void* raw = hpactor::mem::allocate(hpactor::mem::RegionType::kMessage,
+                                        sizeof(TestNode), hpactor::ActorId{0});
+    q.set_pending_free(new (raw) TestNode{5});
     q.reset();
     EXPECT_TRUE(q.empty());
     EXPECT_EQ(q.total_depth(), 0);

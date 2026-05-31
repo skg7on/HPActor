@@ -53,6 +53,7 @@ template <typename T> class MPSCActorMailbox {
         overflow_queue_.set_max_depth(config_.max_overflow_depth);
         overflow_handler_ =
             detail::make_overflow_handler<T>(config_.overflow_policy);
+        lanes_.set_num_user_lanes(config_.priority_levels);
     }
 
     ~MPSCActorMailbox() {
@@ -125,6 +126,8 @@ template <typename T> class MPSCActorMailbox {
             }
             void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
             auto* node = new (raw) T(std::move(msg));
+            system_lane_bytes_.fetch_add(meta.estimated_bytes,
+                                         std::memory_order_relaxed);
             enqueue_reserved(node, meta,
                              MultiLaneQueue<T>::kSystemLaneSentinel);
             return make_result(pressure_state_.code_after_accept());
@@ -151,9 +154,9 @@ template <typename T> class MPSCActorMailbox {
                 actor_id_,
                 static_cast<uint32_t>(lanes_.total_depth()),
                 reservation_.queued_bytes(),
-                [this]() { return drop_one_oldest(); },
+                [this]() { return drop_one_oldest_global(); },
                 nullptr,                                      // dlq
-                [this]() { return drop_one_oldest(); }};       // drop_lowest_priority_fn
+                [this]() { return drop_one_lowest_priority(); }};  // drop_lowest_priority_fn
 
             auto result = overflow_handler_->handle(ctx, reserve_result);
 
@@ -268,9 +271,16 @@ template <typename T> class MPSCActorMailbox {
         lock_consumer();
         T* node = lanes_.dequeue();
         FAULT_INJECT("hpactor.mailbox.dequeue.drop") {
-            // Silently drop: release reservation but return null to caller
+            // Silently drop: release reservation but return null to caller.
+            // System messages bypass reservation — skip release for them.
             if (node != nullptr) {
-                reservation_.release(estimate_node_bytes(*node));
+                bool is_sys = false;
+                if constexpr (std::is_same_v<T, TypedMessage>) {
+                    is_sys = is_system_message(node->type_id());
+                }
+                if (!is_sys) {
+                    reservation_.release(estimate_node_bytes(*node));
+                }
             }
             unlock_consumer();
             return nullptr;
@@ -283,6 +293,8 @@ template <typename T> class MPSCActorMailbox {
             }
             if (!is_sys) {
                 reservation_.release(bytes);
+            } else {
+                system_lane_bytes_.fetch_sub(bytes, std::memory_order_relaxed);
             }
             total_dequeued_.fetch_add(1, std::memory_order_relaxed);
             update_pressure_state();
@@ -385,9 +397,38 @@ template <typename T> class MPSCActorMailbox {
     }
 
   private:
-    bool drop_one_oldest() noexcept {
+    bool drop_one_oldest_global() noexcept {
         FAULT_INJECT("hpactor.mailbox.drop_oldest.fail") {
-            return false;  // eviction failed
+            return false;
+        }
+        lock_consumer();
+        T* node = lanes_.try_drop_oldest_user_lane();
+        if (!node) {
+            unlock_consumer();
+            return false;
+        }
+        uint64_t bytes = estimate_node_bytes(*node);
+        reservation_.release(bytes);
+        total_dropped_.fetch_add(1, std::memory_order_relaxed);
+        update_pressure_state();
+        if (metrics_ring_buffer_) [[unlikely]] {
+            metrics::MetricEvent evt{};
+            evt.actor_id = actor_id_;
+            evt.event_type = metrics::MetricEventType::kMailboxDropped;
+            evt.value_hi = 1;
+            metrics_ring_buffer_->try_push(evt);
+        }
+        if (empty()) {
+            mailbox_was_empty_.store(true, std::memory_order_release);
+        }
+        unlock_consumer();
+        lanes_.set_pending_free(node);
+        return true;
+    }
+
+    bool drop_one_lowest_priority() noexcept {
+        FAULT_INJECT("hpactor.mailbox.drop_lowest_priority.fail") {
+            return false;
         }
         lock_consumer();
         T* node = lanes_.try_drop_from_lowest_user_lane();
@@ -439,7 +480,10 @@ template <typename T> class MPSCActorMailbox {
 
     double pressure_ratio() const noexcept {
         const uint32_t cap = config_.capacity.max_messages;
-        const uint32_t depth = static_cast<uint32_t>(lanes_.total_depth());
+        // Exclude system lane: max_messages only governs user messages.
+        int64_t user_depth = lanes_.total_depth()
+            - lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel);
+        const uint32_t depth = static_cast<uint32_t>(user_depth > 0 ? user_depth : 0);
         double count_ratio = 0.0;
         if (cap > 0) {
             count_ratio = static_cast<double>(depth) / static_cast<double>(cap);
@@ -447,8 +491,10 @@ template <typename T> class MPSCActorMailbox {
         double byte_ratio = 0.0;
         const uint64_t byte_cap = config_.capacity.max_bytes;
         if (byte_cap > 0) {
-            byte_ratio = static_cast<double>(reservation_.queued_bytes()) /
-                         static_cast<double>(byte_cap);
+            byte_ratio = static_cast<double>(
+                reservation_.queued_bytes()
+                    + system_lane_bytes_.load(std::memory_order_relaxed))
+                / static_cast<double>(byte_cap);
         }
         return count_ratio > byte_ratio ? count_ratio : byte_ratio;
     }
@@ -540,6 +586,7 @@ template <typename T> class MPSCActorMailbox {
     std::atomic<uint64_t> total_dropped_{0};
     std::atomic<uint64_t> total_dead_letters_{0};
     std::atomic<uint64_t> max_depth_{0};
+    std::atomic<uint64_t> system_lane_bytes_{0};
 
     // --- Dependencies ---
     ActorContinuationCallback continuation_callback_;
