@@ -123,7 +123,12 @@ The project memory currently records the following major completed areas:
 - Actor metrics: lock-free metric event ring buffer, registry, aggregator, OpenMetrics formatter, MetricsActor, and TOML metrics config.
 - Interactive CLI: trie command registry, lexer, output formatters, pager, inspect/kill/list/stats protobuf requests, and runtime opt-in config.
 - Pluggable service discovery: `IServiceDiscovery`, `UdpRegistrar`, SWIM `GossipMembership`, `HybridDiscovery`, `StaticDiscovery`, and `ActorLocationCache`.
-- Tests: project memory reports 99 unit tests passing.
+- Deterministic fault injection: `FaultController`, `FaultSchedule`, `FaultPoint` registry, 14-domain tick counters, seed-replayable schedules with 80 injection sites.
+- Mailbox architecture: `MultiLaneQueue<T>` lock-free multi-lane queue with dedicated system lane, priority-aware routing, `DropLowestPriority` overflow, and per-lane depth observability.
+- DLQ CLI: `/dlq list`, `/dlq show`, `/dlq replay`, and `/dlq export` commands with `DeadLetterQueue` API.
+- Scheduler hardening: `ActorExecutionEngine`, `WorkerThread` fixes, `IScheduler`/`IWorkPlacementScheduler`/`IWorkerNotification` interface segregation.
+- Complex apps: EdgeOps telemetry platform and order platform under `apps/`.
+- Tests: 1411 source-level GTest cases across 219 test source files and 32 GTest binaries in a three-tier (unit/integration/system) structure.
 
 ### Actor Type Hierarchy
 
@@ -232,9 +237,9 @@ Subsystem parsers self-register via file-scope static registrar objects. New TOM
 
 ## Important Files
 
-- `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
+- `include/hpactor/` — public headers (actor, cli, config, core, fault, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
-- `tests/` — 99 unit tests
+- `tests/` — 219 test source files across unit, integration, and system tiers; 32 GTest binaries
 - `examples/` — simple API usage examples
 - `apps/` — complex demo applications that exercise multiple HPActor subsystems
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler

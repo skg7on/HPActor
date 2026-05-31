@@ -194,7 +194,8 @@ AbstractActor (interface base)
 | `TypedBehavior` | `actor/typed_actor.hpp` | Statically typed handlers |
 | `Supervision` | `supervision/*.hpp` | Fault-tolerance (OneForOne, AllForOne, self-supervising) |
 | `HybridScheduler` | `sched/hybrid_scheduler.hpp` | Work-stealing scheduler with A2WS victim selection |
-| `MPSCActorMailbox` | `mailbox/mpsc_actor_mailbox.hpp` | Lock-free MPSC queue with edge-triggered CAS wakeup |
+| `MPSCActorMailbox` | `mailbox/mpsc_actor_mailbox.hpp` | Lock-free MPSC envelope with edge-triggered CAS wakeup |
+| `MultiLaneQueue` | `mailbox/multi_lane_queue.hpp` | Lock-free multi-lane queue with dedicated system lane, priority-aware routing |
 | `SlabCache` / `SegmentProvider` | `mem/*.hpp` | Two-tier slab allocator (thread-local caches + mmap segments) |
 | `EventLoop` | `net/event_loop.hpp` | kqueue/epoll edge-triggered event loop |
 | `TomlParser` | `config/toml_parser.hpp` | TOML topology parser: coordinator that delegates to self-registered subsystem parsers |
@@ -205,6 +206,7 @@ AbstractActor (interface base)
 | `BinaryLoader` / `BinarySerializer` | `config/binary_*.hpp` | mmap-friendly binary topology format |
 | `MetricsActor` / `MpscRingBuffer` | `metrics/*.hpp` | Lock-free ring buffer instrumentation, OpenMetrics /metrics endpoint for Prometheus |
 | `CliActor` / `CommandNode` | `cli/*.hpp` | Interactive CLI with trie-based command tree, InspectState introspection, paged output |
+| `FaultController` / `FaultPoint` | `fault/*.hpp` | Deterministic fault injection with 80 sites across 14 domains, seed-replayable schedules |
 | `IServiceDiscovery` | `net/service_discovery.hpp` | Pluggable discovery interface (UdpRegistrar, Gossip, Static, Hybrid) |
 | `GossipMembership` | `net/gossip_membership.hpp` | SWIM protocol for decentralized cross-server discovery |
 | `ActorLocationCache` | `net/actor_location_cache.hpp` | TTL cache for ActorId → EndPoint resolution |
@@ -215,7 +217,8 @@ The production reliability docs are architecture requirements and design
 backlog. Do not assume a backlog item is runtime behavior until code proves it.
 Current implemented foundations include scheduled messages, delivery-mode
 configuration, receiver deduplication, structured failure envelopes, bounded
-mailboxes, DLQ, distributed tracing, HTTP gateway, graceful shutdown, actor
+mailboxes, multi-lane priority queues, DLQ with CLI replay/export, distributed
+tracing, HTTP gateway, deterministic fault injection, graceful shutdown, actor
 lifecycle, and actor quarantine. Durable outbox/inbox, ACK/NACK retry, cluster
 control, security, and operations-plane admin APIs remain design/backlog.
 
@@ -336,9 +339,9 @@ environments. The following rules prevent flaky tests:
 
 ## Important Files
 
-- `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
+- `include/hpactor/` — public headers (actor, cli, config, core, fault, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
-- `tests/` — 187 test source files in three-tier structure (unit, integration, system) using Google Test; 29 GTest binaries are discovered through CTest
+- `tests/` — 219 test source files in three-tier structure (unit, integration, system) using Google Test; 32 GTest binaries are discovered through CTest
 - `examples/` — simple API usage examples
 - `apps/` — complex demo applications that exercise multiple HPActor subsystems
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
