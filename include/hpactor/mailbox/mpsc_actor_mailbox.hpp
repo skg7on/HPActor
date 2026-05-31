@@ -68,6 +68,7 @@ template <typename T> class MPSCActorMailbox {
     }
 
     void set_config(const MailboxConfig& cfg) noexcept {
+        uint8_t old_priority_levels = config_.priority_levels;
         config_ = cfg;
         if (config_.capacity.max_messages == 0) {
             config_.capacity.max_messages = 1024;
@@ -85,6 +86,9 @@ template <typename T> class MPSCActorMailbox {
         overflow_queue_.set_max_depth(config_.max_overflow_depth);
         overflow_handler_ =
             detail::make_overflow_handler<T>(config_.overflow_policy);
+        if (cfg.priority_levels != old_priority_levels) {
+            lanes_.set_num_user_lanes(cfg.priority_levels);
+        }
     }
 
     const MailboxConfig& config() const noexcept {
@@ -496,7 +500,9 @@ template <typename T> class MPSCActorMailbox {
     uint8_t route_lane(const MailboxEnvelopeMeta& meta) const noexcept {
         if (is_system_message(meta.type_tag))
             return MultiLaneQueue<T>::kSystemLaneSentinel;
-        return 0;
+        if (!config_.priority_aware)
+            return 0;
+        return std::min<uint8_t>(meta.priority, lanes_.num_user_lanes() - 1);
     }
 
     void lock_consumer() noexcept {
