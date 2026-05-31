@@ -257,3 +257,336 @@ TEST(LineEditorTest, SetRoot) {
     auto root2 = std::make_unique<CommandNode>("/", "root2");
     editor.set_root(root2.get());
 }
+
+// =============================================================================
+// compute_completions
+// =============================================================================
+
+TEST(LineEditorTest, ComputeCompletionsEmptyBuffer) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("");
+    EXPECT_TRUE(result.matches.empty());
+    EXPECT_TRUE(result.prefix.empty());
+}
+
+TEST(LineEditorTest, ComputeCompletionsSlash) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/");
+    // "/" is skipped but becomes partial=words.back()="/";
+    // collect_completions("/") matches nothing → 0 results
+    EXPECT_EQ(result.matches.size(), 0u);
+}
+
+TEST(LineEditorTest, ComputeCompletionsPrefixMatch) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/ac");
+    // "/" skipped, i advances to 1, but words_to_consume=1 → loop skipped.
+    // partial="ac", no exact match → collect_completions("ac") at root
+    // → "actor" starts with "ac" → 1 match
+    EXPECT_EQ(result.matches.size(), 1u);
+    EXPECT_EQ(result.matches[0], "actor");
+    EXPECT_EQ(result.prefix, "/");
+}
+
+TEST(LineEditorTest, ComputeCompletionsExactMatch) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/actor");
+    // exact match "actor" → consumed, partial="" → all non-param children
+    bool found_list = false;
+    for (auto& m : result.matches) {
+        if (m == "list")
+            found_list = true;
+        // <id> is parameter, filtered by collect_completions
+    }
+    EXPECT_TRUE(found_list);
+    EXPECT_EQ(result.matches.size(), 1u); // only "list", not "<id>"
+    EXPECT_EQ(result.prefix, "/actor ");
+}
+
+TEST(LineEditorTest, ComputeCompletionsTrailingSpace) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/actor ");
+    // trailing space → "actor" fully consumed, partial="" → all non-param
+    bool found_list = false;
+    for (auto& m : result.matches) {
+        if (m == "list")
+            found_list = true;
+    }
+    EXPECT_TRUE(found_list);
+    EXPECT_EQ(result.matches.size(), 1u); // only "list"
+}
+
+TEST(LineEditorTest, ComputeCompletionsParameterConsumed) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/actor 0x123 ");
+    // trailing space → both tokens consumed, partial="" → all children
+    bool found_show = false, found_kill = false;
+    for (auto& m : result.matches) {
+        if (m == "show")
+            found_show = true;
+        if (m == "kill")
+            found_kill = true;
+    }
+    EXPECT_TRUE(found_show);
+    EXPECT_TRUE(found_kill);
+}
+
+TEST(LineEditorTest, ComputeCompletionsParameterWithoutSpace) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/actor 0x123");
+    // no trailing space → partial="0x123" → filters collect_completions
+    // Neither "show" nor "kill" starts with "0x123" → 0 matches
+    EXPECT_EQ(result.matches.size(), 0u);
+}
+
+TEST(LineEditorTest, ComputeCompletionsLeafNode) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/help ");
+    // trailing space → "help" consumed, leaf node has no children
+    EXPECT_EQ(result.matches.size(), 0u);
+}
+
+TEST(LineEditorTest, ComputeCompletionsNoMatch) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/xyz");
+    // "xyz" has no match, no prefix match at root → collect_completions("xyz")
+    // at root → no child starts with "xyz" → 0 matches
+    EXPECT_EQ(result.matches.size(), 0u);
+}
+
+TEST(LineEditorTest, ComputeCompletionsNullRoot) {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, nullptr);
+
+    auto result = editor.compute_completions("/actor");
+    EXPECT_TRUE(result.matches.empty());
+    EXPECT_TRUE(result.prefix.empty());
+}
+
+// =============================================================================
+// compute_hint
+// =============================================================================
+
+TEST(LineEditorTest, ComputeHintEmptyBuffer) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("");
+    EXPECT_FALSE(result.active);
+}
+
+TEST(LineEditorTest, ComputeHintSlash) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("/");
+    // "/" is skipped, partial="/" → no child matches "/" → no hint
+    EXPECT_FALSE(result.active);
+}
+
+TEST(LineEditorTest, ComputeHintPrefixMatch) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("/a");
+    // "a" prefix-matches "actor" → hint "ctor"
+    EXPECT_TRUE(result.active);
+    EXPECT_EQ(result.text, "ctor");
+}
+
+TEST(LineEditorTest, ComputeHintExactKeywordAdvances) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("/actor");
+    // exact match "actor" → advance, hint first non-param child
+    EXPECT_TRUE(result.active);
+    // "memory" comes before "stats" under system, but under actor it's "list"
+    // Children of /actor: <id> (param, skip), "list" (keyword)
+    EXPECT_EQ(result.text, "list");
+}
+
+TEST(LineEditorTest, ComputeHintTrailingSpace) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("/actor ");
+    EXPECT_TRUE(result.active);
+    EXPECT_EQ(result.text, "list");
+}
+
+TEST(LineEditorTest, ComputeHintLeafNode) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("/actor list");
+    // exact match "list" → advance, leaf has no children → no hint
+    EXPECT_FALSE(result.active);
+}
+
+TEST(LineEditorTest, ComputeHintNoMatch) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("/unknown");
+    EXPECT_FALSE(result.active);
+}
+
+TEST(LineEditorTest, ComputeHintNullRoot) {
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, nullptr);
+
+    auto result = editor.compute_hint("/actor");
+    EXPECT_FALSE(result.active);
+}
+
+TEST(LineEditorTest, ComputeHintSystem) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("/system");
+    // exact match "system" → advance, children: "stats", "memory"
+    // first non-param child in insertion order is "stats"
+    EXPECT_TRUE(result.active);
+    EXPECT_EQ(result.text, "stats");
+}
+
+TEST(LineEditorTest, ComputeHintPartialSubcommand) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_hint("/system st");
+    // "st" prefix-matches "stats" → hint "ats"
+    EXPECT_TRUE(result.active);
+    EXPECT_EQ(result.text, "ats");
+}
+
+// =============================================================================
+// Additional completion tests
+// =============================================================================
+
+TEST(LineEditorTest, ComputeCompletionsTwoLevelPrefix) {
+    auto root = build_test_tree();
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, root.get());
+
+    auto result = editor.compute_completions("/actor 0x123 sh ");
+    // trailing space → "sh" consumed via prefix match → "show"
+    // partial="" → all children of show node (none, show is leaf) → 0 matches
+    EXPECT_EQ(result.matches.size(), 0u);
+}
+
+TEST(LineEditorTest, ComputeCompletionsAmbiguousPrefix) {
+    CommandNode root{"", "root"};
+    root.add_child("show", "Display");
+    root.add_child("stats", "Statistics");
+    root.add_child("stop", "Stop");
+
+    LineEditorConfig cfg;
+    cfg.history_max = 100;
+    cfg.history_path = "";
+    cfg.multiline = false;
+    LineEditor editor(cfg, &root);
+
+    auto result = editor.compute_completions("/s ");
+    EXPECT_EQ(result.matches.size(), 3u);
+}

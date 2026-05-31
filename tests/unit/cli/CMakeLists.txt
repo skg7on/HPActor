@@ -13,6 +13,8 @@ add_executable(test_unit_cli
     test_help_quit_commands.cpp
     test_actor_commands.cpp
     test_system_commands.cpp
+    test_dlq_commands.cpp
+    test_fault_commands.cpp
 )
 target_include_directories(test_unit_cli PRIVATE ${PROJECT_SOURCE_DIR}/src/cli/commands)
 target_link_libraries(test_unit_cli hpactor hpactor_test_support GTest::gtest_main)

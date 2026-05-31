@@ -102,3 +102,78 @@ TEST(FormattersTest, Factory) {
     EXPECT_NE(OutputFormatter::create("tabular"), nullptr);
     EXPECT_NE(OutputFormatter::create("bogus"), nullptr); // fallback to pretty
 }
+
+TEST(FormattersTest, PrettyTree) {
+    PrettyFormatter f;
+    TreeNode child{"child", "child help", {}};
+    TreeNode root{"root", "root description", {std::move(child)}};
+    f.tree(root);
+    auto out = f.finalize();
+    EXPECT_NE(out.find("root"), std::string::npos);
+    EXPECT_NE(out.find("child"), std::string::npos);
+}
+
+TEST(FormattersTest, PrettyTreeNoChildren) {
+    PrettyFormatter f;
+    TreeNode leaf{"leaf", "", {}};
+    f.tree(leaf);
+    auto out = f.finalize();
+    EXPECT_NE(out.find("leaf"), std::string::npos);
+}
+
+TEST(FormattersTest, PrettyTreeNested) {
+    PrettyFormatter f;
+    TreeNode grandchild{"gc", "", {}};
+    TreeNode child{"b", "", {std::move(grandchild)}};
+    TreeNode root{"a", "", {std::move(child)}};
+    f.tree(root);
+    auto out = f.finalize();
+    EXPECT_NE(out.find('a'), std::string::npos);
+    EXPECT_NE(out.find('b'), std::string::npos);
+    EXPECT_NE(out.find("gc"), std::string::npos);
+}
+
+TEST(FormattersTest, PrettyRawEmpty) {
+    PrettyFormatter f;
+    f.raw("");
+    auto out = f.finalize();
+    EXPECT_TRUE(out.empty());
+}
+
+TEST(FormattersTest, PrettyRawAddsNewline) {
+    PrettyFormatter f;
+    f.raw("hello");
+    auto out = f.finalize();
+    EXPECT_EQ(out, "hello\n");
+}
+
+TEST(FormattersTest, PrettyBufferEmpty) {
+    PrettyFormatter f;
+    auto out = f.finalize();
+    EXPECT_TRUE(out.empty());
+}
+
+TEST(FormattersTest, TabularHeader) {
+    TabularFormatter f;
+    f.header("My Header");
+    auto out = f.finalize();
+    EXPECT_NE(out.find("# My Header"), std::string::npos);
+}
+
+TEST(FormattersTest, TabularError) {
+    TabularFormatter f;
+    f.error("something failed");
+    auto out = f.finalize();
+    EXPECT_NE(out.find("ERROR: something failed"), std::string::npos);
+}
+
+TEST(FormattersTest, TabularTree) {
+    TabularFormatter f;
+    TreeNode child{"child", "child desc", {}};
+    TreeNode root{"root", "", {std::move(child)}};
+    f.tree(root);
+    auto out = f.finalize();
+    EXPECT_NE(out.find("root"), std::string::npos);
+    EXPECT_NE(out.find("child"), std::string::npos);
+    EXPECT_NE(out.find("child desc"), std::string::npos);
+}
