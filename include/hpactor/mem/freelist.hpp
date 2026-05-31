@@ -20,18 +20,29 @@
 
 namespace hpactor::mem {
 
-// Lock-free LIFO freelist with ABA protection via 64-bit tagged pointers.
-// Packs a 48-bit pointer with a 16-bit counter into a single uint64_t,
-// making the CAS always lock-free on 64-bit platforms.
-//
-// Each node must have a `T* next` field.
-// Thread-safe for any number of concurrent push/pop operations.
+/// \brief Lock-free LIFO freelist with ABA protection via 64-bit tagged
+/// pointers.
+///
+/// Packs a 48-bit pointer with a 16-bit ABA counter into a single \c uint64_t,
+/// making the CAS always lock-free on 64-bit platforms.
+///
+/// Each node must have a \c T* \c next field.
+///
+/// \tparam T Node type with a \c T* \c next member.
+/// \note Thread-safe: any number of concurrent \c push() and \c pop()
+/// operations
+///       are lock-free and linearizable.
 template <typename T> class FreeList {
   public:
+    /// \brief Construct an empty freelist.
     FreeList() {
         top_.store(0, std::memory_order_relaxed);
     }
 
+    /// \brief Push a node onto the freelist.
+    ///
+    /// \param[in] node Node to push. Must have a valid \c next field.
+    /// \note Lock-free; safe to call from any thread.
     void push(T* node) noexcept {
         uint64_t old = top_.load(std::memory_order_acquire);
         uint64_t desired;
@@ -42,6 +53,10 @@ template <typename T> class FreeList {
             old, desired, std::memory_order_acq_rel, std::memory_order_acquire));
     }
 
+    /// \brief Pop a node from the freelist.
+    ///
+    /// \return The popped node, or \c nullptr if the freelist is empty.
+    /// \note Lock-free; safe to call from any thread.
     T* pop() noexcept {
         uint64_t old = top_.load(std::memory_order_acquire);
         while (extract_ptr(old) != nullptr) {
@@ -54,6 +69,11 @@ template <typename T> class FreeList {
         return nullptr;
     }
 
+    /// \brief Check whether the freelist is empty.
+    ///
+    /// \return \c true if no nodes are currently linked.
+    /// \note The result is a snapshot — a concurrent push/pop may change state
+    ///       before the caller acts on the return value.
     bool empty() const noexcept {
         return extract_ptr(top_.load(std::memory_order_acquire)) == nullptr;
     }
@@ -64,22 +84,23 @@ template <typename T> class FreeList {
     static constexpr uint64_t kPtrMask = (1ULL << 48) - 1;
     static constexpr int kTagShift = 48;
 
+    /// \brief Extract the pointer from a packed tagged-pointer word, with
+    /// sign-extension for canonical addresses above the 47-bit boundary.
     static T* extract_ptr(uint64_t packed) noexcept {
         constexpr uint64_t kSignBit = 1ULL << 47;
         uint64_t ptr = packed & kPtrMask;
-        // Sign-extend bit 47 so canonical addresses with the high bit set
-        // (e.g. on systems that place user-space mappings above 47-bit
-        // boundary) remain valid after the mask clears the upper 16 bits.
         if (ptr & kSignBit) {
             ptr |= ~kPtrMask;
         }
         return reinterpret_cast<T*>(static_cast<uintptr_t>(ptr));
     }
 
+    /// \brief Increment and return the ABA tag from a packed word.
     static uint16_t next_tag(uint64_t packed) noexcept {
         return static_cast<uint16_t>((packed >> kTagShift) + 1);
     }
 
+    /// \brief Pack a pointer and tag into a single 64-bit word.
     static uint64_t pack(T* ptr, uint16_t tag) noexcept {
         return (reinterpret_cast<uint64_t>(ptr) & kPtrMask) |
                (static_cast<uint64_t>(tag) << kTagShift);

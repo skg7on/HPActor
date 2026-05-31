@@ -26,34 +26,51 @@ namespace hpactor::mem {
 // Guard page utilities for fat blocks (>4KB)
 // ---------------------------------------------------------------------------
 
-// Returns the system page size (cached).
+/// \brief Return the system page size (cached after first call).
+///
+/// \return The page size in bytes (e.g. 4096 on x86-64, 16384 on Apple
+/// Silicon).
 size_t page_size() noexcept;
 
-// Allocate a block with PROT_NONE guard pages at both ends.
-// Returns pointer to usable memory (after leading guard page).
-// On overflow/underflow, SIGSEGV fires instead of silent corruption.
-// Caller must free via guarded_free().
+/// \brief Allocate a block with \c PROT_NONE guard pages at both ends.
+///
+/// Returns a pointer to usable memory positioned after the leading guard page.
+/// On overflow or underflow the guard page triggers \c SIGSEGV instead of
+/// silent memory corruption.
+///
+/// \param[in] user_bytes Number of usable bytes requested.
+/// \return Pointer to the usable memory region, or \c nullptr on failure.
+/// \note Caller must free via \c guarded_free().
 void* guarded_alloc(size_t user_bytes) noexcept;
 
-// Free a block allocated by guarded_alloc().
+/// \brief Free a block previously allocated by \c guarded_alloc().
+///
+/// \param[in] user_ptr Pointer returned by \c guarded_alloc().
+/// \param[in] user_bytes The same size passed to \c guarded_alloc().
 void guarded_free(void* user_ptr, size_t user_bytes) noexcept;
 
 // ---------------------------------------------------------------------------
 // SIGSEGV handler for memory corruption detection
 // ---------------------------------------------------------------------------
 
-// Install the corruption signal handler. Chains to any previous handler.
-// When a guard page is hit, the handler identifies the owning actor (via
-// SegmentProvider::lookup() on the fault address) and records a corruption
-// event rather than crashing the process.
+/// \brief Install the corruption signal handler for \c SIGSEGV / \c SIGBUS.
+///
+/// Chains to any previously installed handler. When a guard page is hit, the
+/// handler identifies the owning actor via \c SegmentProvider::lookup() on the
+/// fault address and records a corruption event rather than crashing the
+/// process.
+///
+/// \note The handler uses only \c write() for logging — never the async-unsafe
+///       logger — to avoid CAS-atomics deadlock in signal context.
 void install_corruption_handler() noexcept;
 
-// Set a pre-opened file descriptor for signal-safe logging of guard page
-// violations. The handler uses write() — never the async-unsafe logger —
-// to avoid CAS atomics deadlock in signal context.
+/// \brief Set a pre-opened file descriptor for signal-safe logging of guard
+/// page violations.
+///
+/// \param[in] fd File descriptor opened for writing (e.g. via \c open()).
 void set_guard_page_log_fd(int fd) noexcept;
 
-// Restore the previous signal handler.
+/// \brief Restore the previous signal handler, removing the corruption handler.
 void remove_corruption_handler() noexcept;
 
 } // namespace hpactor::mem

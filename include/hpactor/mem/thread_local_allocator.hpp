@@ -23,12 +23,21 @@
 
 namespace hpactor::mem {
 
-// Per-thread allocator. Owns a SlabCache for each (RegionType × SizeClass)
-// combination. The hot allocation path is bump-pointer or freelist pop — no
-// locks.
+/// \brief Per-thread allocator.
+///
+/// Owns a SlabCache for each (RegionType × SizeClass) combination — a matrix
+/// of \c kNumRegionTypes rows × \c kNumSizeClasses columns. The hot allocation
+/// path is bump-pointer or freelist pop with no locks.
+///
+/// \note Thread-confined: each instance is owned by exactly one WorkerThread.
+///       Cross-thread frees are routed to the origin SlabCache via
+///       SegmentProvider slab lookup.
 class ThreadLocalAllocator {
   public:
+    /// \brief Construct all per-region, per-size-class caches.
     ThreadLocalAllocator();
+
+    /// \brief Release all caches and their slabs.
     ~ThreadLocalAllocator();
 
     ThreadLocalAllocator(const ThreadLocalAllocator&) = delete;
@@ -36,29 +45,61 @@ class ThreadLocalAllocator {
     ThreadLocalAllocator(ThreadLocalAllocator&&) = delete;
     ThreadLocalAllocator& operator=(ThreadLocalAllocator&&) = delete;
 
-    // Region-aware allocation from a specific size class.
+    /// \brief Allocate from a specific region and size class.
+    ///
+    /// \param[in] region Memory region to charge.
+    /// \param[in] sc Size class for the requested block size.
+    /// \param[in] owner Owning actor.
+    /// \return Pointer to user data, or \c nullptr on failure.
     void* allocate(RegionType region, SizeClass sc, ActorId owner) noexcept;
 
-    // Region-aware allocation by user-requested byte size.
+    /// \brief Allocate from a specific region by user-requested byte size.
+    ///
+    /// Maps \p user_bytes to the appropriate SizeClass internally.
+    ///
+    /// \param[in] region Memory region to charge.
+    /// \param[in] user_bytes Number of bytes requested.
+    /// \param[in] owner Owning actor.
+    /// \return Pointer to user data, or \c nullptr on failure.
     void* allocate(RegionType region, size_t user_bytes, ActorId owner) noexcept;
 
-    // Backward-compatible: allocate with default region (kInternal).
+    /// \brief Backward-compatible: allocate with default region (kInternal).
+    ///
+    /// \param[in] sc Size class.
+    /// \param[in] owner Owning actor.
+    /// \return Pointer to user data, or \c nullptr on failure.
     void* allocate(SizeClass sc, ActorId owner) noexcept {
         return allocate(RegionType::kInternal, sc, owner);
     }
 
-    // Backward-compatible: allocate by bytes with default region.
+    /// \brief Backward-compatible: allocate by bytes with default region.
+    ///
+    /// \param[in] user_bytes Number of bytes requested.
+    /// \param[in] owner Owning actor.
+    /// \return Pointer to user data, or \c nullptr on failure.
     void* allocate_bytes(size_t user_bytes, ActorId owner) noexcept {
         return allocate(RegionType::kInternal, user_bytes, owner);
     }
 
-    // Deallocate a block. Routes to origin SlabCache for cross-thread frees.
+    /// \brief Deallocate a block.
+    ///
+    /// Routes to the origin SlabCache for cross-thread frees via slab lookup.
+    ///
+    /// \param[in] user_ptr Pointer previously returned by an \c allocate()
+    /// overload.
     void deallocate(void* user_ptr) noexcept;
 
-    // Stats for a specific size class (default region).
+    /// \brief Return stats for a specific size class (default region).
+    ///
+    /// \param[in] sc Size class.
+    /// \return Const reference to the cache's Stats.
     const SlabCache::Stats& stats(SizeClass sc) const noexcept;
 
-    // Stats for a specific region and size class.
+    /// \brief Return stats for a specific region and size class.
+    ///
+    /// \param[in] region Memory region.
+    /// \param[in] sc Size class.
+    /// \return Const reference to the cache's Stats.
     const SlabCache::Stats& stats(RegionType region, SizeClass sc) const noexcept;
 
   private:
