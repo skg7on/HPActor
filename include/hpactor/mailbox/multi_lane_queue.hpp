@@ -18,7 +18,6 @@
 #include <hpactor/mem/memory_config.hpp>
 
 #include <cstdint>
-#include <vector>
 
 namespace hpactor::mailbox {
 
@@ -40,7 +39,7 @@ public:
     static constexpr uint8_t kMaxUserLanes = 8;
 
     explicit MultiLaneQueue(uint8_t num_user_lanes = 1)
-        : user_lanes_(num_user_lanes) {}
+        : num_user_lanes_(num_user_lanes) {}
 
     // ── Producer (lock-free, multi-producer safe) ─────────────────
 
@@ -59,8 +58,8 @@ public:
     T* dequeue() noexcept {
         T* node = system_lane_.dequeue();
         if (node) return node;
-        for (auto& lane : user_lanes_) {
-            node = lane.dequeue();
+        for (uint8_t i = 0; i < num_user_lanes_; ++i) {
+            node = user_lanes_[i].dequeue();
             if (node) return node;
         }
         return nullptr;
@@ -71,8 +70,8 @@ public:
     /// \return The dropped node (caller handles reservation release
     ///         and deferred destruction), or nullptr if all empty.
     T* try_drop_from_lowest_user_lane() noexcept {
-        for (int i = static_cast<int>(user_lanes_.size()) - 1; i >= 0; --i) {
-            T* node = user_lanes_[static_cast<size_t>(i)].dequeue();
+        for (int i = static_cast<int>(num_user_lanes_) - 1; i >= 0; --i) {
+            T* node = user_lanes_[i].dequeue();
             if (node) return node;
         }
         return nullptr;
@@ -98,14 +97,15 @@ public:
 
     bool empty() const noexcept {
         if (!system_lane_.empty()) return false;
-        for (const auto& lane : user_lanes_)
-            if (!lane.empty()) return false;
+        for (uint8_t i = 0; i < num_user_lanes_; ++i)
+            if (!user_lanes_[i].empty()) return false;
         return true;
     }
 
     int64_t total_depth() const noexcept {
         int64_t d = system_lane_.count();
-        for (const auto& lane : user_lanes_) d += lane.count();
+        for (uint8_t i = 0; i < num_user_lanes_; ++i)
+            d += user_lanes_[i].count();
         return d;
     }
 
@@ -115,10 +115,10 @@ public:
     }
 
     uint8_t num_user_lanes() const noexcept {
-        return static_cast<uint8_t>(user_lanes_.size());
+        return num_user_lanes_;
     }
 
-    void set_num_user_lanes(uint8_t n) { user_lanes_.resize(n); }
+    void set_num_user_lanes(uint8_t n) { num_user_lanes_ = n; }
 
     // ── Test support ──────────────────────────────────────────────
 
@@ -133,11 +133,13 @@ public:
             mem::deallocate(pending_free_);
             pending_free_ = nullptr;
         }
+        num_user_lanes_ = 1;
     }
 
 private:
     MPSCMailbox<T> system_lane_;
-    std::vector<MPSCMailbox<T>> user_lanes_;
+    MPSCMailbox<T> user_lanes_[kMaxUserLanes];
+    uint8_t num_user_lanes_{1};
     T* pending_free_{nullptr};
 };
 
