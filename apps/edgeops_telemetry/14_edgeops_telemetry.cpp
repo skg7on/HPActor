@@ -12,29 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// =============================================================================
-// HPActor Example 14: EdgeOps Telemetry Platform
-// =============================================================================
-//
-// Production-like IoT edge telemetry application for validating HPActor's actor
-// runtime in one coherent workflow. The deterministic CI path is --all-in-one;
-// role modes are real ActorSystem entrypoints intended for manual same-host
-// multi-process smoke runs.
-//
-// Quickstart:
-//   ./14_edgeops_telemetry --all-in-one --scenario happy-path
-//   ./14_edgeops_telemetry --all-in-one --scenario overload
-//   ./14_edgeops_telemetry --query --fleet
-//   ./14_edgeops_telemetry --query --query-storage
-//
-// Manual role run:
-//   ./14_edgeops_telemetry --storage --actor-port 17232
-//   ./14_edgeops_telemetry --processor --actor-port 17231
-//   ./14_edgeops_telemetry --gateway --actor-port 17230
-//   ./14_edgeops_telemetry --ops --actor-port 17233
-//   ./14_edgeops_telemetry --device-simulator --devices 100 --rate 50
-//
-// =============================================================================
+// HPActor Example 14: EdgeOps Telemetry Platform — IoT edge telemetry demo app.
 
 #include <apps/edgeops_telemetry/scenario.hpp>
 
@@ -203,23 +181,23 @@ edgeops::ScenarioRunConfig make_scenario_config(const Options& opts) {
 }
 
 void print_summary(const edgeops::ScenarioSummary& summary) {
-    std::cout
-        << "EDGEOPS RESULT scenario=" << edgeops::to_string(summary.scenario)
-        << " status=" << summary.status << " devices=" << summary.devices_registered
-        << " received=" << summary.readings_received
-        << " normalized=" << summary.readings_normalized
-        << " rejected=" << summary.readings_rejected
-        << " stored=" << summary.readings_stored
-        << " dropped=" << summary.readings_dropped
-        << " rollups=" << summary.rollups_emitted
-        << " alerts=" << summary.alerts_raised
-        << " storage_peak=" << summary.storage_peak_depth << "/"
-        << summary.storage_capacity << " dlq_depth=" << summary.dlq_depth
-        << " dlq_pushed=" << summary.dlq_total_pushed
-        << " actors=" << summary.actor_count
-        << " workers=" << summary.scheduler_workers
-        << " drained=" << (summary.drained ? "true" : "false")
-        << " elapsed_ms=" << summary.elapsed_ms << "\n";
+    std::cout << "EDGEOPS RESULT scenario=" << edgeops::to_string(summary.scenario)
+              << " status=" << edgeops::to_string(summary.status)
+              << " devices=" << summary.devices_registered
+              << " received=" << summary.readings_received
+              << " normalized=" << summary.readings_normalized
+              << " rejected=" << summary.readings_rejected
+              << " stored=" << summary.readings_stored
+              << " dropped=" << summary.readings_dropped
+              << " rollups=" << summary.rollups_emitted
+              << " alerts=" << summary.alerts_raised
+              << " storage_peak=" << summary.storage_peak_depth << "/"
+              << summary.storage_capacity << " dlq_depth=" << summary.dlq_depth
+              << " dlq_pushed=" << summary.dlq_total_pushed
+              << " actors=" << summary.actor_count
+              << " workers=" << summary.scheduler_workers
+              << " drained=" << (summary.drained ? "true" : "false")
+              << " elapsed_ms=" << summary.elapsed_ms << "\n";
 }
 
 void print_query(const Options& opts, const edgeops::ScenarioSummary& summary) {

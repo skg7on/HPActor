@@ -195,6 +195,11 @@ class AlertRuleActor : public StatefulActor<AlertState> {
 
   protected:
     Behavior make_behavior() override {
+        static const ThresholdRule kTempHigh{SensorType::Temperature, 80500,
+                                             "temperature-high"};
+        static const RateOfChangeRule kTempJump{SensorType::Temperature, 10000,
+                                                "temperature-jump"};
+
         return Behavior{[this](TypedMessage& msg) {
             if (msg.type_id() != NormalizedReadingTag)
                 return;
@@ -202,21 +207,19 @@ class AlertRuleActor : public StatefulActor<AlertState> {
             if (!decode_normalized_reading(msg.payload(), reading))
                 return;
 
-            ThresholdRule threshold{SensorType::Temperature, 80500,
-                                    "temperature-high"};
             AlertRaisedPayload alert;
-            if (threshold.evaluate(reading, alert))
+            if (kTempHigh.evaluate(reading, alert))
                 emit(alert);
 
             auto it = state().previous.find(reading.device_id);
             if (it != state().previous.end()) {
-                RateOfChangeRule rate{SensorType::Temperature, 10000,
-                                      "temperature-jump"};
                 AlertRaisedPayload rate_alert;
-                if (rate.evaluate(it->second, reading, rate_alert))
+                if (kTempJump.evaluate(it->second, reading, rate_alert))
                     emit(rate_alert);
+                it->second = std::move(reading);
+            } else {
+                state().previous.emplace(reading.device_id, std::move(reading));
             }
-            state().previous[reading.device_id] = reading;
         }};
     }
 
@@ -269,10 +272,14 @@ class NormalizerActor : public StatefulActor<NormalizerState> {
             };
             ++state().readings_normalized;
             auto encoded = encode_normalized_reading(normalized);
-            context()->send(storage_, TypedMessage(NormalizedReadingTag, encoded));
+            context()->send(storage_, TypedMessage(NormalizedReadingTag,
+                                                   std::move(encoded)));
             context()->send(aggregator_,
-                            TypedMessage(NormalizedReadingTag, encoded));
-            context()->send(alert_, TypedMessage(NormalizedReadingTag, encoded));
+                            TypedMessage(NormalizedReadingTag,
+                                         encode_normalized_reading(normalized)));
+            context()->send(alert_,
+                            TypedMessage(NormalizedReadingTag,
+                                         encode_normalized_reading(normalized)));
         }};
     }
 
@@ -425,7 +432,7 @@ ScenarioSummary run_scenario(const ScenarioRunConfig& config) {
     if (config.scenario == ScenarioKind::MissingRoute) {
         ScenarioSummary summary;
         summary.scenario = config.scenario;
-        summary.status = "missing-route";
+        summary.status = ScenarioStatus::MissingRoute;
         summary.storage_capacity = config.storage_capacity;
         auto reading = make_reading(0, 0, config.scenario);
         (void)system.try_deliver_local(
@@ -493,22 +500,22 @@ ScenarioSummary run_scenario(const ScenarioRunConfig& config) {
                   *aggregator_actor, *alert_actor, *storage_actor);
     summary.storage_capacity = config.storage_capacity;
     if (config.scenario == ScenarioKind::MalformedTelemetry) {
-        summary.status = summary.readings_rejected > 0 ? "completed-with-"
-                                                         "rejections"
-                                                       : "completed";
+        summary.status = summary.readings_rejected > 0
+                             ? ScenarioStatus::CompletedWithRejections
+                             : ScenarioStatus::Completed;
     } else if (config.scenario == ScenarioKind::Overload) {
-        summary.status = summary.readings_dropped > 0 ? "completed-with-"
-                                                        "pressure"
-                                                      : "completed";
+        summary.status = summary.readings_dropped > 0
+                             ? ScenarioStatus::CompletedWithPressure
+                             : ScenarioStatus::Completed;
     } else if (config.scenario == ScenarioKind::GracefulShutdown) {
-        summary.status = "drained";
+        summary.status = ScenarioStatus::Drained;
         summary.drained = true;
     } else if (config.scenario == ScenarioKind::ProcessorRestart) {
-        summary.status = "completed-after-restart";
+        summary.status = ScenarioStatus::CompletedAfterRestart;
     } else if (config.scenario == ScenarioKind::FaultInjection) {
-        summary.status = "completed-with-fault-hooks";
+        summary.status = ScenarioStatus::CompletedWithFaultHooks;
     } else {
-        summary.status = "completed";
+        summary.status = ScenarioStatus::Completed;
     }
     if (config.scenario == ScenarioKind::DeviceChurn) {
         summary.devices_disconnected = config.device_count / 2;

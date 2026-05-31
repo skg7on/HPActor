@@ -41,9 +41,42 @@ struct ScenarioRunConfig {
     bool enable_cli = false;
 };
 
+enum class ScenarioStatus : uint8_t {
+    NotStarted = 0,
+    Completed,
+    CompletedWithRejections,
+    CompletedWithPressure,
+    CompletedAfterRestart,
+    CompletedWithFaultHooks,
+    Drained,
+    MissingRoute,
+};
+
+inline const char* to_string(ScenarioStatus status) {
+    switch (status) {
+        case ScenarioStatus::NotStarted:
+            return "not-started";
+        case ScenarioStatus::Completed:
+            return "completed";
+        case ScenarioStatus::CompletedWithRejections:
+            return "completed-with-rejections";
+        case ScenarioStatus::CompletedWithPressure:
+            return "completed-with-pressure";
+        case ScenarioStatus::CompletedAfterRestart:
+            return "completed-after-restart";
+        case ScenarioStatus::CompletedWithFaultHooks:
+            return "completed-with-fault-hooks";
+        case ScenarioStatus::Drained:
+            return "drained";
+        case ScenarioStatus::MissingRoute:
+            return "missing-route";
+    }
+    return "not-started";
+}
+
 struct ScenarioSummary {
     ScenarioKind scenario = ScenarioKind::HappyPath;
-    std::string status = "not-started";
+    ScenarioStatus status = ScenarioStatus::NotStarted;
     uint32_t devices_registered = 0;
     uint32_t devices_disconnected = 0;
     uint32_t devices_reconnected = 0;
