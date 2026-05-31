@@ -10,15 +10,17 @@
 
 A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, multi-priority queues, and an application-defined two-tier slab memory allocator for deterministic response times without GC pauses.
 
-## Recent Work (May 17-24, 2026)
+## Recent Work (May 25-31, 2026)
 
-The last week pushed the production reliability foundation further into runtime code and made the test harness much more representative:
+This week landed major mailbox architecture changes, a new complex demo app, expanded fault injection, and scheduler hardening:
 
-- **Delivery semantics and failure reporting**: `DeliveryMode`, receiver-side `DedupCache`, delivery-deadline expiry, canonical `FailureReason` / `FailureEnvelope`, DLQ failure mapping, and CLI `/failure reasons` / `/failure summary`.
-- **Actor containment**: per-actor `QuarantinePolicy`, circuit breaker tracking, failure-rate and timeout windows, supervision quarantine directives, quarantine metrics, and `[system.quarantine]` TOML defaults.
-- **Memory and shared ADTs**: typed memory-region accounting with hard-limit admission, `MemoryPressure` failure mapping, shared `Id<Tag, T>` identifiers, `NodeIdentity`, and shared MPSC ring-buffer extraction.
-- **Test and coverage infrastructure**: vendored Google Test, a three-tier `unit` / `integration` / `system` layout, 29 GTest binaries, 187 test source files, 1083 source-level GTest cases, `ENABLE_COVERAGE`, and broader network/system coverage.
-- **Build, docs, and API polish**: CMake split into focused modules, GCC 15 flag guards, project logo, full Apache 2.0 headers, and stricter Doxygen on new and core public APIs.
+- **Priority mailbox lanes (MBX-005)**: `MultiLaneQueue<T>` lock-free multi-lane queue replaces `MPSCMailbox` as the core mailbox data structure. Dedicated system-message lane, priority-aware user lane routing, `DropLowestPriority` overflow handler, per-lane depth exposure in `MboxSnapshot`, and TOML `priority_aware` / `priority_levels` config. Full design spec, implementation plan, and test suite.
+- **EdgeOps Telemetry Platform**: New complex demo app (`apps/edgeops_telemetry/`) validating actor lifecycle, message routing, rollups, alerts, backpressure, DLQ evidence, operator queries, and same-host role-mode runbook. Order platform relocated under `apps/`. Full design spec under `docs/app/`.
+- **Fault injection expansion**: Comprehensive growth from 12 to 80 fault injection sites across 14 domains (mailbox, transport, scheduler, allocator, storage, timer, gossip, config, actor, and more).
+- **DLQ handoff & CLI (MBX-004)**: DLQ overflow integration with payload, trace context, and timestamp preservation. New `/dlq list`, `/dlq show`, `/dlq replay`, and `/dlq export` CLI commands. `DeadLetterQueue` API additions: `config()`, `snapshot_records()`, `try_pop_at()`. `to_string` for `DeadLetterReason` and `DeadLetterSource`.
+- **CLI test coverage**: 75 new tests across 6 files targeting low-coverage CLI subsystems. Pure completion/hint logic extracted from line editor callbacks for testability.
+- **Scheduler hardening**: Fixed cross-thread `SlabCache` corruption from `WorkerThread` allocators. Raw `std::thread` replaced with `WorkerThread` throughout the scheduler. `try_steal` and backoff wired into `WorkerThread::thread_loop`. Coroutine execution moved into actor engine. Narrowed awaiter scheduler dependencies. Strict Doxygen on all new scheduler headers.
+- **Build & polish**: Clang-tidy made optional (`ENABLE_CLANG_TIDY` CMake flag, default OFF). Addressed all 7 mailbox code review findings. EdgeOps and CLI test simplification. Complete Apache 2.0 license headers on new files.
 
 ## Features
 
