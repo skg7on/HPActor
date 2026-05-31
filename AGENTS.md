@@ -48,6 +48,7 @@ cmake -DENABLE_ASAN=ON ..  # AddressSanitizer
 
 # Build options
 cmake -DENABLE_EXAMPLES=OFF ..    # Disable examples (default ON)
+cmake -DENABLE_APPS=OFF ..        # Disable complex demo applications (default ON)
 cmake -DENABLE_PROACTOR=ON ..     # Enable proactor backend
 cmake -DENABLE_MEMORY_DEBUG=ON .. # Enable memory poisoning + canary verification
 cmake -DENABLE_ACTOR_METRICS=OFF .. # Disable actor-level metrics (default ON)
@@ -234,7 +235,8 @@ Subsystem parsers self-register via file-scope static registrar objects. New TOM
 - `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
 - `tests/` — 99 unit tests
-- `examples/` — 9 API usage examples
+- `examples/` — simple API usage examples
+- `apps/` — complex demo applications that exercise multiple HPActor subsystems
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
 - `third_party/` — vendored dependencies (llhttp, toml++)
 - `cmake/` — CMake modules (protobuf codegen, toml++ interface target)

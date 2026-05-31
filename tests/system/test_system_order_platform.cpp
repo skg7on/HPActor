@@ -22,14 +22,14 @@
 
 #include <hpactor/core/actor_system.hpp>
 
-#include <examples/order_platform/messages.hpp>
+#include <apps/order_platform/messages.hpp>
 
 #include "system_test_fixture.hpp"
 
 #include <string>
 
 using namespace hpactor;
-using namespace hpactor::examples::order_platform;
+using namespace hpactor::apps::order_platform;
 
 // ═══════════════════════════════════════════════════════════════════════════════
 // Test 1: Happy path — all message types encode and decode correctly

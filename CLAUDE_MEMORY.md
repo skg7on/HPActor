@@ -202,7 +202,16 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `examples/03_typed_calculator.cpp` — typed_actor<>, TypedBehavior
 - `examples/04_supervision_tree.cpp` — OneForOne/AllForOne, SupervisorActor
 - `examples/05_ping_pong.cpp` — Actor communication, ScopedActor, linking
-- Built via `ENABLE_EXAMPLES` CMake option (default ON)
+- Simple API examples are built via `ENABLE_EXAMPLES` CMake option (default ON)
+
+**Complex Applications:** ✅ Complete / Expanding
+- `apps/order_platform/13_order_platform.cpp` — multi-role order-processing app
+  demonstrating actors, scheduling, bounded mailboxes, DLQ, CLI/ops probes,
+  HTTP gateway, remote spawn, and query workflows.
+- `apps/edgeops_telemetry/14_edgeops_telemetry.cpp` — IoT edge telemetry app
+  validating actor lifetime, message routing, rollups, alerts, backpressure,
+  DLQ evidence, operator queries, and same-host role-mode runbook.
+- Complex apps are built via `ENABLE_APPS` CMake option (default ON).
 
 **Scheduling Subsystem:** ✅ Complete (Phase 0-7, 2026-04-15)
 - `ChaselevDeque<T>` — Lock-free work-stealing deque (LIFO owner pop, FIFO thief steal)
@@ -310,7 +319,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `test_scheduler_control.cpp` (169 lines) — validates worker-control API
 - Refactored worker tests for deterministic scheduling
 
-**Full-Featured Example:** ✅ Complete (2026-05-16, PR #102)
+**Full-Featured App:** ✅ Complete (2026-05-16, PR #102)
 - Order platform — coordinator, inventory, payment, fulfillment actors
 - Happy path scenario — order flows through all actors successfully
 - Failure scenarios — overload (bounded mailbox), missing-route, worker-crash
@@ -500,6 +509,8 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - `src/rpc/rpc_channel.cpp` — RpcChannel implementation
 - `src/mem/` — segment_provider.cpp, slab_cache.cpp, thread_local_allocator.cpp, memory_config.cpp, memory_tracker.cpp, hibernation_manager.cpp, guard_page.cpp, compaction.cpp, zram.cpp
 - `tools/toml-compiler/` — AOT compiler executable (compiler.cpp)
+- `examples/` — simple API examples
+- `apps/` — complex demo applications that exercise multiple HPActor subsystems
 - Tests: `tests/{unit,integration,system}/` — three-tier structure with 29 GTest binaries and 187 test source files.
 
 ## Build Commands
@@ -528,6 +539,7 @@ cmake -DENABLE_ASAN=ON ..  # AddressSanitizer (may show false positives in intru
 
 # Enable/disable examples (default ON)
 cmake -DENABLE_EXAMPLES=OFF ..
+cmake -DENABLE_APPS=OFF ..  # Disable complex demo applications (default ON)
 
 # Memory management options
 cmake -DENABLE_MEMORY_TRACKING=OFF ..  # Disable per-actor tracking (default ON)

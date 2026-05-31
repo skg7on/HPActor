@@ -36,7 +36,3 @@ target_link_libraries(11_cli_interactive_demo PRIVATE hpactor_lib)
 
 add_executable(12_registrar_star_topology 12_registrar_star_topology.cpp)
 target_link_libraries(12_registrar_star_topology PRIVATE hpactor_lib)
-
-add_executable(13_order_platform 13_order_platform.cpp)
-target_link_libraries(13_order_platform PRIVATE hpactor_lib)
-target_include_directories(13_order_platform PRIVATE ${CMAKE_SOURCE_DIR})
