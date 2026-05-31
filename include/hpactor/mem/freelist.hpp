@@ -16,42 +16,55 @@
 
 #include <atomic>
 #include <cstddef>
+#include <cstdint>
 
 namespace hpactor::mem {
 
-// Lock-free LIFO freelist. Each node must have a `T* next` field.
+// Lock-free LIFO freelist with ABA protection via tagged pointers.
+// Each node must have a `T* next` field.
+// Uses 128-bit CAS (pointer + counter) to prevent the ABA problem.
 // Thread-safe for any number of concurrent push/pop operations.
 template <typename T> class FreeList {
   public:
-    FreeList() : top_(nullptr) {}
+    FreeList() {
+        top_.store({nullptr, 0}, std::memory_order_relaxed);
+    }
 
     void push(T* node) noexcept {
-        node->next = top_.load(std::memory_order_acquire);
-        while (!top_.compare_exchange_weak(node->next, node,
-                                           std::memory_order_acq_rel,
-                                           std::memory_order_acquire)) {
-        }
+        TaggedPtr old = top_.load(std::memory_order_acquire);
+        TaggedPtr desired;
+        do {
+            node->next = old.ptr;
+            desired.ptr = node;
+            desired.tag = old.tag + 1;
+        } while (!top_.compare_exchange_weak(
+            old, desired, std::memory_order_acq_rel, std::memory_order_acquire));
     }
 
     T* pop() noexcept {
-        T* node = top_.load(std::memory_order_acquire);
-        while (node != nullptr) {
-            T* next = node->next;
-            if (top_.compare_exchange_weak(node, next,
-                                           std::memory_order_acq_rel,
+        TaggedPtr old = top_.load(std::memory_order_acquire);
+        while (old.ptr != nullptr) {
+            TaggedPtr desired;
+            desired.ptr = old.ptr->next;
+            desired.tag = old.tag + 1;
+            if (top_.compare_exchange_weak(old, desired, std::memory_order_acq_rel,
                                            std::memory_order_acquire)) {
-                return node;
+                return old.ptr;
             }
         }
         return nullptr;
     }
 
     bool empty() const noexcept {
-        return top_.load(std::memory_order_acquire) == nullptr;
+        return top_.load(std::memory_order_acquire).ptr == nullptr;
     }
 
   private:
-    std::atomic<T*> top_;
+    struct alignas(16) TaggedPtr {
+        T* ptr;
+        uintptr_t tag;
+    };
+    std::atomic<TaggedPtr> top_;
 };
 
 } // namespace hpactor::mem
