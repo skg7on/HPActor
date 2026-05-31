@@ -13,40 +13,28 @@
 // limitations under the License.
 
 #include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/cli/pretty_formatter.hpp>
 #include <hpactor/fault/fault_point.hpp>
 
+#include <cli_test_helpers.hpp>
 #include <gtest/gtest.h>
 
 using namespace hpactor::cli;
-
-namespace {
-
-ICommand* find_cmd(std::string_view path) {
-    auto& reg = CommandRegistry::instance();
-    for (auto& c : reg.commands()) {
-        if (c->path() == path)
-            return c.get();
-    }
-    return nullptr;
-}
-
-} // anonymous namespace
+using hpactor::test::find_cli_command;
 
 // =============================================================================
 // FaultListCommand — no ActorSystem needed (uses FaultPointRegistry singleton)
 // =============================================================================
 
 TEST(FaultListCommandTest, Metadata) {
-    auto* cmd = find_cmd("fault/list");
+    auto* cmd = find_cli_command("fault/list");
     ASSERT_NE(cmd, nullptr);
     EXPECT_EQ(cmd->help_text(), "List all registered fault injection points");
 }
 
 TEST(FaultListCommandTest, ExecuteEmptyRegistry) {
-    auto* cmd = find_cmd("fault/list");
+    auto* cmd = find_cli_command("fault/list");
     ASSERT_NE(cmd, nullptr);
 
     PrettyFormatter fmt;
@@ -66,7 +54,7 @@ TEST(FaultListCommandTest, ExecuteWithRegisteredPoints) {
     reg.register_point("test/point/beta", hpactor::fault::FaultDomain::kTransport,
                        "Beta fault description");
 
-    auto* cmd = find_cmd("fault/list");
+    auto* cmd = find_cli_command("fault/list");
     ASSERT_NE(cmd, nullptr);
 
     PrettyFormatter fmt;
@@ -88,13 +76,13 @@ TEST(FaultListCommandTest, ExecuteWithRegisteredPoints) {
 // =============================================================================
 
 TEST(FaultStatusCommandTest, Metadata) {
-    auto* cmd = find_cmd("fault/status");
+    auto* cmd = find_cli_command("fault/status");
     ASSERT_NE(cmd, nullptr);
     EXPECT_EQ(cmd->help_text(), "Show fault injection status");
 }
 
 TEST(FaultStatusCommandTest, NullSystem) {
-    auto* cmd = find_cmd("fault/status");
+    auto* cmd = find_cli_command("fault/status");
     ASSERT_NE(cmd, nullptr);
 
     PrettyFormatter fmt;
@@ -113,13 +101,13 @@ TEST(FaultStatusCommandTest, NullSystem) {
 // =============================================================================
 
 TEST(FaultClearCommandTest, Metadata) {
-    auto* cmd = find_cmd("fault/clear");
+    auto* cmd = find_cli_command("fault/clear");
     ASSERT_NE(cmd, nullptr);
     EXPECT_EQ(cmd->help_text(), "Clear fault schedule and disable injection");
 }
 
 TEST(FaultClearCommandTest, NullSystem) {
-    auto* cmd = find_cmd("fault/clear");
+    auto* cmd = find_cli_command("fault/clear");
     ASSERT_NE(cmd, nullptr);
 
     PrettyFormatter fmt;

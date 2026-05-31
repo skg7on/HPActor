@@ -14,29 +14,17 @@
 
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/pretty_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <cli_test_helpers.hpp>
 #include <gtest/gtest.h>
-
-#include <chrono>
 
 using namespace hpactor;
 using namespace hpactor::cli;
-
-namespace {
-
-ICommand* find_cmd(std::string_view path) {
-    auto& reg = CommandRegistry::instance();
-    for (auto& c : reg.commands()) {
-        if (c->path() == path)
-            return c.get();
-    }
-    return nullptr;
-}
+using hpactor::test::find_cli_command;
 
 class DlqIntegrationTest : public ::testing::Test {
   protected:
@@ -63,7 +51,7 @@ class DlqIntegrationTest : public ::testing::Test {
                              : mailbox::DeadLetterSource::MailboxAdmission;
         r.target.id = ActorId{static_cast<uint64_t>(100 + idx)};
         r.type_tag = TypeTag{static_cast<uint16_t>(0x100 + idx)};
-        r.message_id = static_cast<uint64_t>(1000 + idx);
+        r.message_id = 1000ULL + static_cast<uint64_t>(idx);
         r.priority = static_cast<uint8_t>(idx);
         r.payload_size = 16;
         r.payload_sample =
@@ -71,10 +59,7 @@ class DlqIntegrationTest : public ::testing::Test {
                          static_cast<uint8_t>(0xCC), static_cast<uint8_t>(0xDD)};
         r.mailbox_depth = 90;
         r.mailbox_capacity = 100;
-        r.timestamp_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
+        r.timestamp_ns = 0; // fixed — no test validates this field
         ASSERT_TRUE(system_->dead_letter_queue()->try_push(std::move(r)));
     }
 
@@ -82,6 +67,16 @@ class DlqIntegrationTest : public ::testing::Test {
         fmt_ = std::make_unique<PrettyFormatter>();
         ctx_.system = system_.get();
         ctx_.output = fmt_.get();
+        cmd.execute(ctx_);
+    }
+
+    void execute_cmd_with(ICommand& cmd,
+                          const std::map<std::string, std::string>& params) {
+        fmt_ = std::make_unique<PrettyFormatter>();
+        ctx_.system = system_.get();
+        ctx_.output = fmt_.get();
+        for (auto& kv : params)
+            ctx_.params[kv.first] = kv.second;
         cmd.execute(ctx_);
     }
 
@@ -94,14 +89,12 @@ class DlqIntegrationTest : public ::testing::Test {
     CommandContext ctx_;
 };
 
-} // anonymous namespace
-
 // =============================================================================
 // DlqListCommand — integration
 // =============================================================================
 
 TEST_F(DlqIntegrationTest, DlqListEmpty) {
-    auto* cmd = find_cmd("dlq/list");
+    auto* cmd = find_cli_command("dlq/list");
     ASSERT_NE(cmd, nullptr);
     execute_cmd(*cmd);
     std::string out = output();
@@ -112,7 +105,7 @@ TEST_F(DlqIntegrationTest, DlqListWithRecords) {
     push_record(0);
     push_record(1);
     push_record(2);
-    auto* cmd = find_cmd("dlq/list");
+    auto* cmd = find_cli_command("dlq/list");
     ASSERT_NE(cmd, nullptr);
     execute_cmd(*cmd);
     std::string out = output();
@@ -124,7 +117,7 @@ TEST_F(DlqIntegrationTest, DlqListWithRecords) {
 TEST_F(DlqIntegrationTest, DlqListFilterByReason) {
     push_record(0); // MailboxFull
     push_record(1); // Expired
-    auto* cmd = find_cmd("dlq/list");
+    auto* cmd = find_cli_command("dlq/list");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["reason"] = "Expired";
@@ -140,7 +133,7 @@ TEST_F(DlqIntegrationTest, DlqListFilterBySource) {
     push_record(0); // LocalDelivery
     push_record(1); // LocalDelivery
     push_record(2); // MailboxAdmission (idx >= 2)
-    auto* cmd = find_cmd("dlq/list");
+    auto* cmd = find_cli_command("dlq/list");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["source"] = "MailboxAdmission";
@@ -157,7 +150,7 @@ TEST_F(DlqIntegrationTest, DlqListWithLimit) {
     push_record(1);
     push_record(2);
     push_record(3);
-    auto* cmd = find_cmd("dlq/list");
+    auto* cmd = find_cli_command("dlq/list");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["limit"] = "2";
@@ -170,7 +163,7 @@ TEST_F(DlqIntegrationTest, DlqListWithLimit) {
 }
 
 TEST_F(DlqIntegrationTest, DlqListInvalidLimit) {
-    auto* cmd = find_cmd("dlq/list");
+    auto* cmd = find_cli_command("dlq/list");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["limit"] = "abc";
@@ -187,7 +180,7 @@ TEST_F(DlqIntegrationTest, DlqListInvalidLimit) {
 
 TEST_F(DlqIntegrationTest, DlqShowValidRecord) {
     push_record(0);
-    auto* cmd = find_cmd("dlq/show");
+    auto* cmd = find_cli_command("dlq/show");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["index"] = "0";
@@ -202,7 +195,7 @@ TEST_F(DlqIntegrationTest, DlqShowValidRecord) {
 }
 
 TEST_F(DlqIntegrationTest, DlqShowMissingIndex) {
-    auto* cmd = find_cmd("dlq/show");
+    auto* cmd = find_cli_command("dlq/show");
     ASSERT_NE(cmd, nullptr);
     execute_cmd(*cmd);
     std::string out = output();
@@ -210,7 +203,7 @@ TEST_F(DlqIntegrationTest, DlqShowMissingIndex) {
 }
 
 TEST_F(DlqIntegrationTest, DlqShowInvalidIndex) {
-    auto* cmd = find_cmd("dlq/show");
+    auto* cmd = find_cli_command("dlq/show");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["index"] = "abc";
@@ -223,7 +216,7 @@ TEST_F(DlqIntegrationTest, DlqShowInvalidIndex) {
 
 TEST_F(DlqIntegrationTest, DlqShowOutOfRange) {
     push_record(0);
-    auto* cmd = find_cmd("dlq/show");
+    auto* cmd = find_cli_command("dlq/show");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["index"] = "99";
@@ -236,7 +229,7 @@ TEST_F(DlqIntegrationTest, DlqShowOutOfRange) {
 
 TEST_F(DlqIntegrationTest, DlqShowWithPayload) {
     push_record(0);
-    auto* cmd = find_cmd("dlq/show");
+    auto* cmd = find_cli_command("dlq/show");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["index"] = "0";
@@ -255,7 +248,7 @@ TEST_F(DlqIntegrationTest, DlqShowNoPayload) {
     r.type_tag = TypeTag{1};
     r.payload_size = 0;
     system_->dead_letter_queue()->try_push(std::move(r));
-    auto* cmd = find_cmd("dlq/show");
+    auto* cmd = find_cli_command("dlq/show");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["index"] = "0";
@@ -271,7 +264,7 @@ TEST_F(DlqIntegrationTest, DlqShowNoPayload) {
 // =============================================================================
 
 TEST_F(DlqIntegrationTest, DlqReplayMissingIndex) {
-    auto* cmd = find_cmd("dlq/replay");
+    auto* cmd = find_cli_command("dlq/replay");
     ASSERT_NE(cmd, nullptr);
     execute_cmd(*cmd);
     std::string out = output();
@@ -279,7 +272,7 @@ TEST_F(DlqIntegrationTest, DlqReplayMissingIndex) {
 }
 
 TEST_F(DlqIntegrationTest, DlqReplayInvalidIndex) {
-    auto* cmd = find_cmd("dlq/replay");
+    auto* cmd = find_cli_command("dlq/replay");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["index"] = "abc";
@@ -291,7 +284,7 @@ TEST_F(DlqIntegrationTest, DlqReplayInvalidIndex) {
 }
 
 TEST_F(DlqIntegrationTest, DlqReplayOutOfRange) {
-    auto* cmd = find_cmd("dlq/replay");
+    auto* cmd = find_cli_command("dlq/replay");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["index"] = "99";
@@ -310,7 +303,7 @@ TEST_F(DlqIntegrationTest, DlqReplayNoPayload) {
     r.type_tag = TypeTag{1};
     r.payload_size = 0;
     system_->dead_letter_queue()->try_push(std::move(r));
-    auto* cmd = find_cmd("dlq/replay");
+    auto* cmd = find_cli_command("dlq/replay");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["index"] = "0";
@@ -327,7 +320,7 @@ TEST_F(DlqIntegrationTest, DlqReplayNoPayload) {
 
 TEST_F(DlqIntegrationTest, DlqExportText) {
     push_record(0);
-    auto* cmd = find_cmd("dlq/export");
+    auto* cmd = find_cli_command("dlq/export");
     ASSERT_NE(cmd, nullptr);
     execute_cmd(*cmd);
     std::string out = output();
@@ -337,7 +330,7 @@ TEST_F(DlqIntegrationTest, DlqExportText) {
 
 TEST_F(DlqIntegrationTest, DlqExportJson) {
     push_record(0);
-    auto* cmd = find_cmd("dlq/export");
+    auto* cmd = find_cli_command("dlq/export");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["format"] = "json";
@@ -351,7 +344,7 @@ TEST_F(DlqIntegrationTest, DlqExportJson) {
 }
 
 TEST_F(DlqIntegrationTest, DlqExportInvalidLimit) {
-    auto* cmd = find_cmd("dlq/export");
+    auto* cmd = find_cli_command("dlq/export");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["limit"] = "xyz";
@@ -366,7 +359,7 @@ TEST_F(DlqIntegrationTest, DlqExportWithLimit) {
     push_record(0);
     push_record(1);
     push_record(2);
-    auto* cmd = find_cmd("dlq/export");
+    auto* cmd = find_cli_command("dlq/export");
     ASSERT_NE(cmd, nullptr);
     ctx_.system = system_.get();
     ctx_.params["limit"] = "2";

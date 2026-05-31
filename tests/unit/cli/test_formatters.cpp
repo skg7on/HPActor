@@ -137,7 +137,6 @@ TEST(FormattersTest, PrettyRawEmpty) {
     PrettyFormatter f;
     f.raw("");
     auto out = f.finalize();
-    // raw() appends empty string and adds newline only when !text.empty()
     EXPECT_TRUE(out.empty());
 }
 

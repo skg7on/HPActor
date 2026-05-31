@@ -13,40 +13,28 @@
 // limitations under the License.
 
 #include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/cli/pretty_formatter.hpp>
 
+#include <cli_test_helpers.hpp>
 #include <gtest/gtest.h>
 
 using namespace hpactor::cli;
-
-namespace {
-
-ICommand* find_cmd(std::string_view path) {
-    auto& reg = CommandRegistry::instance();
-    for (auto& c : reg.commands()) {
-        if (c->path() == path)
-            return c.get();
-    }
-    return nullptr;
-}
-
-} // anonymous namespace
+using hpactor::test::find_cli_command;
 
 // =============================================================================
 // DlqListCommand — unit tests (error paths, no ActorSystem)
 // =============================================================================
 
 TEST(DlqListCommandTest, Metadata) {
-    auto* cmd = find_cmd("dlq/list");
+    auto* cmd = find_cli_command("dlq/list");
     ASSERT_NE(cmd, nullptr);
     EXPECT_EQ(cmd->help_text(), "List dead-letter queue records");
     EXPECT_EQ(cmd->order(), 500);
 }
 
 TEST(DlqListCommandTest, NullSystem) {
-    auto* cmd = find_cmd("dlq/list");
+    auto* cmd = find_cli_command("dlq/list");
     ASSERT_NE(cmd, nullptr);
 
     PrettyFormatter fmt;
@@ -65,7 +53,7 @@ TEST(DlqListCommandTest, NullSystem) {
 // =============================================================================
 
 TEST(DlqShowCommandTest, Metadata) {
-    auto* cmd = find_cmd("dlq/show");
+    auto* cmd = find_cli_command("dlq/show");
     ASSERT_NE(cmd, nullptr);
     EXPECT_EQ(cmd->help_text(), "Show a dead-letter record: /dlq show --index "
                                 "N");
@@ -73,7 +61,7 @@ TEST(DlqShowCommandTest, Metadata) {
 }
 
 TEST(DlqShowCommandTest, NullSystem) {
-    auto* cmd = find_cmd("dlq/show");
+    auto* cmd = find_cli_command("dlq/show");
     ASSERT_NE(cmd, nullptr);
 
     PrettyFormatter fmt;
@@ -92,7 +80,7 @@ TEST(DlqShowCommandTest, NullSystem) {
 // =============================================================================
 
 TEST(DlqReplayCommandTest, Metadata) {
-    auto* cmd = find_cmd("dlq/replay");
+    auto* cmd = find_cli_command("dlq/replay");
     ASSERT_NE(cmd, nullptr);
     EXPECT_EQ(cmd->help_text(), "Replay a dead-letter record: /dlq replay "
                                 "--index N");
@@ -100,7 +88,7 @@ TEST(DlqReplayCommandTest, Metadata) {
 }
 
 TEST(DlqReplayCommandTest, NullSystem) {
-    auto* cmd = find_cmd("dlq/replay");
+    auto* cmd = find_cli_command("dlq/replay");
     ASSERT_NE(cmd, nullptr);
 
     PrettyFormatter fmt;
@@ -119,7 +107,7 @@ TEST(DlqReplayCommandTest, NullSystem) {
 // =============================================================================
 
 TEST(DlqExportCommandTest, Metadata) {
-    auto* cmd = find_cmd("dlq/export");
+    auto* cmd = find_cli_command("dlq/export");
     ASSERT_NE(cmd, nullptr);
     EXPECT_EQ(cmd->help_text(), "Export dead-letter records: /dlq export "
                                 "[--format json|text]");
@@ -127,7 +115,7 @@ TEST(DlqExportCommandTest, Metadata) {
 }
 
 TEST(DlqExportCommandTest, NullSystem) {
-    auto* cmd = find_cmd("dlq/export");
+    auto* cmd = find_cli_command("dlq/export");
     ASSERT_NE(cmd, nullptr);
 
     PrettyFormatter fmt;
