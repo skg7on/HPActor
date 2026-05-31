@@ -124,7 +124,7 @@
 //
 // =============================================================================
 
-#include <examples/order_platform/messages.hpp>
+#include <apps/order_platform/messages.hpp>
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
@@ -157,7 +157,7 @@
 #include <thread>
 #include <unordered_map>
 
-namespace order = hpactor::examples::order_platform;
+namespace order = hpactor::apps::order_platform;
 
 namespace {
 

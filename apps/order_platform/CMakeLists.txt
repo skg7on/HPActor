@@ -1,0 +1,3 @@
+add_executable(13_order_platform 13_order_platform.cpp)
+target_link_libraries(13_order_platform PRIVATE hpactor_lib)
+target_include_directories(13_order_platform PRIVATE ${CMAKE_SOURCE_DIR})

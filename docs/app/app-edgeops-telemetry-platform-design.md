@@ -147,8 +147,8 @@ debugging, but the primary validation path is multi-process same host.
 ## 7. Message Contracts
 
 The application should define explicit TypeTag assignments in an
-`examples/edgeops_telemetry/messages.hpp` header. Payloads can use the existing
-lightweight hand-rolled binary style from `examples/order_platform/messages.hpp`
+`apps/edgeops_telemetry/messages.hpp` header. Payloads can use the existing
+lightweight hand-rolled binary style from `apps/order_platform/messages.hpp`
 for consistency with current examples.
 
 Core messages:
@@ -500,29 +500,79 @@ Future extensions:
 - add long-running soak tests for actor churn, memory pressure, and latency
 - add topology-driven multi-role startup through TOML and AOT binary topology
 
-## 15. Implementation Placement
+## 15. Detailed Runtime Contracts
+
+The first implementation must make the demo honest about what is automated and
+what is operator-driven. The automated path is `--all-in-one`, which constructs
+one `ActorSystem`, spawns the EdgeOps role actors locally, executes one named
+scenario, and returns a `ScenarioSummary`. Same-host multi-process validation is
+provided by real role modes plus a manual runbook; CI does not add a subprocess
+orchestration harness in this version.
+
+### 15.1 Actor Ownership and Lifetime
+
+- The simulator owns simulated device actors for the lifetime of one scenario.
+- The gateway owns the registry and logical device-session actors. A reconnect
+  refreshes the existing session record instead of creating duplicate state.
+- The processor owns normalizer, rollup, and alert actors. The
+  `processor-restart` scenario may restart or respawn these actors only through
+  currently available supervision/lifecycle hooks.
+- The storage role owns bounded recent-reading, rollup, and alert buffers.
+  Storage pressure must be visible in the scenario summary.
+- Draining stops new scenario ingress first, then lets finite in-flight work
+  reach storage before the summary is emitted.
+
+### 15.2 Message and Failure Semantics
+
+- Application messages use explicit `TypeTag` values starting at `0x00030000`.
+- Message codecs reject truncated payloads, trailing bytes, and invalid enum
+  values by returning `false`; they must not throw.
+- Malformed telemetry creates an application-level rejection counter and, where
+  runtime delivery hooks apply, an inspectable DLQ/failure signal.
+- Missing-route scenarios must use HPActor delivery admission results or DLQ
+  state rather than application-only counters.
+- Overload scenarios must use bounded capacity and explicit pressure/drop
+  accounting, avoiding unbounded queues.
+
+### 15.3 Observability Contract
+
+Every completed all-in-one scenario prints or returns:
+
+- scenario name and final status
+- devices registered, disconnected, and reconnected
+- readings received, normalized, rejected, stored, and dropped
+- rollup and alert counts
+- DLQ depth, pushed, and lost counters
+- storage pressure and peak buffered readings
+- actor count and scheduler worker count when available
+
+The role-mode runbook must show how to inspect the same evidence manually with
+query flags and existing CLI/system commands.
+
+### 15.4 Performance and Maturity Evidence
+
+The example is not a benchmark, but it must expose enough counters to compare
+scenario behavior. The summary should include total readings, accepted readings,
+drop/reject counts, rollups, alerts, and a simple elapsed-time field. Performance
+claims in docs must stay qualitative unless backed by a measured command output.
+
+## 16. Implementation Placement
 
 Recommended file layout:
 
 ```text
-examples/
-  14_edgeops_telemetry.cpp
+apps/
   edgeops_telemetry/
+    14_edgeops_telemetry.cpp
     messages.hpp
     scenario.hpp
     scenario.cpp
     rollup.hpp
     alert_rules.hpp
 
-tests/unit/examples/
-  test_edgeops_messages.cpp
-  test_edgeops_rollup.cpp
-  test_edgeops_alert_rules.cpp
-
-tests/integration/examples/
-  test_edgeops_single_process.cpp
-
 tests/system/
+  apps/
+    test_edgeops_messages.cpp
   test_system_edgeops_telemetry.cpp
 ```
 
@@ -530,7 +580,45 @@ The example should avoid becoming one oversized source file. Shared message
 codec, scenario parsing, rollup math, and alert rules should live in small
 headers or helper sources that tests can include without launching the full app.
 
-## 16. Review Checklist
+## 17. Implementation Plan Summary
+
+1. Add helper tests for message codecs, scenario parsing, rollup math, and alert
+   rules before writing helper implementation.
+2. Implement the helper headers/sources and wire them into
+   `test_system_apps`.
+3. Add app-level system tests against an all-in-one `run_scenario()` API that
+   constructs the actor system and returns a deterministic `ScenarioSummary`.
+4. Implement actor pipeline behavior in `scenario.cpp` and keep
+   `apps/edgeops_telemetry/14_edgeops_telemetry.cpp` focused on CLI parsing
+   and operator output.
+5. Add role-mode entrypoints and a manual same-host multi-process runbook.
+6. Verify with targeted build/test commands for the example, helper tests, and
+   EdgeOps system tests.
+
+## 18. Manual Same-Host Multi-Process Runbook
+
+Use separate terminals after building `14_edgeops_telemetry`:
+
+```text
+./build/apps/edgeops_telemetry/14_edgeops_telemetry --storage --actor-port 17232
+./build/apps/edgeops_telemetry/14_edgeops_telemetry --processor --actor-port 17231
+./build/apps/edgeops_telemetry/14_edgeops_telemetry --gateway --actor-port 17230
+./build/apps/edgeops_telemetry/14_edgeops_telemetry --ops --actor-port 17233
+./build/apps/edgeops_telemetry/14_edgeops_telemetry --device-simulator --devices 100 --rate 50 --scenario happy-path
+```
+
+Expected evidence:
+
+- each role prints its endpoint and role name
+- the simulator prints the scenario summary
+- query mode can print fleet, device, alert, and storage summaries for the
+  all-in-one validation path
+- DLQ and pressure counters are non-zero for overload or missing-route scenarios
+
+The runbook is intentionally manual until the repository has a reusable
+subprocess orchestration test harness.
+
+## 19. Review Checklist
 
 - The design is grounded in current finished runtime features.
 - Backlog-only production features are identified as future extensions.

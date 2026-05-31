@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <examples/order_platform/messages.hpp>
+#include <apps/order_platform/messages.hpp>
 
 #include <gtest/gtest.h>
 
 #include <string>
 #include <vector>
 
-using namespace hpactor::examples::order_platform;
+using namespace hpactor::apps::order_platform;
 
 TEST(OrderPlatformMessagesTest, SubmitOrderRoundTrip) {
     SubmitOrderPayload in;

@@ -98,6 +98,7 @@ cmake -DENABLE_ASAN=ON ..  # AddressSanitizer
 
 # Build options
 cmake -DENABLE_EXAMPLES=OFF ..    # Disable examples (default ON)
+cmake -DENABLE_APPS=OFF ..        # Disable complex demo applications (default ON)
 cmake -DENABLE_PROACTOR=ON ..     # Enable proactor backend
 cmake -DENABLE_MEMORY_TRACKING=OFF .. # Disable per-actor memory tracking (default ON)
 cmake -DENABLE_MEMORY_DEBUG=ON .. # Enable memory poisoning + canary verification
@@ -338,7 +339,8 @@ environments. The following rules prevent flaky tests:
 - `include/hpactor/` — public headers (actor, cli, config, core, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
 - `tests/` — 187 test source files in three-tier structure (unit, integration, system) using Google Test; 29 GTest binaries are discovered through CTest
-- `examples/` — 12 API usage examples
+- `examples/` — simple API usage examples
+- `apps/` — complex demo applications that exercise multiple HPActor subsystems
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
 - `third_party/` — vendored dependencies (googletest v1.14.0, llhttp, toml++)
 - `cmake/` — CMake modules (gtest, protobuf codegen, toml++ interface target)

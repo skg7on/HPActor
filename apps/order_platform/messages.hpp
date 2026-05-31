@@ -22,7 +22,7 @@
 #include <string_view>
 #include <vector>
 
-namespace hpactor::examples::order_platform {
+namespace hpactor::apps::order_platform {
 
 inline constexpr TypeTag SubmitOrderTag{0x00020000};
 inline constexpr TypeTag OrderAcceptedTag{0x00020001};
@@ -500,4 +500,4 @@ inline uint64_t calculate_subtotal(const std::vector<OrderLine>& lines) {
     return total;
 }
 
-} // namespace hpactor::examples::order_platform
+} // namespace hpactor::apps::order_platform
