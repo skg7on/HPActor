@@ -7,6 +7,13 @@
 - Keep `.worktrees/` ignored and use the worktree-local `build/` directory for generated files.
 - Read-only inspection may happen in the main checkout; edits, specs, plans, tests, and builds for a task belong in the task worktree.
 
+## TDDFlow Rule
+
+- After an accepted design/spec and before implementing any feature, bug fix, refactor, or behavior change, invoke `.claude/skills/tddflow-development/SKILL.md`.
+- Follow RED-GREEN-REFACTOR: write a focused failing test, verify the expected failure, implement the minimum passing code, verify green, then refactor while staying green.
+- Do not write production implementation before the failing test unless the user explicitly approves an exception for generated code, throwaway exploration, docs-only work, or configuration-only work.
+- Record the RED and GREEN verification commands for feature and bug-fix tasks.
+
 ## Architecture Rules
 
 - HPActor is a C++20 event-based actor framework. Preserve actor isolation and avoid shared mutable state.

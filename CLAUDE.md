@@ -72,6 +72,28 @@ Write file_path="/Users/skg7on/Workspace/Projects/HPActor/.worktrees/test-reorg-
 Write file_path="/Users/skg7on/Workspace/Projects/HPActor/tests/unit/core/test_smoke.cpp" ...
 ```
 
+## Required TDDFlow Before Implementation
+
+After a design/spec is accepted and before implementing any feature, bug fix,
+refactor, or behavior change, invoke and follow the `tddflow-development` skill
+from `.claude/skills/tddflow-development/SKILL.md`.
+
+TDDFlow is mandatory for production code changes:
+
+- **RED:** write one focused failing test that describes the next required
+  behavior, then run the narrowest relevant test command and confirm it fails
+  for the expected reason.
+- **GREEN:** write the minimum implementation needed to pass that test, then run
+  the same focused command and confirm it passes.
+- **REFACTOR:** clean up only after green, keeping the same tests green.
+- Repeat the loop for each behavior or edge case until the accepted design is
+  implemented.
+
+Do not write production implementation before observing the failing test unless
+the user explicitly approves an exception for generated code, throwaway
+exploration, docs-only work, or configuration-only work. Record the RED and
+GREEN verification commands in the final response for feature and bug-fix tasks.
+
 ## Build Commands
 
 ```bash
