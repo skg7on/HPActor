@@ -1,9 +1,6 @@
 add_executable(test_unit_sched
-    test_chaselev_deque.cpp
-    test_multi_priority_work_queue.cpp
     test_edf_queue.cpp
     test_a2ws.cpp
-    test_calendar_queue.cpp
     test_coroutine_task.cpp
     test_coroutine_frame_pool.cpp
     test_actor_state.cpp

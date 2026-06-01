@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/sched/calendar_queue.hpp>
+#include <hpactor/adt/calendar_queue.hpp>
 
 #include <algorithm>
 #include <cstdlib>
 
-namespace hpactor::sched {
+namespace hpactor::adt {
 
 void CalendarQueue::BucketList::push_back(Timer* t) {
     t->next = nullptr;
@@ -212,4 +212,4 @@ bool CalendarQueue::empty() const {
     return timer_map_.empty();
 }
 
-} // namespace hpactor::sched
+} // namespace hpactor::adt

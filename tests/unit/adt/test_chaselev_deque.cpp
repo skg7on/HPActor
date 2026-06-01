@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// tests/unit/sched/test_chaselev_deque.cpp
+// tests/unit/adt/test_chaselev_deque.cpp
 #include <gtest/gtest.h>
-#include <hpactor/sched/work_queue.hpp>
+#include <hpactor/adt/chaselev_deque.hpp>
 #include <random>
 #include <thread>
 #include <vector>
@@ -24,7 +24,7 @@ struct Item {
 };
 
 TEST(ChaselevDequeTest, BasicPushPop) {
-    hpactor::sched::ChaselevDeque<Item> deque;
+    hpactor::adt::ChaselevDeque<Item> deque;
     EXPECT_EQ(deque.size_approx(), 0U);
 
     deque.push_bottom(Item{42});
@@ -38,14 +38,14 @@ TEST(ChaselevDequeTest, BasicPushPop) {
 }
 
 TEST(ChaselevDequeTest, StealReturnsFalseOnEmpty) {
-    hpactor::sched::ChaselevDeque<Item> deque;
+    hpactor::adt::ChaselevDeque<Item> deque;
     Item out{0};
     bool stolen = deque.steal_top(out);
     EXPECT_FALSE(stolen);
 }
 
 TEST(ChaselevDequeTest, FillBeyondCapacityAndDrain) {
-    hpactor::sched::ChaselevDeque<Item> deque(4); // small initial capacity
+    hpactor::adt::ChaselevDeque<Item> deque(4); // small initial capacity
     for (int i = 0; i < 128; ++i) {
         deque.push_bottom(Item{i});
     }
@@ -60,7 +60,7 @@ TEST(ChaselevDequeTest, FillBeyondCapacityAndDrain) {
 }
 
 TEST(ChaselevDequeTest, ConcurrentPushBottomAndStealTop) {
-    hpactor::sched::ChaselevDeque<Item> deque;
+    hpactor::adt::ChaselevDeque<Item> deque;
     std::atomic<bool> start{false};
     std::atomic<int> steal_count{0};
     std::atomic<int> push_count{0};
