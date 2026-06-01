@@ -41,8 +41,10 @@ class TestEventHandler : public EventBasedActor, public LifecycleActor {
   public:
     int on_count = 0;
     int request_count = 0;
+    int behavior_count = 0;
     MetricsRequest last_request;
     TypeTag last_received_tag = TypeTag::Invalid;
+    std::string become_trace;
 
     /// Optional hook called from register_handlers() so each test can
     /// install its own handlers without subclassing.
@@ -314,4 +316,125 @@ TEST_F(EventBasedActorTest, MultipleHandlersForDifferentTags) {
     inject_and_receive(actor, TypeTag::MetricsResponseTag, resp);
     EXPECT_EQ(actor->on_count, 1);
     EXPECT_EQ(actor->request_count, 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Section 2: become / become_empty
+// ═══════════════════════════════════════════════════════════════════
+
+TEST_F(EventBasedActorTest, BecomeReplacesCurrentBehavior) {
+    auto* actor = spawn_test_actor();
+
+    // Install behavior A
+    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
+        actor->become_trace += "A";
+    }});
+
+    // Inject a message with unknown TypeTag so it falls through to behavior
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->become_trace, "A");
+
+    // Install behavior B
+    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
+        actor->become_trace += "B";
+    }});
+
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->become_trace, "AB");
+}
+
+TEST_F(EventBasedActorTest, BecomeEmptyDropsMessages) {
+    auto* actor = spawn_test_actor();
+
+    // Set up a behavior first
+    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
+        actor->behavior_count++;
+    }});
+
+    // Verify behavior fires
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->behavior_count, 1);
+
+    // Now become_empty — subsequent messages should not invoke behavior
+    actor->become_empty();
+
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->behavior_count, 1);
+}
+
+TEST_F(EventBasedActorTest, BecomeFromWithinHandler) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) {
+            a->become_trace += "proto";
+            a->become(Behavior{[a](TypedMessage& /*msg*/) {
+                a->become_trace += ":behavior";
+            }});
+        });
+    };
+
+    // First message: hits proto handler, which calls become()
+    MetricsRequest req;
+    inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
+    EXPECT_EQ(actor->become_trace, "proto");
+
+    // Second message with same tag: hits proto handler AGAIN
+    inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
+    EXPECT_EQ(actor->become_trace, "protoproto");
+
+    // Third message with unknown tag: falls through to behavior
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->become_trace, "protoproto:behavior");
+}
+
+TEST_F(EventBasedActorTest, RepeatedBecomeCycle) {
+    auto* actor = spawn_test_actor();
+
+    // Chain: A → B → C → empty
+    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
+        actor->become_trace += "A";
+        actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
+            actor->become_trace += "B";
+            actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
+                actor->become_trace += "C";
+                actor->become_empty();
+            }});
+        }});
+    }});
+
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->become_trace, "A");
+
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->become_trace, "AB");
+
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->become_trace, "ABC");
+
+    // Fourth message: empty behavior = no-op
+    inject_message(actor, TypeTag(0x9999), StreamBuffer{});
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->become_trace, "ABC");
 }
