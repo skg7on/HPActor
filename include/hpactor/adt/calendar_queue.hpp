@@ -54,11 +54,34 @@ class CalendarQueue {
     /// \brief Callback type invoked when a timer fires.
     using TimerCallback = std::function<void()>;
 
+    /// \brief Allocates raw storage for one Timer entry.
+    ///
+    /// The \p size parameter is the exact \c sizeof(Timer), passed by the
+    /// CalendarQueue so callers need not know the Timer layout.
+    /// The default uses \c ::operator \c new.
+    using TimerStorageFactory = std::function<void*(size_t size)>;
+
+    /// \brief Deallocates storage previously returned by \c
+    /// TimerStorageFactory.
+    ///
+    /// \p size matches the value passed to the corresponding factory call.
+    /// The default uses \c ::operator \c delete.
+    using TimerStorageDeleter = std::function<void(void* ptr, size_t size)>;
+
     /// \brief Construct a calendar queue with the given configuration.
     ///
     /// \pre All bucket counts in \p cfg must be powers of two.
     /// \param[in] cfg Wheel configuration (bucket counts, granularity, cap).
-    explicit CalendarQueue(const CalendarQueueConfig& cfg = {});
+    /// \param[in] make_storage Allocates raw storage for one Timer (default: \c
+    ///            ::operator \c new).
+    /// \param[in] destroy_storage Deallocates storage previously returned by
+    ///            \p make_storage (default: \c ::operator \c delete).
+    explicit CalendarQueue(
+        const CalendarQueueConfig& cfg = {},
+        TimerStorageFactory make_storage =
+            [](size_t sz) { return ::operator new(sz); },
+        TimerStorageDeleter destroy_storage =
+            [](void* p, size_t) { ::operator delete(p); });
 
     /// \brief Destroys the queue and all pending timers.
     ///
@@ -145,6 +168,12 @@ class CalendarQueue {
     void cascade_coarse(int64_t now_ns);
     void cascade_remote(int64_t now_ns);
 
+    /// \brief Allocate and construct a Timer via the storage factory.
+    Timer* make_timer(TimerCallback cb, int64_t expire_ns);
+
+    /// \brief Destroy a Timer and return its storage via the deleter.
+    void destroy_timer(Timer* timer);
+
     std::vector<BucketList> fine_wheel_;
     std::vector<BucketList> coarse_wheel_;
     std::vector<BucketList> remote_wheel_;
@@ -165,6 +194,9 @@ class CalendarQueue {
 
     std::atomic<uint64_t> next_id_{1};
     mutable std::recursive_mutex mutex_;
+
+    TimerStorageFactory make_storage_;
+    TimerStorageDeleter destroy_storage_;
 };
 
 } // namespace hpactor::adt

@@ -16,8 +16,32 @@
 
 #include <algorithm>
 #include <cstdlib>
+#include <new>
 
 namespace hpactor::adt {
+
+// ---------------------------------------------------------------------------
+// Timer lifecycle helpers
+// ---------------------------------------------------------------------------
+
+CalendarQueue::Timer*
+CalendarQueue::make_timer(TimerCallback cb, int64_t expire_ns) {
+    void* mem = make_storage_(sizeof(Timer));
+    auto* timer = ::new (mem) Timer;
+    timer->expire_ns = expire_ns;
+    timer->id = next_id_.fetch_add(1, std::memory_order_relaxed);
+    timer->callback = std::move(cb);
+    return timer;
+}
+
+void CalendarQueue::destroy_timer(Timer* timer) {
+    timer->~Timer();
+    destroy_storage_(static_cast<void*>(timer), sizeof(Timer));
+}
+
+// ---------------------------------------------------------------------------
+// BucketList
+// ---------------------------------------------------------------------------
 
 void CalendarQueue::BucketList::push_back(Timer* t) {
     t->next = nullptr;
@@ -47,11 +71,19 @@ void CalendarQueue::BucketList::unlink(Timer* t) {
     count--;
 }
 
-CalendarQueue::CalendarQueue(const CalendarQueueConfig& cfg)
+// ---------------------------------------------------------------------------
+// CalendarQueue
+// ---------------------------------------------------------------------------
+
+CalendarQueue::CalendarQueue(const CalendarQueueConfig& cfg,
+                             TimerStorageFactory make_storage,
+                             TimerStorageDeleter destroy_storage)
     : fine_bucket_ns_(cfg.fine_bucket_ns),
       coarse_bucket_ns_(cfg.fine_bucket_ns * cfg.fine_buckets),
       remote_bucket_ns_(coarse_bucket_ns_ * cfg.coarse_buckets),
-      max_advance_buckets_(cfg.max_advance_buckets) {
+      max_advance_buckets_(cfg.max_advance_buckets),
+      make_storage_(std::move(make_storage)),
+      destroy_storage_(std::move(destroy_storage)) {
     if ((cfg.fine_buckets & (cfg.fine_buckets - 1)) != 0 ||
         (cfg.coarse_buckets & (cfg.coarse_buckets - 1)) != 0 ||
         (cfg.remote_buckets & (cfg.remote_buckets - 1)) != 0) {
@@ -67,7 +99,7 @@ CalendarQueue::CalendarQueue(const CalendarQueueConfig& cfg)
 
 CalendarQueue::~CalendarQueue() {
     for (auto& [id, timer] : timer_map_) {
-        delete timer;
+        destroy_timer(timer);
     }
 }
 
@@ -82,10 +114,7 @@ uint64_t CalendarQueue::schedule(int64_t delay_ns, TimerCallback cb) {
 
 uint64_t CalendarQueue::schedule_at(int64_t expire_ns, TimerCallback cb) {
     std::lock_guard<std::recursive_mutex> lock(mutex_);
-    auto* timer = new Timer;
-    timer->expire_ns = expire_ns;
-    timer->id = next_id_.fetch_add(1, std::memory_order_relaxed);
-    timer->callback = std::move(cb);
+    auto* timer = make_timer(std::move(cb), expire_ns);
     timer_map_[timer->id] = timer;
     int64_t now = last_advance_ns_;
     insert_timer(timer, now);
@@ -137,7 +166,7 @@ bool CalendarQueue::cancel(uint64_t timer_id) {
         default:
             break;
     }
-    delete timer;
+    destroy_timer(timer);
     return true;
 }
 
@@ -187,7 +216,7 @@ uint32_t CalendarQueue::advance(int64_t now_ns) {
                 t->callback();
                 fired++;
             }
-            delete t;
+            destroy_timer(t);
             t = next;
         }
 

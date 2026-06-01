@@ -14,12 +14,13 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/mem/memory_config.hpp>
 #include <hpactor/sched/scheduler.hpp>
-#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/sched/worker_thread.hpp>
 
 #include <chrono>
@@ -40,9 +41,16 @@ HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
         case TimerBackend::TimingWheel:
             timer_backend_.emplace<TimingWheel>(1'000'000, 4);
             break;
-        case TimerBackend::CalendarQueue:
-            timer_backend_.emplace<CalendarQueue>();
+        case TimerBackend::CalendarQueue: {
+            auto make_storage = [](size_t sz) -> void* {
+                return mem::allocate(mem::RegionType::kInternal, sz,
+                                     hpactor::ActorId{});
+            };
+            auto destroy_storage = [](void* p, size_t) { mem::deallocate(p); };
+            timer_backend_.emplace<CalendarQueue>(CalendarQueueConfig{},
+                                                  make_storage, destroy_storage);
             break;
+        }
     }
 }
 
