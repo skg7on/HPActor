@@ -346,7 +346,15 @@ class EventBasedActor : public LocalActor {
     bool handle_demonitor_msg(const TypedMessage& msg);
     void handle_down_msg(const TypedMessage& msg);
 
-    // Drain timer management (stubs — implemented in Task 7).
+    // Pipeline stages extracted from receive().
+    bool apply_drain_gate(TypedMessage& msg);
+    void try_drain_completion();
+    bool dispatch_system_message(const TypedMessage& msg);
+    bool apply_lifecycle_gate(const TypedMessage& msg);
+    bool dispatch_cli_message(TypedMessage& msg);
+    void dispatch_user_message(TypedMessage& msg);
+
+    // Drain timer management.
     void start_drain_timer();
     void cancel_drain_timer();
 
