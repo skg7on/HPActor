@@ -23,10 +23,11 @@ TEST(ConnectionPoolTest, PoolConfigDefaults) {
     PoolConfig config;
     EXPECT_EQ(config.min_connections, 1u);
     EXPECT_EQ(config.max_connections, 4u);
-    EXPECT_EQ(config.max_pending, 1000u);
     EXPECT_EQ(config.max_attempts, 5u);
     EXPECT_EQ(config.initial_backoff.count(), 1000);
     EXPECT_EQ(config.max_backoff.count(), 16000);
+    EXPECT_EQ(config.outbound_limits.max_messages, 1000u);
+    EXPECT_EQ(config.circuit_breaker_cfg.failure_threshold, 5u);
 }
 
 TEST(ConnectionPoolTest, PoolStatsInitialState) {
@@ -35,6 +36,11 @@ TEST(ConnectionPoolTest, PoolStatsInitialState) {
     EXPECT_EQ(stats.pending_messages, 0u);
     EXPECT_EQ(stats.reconnect_attempts, 0u);
     EXPECT_EQ(stats.is_connected, false);
+    EXPECT_EQ(stats.pending_control_messages, 0u);
+    EXPECT_EQ(stats.pending_data_messages, 0u);
+    EXPECT_EQ(stats.pending_bytes, 0u);
+    EXPECT_EQ(stats.pressure_state, 0u);
+    EXPECT_EQ(stats.circuit_state, 0u);
 }
 
 TEST(ConnectionPoolTest, StatsInitial) {

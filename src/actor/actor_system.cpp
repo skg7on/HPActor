@@ -153,6 +153,12 @@ ActorSystem::ActorSystem(const Config& config)
         transport_ = std::make_unique<net::TcpTransport>(endpoint_, config.tls,
                                                          config.pool, nullptr);
 
+        // Propagate metrics ring buffer to transport for connection pool
+        // metrics
+        if (metrics_ring_buffer_) {
+            transport_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+        }
+
         rpc_channel_ =
             std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
 
@@ -1112,6 +1118,14 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
 
     apply_tracing_config(model.system.tracing);
+
+    // Wire transport outbound limits and circuit breaker config into pool
+    // config.
+    config_.pool.outbound_limits = model.system.transport_outbound_limits;
+    config_.pool.circuit_breaker_cfg = model.system.transport_circuit_breaker;
+    if (transport_) {
+        transport_->set_pool_config(config_.pool);
+    }
 
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
                      "topology bootstrap complete");

@@ -66,6 +66,8 @@ add_library(hpactor_lib SHARED
     net/http_gateway.cpp
     net/http_client.cpp
     net/http_connection.cpp
+    net/endpoint_outbound_queue.cpp
+    net/endpoint_circuit_breaker.cpp
     sched/actor_ready_gate.cpp
     sched/actor_execution_engine.cpp
     sched/work_placement_scheduler.cpp
@@ -164,6 +166,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/failure_commands.cpp
     cli/commands/fault_commands.cpp
     cli/commands/dlq_commands.cpp
+    cli/commands/endpoint_commands.cpp
 )
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------

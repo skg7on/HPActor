@@ -39,6 +39,10 @@ const char* to_string(FailureReason reason) noexcept {
             return "outbound_queue_full";
         case FailureReason::MemoryPressure:
             return "memory_pressure";
+        case FailureReason::ResourceExhausted:
+            return "resource_exhausted";
+        case FailureReason::RemoteUnavailable:
+            return "remote_unavailable";
         case FailureReason::Expired:
             return "expired";
         case FailureReason::Timeout:

@@ -34,21 +34,31 @@ enum class MetricEventType : uint8_t {
     kMailboxRejected = 10,   ///< Message rejected by mailbox admission.
     kMailboxDropped = 11,    ///< Message dropped by overflow policy.
     kMailboxDeadLetter = 12, ///< Message routed to the dead-letter queue.
-    kBackpressureSignal = 13,  ///< Backpressure signal emitted.
-    kDeadLetterLost = 14,      ///< Dead-letter record evicted.
-    kLifecycleTransition = 15, ///< Actor lifecycle state changed.
-    kMessageRejected = 16,     ///< Message rejected at the receiver.
-    kActorDrainStart = 17,     ///< Actor drain phase started.
-    kActorDrainComplete = 18,  ///< Actor drain phase completed.
-    kActorDrainTimeout = 19,   ///< Actor drain phase timed out.
-    kDeliveryFailure = 20,     ///< Delivery failure — \c code carries
-                               ///< FailureReason.
-    kDeliveryDuplicate = 21,   ///< Duplicate message suppressed at receiver.
-    kDeliveryExpired = 22,     ///< Message expired before handler execution.
-    kActorQuarantined = 23,    ///< Actor transitioned to kQuarantined.
-    kActorUnquarantined = 24,  ///< Actor released from quarantine.
-    kCircuitStateChange = 25,  ///< Circuit breaker state changed.
-    kFaultInjected = 26,       ///< Fault injection fired.
+    kBackpressureSignal = 13,   ///< Backpressure signal emitted.
+    kDeadLetterLost = 14,       ///< Dead-letter record evicted.
+    kLifecycleTransition = 15,  ///< Actor lifecycle state changed.
+    kMessageRejected = 16,      ///< Message rejected at the receiver.
+    kActorDrainStart = 17,      ///< Actor drain phase started.
+    kActorDrainComplete = 18,   ///< Actor drain phase completed.
+    kActorDrainTimeout = 19,    ///< Actor drain phase timed out.
+    kDeliveryFailure = 20,      ///< Delivery failure — \c code carries
+                                ///< FailureReason.
+    kDeliveryDuplicate = 21,    ///< Duplicate message suppressed at receiver.
+    kDeliveryExpired = 22,      ///< Message expired before handler execution.
+    kActorQuarantined = 23,     ///< Actor transitioned to kQuarantined.
+    kActorUnquarantined = 24,   ///< Actor released from quarantine.
+    kCircuitStateChange = 25,   ///< Circuit breaker state changed.
+    kFaultInjected = 26,        ///< Fault injection fired.
+    kEndpointSendAccepted = 27, ///< Message accepted into endpoint outbound
+                                ///< queue.
+    kEndpointSendRejected = 28, ///< Message rejected by endpoint outbound
+                                ///< queue.
+    kEndpointOutboundMessages = 29, ///< Endpoint outbound queue message count.
+    kEndpointOutboundBytes = 30,    ///< Endpoint outbound queue byte count.
+    kEndpointPressureState = 31,    ///< Endpoint outbound queue pressure state.
+    kEndpointCircuitState = 32,     ///< Endpoint circuit breaker state.
+    kEndpointBackpressureSignal = 33, ///< Endpoint backpressure signal sent.
+    kEndpointCircuitTransition = 34,  ///< Endpoint circuit breaker transition.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

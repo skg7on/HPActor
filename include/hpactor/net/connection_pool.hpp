@@ -14,7 +14,11 @@
 
 #pragma once
 
+#include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/net/acceptor.hpp>
+#include <hpactor/net/endpoint_circuit_breaker.hpp>
+#include <hpactor/net/endpoint_outbound_queue.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/tls_connection.hpp>
 #include <hpactor/net/tls_context.hpp>
@@ -44,18 +48,12 @@ struct WireFrame; // forward decl, full def in <hpactor/net/frame.hpp>
 struct PoolConfig {
     size_t min_connections = 1;
     size_t max_connections = 4;
-    size_t max_pending = 1000;
     size_t max_attempts = 5;
     std::chrono::milliseconds initial_backoff{1000};
     std::chrono::milliseconds max_backoff{16000};
     bool use_tls = false; // Default to plain text
-};
-
-// Pending message entry
-struct PendingMessage {
-    ActorAddress target;
-    StreamBuffer data;
-    std::chrono::steady_clock::time_point enqueued_at;
+    EndpointOutboundLimits outbound_limits{};
+    EndpointCircuitBreakerConfig circuit_breaker_cfg{};
 };
 
 // Connection pool statistics
@@ -64,6 +62,11 @@ struct PoolStats {
     size_t pending_messages = 0;
     size_t reconnect_attempts = 0;
     bool is_connected = false;
+    size_t pending_control_messages = 0;
+    size_t pending_data_messages = 0;
+    size_t pending_bytes = 0;
+    uint8_t pressure_state = 0;
+    uint8_t circuit_state = 0;
 };
 
 // -----------------------------------------------------------------------------
@@ -150,9 +153,41 @@ class ConnectionPool {
     // discovery cost.
     void prewarm_pool(EndPoint ep, const std::vector<AcceptorInfo>& acceptors);
 
+    // Getter for outbound queue (read-only access)
+    const EndpointOutboundQueue& outbound_queue() const {
+        return outbound_queue_;
+    }
+
+    // Getter for circuit breaker (mutable access for reset)
+    EndpointCircuitBreaker& circuit_breaker() {
+        return circuit_breaker_;
+    }
+
+    // Getter for circuit breaker (read-only access)
+    const EndpointCircuitBreaker& circuit_breaker() const {
+        return circuit_breaker_;
+    }
+
+    /// \brief Set the metrics ring buffer for metric emission.
+    ///
+    /// \param[in] buf Pointer to the system-wide metrics ring buffer.
+    void
+    set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf) {
+        metrics_ring_buffer_ = buf;
+    }
+
   private:
     // Get connection via round-robin
     ConnectionPtr get_connection();
+
+    /// \brief Pack the remote endpoint into an ActorId for metric event
+    /// transport.
+    ///
+    /// For IPv4: packs (addr << 16) | port_nw into the ActorId value.
+    /// For IPv6: uses a hash of the address combined with the port.
+    ///
+    /// \return ActorId encoding the endpoint identity.
+    [[nodiscard]] ActorId pack_endpoint_for_metrics() const;
 
     // Schedule reconnect with backoff
     void schedule_reconnect();
@@ -160,15 +195,13 @@ class ConnectionPool {
     // Flush pending messages
     void flush_pending();
 
-    // Add pending message
-    bool add_pending(const ActorAddress& target, const StreamBuffer& data);
-
     EndPoint remote_endpoint_;
     PoolConfig config_;
     EventLoop* loop_;
 
     std::vector<ConnectionPtr> active_connections_;
-    std::deque<PendingMessage> pending_messages_;
+    EndpointOutboundQueue outbound_queue_;
+    EndpointCircuitBreaker circuit_breaker_;
 
     std::atomic<size_t> next_index_{0};
     std::atomic<size_t> reconnect_attempts_{0};
@@ -183,6 +216,9 @@ class ConnectionPool {
 
     // Acceptor info for future connection establishment (set via prewarm_pool).
     std::vector<AcceptorInfo> acceptors_;
+
+    // Metrics ring buffer (optional, set via set_metrics_ring_buffer).
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_ = nullptr;
 };
 
 } // namespace net

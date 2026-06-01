@@ -20,6 +20,8 @@
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mailbox/delivery_mode.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/net/endpoint_circuit_breaker.hpp>
+#include <hpactor/net/endpoint_outbound_queue.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 
 #include <cstdint>
@@ -178,6 +180,12 @@ struct SystemDef {
     /// \brief System-level defaults for per-actor quarantine policies.
     ///        Individual actor definitions in TOML can override these values.
     hpactor::QuarantinePolicy quarantine_defaults;
+
+    /// \brief Per-endpoint outbound queue limits from
+    /// [system.transport.outbound].
+    hpactor::net::EndpointOutboundLimits transport_outbound_limits;
+    /// \brief Endpoint circuit breaker config from [system.transport.outbound].
+    hpactor::net::EndpointCircuitBreakerConfig transport_circuit_breaker;
 };
 
 /// \brief The complete, validated, topologically sorted topology model.

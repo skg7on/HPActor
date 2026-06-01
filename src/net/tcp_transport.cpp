@@ -80,6 +80,10 @@ TcpTransport::get_or_create_pool(EndPoint remote_endpoint) {
     if (actor_msg_handler_) {
         pool->set_actor_message_handler(actor_msg_handler_);
     }
+    // Propagate metrics ring buffer
+    if (metrics_ring_buffer_) {
+        pool->set_metrics_ring_buffer(metrics_ring_buffer_);
+    }
     return pool;
 }
 
@@ -371,7 +375,7 @@ bool TcpTransport::is_connected(EndPoint remote_endpoint) const {
 
 void TcpTransport::close_connection(EndPoint remote_endpoint) {
     FAULT_INJECT("hpactor.transport.connection.reset") {
-        return;  // pretend to close but don't
+        return; // pretend to close but don't
     }
     auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
@@ -385,6 +389,14 @@ void TcpTransport::set_rpc_handler(rpc_response_handler handler) {
     rpc_handler_ = std::move(handler);
     for (auto& [ep, pool] : pools_) {
         pool->set_rpc_handler(rpc_handler_);
+    }
+}
+
+void TcpTransport::set_metrics_ring_buffer(
+    metrics::MpscRingBuffer<metrics::MetricEvent>* buf) {
+    metrics_ring_buffer_ = buf;
+    for (auto& [ep, pool] : pools_) {
+        pool->set_metrics_ring_buffer(buf);
     }
 }
 

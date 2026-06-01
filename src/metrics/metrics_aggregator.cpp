@@ -12,10 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <arpa/inet.h>
+#include <cstdio>
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/metrics/metrics_aggregator.hpp>
 #include <hpactor/fault/fault_macros.hpp>
+#include <hpactor/metrics/metrics_aggregator.hpp>
+#include <hpactor/types/types.hpp>
 #include <string>
 
 namespace hpactor::metrics {
@@ -106,6 +109,50 @@ void Aggregator::ensure_families_registered() {
                                                        "Total circuit breaker "
                                                        "trip events.",
                                                        MetricType::kCounter);
+
+    // ── Endpoint outbound queue metric families ─────────────────────
+    endpoint_outbound_messages_family_ =
+        &registry_.register_family("hpactor_endpoint_outbound_messages",
+                                   "Current endpoint outbound queue message "
+                                   "count per lane.",
+                                   MetricType::kGauge);
+    endpoint_outbound_bytes_family_ =
+        &registry_.register_family("hpactor_endpoint_outbound_bytes",
+                                   "Current endpoint outbound queue byte "
+                                   "count per lane.",
+                                   MetricType::kGauge);
+    endpoint_pressure_state_family_ =
+        &registry_.register_family("hpactor_endpoint_pressure_state",
+                                   "Endpoint outbound queue pressure state "
+                                   "(0=normal, 1=soft, 2=hard).",
+                                   MetricType::kGauge);
+    endpoint_circuit_state_family_ =
+        &registry_.register_family("hpactor_endpoint_circuit_state",
+                                   "Endpoint circuit breaker state "
+                                   "(0=closed, 1=open, 2=half-open).",
+                                   MetricType::kGauge);
+    endpoint_send_accepted_family_ =
+        &registry_.register_family("hpactor_endpoint_send_accepted_total",
+                                   "Total messages accepted into endpoint "
+                                   "outbound queue.",
+                                   MetricType::kCounter);
+    endpoint_send_rejected_family_ =
+        &registry_.register_family("hpactor_endpoint_send_rejected_total",
+                                   "Total messages rejected by endpoint "
+                                   "outbound queue.",
+                                   MetricType::kCounter);
+    endpoint_backpressure_signals_family_ =
+        &registry_.register_family("hpactor_endpoint_backpressure_signals_"
+                                   "sent_total",
+                                   "Total backpressure signals sent for "
+                                   "endpoint outbound queue.",
+                                   MetricType::kCounter);
+    endpoint_circuit_transitions_family_ =
+        &registry_.register_family("hpactor_endpoint_circuit_transitions_"
+                                   "total",
+                                   "Total endpoint circuit breaker "
+                                   "transitions.",
+                                   MetricType::kCounter);
 }
 
 LabelSet Aggregator::make_actor_labels(ActorId id) {
@@ -126,6 +173,38 @@ LabelSet Aggregator::make_actor_labels(ActorId id) {
     return ls;
 }
 
+LabelSet Aggregator::make_endpoint_labels(ActorId id) {
+    LabelSet ls;
+    uint64_t packed = id.value();
+    auto it = endpoint_label_cache_.find(packed);
+    if (it != endpoint_label_cache_.end()) {
+        ls.labels.emplace_back("endpoint", it->second);
+        return ls;
+    }
+
+    // Unpack: for IPv4, the address is in the upper 32 bits and port in the
+    // lower 16 bits of packed.
+    uint32_t addr = static_cast<uint32_t>(packed >> 16);
+    uint16_t port_nw = static_cast<uint16_t>(packed & 0xFFFF);
+
+    // Skip label for unknown/zero-packed endpoints
+    if (addr == 0 && port_nw == 0) {
+        ls.labels.emplace_back("endpoint", "unknown");
+        endpoint_label_cache_[packed] = "unknown";
+        return ls;
+    }
+
+    struct in_addr in;
+    in.s_addr = addr;
+    char buf[64];
+    std::snprintf(buf, sizeof(buf), "%s:%u", ::inet_ntoa(in),
+                  static_cast<unsigned>(net_to_host_u16(port_nw)));
+    std::string label(buf);
+    endpoint_label_cache_[packed] = label;
+    ls.labels.emplace_back("endpoint", label);
+    return ls;
+}
+
 void Aggregator::begin_drain() {
     ensure_families_registered();
 }
@@ -142,7 +221,7 @@ void Aggregator::end_drain() {
 
 void Aggregator::on_event(const MetricEvent& e) {
     FAULT_INJECT("hpactor.metrics.aggregator.on_event.corrupt") {
-        return;  // silently drop metric event
+        return; // silently drop metric event
     }
     ensure_families_registered();
 
@@ -274,6 +353,73 @@ void Aggregator::on_event(const MetricEvent& e) {
         }
         case MetricEventType::kFaultInjected:
             break;
+        // ── Endpoint outbound queue events ─────────────────────────
+        case MetricEventType::kEndpointSendAccepted: {
+            auto lb = make_endpoint_labels(e.actor_id);
+            std::string mode = (e.code == 0) ? "best_effort" : "at_least_once";
+            lb.labels.emplace_back("mode", mode);
+            auto& c = registry_.get_or_create<CounterValue>(
+                *endpoint_send_accepted_family_, lb);
+            c.total.fetch_add(e.value_hi, std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kEndpointSendRejected: {
+            auto lb = make_endpoint_labels(e.actor_id);
+            std::string reason = (e.code == 0) ? "queue_full" : "other";
+            lb.labels.emplace_back("reason", reason);
+            auto& c = registry_.get_or_create<CounterValue>(
+                *endpoint_send_rejected_family_, lb);
+            c.total.fetch_add(e.value_hi, std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kEndpointOutboundMessages: {
+            auto lb = make_endpoint_labels(e.actor_id);
+            std::string lane = (e.code == 0) ? "data" : "control";
+            lb.labels.emplace_back("lane", lane);
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *endpoint_outbound_messages_family_, lb);
+            g.value.store(static_cast<int64_t>(e.value_hi),
+                          std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kEndpointOutboundBytes: {
+            auto lb = make_endpoint_labels(e.actor_id);
+            std::string lane = (e.code == 0) ? "data" : "control";
+            lb.labels.emplace_back("lane", lane);
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *endpoint_outbound_bytes_family_, lb);
+            g.value.store(static_cast<int64_t>(e.value_hi),
+                          std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kEndpointPressureState: {
+            auto lb = make_endpoint_labels(e.actor_id);
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *endpoint_pressure_state_family_, lb);
+            g.value.store(static_cast<int64_t>(e.code), std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kEndpointCircuitState: {
+            auto lb = make_endpoint_labels(e.actor_id);
+            auto& g = registry_.get_or_create<GaugeValue>(
+                *endpoint_circuit_state_family_, lb);
+            g.value.store(static_cast<int64_t>(e.code), std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kEndpointBackpressureSignal: {
+            auto lb = make_endpoint_labels(e.actor_id);
+            auto& c = registry_.get_or_create<CounterValue>(
+                *endpoint_backpressure_signals_family_, lb);
+            c.total.fetch_add(1, std::memory_order_relaxed);
+            break;
+        }
+        case MetricEventType::kEndpointCircuitTransition: {
+            auto lb = make_endpoint_labels(e.actor_id);
+            auto& c = registry_.get_or_create<CounterValue>(
+                *endpoint_circuit_transitions_family_, lb);
+            c.total.fetch_add(1, std::memory_order_relaxed);
+            break;
+        }
         case MetricEventType::kCircuitStateChange: {
             {
                 auto& g = registry_.get_or_create<GaugeValue>(

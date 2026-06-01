@@ -33,7 +33,8 @@ TEST(TlsIntegrationTest, TlsConfigAndPoolConfig) {
     PoolConfig pool_config;
     EXPECT_EQ(pool_config.min_connections, 1u);
     EXPECT_EQ(pool_config.max_connections, 4u);
-    EXPECT_EQ(pool_config.max_pending, 1000u);
+    EXPECT_EQ(pool_config.outbound_limits.max_messages, 1000u);
+    EXPECT_EQ(pool_config.circuit_breaker_cfg.failure_threshold, 5u);
     EXPECT_EQ(pool_config.max_attempts, 5u);
     EXPECT_EQ(pool_config.initial_backoff.count(), 1000);
     EXPECT_EQ(pool_config.max_backoff.count(), 16000);
