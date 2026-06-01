@@ -840,6 +840,10 @@ const char* enqueue_code_name(hpactor::mailbox::EnqueueResultCode code) {
             return "mailbox_closed";
         case Code::ActorNotFound:
             return "actor_not_found";
+        case Code::EndpointBackpressure:
+            return "endpoint_backpressure";
+        case Code::EndpointCircuitOpen:
+            return "endpoint_circuit_open";
     }
     return "rejected";
 }

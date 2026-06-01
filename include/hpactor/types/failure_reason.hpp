@@ -28,9 +28,11 @@ namespace hpactor {
 /// spawn (90-99). \c Unknown = 255 is the sentinel.
 enum class FailureReason : uint8_t {
     // ── Route / addressing (0-9) ────────────────────────────────
-    NoRoute = 0,         ///< Actor or node not found for the target address.
-    NodeUnavailable = 1, ///< Remote node unreachable (network, partition,
-                         ///< down).
+    NoRoute = 0,           ///< Actor or node not found for the target address.
+    NodeUnavailable = 1,   ///< Remote node unreachable (network, partition,
+                           ///< down).
+    RemoteUnavailable = 2, ///< Remote endpoint or service is unavailable
+                           ///< (circuit breaker open, refused connection).
 
     // ── Actor lifecycle (10-19) ─────────────────────────────────
     ActorDead = 10,     ///< Target actor has terminated.
@@ -45,6 +47,8 @@ enum class FailureReason : uint8_t {
     OutboundQueueFull = 21, ///< Remote endpoint's outbound queue is at
                             ///< capacity.
     MemoryPressure = 22,    ///< Node-level memory pressure prevents admission.
+    ResourceExhausted = 23, ///< General resource exhaustion (backpressure,
+                            ///< outbound queue, rate limit).
 
     // ── Time (30-39) ────────────────────────────────────────────
     Expired = 30, ///< Message deadline expired before delivery.
@@ -117,6 +121,8 @@ constexpr bool retryable(FailureReason reason) noexcept {
         case FailureReason::TransportError:
         case FailureReason::Draining:
         case FailureReason::ShuttingDown:
+        case FailureReason::ResourceExhausted:
+        case FailureReason::RemoteUnavailable:
             return true;
         default:
             return false;

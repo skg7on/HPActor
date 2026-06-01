@@ -39,9 +39,11 @@ enum class DeadLetterReason : uint8_t {
     DecodeFailed,
     OverflowPolicy,
     NoDropRejected,
-    DrainTimeout = 12,    // message dropped because drain deadline expired
-    DrainPolicyDrop = 13, // message dropped by DropUserMessages policy
-    Expired = 14,         // message deadline expired before delivery
+    DrainTimeout = 12,         // message dropped because drain deadline expired
+    DrainPolicyDrop = 13,      // message dropped by DropUserMessages policy
+    Expired = 14,              // message deadline expired before delivery
+    EndpointBackpressure = 15, // data lane at capacity for target endpoint
+    EndpointCircuitOpen = 16,  // circuit breaker open for target endpoint
 };
 
 enum class DeadLetterSource : uint8_t {
@@ -86,6 +88,10 @@ failure_reason(DeadLetterReason reason) noexcept {
             return FailureReason::Dropped;
         case DeadLetterReason::Expired:
             return FailureReason::Expired;
+        case DeadLetterReason::EndpointBackpressure:
+            return FailureReason::ResourceExhausted;
+        case DeadLetterReason::EndpointCircuitOpen:
+            return FailureReason::RemoteUnavailable;
     }
     return FailureReason::Unknown;
 }
@@ -142,6 +148,10 @@ failure_source(DeadLetterSource source) noexcept {
             return "DrainPolicyDrop";
         case DeadLetterReason::Expired:
             return "Expired";
+        case DeadLetterReason::EndpointBackpressure:
+            return "EndpointBackpressure";
+        case DeadLetterReason::EndpointCircuitOpen:
+            return "EndpointCircuitOpen";
     }
     return "Unknown";
 }
