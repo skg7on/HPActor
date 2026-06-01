@@ -19,11 +19,12 @@
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/types/types.hpp>
 
-#include <atomic>
 #include <chrono>
 #include <cstddef>
 #include <deque>
 #include <optional>
+
+#include <atomic>
 
 namespace hpactor::net {
 
@@ -39,10 +40,10 @@ struct EndpointOutboundLimits {
 };
 
 struct EndpointOutboundCounts {
-    std::atomic<size_t> control_messages{0};
-    std::atomic<size_t> control_bytes{0};
-    std::atomic<size_t> data_messages{0};
-    std::atomic<size_t> data_bytes{0};
+    size_t control_messages = 0;
+    size_t control_bytes = 0;
+    size_t data_messages = 0;
+    size_t data_bytes = 0;
 };
 
 class EndpointOutboundQueue {
@@ -72,7 +73,10 @@ class EndpointOutboundQueue {
     void update_pressure_after_dequeue(size_t bytes_dequeued);
 
     EndpointOutboundLimits limits_;
-    EndpointOutboundCounts counts_;
+    std::atomic<size_t> control_messages_{0};
+    std::atomic<size_t> control_bytes_{0};
+    std::atomic<size_t> data_messages_{0};
+    std::atomic<size_t> data_bytes_{0};
     std::deque<PendingMessage> control_lane_;
     std::deque<PendingMessage> data_lane_;
     mailbox::detail::PressureStateMachine pressure_;
