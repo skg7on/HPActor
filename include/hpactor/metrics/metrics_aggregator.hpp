@@ -26,13 +26,40 @@ class ActorSystem;
 
 namespace hpactor::metrics {
 
+/// \brief Event-to-metric dispatch engine.
+///
+/// Consumes MetricEvents from the ring buffer (via on_event()) and updates
+/// the corresponding counters, gauges, and histograms in the MetricRegistry.
+/// Maintains an actor-type label cache for efficient label resolution.
+///
+/// \note Thread affinity: owned by MetricsActor, drained on the actor's
+///       scheduler thread. Not safe for concurrent access from multiple
+///       threads.
 class Aggregator {
   public:
+    /// \brief Construct an aggregator.
+    ///
+    /// \param[in] registry Metric registry to update.
+    /// \param[in] system Actor system for actor type resolution.
     Aggregator(MetricRegistry& registry, ActorSystem& system);
 
+    /// \brief Process a single metric event.
+    ///
+    /// Dispatches based on event_type, updating the appropriate counter,
+    /// gauge, or histogram in the registry.
+    ///
+    /// \param[in] e The metric event to process.
     void on_event(const MetricEvent& e);
 
+    /// \brief Signal the start of a drain cycle.
+    ///
+    /// Called before the ring buffer is drained to allow pre-drain
+    /// state capture.
     void begin_drain();
+
+    /// \brief Signal the end of a drain cycle.
+    ///
+    /// Called after the ring buffer is fully drained.
     void end_drain();
 
   private:
@@ -59,9 +86,17 @@ class Aggregator {
 
     int64_t active_actors_{0};
 
+    /// \brief LRU-style cache mapping ActorId to actor type name for label
+    ///        resolution.
     mutable std::unordered_map<ActorId, std::string> actor_type_cache_;
 
+    /// \brief Register all known metric families in the registry.
     void ensure_families_registered();
+
+    /// \brief Build a LabelSet for a given actor.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return LabelSet with actor_id and actor_type labels populated.
     LabelSet make_actor_labels(ActorId id);
 };
 

@@ -19,44 +19,56 @@
 
 namespace hpactor::metrics {
 
+/// \brief Event types emitted into the metrics ring buffer.
 enum class MetricEventType : uint8_t {
-    kMailboxEnqueue = 0,
-    kMailboxDequeue = 1,
-    kMessageProcessed = 2,
-    kActorSpawned = 3,
-    kActorTerminated = 4,
-    kSchedulerDispatch = 5,
-    kSchedulerSteal = 6,
-    kSupervisorRestart = 7,
-    kMemoryAlloc = 8,
-    kMemoryFree = 9,
-    kMailboxRejected = 10,
-    kMailboxDropped = 11,
-    kMailboxDeadLetter = 12,
-    kBackpressureSignal = 13,
-    kDeadLetterLost = 14,
-    kLifecycleTransition = 15,
-    kMessageRejected = 16,
-    kActorDrainStart = 17,
-    kActorDrainComplete = 18,
-    kActorDrainTimeout = 19,
-    kDeliveryFailure = 20,    ///< Delivery failure event — \c code carries
-                              ///< FailureReason.
-    kDeliveryDuplicate = 21,  ///< Duplicate message suppressed at receiver.
-    kDeliveryExpired = 22,    ///< Message expired before handler execution.
-    kActorQuarantined = 23,   ///< Actor transitioned to kQuarantined.
-    kActorUnquarantined = 24, ///< Actor released from quarantine.
-    kCircuitStateChange = 25, ///< Circuit breaker state changed.
+    kMailboxEnqueue = 0,     ///< Message enqueued into an actor mailbox.
+    kMailboxDequeue = 1,     ///< Message dequeued from an actor mailbox.
+    kMessageProcessed = 2,   ///< Actor finished processing a message.
+    kActorSpawned = 3,       ///< A new actor was spawned.
+    kActorTerminated = 4,    ///< An actor terminated.
+    kSchedulerDispatch = 5,  ///< A worker thread dispatched an actor.
+    kSchedulerSteal = 6,     ///< A worker thread stole work from another queue.
+    kSupervisorRestart = 7,  ///< A supervisor restarted a child actor.
+    kMemoryAlloc = 8,        ///< Memory allocated through the allocator.
+    kMemoryFree = 9,         ///< Memory freed through the allocator.
+    kMailboxRejected = 10,   ///< Message rejected by mailbox admission.
+    kMailboxDropped = 11,    ///< Message dropped by overflow policy.
+    kMailboxDeadLetter = 12, ///< Message routed to the dead-letter queue.
+    kBackpressureSignal = 13,  ///< Backpressure signal emitted.
+    kDeadLetterLost = 14,      ///< Dead-letter record evicted.
+    kLifecycleTransition = 15, ///< Actor lifecycle state changed.
+    kMessageRejected = 16,     ///< Message rejected at the receiver.
+    kActorDrainStart = 17,     ///< Actor drain phase started.
+    kActorDrainComplete = 18,  ///< Actor drain phase completed.
+    kActorDrainTimeout = 19,   ///< Actor drain phase timed out.
+    kDeliveryFailure = 20,     ///< Delivery failure — \c code carries
+                               ///< FailureReason.
+    kDeliveryDuplicate = 21,   ///< Duplicate message suppressed at receiver.
+    kDeliveryExpired = 22,     ///< Message expired before handler execution.
+    kActorQuarantined = 23,    ///< Actor transitioned to kQuarantined.
+    kActorUnquarantined = 24,  ///< Actor released from quarantine.
+    kCircuitStateChange = 25,  ///< Circuit breaker state changed.
     kFaultInjected = 26,       ///< Fault injection fired.
 };
 
+/// \brief A single metric event in the lock-free ring buffer.
+///
+/// 32-byte aligned struct for cache-line-friendly atomic operations.
+/// Written by producers throughout the actor system and drained by
+/// the MetricsActor for aggregation.
 struct alignas(32) MetricEvent {
+    /// \brief Monotonic timestamp in nanoseconds.
     uint64_t timestamp_ns;
+    /// \brief Actor this event pertains to.
     ActorId actor_id;
+    /// \brief Event classification.
     MetricEventType event_type;
-    uint8_t code; // rejection reason, drop reason, policy code
-    uint8_t aux;  // auxiliary data
+    /// \brief Event-specific code (rejection reason, drop reason, policy code).
+    uint8_t code;
+    /// \brief Auxiliary data (event-specific semantics).
+    uint8_t aux;
     uint8_t _pad[1];
+    /// \brief High 32 bits of an event-specific 64-bit value (e.g. byte count).
     uint32_t value_hi;
 };
 

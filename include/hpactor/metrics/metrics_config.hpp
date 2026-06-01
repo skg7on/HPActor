@@ -19,13 +19,23 @@
 
 namespace hpactor::metrics {
 
+/// \brief Configuration for the metrics subsystem.
+///
+/// Maps to TOML keys under \c [system.metrics].
 struct MetricsConfig {
-    bool        enabled              = true;
-    uint32_t    ring_buffer_capacity = 65536;
-    std::string metrics_path         = "/metrics";
-    bool        per_actor_labels     = true;
-    bool        scheduler_metrics    = true;
-    bool        memory_metrics       = true;
+    /// \brief Enable metrics collection. Default true.
+    bool enabled = true;
+    /// \brief Capacity of the metric event ring buffer (must be a power of
+    /// two).
+    uint32_t ring_buffer_capacity = 65536;
+    /// \brief HTTP path for the Prometheus /metrics endpoint.
+    std::string metrics_path = "/metrics";
+    /// \brief Include per-actor labels in metric output.
+    bool per_actor_labels = true;
+    /// \brief Emit scheduler dispatch/steal metric events.
+    bool scheduler_metrics = true;
+    /// \brief Emit memory alloc/free metric events.
+    bool memory_metrics = true;
 };
 
 } // namespace hpactor::metrics
