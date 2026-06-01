@@ -43,35 +43,83 @@ class ListActorsReply;
 class SystemStatsReply;
 class MemoryStatsReply;
 
+/// \brief Interactive CLI actor with dedicated I/O thread.
+///
+/// Reads commands from stdin (or a UDS/TCP socket), tokenizes input via Lexer,
+/// walks the command tree, and dispatches to registered command handlers.
+/// Runs on \c DispatchPolicy::DedicatedThread so it may block synchronously
+/// on request-response round-trips without contending with the scheduler.
+///
+/// \note Thread affinity: runs on a dedicated daemon thread. All public
+///       methods are called from that thread unless noted otherwise.
 class CliActor : public DaemonActor {
   public:
+    /// \brief Construct the CLI actor.
+    ///
+    /// \param[in] ctx Actor context.
+    /// \param[in] system The actor system, for sending inspect/kill/list
+    /// requests.
+    /// \param[in] config CLI subsystem configuration.
     CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& config);
 
-    // DaemonActor interface
+    // --- DaemonActor interface ---
+
+    /// \brief Process one iteration of the CLI input loop.
+    ///
+    /// Reads a line, tokenizes, walks the command tree, and executes the
+    /// matched handler. Returns false when the input stream ends or
+    /// request_shutdown() is called.
+    ///
+    /// \retval true Continue the daemon loop.
+    /// \retval false Shut down the CLI daemon.
     bool run_once() override;
+
+    /// \brief Called when the daemon thread starts.
+    ///
+    /// Installs line-editor callbacks and prints the greeting banner.
     void on_daemon_start() override;
+
+    /// \brief Called when the daemon thread stops.
+    ///
+    /// Saves history and performs cleanup.
     void on_daemon_stop() override;
 
+    /// \brief CLI is always a system actor.
     bool is_system_actor() const override {
         return true;
     }
 
-    // Accessors for commands
+    // --- Accessors for command handlers ---
+
+    /// \brief Reference to the actor system.
     ActorSystem& system() {
         return system_;
     }
+
+    /// \brief Read-only reference to the CLI configuration.
     const CliConfig& config() const {
         return config_;
     }
+
+    /// \brief The current output formatter.
+    ///
+    /// \return Non-owning pointer. Never nullptr after construction.
     OutputFormatter* formatter() {
         return formatter_.get();
     }
+
+    /// \brief The interactive pager for multi-page output.
+    ///
+    /// \return Non-owning pointer. Never nullptr after construction.
     Pager* pager() {
         return pager_.get();
     }
 
-    // Whether the CLI input loop is still running.
-    // Set to false by /quit or EOF on stdin.
+    /// \brief Whether the CLI input loop is still running.
+    ///
+    /// Set to false by /quit or EOF on stdin.
+    ///
+    /// \return true if the CLI is accepting input.
     bool is_running() const {
         return running_;
     }
@@ -99,25 +147,49 @@ class CliActor : public DaemonActor {
     }
 
     // --- Request-Response Helpers ---
-    //
-    // Send an InspectStateRequest to target and block on the reply.
-    // Polls this actor's mailbox on the dedicated thread — safe, no
-    // scheduler contention since CliActor uses DispatchPolicy::DedicatedThread.
+
+    /// \brief Send an InspectStateRequest to a target actor and block on
+    ///        the reply.
+    ///
+    /// Polls this actor's mailbox on the dedicated thread. Safe because
+    /// CliActor uses DispatchPolicy::DedicatedThread — no scheduler
+    /// contention.
+    ///
+    /// \param[in] target Actor to inspect.
+    /// \param[in] req The inspect request.
+    /// \param[in] timeout Maximum time to wait for a reply.
+    /// \return The reply if received within the timeout, otherwise
+    ///         \c std::nullopt.
     std::optional<InspectStateReply> send_and_wait_inspect(
         ActorId target, const class InspectStateRequest& req,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
 
+    /// \brief Send a KillRequest to a target actor and block on the reply.
+    ///
+    /// \param[in] target Actor to kill.
+    /// \param[in] req The kill request.
+    /// \param[in] timeout Maximum time to wait for a reply.
+    /// \return The reply if received within the timeout, otherwise
+    ///         \c std::nullopt.
     std::optional<KillReply> send_and_wait_kill(
         ActorId target, const class KillRequest& req,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
 
-    // Enumerate all known actors. Returns metadata for each.
+    /// \brief Enumerate all known actors.
+    ///
+    /// \param[in] filter Optional substring filter on actor type or behavior
+    ///                   name. Empty string matches all actors.
+    /// \return Metadata for each matching actor.
     std::vector<ActorMeta> enumerate_actors(const std::string& filter = "");
 
-    // Resolve the CLI history file path from config.
-    // If config.history_path is non-empty, returns it directly.
-    // Otherwise returns $HOME/.hpactor_history, falling back to
-    // /tmp/.hpactor_history.
+    /// \brief Resolve the CLI history file path from config.
+    ///
+    /// If config.history_path is non-empty, returns it directly.
+    /// Otherwise returns \c $HOME/.hpactor_history, falling back to
+    /// \c /tmp/.hpactor_history if the home directory is unavailable.
+    ///
+    /// \param[in] config CLI configuration.
+    /// \return The resolved history file path.
     static std::string get_history_path(const CliConfig& config);
 
   private:
@@ -125,8 +197,15 @@ class CliActor : public DaemonActor {
     void execute_tokens(const std::vector<Token>& tokens);
     void print_greeting();
 
-    // Poll mailbox for a message with the given TypeTag, ignoring all others.
-    // Returns the raw StreamBuffer payload if found before timeout.
+    /// \brief Poll mailbox for a message with the given TypeTag.
+    ///
+    /// Ignores all other messages until the expected tag arrives or the
+    /// timeout expires.
+    ///
+    /// \param[in] expected_tag The TypeTag to wait for.
+    /// \param[in] timeout Maximum time to poll.
+    /// \return The raw payload if the expected message arrived, otherwise
+    ///         \c std::nullopt.
     std::optional<StreamBuffer>
     poll_for_response(TypeTag expected_tag, std::chrono::milliseconds timeout);
 

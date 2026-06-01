@@ -21,15 +21,29 @@
 namespace hpactor {
 namespace cli {
 
+/// \brief Tokenizer for CLI command-line input.
+///
+/// Splits an input string into tokens, handling quoted strings, flags with
+/// arguments, and comment characters. A leading "/" is normalized into a
+/// Keyword token.
+///
+/// \note Thread affinity: called on the CLI daemon thread.
 class Lexer {
-public:
-    // Tokenize a command string into a sequence of tokens.
-    // A leading "/" becomes a Keyword "/" (optional, parser auto-inserts if missing).
+  public:
+    /// \brief Tokenize a command string into a sequence of tokens.
+    ///
+    /// A leading "/" becomes a Keyword "/" token. The parser auto-inserts
+    /// a leading "/" if missing, so callers may safely omit it.
+    ///
+    /// \param[in] input Raw command-line string.
+    /// \return Ordered vector of tokens. Always contains at least an Eof
+    ///         token for empty input.
     static std::vector<Token> tokenize(const std::string& input);
 
-private:
+  private:
+    /// \brief Unescape backslash sequences in a quoted string.
     static std::string unescape(const std::string& s);
 };
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor

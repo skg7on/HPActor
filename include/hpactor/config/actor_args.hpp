@@ -21,25 +21,23 @@
 
 namespace hpactor::config {
 
-// -----------------------------------------------------------------------------
-// ConfigurableActor — concept for actors that accept TOML args
-//
-// Actors may optionally implement:
-//
-//   static result<void> configure_from_args(
-//       const std::unordered_map<std::string, std::string>& args,
-//       T& actor);
-//
-// The BootstrapEngine calls configure_from_args() after construction
-// and before on_activate() when the concrete type is known.
-//
-// Future: integrate with ActorFactoryRegistry to invoke per-type args
-// configuration during spawn_configured().
-// -----------------------------------------------------------------------------
+/// \brief Concept for actors that accept TOML-derived configuration arguments.
+///
+/// Actors may optionally implement a static method:
+///
+/// \code{.cpp}
+/// static result<void> configure_from_args(
+///     const std::unordered_map<std::string, std::string>& args,
+///     T& actor);
+/// \endcode
+///
+/// The BootstrapEngine calls configure_from_args() after construction and
+/// before on_activate() when the concrete type satisfies this concept.
+///
+/// \tparam T Actor type to check.
 template <typename T>
 concept ConfigurableActor =
-    requires(T& actor,
-             const std::unordered_map<std::string, std::string>& args) {
+    requires(T& actor, const std::unordered_map<std::string, std::string>& args) {
         { T::configure_from_args(args, actor) } -> std::same_as<result<void>>;
     };
 

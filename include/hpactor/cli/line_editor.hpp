@@ -26,54 +26,97 @@ namespace hpactor::cli {
 
 struct CommandNode;
 
+/// \brief Configuration for the interactive line editor.
 struct LineEditorConfig {
+    /// \brief Path to the history file.
     std::string history_path;
+    /// \brief Maximum number of in-memory history entries.
     uint32_t history_max = 1000;
+    /// \brief Whether to enable multiline input mode.
     bool multiline = false;
 };
 
-/// Result of tab-completion computation for a partial input buffer.
+/// \brief Result of tab-completion computation for a partial input buffer.
 struct CompletionResult {
-    std::string prefix;               ///< Full prefix to prepend to each match.
-    std::vector<std::string> matches; ///< Matching keywords at the current
-                                      ///< level.
+    /// \brief Full prefix to prepend to each match (includes the leading "/"
+    ///        and all consumed tokens).
+    std::string prefix;
+    /// \brief Matching keywords at the current trie level.
+    std::vector<std::string> matches;
 };
 
-/// Result of inline-hint computation for a partial input buffer.
+/// \brief Result of inline-hint computation for a partial input buffer.
 struct HintResult {
-    std::string text; ///< Remainder of the hinted keyword after typed prefix.
-    bool active = false; ///< When false, no hint should be displayed.
+    /// \brief Remainder of the hinted keyword after the typed prefix.
+    std::string text;
+    /// \brief When false, no hint should be displayed.
+    bool active = false;
 };
 
+/// \brief Interactive line editor wrapping linenoise with CLI-aware completion.
+///
+/// Provides readline with history, tab completion driven by the command tree,
+/// and inline hints showing the remainder of partially-typed keywords.
+///
+/// \note Thread affinity: single-instance, used only on the CLI daemon thread.
 class LineEditor {
   public:
+    /// \brief Construct the line editor.
+    ///
+    /// \param[in] cfg Editor configuration (history path, limits, multiline).
+    /// \param[in] root Non-owning pointer to the command tree root for
+    ///                 completion and hint computation.
     LineEditor(const LineEditorConfig& cfg, const CommandNode* root);
+
+    /// \brief Destructor. Clears the global current_ pointer.
     ~LineEditor();
 
     LineEditor(const LineEditor&) = delete;
     LineEditor& operator=(const LineEditor&) = delete;
 
+    /// \brief Read a line of input from the user.
+    ///
+    /// \param[in] prompt Prompt string displayed to the user.
+    /// \return The raw input line, or an empty string on EOF.
     std::string readline(const std::string& prompt);
+
+    /// \brief Add a line to the in-memory history.
+    ///
+    /// \param[in] line The input line to record.
     void add_history(const std::string& line) const;
+
+    /// \brief Load history from the configured history file.
     void load_history() const;
+
+    /// \brief Save current history to the configured history file.
     void save_history() const;
+
+    /// \brief Update the command tree root for completion and hints.
+    ///
+    /// \param[in] root Non-owning pointer to the new command tree root.
     void set_root(const CommandNode* root) {
         root_ = root;
     }
 
-    /// Walk the command tree to compute tab completions for \p buf.
+    /// \brief Walk the command tree to compute tab completions for \p buf.
     ///
     /// Tokenizes the buffer, walks the tree consuming exact and prefix
     /// matches, then collects matching children at the resolved node.
     /// The returned prefix includes the leading "/" and all consumed
     /// tokens so that callers only need to append each match.
+    ///
+    /// \param[in] buf The current input buffer.
+    /// \return Completion candidates and the prefix to prepend.
     CompletionResult compute_completions(const std::string& buf) const;
 
-    /// Walk the command tree to compute an inline hint for \p buf.
+    /// \brief Walk the command tree to compute an inline hint for \p buf.
     ///
     /// Finds the first non-parameter child whose keyword starts with
     /// the partial token at the cursor. The returned text is the
     /// remainder of the keyword after the already-typed prefix.
+    ///
+    /// \param[in] buf The current input buffer.
+    /// \return The hint remainder text and active flag.
     HintResult compute_hint(const std::string& buf) const;
 
   private:

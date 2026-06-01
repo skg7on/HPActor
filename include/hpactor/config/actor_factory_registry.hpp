@@ -23,22 +23,45 @@
 
 namespace hpactor::config {
 
-// -----------------------------------------------------------------------------
-// ActorFactoryRegistry — singleton registry mapping behavior name strings to
-// ActorFactory functions.
-//
-// Populated at static init time via HPACTOR_REGISTER_ACTOR. Read-only after
-// main() starts (no runtime registration). Thread-safe by immutability.
-// -----------------------------------------------------------------------------
+/// \brief Singleton registry mapping behavior name strings to ActorFactory
+///        functions.
+///
+/// Populated at static init time via HPACTOR_REGISTER_ACTOR. Read-only after
+/// main() starts (no runtime registration). Thread-safe by immutability.
+///
+/// \note Registration phase: static initialization (single-threaded).
+///       Lookup phase: read-only, safe for concurrent access.
 class ActorFactoryRegistry {
   public:
+    /// \brief Access the singleton instance.
+    ///
+    /// \return Reference to the process-global registry.
     static ActorFactoryRegistry& instance();
 
-    template <typename T>
-    void register_factory(const std::string& name);
+    /// \brief Register a factory for the given behavior name.
+    ///
+    /// \tparam T Actor subclass with a constructor taking (ActorContext*,
+    ///           ActorSystem&).
+    /// \param[in] name Behavior name string used in TOML actor definitions.
+    template <typename T> void register_factory(const std::string& name);
 
+    /// \brief Look up a factory by behavior name.
+    ///
+    /// \param[in] name Behavior name.
+    /// \return The factory function, or an empty (default-constructed)
+    ///         ActorFactory if not found.
     ActorFactory get_factory(const std::string& name) const;
+
+    /// \brief Check whether a behavior name is registered.
+    ///
+    /// \param[in] name Behavior name.
+    /// \retval true A factory is registered for this name.
+    /// \retval false No factory is registered.
     bool has(const std::string& name) const;
+
+    /// \brief All registered behavior names.
+    ///
+    /// \return Sorted list of known behavior names.
     std::vector<std::string> known_names() const;
 
   private:
@@ -55,20 +78,23 @@ void ActorFactoryRegistry::register_factory(const std::string& name) {
 
 } // namespace hpactor::config
 
-// -----------------------------------------------------------------------------
-// HPACTOR_REGISTER_ACTOR — static registration macro
-//
-// Place in an actor's .cpp file to register it for TOML-based bootstrapping.
-// Registration happens before main() via static initialization.
-//
-// Example:
-//   HPACTOR_REGISTER_ACTOR("TcpGatewayActor", TcpGatewayActor);
-// -----------------------------------------------------------------------------
+/// \brief Static registration macro for TOML-based actor bootstrapping.
+///
+/// Place in an actor's .cpp file to register it for TOML topology
+/// configuration. Registration happens before main() via static
+/// initialization.
+///
+/// \code{.cpp}
+/// HPACTOR_REGISTER_ACTOR("TcpGatewayActor", TcpGatewayActor);
+/// \endcode
+///
+/// \param Name String literal — the behavior name used in TOML.
+/// \param ActorClass The C++ actor class to instantiate.
 #define HPACTOR_REGISTER_ACTOR(Name, ActorClass)                               \
-    namespace {                                                                  \
-        [[maybe_unused]] static const bool _hpactor_reg_##ActorClass = [] {      \
-            ::hpactor::config::ActorFactoryRegistry::instance()                  \
-                .register_factory<ActorClass>(Name);                            \
-            return true;                                                         \
-        }();                                                                     \
+    namespace {                                                                \
+    [[maybe_unused]] static const bool _hpactor_reg_##ActorClass = [] {        \
+        ::hpactor::config::ActorFactoryRegistry::instance()                    \
+            .register_factory<ActorClass>(Name);                               \
+        return true;                                                           \
+    }();                                                                       \
     }

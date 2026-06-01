@@ -19,6 +19,10 @@
 namespace hpactor {
 namespace cli {
 
+/// \brief Tabular (plain-text columns) output formatter.
+///
+/// Produces grep-friendly plain-text output with aligned columns.
+/// No ANSI escape sequences or JSON formatting.
 class TabularFormatter : public OutputFormatter {
   public:
     void header(const std::string& title) override;
@@ -28,6 +32,10 @@ class TabularFormatter : public OutputFormatter {
     void tree(const TreeNode& root) override;
     void raw(const std::string& text) override;
     void error(const std::string& message) override;
+
+    /// \brief Produce the final tabular output string.
+    ///
+    /// \return Plain-text accumulated output.
     std::string finalize() override;
 
   private:

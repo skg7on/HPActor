@@ -18,35 +18,45 @@
 
 namespace hpactor::config {
 
-// -----------------------------------------------------------------------------
-// Binary topology format — designed for zero-copy mmap access
-//
-// All strings are stored as offsets into a string table. After mmap, string
-// pointers point directly into the mapped region (no allocation).
-// -----------------------------------------------------------------------------
+/// \brief Magic number for binary topology files ("HPAT").
+constexpr uint32_t TOPOLOGY_BINARY_MAGIC = 0x48504154;
 
-constexpr uint32_t TOPOLOGY_BINARY_MAGIC = 0x48504154; // "HPAT"
-
+/// \brief File header for the mmap-friendly binary topology format.
+///
+/// All strings are stored as offsets into a string table. After mmap,
+/// string pointers point directly into the mapped region (zero-copy).
 struct BinaryHeader {
+    /// \brief Magic number; must equal TOPOLOGY_BINARY_MAGIC.
     uint32_t magic;
+    /// \brief Format version for forward compatibility.
     uint32_t version;
+    /// \brief Byte offset to the BinarySystemDef record.
     uint32_t system_offset;
+    /// \brief Number of dispatcher definitions.
     uint32_t dispatcher_count;
+    /// \brief Byte offset to the BinaryDispatcherDef array.
     uint32_t dispatchers_offset;
+    /// \brief Number of actor definitions.
     uint32_t actor_count;
+    /// \brief Byte offset to the BinaryActorDef array.
     uint32_t actors_offset;
+    /// \brief Byte offset to the string table.
     uint32_t string_table_offset;
+    /// \brief Size of the string table in bytes.
     uint32_t string_table_size;
 };
 
-// Fixed-size system config record (aligned for direct memcpy)
+/// \brief Fixed-size system config record in binary format.
+///
+/// Aligned for direct memcpy. String fields are stored as offsets into
+/// the string table.
 struct BinarySystemDef {
     uint32_t scheduler_threads;
     uint32_t max_queue_depth;
     uint32_t default_mailbox_size;
-    uint32_t enable_network; // bool as uint32_t
+    uint32_t enable_network; ///< bool stored as uint32_t.
     uint16_t tcp_port;
-    uint16_t reserved_pad; // was udp_port (now in RegistrarConfig)
+    uint16_t reserved_pad; ///< Was udp_port; now in RegistrarConfig.
     uint32_t spawn_timeout_ms;
     uint32_t enable_http_gateway;
     uint16_t http_port;
@@ -54,10 +64,10 @@ struct BinarySystemDef {
     uint32_t http_max_request_size;
     uint32_t http_reply_timeout_ms;
     uint32_t use_coroutines;
-    uint32_t version_offset; // string table offset
+    uint32_t version_offset; ///< String table offset to version string.
     union {
-        uint32_t http_bind_host;        // X-macro compatible name
-        uint32_t http_bind_host_offset; // string table offset (canonical)
+        uint32_t http_bind_host;        ///< X-macro compatible name.
+        uint32_t http_bind_host_offset; ///< String table offset (canonical).
     };
     uint32_t tracing_enabled;
     uint32_t tracing_propagate_unsampled;
@@ -70,33 +80,49 @@ struct BinarySystemDef {
     uint16_t tracing_max_tracestate_len;
     uint16_t tracing_pad;
     uint32_t tracing_flags;
-    uint32_t tracing_service_name_offset;
-    uint32_t tracing_otlp_endpoint_offset;
-    uint32_t tracing_json_file_path_offset;
+    uint32_t tracing_service_name_offset;   ///< String table offset.
+    uint32_t tracing_otlp_endpoint_offset;  ///< String table offset.
+    uint32_t tracing_json_file_path_offset; ///< String table offset.
 };
 
+/// \brief Dispatcher definition in binary format.
 struct BinaryDispatcherDef {
+    /// \brief String table offset to the dispatcher name.
     uint32_t name_offset;
+    /// \brief Number of worker threads.
     uint16_t threads;
+    /// \brief Number of CPU affinity entries.
     uint16_t cpu_affinity_count;
-    uint32_t cpu_affinity_offset; // offset to uint8_t array, 0 if count=0
+    /// \brief Offset to uint8_t CPU affinity array. 0 if count=0.
+    uint32_t cpu_affinity_offset;
 };
 
+/// \brief Actor definition in binary format.
 struct BinaryActorDef {
+    /// \brief String table offset to actor id.
     uint32_t id_offset;
+    /// \brief String table offset to behavior name.
     uint32_t behavior_offset;
-    uint32_t supervisor_offset; // 0 = no supervisor
-    uint32_t dispatcher_offset; // 0 = default pool
+    /// \brief String table offset to supervisor id. 0 = unsupervised.
+    uint32_t supervisor_offset;
+    /// \brief String table offset to dispatcher name. 0 = default pool.
+    uint32_t dispatcher_offset;
+    /// \brief DispatchPolicy enum value.
     uint8_t dispatch_policy;
     uint32_t mailbox_capacity;
     uint32_t slab_class_bytes;
     uint32_t max_memory_kb;
+    /// \brief Number of key-value argument pairs.
     uint16_t args_count;
-    uint32_t args_offset; // offset to BinaryKeyValue array, 0 if count=0
+    /// \brief Offset to BinaryKeyValue array. 0 if count=0.
+    uint32_t args_offset;
 };
 
+/// \brief A key-value pair in the binary format.
 struct BinaryKeyValue {
+    /// \brief String table offset to the key.
     uint32_t key_offset;
+    /// \brief String table offset to the value.
     uint32_t value_offset;
 };
 

@@ -21,17 +21,23 @@
 
 namespace hpactor::config {
 
-// -----------------------------------------------------------------------------
-// TomlParser — parses TOML entrypoint files into validated TopologyModel
-//
-// Handles import resolution, file merging, template inheritance (deep merge),
-// validation, and topological sort of the actor dependency DAG.
-// -----------------------------------------------------------------------------
+/// \brief Parses TOML entrypoint files into validated TopologyModel instances.
+///
+/// Handles import resolution (glob), file merging, template inheritance
+/// (deep merge), validation, and topological sort of the actor dependency DAG
+/// (Kahn's algorithm).
+///
+/// \note Called during ActorSystem::load_topology(). May allocate and perform
+///       file I/O. Not thread-safe for concurrent parse calls on the same
+///       instance (each parse() call is self-contained).
 class TomlParser {
   public:
-    // Parse a TOML entrypoint file into a validated, topologically sorted
-    // TopologyModel. Returns error on parse failure, validation failure,
-    // or circular dependency.
+    /// \brief Parse a TOML entrypoint file into a validated, topologically
+    ///        sorted TopologyModel.
+    ///
+    /// \param[in] entrypoint_path Path to the root TOML file.
+    /// \return A populated TopologyModel on success, or an error result on
+    ///         parse failure, validation failure, or circular dependency.
     static result<TopologyModel> parse(const std::string& entrypoint_path);
 };
 

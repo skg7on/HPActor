@@ -20,18 +20,38 @@
 
 namespace hpactor::config {
 
+/// \brief Per-file parse context for error reporting and path tracking.
+///
+/// Carries the file path being parsed and whether it is the entrypoint
+/// file (vs an imported file). Passed to subsystem parsers so they can
+/// report file-specific errors.
 class TomlParseContext {
   public:
+    /// \brief Construct a parse context.
+    ///
+    /// \param[in] filepath Path to the TOML file being parsed.
+    /// \param[in] entrypoint Whether this is the root entrypoint file.
     TomlParseContext(std::string filepath, bool entrypoint) noexcept
         : filepath_(std::move(filepath)), entrypoint_(entrypoint) {}
 
+    /// \brief The file path being parsed.
+    ///
+    /// \return Const reference to the file path string.
     const std::string& filepath() const noexcept {
         return filepath_;
     }
+
+    /// \brief Whether this file is the entrypoint (vs an import).
+    ///
+    /// \return true if this is the root file passed to TomlParser::parse().
     bool is_entrypoint() const noexcept {
         return entrypoint_;
     }
 
+    /// \brief Produce an error result tagged with this file's context.
+    ///
+    /// \param[in] message Human-readable error description.
+    /// \return An error result.
     result<void> fail(const char* /*message*/) const {
         return result<void>::make(error(errors::unknown));
     }
