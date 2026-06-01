@@ -19,6 +19,10 @@
 namespace hpactor {
 namespace cli {
 
+/// \brief ANSI color and box-drawing output formatter.
+///
+/// Produces human-readable output with dimmed headers, bold labels,
+/// colored values (cyan/green/red), and horizontal rules.
 class PrettyFormatter : public OutputFormatter {
   public:
     void header(const std::string& title) override;
@@ -28,6 +32,10 @@ class PrettyFormatter : public OutputFormatter {
     void tree(const TreeNode& root) override;
     void raw(const std::string& text) override;
     void error(const std::string& message) override;
+
+    /// \brief Produce the accumulated formatted output.
+    ///
+    /// \return The full formatted string with ANSI escape sequences.
     std::string finalize() override;
 
   private:

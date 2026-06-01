@@ -20,19 +20,25 @@
 namespace hpactor {
 namespace cli {
 
+/// \brief Token type classification produced by the Lexer.
 enum class TokenType {
-    Keyword,         // actor, show, list, etc.
-    Parameter,       // 0x123, echo-actor-1, "quoted string"
-    Flag,            // --detail, --no-pager
-    FlagWithArg,     // --format json, --filter Worker
-    Eof,
+    Keyword,     ///< Literal command/verb such as \c actor, \c show, \c list.
+    Parameter,   ///< A value: hex id (\c 0x123), string, or quoted string.
+    Flag,        ///< Boolean flag: \c --detail, \c --no-pager.
+    FlagWithArg, ///< Flag with a value: \c --format \c json, \c --filter \c
+                 ///< Worker.
+    Eof,         ///< End-of-input sentinel.
 };
 
+/// \brief A single token produced by the Lexer from a command-line string.
 struct Token {
+    /// \brief Token classification.
     TokenType type = TokenType::Eof;
+    /// \brief The raw token text.
     std::string value;
-    std::optional<std::string> arg;  // populated for FlagWithArg
+    /// \brief Flag argument value, populated only for FlagWithArg tokens.
+    std::optional<std::string> arg;
 };
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor

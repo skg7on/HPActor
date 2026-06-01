@@ -22,15 +22,30 @@
 
 namespace hpactor::config {
 
+/// \brief Raw actor definition before template resolution.
+///
+/// If \c inherits is non-empty, the actor inherits fields from the named
+/// template during TomlParser import/merge processing.
 struct TomlRawActor {
+    /// \brief The actor definition fields.
     ActorDef def;
+    /// \brief Template name to inherit from (empty = no inheritance).
     std::string inherits;
 };
 
+/// \brief Intermediate representation of a single parsed TOML file.
+///
+/// Holds the raw parsed data before import resolution, template expansion,
+/// and cross-file merging.
 struct TomlFileData {
+    /// \brief System configuration from the file's [system] section (merged
+    ///        across imports).
     SystemDef system;
+    /// \brief Dispatcher definitions.
     std::vector<DispatcherDef> dispatchers;
+    /// \brief Actor definitions with optional template inheritance.
     std::vector<TomlRawActor> actors;
+    /// \brief Named actor templates for inheritance.
     std::unordered_map<std::string, ActorDef> templates;
 };
 

@@ -23,17 +23,35 @@
 
 namespace hpactor::metrics {
 
+/// \brief System actor that drains the metric ring buffer and serves the
+///        /metrics endpoint.
+///
+/// Registered as a system actor during ActorSystem construction when
+/// metrics are enabled. On each /metrics scrape, drains the shared ring
+/// buffer through the Aggregator into the MetricRegistry, takes a snapshot,
+/// and formats the response via OpenMetricsFormatter.
+///
+/// \note Thread affinity: runs on the scheduler like any EventBasedActor.
+///       Ring buffer writes are lock-free (MPSC); the drain path is
+///       single-consumer.
 class MetricsActor : public EventBasedActor {
   public:
+    /// \brief Construct the metrics actor.
+    ///
+    /// \param[in] system The actor system.
+    /// \param[in] ring_buffer Shared metric event ring buffer to drain.
     MetricsActor(ActorSystem& system,
                  std::shared_ptr<MpscRingBuffer<MetricEvent>> ring_buffer);
 
+    /// \brief Register the /metrics request handler.
     void register_handlers() override;
 
+    /// \brief MetricsActor is always a system actor.
     bool is_system_actor() const override {
         return true;
     }
 
+    /// \brief Actor type name constant.
     static constexpr const char* kActorTypeName = "MetricsActor";
 
   private:
@@ -41,6 +59,7 @@ class MetricsActor : public EventBasedActor {
     MetricRegistry registry_;
     Aggregator aggregator_;
     OpenMetricsFormatter formatter_;
+    /// \brief Snapshot of events_lost from the ring buffer for observability.
     uint64_t events_lost_{0};
 };
 

@@ -19,6 +19,10 @@
 namespace hpactor {
 namespace cli {
 
+/// \brief JSON output formatter for machine-readable CLI output.
+///
+/// Accumulates output as a single JSON object with keys for each
+/// rendered section. Suitable for scripting and automation.
 class JsonFormatter : public OutputFormatter {
   public:
     void header(const std::string& title) override;
@@ -28,11 +32,19 @@ class JsonFormatter : public OutputFormatter {
     void tree(const TreeNode& root) override;
     void raw(const std::string& text) override;
     void error(const std::string& message) override;
+
+    /// \brief Produce the final JSON string.
+    ///
+    /// \return A JSON object with accumulated sections.
     std::string finalize() override;
 
   private:
     std::string buf_;
+
+    /// \brief Escape a string for JSON output.
     static std::string escape(const std::string& s);
+
+    /// \brief Recursively render a tree node as JSON.
     void json_tree(const TreeNode& node);
 };
 

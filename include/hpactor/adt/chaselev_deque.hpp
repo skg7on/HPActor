@@ -21,9 +21,26 @@
 
 namespace hpactor::adt {
 
+/// \brief Lock-free work-stealing deque (Chase-Lev).
+///
+/// The owning thread pushes and pops from the bottom (LIFO), while thief
+/// threads steal from the top (FIFO). ABA protection comes from using 64-bit
+/// indices for top and bottom, which are practically immune to wrap-around.
+///
+/// \tparam T Element type. Must be default-constructible and move-assignable.
+///
+/// \note Concurrency: push_bottom() and pop_bottom() are single-owner — only
+///       one thread may call them. steal_top() is safe for concurrent calls
+///       from multiple thief threads. The deque is lock-free on all paths.
 template <typename T> class ChaselevDeque {
   public:
+    /// \brief Construct a deque with the given initial capacity.
+    ///
+    /// \param[in] initial_capacity Starting capacity of the circular array.
+    ///            Rounded up to the next power of two internally.
     explicit ChaselevDeque(size_t initial_capacity = 256);
+
+    /// \brief Destroys the deque and all internal circular arrays.
     ~ChaselevDeque();
 
     ChaselevDeque(const ChaselevDeque&) = delete;
@@ -31,23 +48,57 @@ template <typename T> class ChaselevDeque {
     ChaselevDeque(ChaselevDeque&&) = delete;
     ChaselevDeque& operator=(ChaselevDeque&&) = delete;
 
+    /// \brief Push an item onto the bottom of the deque.
+    ///
+    /// Grows the circular array if the deque is full.
+    /// \param[in] item Element to push.
     void push_bottom(T item);
+
+    /// \brief Pop an item from the bottom of the deque (owner LIFO).
+    ///
+    /// \param[out] out Set to the popped element on success.
+    /// \retval true An element was popped into \p out.
+    /// \retval false The deque was empty.
     bool pop_bottom(T& out);
+
+    /// \brief Steal an item from the top of the deque (thief FIFO).
+    ///
+    /// \param[out] out Set to the stolen element on success.
+    /// \retval true An element was stolen into \p out.
+    /// \retval false The deque was empty or the steal lost a race.
     bool steal_top(T& out);
+
+    /// \brief Approximate number of elements in the deque.
+    ///
+    /// This is a relaxed snapshot and may be stale by the time it is observed.
+    /// \return An approximate element count.
     size_t size_approx() const;
 
   private:
+    /// \brief Growable circular array backing the deque.
     struct CircularArray {
         std::vector<std::atomic<T>> buf;
         size_t mask;
+
+        /// \brief Construct a circular array of the given capacity.
+        ///
+        /// \pre \p cap must be a power of two.
         explicit CircularArray(size_t cap);
 
+        /// \brief Load the element at logical index \p i.
         T get(int64_t i) const {
             return buf[static_cast<size_t>(i) & mask].load(std::memory_order_relaxed);
         }
+
+        /// \brief Store \p v at logical index \p i.
         void put(int64_t i, T v) {
             buf[static_cast<size_t>(i) & mask].store(v, std::memory_order_relaxed);
         }
+
+        /// \brief Grow the array to double its current capacity.
+        ///
+        /// Copies elements in the range [top, bottom) into the new array.
+        /// \return The newly allocated, doubled-capacity array.
         CircularArray* grow(int64_t bottom, int64_t top) const;
     };
 

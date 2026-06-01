@@ -20,15 +20,29 @@
 namespace hpactor {
 namespace cli {
 
+/// \brief Configuration for the interactive CLI subsystem.
+///
+/// All fields map to TOML keys under \c [system.cli]. The CLI is opt-in:
+/// \c enabled must be set to \c true via TOML or programmatic config.
 struct CliConfig {
-    bool enabled = false;  // CLI is opt-in — only enable via TOML or explicit config
-    std::string listen_path;          // UDS path; empty = stdin/stdout
-    uint16_t tcp_port = 0;           // TCP port; 0 = disabled
+    /// \brief Enable the CLI subsystem. Defaults to false (opt-in).
+    bool enabled = false;
+    /// \brief Unix domain socket path for CLI connections.
+    ///        Empty means stdin/stdout.
+    std::string listen_path;
+    /// \brief TCP listen port. 0 means disabled.
+    uint16_t tcp_port = 0;
+    /// \brief Default output format: "pretty", "json", or "tabular".
     std::string default_format = "pretty";
+    /// \brief Number of items per page for paged output.
     uint32_t page_size = 50;
-    std::string history_path;       // empty = ~/.hpactor_history
-    uint32_t history_max = 1000;    // max in-memory history entries
+    /// \brief History file path. Empty means \c ~/.hpactor_history, falling
+    ///        back to \c /tmp/.hpactor_history if the home directory is
+    ///        unavailable.
+    std::string history_path;
+    /// \brief Maximum number of in-memory history entries.
+    uint32_t history_max = 1000;
 };
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor

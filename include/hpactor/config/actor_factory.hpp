@@ -25,15 +25,17 @@ class ActorSystem;
 
 namespace config {
 
-// -----------------------------------------------------------------------------
-// ActorFactory — type-erased factory function for constructing actors
-//
-// Follows the same signature convention as ActorSystem::spawn<T>(): the
-// ActorContext* may be nullptr during construction and is set later via
-// set_context() during spawn_configured().
-// -----------------------------------------------------------------------------
-using ActorFactory = std::function<std::shared_ptr<AbstractActor>(
-    ActorContext*, ActorSystem&)>;
+/// \brief Type-erased factory function for constructing actors.
+///
+/// Follows the same signature convention as ActorSystem::spawn<T>(): the
+/// ActorContext* may be nullptr during construction and is set later via
+/// set_context() during spawn_configured().
+///
+/// \param[in] ctx Actor context pointer (may be nullptr during construction).
+/// \param[in] sys Reference to the actor system.
+/// \return Shared pointer to the constructed actor.
+using ActorFactory =
+    std::function<std::shared_ptr<AbstractActor>(ActorContext*, ActorSystem&)>;
 
 } // namespace config
 } // namespace hpactor

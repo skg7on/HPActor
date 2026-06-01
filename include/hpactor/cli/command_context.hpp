@@ -29,27 +29,52 @@ namespace cli {
 class CliActor;
 class OutputFormatter;
 
+/// \brief Execution context passed to command handlers.
+///
+/// Populated by CliActor after tokenizing and walking the command tree.
+/// Contains parsed arguments, captured parameters, output configuration,
+/// and references to the actor system and CLI actor for request-response
+/// round-trips.
 struct CommandContext {
+    /// \brief Positional arguments in order (beyond the matched command path).
     std::vector<std::string> args;
+    /// \brief Captured parameter values (e.g. \c <id>) and flag values
+    ///        (e.g. \c --format).
     std::map<std::string, std::string> params;
+    /// \brief The actor system, for sending inspect/kill/list requests.
     ActorSystem* system = nullptr;
+    /// \brief The CLI actor, for request-response helpers.
     CliActor* cli_actor = nullptr;
+    /// \brief Output formatter for rendering results.
     OutputFormatter* output = nullptr;
+    /// \brief Whether output should be paged.
     bool paged = false;
+    /// \brief Page size for paged output.
     uint32_t page_size = 50;
+    /// \brief Output format name ("pretty", "json", "tabular").
     std::string format = "pretty";
 
+    /// \brief Check whether a boolean flag is present.
+    ///
+    /// \param[in] name Flag name (without \c -- prefix).
+    /// \retval true The flag is present and its value is "true" or empty.
+    /// \retval false The flag is absent or explicitly set to "false".
     bool has_flag(const std::string& name) const {
         auto it = params.find(name);
         return it != params.end() && (it->second == "true" || it->second.empty());
     }
 
+    /// \brief Get the value of a named parameter or flag.
+    ///
+    /// \param[in] name Parameter name (without angle brackets or \c -- prefix).
+    /// \return The value if present, otherwise \c std::nullopt.
     std::optional<std::string> get_param(const std::string& name) const {
         auto it = params.find(name);
-        if (it != params.end()) return it->second;
+        if (it != params.end())
+            return it->second;
         return std::nullopt;
     }
 };
 
-}  // namespace cli
-}  // namespace hpactor
+} // namespace cli
+} // namespace hpactor

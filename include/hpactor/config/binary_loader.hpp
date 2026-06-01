@@ -21,8 +21,15 @@
 
 namespace hpactor::config {
 
-// Load a pre-compiled binary topology file via mmap.
-// Returns a fully populated TopologyModel with zero-copy string access.
+/// \brief Load a pre-compiled binary topology file via mmap.
+///
+/// Maps the file read-only and reconstructs a TopologyModel with string
+/// pointers pointing directly into the mapped region (zero-copy). Validates
+/// the magic number and version before reconstructing.
+///
+/// \param[in] path Path to the binary topology file.
+/// \return A fully populated TopologyModel on success, or an error result
+///         on file-not-found, invalid magic, or version mismatch.
 result<TopologyModel> load_binary_topology(const std::string& path);
 
 } // namespace hpactor::config

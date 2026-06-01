@@ -16,13 +16,19 @@
 
 #include <hpactor/config/topology_model.hpp>
 
-#include <vector>
 #include <cstdint>
+#include <vector>
 
 namespace hpactor::config {
 
-// Serialize a TopologyModel to the mmap-friendly binary format.
-// Returns the binary blob. Caller writes to file.
+/// \brief Serialize a TopologyModel to the mmap-friendly binary format.
+///
+/// Produces a binary blob with a string table, allowing zero-copy access
+/// after mmap. The caller is responsible for writing the returned vector
+/// to a file.
+///
+/// \param[in] model The validated, topologically sorted topology to serialize.
+/// \return The binary blob as a byte vector.
 std::vector<uint8_t> serialize_topology(const TopologyModel& model);
 
 } // namespace hpactor::config

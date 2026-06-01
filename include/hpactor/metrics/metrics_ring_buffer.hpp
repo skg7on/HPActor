@@ -18,7 +18,11 @@
 
 namespace hpactor::metrics {
 
-// Alias for backward compatibility — delegates to the shared ADT.
+/// \brief Alias for backward compatibility — delegates to the shared ADT
+///        MpscRingBuffer.
+///
+/// \tparam T Element type stored in the ring buffer.
+/// \tparam Capacity Compile-time buffer capacity (must be a power of two).
 template <typename T, size_t Capacity = 65536>
 using MpscRingBuffer = adt::MpscRingBuffer<T, Capacity>;
 

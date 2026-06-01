@@ -21,12 +21,31 @@
 
 namespace hpactor::tracing {
 
+/// \brief Abstract interface for exporting completed span records.
+///
+/// Implementations include MemoryExporter (testing), JsonFileExporter
+/// (NDJSON files), and OtlpHttpExporter (OTLP/HTTP to a collector).
+///
+/// \note Thread safety: export_batch() is called from the drain thread.
+///       Implementations must be internally synchronized if they share
+///       state with other threads (e.g. MemoryExporter::snapshot()).
 class SpanExporter {
   public:
     virtual ~SpanExporter() = default;
+
+    /// \brief Export a batch of completed span records.
+    ///
+    /// \param[in] batch Non-owning span of SpanRecord to export.
+    /// \return success or an error code on export failure.
     virtual result<void>
     export_batch(std::span<const SpanRecord> batch) noexcept = 0;
+
+    /// \brief Graceful shutdown. Called before the exporter is destroyed.
     virtual void shutdown() noexcept = 0;
+
+    /// \brief Human-readable exporter name for diagnostics.
+    ///
+    /// \return A static string literal.
     virtual const char* name() const noexcept = 0;
 };
 
