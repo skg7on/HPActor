@@ -438,3 +438,134 @@ TEST_F(EventBasedActorTest, RepeatedBecomeCycle) {
     actor->receive(msg);
     EXPECT_EQ(actor->become_trace, "ABC");
 }
+
+// ═══════════════════════════════════════════════════════════════════
+// Section 3: receive() dispatch priority
+// ═══════════════════════════════════════════════════════════════════
+
+TEST_F(EventBasedActorTest, ProtoHandlerPriorityOverBehavior) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
+    };
+    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
+        actor->behavior_count++;
+    }});
+
+    MetricsRequest req;
+    inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
+
+    EXPECT_EQ(actor->on_count, 1);
+    EXPECT_EQ(actor->behavior_count, 0);
+}
+
+TEST_F(EventBasedActorTest, BehaviorFallbackForUnknownTag) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
+    };
+    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
+        actor->behavior_count++;
+    }});
+
+    // Known tag → proto handler fires
+    MetricsRequest req;
+    inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
+    EXPECT_EQ(actor->on_count, 1);
+    EXPECT_EQ(actor->behavior_count, 0);
+
+    // Unknown tag → behavior fallback
+    inject_message(actor, TypeTag::User, StreamBuffer{42});
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+    actor->receive(msg);
+    EXPECT_EQ(actor->on_count, 1);
+    EXPECT_EQ(actor->behavior_count, 1);
+}
+
+TEST_F(EventBasedActorTest, NoOpForUnknownTagAndEmptyBehavior) {
+    auto* actor = spawn_test_actor();
+
+    // No handlers, no behavior — receive on unknown tag should be a safe no-op
+    inject_message(actor, TypeTag::User, StreamBuffer{42});
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Section 4: Error paths and edge cases
+// ═══════════════════════════════════════════════════════════════════
+
+TEST_F(EventBasedActorTest, DeserializationFailureIsSafe) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
+    };
+
+    // Corrupted payload — ParseFromArray should fail for MetricsRequest
+    StreamBuffer corrupt = {0xFF, 0xFF, 0xFF, 0xFF};
+    inject_message(actor, TypeTag::MetricsRequestTag, corrupt);
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+    EXPECT_EQ(actor->on_count, 0);
+}
+
+TEST_F(EventBasedActorTest, UnknownTypeTagNoSideEffects) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
+    };
+
+    // Initialize handlers
+    MetricsRequest req;
+    inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
+    EXPECT_EQ(actor->on_count, 1);
+
+    // Send a completely unknown tag
+    inject_message(actor, TypeTag(0xDEAD), StreamBuffer{});
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+    EXPECT_EQ(actor->on_count, 1);
+}
+
+TEST_F(EventBasedActorTest, TwoConsecutiveMessagesBothHandled) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
+    };
+
+    MetricsRequest req;
+    inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
+    EXPECT_EQ(actor->on_count, 1);
+
+    inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
+    EXPECT_EQ(actor->on_count, 2);
+}
+
+TEST_F(EventBasedActorTest, EmptyPayloadSafe) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
+    };
+
+    // Empty payload — MetricsRequest has ByteSizeLong() == 0, so this is valid
+    StreamBuffer empty_payload;
+    inject_message(actor, TypeTag::MetricsRequestTag, empty_payload);
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+    EXPECT_EQ(actor->on_count, 1);
+}
