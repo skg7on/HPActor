@@ -18,6 +18,30 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/platform.hpp>
 
+/// \def FAULT_INJECT(path)
+/// \brief Deterministic fault injection hook placed at call sites.
+///
+/// Expands to an \c if statement whose body executes when a fault is scheduled
+/// at \p path for the current (domain, tick). The enclosing code should place
+/// the fault-action logic inside the controlled block:
+///
+/// \code{.cpp}
+/// FAULT_INJECT("hpactor.mailbox.enqueue.fail") {
+///     return EnqueueResult::failure(EnqueueResultCode::kCapacityExceeded);
+/// }
+/// \endcode
+///
+/// \param path A dot-separated string literal naming the injection site. Must
+///             match a registered \c FaultPoint path.
+///
+/// \note When \c HPACTOR_ENABLE_FAULT_INJECTION is \c OFF (compile-time),
+///       the macro expands to \c if(false) and the compiler eliminates all
+///       injection-site code. When enabled, the \c HPACTOR_UNLIKELY annotation
+///       on the \c check() call ensures the cold branch is predicted not-taken.
+///
+/// \note Thread safety: reads the calling thread's installed
+///       \c FaultController via \c FaultController::instance(). If no
+///       controller is installed, the branch is never taken.
 #if HPACTOR_ENABLE_FAULT_INJECTION
 #    define FAULT_INJECT(path)                                                 \
         if (auto* _fc = ::hpactor::fault::FaultController::instance();         \
