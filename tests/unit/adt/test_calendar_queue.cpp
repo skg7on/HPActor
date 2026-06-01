@@ -12,14 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// tests/unit/sched/test_calendar_queue.cpp
+// tests/unit/adt/test_calendar_queue.cpp
 
 #include <functional>
 #include <gtest/gtest.h>
-#include <hpactor/sched/calendar_queue.hpp>
-#include <hpactor/sched/scheduler.hpp>
+#include <hpactor/adt/calendar_queue.hpp>
 
-using namespace hpactor::sched;
+using namespace hpactor::adt;
 
 static constexpr int64_t ONE_MS = 1'000'000;
 
@@ -59,15 +58,6 @@ TEST_F(CalendarQueueTest, Cancel) {
 TEST_F(CalendarQueueTest, CancelNonexistent) {
     EXPECT_FALSE(q_.cancel(999));
     EXPECT_FALSE(q_.cancel(0));
-}
-
-TEST_F(CalendarQueueTest, IdValid) {
-    auto id = q_.schedule(ONE_MS, [] {});
-    EXPECT_GE(id, 1U);
-    TimerHandle h0{0};
-    EXPECT_FALSE(h0.valid());
-    TimerHandle h1{id};
-    EXPECT_TRUE(h1.valid());
 }
 
 TEST_F(CalendarQueueTest, ZeroDelayClamped) {

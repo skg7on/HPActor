@@ -12,52 +12,48 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-// tests/unit/sched/test_multi_priority_work_queue.cpp
+// tests/unit/adt/test_multi_priority_work_queue.cpp
 #include <gtest/gtest.h>
-#include <hpactor/sched/work_queue.hpp>
+#include <hpactor/adt/multi_priority_work_queue.hpp>
 #include <vector>
 
+struct TestItem {
+    int value;
+};
+
 TEST(MultiPriorityWorkQueueTest, PopReturnsFalseOnEmpty) {
-    hpactor::sched::MultiPriorityWorkQueue q(4);
-    hpactor::sched::WorkItem out;
+    hpactor::adt::MultiPriorityWorkQueue<TestItem> q(4);
+    TestItem out{0};
     EXPECT_FALSE(q.pop(out));
 }
 
 TEST(MultiPriorityWorkQueueTest, PushPopRoundTrip) {
-    hpactor::sched::MultiPriorityWorkQueue q(4);
-    hpactor::sched::WorkItem item;
-    item.actor = hpactor::ActorId{1};
-    item.deadline_ns = 1000;
-    item.sequence = 1;
-
+    hpactor::adt::MultiPriorityWorkQueue<TestItem> q(4);
+    TestItem item{42};
     q.push(0, item);
     EXPECT_EQ(q.depth_approx(), 1U);
 
-    hpactor::sched::WorkItem out;
+    TestItem out{0};
     EXPECT_TRUE(q.pop(out));
-    EXPECT_EQ(out.actor.value(), 1U);
+    EXPECT_EQ(out.value, 42);
     EXPECT_EQ(q.depth_approx(), 0U);
 }
 
 TEST(MultiPriorityWorkQueueTest, PriorityOrderingHigherFirst) {
-    hpactor::sched::MultiPriorityWorkQueue q(4);
-    hpactor::sched::WorkItem lo, hi;
-    lo.actor = hpactor::ActorId{1};
-    lo.deadline_ns = 2000;
-    lo.sequence = 1;
-    hi.actor = hpactor::ActorId{2};
-    hi.deadline_ns = 1000;
-    hi.sequence = 2;
+    hpactor::adt::MultiPriorityWorkQueue<TestItem> q(4);
+    TestItem lo{1};
+    TestItem hi{2};
+    TestItem mid{3};
 
-    q.push(3, lo); // low priority (3)
-    q.push(0, hi); // high priority (0)
-    q.push(2, lo); // also low
+    q.push(3, lo);
+    q.push(0, hi);
+    q.push(2, mid);
 
-    hpactor::sched::WorkItem out;
+    TestItem out{0};
     EXPECT_TRUE(q.pop(out));
-    EXPECT_EQ(out.actor.value(), 2U); // high priority first
+    EXPECT_EQ(out.value, 2); // high priority first
     EXPECT_TRUE(q.pop(out));
-    EXPECT_EQ(out.actor.value(), 1U); // priority 2 before priority 3
+    EXPECT_EQ(out.value, 3); // priority 2 before priority 3
     EXPECT_TRUE(q.pop(out));
-    EXPECT_EQ(out.actor.value(), 1U); // last remaining
+    EXPECT_EQ(out.value, 1); // last remaining
 }

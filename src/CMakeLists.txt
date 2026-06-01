@@ -74,7 +74,7 @@ add_library(hpactor_lib SHARED
     sched/edf_queue.cpp
     sched/a2ws.cpp
     sched/timing_wheel.cpp
-    sched/calendar_queue.cpp
+    adt/calendar_queue.cpp
     sched/coroutine_frame_pool.cpp
     sched/dedicated_thread_pool.cpp
     mem/segment_provider.cpp
