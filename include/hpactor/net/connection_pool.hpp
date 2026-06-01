@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/endpoint_circuit_breaker.hpp>
 #include <hpactor/net/endpoint_outbound_queue.hpp>
@@ -166,9 +168,26 @@ class ConnectionPool {
         return circuit_breaker_;
     }
 
+    /// \brief Set the metrics ring buffer for metric emission.
+    ///
+    /// \param[in] buf Pointer to the system-wide metrics ring buffer.
+    void
+    set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf) {
+        metrics_ring_buffer_ = buf;
+    }
+
   private:
     // Get connection via round-robin
     ConnectionPtr get_connection();
+
+    /// \brief Pack the remote endpoint into an ActorId for metric event
+    /// transport.
+    ///
+    /// For IPv4: packs (addr << 16) | port_nw into the ActorId value.
+    /// For IPv6: uses a hash of the address combined with the port.
+    ///
+    /// \return ActorId encoding the endpoint identity.
+    [[nodiscard]] ActorId pack_endpoint_for_metrics() const;
 
     // Schedule reconnect with backoff
     void schedule_reconnect();
@@ -197,6 +216,9 @@ class ConnectionPool {
 
     // Acceptor info for future connection establishment (set via prewarm_pool).
     std::vector<AcceptorInfo> acceptors_;
+
+    // Metrics ring buffer (optional, set via set_metrics_ring_buffer).
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_ = nullptr;
 };
 
 } // namespace net

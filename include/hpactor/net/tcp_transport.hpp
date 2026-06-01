@@ -14,6 +14,8 @@
 
 #pragma once
 
+#include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/event_loop.hpp>
@@ -79,6 +81,15 @@ class TcpTransport : public Transport {
         pool_config_ = cfg;
     }
 
+    /// \brief Set the metrics ring buffer for connection pool metric emission.
+    ///
+    /// Any existing or future pools created by this transport will receive
+    /// a pointer to the ring buffer.
+    ///
+    /// \param[in] buf Pointer to the system-wide metrics ring buffer.
+    void
+    set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf);
+
   private:
     void handle_accept(int client_fd, EndPoint remote_endpoint);
 
@@ -113,6 +124,9 @@ class TcpTransport : public Transport {
 
     // Completion callback for async send routing
     std::function<void(OpCompletion)> completion_callback_;
+
+    // Metrics ring buffer (optional, propagated to all connection pools).
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_ = nullptr;
 };
 
 } // namespace net

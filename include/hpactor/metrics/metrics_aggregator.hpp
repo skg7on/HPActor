@@ -19,7 +19,6 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <string>
 #include <unordered_map>
-
 namespace hpactor {
 class ActorSystem;
 } // namespace hpactor
@@ -84,6 +83,16 @@ class Aggregator {
     MetricFamily* circuit_state_family_ = nullptr;
     MetricFamily* circuit_trips_family_ = nullptr;
 
+    // Endpoint outbound queue metric families
+    MetricFamily* endpoint_outbound_messages_family_ = nullptr;
+    MetricFamily* endpoint_outbound_bytes_family_ = nullptr;
+    MetricFamily* endpoint_pressure_state_family_ = nullptr;
+    MetricFamily* endpoint_circuit_state_family_ = nullptr;
+    MetricFamily* endpoint_send_accepted_family_ = nullptr;
+    MetricFamily* endpoint_send_rejected_family_ = nullptr;
+    MetricFamily* endpoint_backpressure_signals_family_ = nullptr;
+    MetricFamily* endpoint_circuit_transitions_family_ = nullptr;
+
     int64_t active_actors_{0};
 
     /// \brief LRU-style cache mapping ActorId to actor type name for label
@@ -98,6 +107,19 @@ class Aggregator {
     /// \param[in] id Actor identifier.
     /// \return LabelSet with actor_id and actor_type labels populated.
     LabelSet make_actor_labels(ActorId id);
+
+    /// \brief Build a LabelSet for a given endpoint.
+    ///
+    /// The endpoint identity is encoded in the \p id.value() field as a
+    /// packed IPv4 address and port (addr<<16|port) for IPv4, or a hash
+    /// for IPv6. A cache is maintained to avoid repeated string conversion.
+    ///
+    /// \param[in] id ActorId carrying the packed endpoint identity.
+    /// \return LabelSet with an "endpoint" label.
+    LabelSet make_endpoint_labels(ActorId id);
+
+    /// \brief Cache mapping packed endpoint identity to endpoint label string.
+    mutable std::unordered_map<uint64_t, std::string> endpoint_label_cache_;
 };
 
 } // namespace hpactor::metrics

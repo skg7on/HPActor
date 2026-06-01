@@ -153,6 +153,12 @@ ActorSystem::ActorSystem(const Config& config)
         transport_ = std::make_unique<net::TcpTransport>(endpoint_, config.tls,
                                                          config.pool, nullptr);
 
+        // Propagate metrics ring buffer to transport for connection pool
+        // metrics
+        if (metrics_ring_buffer_) {
+            transport_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+        }
+
         rpc_channel_ =
             std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
 

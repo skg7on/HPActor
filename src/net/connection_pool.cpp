@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/frame.hpp>
 #include <hpactor/spawn.hpp>
@@ -90,6 +91,24 @@ bool ConnectionPool::try_send(const ActorAddress& target,
     PendingMessage msg{target, encoded, std::chrono::steady_clock::now()};
     auto result = outbound_queue_.try_enqueue(
         std::move(msg), mailbox::DeliveryMode::BestEffort, TypeTag::User);
+
+    // Emit metric events for endpoint outbound queue send result
+    if (metrics_ring_buffer_) {
+        metrics::MetricEvent evt{};
+        evt.actor_id = pack_endpoint_for_metrics();
+        evt.code = 0; // best_effort / queue_full
+        evt.value_hi = 1;
+        evt.timestamp_ns = static_cast<uint64_t>(
+            std::chrono::steady_clock::now().time_since_epoch().count());
+
+        if (result.accepted()) {
+            evt.event_type = metrics::MetricEventType::kEndpointSendAccepted;
+        } else {
+            evt.event_type = metrics::MetricEventType::kEndpointSendRejected;
+        }
+        metrics_ring_buffer_->try_push(evt);
+    }
+
     return result.accepted();
 }
 
@@ -295,6 +314,28 @@ void ConnectionPool::prewarm_pool(EndPoint ep,
     // The actual connection is established asynchronously on first use.
     // This just ensures the pool is ready so the first send() doesn't pay
     // discovery cost.
+}
+
+ActorId ConnectionPool::pack_endpoint_for_metrics() const {
+    // Pack the endpoint into a uint64_t for metric event transport.
+    // For IPv4: upper 32 bits = address, lower 16 bits = port (network byte
+    // order). For IPv6: fall back to a hash-based identifier.
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&remote_endpoint_)) {
+        uint64_t packed = (static_cast<uint64_t>(ipv4->addr) << 16) | ipv4->port_nw;
+        return ActorId(packed);
+    }
+    // For IPv6, combine address bytes with port via FNV-1a hash.
+    if (auto* ipv6 = std::get_if<Ipv6Endpoint>(&remote_endpoint_)) {
+        uint64_t hash = 0xcbf29ce484222325ULL; // FNV-1a offset basis
+        for (uint8_t byte : ipv6->addr) {
+            hash ^= byte;
+            hash *= 0x100000001b3ULL; // FNV-1a prime
+        }
+        hash ^= ipv6->port_nw;
+        hash *= 0x100000001b3ULL;
+        return ActorId(hash);
+    }
+    return ActorId(0);
 }
 
 } // namespace net
