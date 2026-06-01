@@ -70,11 +70,17 @@ void HybridScheduler::start() {
         worker_threads_.push_back(std::move(worker));
     }
 
-    // Start timer advancement thread
+    // Start timer advancement thread.
+    // When workers are paused (test mode), skip timer advancement so
+    // timer callbacks don't race with drain_ready() on worker deques.
     timer_thread_ = std::thread([this] {
         while (running_.load(std::memory_order_acquire)) {
-            auto now = std::chrono::steady_clock::now().time_since_epoch().count();
-            std::visit([&](auto& backend) { backend.advance(now); }, timer_backend_);
+            if (!workers_paused_.load(std::memory_order_acquire)) {
+                auto now =
+                    std::chrono::steady_clock::now().time_since_epoch().count();
+                std::visit([&](auto& backend) { backend.advance(now); },
+                           timer_backend_);
+            }
             std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });

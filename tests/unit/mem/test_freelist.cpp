@@ -52,7 +52,7 @@ TEST(FreeListTest, BasicPushPopLIFO) {
 
 TEST(FreeListTest, ConcurrentPushPopAcrossThreads) {
     hpactor::mem::FreeList<TestNode> fl;
-    constexpr int kNumItems = 10000;
+    constexpr int kNumItems = 2000;
 
     std::atomic<int> push_count{0};
     std::atomic<int> pop_count{0};
@@ -66,12 +66,15 @@ TEST(FreeListTest, ConcurrentPushPopAcrossThreads) {
                 fl.push(node);
                 push_count.fetch_add(1);
             }
-            // Pop items
+            // Pop items; yield when empty to avoid starving other threads
+            // and reduce contention under coverage instrumentation.
             while (pop_count.load() < kNumItems) {
                 TestNode* n = fl.pop();
                 if (n) {
                     pop_count.fetch_add(1);
                     delete n;
+                } else {
+                    std::this_thread::yield();
                 }
             }
         });

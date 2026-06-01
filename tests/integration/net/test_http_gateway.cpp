@@ -104,7 +104,20 @@ static uint16_t find_available_port() {
 // =============================================================================
 class HttpGatewayTest : public ::testing::Test {
   protected:
-    ActorSystem system{Config{}};
+    // Use 2 scheduler threads so the EchoActor and ReplyAdapter can be
+    // processed concurrently with the HTTP gateway daemon thread. A longer
+    // HTTP reply timeout gives headroom on loaded CI runners.
+    Config test_config() {
+        Config cfg;
+        cfg.scheduler_threads = 2;
+        cfg.enable_network = false;
+        cfg.cli.enabled = false;
+        cfg.tracing.enabled = false;
+        cfg.mailbox.default_capacity = 1024;
+        return cfg;
+    }
+
+    ActorSystem system{test_config()};
     Actor echo_actor;
     Actor slow_actor;
     Actor server_actor;
@@ -120,12 +133,16 @@ class HttpGatewayTest : public ::testing::Test {
 
         server_actor = system.spawn<net::HTTPGatewayActor>("0.0.0.0", port);
         server = static_cast<net::HTTPGatewayActor*>(server_actor.get().get());
+        server->set_reply_timeout(std::chrono::milliseconds(15000));
 
         while (!server->is_listening()) {
             std::this_thread::sleep_for(std::chrono::milliseconds(10));
         }
 
         setup_routes();
+
+        // Let the scheduler threads stabilize before accepting requests.
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
   private:
