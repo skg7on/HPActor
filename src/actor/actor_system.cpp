@@ -1113,6 +1113,14 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     apply_tracing_config(model.system.tracing);
 
+    // Wire transport outbound limits and circuit breaker config into pool
+    // config.
+    config_.pool.outbound_limits = model.system.transport_outbound_limits;
+    config_.pool.circuit_breaker_cfg = model.system.transport_circuit_breaker;
+    if (transport_) {
+        transport_->set_pool_config(config_.pool);
+    }
+
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
                      "topology bootstrap complete");
 

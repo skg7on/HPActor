@@ -69,6 +69,16 @@ class TcpTransport : public Transport {
         actor_msg_handler_ = std::move(h);
     }
 
+    /// \brief Update the pool config used for new connection pools.
+    ///
+    /// Existing pools are not affected — only pools created after this call
+    /// will use the updated config. Typically called during topology bootstrap
+    /// after outbound limits and circuit breaker config have been parsed from
+    /// TOML configuration.
+    void set_pool_config(const PoolConfig& cfg) {
+        pool_config_ = cfg;
+    }
+
   private:
     void handle_accept(int client_fd, EndPoint remote_endpoint);
 
