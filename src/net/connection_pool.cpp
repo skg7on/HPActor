@@ -27,7 +27,9 @@ namespace net {
 
 ConnectionPool::ConnectionPool(EndPoint remote_endpoint,
                                const PoolConfig& config, EventLoop* loop)
-    : remote_endpoint_(remote_endpoint), config_(config), loop_(loop) {}
+    : remote_endpoint_(remote_endpoint), config_(config), loop_(loop),
+      outbound_queue_(config.outbound_limits),
+      circuit_breaker_(config.circuit_breaker_cfg) {}
 
 ConnectionPool::~ConnectionPool() {
     abort();
@@ -50,14 +52,20 @@ void ConnectionPool::send(const ActorAddress& target, const StreamBuffer& encode
         return;
     }
 
+    if (!circuit_breaker_.allow_send()) {
+        return;
+    }
+
     ConnectionPtr conn = get_connection();
     if (conn) {
         conn->send(encoded);
         return;
     }
 
-    // No connection available, queue pending
-    add_pending(target, encoded);
+    // Queue through outbound queue
+    PendingMessage msg{target, encoded, std::chrono::steady_clock::now()};
+    outbound_queue_.try_enqueue(std::move(msg),
+                                mailbox::DeliveryMode::BestEffort, TypeTag::User);
 }
 
 bool ConnectionPool::try_send(const ActorAddress& target,
@@ -69,14 +77,20 @@ bool ConnectionPool::try_send(const ActorAddress& target,
         return false;
     }
 
+    if (!circuit_breaker_.allow_send()) {
+        return false;
+    }
+
     ConnectionPtr conn = get_connection();
     if (conn) {
         conn->send(encoded);
         return true;
     }
 
-    // No connection available — try to queue; fail if pending queue is full
-    return add_pending(target, encoded);
+    PendingMessage msg{target, encoded, std::chrono::steady_clock::now()};
+    auto result = outbound_queue_.try_enqueue(
+        std::move(msg), mailbox::DeliveryMode::BestEffort, TypeTag::User);
+    return result.accepted();
 }
 
 void ConnectionPool::send(const StreamBuffer& data) {
@@ -84,7 +98,7 @@ void ConnectionPool::send(const StreamBuffer& data) {
     ActorAddress target;
     target.endpoint =
         endpoint_ops::parse_endpoint(endpoint_ops::to_string(remote_endpoint_));
-    send(target, data);
+    (void)try_send(target, data);
 }
 
 void ConnectionPool::close() {
@@ -100,21 +114,25 @@ PoolStats ConnectionPool::stats() const {
     std::lock_guard<std::mutex> lock(mutex_);
     PoolStats s;
     s.active_connections = active_connections_.size();
-    s.pending_messages = pending_messages_.size();
+    s.pending_messages = outbound_queue_.total_messages();
+    s.pending_control_messages = outbound_queue_.control_messages();
+    s.pending_data_messages = outbound_queue_.data_messages();
+    s.pending_bytes = outbound_queue_.total_bytes();
     s.reconnect_attempts = reconnect_attempts_.load();
     s.is_connected = !active_connections_.empty();
+    s.pressure_state = static_cast<uint8_t>(outbound_queue_.pressure_state());
+    s.circuit_state = static_cast<uint8_t>(circuit_breaker_.state());
     return s;
 }
 
 size_t ConnectionPool::drain() {
     shutting_down_.store(true);
     std::lock_guard<std::mutex> lock(mutex_);
-    size_t unsent = pending_messages_.size();
+    size_t unsent = outbound_queue_.total_messages();
     for (auto& conn : active_connections_) {
         conn->close();
     }
     active_connections_.clear();
-    pending_messages_.clear();
     return unsent;
 }
 
@@ -125,7 +143,6 @@ void ConnectionPool::abort() {
         conn->close();
     }
     active_connections_.clear();
-    pending_messages_.clear();
 }
 
 void ConnectionPool::set_rpc_handler(rpc_response_handler handler) {
@@ -143,6 +160,7 @@ void ConnectionPool::on_connection_ready(ConnectionPtr conn) {
         std::lock_guard<std::mutex> lock(mutex_);
         active_connections_.push_back(conn);
     }
+    circuit_breaker_.record_success();
     flush_pending();
 }
 
@@ -154,6 +172,7 @@ void ConnectionPool::on_connection_error(ConnectionPtr conn, const error& err) {
                                               active_connections_.end(), conn),
                                   active_connections_.end());
     }
+    circuit_breaker_.record_failure();
     HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0, "connection error");
     schedule_reconnect();
 }
@@ -249,27 +268,18 @@ void ConnectionPool::flush_pending() {
     FAULT_INJECT("hpactor.connection_pool.flush.drop") {
         return;
     }
-    std::lock_guard<std::mutex> lock(mutex_);
-    while (!pending_messages_.empty() && !active_connections_.empty()) {
-        auto& msg = pending_messages_.front();
+    while (true) {
+        auto msg = outbound_queue_.try_dequeue();
+        if (!msg.has_value())
+            break;
+
         auto conn = get_connection();
         if (conn) {
-            conn->send(msg.data);
-            pending_messages_.pop_front();
+            conn->send(msg->data);
         } else {
-            break;
+            break; // No connection available, stop draining
         }
     }
-}
-
-bool ConnectionPool::add_pending(const ActorAddress& target,
-                                 const StreamBuffer& data) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    if (pending_messages_.size() >= config_.max_pending) {
-        return false;
-    }
-    pending_messages_.push_back({target, data, std::chrono::steady_clock::now()});
-    return true;
 }
 
 void ConnectionPool::add_connection(ConnectionPtr conn) {

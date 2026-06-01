@@ -16,7 +16,7 @@
 
 #include <hpactor/mailbox/detail/pressure_state_machine.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
-#include <hpactor/net/connection_pool.hpp>
+#include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
@@ -27,6 +27,13 @@
 #include <atomic>
 
 namespace hpactor::net {
+
+/// Pending message entry for outbound queue storage.
+struct PendingMessage {
+    ActorAddress target;
+    StreamBuffer data;
+    std::chrono::steady_clock::time_point enqueued_at;
+};
 
 struct EndpointOutboundLimits {
     size_t max_messages = 1000;
