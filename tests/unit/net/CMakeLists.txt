@@ -4,6 +4,7 @@ add_executable(test_unit_net
     test_communication_endpoint.cpp
     test_connection.cpp
     test_connection_pool.cpp
+    test_endpoint_circuit_breaker.cpp
     test_endpoint_outbound_queue.cpp
     test_gossip_membership.cpp
     test_http_parser.cpp
