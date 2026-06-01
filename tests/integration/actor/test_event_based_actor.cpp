@@ -15,6 +15,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle_state.hpp>
+#include <hpactor/actor/quarantine_reason.hpp>
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
@@ -23,6 +24,7 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <hpactor/cli_messages.pb.h>
 #include <hpactor/common.pb.h>
 #include <hpactor/messages.pb.h>
 
@@ -568,4 +570,211 @@ TEST_F(EventBasedActorTest, EmptyPayloadSafe) {
 
     EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
     EXPECT_EQ(actor->on_count, 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Section 5: System message interception
+// ═══════════════════════════════════════════════════════════════════
+
+TEST_F(EventBasedActorTest, LinkMsgInterceptedBeforeProtoHandler) {
+    auto* actor = spawn_test_actor();
+    auto* other = spawn_test_actor();
+
+    DownMessage pb;
+    pb.set_actor_id(other->id().value());
+    pb.set_reason_code(0);
+
+    StreamBuffer payload(pb.ByteSizeLong());
+    (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    inject_message(actor, TypeTag::LinkMsg, payload, other->address());
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+
+    auto* ctx = actor->context();
+    ASSERT_NE(ctx, nullptr);
+    bool found = false;
+    for (const auto& linked : ctx->linked_actors()) {
+        if (linked.id == other->id()) {
+            found = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+TEST_F(EventBasedActorTest, DownMsgCleansUpLinkedMonitored) {
+    auto* actor = spawn_test_actor();
+    auto* other = spawn_test_actor();
+
+    // First link 'other' to 'actor' via LinkMsg
+    {
+        DownMessage pb;
+        pb.set_actor_id(other->id().value());
+        StreamBuffer payload(pb.ByteSizeLong());
+        (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+        inject_message(actor, TypeTag::LinkMsg, payload, other->address());
+        TypedMessage msg;
+        ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+        actor->receive(msg);
+    }
+
+    // Now send DownMsg — should remove 'other' from linked_actors
+    DownMessage down_pb;
+    down_pb.set_actor_id(other->id().value());
+    down_pb.set_reason_code(42);
+    StreamBuffer payload(down_pb.ByteSizeLong());
+    (void)down_pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    inject_message(actor, TypeTag::DownMsg, payload, other->address());
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+
+    auto* ctx = actor->context();
+    ASSERT_NE(ctx, nullptr);
+    for (const auto& linked : ctx->linked_actors()) {
+        EXPECT_NE(linked.id, other->id());
+    }
+}
+
+TEST_F(EventBasedActorTest, MonitorMsgRegistration) {
+    auto* actor = spawn_test_actor();
+    auto* other = spawn_test_actor();
+
+    DownMessage pb;
+    pb.set_actor_id(other->id().value());
+    StreamBuffer payload(pb.ByteSizeLong());
+    (void)pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    inject_message(actor, TypeTag::MonitorMsg, payload, other->address());
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+
+    auto* ctx = actor->context();
+    ASSERT_NE(ctx, nullptr);
+    bool found = false;
+    for (const auto& m : ctx->monitored_actors()) {
+        if (m.id == other->id()) {
+            found = true;
+            break;
+        }
+    }
+    EXPECT_TRUE(found);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Section 6: Lifecycle gate
+// ═══════════════════════════════════════════════════════════════════
+
+TEST_F(EventBasedActorTest, QuarantinedActorRejectsUserMessages) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
+    };
+
+    // Transition to quarantined
+    auto* lc = actor->as_lifecycle();
+    ASSERT_NE(lc, nullptr);
+    lc->transition_to_quarantined(QuarantineReason::CircuitBreakerTrip);
+    ASSERT_TRUE(lc->is_quarantined());
+
+    // User-range tag (>= 0x1000) should be rejected by lifecycle gate
+    inject_message(actor, TypeTag::User, StreamBuffer{42});
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    actor->receive(msg);
+    EXPECT_EQ(actor->on_count, 0);
+}
+
+TEST_F(EventBasedActorTest, ActiveActorAcceptsUserMessages) {
+    auto* actor = spawn_test_actor();
+
+    actor->register_hook = [](TestEventHandler* a) {
+        a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
+    };
+
+    // Ensure the actor is in Active state for message acceptance
+    auto* lc = actor->as_lifecycle();
+    ASSERT_NE(lc, nullptr);
+    if (lc->state() == LifecycleState::kStarting) {
+        lc->transition(LifecycleState::kActive);
+    }
+
+    MetricsRequest req;
+    inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
+    EXPECT_EQ(actor->on_count, 1);
+}
+
+// ═══════════════════════════════════════════════════════════════════
+// Section 7: CLI dispatch
+// ═══════════════════════════════════════════════════════════════════
+
+TEST_F(EventBasedActorTest, InspectStateRequestReturnsMetadata) {
+    auto* actor = spawn_test_actor();
+
+    cli::InspectStateRequest req;
+    req.set_include_mailbox(true);
+    req.set_include_state(false);
+
+    StreamBuffer payload(req.ByteSizeLong());
+    (void)req.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    auto* reply_target = spawn_test_actor();
+    inject_message(actor, TypeTag::InspectStateRequestTag, payload,
+                   reply_target->address());
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+
+    auto* reply_mbox = reply_target->get_mailbox();
+    ASSERT_NE(reply_mbox, nullptr);
+    TypedMessage reply_msg;
+    ASSERT_TRUE(reply_mbox->try_pop(reply_msg));
+    EXPECT_EQ(reply_msg.type_id(), TypeTag::InspectStateResponseTag);
+
+    cli::InspectStateReply reply;
+    ASSERT_TRUE(reply.ParseFromArray(reply_msg.payload().data(),
+                                     static_cast<int>(reply_msg.payload().size())));
+    EXPECT_TRUE(reply.has_metadata());
+    EXPECT_GT(reply.metadata().actor_id(), 0u);
+}
+
+TEST_F(EventBasedActorTest, KillRequestDrivesLifecycleToStopped) {
+    auto* actor = spawn_test_actor();
+
+    cli::KillRequest req;
+    StreamBuffer payload(req.ByteSizeLong());
+    (void)req.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+
+    auto* reply_target = spawn_test_actor();
+    inject_message(actor, TypeTag::KillRequestTag, payload,
+                   reply_target->address());
+    TypedMessage msg;
+    ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
+
+    EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
+
+    auto* lc = actor->as_lifecycle();
+    ASSERT_NE(lc, nullptr);
+    EXPECT_EQ(lc->state(), LifecycleState::kStopped);
+
+    auto* reply_mbox = reply_target->get_mailbox();
+    ASSERT_NE(reply_mbox, nullptr);
+    TypedMessage reply_msg;
+    ASSERT_TRUE(reply_mbox->try_pop(reply_msg));
+    EXPECT_EQ(reply_msg.type_id(), TypeTag::KillResponseTag);
+
+    cli::KillReply reply;
+    ASSERT_TRUE(reply.ParseFromArray(reply_msg.payload().data(),
+                                     static_cast<int>(reply_msg.payload().size())));
+    EXPECT_TRUE(reply.success());
 }
