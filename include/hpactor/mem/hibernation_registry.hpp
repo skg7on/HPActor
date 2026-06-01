@@ -23,36 +23,67 @@
 
 namespace hpactor::mem {
 
-// Hibernation buffer: serialized actor state stored in cold memory.
+/// \brief Serialized actor state stored in cold memory during hibernation.
 struct HibernationBuffer {
-    void* ptr{nullptr};
-    size_t size{0};
-    uint64_t hibernated_at_ts{0};
-    uint32_t actor_id{0};
+    void* ptr{nullptr};           ///< Owned pointer to the serialized buffer.
+    size_t size{0};               ///< Size of the serialized buffer in bytes.
+    uint64_t hibernated_at_ts{0}; ///< Monotonic timestamp when hibernation
+                                  ///< completed.
+    uint32_t actor_id{0};         ///< ActorId that owns this buffer.
 };
 
-// Thread-safe registry mapping ActorId → HibernationBuffer.
-// Stores serialized actor state for hibernated actors.
+/// \brief Thread-safe registry mapping ActorId to HibernationBuffer.
+///
+/// Stores serialized actor state for hibernated actors. Ownership of the
+/// buffer memory transfers to the registry on \c store() and back to the
+/// caller on \c load().
+///
+/// \note Externally synchronized via internal mutex; all public methods are
+///       safe to call from any thread.
 class HibernationRegistry {
   public:
+    /// \brief Return the singleton instance.
     static HibernationRegistry& instance();
 
-    // Store a hibernated actor's buffer. Takes ownership of ptr.
+    /// \brief Store a hibernated actor's serialized buffer.
+    ///
+    /// Takes ownership of \p buf.ptr. The caller must not free it after
+    /// this call.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \param[in] buf Buffer descriptor (ownership transfers to registry).
     void store(ActorId id, HibernationBuffer buf);
 
-    // Retrieve and remove (on reactivation). Returns buffer with nullptr if not found.
+    /// \brief Retrieve and remove a hibernated actor's buffer (for
+    /// reactivation).
+    ///
+    /// Ownership of the returned buffer's pointer transfers to the caller.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return The buffer, with \c ptr == \c nullptr if not found.
     HibernationBuffer load(ActorId id);
 
-    // Remove without retrieving (on actor termination while hibernated).
+    /// \brief Remove an entry without retrieving the buffer.
+    ///
+    /// Used when a hibernated actor is terminated. The buffer memory is freed.
+    ///
+    /// \param[in] id Actor identifier.
     void remove(ActorId id);
 
-    // Check if an actor is hibernated.
+    /// \brief Check whether an actor is currently hibernated.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return \c true if a buffer is stored for this actor.
     bool contains(ActorId id) const;
 
-    // Total number of hibernated actors.
+    /// \brief Return the number of hibernated actors.
+    ///
+    /// \return Total count of stored buffers.
     size_t count() const;
 
-    // Total hibernated bytes across all actors.
+    /// \brief Return the total bytes consumed by all hibernated buffers.
+    ///
+    /// \return Sum of \c size across all stored buffers.
     size_t total_bytes() const;
 
   private:

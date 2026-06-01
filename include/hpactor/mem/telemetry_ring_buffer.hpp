@@ -19,28 +19,33 @@
 
 namespace hpactor::mem {
 
+/// \brief Types of allocation telemetry events recorded by the ring buffer.
 enum class AllocationEventType : uint8_t {
-    kAlloc = 0,
-    kFree = 1,
-    kCorruption = 2,
-    kHibernateIn = 3,
-    kHibernateOut = 4,
-    kRejected = 5,
+    kAlloc = 0,        ///< A managed allocation was satisfied.
+    kFree = 1,         ///< A managed block was freed.
+    kCorruption = 2,   ///< Canary or guard-page corruption detected.
+    kHibernateIn = 3,  ///< Actor state was serialized for hibernation.
+    kHibernateOut = 4, ///< Actor state was deserialized from hibernation.
+    kRejected = 5, ///< An allocation was rejected by region pressure admission.
 };
 
-// Allocation event for telemetry. Compact (32 bytes) for ring buffer density.
+/// \brief Compact (32-byte) allocation event stored in the telemetry ring
+/// buffer.
 struct AllocationEvent {
-    uint64_t timestamp;  // rdtsc or monotonic ns
-    uint32_t actor_id;   // owning actor
-    uint16_t block_size; // user bytes requested
-    uint8_t size_class;  // SizeClass index
-    uint8_t region_type; // RegionType
-    uint8_t event_type;  // 0=alloc, 1=free, 2=corruption, 3=hibernate_in,
-                         // 4=hibernate_out
-    uint8_t _pad[7];     // align to 32B
+    uint64_t timestamp;  ///< Monotonic timestamp (rdtsc or steady_clock).
+    uint32_t actor_id;   ///< Owning actor identifier.
+    uint16_t block_size; ///< User bytes requested.
+    uint8_t size_class;  ///< SizeClass index the request mapped to.
+    uint8_t region_type; ///< RegionType the allocation was charged against.
+    uint8_t event_type;  ///< AllocationEventType value.
+    uint8_t _pad[7];     ///< Padding to 32 B alignment.
 };
 
-// Alias for backward compatibility — delegates to the shared ADT.
+/// \brief Alias for the MPSC ring buffer specialized for allocation events.
+///
+/// Delegates to the shared \c adt::MpscRingBuffer ADT.
+///
+/// \tparam Capacity Ring buffer capacity in number of events (default 65536).
 template <size_t Capacity = 65536>
 using TelemetryRingBuffer = adt::MpscRingBuffer<AllocationEvent, Capacity>;
 

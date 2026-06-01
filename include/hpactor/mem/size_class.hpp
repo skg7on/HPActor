@@ -24,15 +24,25 @@ using hpactor::adt::size_for_class;
 using hpactor::adt::SizeClass;
 } // namespace hpactor::mem
 
-// AllocHeader (32 bytes) + CanaryFooter (8 bytes) = 40 bytes overhead
+/// \brief Per-block fixed overhead in bytes: AllocHeader (32 B) + CanaryFooter
+/// (8 B).
 inline constexpr size_t kAllocOverhead = 40;
 
 namespace hpactor::mem {
 
+/// \brief Return the total block size (user payload + allocator overhead) for a
+/// given size class.
+///
+/// \param[in] sc The size class.
+/// \return Total bytes occupied by one block of this class.
 constexpr size_t block_size(SizeClass sc) noexcept {
     return size_for_class(sc) + kAllocOverhead;
 }
 
+/// \brief Return the user-payload size given a total block size.
+///
+/// \param[in] block_sz Total block size (as returned by block_size()).
+/// \return User-usable bytes within the block.
 constexpr size_t user_size(size_t block_sz) noexcept {
     return block_sz - kAllocOverhead;
 }
