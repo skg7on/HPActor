@@ -123,6 +123,7 @@ TEST(RuntimeWorkflow, ActorCountReflectsLiveActors) {
 
 TEST(RuntimeWorkflow, LinkUnlinkApi) {
     Config cfg = test::config_with_scheduler(1);
+    cfg.scheduler_start_paused = true;
     ActorSystem system(cfg);
 
     auto a1 = system.spawn<test::CountingActor>();
@@ -130,14 +131,23 @@ TEST(RuntimeWorkflow, LinkUnlinkApi) {
 
     auto* actor1 = static_cast<test::CountingActor*>(a1.get().get());
 
+    // link_to/unlink_from update the calling actor's linked_ list
+    // synchronously; the SchedulerTestDriver drains any LinkMsg/UnlinkMsg
+    // system messages sent to the target actor.
+    hpactor::test::SchedulerTestDriver driver(system);
+
     // Link A1 → A2
     actor1->link_to(a2.address());
+    driver.drain_until([&]() { return true; });
+
     auto linked = actor1->context()->linked_actors();
     EXPECT_FALSE(linked.empty());
     EXPECT_EQ(linked[0], a2.address());
 
     // Unlink
     actor1->unlink_from(a2.address());
+    driver.drain_until([&]() { return true; });
+
     linked = actor1->context()->linked_actors();
     EXPECT_TRUE(linked.empty());
 }
