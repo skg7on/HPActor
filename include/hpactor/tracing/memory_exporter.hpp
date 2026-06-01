@@ -21,14 +21,35 @@
 
 namespace hpactor::tracing {
 
+/// \brief In-memory span exporter for testing and inspection.
+///
+/// Accumulates all exported spans in a vector. Callers can snapshot or
+/// clear the accumulated spans for test assertions.
+///
+/// \note Thread safety: internally synchronized via std::mutex.
+///       snapshot() and clear() may be called from any thread.
 class MemoryExporter final : public SpanExporter {
   public:
+    /// \brief Append spans to the in-memory store.
+    ///
+    /// \param[in] batch Span batch to store.
+    /// \return Always success.
     result<void> export_batch(std::span<const SpanRecord> batch) noexcept override;
+
+    /// \brief No-op (in-memory exporter has no resources to release).
     void shutdown() noexcept override {}
+
+    /// \brief Exporter name.
     const char* name() const noexcept override {
         return "memory";
     }
+
+    /// \brief Take a snapshot of all accumulated spans.
+    ///
+    /// \return A copy of the internal span vector.
     std::vector<SpanRecord> snapshot() const;
+
+    /// \brief Clear all accumulated spans.
     void clear();
 
   private:
