@@ -181,11 +181,11 @@ void TlsConnection::start_client_handshake() {
 
 void TlsConnection::handle_read() {
     // Read from fd into accumulation buffer
+    uint8_t local_buf[kReadChunkSize];
     while (true) {
-        uint8_t* area = read_buffer_.reserve_tail(kReadChunkSize);
-        ssize_t n = ::read(fd_, area, kReadChunkSize);
+        ssize_t n = ::read(fd_, local_buf, kReadChunkSize);
         if (n > 0) {
-            read_buffer_.commit_tail(static_cast<size_t>(n));
+            read_buffer_.append(local_buf, static_cast<size_t>(n));
         } else if (n == 0) {
             break;
         } else {
@@ -221,6 +221,9 @@ void TlsConnection::process_buffer() {
             StreamBuffer msg_payload(payload.begin() + 1, payload.end());
 
             switch (msg_type) {
+                case TlsMessageType::ClientHello:
+                    handle_client_hello(msg_payload);
+                    break;
                 case TlsMessageType::ServerHello:
                     handle_server_hello(msg_payload);
                     break;

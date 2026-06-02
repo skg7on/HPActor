@@ -478,3 +478,27 @@ TEST_F(TlsConnectionTest, InvalidCertificateVerification) {
     EXPECT_TRUE(result != TlsContext::CertVerifyResult::Ok ||
                 result == TlsContext::CertVerifyResult::Ok);
 }
+
+TEST_F(TlsConnectionTest, ServerHandlesClientHello) {
+    auto ctx = make_test_ctx();
+    EventLoop loop;
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto server = TlsConnection::create_server(
+        server_fd, LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
+
+    // Send a raw ClientHello to the server
+    StreamBuffer client_hello = build_raw_client_hello(ctx.public_key());
+    ssize_t written = ::write(client_fd, client_hello.data(), client_hello.size());
+    ASSERT_GT(written, 0);
+
+    // Server processes the ClientHello — should NOT enter Error state
+    server->handle_read();
+
+    EXPECT_NE(server->state(), ConnectionState::Error);
+    EXPECT_NE(server->session_state(), TlsSessionState::Error);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
