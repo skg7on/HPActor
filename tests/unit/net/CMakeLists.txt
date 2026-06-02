@@ -17,6 +17,7 @@ add_executable(test_unit_net
     test_service_discovery.cpp
     test_tls_context.cpp
     test_tls_integration.cpp
+    test_udp_transport_smoke.cpp
 )
 target_link_libraries(test_unit_net hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_net PROPERTIES TIMEOUT 30)
