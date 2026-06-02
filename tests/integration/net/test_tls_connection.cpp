@@ -621,3 +621,37 @@ TEST_F(TlsConnectionTest, CompleteHandshakeReachesEncrypted) {
     ::close(pair.client_fd);
     ::close(pair.server_fd);
 }
+
+TEST_F(TlsConnectionTest, TruncatedClientHelloCausesError) {
+    auto ctx = make_test_ctx();
+    EventLoop loop;
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto server = TlsConnection::create_server(
+        server_fd, LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, &loop);
+
+    // Send ClientHello with only 10 bytes of payload (less than kNonceSize=32)
+    StreamBuffer payload;
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::ClientHello));
+    for (int i = 0; i < 10; i++)
+        payload.push_back(static_cast<uint8_t>(i));
+
+    StreamBuffer short_msg;
+    short_msg.push_back(static_cast<uint8_t>(TlsMessageType::ClientHello));
+    size_t len = payload.size();
+    short_msg.push_back(static_cast<uint8_t>((len >> 16) & 0xFF));
+    short_msg.push_back(static_cast<uint8_t>((len >> 8) & 0xFF));
+    short_msg.push_back(static_cast<uint8_t>(len & 0xFF));
+    short_msg.insert(short_msg.end(), payload.begin(), payload.end());
+
+    ssize_t written = ::write(client_fd, short_msg.data(), short_msg.size());
+    ASSERT_EQ(written, static_cast<ssize_t>(short_msg.size()));
+
+    server->handle_read();
+
+    EXPECT_EQ(server->state(), ConnectionState::Error);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
