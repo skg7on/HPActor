@@ -556,6 +556,13 @@ class ActorSystem {
 
     // ── Network access ────────────────────────────────────────────────────
 
+    /// \brief Access the network event loop.
+    ///
+    /// Returns \c nullptr if networking is not enabled.
+    net::EventLoop* event_loop() {
+        return network_loop_.get();
+    }
+
     /// \brief Primary transport for remote messaging.
     ///
     /// Returns \c nullptr if networking is not enabled.
