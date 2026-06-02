@@ -29,6 +29,8 @@
 #include <openssl/evp.h>
 #include <openssl/x509.h>
 
+#include "tls_test_helpers.hpp"
+
 using namespace hpactor;
 using namespace hpactor::net;
 
@@ -73,63 +75,6 @@ static TlsContext make_test_ctx(uint16_t port = 12345) {
     return TlsContext::from_config(config);
 }
 
-// -----------------------------------------------------------------------------
-// Temporary local cert helpers (will move to tests/support/tls_test_helpers.hpp)
-// -----------------------------------------------------------------------------
-namespace {
-struct LocalTestCerts {
-    StreamBuffer cert_der;
-    StreamBuffer key_der;
-    StreamBuffer pub_key_der;
-};
-
-LocalTestCerts generate_local_certs(const char* cn = "test") {
-    LocalTestCerts c;
-    EVP_PKEY* pkey = EVP_PKEY_new();
-    EVP_PKEY_CTX* pctx = EVP_PKEY_CTX_new_id(EVP_PKEY_RSA, nullptr);
-    EVP_PKEY_keygen_init(pctx);
-    EVP_PKEY_CTX_set_rsa_keygen_bits(pctx, 2048);
-    EVP_PKEY_keygen(pctx, &pkey);
-    EVP_PKEY_CTX_free(pctx);
-
-    X509* x509 = X509_new();
-    ASN1_INTEGER_set(X509_get_serialNumber(x509), 1);
-    X509_gmtime_adj(X509_get_notBefore(x509), 0);
-    X509_gmtime_adj(X509_get_notAfter(x509), 31536000L);
-    X509_set_pubkey(x509, pkey);
-    X509_NAME* name = X509_NAME_new();
-    X509_NAME_add_entry_by_txt(name, "CN", MBSTRING_ASC,
-                               reinterpret_cast<const unsigned char*>(cn), -1, -1,
-                               0);
-    X509_set_subject_name(x509, name);
-    X509_set_issuer_name(x509, name);
-    X509_NAME_free(name);
-    X509_sign(x509, pkey, EVP_sha256());
-
-    int cl = i2d_X509(x509, nullptr);
-    c.cert_der.resize(static_cast<size_t>(cl));
-    unsigned char* cp = c.cert_der.data();
-    i2d_X509(x509, &cp);
-
-    int kl = i2d_PrivateKey(pkey, nullptr);
-    c.key_der.resize(static_cast<size_t>(kl));
-    unsigned char* kp = c.key_der.data();
-    i2d_PrivateKey(pkey, &kp);
-
-    X509_free(x509);
-    EVP_PKEY_free(pkey);
-    return c;
-}
-
-net::TlsContext make_local_ctx(const LocalTestCerts& c, uint16_t port) {
-    net::TlsConfig cfg;
-    cfg.endpoint = hpactor::endpoint_ops::parse_endpoint(
-        "127.0.0.1:" + std::to_string(port));
-    cfg.own_cert_der = c.cert_der;
-    cfg.own_key_der = c.key_der;
-    return net::TlsContext::from_config(cfg);
-}
-} // anonymous namespace
 
 class TlsConnectionTest : public ::testing::Test {};
 
@@ -605,10 +550,10 @@ drive_handshake(net::TlsContext& server_ctx, net::TlsContext& client_ctx) {
 }
 
 TEST_F(TlsConnectionTest, CompleteHandshakeReachesEncrypted) {
-    auto server_certs = generate_local_certs("server");
-    auto client_certs = generate_local_certs("client");
-    auto server_ctx = make_local_ctx(server_certs, 54321);
-    auto client_ctx = make_local_ctx(client_certs, 12345);
+    auto server_certs = test::generate_test_certs("server");
+    auto client_certs = test::generate_test_certs("client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
 
     auto pair = drive_handshake(server_ctx, client_ctx);
 
