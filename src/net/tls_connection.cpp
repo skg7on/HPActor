@@ -181,14 +181,16 @@ void TlsConnection::start_client_handshake() {
 
 void TlsConnection::handle_read() {
     // Read from fd into accumulation buffer
-    uint8_t local_buf[kReadChunkSize];
     while (true) {
-        ssize_t n = ::read(fd_, local_buf, kReadChunkSize);
+        uint8_t* area = read_buffer_.reserve_tail(kReadChunkSize);
+        ssize_t n = ::read(fd_, area, kReadChunkSize);
         if (n > 0) {
-            read_buffer_.append(local_buf, static_cast<size_t>(n));
+            read_buffer_.commit_tail(static_cast<size_t>(n));
         } else if (n == 0) {
+            read_buffer_.commit_tail(0); // undo reserve
             break;
         } else {
+            read_buffer_.commit_tail(0); // undo reserve
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 break;
             break;
