@@ -290,6 +290,16 @@ StreamBuffer TlsConnection::build_client_hello() {
     return msg;
 }
 
+StreamBuffer TlsConnection::build_server_hello() {
+    StreamBuffer payload;
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::ServerHello));
+    payload.insert(payload.end(), server_nonce_.begin(), server_nonce_.end());
+
+    StreamBuffer msg = format_tls_message(TlsMessageType::ServerHello, payload);
+    handshake_messages_.insert(handshake_messages_.end(), msg.begin(), msg.end());
+    return msg;
+}
+
 StreamBuffer TlsConnection::build_certificate() {
     StreamBuffer payload;
     // Certificate data from TLS context

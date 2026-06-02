@@ -128,6 +128,7 @@ class TlsConnection : public Connection,
 
     // Handshake message builders
     StreamBuffer build_client_hello();
+    StreamBuffer build_server_hello();
     StreamBuffer build_certificate();
     StreamBuffer build_certificate_verify(const Nonce& challenge);
     StreamBuffer build_finished();
