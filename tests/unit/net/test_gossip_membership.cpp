@@ -16,6 +16,7 @@
 // Uses FRIEND_TEST declarations in the header instead of #define private
 // public.
 
+#include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/net/gossip_membership.hpp>
 
 #include <gtest/gtest.h>
@@ -63,7 +64,7 @@ TEST_F(GossipMembershipTest, ConstructionDefaults) {
     EXPECT_EQ(gm.incarnation_, 1u);
     EXPECT_FALSE(gm.needs_dissemination_);
     EXPECT_TRUE(gm.members_.empty());
-    EXPECT_EQ(gm.udp_socket_, -1);
+    EXPECT_EQ(gm.transport_.get(), nullptr);
 }
 
 TEST_F(GossipMembershipTest, BootstrapSoloCluster) {
@@ -375,6 +376,514 @@ TEST_F(GossipMembershipTest, WireEncodeDecodeMetadata) {
     EXPECT_EQ(out_pb[0].identity.acceptors[0].handshake_version, 1u);
     EXPECT_EQ(out_pb[0].identity.acceptors[0].protocol_version, 1u);
     EXPECT_FALSE(out_pb[0].identity.acceptors[0].tls_required);
+}
+
+// ── Integration tests (protocol flow with FakeUdpTransport) ──────
+
+class GossipProtocolIntegrationTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+        fc_.install();
+    }
+    void TearDown() override {
+        fc_.remove();
+    }
+
+    // Helper: create a GossipConfig for a node at the given port.
+    static GossipConfig cfg_for(uint16_t port, const char* host = "127.0.0.1") {
+        GossipConfig cfg;
+        cfg.gossip_port = port;
+        cfg.local_state.identity.endpoint = ep(port);
+        cfg.local_state.identity.host = host;
+        cfg.protocol_period = std::chrono::milliseconds(100);
+        cfg.ping_timeout = std::chrono::milliseconds(50);
+        cfg.suspicion_timeout = std::chrono::milliseconds(200);
+        cfg.dead_timeout = std::chrono::milliseconds(1000);
+        return cfg;
+    }
+
+    fault::FaultController fc_;
+};
+
+TEST_F(GossipProtocolIntegrationTest, JoinFlow) {
+    // Helper lambda: route all packets from `from`'s transport to `to`'s
+    // handle_packet.  Defined in the test body so it executes with friend
+    // access (FRIEND_TEST grants friendship to the GTest-generated test
+    // class, not the fixture).
+    auto deliver_packets = [](GossipMembership& from, GossipMembership& to,
+                              const std::string& src_host = "127.0.0.1",
+                              uint16_t src_port = 9000) {
+        auto* t = static_cast<FakeUdpTransport*>(from.transport_.get());
+        for (const auto& pkt : t->sent_packets) {
+            to.handle_packet(pkt.data, src_host, src_port);
+        }
+        t->clear_sent();
+    };
+
+    // Node A: solo node (seed)
+    auto cfg_a = cfg_for(9000);
+    auto transport_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(transport_a));
+    // Manually bootstrap A (like start() does, but without EventLoop)
+    node_a.incarnation_ = 100;
+    Member self_a;
+    self_a.identity.endpoint = ep(9000);
+    self_a.incarnation = 100;
+    self_a.status = MemberStatus::Alive;
+    self_a.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9000)] = std::move(self_a);
+
+    // Node B: joins via A as seed
+    auto cfg_b = cfg_for(9001);
+    cfg_b.seeds.push_back(ep(9000));
+    auto transport_b = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_b(cfg_b, std::move(transport_b));
+    node_b.incarnation_ = 200;
+
+    // B sends Join to A
+    node_b.send_join(ep(9000));
+
+    // Deliver B's Join to A
+    deliver_packets(node_b, node_a);
+
+    // A should now know about B (via merge in handle_join)
+    EXPECT_EQ(node_a.members_.size(), 2u);
+    EXPECT_NE(node_a.members_.find(ep(9001)), node_a.members_.end());
+    EXPECT_EQ(node_a.members_[ep(9001)].status, MemberStatus::Alive);
+
+    // A should have sent a SyncRsp back to B
+    auto* ta = static_cast<FakeUdpTransport*>(node_a.transport_.get());
+    ASSERT_FALSE(ta->sent_packets.empty());
+
+    // Deliver A's SyncRsp to B
+    deliver_packets(node_a, node_b);
+
+    // B should now know about A
+    EXPECT_EQ(node_b.members_.size(), 2u);
+    EXPECT_NE(node_b.members_.find(ep(9000)), node_b.members_.end());
+    EXPECT_EQ(node_b.members_[ep(9000)].status, MemberStatus::Alive);
+}
+
+TEST_F(GossipProtocolIntegrationTest, ProtocolRoundPingAck) {
+    auto deliver = [](GossipMembership& from, GossipMembership& to) {
+        auto* t = static_cast<FakeUdpTransport*>(from.transport_.get());
+        for (const auto& pkt : t->sent_packets) {
+            to.handle_packet(pkt.data, "127.0.0.1", 9000);
+        }
+        t->clear_sent();
+    };
+
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    auto cfg_b = cfg_for(9001);
+    auto t_b = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_b(cfg_b, std::move(t_b));
+    node_b.incarnation_ = 200;
+
+    // Both know each other
+    for (uint16_t p = 9000; p <= 9001; ++p) {
+        Member m;
+        m.identity.endpoint = ep(p);
+        m.status = MemberStatus::Alive;
+        m.incarnation = 100 + (p - 9000) * 100;
+        m.last_seen = std::chrono::steady_clock::now();
+        node_a.members_[ep(p)] = m;
+        node_b.members_[ep(p)] = m;
+    }
+
+    node_a.protocol_round();
+    EXPECT_NE(node_a.pending_pings_.find(ep(9001)), node_a.pending_pings_.end());
+
+    deliver(node_a, node_b);
+    auto* tb = static_cast<FakeUdpTransport*>(node_b.transport_.get());
+    ASSERT_FALSE(tb->sent_packets.empty());
+
+    deliver(node_b, node_a);
+    EXPECT_EQ(node_a.pending_pings_.find(ep(9001)), node_a.pending_pings_.end());
+}
+
+TEST_F(GossipProtocolIntegrationTest, IndirectProbePingReq) {
+    auto deliver = [](GossipMembership& from, GossipMembership& to) {
+        auto* t = static_cast<FakeUdpTransport*>(from.transport_.get());
+        for (const auto& pkt : t->sent_packets) {
+            to.handle_packet(pkt.data, "127.0.0.1", 9000);
+        }
+        t->clear_sent();
+    };
+
+    // 3 nodes: A (requester), B (proxy), C (target)
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    auto cfg_b = cfg_for(9001);
+    auto t_b = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_b(cfg_b, std::move(t_b));
+    node_b.incarnation_ = 200;
+
+    auto cfg_c = cfg_for(9002);
+    auto t_c = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_c(cfg_c, std::move(t_c));
+    node_c.incarnation_ = 300;
+
+    // All three know each other as Alive
+    for (auto* n : {&node_a, &node_b, &node_c}) {
+        for (uint16_t p = 9000; p <= 9002; ++p) {
+            Member m;
+            m.identity.endpoint = ep(p);
+            m.status = MemberStatus::Alive;
+            m.incarnation = 100 + (p - 9000) * 100;
+            m.last_seen = std::chrono::steady_clock::now();
+            n->members_[ep(p)] = std::move(m);
+        }
+    }
+
+    // A has an expired pending ping for C (first expiry)
+    auto now = std::chrono::steady_clock::now();
+    node_a.pending_pings_[ep(9002)] =
+        PendingPing{now - std::chrono::milliseconds(100), false, {}};
+
+    node_a.protocol_round();
+
+    auto* ta = static_cast<FakeUdpTransport*>(node_a.transport_.get());
+    ASSERT_FALSE(ta->sent_packets.empty());
+
+    deliver(node_a, node_b);
+
+    auto* tb = static_cast<FakeUdpTransport*>(node_b.transport_.get());
+    ASSERT_FALSE(tb->sent_packets.empty());
+
+    deliver(node_b, node_c);
+
+    auto* tc = static_cast<FakeUdpTransport*>(node_c.transport_.get());
+    ASSERT_FALSE(tc->sent_packets.empty());
+
+    deliver(node_c, node_b);
+
+    ASSERT_FALSE(tb->sent_packets.empty());
+
+    deliver(node_b, node_a);
+
+    EXPECT_EQ(node_a.pending_pings_.find(ep(9002)), node_a.pending_pings_.end());
+    EXPECT_EQ(node_a.members_[ep(9002)].status, MemberStatus::Alive);
+}
+
+TEST_F(GossipProtocolIntegrationTest, FailureDetectionSuspicious) {
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    for (uint16_t p = 9000; p <= 9001; ++p) {
+        Member m;
+        m.identity.endpoint = ep(p);
+        m.status = MemberStatus::Alive;
+        m.incarnation = 100;
+        m.last_seen = std::chrono::steady_clock::now();
+        node_a.members_[ep(p)] = std::move(m);
+    }
+
+    // Expired pending ping for B in a 2-node cluster (no indirect probes
+    // available)
+    auto now = std::chrono::steady_clock::now();
+    node_a.pending_pings_[ep(9001)] =
+        PendingPing{now - std::chrono::milliseconds(100), false, {}};
+
+    node_a.protocol_round();
+
+    EXPECT_EQ(node_a.members_[ep(9001)].status, MemberStatus::Suspicious);
+    EXPECT_EQ(node_a.pending_pings_.find(ep(9001)), node_a.pending_pings_.end());
+}
+
+TEST_F(GossipProtocolIntegrationTest, FailureDetectionDead) {
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    Member self;
+    self.identity.endpoint = ep(9000);
+    self.status = MemberStatus::Alive;
+    self.incarnation = 100;
+    self.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9000)] = std::move(self);
+
+    Member suspicious;
+    suspicious.identity.endpoint = ep(9001);
+    suspicious.status = MemberStatus::Suspicious;
+    suspicious.incarnation = 200;
+    suspicious.last_seen =
+        std::chrono::steady_clock::now() - std::chrono::seconds(10);
+    node_a.members_[ep(9001)] = std::move(suspicious);
+
+    bool callback_fired = false;
+    Member callback_member;
+    node_a.on_member_change([&](const Member& m, bool) {
+        callback_fired = true;
+        callback_member = m;
+    });
+
+    node_a.protocol_round();
+
+    EXPECT_EQ(node_a.members_[ep(9001)].status, MemberStatus::Dead);
+    EXPECT_TRUE(callback_fired);
+    EXPECT_EQ(callback_member.identity.endpoint, ep(9001));
+}
+
+TEST_F(GossipProtocolIntegrationTest, LeavePropagation) {
+    auto deliver = [](GossipMembership& from, GossipMembership& to) {
+        auto* t = static_cast<FakeUdpTransport*>(from.transport_.get());
+        for (const auto& pkt : t->sent_packets) {
+            to.handle_packet(pkt.data, "127.0.0.1", 9000);
+        }
+        t->clear_sent();
+    };
+
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    auto cfg_b = cfg_for(9001);
+    auto t_b = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_b(cfg_b, std::move(t_b));
+    node_b.incarnation_ = 200;
+
+    for (uint16_t p = 9000; p <= 9001; ++p) {
+        Member m;
+        m.identity.endpoint = ep(p);
+        m.status = MemberStatus::Alive;
+        m.incarnation = 100 + (p - 9000) * 100;
+        m.last_seen = std::chrono::steady_clock::now();
+        node_a.members_[ep(p)] = m;
+        node_b.members_[ep(p)] = m;
+    }
+
+    bool callback_fired = false;
+    node_a.on_member_change([&](const Member&, bool) { callback_fired = true; });
+
+    node_b.send_leave(ep(9000));
+    deliver(node_b, node_a);
+
+    EXPECT_EQ(node_a.members_[ep(9001)].status, MemberStatus::Left);
+    EXPECT_TRUE(callback_fired);
+}
+
+TEST_F(GossipProtocolIntegrationTest, PiggybackDissemination) {
+    auto deliver = [](GossipMembership& from, GossipMembership& to) {
+        auto* t = static_cast<FakeUdpTransport*>(from.transport_.get());
+        for (const auto& pkt : t->sent_packets) {
+            to.handle_packet(pkt.data, "127.0.0.1", 9000);
+        }
+        t->clear_sent();
+    };
+
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    auto cfg_c = cfg_for(9002);
+    auto t_c = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_c(cfg_c, std::move(t_c));
+    node_c.incarnation_ = 300;
+
+    // A knows: self (Alive), B (Suspicious), C (Alive)
+    Member self_a;
+    self_a.identity.endpoint = ep(9000);
+    self_a.status = MemberStatus::Alive;
+    self_a.incarnation = 100;
+    self_a.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9000)] = self_a;
+
+    Member susp_b;
+    susp_b.identity.endpoint = ep(9001);
+    susp_b.status = MemberStatus::Suspicious;
+    susp_b.incarnation = 200;
+    susp_b.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9001)] = susp_b;
+
+    Member alive_c;
+    alive_c.identity.endpoint = ep(9002);
+    alive_c.status = MemberStatus::Alive;
+    alive_c.incarnation = 300;
+    alive_c.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9002)] = alive_c;
+
+    // C knows: self (Alive), A (Alive) — but NOT B
+    Member self_c;
+    self_c.identity.endpoint = ep(9002);
+    self_c.status = MemberStatus::Alive;
+    self_c.incarnation = 300;
+    self_c.last_seen = std::chrono::steady_clock::now();
+    node_c.members_[ep(9002)] = self_c;
+
+    Member alive_a;
+    alive_a.identity.endpoint = ep(9000);
+    alive_a.status = MemberStatus::Alive;
+    alive_a.incarnation = 100;
+    alive_a.last_seen = std::chrono::steady_clock::now();
+    node_c.members_[ep(9000)] = alive_a;
+
+    EXPECT_EQ(node_c.members_.find(ep(9001)), node_c.members_.end());
+
+    node_a.protocol_round();
+    deliver(node_a, node_c);
+
+    auto it = node_c.members_.find(ep(9001));
+    ASSERT_NE(it, node_c.members_.end());
+    EXPECT_EQ(it->second.status, MemberStatus::Suspicious);
+    EXPECT_EQ(it->second.incarnation, 200u);
+}
+
+TEST_F(GossipProtocolIntegrationTest, IncarnationConflictResolution) {
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    Member b_in_a;
+    b_in_a.identity.endpoint = ep(9001);
+    b_in_a.status = MemberStatus::Alive;
+    b_in_a.incarnation = 10;
+    b_in_a.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9000)] = Member{};
+    node_a.members_[ep(9001)] = b_in_a;
+
+    // Stale piggyback: inc=8 Dead → should be ignored
+    std::vector<PiggybackEntry> stale;
+    PiggybackEntry stale_e;
+    stale_e.type = PiggybackType::Dead;
+    stale_e.identity.endpoint = ep(9001);
+    stale_e.incarnation = 8;
+    stale.push_back(stale_e);
+    node_a.apply_piggyback(stale);
+
+    EXPECT_EQ(node_a.members_[ep(9001)].status, MemberStatus::Alive);
+    EXPECT_EQ(node_a.members_[ep(9001)].incarnation, 10u);
+
+    // Fresher piggyback: inc=12 Dead → should be accepted
+    std::vector<PiggybackEntry> fresh;
+    PiggybackEntry fresh_e;
+    fresh_e.type = PiggybackType::Dead;
+    fresh_e.identity.endpoint = ep(9001);
+    fresh_e.incarnation = 12;
+    fresh.push_back(fresh_e);
+    node_a.apply_piggyback(fresh);
+
+    EXPECT_EQ(node_a.members_[ep(9001)].status, MemberStatus::Dead);
+    EXPECT_EQ(node_a.members_[ep(9001)].incarnation, 12u);
+}
+
+TEST_F(GossipProtocolIntegrationTest, MemberChangeCallback) {
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+    node_a.members_[ep(9000)] = Member{};
+
+    std::vector<std::pair<Member, bool>> events;
+    node_a.on_member_change(
+        [&](const Member& m, bool joined) { events.emplace_back(m, joined); });
+
+    // Add B as Alive, then mark dead — callback fires for Dead
+    Member b;
+    b.identity.endpoint = ep(9001);
+    b.status = MemberStatus::Alive;
+    b.incarnation = 200;
+    b.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9001)] = b;
+
+    node_a.mark_dead(ep(9001));
+    ASSERT_EQ(events.size(), 1u);
+    EXPECT_EQ(events[0].first.identity.endpoint, ep(9001));
+    EXPECT_FALSE(events[0].second); // joined=false for Dead
+
+    // Test leave callback
+    node_a.handle_leave(ep(9001), 300);
+    ASSERT_EQ(events.size(), 2u);
+    EXPECT_EQ(events[1].first.identity.endpoint, ep(9001));
+    EXPECT_FALSE(events[1].second);
+}
+
+TEST_F(GossipProtocolIntegrationTest, TombstonePurging) {
+    auto cfg_a = cfg_for(9000);
+    cfg_a.dead_timeout = std::chrono::milliseconds(100);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    Member self;
+    self.identity.endpoint = ep(9000);
+    self.status = MemberStatus::Alive;
+    self.incarnation = 100;
+    self.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9000)] = self;
+
+    // Ancient Dead member
+    Member dead;
+    dead.identity.endpoint = ep(9001);
+    dead.status = MemberStatus::Dead;
+    dead.incarnation = 200;
+    dead.last_seen = std::chrono::steady_clock::now() - std::chrono::seconds(60);
+    node_a.members_[ep(9001)] = dead;
+
+    EXPECT_EQ(node_a.members_.size(), 2u);
+
+    node_a.protocol_round();
+
+    EXPECT_EQ(node_a.members_.find(ep(9001)), node_a.members_.end());
+    EXPECT_NE(node_a.members_.find(ep(9000)), node_a.members_.end());
+    EXPECT_EQ(node_a.members_.size(), 1u);
+}
+
+TEST_F(GossipProtocolIntegrationTest, FaultInjectionPacketLoss) {
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    auto* t_a_raw = t_a.get();
+    GossipMembership node_a(cfg_a, std::move(t_a));
+    node_a.incarnation_ = 100;
+
+    Member self;
+    self.identity.endpoint = ep(9000);
+    self.status = MemberStatus::Alive;
+    self.incarnation = 100;
+    self.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9000)] = self;
+
+    Member peer;
+    peer.identity.endpoint = ep(9001);
+    peer.status = MemberStatus::Alive;
+    peer.incarnation = 200;
+    peer.last_seen = std::chrono::steady_clock::now();
+    node_a.members_[ep(9001)] = peer;
+
+    // Normal send — packet should appear in transport
+    node_a.send_ping(ep(9001));
+    EXPECT_FALSE(t_a_raw->sent_packets.empty());
+    t_a_raw->clear_sent();
+
+    // Enable the ping.drop fault point — requires a loaded schedule
+    auto* fc = hpactor::fault::FaultController::instance();
+    ASSERT_NE(fc, nullptr) << "FaultController not initialized";
+
+    hpactor::fault::FaultSchedule schedule;
+    hpactor::fault::add_entry_to(schedule, hpactor::fault::FaultDomain::kGossip, 1)
+        .drop("hpactor.gossip.ping.drop");
+    fc->load(schedule);
+    fc->enable("hpactor.gossip.ping.drop");
+
+    node_a.send_ping(ep(9001));
+    EXPECT_TRUE(t_a_raw->sent_packets.empty());
+
+    fc->disable();
+
+    node_a.send_ping(ep(9001));
+    EXPECT_FALSE(t_a_raw->sent_packets.empty());
 }
 
 } // namespace hpactor::net
