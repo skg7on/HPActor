@@ -342,6 +342,38 @@ StreamBuffer TlsConnection::build_finished() {
     return format_tls_message(TlsMessageType::Finished, payload);
 }
 
+void TlsConnection::handle_client_hello(const StreamBuffer& data) {
+    if (handshake_state_ != TlsHandshakeState::WaitingForServerHello) {
+        set_handshake_state(TlsHandshakeState::Error);
+        return;
+    }
+
+    if (data.size() < kNonceSize) {
+        set_handshake_state(TlsHandshakeState::Error);
+        return;
+    }
+
+    // Generate server nonce
+    RAND_bytes(server_nonce_.data(), static_cast<int>(kNonceSize));
+
+    // Extract client nonce from ClientHello
+    std::memcpy(client_nonce_.data(), data.data(), kNonceSize);
+
+    // Send ServerHello with our nonce
+    StreamBuffer server_hello = build_server_hello();
+    send_raw(server_hello);
+
+    // Send our certificate
+    StreamBuffer cert_msg = build_certificate();
+    send_raw(cert_msg);
+
+    // Generate pre-master secret
+    pre_master_secret_.resize(48);
+    RAND_bytes(pre_master_secret_.data(), 48);
+
+    set_handshake_state(TlsHandshakeState::WaitingForCertificate);
+}
+
 void TlsConnection::handle_server_hello(const StreamBuffer& data) {
     if (handshake_state_ != TlsHandshakeState::WaitingForServerHello) {
         set_handshake_state(TlsHandshakeState::Error);

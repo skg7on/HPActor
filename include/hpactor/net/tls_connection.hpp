@@ -134,6 +134,7 @@ class TlsConnection : public Connection,
     StreamBuffer build_finished();
 
     // Handshake message handlers
+    void handle_client_hello(const StreamBuffer& data);
     void handle_server_hello(const StreamBuffer& data);
     void handle_certificate(const StreamBuffer& data);
     void handle_certificate_verify(const StreamBuffer& data);
