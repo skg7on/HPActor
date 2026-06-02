@@ -16,12 +16,10 @@
 
 #include <hpactor/net/event_loop.hpp>
 
-#include <atomic>
 #include <cstdint>
 #include <functional>
 #include <memory>
 #include <string>
-#include <thread>
 #include <vector>
 
 namespace hpactor::net {
@@ -95,8 +93,6 @@ class RealUdpTransport : public IUdpTransport {
     int sock_ = -1;
     ReceiveCallback receive_cb_;
     std::vector<uint8_t> recv_buffer_;
-    std::atomic<bool> running_{false};
-    std::thread recv_thread_;
 };
 
 } // namespace hpactor::net

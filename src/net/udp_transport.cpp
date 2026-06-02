@@ -19,13 +19,10 @@
 
 #include <arpa/inet.h>
 #include <netinet/in.h>
-#include <poll.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
-#include <atomic>
 #include <cstring>
-#include <thread>
 
 namespace hpactor::net {
 
@@ -55,21 +52,9 @@ bool RealUdpTransport::bind(uint16_t port) {
         return false;
     }
 
-    // Spawn a dedicated polling thread for receiving UDP data.
-    // We do NOT use the EventLoop's kqueue/epoll for UDP because kevent()
-    // on macOS does not reliably detect EVFILT_READ on non-blocking UDP
-    // sockets registered via add_fd().  A dedicated poll() + recvfrom()
-    // loop avoids the issue entirely.
-    running_.store(true);
-    recv_thread_ = std::thread([this]() {
-        while (running_.load()) {
-            struct pollfd pfd;
-            pfd.fd = sock_;
-            pfd.events = POLLIN;
-            int ready = poll(&pfd, 1, 100);
-            if (ready <= 0 || !running_.load())
-                continue;
-
+    if (loop_) {
+        loop_->add_fd(sock_, EventLoop::Event::Read);
+        loop_->set_read_handler(sock_, [this](int /*fd*/) {
             struct sockaddr_in src_addr{};
             socklen_t src_addr_len = sizeof(src_addr);
 
@@ -95,9 +80,8 @@ bool RealUdpTransport::bind(uint16_t port) {
                     receive_cb_(data, from_host, from_port);
                 }
             }
-        }
-    });
-
+        });
+    }
     return true;
 }
 
@@ -122,11 +106,11 @@ void RealUdpTransport::send(const StreamBuffer& data, const EndPoint& dest) {
 }
 
 void RealUdpTransport::close() {
-    running_.store(false);
-    if (recv_thread_.joinable()) {
-        recv_thread_.join();
-    }
     if (sock_ >= 0) {
+        if (loop_) {
+            loop_->clear_read_handler(sock_);
+            loop_->remove_fd(sock_);
+        }
         ::close(sock_);
         sock_ = -1;
     }
