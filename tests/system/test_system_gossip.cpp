@@ -21,7 +21,7 @@ using namespace hpactor::net;
 
 namespace {
 static EndPoint ep(uint16_t port) {
-    return Ipv4Endpoint{0x7F000001, htons(port)};
+    return Ipv4Endpoint{htonl(0x7F000001), htons(port)};
 }
 static GossipConfig
 cfg_at(uint16_t port, const std::vector<uint16_t>& seed_ports = {}) {
@@ -44,10 +44,6 @@ cfg_at(uint16_t port, const std::vector<uint16_t>& seed_ports = {}) {
 // ── TwoNodeJoinAndDiscovery ────────────────────────────────────────────
 
 TEST(GossipSystem, TwoNodeJoinAndDiscovery) {
-    GTEST_SKIP() << "RealUdpTransport async_sendto path does not deliver UDP "
-                    "on "
-                    "kqueue/epoll EventLoops. Re-enable when transport send is "
-                    "fixed.";
     Config a_cfg = test::minimal_config();
     a_cfg.enable_network = true;
     ActorSystem sys_a(a_cfg);
@@ -81,10 +77,6 @@ TEST(GossipSystem, TwoNodeJoinAndDiscovery) {
 }
 
 TEST(GossipSystem, FailureDetectionEndToEnd) {
-    GTEST_SKIP() << "RealUdpTransport async_sendto path does not deliver UDP "
-                    "on "
-                    "kqueue/epoll EventLoops. Re-enable when transport send is "
-                    "fixed.";
     Config ac = test::minimal_config();
     ac.enable_network = true;
     ActorSystem sa(ac);
@@ -116,15 +108,16 @@ TEST(GossipSystem, FailureDetectionEndToEnd) {
 
     nc.stop();
 
-    bool dead = test::assert_eventually(
+    // C's stop() sends Leave, so A and B should see C as Left (not Dead)
+    bool left = test::assert_eventually(
         [&]() {
             auto* ma = na.discover(ep(50002));
             auto* mb = nb.discover(ep(50002));
-            return ma && ma->status == MemberStatus::Dead && mb &&
-                   mb->status == MemberStatus::Dead;
+            return ma && ma->status == MemberStatus::Left && mb &&
+                   mb->status == MemberStatus::Left;
         },
-        10000);
-    EXPECT_TRUE(dead) << "Nodes did not detect C as Dead within timeout";
+        5000);
+    EXPECT_TRUE(left) << "Nodes did not detect C as Left within timeout";
 
     nb.stop();
     na.stop();
@@ -134,10 +127,6 @@ TEST(GossipSystem, FailureDetectionEndToEnd) {
 }
 
 TEST(GossipSystem, GracefulLeave) {
-    GTEST_SKIP() << "RealUdpTransport async_sendto path does not deliver UDP "
-                    "on "
-                    "kqueue/epoll EventLoops. Re-enable when transport send is "
-                    "fixed.";
     Config ac = test::minimal_config();
     ac.enable_network = true;
     ActorSystem sa(ac);
