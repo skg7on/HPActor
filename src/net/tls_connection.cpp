@@ -307,6 +307,8 @@ StreamBuffer TlsConnection::build_server_hello() {
 
 StreamBuffer TlsConnection::build_certificate() {
     StreamBuffer payload;
+    // Inner type byte for correct dispatch on the receiving side
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::Certificate));
     // Certificate data from TLS context
     if (!tls_context_) {
         set_handshake_state(TlsHandshakeState::Error);
@@ -322,6 +324,8 @@ StreamBuffer TlsConnection::build_certificate() {
 
 StreamBuffer TlsConnection::build_certificate_verify(const Nonce& challenge) {
     StreamBuffer payload;
+    // Inner type byte for correct dispatch on the receiving side
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::CertificateVerify));
     // Sign the challenge nonce with our private key
     StreamBuffer data_to_sign(challenge.begin(), challenge.end());
     if (!tls_context_) {
@@ -339,6 +343,8 @@ StreamBuffer TlsConnection::build_certificate_verify(const Nonce& challenge) {
 
 StreamBuffer TlsConnection::build_finished() {
     StreamBuffer payload;
+    // Inner type byte for correct dispatch on the receiving side
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::Finished));
     // Compute verify_data using PRF
     StreamBuffer verify_data =
         prf_sha256(master_secret_, "finished", handshake_messages_);
@@ -438,6 +444,10 @@ void TlsConnection::handle_certificate_verify(const StreamBuffer& data) {
 
     // Derive session keys
     derive_session_keys(pre_master_secret_, client_nonce_, server_nonce_);
+
+    // Send Finished to complete our side of the handshake
+    StreamBuffer finished = build_finished();
+    send_raw(finished);
 
     set_handshake_state(TlsHandshakeState::WaitingForFinished);
 }
@@ -589,8 +599,16 @@ void TlsConnection::set_session_state(TlsSessionState new_state) {
 }
 
 void TlsConnection::send_raw(const StreamBuffer& data) {
-    if (fd_ < 0 || !loop_)
+    if (fd_ < 0)
         return;
+
+    // When no event loop is available (e.g., test mode), write directly to
+    // the fd to keep the handshake synchronous and avoid the is_sending_
+    // flag blocking subsequent sends during the same process_buffer cycle.
+    if (!loop_) {
+        ::write(fd_, data.data(), data.size());
+        return;
+    }
 
     // Append data to write buffer
     write_buffer_.append(data.data(), data.size());

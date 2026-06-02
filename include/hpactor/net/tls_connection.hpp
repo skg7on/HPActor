@@ -122,6 +122,7 @@ class TlsConnection : public Connection,
         return session_state_;
     }
 
+
   private:
     TlsConnection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                   TlsContext* tls_context, EventLoop* loop);
