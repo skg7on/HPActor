@@ -491,7 +491,7 @@ TEST_F(TlsConnectionTest, ServerHandlesClientHello) {
     // Send a raw ClientHello to the server
     StreamBuffer client_hello = build_raw_client_hello(ctx.public_key());
     ssize_t written = ::write(client_fd, client_hello.data(), client_hello.size());
-    ASSERT_GT(written, 0);
+    ASSERT_EQ(written, static_cast<ssize_t>(client_hello.size()));
 
     // Server processes the ClientHello — should NOT enter Error state
     server->handle_read();
