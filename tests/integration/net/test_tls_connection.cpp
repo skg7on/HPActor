@@ -21,12 +21,15 @@
 #include <fcntl.h>
 #include <memory>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <unistd.h>
 
 #include <gtest/gtest.h>
 
 #include <openssl/asn1.h>
 #include <openssl/evp.h>
+#include <openssl/rand.h>
+#include <openssl/rsa.h>
 #include <openssl/x509.h>
 
 #include "tls_test_helpers.hpp"
@@ -599,4 +602,119 @@ TEST_F(TlsConnectionTest, TruncatedClientHelloCausesError) {
 
     ::close(client_fd);
     ::close(server_fd);
+}
+
+// -----------------------------------------------------------------------------
+// TlsContext crypto tests with real RSA keys
+// -----------------------------------------------------------------------------
+
+TEST_F(TlsConnectionTest, SignDataWithRealKey) {
+    auto certs = test::generate_test_certs("sign-test");
+    auto ctx = test::make_tls_context_from_certs(certs, 12345);
+
+    StreamBuffer data = {'s', 'i', 'g', 'n', '_', 'm', 'e'};
+    StreamBuffer signature = ctx.sign_data(data);
+
+    // With a real RSA key, signature should be non-empty (RSA-2048 sig is 256 bytes)
+    EXPECT_FALSE(signature.empty());
+    EXPECT_EQ(signature.size(), 256u);
+}
+
+TEST_F(TlsConnectionTest, DecryptPreMasterSecretRoundtrip) {
+    auto certs = test::generate_test_certs("decrypt-test");
+    auto ctx = test::make_tls_context_from_certs(certs, 12345);
+
+    // Encrypt 48-byte pre-master secret with the public key (RSA encrypt)
+    StreamBuffer plaintext(48);
+    RAND_bytes(plaintext.data(), 48);
+
+    const unsigned char* key_data = certs.pub_key_der.data();
+    EVP_PKEY* pubkey = d2i_PUBKEY(nullptr, &key_data,
+                                  static_cast<long>(certs.pub_key_der.size()));
+    ASSERT_NE(pubkey, nullptr);
+
+    EVP_PKEY_CTX* pctx = EVP_PKEY_CTX_new(pubkey, nullptr);
+    ASSERT_NE(pctx, nullptr);
+    ASSERT_EQ(EVP_PKEY_encrypt_init(pctx), 1);
+    ASSERT_EQ(EVP_PKEY_CTX_set_rsa_padding(pctx, RSA_PKCS1_PADDING), 1);
+
+    size_t out_len = 0;
+    EVP_PKEY_encrypt(pctx, nullptr, &out_len, plaintext.data(), plaintext.size());
+    StreamBuffer ciphertext(out_len);
+    EVP_PKEY_encrypt(pctx, ciphertext.data(), &out_len, plaintext.data(),
+                     plaintext.size());
+    ciphertext.resize(out_len);
+
+    EVP_PKEY_CTX_free(pctx);
+    EVP_PKEY_free(pubkey);
+
+    // Decrypt with our private key
+    StreamBuffer decrypted;
+    bool ok = ctx.decrypt_pre_master_secret(ciphertext, decrypted);
+    EXPECT_TRUE(ok);
+    EXPECT_EQ(decrypted, plaintext);
+}
+
+TEST_F(TlsConnectionTest, VerifyValidCertificate) {
+    auto certs = test::generate_test_certs("verify-valid");
+    auto ctx = test::make_tls_context_from_certs(certs, 12345);
+
+    auto result = ctx.verify_certificate(certs.cert_der);
+    EXPECT_EQ(result, TlsContext::CertVerifyResult::Ok);
+}
+
+TEST_F(TlsConnectionTest, VerifyInvalidCertificate) {
+    auto certs = test::generate_test_certs("verify-invalid");
+    auto ctx = test::make_tls_context_from_certs(certs, 12345);
+
+    // Garbage data that is not valid DER
+    StreamBuffer invalid_cert = {0x00, 0x01, 0x02, 0x03, 0xFF, 0xFE};
+    auto result = ctx.verify_certificate(invalid_cert);
+    EXPECT_EQ(result, TlsContext::CertVerifyResult::Invalid);
+}
+
+TEST_F(TlsConnectionTest, FromFilesystemLoadsCerts) {
+    auto certs = test::generate_test_certs("fs-test");
+
+    // Create temp directory
+    std::string cert_dir = "/tmp/hpactor_test_certs_" +
+                           std::to_string(::getpid());
+    ::mkdir(cert_dir.c_str(), 0755);
+
+    // Build expected filenames from endpoint
+    auto ep = hpactor::endpoint_ops::parse_endpoint("127.0.0.1:19999");
+    std::string safe_id = hpactor::endpoint_ops::to_string(ep);
+    std::replace(safe_id.begin(), safe_id.end(), ':', '_');
+
+    std::string cert_path = cert_dir + "/node_" + safe_id + ".pem";
+    std::string key_path = cert_dir + "/node_" + safe_id + "_key.pem";
+
+    // Write cert in PEM format
+    const unsigned char* cptr = certs.cert_der.data();
+    X509* x509 = d2i_X509(nullptr, &cptr, static_cast<long>(certs.cert_der.size()));
+    ASSERT_NE(x509, nullptr);
+    FILE* cf = fopen(cert_path.c_str(), "w");
+    ASSERT_NE(cf, nullptr);
+    PEM_write_X509(cf, x509);
+    fclose(cf);
+
+    // Write key in PEM format
+    const unsigned char* kptr = certs.key_der.data();
+    EVP_PKEY* pkey = d2i_PrivateKey(EVP_PKEY_RSA, nullptr, &kptr,
+                                    static_cast<long>(certs.key_der.size()));
+    ASSERT_NE(pkey, nullptr);
+    FILE* kf = fopen(key_path.c_str(), "w");
+    ASSERT_NE(kf, nullptr);
+    PEM_write_PrivateKey(kf, pkey, nullptr, nullptr, 0, nullptr, nullptr);
+    fclose(kf);
+
+    auto ctx = net::TlsContext::from_filesystem(ep, cert_dir);
+    EXPECT_EQ(ctx.endpoint(), ep);
+    EXPECT_FALSE(ctx.certificate().empty());
+
+    X509_free(x509);
+    EVP_PKEY_free(pkey);
+    ::unlink(cert_path.c_str());
+    ::unlink(key_path.c_str());
+    ::rmdir(cert_dir.c_str());
 }
