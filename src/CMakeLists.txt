@@ -61,6 +61,7 @@ add_library(hpactor_lib SHARED
     net/static_discovery.cpp
     net/actor_location_cache.cpp
     net/gossip_membership.cpp
+    net/udp_transport.cpp
     net/hybrid_discovery.cpp
     net/http_parser.cpp
     net/http_gateway.cpp
