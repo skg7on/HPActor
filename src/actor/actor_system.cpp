@@ -1014,23 +1014,29 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
         actors_.emplace(id, actor);
     }
 
-    // Create mailbox with capacity from ActorDef
+    // Create mailbox with capacity from ActorDef, capture pointer while lock is
+    // held
+    mailbox::MPSCActorMailbox<TypedMessage>* mbox = nullptr;
     {
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-        mailboxes_.emplace(
+        auto [it, _] = mailboxes_.emplace(
             id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
                     id, scheduler_.get(), mailbox_config_for_actor_def(def)));
+        mbox = it->second.get();
     }
 
     // Create actor context and set it on the actor
     auto* local = static_cast<LocalActor*>(actor.get());
     auto actor_ctx = std::make_unique<ActorContext>(Actor(actor), this);
     local->set_context(actor_ctx.get());
-    actor_contexts_.emplace(id, std::move(actor_ctx));
+    {
+        std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
+        actor_contexts_.emplace(id, std::move(actor_ctx));
+    }
 
     // Set scheduler and mailbox on actor
     actor->set_scheduler(scheduler_.get());
-    actor->set_mailbox(mailboxes_[id].get());
+    actor->set_mailbox(mbox);
 
     // Register with scheduler. Actor class policy is authoritative for
     // specialized actors such as DaemonActor and DenseComputingActor; TOML can
