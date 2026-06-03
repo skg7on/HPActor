@@ -758,33 +758,36 @@ Actor ActorSystem::spawn(Args&&... args) {
         actors_.emplace(id, actor);
     }
 
-    // Create mailbox
+    // Create mailbox, capture pointer while lock is held
+    mailbox::MPSCActorMailbox<TypedMessage>* mbox = nullptr;
     {
         std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-        mailboxes_.emplace(
+        auto [it, _] = mailboxes_.emplace(
             id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
                     id, scheduler_.get(), mailbox_config_for_spawn()));
+        mbox = it->second.get();
     }
 
     // Create actor context and set it on the actor
     auto actor_ctx = std::make_unique<ActorContext>(Actor(actor), this);
     actor->set_context(actor_ctx.get());
-    actor_contexts_.emplace(id, std::move(actor_ctx));
+    {
+        std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
+        actor_contexts_.emplace(id, std::move(actor_ctx));
+    }
 
     // Set scheduler and mailbox on actor
     actor->set_scheduler(scheduler_.get());
-    actor->set_mailbox(mailboxes_[id].get());
+    actor->set_mailbox(mbox);
 
     // Wire metrics ring buffer to actor and mailbox
     if (metrics_ring_buffer_) [[unlikely]] {
-        auto* mbox = mailboxes_[id].get();
         mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
         actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
     }
 
     // Wire logger to actor and mailbox
     if (logger_) [[unlikely]] {
-        auto* mbox = mailboxes_[id].get();
         mbox->set_logger(logger_);
         actor->set_logger(logger_);
     }
