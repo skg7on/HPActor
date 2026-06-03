@@ -14,18 +14,14 @@
 
 #include <hpactor/net/gossip_membership.hpp>
 
+#include <hpactor/net/udp_transport.hpp>
+
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/gossip.pb.h>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/net/registrar.hpp> // for endpoint_ops, HostResolver
-#include <hpactor/fault/fault_macros.hpp>
-
-#include <arpa/inet.h>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <unistd.h>
 
 #include <algorithm>
-#include <cstring>
 #include <random>
 
 namespace hpactor::net {
@@ -142,46 +138,6 @@ Member from_pb_member(const PbGossipMember& pb) {
     return m;
 }
 
-// ---- Async UDP send via EventLoop ----
-// Uses the EventLoop's async_sendto (non-blocking, completion-driven).
-// Falls back to blocking sendto when no EventLoop is available.
-
-void async_udp_send(EventLoop* loop, int sock, const StreamBuffer& data,
-                    const EndPoint& dest) {
-    FAULT_INJECT("hpactor.gossip.packet.loss") {
-        return;  // silently drop packet
-    }
-    if (sock < 0 || data.empty())
-        return;
-
-    if (loop) {
-        struct iovec iov;
-        iov.iov_base = const_cast<uint8_t*>(data.data());
-        iov.iov_len = data.size();
-
-        sockaddr_in addr{};
-        addr.sin_family = AF_INET;
-        if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&dest)) {
-            addr.sin_addr.s_addr = ipv4->addr;
-            addr.sin_port = ipv4->port_nw;
-        }
-
-        loop->backend()->async_sendto(
-            sock, &iov, 1, reinterpret_cast<const sockaddr*>(&addr),
-            sizeof(addr), ActorId(0), static_cast<uint32_t>(OpType::SendTo));
-    } else {
-        // Legacy fallback: blocking sendto
-        sockaddr_in addr{};
-        addr.sin_family = AF_INET;
-        if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&dest)) {
-            addr.sin_addr.s_addr = ipv4->addr;
-            addr.sin_port = ipv4->port_nw;
-        }
-        sendto(sock, data.data(), data.size(), 0,
-               reinterpret_cast<const struct sockaddr*>(&addr), sizeof(addr));
-    }
-}
-
 // ---- Per-instance state (RNG, join retry, forwarded pings) ----
 
 struct InstanceExtras {
@@ -215,10 +171,15 @@ static void cleanup_extras(const GossipMembership* self) {
 // =============================================================================
 
 GossipMembership::GossipMembership(const GossipConfig& cfg, EventLoop* loop)
-    : config_(cfg), loop_(loop), incarnation_(1) // Start at 1 so 0 means "no
-                                                 // incarnation"
-      ,
-      recv_buffer_(kGossipMaxMsgSize) {}
+    : config_(cfg), loop_(loop),
+      transport_(loop ? std::make_unique<RealUdpTransport>(loop)
+                      : std::unique_ptr<IUdpTransport>()),
+      incarnation_(1) {}
+
+GossipMembership::GossipMembership(const GossipConfig& cfg,
+                                   std::unique_ptr<IUdpTransport> transport)
+    : config_(cfg), loop_(nullptr), transport_(std::move(transport)),
+      incarnation_(1) {}
 
 GossipMembership::~GossipMembership() {
     stop();
@@ -234,7 +195,12 @@ void GossipMembership::start() {
     incarnation_ = static_cast<uint64_t>(
         std::chrono::system_clock::now().time_since_epoch().count());
 
-    setup_udp_socket();
+    if (transport_) {
+        transport_->bind(config_.gossip_port);
+        transport_->set_receive_callback(
+            [this](const StreamBuffer& data, const std::string& host,
+                   uint16_t port) { handle_packet(data, host, port); });
+    }
 
     // Add self to the membership table.
     {
@@ -304,8 +270,10 @@ void GossipMembership::stop() {
         }
     }
 
-    // Tear down the UDP socket.
-    teardown_udp_socket();
+    // Tear down the UDP transport.
+    if (transport_) {
+        transport_->close();
+    }
 
     // Clear local state.
     {
@@ -620,53 +588,14 @@ void GossipMembership::protocol_round() {
     }
     auto now = std::chrono::steady_clock::now();
 
-    // ── 1. Pick peers and send Pings ──────────────────────────────────────
-    {
-        std::shared_lock<std::shared_mutex> lock(members_mutex_);
-
-        // Collect Alive members excluding self.
-        std::vector<EndPoint> alive;
-        for (const auto& [ep, m] : members_) {
-            if (m.status == MemberStatus::Alive &&
-                !(ep == config_.local_state.identity.endpoint)) {
-                alive.push_back(ep);
-            }
-        }
-
-        if (!alive.empty()) {
-            auto targets = pick_random_peers(config_.fanout, {});
-            // pick_random_peers already handles the alive filtering; but it
-            // uses the shared_lock we already hold.  To avoid double-locking
-            // we build the targets list above and pass it directly.
-
-            // Build piggyback entries for outgoing Pings.
-            auto pb = build_piggyback_impl(config_, incarnation_,
-                                           needs_dissemination_, members_);
-            // Lock must be held while reading members_ for piggyback.
-
-            for (const auto& target : targets) {
-                StreamBuffer msg =
-                    encode_message(GossipMessageType::Ping, incarnation_, seq_no_++,
-                                   config_.local_state.identity.endpoint, pb);
-                async_udp_send(loop_, udp_socket_, msg, target);
-
-                // Record pending ping.
-                // pending_pings_ is protected by members_mutex_ in our design.
-                PendingPing pp;
-                pp.expires_at = now + config_.ping_timeout;
-                pp.indirect_requested = false;
-                pending_pings_[target] = pp;
-            }
-
-            // Clear dissemination flag now that we've piggybacked our metadata.
-            if (needs_dissemination_ && !pb.empty()) {
-                needs_dissemination_ = false;
-            }
-        }
-    } // shared_lock released
-
-    // ── 2. Check pending pings ─────────────────────────────────────────────
-    // Re-acquire unique lock because we may mutate pending_pings_ and members_.
+    // ── 1. Check pending pings ─────────────────────────────────────────────
+    // Must run before sending new pings so that expired pings are not
+    // overwritten by fresh ones in step 2.
+    // Collect expired pings under lock, then release before calling
+    // send_ping_req() and mark_suspicious() which acquire their own
+    // members_mutex_ lock.
+    std::vector<EndPoint> expired_targets_suspicious;
+    std::vector<std::pair<EndPoint, EndPoint>> ping_reqs; // (proxy, target)
     {
         std::unique_lock<std::shared_mutex> lock(members_mutex_);
 
@@ -696,25 +625,87 @@ void GossipMembership::protocol_round() {
                 if (probes.empty()) {
                     // 2-node cluster or no other peers available — skip
                     // indirect probes and immediately mark suspicious.
-                    mark_suspicious(target);
                     pending_pings_.erase(target);
+                    expired_targets_suspicious.push_back(target);
                 } else {
                     for (const auto& proxy : probes) {
-                        send_ping_req(proxy, target);
+                        ping_reqs.emplace_back(proxy, target);
                     }
                 }
             } else {
                 // Second expiry — indirect probes did not succeed.
-                mark_suspicious(target);
                 pending_pings_.erase(it);
+                expired_targets_suspicious.push_back(target);
             }
         }
+    } // Release lock before calling send_ping_req() / mark_suspicious()
+
+    for (const auto& [proxy, target] : ping_reqs) {
+        send_ping_req(proxy, target);
     }
 
+    for (const auto& target : expired_targets_suspicious) {
+        mark_suspicious(target);
+    }
+
+    // ── 2. Pick peers and send Pings ──────────────────────────────────────
+    {
+        std::shared_lock<std::shared_mutex> lock(members_mutex_);
+
+        // Collect Alive members excluding self.
+        std::vector<EndPoint> alive;
+        for (const auto& [ep, m] : members_) {
+            if (m.status == MemberStatus::Alive &&
+                !(ep == config_.local_state.identity.endpoint)) {
+                alive.push_back(ep);
+            }
+        }
+
+        if (!alive.empty()) {
+            auto targets = pick_random_peers(config_.fanout, {});
+            // pick_random_peers already handles the alive filtering; but it
+            // uses the shared_lock we already hold.  To avoid double-locking
+            // we build the targets list above and pass it directly.
+
+            // Build piggyback entries for outgoing Pings.
+            auto pb = build_piggyback_impl(config_, incarnation_,
+                                           needs_dissemination_, members_);
+            // Lock must be held while reading members_ for piggyback.
+
+            for (const auto& target : targets) {
+                StreamBuffer msg =
+                    encode_message(GossipMessageType::Ping, incarnation_, seq_no_++,
+                                   config_.local_state.identity.endpoint, pb);
+                if (transport_)
+                    transport_->send(msg, target);
+
+                // Record or refresh pending ping.  Preserve indirect probe
+                // state if one was already in flight (set by step 1 above).
+                // pending_pings_ is protected by members_mutex_ in our design.
+                auto it = pending_pings_.find(target);
+                if (it != pending_pings_.end()) {
+                    it->second.expires_at = now + config_.ping_timeout;
+                } else {
+                    PendingPing pp;
+                    pp.expires_at = now + config_.ping_timeout;
+                    pp.indirect_requested = false;
+                    pending_pings_[target] = pp;
+                }
+            }
+
+            // Clear dissemination flag now that we've piggybacked our metadata.
+            if (needs_dissemination_ && !pb.empty()) {
+                needs_dissemination_ = false;
+            }
+        }
+    } // shared_lock released
+
     // ── 3. Check suspicious members for timeout ────────────────────────────
+    // Collect expired suspicious members under lock, then release before
+    // calling mark_dead() which acquires its own members_mutex_ lock.
+    std::vector<EndPoint> to_mark_dead;
     {
         std::unique_lock<std::shared_mutex> lock(members_mutex_);
-        std::vector<EndPoint> to_mark_dead;
         for (auto& [ep, m] : members_) {
             if (m.status == MemberStatus::Suspicious) {
                 if (now - m.last_seen > config_.suspicion_timeout) {
@@ -722,9 +713,10 @@ void GossipMembership::protocol_round() {
                 }
             }
         }
-        for (const auto& ep : to_mark_dead) {
-            mark_dead(ep);
-        }
+    } // Release lock before calling mark_dead()
+
+    for (const auto& ep : to_mark_dead) {
+        mark_dead(ep);
     }
 
     // ── 4. Purge old tombstones ────────────────────────────────────────────
@@ -749,7 +741,13 @@ void GossipMembership::handle_packet(const StreamBuffer& data,
     std::vector<PiggybackEntry> pb;
 
     if (!decode_message(data, type, sender, inc, seq, ping_target, pb)) {
-        return; // Malformed or unknown message
+        // Try SyncRsp format (uses a separate wire format from standard
+        // messages)
+        std::vector<Member> members;
+        if (decode_sync_rsp(data, members)) {
+            handle_sync_rsp(std::move(members));
+        }
+        return;
     }
 
     switch (type) {
@@ -768,39 +766,10 @@ void GossipMembership::handle_packet(const StreamBuffer& data,
         case GossipMessageType::Join:
             handle_join(sender, inc, std::move(pb));
             break;
-        case GossipMessageType::SyncRsp: {
-            // SyncRsp uses a different wire format (decode_sync_rsp, not
-            // decode_message). The data after the standard header contains the
-            // SyncRsp payload. However, handle_sync_rsp expects a
-            // vector<Member>, so we delegate to the sender to re-encode.
-            // Actually the SyncRsp is carried in a regular message envelope —
-            // decode_message parsed the header, and the piggyback entries are
-            // not used.  We extract the member list from the raw data by
-            // skipping the standard header.
-            //
-            // For SyncRsp, the sender includes the full table after the
-            // piggyback count.  We re-parse from the raw data, but
-            // decode_message already consumed everything.  Fortunately, SyncRsp
-            // uses a dedicated encode_sync_rsp / decode_sync_rsp code path. The
-            // incoming data is the *entire* SyncRsp payload (not the standard
-            // message envelope). The handle_packet caller (UDP read handler)
-            // passes the raw data, so for SyncRsp we decode differently.
-
-            // Actually, looking at the wire design: Join is a standard message;
-            // the seed responds with SyncRsp which is a SEPARATE wire format
-            // (not through encode_message).  But it arrives on the same UDP
-            // socket. We need a heuristic to distinguish standard messages from
-            // SyncRsp.
-
-            // Try SyncRsp format first (no magic prefix, starts with 4B count):
-            std::vector<Member> members;
-            if (decode_sync_rsp(data, members)) {
-                handle_sync_rsp(std::move(members));
-            }
-            break;
-        }
         case GossipMessageType::Leave:
             handle_leave(sender, inc);
+            break;
+        default:
             break;
     }
 }
@@ -847,7 +816,8 @@ void GossipMembership::handle_ping(EndPoint sender, uint64_t inc, uint32_t /*seq
     StreamBuffer ack_msg =
         encode_message(GossipMessageType::Ack, incarnation_, seq_no_++,
                        config_.local_state.identity.endpoint, ack_pb);
-    async_udp_send(loop_, udp_socket_, ack_msg, sender);
+    if (transport_)
+        transport_->send(ack_msg, sender);
 }
 
 void GossipMembership::handle_ack(EndPoint sender, uint64_t inc,
@@ -908,7 +878,8 @@ void GossipMembership::handle_ping_req(EndPoint sender, EndPoint target) {
     StreamBuffer msg =
         encode_message(GossipMessageType::Ping, incarnation_, seq_no_++,
                        config_.local_state.identity.endpoint, pb);
-    async_udp_send(loop_, udp_socket_, msg, target);
+    if (transport_)
+        transport_->send(msg, target);
 }
 
 void GossipMembership::handle_indirect_ack(EndPoint sender, EndPoint target) {
@@ -1014,7 +985,9 @@ void GossipMembership::handle_leave(EndPoint sender, uint64_t inc) {
 // =============================================================================
 
 void GossipMembership::send_ping(EndPoint target) {
-    FAULT_INJECT("hpactor.gossip.ping.drop") { return; }
+    FAULT_INJECT("hpactor.gossip.ping.drop") {
+        return;
+    }
     std::vector<PiggybackEntry> pb;
     {
         std::shared_lock<std::shared_mutex> lock(members_mutex_);
@@ -1024,15 +997,19 @@ void GossipMembership::send_ping(EndPoint target) {
     StreamBuffer msg =
         encode_message(GossipMessageType::Ping, incarnation_, seq_no_++,
                        config_.local_state.identity.endpoint, pb);
-    async_udp_send(loop_, udp_socket_, msg, target);
+    if (transport_)
+        transport_->send(msg, target);
 }
 
 void GossipMembership::send_ack(EndPoint target, std::vector<PiggybackEntry> pb) {
-    FAULT_INJECT("hpactor.gossip.ack.drop") { return; }
+    FAULT_INJECT("hpactor.gossip.ack.drop") {
+        return;
+    }
     StreamBuffer msg =
         encode_message(GossipMessageType::Ack, incarnation_, seq_no_++,
                        config_.local_state.identity.endpoint, pb);
-    async_udp_send(loop_, udp_socket_, msg, target);
+    if (transport_)
+        transport_->send(msg, target);
 }
 
 void GossipMembership::send_ping_req(EndPoint proxy, EndPoint target) {
@@ -1045,7 +1022,8 @@ void GossipMembership::send_ping_req(EndPoint proxy, EndPoint target) {
     }
     StreamBuffer msg = encode_message(GossipMessageType::PingReq, incarnation_,
                                       seq_no_++, target, pb);
-    async_udp_send(loop_, udp_socket_, msg, proxy);
+    if (transport_)
+        transport_->send(msg, proxy);
 }
 
 void GossipMembership::send_indirect_ack(EndPoint target, EndPoint orig_target) {
@@ -1053,11 +1031,14 @@ void GossipMembership::send_indirect_ack(EndPoint target, EndPoint orig_target) 
     std::vector<PiggybackEntry> pb; // empty piggyback for indirect ack
     StreamBuffer msg = encode_message(GossipMessageType::IndirectAck,
                                       incarnation_, seq_no_++, orig_target, pb);
-    async_udp_send(loop_, udp_socket_, msg, target);
+    if (transport_)
+        transport_->send(msg, target);
 }
 
 void GossipMembership::send_join(EndPoint seed) {
-    FAULT_INJECT("hpactor.gossip.join.drop") { return; }
+    FAULT_INJECT("hpactor.gossip.join.drop") {
+        return;
+    }
     // Join includes self metadata as piggyback.
     std::vector<PiggybackEntry> pb;
     {
@@ -1072,7 +1053,8 @@ void GossipMembership::send_join(EndPoint seed) {
     StreamBuffer msg =
         encode_message(GossipMessageType::Join, incarnation_, seq_no_++,
                        config_.local_state.identity.endpoint, pb);
-    async_udp_send(loop_, udp_socket_, msg, seed);
+    if (transport_)
+        transport_->send(msg, seed);
 }
 
 void GossipMembership::send_sync_rsp(EndPoint target) {
@@ -1087,16 +1069,20 @@ void GossipMembership::send_sync_rsp(EndPoint target) {
         }
     }
     StreamBuffer data = encode_sync_rsp(table);
-    async_udp_send(loop_, udp_socket_, data, target);
+    if (transport_)
+        transport_->send(data, target);
 }
 
 void GossipMembership::send_leave(EndPoint target) {
-    FAULT_INJECT("hpactor.gossip.leave.drop") { return; }
+    FAULT_INJECT("hpactor.gossip.leave.drop") {
+        return;
+    }
     std::vector<PiggybackEntry> pb; // empty piggyback for leave
     StreamBuffer msg =
         encode_message(GossipMessageType::Leave, incarnation_, seq_no_++,
                        config_.local_state.identity.endpoint, pb);
-    async_udp_send(loop_, udp_socket_, msg, target);
+    if (transport_)
+        transport_->send(msg, target);
 }
 
 // =============================================================================
@@ -1104,7 +1090,9 @@ void GossipMembership::send_leave(EndPoint target) {
 // =============================================================================
 
 void GossipMembership::mark_suspicious(EndPoint ep) {
-    FAULT_INJECT("hpactor.gossip.mark_suspicious.drop") { return; }
+    FAULT_INJECT("hpactor.gossip.mark_suspicious.drop") {
+        return;
+    }
     std::unique_lock<std::shared_mutex> lock(members_mutex_);
     auto it = members_.find(ep);
     if (it != members_.end()) {
@@ -1116,7 +1104,9 @@ void GossipMembership::mark_suspicious(EndPoint ep) {
 }
 
 void GossipMembership::mark_dead(EndPoint ep) {
-    FAULT_INJECT("hpactor.gossip.mark_dead.drop") { return; }
+    FAULT_INJECT("hpactor.gossip.mark_dead.drop") {
+        return;
+    }
     Member member_to_fire;
     bool should_fire = false;
 
@@ -1290,9 +1280,8 @@ GossipMembership::pick_random_peers(size_t count,
     }
     auto& ext = extras_for(this);
 
-    std::shared_lock<std::shared_mutex> lock(members_mutex_);
-
     // Collect Alive peers excluding self and explicitly excluded endpoints.
+    // Caller holds members_mutex_ — do not re-acquire.
     std::vector<EndPoint> candidates;
     for (const auto& [ep, m] : members_) {
         if (m.status != MemberStatus::Alive)
@@ -1313,74 +1302,6 @@ GossipMembership::pick_random_peers(size_t count,
     std::shuffle(candidates.begin(), candidates.end(), ext.rng);
     candidates.resize(count);
     return candidates;
-}
-
-// =============================================================================
-// Socket setup/teardown
-// =============================================================================
-
-void GossipMembership::setup_udp_socket() {
-    udp_socket_ = socket(AF_INET, SOCK_DGRAM, 0);
-    if (udp_socket_ < 0)
-        return;
-
-    int reuse = 1;
-    setsockopt(udp_socket_, SOL_SOCKET, SO_REUSEADDR, &reuse, sizeof(reuse));
-
-    struct sockaddr_in addr;
-    memset(&addr, 0, sizeof(addr));
-    addr.sin_family = AF_INET;
-    addr.sin_addr.s_addr = INADDR_ANY;
-    addr.sin_port = htons(config_.gossip_port);
-
-    if (bind(udp_socket_, reinterpret_cast<struct sockaddr*>(&addr),
-             sizeof(addr)) < 0) {
-        close(udp_socket_);
-        udp_socket_ = -1;
-        return;
-    }
-
-    if (loop_) {
-        loop_->add_fd(udp_socket_, EventLoop::Event::Read);
-        loop_->set_read_handler(udp_socket_, [this](int /*fd*/) {
-            // Non-blocking recvfrom loop (edge-triggered).
-            struct sockaddr_in src_addr;
-            socklen_t src_addr_len = sizeof(src_addr);
-
-            while (true) {
-                ssize_t n = recvfrom(udp_socket_, recv_buffer_.data(),
-                                     recv_buffer_.size(), MSG_DONTWAIT,
-                                     reinterpret_cast<struct sockaddr*>(&src_addr),
-                                     &src_addr_len);
-                if (n <= 0)
-                    break;
-
-                StreamBuffer data(recv_buffer_.data(),
-                                  recv_buffer_.data() + static_cast<size_t>(n));
-
-                std::string from_host;
-                uint16_t from_port = 0;
-                char ip_str[INET_ADDRSTRLEN];
-                if (inet_ntop(AF_INET, &src_addr.sin_addr, ip_str, sizeof(ip_str))) {
-                    from_host = ip_str;
-                }
-                from_port = ntohs(src_addr.sin_port);
-
-                handle_packet(data, from_host, from_port);
-            }
-        });
-    }
-}
-
-void GossipMembership::teardown_udp_socket() {
-    if (udp_socket_ >= 0) {
-        if (loop_) {
-            loop_->clear_read_handler(udp_socket_);
-            loop_->remove_fd(udp_socket_);
-        }
-        close(udp_socket_);
-        udp_socket_ = -1;
-    }
 }
 
 } // namespace hpactor::net

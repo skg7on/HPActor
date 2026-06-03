@@ -16,6 +16,7 @@ set(TEST_SYSTEM_SOURCES
     test_system_registrar_server.cpp
     test_system_registrar_client.cpp
     test_system_udp_registrar.cpp
+    test_system_gossip.cpp
     test_dlq_handoff.cpp
 )
 

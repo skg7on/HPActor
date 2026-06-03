@@ -17,6 +17,7 @@
 #include <hpactor/adt/node_identity.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/service_discovery.hpp>
+#include <hpactor/net/udp_transport.hpp>
 
 // FRIEND_TEST macro: self-contained definition compatible with gtest.
 // This avoids a dependency on gtest/gtest_prod.h which may not be in the
@@ -95,6 +96,8 @@ struct PendingPing {
 class GossipMembership : public IServiceDiscovery {
   public:
     GossipMembership(const GossipConfig& cfg, EventLoop* loop);
+    GossipMembership(const GossipConfig& cfg,
+                     std::unique_ptr<IUdpTransport> transport);
     ~GossipMembership() override;
 
     void start() override;
@@ -126,6 +129,19 @@ class GossipMembership : public IServiceDiscovery {
     FRIEND_TEST(GossipMembershipTest, PurgeDeadTombstones);
     FRIEND_TEST(GossipMembershipTest, WireEncodeDecodePing);
     FRIEND_TEST(GossipMembershipTest, WireEncodeDecodeMetadata);
+
+    // Integration tests (protocol flow)
+    FRIEND_TEST(GossipProtocolIntegrationTest, JoinFlow);
+    FRIEND_TEST(GossipProtocolIntegrationTest, ProtocolRoundPingAck);
+    FRIEND_TEST(GossipProtocolIntegrationTest, IndirectProbePingReq);
+    FRIEND_TEST(GossipProtocolIntegrationTest, FailureDetectionSuspicious);
+    FRIEND_TEST(GossipProtocolIntegrationTest, FailureDetectionDead);
+    FRIEND_TEST(GossipProtocolIntegrationTest, LeavePropagation);
+    FRIEND_TEST(GossipProtocolIntegrationTest, PiggybackDissemination);
+    FRIEND_TEST(GossipProtocolIntegrationTest, IncarnationConflictResolution);
+    FRIEND_TEST(GossipProtocolIntegrationTest, MemberChangeCallback);
+    FRIEND_TEST(GossipProtocolIntegrationTest, TombstonePurging);
+    FRIEND_TEST(GossipProtocolIntegrationTest, FaultInjectionPacketLoss);
 #endif
 
   private:
@@ -174,12 +190,9 @@ class GossipMembership : public IServiceDiscovery {
     std::vector<EndPoint>
     pick_random_peers(size_t count, std::unordered_set<EndPoint> exclude = {});
 
-    void setup_udp_socket();
-    void teardown_udp_socket();
-
     GossipConfig config_;
     EventLoop* loop_ = nullptr;
-    int udp_socket_ = -1;
+    std::unique_ptr<IUdpTransport> transport_;
     uint64_t incarnation_ = 0;
     uint32_t seq_no_ = 0;
 
@@ -188,7 +201,6 @@ class GossipMembership : public IServiceDiscovery {
     MemberChangeCallback member_change_cb_;
     uint64_t protocol_timer_ = 0;
     bool needs_dissemination_ = false;
-    std::vector<uint8_t> recv_buffer_;
     mutable std::shared_mutex members_mutex_;
 };
 
