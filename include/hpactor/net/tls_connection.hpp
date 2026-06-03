@@ -177,6 +177,9 @@ class TlsConnection : public Connection,
     Nonce server_nonce_;
     StreamBuffer pre_master_secret_;
 
+    // Encrypted pre-master secret for transmission in ServerHello
+    StreamBuffer encrypted_pms_;
+
     // Session keys
     StreamBuffer master_secret_;
     StreamBuffer session_key_; // AES-256 key
@@ -193,6 +196,10 @@ class TlsConnection : public Connection,
 
     // Handshake message buffer (for Finished verify_data)
     StreamBuffer handshake_messages_;
+
+    // Weak self-reference to avoid shared_from_this issues with dual
+    // enable_shared_from_this inheritance (Connection also inherits from it).
+    std::weak_ptr<TlsConnection> weak_self_;
 
     // Callbacks
     std::function<void(ConnectionPtr)> ready_handler_;

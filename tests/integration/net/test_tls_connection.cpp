@@ -718,3 +718,222 @@ TEST_F(TlsConnectionTest, FromFilesystemLoadsCerts) {
     ::unlink(key_path.c_str());
     ::rmdir(cert_dir.c_str());
 }
+
+// ---------------------------------------------------------------------------
+// Task 8: Handshake completion and encrypted data exchange
+// ---------------------------------------------------------------------------
+
+TEST_F(TlsConnectionTest, HandshakeReadyHandlerFires) {
+    auto server_certs = test::generate_test_certs("ready-server");
+    auto client_certs = test::generate_test_certs("ready-client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
+
+    // Use the same drive_handshake pattern that CompleteHandshakeReachesEncrypted
+    // uses, but add ready handlers before driving.
+    auto fds = create_socket_pair();
+    auto server = TlsConnection::create_server(
+        fds.second, LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("127.0.0.1:54321"), &server_ctx,
+        nullptr);
+    auto client = TlsConnection::create_client(
+        LocalEndpoint, hpactor::endpoint_ops::parse_endpoint("127.0.0.1:12345"),
+        &client_ctx, nullptr);
+    client->set_fd(fds.first);
+
+    bool client_ready = false;
+    bool server_ready = false;
+    client->set_ready_handler([&](ConnectionPtr) { client_ready = true; });
+    server->set_ready_handler([&](ConnectionPtr) { server_ready = true; });
+
+    // Drive handshake (same sequence as drive_handshake)
+    client->start_client_handshake();
+    server->handle_read();
+    client->handle_read();
+    server->handle_read();
+    client->handle_read();
+    server->handle_read();
+
+    EXPECT_TRUE(client_ready);
+    EXPECT_TRUE(server_ready);
+    EXPECT_EQ(client->session_state(), TlsSessionState::Encrypted);
+    EXPECT_EQ(server->session_state(), TlsSessionState::Encrypted);
+
+    ::close(fds.first);
+    ::close(fds.second);
+}
+
+TEST_F(TlsConnectionTest, SingleEncryptedFrame) {
+    auto server_certs = test::generate_test_certs("single-frame-server");
+    auto client_certs = test::generate_test_certs("single-frame-client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
+
+    auto pair = drive_handshake(server_ctx, client_ctx);
+    ASSERT_EQ(pair.client->session_state(), TlsSessionState::Encrypted);
+
+    StreamBuffer received;
+    pair.server->set_frame_handler(
+        [&](StreamBuffer data) { received = std::move(data); });
+
+    StreamBuffer plaintext = {'h', 'e', 'l', 'l', 'o', '_', 't', 'l', 's'};
+    pair.client->send(plaintext);
+    pair.server->handle_read();
+
+    EXPECT_EQ(received, plaintext);
+
+    ::close(pair.client_fd);
+    ::close(pair.server_fd);
+}
+
+TEST_F(TlsConnectionTest, MultipleEncryptedFrames) {
+    auto server_certs = test::generate_test_certs("multi-frame-server");
+    auto client_certs = test::generate_test_certs("multi-frame-client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
+
+    auto pair = drive_handshake(server_ctx, client_ctx);
+
+    std::vector<StreamBuffer> received;
+    pair.server->set_frame_handler(
+        [&](StreamBuffer data) { received.push_back(std::move(data)); });
+
+    constexpr int kNumFrames = 5;
+    for (int i = 0; i < kNumFrames; i++) {
+        StreamBuffer msg = {'m', 's', 'g', static_cast<uint8_t>(i)};
+        pair.client->send(msg);
+        pair.server->handle_read();
+    }
+
+    ASSERT_EQ(received.size(), static_cast<size_t>(kNumFrames));
+    for (int i = 0; i < kNumFrames; i++) {
+        EXPECT_EQ(received[i].size(), 4u);
+        EXPECT_EQ(received[i][3], static_cast<uint8_t>(i));
+    }
+
+    ::close(pair.client_fd);
+    ::close(pair.server_fd);
+}
+
+TEST_F(TlsConnectionTest, LargeEncryptedPayload) {
+    auto server_certs = test::generate_test_certs("large-payload-server");
+    auto client_certs = test::generate_test_certs("large-payload-client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
+
+    auto pair = drive_handshake(server_ctx, client_ctx);
+
+    StreamBuffer received;
+    pair.server->set_frame_handler(
+        [&](StreamBuffer data) { received = std::move(data); });
+
+    StreamBuffer large_payload;
+    for (int i = 0; i < 1024; i++)
+        large_payload.push_back(static_cast<uint8_t>(i & 0xFF));
+
+    pair.client->send(large_payload);
+    pair.server->handle_read();
+
+    EXPECT_EQ(received.size(), large_payload.size());
+    EXPECT_EQ(received, large_payload);
+
+    ::close(pair.client_fd);
+    ::close(pair.server_fd);
+}
+
+TEST_F(TlsConnectionTest, SendBeforeHandshakeComplete) {
+    auto server_certs = test::generate_test_certs("early-server");
+    auto client_certs = test::generate_test_certs("early-client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
+
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto client = TlsConnection::create_client(
+        hpactor::endpoint_ops::parse_endpoint("127.0.0.1:12345"),
+        hpactor::endpoint_ops::parse_endpoint("127.0.0.1:54321"),
+        &client_ctx, nullptr);
+    client->set_fd(client_fd);
+
+    // send() while still in Handshake state should be a no-op
+    StreamBuffer data = {'e', 'a', 'r', 'l', 'y'};
+    client->send(data);
+    EXPECT_EQ(client->session_state(), TlsSessionState::Handshake);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
+
+TEST_F(TlsConnectionTest, ServerHelloInsufficientData) {
+    auto ctx = make_test_ctx();
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto client = TlsConnection::create_client(
+        LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("localhost:12345"),
+        &ctx, nullptr);
+    client->set_fd(client_fd);
+    client->start_client_handshake();
+
+    // Manually write a ServerHello with insufficient payload (< 32 bytes)
+    // The data must be written to server_fd so it arrives on client_fd
+    StreamBuffer payload;
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::ServerHello));
+    payload.push_back('x'); // only 1 byte of nonce, need 32
+
+    StreamBuffer short_msg;
+    short_msg.push_back(static_cast<uint8_t>(TlsMessageType::ServerHello));
+    size_t len = payload.size();
+    short_msg.push_back(static_cast<uint8_t>((len >> 16) & 0xFF));
+    short_msg.push_back(static_cast<uint8_t>((len >> 8) & 0xFF));
+    short_msg.push_back(static_cast<uint8_t>(len & 0xFF));
+    short_msg.insert(short_msg.end(), payload.begin(), payload.end());
+
+    ssize_t written = ::write(server_fd, short_msg.data(), short_msg.size());
+    ASSERT_EQ(written, static_cast<ssize_t>(short_msg.size()));
+
+    client->handle_read();
+
+    EXPECT_EQ(client->state(), ConnectionState::Error);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
+
+TEST_F(TlsConnectionTest, SessionStateAfterHandshake) {
+    auto server_certs = test::generate_test_certs("session-state-server");
+    auto client_certs = test::generate_test_certs("session-state-client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
+
+    auto pair = drive_handshake(server_ctx, client_ctx);
+
+    EXPECT_EQ(pair.client->state(), ConnectionState::Connected);
+    EXPECT_EQ(pair.server->state(), ConnectionState::Connected);
+    EXPECT_EQ(pair.client->session_state(), TlsSessionState::Encrypted);
+    EXPECT_EQ(pair.server->session_state(), TlsSessionState::Encrypted);
+
+    ::close(pair.client_fd);
+    ::close(pair.server_fd);
+}
+
+TEST_F(TlsConnectionTest, HandshakeMessagesAccumulated) {
+    auto server_certs = test::generate_test_certs("accum-server");
+    auto client_certs = test::generate_test_certs("accum-client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
+
+    auto pair = drive_handshake(server_ctx, client_ctx);
+
+    // Successful completion of the full handshake implies that intermediate
+    // handshake messages were correctly accumulated and processed by both sides
+    // through the multi-step ClientHello -> ServerHello+Cert -> Cert+CertVerify
+    // -> CertVerify+Finished sequence.
+    EXPECT_EQ(pair.client->session_state(), TlsSessionState::Encrypted);
+    EXPECT_EQ(pair.server->session_state(), TlsSessionState::Encrypted);
+    EXPECT_NE(pair.client->state(), ConnectionState::Error);
+    EXPECT_NE(pair.server->state(), ConnectionState::Error);
+
+    ::close(pair.client_fd);
+    ::close(pair.server_fd);
+}
