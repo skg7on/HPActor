@@ -83,11 +83,12 @@ void EventBasedActor::receive(TypedMessage& msg) {
     FAULT_INJECT("hpactor.actor.receive.drop") {
         return;
     }
+
+    // Trace: set up receive span + context scope (RAII-managed)
     auto* ctx = context();
     auto* trace_manager = system().trace_manager();
     tracing::SpanHandle receive_span;
     std::unique_ptr<ActorContext::TraceScope> trace_scope;
-
     if (trace_manager != nullptr && trace_manager->enabled() &&
         trace_manager->config().record_actor_receive_spans) {
         tracing::SpanStart start;
@@ -107,238 +108,30 @@ void EventBasedActor::receive(TypedMessage& msg) {
                 ctx, receive_span.context);
         }
     }
-
     ReceiveSpanGuard span_guard(trace_manager, &receive_span);
-    // -- Drain gate: apply drain policy to every message during kDraining --
-    if (auto* lc = as_lifecycle()) {
-        if (lc->state() == LifecycleState::kDraining) {
-            if (!drain_one(msg)) {
-                // Drain-completion check: if mailbox is now empty, finish drain
-                if (mailbox_is_empty()) {
-                    cancel_drain_timer();
-                    lc->transition(LifecycleState::kStopping);
-                    lc->transition(LifecycleState::kStopped);
-                    on_exit();
-                }
-                return; // message was dead-lettered by the drain policy
-            }
-        }
-    }
-    // -- End drain gate --
 
-    // -- System message interception (link / monitor / death) --
-    {
-        bool handled = false;
-        switch (msg.type_id()) {
-            case TypeTag::LinkMsg:
-                handled = handle_link_msg(msg);
-                break;
-            case TypeTag::UnlinkMsg:
-                handled = handle_unlink_msg(msg);
-                break;
-            case TypeTag::MonitorMsg:
-                handled = handle_monitor_msg(msg);
-                break;
-            case TypeTag::DemonitorMsg:
-                handled = handle_demonitor_msg(msg);
-                break;
-            case TypeTag::DownMsg:
-                handle_down_msg(msg);
-                break;
-            default:
-                break;
-        }
-        if (handled)
-            return;
-    }
-    // -- End system message interception --
+    // Pipeline: each stage may consume or reject the message
+    if (!apply_drain_gate(msg))
+        return;
+    if (dispatch_system_message(msg))
+        return;
+    if (!apply_lifecycle_gate(msg))
+        return;
 
-    // -- Lifecycle message gate --
-    // User messages (TypeTag >= 0x1000) are only accepted in ACTIVE state
-    // or while draining (the drain gate handles drain policy decisions).
-    // System messages (TypeTag < 0x1000) always pass through.
-    if (static_cast<uint32_t>(msg.type_id()) >= 0x1000) {
-        if (auto* lc = as_lifecycle()) {
-            if (!lc->accepts_user_msgs() &&
-                lc->state() != LifecycleState::kDraining) {
-                // Quarantine-specific: build FailureEnvelope and emit metrics.
-                if (lc->is_quarantined()) {
-                    if (metrics_ring_buffer_) [[unlikely]] {
-                        FailureEnvelope env = make_failure_envelope(
-                            FailureReason::Quarantined, id(), msg.sender_address(),
-                            ActorAddress{}, MessageId{0}, TraceContext{},
-                            FailureSource::ActorRuntime, "actor is quarantined");
-                        metrics::MetricEvent evt{};
-                        evt.timestamp_ns = env.timestamp_ns;
-                        evt.actor_id = id();
-                        evt.event_type = metrics::MetricEventType::kDeliveryFailure;
-                        evt.code = static_cast<uint8_t>(FailureReason::Quarantined);
-                        evt.value_hi = 1;
-                        metrics_ring_buffer_->try_push(evt);
-                    }
-                    HPACTOR_LOG_WARNING(
-                        log::LogCategory::kActor, id(), 0, "quarantine_reject",
-                        log::field_lit("reason",
-                                       to_string(lc->quarantine_reason())));
-                }
-                return;
-            }
-        }
-    }
-    // -- End lifecycle message gate --
-
+    // Lazy init + sender capture for reply() tracking
     if (!handlers_initialized_) {
         initialize_proto_handlers();
     }
-
-    // Capture sender for reply() tracking
     ctx = context();
     if (ctx != nullptr) {
         ctx->set_current_sender(msg.sender_address());
     }
 
-    // -- CLI introspection dispatch --
-    {
-        // InspectStateRequest: gather metadata + optional
-        // state/mailbox/children
-        if (msg.type_id() == TypeTag::InspectStateRequestTag) {
-            cli::InspectStateRequest req;
-            if (!req.ParseFromArray(msg.payload().data(),
-                                    static_cast<int>(msg.payload().size()))) {
-                return;
-            }
-
-            cli::InspectStateReply reply;
-            auto meta = to_metadata();
-            auto* pb_meta = reply.mutable_metadata();
-            pb_meta->set_actor_id(meta.actor_id);
-            pb_meta->set_actor_type(meta.actor_type);
-            pb_meta->set_state(meta.state);
-            pb_meta->set_incarnation(meta.incarnation);
-
-            if (req.include_mailbox()) {
-                auto ms = mailbox_snapshot();
-                auto* pb_mbox = reply.mutable_mailbox();
-                pb_mbox->set_depth(ms.depth);
-                pb_mbox->set_total_enqueued(ms.total_enqueued);
-                pb_mbox->set_total_dequeued(ms.total_dequeued);
-                pb_mbox->set_max_depth(ms.max_depth);
-                pb_mbox->set_high_priority_depth(ms.high_priority_depth);
-                pb_mbox->set_capacity(ms.capacity);
-                pb_mbox->set_queued_bytes(ms.queued_bytes);
-                pb_mbox->set_byte_capacity(ms.byte_capacity);
-                pb_mbox->set_pressure_ratio_ppm(ms.pressure_ratio_ppm);
-                pb_mbox->set_total_rejected(ms.total_rejected);
-                pb_mbox->set_total_dropped(ms.total_dropped);
-                pb_mbox->set_total_dead_letters(ms.total_dead_letters);
-                pb_mbox->set_pressure_state(ms.pressure_state);
-                pb_mbox->set_overflow_policy(ms.overflow_policy);
-            }
-
-            if (req.include_state()) {
-                auto blob = serialize_state();
-                reply.set_state_blob(std::string(
-                    reinterpret_cast<const char*>(blob.data()), blob.size()));
-            }
-
-            std::string reply_data = reply.SerializeAsString();
-            StreamBuffer payload(reply_data.begin(), reply_data.end());
-            ctx->reply(TypedMessage(TypeTag::InspectStateResponseTag,
-                                    std::move(payload)));
-            return;
-        }
-
-        // KillRequest: terminate this actor
-        if (msg.type_id() == TypeTag::KillRequestTag) {
-            cli::KillRequest req;
-            if (!req.ParseFromArray(msg.payload().data(),
-                                    static_cast<int>(msg.payload().size()))) {
-                return;
-            }
-
-            cli::KillReply reply;
-            reply.set_success(true);
-            reply.set_error_code(0);
-
-            std::string reply_data = reply.SerializeAsString();
-            StreamBuffer payload(reply_data.begin(), reply_data.end());
-            ctx->reply(TypedMessage(TypeTag::KillResponseTag, std::move(payload)));
-
-            // Drive lifecycle state machine for graceful stop
-            if (auto* lc = as_lifecycle()) {
-                lc->transition(LifecycleState::kStopping);
-                lc->transition(LifecycleState::kStopped);
-            }
-            set_exit_reason(0);
-            return;
-        }
-    }
-    // -- End CLI dispatch --
-
-    auto t0 = metrics_ring_buffer_ ? std::chrono::steady_clock::now()
-                                   : std::chrono::steady_clock::time_point{};
-
-    // Try proto handler dispatch by TypeTag first
-    auto it = proto_handlers_.find(msg.type_id());
-    if (it != proto_handlers_.end()) {
-        auto deserialized = it->second.deserialize(msg.payload());
-        if (deserialized) {
-            StreamBuffer response = it->second.invoke(std::move(deserialized));
-            if (!response.empty() && ctx != nullptr) {
-                TypedMessage reply_msg(it->first, response);
-                ctx->reply(std::move(reply_msg));
-            }
-            if (quarantine_policy_.enabled) [[unlikely]] {
-                record_circuit_breaker_result(true);
-            }
-        } else {
-            if (quarantine_policy_.enabled) [[unlikely]] {
-                record_circuit_breaker_result(false);
-            }
-        }
-        if (metrics_ring_buffer_) [[unlikely]] {
-            auto t1 = std::chrono::steady_clock::now();
-            auto ns =
-                std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-            metrics::MetricEvent evt{};
-            evt.actor_id = id();
-            evt.event_type = metrics::MetricEventType::kMessageProcessed;
-            evt.value_hi = static_cast<uint32_t>(ns > UINT32_MAX ? UINT32_MAX : ns);
-            metrics_ring_buffer_->try_push(evt);
-        }
+    if (dispatch_cli_message(msg))
         return;
-    }
 
-    // Fall through to Behavior-based handling
-    if (behavior_) {
-        behavior_(msg);
-    }
-
-    if (quarantine_policy_.enabled) [[unlikely]] {
-        record_circuit_breaker_result(true);
-    }
-
-    if (metrics_ring_buffer_) [[unlikely]] {
-        auto t1 = std::chrono::steady_clock::now();
-        auto ns =
-            std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
-        metrics::MetricEvent evt{};
-        evt.actor_id = id();
-        evt.event_type = metrics::MetricEventType::kMessageProcessed;
-        evt.value_hi = static_cast<uint32_t>(ns > UINT32_MAX ? UINT32_MAX : ns);
-        metrics_ring_buffer_->try_push(evt);
-    }
-
-    // -- Drain-completion check after processing a message --
-    if (auto* lc = as_lifecycle()) {
-        if (lc->state() == LifecycleState::kDraining && mailbox_is_empty()) {
-            cancel_drain_timer();
-            lc->transition(LifecycleState::kStopping);
-            lc->transition(LifecycleState::kStopped);
-            on_exit();
-        }
-    }
-    // -- End drain-completion check --
+    dispatch_user_message(msg);
+    try_drain_completion();
 }
 
 bool EventBasedActor::handle_link_msg(const TypedMessage& msg) {
@@ -492,6 +285,226 @@ void EventBasedActor::on_exit() {
         ctx->send(addr, std::move(down_msg));
     }
     // linked_ and monitored_ vectors will be destroyed with the context
+}
+
+// ── receive() pipeline stages ───────────────────────────────
+
+bool EventBasedActor::apply_drain_gate(TypedMessage& msg) {
+    auto* lc = as_lifecycle();
+    if (!lc || lc->state() != LifecycleState::kDraining)
+        return true;
+
+    if (!drain_one(msg)) {
+        try_drain_completion();
+        return false;
+    }
+    return true;
+}
+
+void EventBasedActor::try_drain_completion() {
+    auto* lc = as_lifecycle();
+    if (!lc || lc->state() != LifecycleState::kDraining || !mailbox_is_empty())
+        return;
+
+    cancel_drain_timer();
+    lc->transition(LifecycleState::kStopping);
+    lc->transition(LifecycleState::kStopped);
+    on_exit();
+}
+
+bool EventBasedActor::dispatch_system_message(const TypedMessage& msg) {
+    bool handled = false;
+    switch (msg.type_id()) {
+        case TypeTag::LinkMsg:
+            handled = handle_link_msg(msg);
+            break;
+        case TypeTag::UnlinkMsg:
+            handled = handle_unlink_msg(msg);
+            break;
+        case TypeTag::MonitorMsg:
+            handled = handle_monitor_msg(msg);
+            break;
+        case TypeTag::DemonitorMsg:
+            handled = handle_demonitor_msg(msg);
+            break;
+        case TypeTag::DownMsg:
+            handle_down_msg(msg);
+            break;
+        default:
+            break;
+    }
+    return handled;
+}
+
+bool EventBasedActor::apply_lifecycle_gate(const TypedMessage& msg) {
+    // System messages (TypeTag < 0x1000) always pass through.
+    if (static_cast<uint32_t>(msg.type_id()) < 0x1000)
+        return true;
+
+    auto* lc = as_lifecycle();
+    if (!lc)
+        return true;
+    if (lc->accepts_user_msgs() || lc->state() == LifecycleState::kDraining)
+        return true;
+
+    // Quarantine-specific: build FailureEnvelope and emit metrics.
+    if (lc->is_quarantined()) {
+        if (metrics_ring_buffer_) [[unlikely]] {
+            FailureEnvelope env = make_failure_envelope(
+                FailureReason::Quarantined, id(), msg.sender_address(),
+                ActorAddress{}, MessageId{0}, TraceContext{},
+                FailureSource::ActorRuntime, "actor is quarantined");
+            metrics::MetricEvent evt{};
+            evt.timestamp_ns = env.timestamp_ns;
+            evt.actor_id = id();
+            evt.event_type = metrics::MetricEventType::kDeliveryFailure;
+            evt.code = static_cast<uint8_t>(FailureReason::Quarantined);
+            evt.value_hi = 1;
+            metrics_ring_buffer_->try_push(evt);
+        }
+        HPACTOR_LOG_WARNING(
+            log::LogCategory::kActor, id(), 0, "quarantine_reject",
+            log::field_lit("reason",
+                           to_string(lc->quarantine_reason())));
+    }
+    return false;
+}
+
+bool EventBasedActor::dispatch_cli_message(TypedMessage& msg) {
+    auto* ctx = context();
+    if (ctx == nullptr)
+        return false;
+
+    // InspectStateRequest: gather metadata + optional state/mailbox/children
+    if (msg.type_id() == TypeTag::InspectStateRequestTag) {
+        cli::InspectStateRequest req;
+        if (!req.ParseFromArray(msg.payload().data(),
+                                static_cast<int>(msg.payload().size()))) {
+            return true; // consumed (malformed request, drop silently)
+        }
+
+        cli::InspectStateReply reply;
+        auto meta = to_metadata();
+        auto* pb_meta = reply.mutable_metadata();
+        pb_meta->set_actor_id(meta.actor_id);
+        pb_meta->set_actor_type(meta.actor_type);
+        pb_meta->set_state(meta.state);
+        pb_meta->set_incarnation(meta.incarnation);
+
+        if (req.include_mailbox()) {
+            auto ms = mailbox_snapshot();
+            auto* pb_mbox = reply.mutable_mailbox();
+            pb_mbox->set_depth(ms.depth);
+            pb_mbox->set_total_enqueued(ms.total_enqueued);
+            pb_mbox->set_total_dequeued(ms.total_dequeued);
+            pb_mbox->set_max_depth(ms.max_depth);
+            pb_mbox->set_high_priority_depth(ms.high_priority_depth);
+            pb_mbox->set_capacity(ms.capacity);
+            pb_mbox->set_queued_bytes(ms.queued_bytes);
+            pb_mbox->set_byte_capacity(ms.byte_capacity);
+            pb_mbox->set_pressure_ratio_ppm(ms.pressure_ratio_ppm);
+            pb_mbox->set_total_rejected(ms.total_rejected);
+            pb_mbox->set_total_dropped(ms.total_dropped);
+            pb_mbox->set_total_dead_letters(ms.total_dead_letters);
+            pb_mbox->set_pressure_state(ms.pressure_state);
+            pb_mbox->set_overflow_policy(ms.overflow_policy);
+        }
+
+        if (req.include_state()) {
+            auto blob = serialize_state();
+            reply.set_state_blob(std::string(
+                reinterpret_cast<const char*>(blob.data()), blob.size()));
+        }
+
+        std::string reply_data = reply.SerializeAsString();
+        StreamBuffer payload(reply_data.begin(), reply_data.end());
+        ctx->reply(TypedMessage(TypeTag::InspectStateResponseTag,
+                                std::move(payload)));
+        return true;
+    }
+
+    // KillRequest: terminate this actor
+    if (msg.type_id() == TypeTag::KillRequestTag) {
+        cli::KillRequest req;
+        if (!req.ParseFromArray(msg.payload().data(),
+                                static_cast<int>(msg.payload().size()))) {
+            return true; // consumed (malformed request, drop silently)
+        }
+
+        cli::KillReply reply;
+        reply.set_success(true);
+        reply.set_error_code(0);
+
+        std::string reply_data = reply.SerializeAsString();
+        StreamBuffer payload(reply_data.begin(), reply_data.end());
+        ctx->reply(TypedMessage(TypeTag::KillResponseTag, std::move(payload)));
+
+        if (auto* lc = as_lifecycle()) {
+            lc->transition(LifecycleState::kStopping);
+            lc->transition(LifecycleState::kStopped);
+        }
+        set_exit_reason(0);
+        return true;
+    }
+
+    return false;
+}
+
+void EventBasedActor::dispatch_user_message(TypedMessage& msg) {
+    auto t0 = metrics_ring_buffer_ ? std::chrono::steady_clock::now()
+                                   : std::chrono::steady_clock::time_point{};
+    auto* ctx = context();
+
+    // Proto handler dispatch by TypeTag
+    auto it = proto_handlers_.find(msg.type_id());
+    if (it != proto_handlers_.end()) {
+        auto deserialized = it->second.deserialize(msg.payload());
+        if (deserialized) {
+            StreamBuffer response = it->second.invoke(std::move(deserialized));
+            if (!response.empty() && ctx != nullptr) {
+                TypedMessage reply_msg(it->first, response);
+                ctx->reply(std::move(reply_msg));
+            }
+            if (quarantine_policy_.enabled) [[unlikely]] {
+                record_circuit_breaker_result(true);
+            }
+        } else {
+            if (quarantine_policy_.enabled) [[unlikely]] {
+                record_circuit_breaker_result(false);
+            }
+        }
+        if (metrics_ring_buffer_) [[unlikely]] {
+            auto t1 = std::chrono::steady_clock::now();
+            auto ns =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+            metrics::MetricEvent evt{};
+            evt.actor_id = id();
+            evt.event_type = metrics::MetricEventType::kMessageProcessed;
+            evt.value_hi = static_cast<uint32_t>(ns > UINT32_MAX ? UINT32_MAX : ns);
+            metrics_ring_buffer_->try_push(evt);
+        }
+        return;
+    }
+
+    // Behavior fallback
+    if (behavior_) {
+        behavior_(msg);
+    }
+
+    if (quarantine_policy_.enabled) [[unlikely]] {
+        record_circuit_breaker_result(true);
+    }
+
+    if (metrics_ring_buffer_) [[unlikely]] {
+        auto t1 = std::chrono::steady_clock::now();
+        auto ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        metrics::MetricEvent evt{};
+        evt.actor_id = id();
+        evt.event_type = metrics::MetricEventType::kMessageProcessed;
+        evt.value_hi = static_cast<uint32_t>(ns > UINT32_MAX ? UINT32_MAX : ns);
+        metrics_ring_buffer_->try_push(evt);
+    }
 }
 
 cli::MboxSnapshot EventBasedActor::mailbox_snapshot() const {
