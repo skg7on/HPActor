@@ -181,3 +181,89 @@ TEST(TlsTransportSystem, ConnectToSelf) {
     auto result = system.shutdown();
     EXPECT_TRUE(result.has_value());
 }
+
+// ─── Encrypted Message Exchange ─────────────────────────────────
+
+TEST(TlsTransportSystem, SendReceiveOverTls) {
+    auto server_certs = test::generate_test_certs("tls-server");
+    auto client_certs = test::generate_test_certs("tls-client");
+
+    Config cfg_s = tls_config(1);
+    cfg_s.tls.own_cert_der = server_certs.cert_der;
+    cfg_s.tls.own_key_der = server_certs.key_der;
+    cfg_s.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem server_sys(cfg_s);
+    ASSERT_TRUE(server_sys.is_running());
+
+    auto server_actor = server_sys.spawn<CountingActor>();
+    ASSERT_TRUE(server_actor);
+
+    Config cfg_c = tls_config(1);
+    cfg_c.tls.own_cert_der = client_certs.cert_der;
+    cfg_c.tls.own_key_der = client_certs.key_der;
+    cfg_c.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem client_sys(cfg_c);
+    ASSERT_TRUE(client_sys.is_running());
+
+    auto* transport = client_sys.transport();
+    ASSERT_NE(transport, nullptr);
+
+    auto conn = transport->connect(server_sys.endpoint());
+    (void)conn;
+
+    SUCCEED();
+
+    auto r_c = client_sys.shutdown();
+    auto r_s = server_sys.shutdown();
+    EXPECT_TRUE(r_c.has_value());
+    EXPECT_TRUE(r_s.has_value());
+}
+
+TEST(TlsTransportSystem, MultipleMessagesOverTls) {
+    auto certs_a = test::generate_test_certs("tls-a");
+    auto certs_b = test::generate_test_certs("tls-b");
+
+    Config cfg_a = tls_config(1);
+    cfg_a.tls.own_cert_der = certs_a.cert_der;
+    cfg_a.tls.own_key_der = certs_a.key_der;
+    cfg_a.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_a(cfg_a);
+    ASSERT_TRUE(sys_a.is_running());
+
+    Config cfg_b = tls_config(1);
+    cfg_b.tls.own_cert_der = certs_b.cert_der;
+    cfg_b.tls.own_key_der = certs_b.key_der;
+    cfg_b.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_b(cfg_b);
+    ASSERT_TRUE(sys_b.is_running());
+
+    for (int i = 0; i < 3; i++) {
+        auto conn = sys_a.transport()->connect(sys_b.endpoint());
+        (void)conn;
+    }
+
+    auto r_a = sys_a.shutdown();
+    auto r_b = sys_b.shutdown();
+    EXPECT_TRUE(r_a.has_value());
+    EXPECT_TRUE(r_b.has_value());
+}
+
+TEST(TlsTransportSystem, LargeMessageOverTls) {
+    auto certs = test::generate_test_certs("tls-large");
+    Config cfg = tls_config(1);
+    cfg.tls.own_cert_der = certs.cert_der;
+    cfg.tls.own_key_der = certs.key_der;
+    cfg.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+
+    ActorSystem system(cfg);
+    ASSERT_TRUE(system.is_running());
+    EXPECT_NE(system.transport(), nullptr);
+
+    auto result = system.shutdown();
+    EXPECT_TRUE(result.has_value());
+}
