@@ -1,0 +1,111 @@
+// Copyright 2026 HPActor Contributors
+// SPDX-License-Identifier: Apache-2.0
+
+// System test: TLS Transport
+// Exercises TcpTransport with use_tls=true over loopback.
+
+#include <gtest/gtest.h>
+
+#include <hpactor/config/actor_factory_registry.hpp>
+#include <hpactor/core/actor_system.hpp>
+#include <hpactor/net/static_discovery.hpp>
+
+#include "system_test_fixture.hpp"
+#include "tls_test_helpers.hpp"
+
+using namespace hpactor;
+
+using CountingActor = test::CountingActor;
+HPACTOR_REGISTER_ACTOR("CountingActor", CountingActor);
+
+// Helper: create a Config with TLS enabled and ephemeral port.
+// Generates fresh self-signed certs on each call.
+static Config tls_config(size_t scheduler_threads = 1) {
+    auto certs = test::generate_test_certs();
+    Config cfg;
+    cfg.scheduler_threads = scheduler_threads;
+    cfg.enable_network = true;
+    cfg.tcp_port = 0; // ephemeral
+    cfg.cli.enabled = false;
+    cfg.tracing.enabled = false;
+    cfg.tls.endpoint = hpactor::endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.tls.own_cert_der = certs.cert_der;
+    cfg.tls.own_key_der = certs.key_der;
+    cfg.tls.verify_peer = false;
+    cfg.pool.use_tls = true;
+    return cfg;
+}
+
+// ─── Transport Lifecycle ────────────────────────────────────────
+
+TEST(TlsTransportSystem, ListenOnEphemeralPort) {
+    Config cfg = tls_config(1);
+    cfg.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+
+    ActorSystem system(cfg);
+    EXPECT_TRUE(system.is_running());
+    EXPECT_NE(system.transport(), nullptr);
+
+    auto ep = system.endpoint();
+    EXPECT_NE(ep, EndPoint{});
+
+    auto result = system.shutdown();
+    EXPECT_TRUE(result.has_value());
+}
+
+TEST(TlsTransportSystem, IsConnectedFalseForUnknown) {
+    Config cfg = tls_config(1);
+    cfg.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+
+    ActorSystem system(cfg);
+    auto* transport = system.transport();
+    ASSERT_NE(transport, nullptr);
+
+    auto unknown_ep = hpactor::endpoint_ops::parse_endpoint("127.0.0.1:19999");
+    EXPECT_FALSE(transport->is_connected(unknown_ep));
+
+    auto result = system.shutdown();
+    EXPECT_TRUE(result.has_value());
+}
+
+TEST(TlsTransportSystem, CloseConnectionUnknownIsSafe) {
+    Config cfg = tls_config(1);
+    cfg.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+
+    ActorSystem system(cfg);
+    auto* transport = system.transport();
+    ASSERT_NE(transport, nullptr);
+
+    auto unknown_ep = hpactor::endpoint_ops::parse_endpoint("127.0.0.1:19999");
+    transport->close_connection(unknown_ep); // should not crash
+
+    auto result = system.shutdown();
+    EXPECT_TRUE(result.has_value());
+}
+
+TEST(TlsTransportSystem, TwoTlsSystemsDifferentPorts) {
+    Config cfg_a = tls_config(1);
+    cfg_a.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_a(cfg_a);
+    EXPECT_TRUE(sys_a.is_running());
+
+    Config cfg_b = tls_config(1);
+    cfg_b.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_b(cfg_b);
+    EXPECT_TRUE(sys_b.is_running());
+
+    auto ep_a = sys_a.endpoint();
+    auto ep_b = sys_b.endpoint();
+    EXPECT_NE(ep_a, EndPoint{});
+    EXPECT_NE(ep_b, EndPoint{});
+
+    auto r_a = sys_a.shutdown();
+    auto r_b = sys_b.shutdown();
+    EXPECT_TRUE(r_a.has_value());
+    EXPECT_TRUE(r_b.has_value());
+}
