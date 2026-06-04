@@ -467,6 +467,21 @@ class ActorSystem {
                         int64_t deadline_ns = INT64_MAX,
                         mailbox::DeliveryOptions options = {});
 
+    /// \brief Record a timeout against an actor for circuit breaker tracking.
+    ///
+    /// Callers should invoke this when a request to \p target times out
+    /// (e.g., from ask/request timeout paths). If the target actor has
+    /// quarantine enabled with a non-zero \c timeout_rate_threshold,
+    /// the timeout is recorded in the failure-rate tracker and may trip
+    /// the circuit breaker.
+    ///
+    /// \param[in] target The actor that timed out.
+    /// \note Thread safety: safe to call from any thread. The target
+    ///       actor's circuit breaker is accessed through the actor
+    ///       registry; the timeout recording itself is single-writer
+    ///       (scheduler thread only).
+    void record_actor_timeout(ActorId target);
+
     // ── Dead-letter queue ─────────────────────────────────────────────────
 
     /// \brief Enqueue a dead-letter record.

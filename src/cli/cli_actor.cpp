@@ -134,6 +134,27 @@ CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
     return reply;
 }
 
+std::optional<QuarantineReply>
+CliActor::send_and_wait_quarantine(ActorId target, const QuarantineRequest& req,
+                                   std::chrono::milliseconds timeout) {
+    auto actor = system_.get_actor(target);
+    if (!actor)
+        return std::nullopt;
+
+    TypedMessage msg(TypeTag::QuarantineRequestTag, req);
+    context()->send(actor->address(), std::move(msg));
+
+    auto payload = poll_for_response(TypeTag::QuarantineResponseTag, timeout);
+    if (!payload)
+        return std::nullopt;
+
+    QuarantineReply reply;
+    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size()))) {
+        return std::nullopt;
+    }
+    return reply;
+}
+
 // ---------------------------------------------------------------------------
 // Actor enumeration — iterates the system actor map under lock.
 // ---------------------------------------------------------------------------
@@ -222,7 +243,7 @@ void CliActor::build_command_tree() {
 
 void CliActor::execute_tokens(const std::vector<Token>& tokens) {
     FAULT_INJECT("hpactor.cli.execute_tokens.corrupt") {
-        return;  // silently skip command execution
+        return; // silently skip command execution
     }
     // Reopen formatter for each command
     formatter_ = OutputFormatter::create(config_.default_format);
@@ -300,7 +321,7 @@ void CliActor::execute_tokens(const std::vector<Token>& tokens) {
 
 bool CliActor::run_once() {
     FAULT_INJECT("hpactor.cli.actor.run_once.fail") {
-        return false;  // daemon exits
+        return false; // daemon exits
     }
     if (!running_) {
         return false;

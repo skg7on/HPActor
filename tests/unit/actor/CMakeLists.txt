@@ -1,6 +1,7 @@
 add_executable(test_unit_actor
     test_abstract_actor.cpp
     test_circuit_breaker_tracker.cpp
+    test_circuit_breaker_result.cpp
     test_failure_rate_tracker.cpp
     test_lifecycle_state.cpp
     test_proto_registry.cpp

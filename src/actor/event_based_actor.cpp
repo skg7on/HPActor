@@ -18,6 +18,7 @@
 #include <hpactor/actor/quarantine_reason.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
@@ -26,7 +27,6 @@
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 #include <hpactor/types/failure_envelope.hpp>
-#include <hpactor/fault/fault_macros.hpp>
 
 #include <chrono>
 #include <cstring>
@@ -132,6 +132,7 @@ void EventBasedActor::receive(TypedMessage& msg) {
 
     dispatch_user_message(msg);
     try_drain_completion();
+    check_mailbox_pressure();
 }
 
 bool EventBasedActor::handle_link_msg(const TypedMessage& msg) {
@@ -364,8 +365,7 @@ bool EventBasedActor::apply_lifecycle_gate(const TypedMessage& msg) {
         }
         HPACTOR_LOG_WARNING(
             log::LogCategory::kActor, id(), 0, "quarantine_reject",
-            log::field_lit("reason",
-                           to_string(lc->quarantine_reason())));
+            log::field_lit("reason", to_string(lc->quarantine_reason())));
     }
     return false;
 }
@@ -410,6 +410,27 @@ bool EventBasedActor::dispatch_cli_message(TypedMessage& msg) {
             pb_mbox->set_overflow_policy(ms.overflow_policy);
         }
 
+        if (req.include_circuit_breaker() && quarantine_policy_.enabled) {
+            auto* pb_cb = reply.mutable_circuit_breaker();
+            pb_cb->set_state(to_string(circuit_breaker_.state));
+            pb_cb->set_trip_count(circuit_breaker_.trip_count);
+            pb_cb->set_failure_ema(circuit_breaker_.failure_ema);
+            if (circuit_breaker_.state == CircuitBreakerState::kOpen) {
+                auto ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                              circuit_breaker_.opened_at.time_since_epoch())
+                              .count();
+                pb_cb->set_opened_at_ns(static_cast<uint64_t>(ns));
+            }
+        }
+        if (req.include_quarantine_info()) {
+            reply.set_quarantine_enabled(quarantine_policy_.enabled);
+            if (auto* lc = as_lifecycle()) {
+                if (lc->is_quarantined()) {
+                    reply.set_quarantine_reason(
+                        std::string(to_string(lc->quarantine_reason())));
+                }
+            }
+        }
         if (req.include_state()) {
             auto blob = serialize_state();
             reply.set_state_blob(std::string(
@@ -418,8 +439,8 @@ bool EventBasedActor::dispatch_cli_message(TypedMessage& msg) {
 
         std::string reply_data = reply.SerializeAsString();
         StreamBuffer payload(reply_data.begin(), reply_data.end());
-        ctx->reply(TypedMessage(TypeTag::InspectStateResponseTag,
-                                std::move(payload)));
+        ctx->reply(
+            TypedMessage(TypeTag::InspectStateResponseTag, std::move(payload)));
         return true;
     }
 
@@ -444,6 +465,56 @@ bool EventBasedActor::dispatch_cli_message(TypedMessage& msg) {
             lc->transition(LifecycleState::kStopped);
         }
         set_exit_reason(0);
+        return true;
+    }
+
+    // QuarantineRequest: quarantine or unquarantine this actor
+    if (msg.type_id() == TypeTag::QuarantineRequestTag) {
+        cli::QuarantineRequest req;
+        if (!req.ParseFromArray(msg.payload().data(),
+                                static_cast<int>(msg.payload().size()))) {
+            return true;
+        }
+
+        cli::QuarantineReply reply;
+        bool ok = false;
+
+        if (req.unquarantine()) {
+            // Release from quarantine: Q→Stopped→Starting→Active
+            if (auto* lc = as_lifecycle()) {
+                if (lc->is_quarantined()) {
+                    lc->transition(LifecycleState::kStopped);
+                    lc->bump_incarnation();
+                    lc->transition(LifecycleState::kStarting);
+                    lc->transition(LifecycleState::kActive);
+                    circuit_breaker_.state = CircuitBreakerState::kClosed;
+                    circuit_breaker_.trip_count = 0;
+                    circuit_breaker_.half_open_probe_in_flight = false;
+                    ok = true;
+                } else {
+                    reply.set_error_message("Actor is not quarantined");
+                }
+            } else {
+                reply.set_error_message("Actor does not support lifecycle");
+            }
+        } else {
+            // Quarantine the actor
+            if (auto* lc = as_lifecycle()) {
+                if (!lc->is_quarantined()) {
+                    lc->transition_to_quarantined(QuarantineReason::OperatorAction);
+                    ok = true;
+                } else {
+                    reply.set_error_message("Actor is already quarantined");
+                }
+            } else {
+                reply.set_error_message("Actor does not support lifecycle");
+            }
+        }
+
+        reply.set_success(ok);
+        std::string reply_data = reply.SerializeAsString();
+        StreamBuffer payload(reply_data.begin(), reply_data.end());
+        ctx->reply(TypedMessage(TypeTag::QuarantineResponseTag, std::move(payload)));
         return true;
     }
 
@@ -630,6 +701,19 @@ void EventBasedActor::record_circuit_breaker_result(bool success) {
             circuit_breaker_.state = CircuitBreakerState::kClosed;
             circuit_breaker_.trip_count = 0;
             circuit_breaker_.half_open_probe_in_flight = false;
+            if (metrics_ring_buffer_) [[unlikely]] {
+                auto now_ns =
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch())
+                        .count();
+                metrics::MetricEvent evt{};
+                evt.timestamp_ns = static_cast<uint64_t>(now_ns);
+                evt.actor_id = id();
+                evt.event_type = metrics::MetricEventType::kCircuitStateChange;
+                evt.code = static_cast<uint8_t>(CircuitBreakerState::kClosed);
+                evt.value_hi = 0;
+                metrics_ring_buffer_->try_push(evt);
+            }
         }
         return;
     }
@@ -655,16 +739,83 @@ void EventBasedActor::record_circuit_breaker_result(bool success) {
 
     if (circuit_breaker_.state == CircuitBreakerState::kClosed ||
         circuit_breaker_.state == CircuitBreakerState::kHalfOpen) {
-        circuit_breaker_.state = CircuitBreakerState::kOpen;
-        circuit_breaker_.opened_at = now;
-        circuit_breaker_.half_open_probe_in_flight = false;
-        circuit_breaker_.trip_count++;
+        trip_circuit(now);
     }
 
     auto max_trips = quarantine_policy_.max_circuit_trips;
     if (max_trips > 0 && circuit_breaker_.trip_count >= max_trips) {
         if (auto* lc = as_lifecycle()) {
             lc->transition_to_quarantined(QuarantineReason::CircuitBreakerTrip);
+        }
+    }
+}
+
+void EventBasedActor::record_circuit_breaker_timeout() {
+    if (!quarantine_policy_.enabled)
+        return;
+
+    uint32_t threshold = quarantine_policy_.timeout_rate_threshold;
+    if (threshold == 0)
+        return;
+
+    auto now = std::chrono::steady_clock::now();
+    failure_rate_tracker_.advance_buckets(now);
+    failure_rate_tracker_.record_timeout();
+    auto window_ms =
+        static_cast<uint32_t>(quarantine_policy_.observation_window.count());
+
+    double rate = failure_rate_tracker_.timeout_rate(window_ms);
+    if (rate > static_cast<double>(threshold)) {
+        if (circuit_breaker_.state == CircuitBreakerState::kClosed ||
+            circuit_breaker_.state == CircuitBreakerState::kHalfOpen) {
+            trip_circuit(now);
+        }
+    }
+}
+
+void EventBasedActor::trip_circuit(std::chrono::steady_clock::time_point now) {
+    circuit_breaker_.state = CircuitBreakerState::kOpen;
+    circuit_breaker_.opened_at = now;
+    circuit_breaker_.half_open_probe_in_flight = false;
+    circuit_breaker_.trip_count++;
+    if (metrics_ring_buffer_) [[unlikely]] {
+        auto now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                          now.time_since_epoch())
+                          .count();
+        metrics::MetricEvent evt{};
+        evt.timestamp_ns = static_cast<uint64_t>(now_ns);
+        evt.actor_id = id();
+        evt.event_type = metrics::MetricEventType::kCircuitStateChange;
+        evt.code = static_cast<uint8_t>(CircuitBreakerState::kOpen);
+        evt.value_hi = circuit_breaker_.trip_count;
+        metrics_ring_buffer_->try_push(evt);
+    }
+}
+
+void EventBasedActor::check_mailbox_pressure() {
+    if (!quarantine_policy_.enabled)
+        return;
+
+    float threshold = quarantine_policy_.mailbox_pressure_threshold;
+    if (threshold <= 0.0f)
+        return;
+
+    if (!mailbox_)
+        return;
+
+    auto snap = mailbox_->snapshot();
+    float ratio = static_cast<float>(snap.pressure_ratio_ppm) / 1000000.0f;
+    if (ratio >= threshold) {
+        if (circuit_breaker_.state == CircuitBreakerState::kClosed ||
+            circuit_breaker_.state == CircuitBreakerState::kHalfOpen) {
+            trip_circuit(std::chrono::steady_clock::now());
+        }
+        // If circuit is already open, escalate to quarantine
+        auto max_trips = quarantine_policy_.max_circuit_trips;
+        if (max_trips > 0 && circuit_breaker_.trip_count >= max_trips) {
+            if (auto* lc = as_lifecycle()) {
+                lc->transition_to_quarantined(QuarantineReason::MailboxPressure);
+            }
         }
     }
 }

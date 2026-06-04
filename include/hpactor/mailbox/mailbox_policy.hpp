@@ -118,6 +118,7 @@ enum class EnqueueResultCode : uint8_t {
     ActorNotFound,
     EndpointBackpressure, // new: data lane at capacity for remote endpoint
     EndpointCircuitOpen,  // new: circuit breaker open for remote endpoint
+    CircuitOpen,          // new: actor-level circuit breaker open
 };
 
 /// \brief Map an EnqueueResultCode to the canonical FailureReason.
@@ -149,6 +150,8 @@ failure_reason(EnqueueResultCode code) noexcept {
             return FailureReason::ResourceExhausted;
         case EnqueueResultCode::EndpointCircuitOpen:
             return FailureReason::RemoteUnavailable;
+        case EnqueueResultCode::CircuitOpen:
+            return FailureReason::CircuitOpen;
         case EnqueueResultCode::Accepted:
         case EnqueueResultCode::AcceptedWithSoftPressure:
             return FailureReason::Unknown; // Not a failure
@@ -187,7 +190,8 @@ struct EnqueueResult {
         return code == EnqueueResultCode::Rejected ||
                code == EnqueueResultCode::MailboxClosed ||
                code == EnqueueResultCode::ReroutedToOverflow ||
-               code == EnqueueResultCode::EndpointBackpressure;
+               code == EnqueueResultCode::EndpointBackpressure ||
+               code == EnqueueResultCode::CircuitOpen;
     }
 
     /// \brief Canonical failure reason for this admission result.

@@ -40,7 +40,8 @@ ICommand* find_cmd(std::string_view path) {
 TEST(ActorShowCommandTest, Metadata) {
     auto* cmd = find_cmd("actor/<id>/show");
     ASSERT_NE(cmd, nullptr);
-    EXPECT_EQ(cmd->help_text(), "Display actor metadata, state, mailbox, and children");
+    EXPECT_EQ(cmd->help_text(), "Display actor metadata, state, mailbox, and "
+                                "children");
     EXPECT_EQ(cmd->order(), 100);
 }
 
@@ -195,7 +196,178 @@ TEST(ActorListCommandTest, FilterParamParsedWhenSet) {
     CommandContext ctx;
     ctx.output = &fmt;
     ctx.params["filter"] = "Worker";
-    ctx.cli_actor = nullptr; // still null, but filter parsing happens before null check
+    ctx.cli_actor = nullptr; // still null, but filter parsing happens before
+                             // null check
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Internal error: no CLI actor"), std::string::npos);
+}
+
+// =============================================================================
+// ActorCircuitCommand
+// =============================================================================
+
+TEST(ActorCircuitCommandTest, Metadata) {
+    auto* cmd = find_cmd("actor/<id>/circuit");
+    ASSERT_NE(cmd, nullptr);
+    EXPECT_EQ(cmd->help_text(), "Show circuit breaker state: state, trip "
+                                "count, failure EMA");
+    EXPECT_EQ(cmd->order(), 150);
+}
+
+TEST(ActorCircuitCommandTest, MissingActorId) {
+    auto* cmd = find_cmd("actor/<id>/circuit");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Missing actor ID"), std::string::npos);
+}
+
+TEST(ActorCircuitCommandTest, InvalidActorId) {
+    auto* cmd = find_cmd("actor/<id>/circuit");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "garbage";
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Invalid actor ID"), std::string::npos);
+}
+
+TEST(ActorCircuitCommandTest, NullCliActor) {
+    auto* cmd = find_cmd("actor/<id>/circuit");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "0x1234";
+    ctx.cli_actor = nullptr;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Internal error: no CLI actor"), std::string::npos);
+}
+
+// =============================================================================
+// ActorQuarantineCommand
+// =============================================================================
+
+TEST(ActorQuarantineCommandTest, Metadata) {
+    auto* cmd = find_cmd("actor/<id>/quarantine");
+    ASSERT_NE(cmd, nullptr);
+    EXPECT_EQ(cmd->help_text(), "Manually quarantine an actor [--reason "
+                                "<text>]");
+    EXPECT_EQ(cmd->order(), 250);
+}
+
+TEST(ActorQuarantineCommandTest, MissingActorId) {
+    auto* cmd = find_cmd("actor/<id>/quarantine");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Missing actor ID"), std::string::npos);
+}
+
+TEST(ActorQuarantineCommandTest, InvalidActorId) {
+    auto* cmd = find_cmd("actor/<id>/quarantine");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "garbage";
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Invalid actor ID"), std::string::npos);
+}
+
+TEST(ActorQuarantineCommandTest, NullCliActor) {
+    auto* cmd = find_cmd("actor/<id>/quarantine");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "0x1234";
+    ctx.cli_actor = nullptr;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Internal error: no CLI actor"), std::string::npos);
+}
+
+// =============================================================================
+// ActorUnquarantineCommand
+// =============================================================================
+
+TEST(ActorUnquarantineCommandTest, Metadata) {
+    auto* cmd = find_cmd("actor/<id>/unquarantine");
+    ASSERT_NE(cmd, nullptr);
+    EXPECT_EQ(cmd->help_text(), "Release an actor from quarantine");
+    EXPECT_EQ(cmd->order(), 260);
+}
+
+TEST(ActorUnquarantineCommandTest, MissingActorId) {
+    auto* cmd = find_cmd("actor/<id>/unquarantine");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Missing actor ID"), std::string::npos);
+}
+
+TEST(ActorUnquarantineCommandTest, InvalidActorId) {
+    auto* cmd = find_cmd("actor/<id>/unquarantine");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "garbage";
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Invalid actor ID"), std::string::npos);
+}
+
+TEST(ActorUnquarantineCommandTest, NullCliActor) {
+    auto* cmd = find_cmd("actor/<id>/unquarantine");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "0x5678";
+    ctx.cli_actor = nullptr;
 
     cmd->execute(ctx);
     std::string out = fmt.finalize();
