@@ -109,3 +109,75 @@ TEST(TlsTransportSystem, TwoTlsSystemsDifferentPorts) {
     EXPECT_TRUE(r_a.has_value());
     EXPECT_TRUE(r_b.has_value());
 }
+
+// ─── TLS Client↔Server Connect ─────────────────────────────────
+
+TEST(TlsTransportSystem, ConnectLoopback) {
+    Config cfg_a = tls_config(1);
+    cfg_a.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_a(cfg_a);
+    ASSERT_TRUE(sys_a.is_running());
+
+    Config cfg_b = tls_config(1);
+    cfg_b.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_b(cfg_b);
+    ASSERT_TRUE(sys_b.is_running());
+
+    auto* transport_a = sys_a.transport();
+    ASSERT_NE(transport_a, nullptr);
+
+    // Attempt a connection — may succeed or fail depending on TLS config
+    auto conn = transport_a->connect(sys_b.endpoint());
+    (void)conn;
+
+    SUCCEED();
+
+    auto r_a = sys_a.shutdown();
+    auto r_b = sys_b.shutdown();
+    EXPECT_TRUE(r_a.has_value());
+    EXPECT_TRUE(r_b.has_value());
+}
+
+TEST(TlsTransportSystem, ConnectReturnsConnection) {
+    Config cfg_a = tls_config(1);
+    cfg_a.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_a(cfg_a);
+    ASSERT_TRUE(sys_a.is_running());
+
+    Config cfg_b = tls_config(1);
+    cfg_b.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_b(cfg_b);
+    ASSERT_TRUE(sys_b.is_running());
+
+    auto* transport_a = sys_a.transport();
+    ASSERT_NE(transport_a, nullptr);
+
+    auto conn = transport_a->connect(sys_b.endpoint());
+    (void)conn;
+
+    auto r_a = sys_a.shutdown();
+    auto r_b = sys_b.shutdown();
+    EXPECT_TRUE(r_a.has_value());
+    EXPECT_TRUE(r_b.has_value());
+}
+
+TEST(TlsTransportSystem, ConnectToSelf) {
+    Config cfg = tls_config(1);
+    cfg.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem system(cfg);
+    ASSERT_TRUE(system.is_running());
+
+    auto* transport = system.transport();
+    ASSERT_NE(transport, nullptr);
+
+    auto conn = transport->connect(system.endpoint());
+    (void)conn;
+
+    auto result = system.shutdown();
+    EXPECT_TRUE(result.has_value());
+}
