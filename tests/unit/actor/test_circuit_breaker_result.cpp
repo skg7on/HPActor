@@ -113,8 +113,8 @@ class CircuitBreakerResultTest : public ::testing::Test {
         }
         // If we need more than kNumBuckets, stack them in bucket 0
         if (needed > FailureRateTracker::kNumBuckets) {
-            ft_->failure_buckets[0] =
-                needed - (FailureRateTracker::kNumBuckets - 1);
+            ft_->failure_buckets[0] = static_cast<uint32_t>(
+                needed - (FailureRateTracker::kNumBuckets - 1));
         }
         ft_->last_bucket_advance = std::chrono::steady_clock::now();
         ft_->bucket_interval_ms = window_ms / FailureRateTracker::kNumBuckets;
