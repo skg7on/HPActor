@@ -24,6 +24,7 @@
 
 #include <chrono>
 #include <gtest/gtest.h>
+#include <memory>
 #include <vector>
 
 using namespace hpactor;
@@ -123,12 +124,20 @@ class CircuitBreakerResultTest : public ::testing::Test {
         }
     }
 
+    /// \brief Allocate a ring buffer and wire it into the actor under test.
+    void setup_metrics() {
+        metric_buf_ =
+            std::make_unique<metrics::MpscRingBuffer<metrics::MetricEvent, 64>>();
+        eba_->set_metrics_ring_buffer(metric_buf_.get());
+    }
+
     std::unique_ptr<ActorSystem> system_;
     Actor target_;
     EventBasedActor* eba_{nullptr};
     CircuitBreakerTracker* cb_{nullptr};
     FailureRateTracker* ft_{nullptr};
     LifecycleActor* lc_{nullptr};
+    std::unique_ptr<metrics::MpscRingBuffer<metrics::MetricEvent, 64>> metric_buf_;
 };
 
 // ── HalfOpen + success → Closed, trip_count reset ──────────────────────
@@ -322,9 +331,7 @@ TEST_F(CircuitBreakerResultTest, EmitsMetricOnCircuitTrip) {
     policy.observation_window = milliseconds(2000);
     setup_actor(policy);
 
-    // Install a small ring buffer so we can verify the metric.
-    metrics::MpscRingBuffer<metrics::MetricEvent, 16> ring_buffer;
-    eba_->set_metrics_ring_buffer(&ring_buffer);
+    setup_metrics();
 
     // Trigger a trip: produce enough failures to push EMA above threshold.
     for (size_t i = 0; i < FailureRateTracker::kNumBuckets; ++i) {
@@ -337,7 +344,7 @@ TEST_F(CircuitBreakerResultTest, EmitsMetricOnCircuitTrip) {
 
     // Drain the ring buffer and collect events.
     std::vector<metrics::MetricEvent> events;
-    ring_buffer.drain(
+    metric_buf_->drain(
         [&](const metrics::MetricEvent& evt) { events.push_back(evt); });
 
     // We expect at least one kCircuitStateChange event.
@@ -361,8 +368,7 @@ TEST_F(CircuitBreakerResultTest, EmitsMetricOnHalfOpenSuccess) {
     policy.failure_rate_threshold = 5;
     setup_actor(policy);
 
-    metrics::MpscRingBuffer<metrics::MetricEvent, 16> ring_buffer;
-    eba_->set_metrics_ring_buffer(&ring_buffer);
+    setup_metrics();
 
     // Arrange: circuit is half-open
     cb_->state = CircuitBreakerState::kHalfOpen;
@@ -374,7 +380,7 @@ TEST_F(CircuitBreakerResultTest, EmitsMetricOnHalfOpenSuccess) {
 
     // Verify metric
     std::vector<metrics::MetricEvent> events;
-    ring_buffer.drain(
+    metric_buf_->drain(
         [&](const metrics::MetricEvent& evt) { events.push_back(evt); });
 
     bool found = false;
@@ -398,8 +404,7 @@ TEST_F(CircuitBreakerResultTest, EmitsMetricOnHalfOpenFailure) {
     policy.observation_window = milliseconds(1000);
     setup_actor(policy);
 
-    metrics::MpscRingBuffer<metrics::MetricEvent, 16> ring_buffer;
-    eba_->set_metrics_ring_buffer(&ring_buffer);
+    setup_metrics();
 
     // Arrange: circuit is half-open
     cb_->state = CircuitBreakerState::kHalfOpen;
@@ -414,7 +419,7 @@ TEST_F(CircuitBreakerResultTest, EmitsMetricOnHalfOpenFailure) {
 
     // Verify metric
     std::vector<metrics::MetricEvent> events;
-    ring_buffer.drain(
+    metric_buf_->drain(
         [&](const metrics::MetricEvent& evt) { events.push_back(evt); });
 
     bool found = false;
@@ -438,8 +443,7 @@ TEST_F(CircuitBreakerResultTest, NoMetricWhenDisabled) {
     setup_actor(policy);
 
     // Install ring buffer, then disable quarantine.
-    metrics::MpscRingBuffer<metrics::MetricEvent, 16> ring_buffer;
-    eba_->set_metrics_ring_buffer(&ring_buffer);
+    setup_metrics();
 
     QuarantinePolicy off;
     off.enabled = false;
@@ -450,7 +454,7 @@ TEST_F(CircuitBreakerResultTest, NoMetricWhenDisabled) {
 
     // Verify: no events emitted
     size_t count = 0;
-    ring_buffer.drain([&](const metrics::MetricEvent&) { count++; });
+    metric_buf_->drain([&](const metrics::MetricEvent&) { count++; });
     EXPECT_EQ(count, 0u);
 }
 
