@@ -20,6 +20,31 @@ using namespace hpactor;
 using namespace hpactor::net;
 
 namespace {
+
+/// \brief Check whether a UDP port is available for binding.
+static bool port_is_available(uint16_t port) {
+    int fd = ::socket(AF_INET, SOCK_DGRAM, 0);
+    if (fd < 0)
+        return false;
+    struct sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_addr.s_addr = htonl(0x7F000001);
+    addr.sin_port = htons(port);
+    int rc = ::bind(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    ::close(fd);
+    return rc == 0;
+}
+
+/// \brief Skip the test if gossip ports are not available (CI coverage builds
+///        often have port conflicts or resource constraints).
+static bool ensure_gossip_ports(uint16_t base, int count) {
+    for (int i = 0; i < count; ++i) {
+        if (!port_is_available(static_cast<uint16_t>(base + i)))
+            return false;
+    }
+    return true;
+}
+
 static EndPoint ep(uint16_t port) {
     return Ipv4Endpoint{htonl(0x7F000001), htons(port)};
 }
@@ -44,6 +69,8 @@ cfg_at(uint16_t port, const std::vector<uint16_t>& seed_ports = {}) {
 // ── TwoNodeJoinAndDiscovery ────────────────────────────────────────────
 
 TEST(GossipSystem, TwoNodeJoinAndDiscovery) {
+    if (!ensure_gossip_ports(50000, 2))
+        GTEST_SKIP() << "Gossip ports 50000-50001 not available";
     Config a_cfg = test::minimal_config();
     a_cfg.enable_network = true;
     ActorSystem sys_a(a_cfg);
@@ -77,6 +104,8 @@ TEST(GossipSystem, TwoNodeJoinAndDiscovery) {
 }
 
 TEST(GossipSystem, FailureDetectionEndToEnd) {
+    if (!ensure_gossip_ports(50000, 3))
+        GTEST_SKIP() << "Gossip ports 50000-50002 not available";
     Config ac = test::minimal_config();
     ac.enable_network = true;
     ActorSystem sa(ac);
@@ -127,6 +156,8 @@ TEST(GossipSystem, FailureDetectionEndToEnd) {
 }
 
 TEST(GossipSystem, GracefulLeave) {
+    if (!ensure_gossip_ports(50010, 3))
+        GTEST_SKIP() << "Gossip ports 50010-50012 not available";
     Config ac = test::minimal_config();
     ac.enable_network = true;
     ActorSystem sa(ac);
