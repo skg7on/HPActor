@@ -20,6 +20,7 @@ add_library(hpactor_lib SHARED
     ref/actor_ref.cpp
     supervision/supervision.cpp
     mailbox/dead_letter_queue.cpp
+    mailbox/delivery_result.cpp
     mailbox/dedup_cache.cpp
     mailbox/backpressure_signal_serialization.cpp
     config/actor_factory_registry.cpp

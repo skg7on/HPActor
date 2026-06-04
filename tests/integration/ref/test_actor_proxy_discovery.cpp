@@ -35,8 +35,8 @@ struct FailingTransport : public net::Transport {
     }
     void listen(uint16_t) override {}
     void stop_listening() override {}
-    bool try_send(const ActorAddress&, const StreamBuffer&) override {
-        return false;
+    TransportSendResult try_send(const ActorAddress&, const StreamBuffer&) override {
+        return TransportSendResult::NotConnected;
     }
     bool is_connected(EndPoint) const override {
         return false;
@@ -62,11 +62,12 @@ struct RecordingTransport : public net::Transport {
     }
     void listen(uint16_t) override {}
     void stop_listening() override {}
-    bool try_send(const ActorAddress& receiver, const StreamBuffer& data) override {
+    TransportSendResult
+    try_send(const ActorAddress& receiver, const StreamBuffer& data) override {
         send_called = true;
         last_receiver = receiver;
         last_payload_size = data.size();
-        return true;
+        return TransportSendResult::Sent;
     }
     bool is_connected(EndPoint) const override {
         return false;
@@ -142,7 +143,7 @@ TEST_F(ActorProxyDiscoveryTest, TransportTrySendFailureReturnsRejected) {
     ActorAddress target(other_ep_, 0, ActorId{2}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{'p', 'a', 'y'});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Rejected);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::RemoteUnavailable);
 }
 
 TEST_F(ActorProxyDiscoveryTest, TransportTrySendSuccess) {
@@ -153,7 +154,7 @@ TEST_F(ActorProxyDiscoveryTest, TransportTrySendSuccess) {
     ActorAddress target(other_ep_, 0, ActorId{2}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{'d', 'a', 't', 'a'});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Accepted);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::Accepted);
     EXPECT_TRUE(transport.send_called);
 }
 
@@ -170,7 +171,7 @@ TEST_F(ActorProxyDiscoveryTest, DiscoveryMissingRouteReturnsActorNotFound) {
     ActorAddress target(other_ep_, 0, ActorId{2}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{'x'});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::ActorNotFound);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::NoRoute);
 }
 
 TEST_F(ActorProxyDiscoveryTest, DiscoveryResolvesAndSends) {
@@ -184,7 +185,7 @@ TEST_F(ActorProxyDiscoveryTest, DiscoveryResolvesAndSends) {
     ActorAddress target(other_ep_, 0, ActorId{2}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{'y'});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Accepted);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::Accepted);
     EXPECT_TRUE(transport.send_called);
 }
 
@@ -203,7 +204,7 @@ TEST_F(ActorProxyDiscoveryTest, LocationCacheHitUpdatesEndpoint) {
     ActorAddress target(ep_, 0, ActorId{2}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{'z'});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Accepted);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::Accepted);
     EXPECT_TRUE(transport.send_called);
     EXPECT_EQ(transport.last_receiver.endpoint, other_ep_);
 }
@@ -219,7 +220,7 @@ TEST_F(ActorProxyDiscoveryTest, LocationCacheMissDoesNotCrash) {
     ActorAddress target(ep_, 0, ActorId{99}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{'w'});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Accepted);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::Accepted);
 }
 
 // ── Sender address fallback ──────────────────────────────────────
@@ -232,7 +233,7 @@ TEST_F(ActorProxyDiscoveryTest, SenderAddressFallbackWhenMsgHasNoSender) {
     TypedMessage msg(TypeTag::User, StreamBuffer{'a'});
     ActorAddress target(ep_, 0, ActorId{11}, 0);
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Accepted);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::Accepted);
     EXPECT_EQ(transport.last_receiver.id, ActorId{11});
 }
 
@@ -244,5 +245,5 @@ TEST_F(ActorProxyDiscoveryTest, TransportFailureNoSystemNoCrash) {
     ActorAddress target(other_ep_, 0, ActorId{2}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{'f'});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Rejected);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::RemoteUnavailable);
 }

@@ -18,8 +18,8 @@
 #include <hpactor/mailbox/delivery_mode.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 
-#include <gtest/gtest.h>
 #include <chrono>
+#include <gtest/gtest.h>
 
 using namespace hpactor;
 using namespace hpactor::mailbox;
@@ -56,11 +56,10 @@ TEST_F(DeliverySemanticsTest, BestEffortDefaultAccepted) {
 
     DeliveryOptions opts;
     opts.delivery_mode = DeliveryMode::BestEffort;
-    auto result = ctx.try_send(target_.address(),
-                                TypedMessage(TypeTag::User, StreamBuffer{1}),
-                                opts);
+    auto result = ctx.try_send(
+        target_.address(), TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
     EXPECT_TRUE(result.accepted());
-    EXPECT_EQ(result.code, EnqueueResultCode::Accepted);
+    EXPECT_EQ(result.status, DeliveryStatus::Accepted);
 }
 
 TEST_F(DeliverySemanticsTest, DefaultOptionsBestEffort) {
@@ -68,7 +67,7 @@ TEST_F(DeliverySemanticsTest, DefaultOptionsBestEffort) {
     ActorContext ctx(sender_, system_.get());
 
     auto result = ctx.try_send(target_.address(),
-                                TypedMessage(TypeTag::User, StreamBuffer{1}));
+                               TypedMessage(TypeTag::User, StreamBuffer{1}));
     EXPECT_TRUE(result.accepted());
 }
 
@@ -79,9 +78,8 @@ TEST_F(DeliverySemanticsTest, ObservableBestEffortAccepted) {
 
     DeliveryOptions opts;
     opts.delivery_mode = DeliveryMode::ObservableBestEffort;
-    auto result = ctx.try_send(target_.address(),
-                                TypedMessage(TypeTag::User, StreamBuffer{1}),
-                                opts);
+    auto result = ctx.try_send(
+        target_.address(), TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
     EXPECT_TRUE(result.accepted());
 }
 
@@ -93,9 +91,8 @@ TEST_F(DeliverySemanticsTest, AtLeastOnceAccepted) {
     DeliveryOptions opts;
     opts.delivery_mode = DeliveryMode::AtLeastOnce;
     opts.message_id = 42;
-    auto result = ctx.try_send(target_.address(),
-                                TypedMessage(TypeTag::User, StreamBuffer{1}),
-                                opts);
+    auto result = ctx.try_send(
+        target_.address(), TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
     EXPECT_TRUE(result.accepted());
 }
 
@@ -108,14 +105,14 @@ TEST_F(DeliverySemanticsTest, AtLeastOnceDuplicateSuppressed) {
 
     // First send → accepted and delivered.
     auto r1 = ctx.try_send(target_.address(),
-                            TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
+                           TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
     EXPECT_TRUE(r1.accepted());
 
     // Second send with same message_id → accepted (duplicate suppressed).
     auto r2 = ctx.try_send(target_.address(),
-                            TypedMessage(TypeTag::User, StreamBuffer{2}), opts);
+                           TypedMessage(TypeTag::User, StreamBuffer{2}), opts);
     EXPECT_TRUE(r2.accepted());
-    EXPECT_EQ(r2.code, EnqueueResultCode::Accepted);
+    EXPECT_EQ(r2.status, DeliveryStatus::Accepted);
 
     // Verify mailbox has only one message (the first).
     auto* mailbox = system_->get_mailbox(target_.address().id);
@@ -135,11 +132,11 @@ TEST_F(DeliverySemanticsTest, AtLeastOnceNoDedupWithoutMessageId) {
     opts.message_id = 0; // no message id → no dedup
 
     auto r1 = ctx.try_send(target_.address(),
-                            TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
+                           TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
     EXPECT_TRUE(r1.accepted());
 
     auto r2 = ctx.try_send(target_.address(),
-                            TypedMessage(TypeTag::User, StreamBuffer{2}), opts);
+                           TypedMessage(TypeTag::User, StreamBuffer{2}), opts);
     EXPECT_TRUE(r2.accepted());
 
     // Both messages should be in the mailbox.
@@ -158,9 +155,9 @@ TEST_F(DeliverySemanticsTest, TrySendToDeadActorReturnsActorNotFound) {
     // Use a non-existent actor id to trigger ActorNotFound.
     ActorAddress missing_addr = target_.address();
     missing_addr.id = ActorId{99999};
-    auto result = ctx.try_send(missing_addr,
-                                TypedMessage(TypeTag::User, StreamBuffer{1}));
-    EXPECT_EQ(result.code, EnqueueResultCode::ActorNotFound);
+    auto result =
+        ctx.try_send(missing_addr, TypedMessage(TypeTag::User, StreamBuffer{1}));
+    EXPECT_EQ(result.status, DeliveryStatus::NoRoute);
     EXPECT_EQ(result.failure_reason(), FailureReason::NoRoute);
 }
 

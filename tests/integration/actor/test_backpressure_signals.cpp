@@ -70,7 +70,7 @@ TEST_F(BackpressureSignalsTest, SignalOnSoftPressure) {
     auto result = sender_ctx->try_send(
         target.address(), TypedMessage(TypeTag::User, StreamBuffer{1}));
     EXPECT_TRUE(result.accepted());
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::AcceptedWithSoftPressure);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::AcceptedWithPressure);
     EXPECT_TRUE(signaled);
 }
 
@@ -114,7 +114,7 @@ TEST_F(BackpressureSignalsTest, NoSignalWhenBelowWatermark) {
     auto result = sender_ctx->try_send(
         target.address(), TypedMessage(TypeTag::User, StreamBuffer{1}));
     EXPECT_TRUE(result.accepted());
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::Accepted);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::Accepted);
     EXPECT_FALSE(signaled);
 }
 

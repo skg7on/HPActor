@@ -451,6 +451,22 @@ class ActorSystem {
                       int64_t deadline_ns = INT64_MAX,
                       mailbox::DeliveryOptions options = {});
 
+    /// \brief Deliver with a user-facing \c DeliveryResult.
+    ///
+    /// Wraps \c try_deliver_local() and converts the internal
+    /// \c EnqueueResult to \c DeliveryResult for caller convenience.
+    ///
+    /// \param[in] target Actor ID.
+    /// \param[in] msg Message to deliver.
+    /// \param[in] priority 0–3 (0 = highest).
+    /// \param[in] deadline_ns Absolute delivery deadline.
+    /// \param[in] options Delivery options.
+    /// \return \c DeliveryResult describing the delivery outcome.
+    mailbox::DeliveryResult
+    deliver_with_result(ActorId target, TypedMessage msg, uint8_t priority = 0,
+                        int64_t deadline_ns = INT64_MAX,
+                        mailbox::DeliveryOptions options = {});
+
     // ── Dead-letter queue ─────────────────────────────────────────────────
 
     /// \brief Enqueue a dead-letter record.

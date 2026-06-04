@@ -24,10 +24,10 @@ namespace {
 
 class MockTransport : public hpactor::net::Transport {
   public:
-    bool try_send(const hpactor::ActorAddress&,
-                  const hpactor::StreamBuffer& encoded) override {
+    TransportSendResult try_send(const hpactor::ActorAddress&,
+                                 const hpactor::StreamBuffer& encoded) override {
         sent_frames_.push_back(encoded);
-        return true;
+        return TransportSendResult::Sent;
     }
     hpactor::net::ConnectionPtr
     connect(hpactor::EndPoint, const std::string&, uint16_t) override {

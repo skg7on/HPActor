@@ -53,7 +53,7 @@ TEST_F(ActorContextTrySendTest, Accepted) {
     auto ok = ctx.try_send(target_.address(),
                            TypedMessage(TypeTag::User, StreamBuffer{1}));
     ASSERT_TRUE(ok.accepted());
-    EXPECT_EQ(ok.code, mailbox::EnqueueResultCode::Accepted);
+    EXPECT_EQ(ok.status, mailbox::DeliveryStatus::Accepted);
 
     auto* mailbox = system_->get_mailbox(target_.address().id);
     ASSERT_NE(mailbox, nullptr);
@@ -86,7 +86,7 @@ TEST_F(ActorContextTrySendTest, ActorNotFound) {
     missing_addr.id = ActorId{99999};
     auto missing =
         ctx.try_send(missing_addr, TypedMessage(TypeTag::User, StreamBuffer{3}));
-    EXPECT_EQ(missing.code, mailbox::EnqueueResultCode::ActorNotFound);
+    EXPECT_EQ(missing.status, mailbox::DeliveryStatus::NoRoute);
 }
 
 TEST_F(ActorContextTrySendTest, WithPriority) {

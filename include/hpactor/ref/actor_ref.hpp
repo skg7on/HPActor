@@ -144,17 +144,18 @@ class ActorRef {
     /// \param[in] msg Message to send (moved).
     void send(const ActorAddress& target, TypedMessage msg);
 
-    /// \brief Try-send returning an admission result.
+    /// \brief Try-send returning a unified delivery result.
     ///
-    /// For local actors, delegates to \c ActorSystem::try_deliver_local().
-    /// For remote actors, delegates to \c ActorProxy::try_send() (best-effort).
+    /// For local actors, delegates to \c ActorSystem::try_deliver_local()
+    /// and maps the result. For remote actors, delegates to
+    /// \c ActorProxy::try_send().
     ///
     /// \param[in] target Destination address.
     /// \param[in] msg Message to send.
     /// \param[in] options Delivery options (deadline, priority, idempotency).
-    /// \return \c EnqueueResult describing the admission outcome.
-    mailbox::EnqueueResult try_send(const ActorAddress& target, TypedMessage msg,
-                                    mailbox::DeliveryOptions options = {});
+    /// \return \c DeliveryResult describing the delivery outcome.
+    mailbox::DeliveryResult try_send(const ActorAddress& target, TypedMessage msg,
+                                     mailbox::DeliveryOptions options = {});
 
     /// \brief Access underlying \c Actor (internal use).
     ///

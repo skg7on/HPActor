@@ -22,8 +22,8 @@ using namespace hpactor;
 
 namespace {
 struct NullTransport : public net::Transport {
-    bool try_send(const ActorAddress&, const StreamBuffer&) override {
-        return true;
+    TransportSendResult try_send(const ActorAddress&, const StreamBuffer&) override {
+        return TransportSendResult::Sent;
     }
     void send(const ActorAddress&, const StreamBuffer&) override {}
     net::ConnectionPtr connect(EndPoint, const std::string&, uint16_t) override {

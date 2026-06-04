@@ -125,12 +125,13 @@ void ActorContext::send_with_priority(const ActorAddress& target, TypedMessage m
     (void)try_send_with_priority(target, std::move(msg), priority, deadline_ns);
 }
 
-mailbox::EnqueueResult
+mailbox::DeliveryResult
 ActorContext::try_send(const ActorAddress& target, TypedMessage msg,
                        mailbox::DeliveryOptions options) {
     auto ref = resolve(target);
     if (!ref) {
-        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+        return {mailbox::DeliveryStatus::NoRoute, target,
+                MessageId{options.message_id}, 0};
     }
 
     if (owner_) {
@@ -147,13 +148,14 @@ ActorContext::try_send(const ActorAddress& target, TypedMessage msg,
     return ref.try_send(ref.address(), std::move(msg), options);
 }
 
-mailbox::EnqueueResult
+mailbox::DeliveryResult
 ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage msg,
                                      uint8_t priority, int64_t deadline_ns,
                                      mailbox::DeliveryOptions options) {
     auto ref = resolve(target);
     if (!ref) {
-        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+        return {mailbox::DeliveryStatus::NoRoute, target,
+                MessageId{options.message_id}, 0};
     }
 
     if (owner_) {
@@ -169,10 +171,13 @@ ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage ms
 
     if (ref.is_local()) {
         if (system != nullptr) {
-            return system->try_deliver_local(target.id, std::move(msg),
-                                             priority, deadline_ns, options);
+            auto er = system->try_deliver_local(target.id, std::move(msg),
+                                                priority, deadline_ns, options);
+            return mailbox::DeliveryResult::from_enqueue(
+                er, target, MessageId{options.message_id});
         }
-        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+        return {mailbox::DeliveryStatus::NoRoute, target,
+                MessageId{options.message_id}, 0};
     }
 
     return ref.try_send(ref.address(), std::move(msg), options);
@@ -182,6 +187,15 @@ void ActorContext::reply(TypedMessage msg) {
     if (current_sender_.id != ActorId{0}) {
         send(current_sender_, std::move(msg));
     }
+}
+
+mailbox::DeliveryResult
+ActorContext::try_reply(TypedMessage msg, mailbox::DeliveryOptions options) {
+    if (current_sender_.id == ActorId{0}) {
+        return {mailbox::DeliveryStatus::NoRoute, ActorAddress{},
+                MessageId{options.message_id}, 0};
+    }
+    return try_send(current_sender_, std::move(msg), options);
 }
 
 void ActorContext::reply(TypeTag tag, const google::protobuf::Message& proto_msg) {

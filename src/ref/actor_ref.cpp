@@ -15,6 +15,7 @@
 // Actor reference implementation - see actor_ref.hpp
 
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/mailbox/delivery_result.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 
 namespace hpactor {
@@ -23,23 +24,27 @@ void ActorRef::send(const ActorAddress& target, TypedMessage msg) {
     (void)try_send(target, std::move(msg));
 }
 
-mailbox::EnqueueResult
+mailbox::DeliveryResult
 ActorRef::try_send(const ActorAddress& target, TypedMessage msg,
                    mailbox::DeliveryOptions options) {
     if (is_local()) {
         Actor* actor = get_actor();
         if (actor != nullptr) {
-            return actor->get()->system().try_deliver_local(
+            auto er = actor->get()->system().try_deliver_local(
                 target.id, std::move(msg), /*priority=*/0,
                 /*deadline_ns=*/INT64_MAX, options);
+            return mailbox::DeliveryResult::from_enqueue(
+                er, target, MessageId{options.message_id});
         }
-        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+        return {mailbox::DeliveryStatus::NoRoute, target,
+                MessageId{options.message_id}, 0};
     } else {
         ActorProxy* proxy = get_proxy();
         if (proxy != nullptr) {
             return proxy->try_send(target, std::move(msg), options);
         }
-        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+        return {mailbox::DeliveryStatus::NoRoute, target,
+                MessageId{options.message_id}, 0};
     }
 }
 

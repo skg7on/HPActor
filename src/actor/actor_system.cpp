@@ -430,15 +430,17 @@ void ActorSystem::emit_remote_backpressure_signal(
     frame.pb_frame.set_payload(reinterpret_cast<const char*>(payload.data()),
                                payload.size());
 
-    bool sent = false;
+    TransportSendResult sent = TransportSendResult::NotConnected;
     auto encoded = frame.encode();
     if (backpressure_signal_wire_sink_for_test_) {
-        sent = backpressure_signal_wire_sink_for_test_(signal.sender, encoded);
+        sent = backpressure_signal_wire_sink_for_test_(signal.sender, encoded)
+                   ? TransportSendResult::Sent
+                   : TransportSendResult::WriteError;
     } else if (transport_) {
         sent = transport_->try_send(signal.sender, encoded);
     }
 
-    if (!sent) {
+    if (sent != TransportSendResult::Sent) {
         HPACTOR_LOG_WARNING(log::LogCategory::kMailbox, signal.target.id, 0,
                             "backpressure_signal_remote_send_failed",
                             log::field("sender", signal.sender.id.value()));
@@ -890,6 +892,15 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                    options.emit_backpressure, bp_mode);
 
     return result;
+}
+
+mailbox::DeliveryResult
+ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
+                                 uint8_t priority, int64_t deadline_ns,
+                                 mailbox::DeliveryOptions options) {
+    auto er =
+        try_deliver_local(target, std::move(msg), priority, deadline_ns, options);
+    return mailbox::DeliveryResult::from_enqueue(er, ActorAddress{}, {});
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {

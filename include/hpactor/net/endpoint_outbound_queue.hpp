@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/mailbox/delivery_result.hpp>
 #include <hpactor/mailbox/detail/pressure_state_machine.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/ref/actor_address.hpp>
@@ -57,7 +58,7 @@ class EndpointOutboundQueue {
   public:
     explicit EndpointOutboundQueue(const EndpointOutboundLimits& limits);
 
-    mailbox::EnqueueResult
+    TransportSendResult
     try_enqueue(PendingMessage msg, mailbox::DeliveryMode mode, TypeTag type_tag);
 
     std::optional<PendingMessage> try_dequeue();

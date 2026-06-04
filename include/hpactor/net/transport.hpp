@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/adt/stream_buffer.hpp>
+#include <hpactor/mailbox/delivery_result.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/rpc/rpc_types.hpp>
 #include <hpactor/types/types.hpp>
@@ -182,10 +183,9 @@ class Transport {
     ///
     /// \param[in] target Destination actor address.
     /// \param[in] encoded Serialized message payload.
-    /// \return \c true if the message was accepted by the transport
-    ///         (either sent immediately or queued for later delivery).
-    /// \retval false No connection, queue full, or transport shutting down.
-    virtual bool
+    /// \return \c TransportSendResult describing whether the frame was
+    ///         queued for transmission or why it was rejected.
+    virtual TransportSendResult
     try_send(const ActorAddress& target, const StreamBuffer& encoded) = 0;
 
     /// \brief Send a message to a remote actor (fire-and-forget).

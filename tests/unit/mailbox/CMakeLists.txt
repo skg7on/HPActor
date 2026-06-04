@@ -11,6 +11,7 @@ add_executable(test_unit_mailbox
     test_mailbox_policy.cpp
     test_dead_letter_failure.cpp
     test_dead_letter_queue.cpp
+    test_delivery_result.cpp
     test_delivery_mode.cpp
     test_is_expired.cpp
     test_dedup_cache.cpp

@@ -54,7 +54,8 @@ class TcpTransport : public Transport {
     void listen(uint16_t port) override;
     void stop_listening() override;
 
-    bool try_send(const ActorAddress& target, const StreamBuffer& encoded) override;
+    TransportSendResult
+    try_send(const ActorAddress& target, const StreamBuffer& encoded) override;
 
     bool is_connected(EndPoint remote_endpoint) const override;
     EndPoint endpoint() const override {

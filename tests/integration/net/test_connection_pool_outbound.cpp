@@ -55,10 +55,13 @@ TEST_F(ConnectionPoolOutboundTest, TrySendReturnsFalseWhenQueueFull) {
     addr.endpoint = ep;
 
     // First two sends fill the queue
-    EXPECT_TRUE(pool.try_send(addr, StreamBuffer(128, 0xBB)));
-    EXPECT_TRUE(pool.try_send(addr, StreamBuffer(128, 0xBB)));
+    EXPECT_EQ(TransportSendResult::Sent,
+              pool.try_send(addr, StreamBuffer(128, 0xBB)));
+    EXPECT_EQ(TransportSendResult::Sent,
+              pool.try_send(addr, StreamBuffer(128, 0xBB)));
     // Third send should be rejected (queue full)
-    EXPECT_FALSE(pool.try_send(addr, StreamBuffer(128, 0xBB)));
+    EXPECT_NE(TransportSendResult::Sent,
+              pool.try_send(addr, StreamBuffer(128, 0xBB)));
 }
 
 TEST_F(ConnectionPoolOutboundTest, CircuitBreakerOpensAfterFailures) {
@@ -113,7 +116,8 @@ TEST_F(ConnectionPoolOutboundTest, CircuitBreakerBlocksSendsWhenOpen) {
     EXPECT_EQ(pool.circuit_breaker().state(), EndpointCircuitBreaker::State::Open);
 
     // Sends should be blocked
-    EXPECT_FALSE(pool.try_send(addr, StreamBuffer(128, 0xDD)));
+    EXPECT_NE(TransportSendResult::Sent,
+              pool.try_send(addr, StreamBuffer(128, 0xDD)));
 }
 
 } // anonymous namespace

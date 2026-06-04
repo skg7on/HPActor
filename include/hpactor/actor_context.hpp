@@ -123,36 +123,43 @@ class ActorContext {
     void send_with_priority(const ActorAddress& target, TypedMessage msg,
                             uint8_t priority, int64_t deadline_ns);
 
-    /// \brief Try-send returning an admission result (opt-in backpressure).
+    /// \brief Try-send returning a unified delivery result.
     ///
     /// Resolves the target address, stamps the sender address, and delegates
-    /// to \c ActorRef::try_send().
+    /// to \c ActorRef::try_send(). Returns a \c DeliveryResult suitable for
+    /// user-facing logic (retry, backoff, error handling).
     ///
     /// \param[in] target Destination actor address.
     /// \param[in] msg Message to send.
     /// \param[in] options Delivery options (deadline, priority, idempotency).
-    /// \return \c EnqueueResult describing whether the message was accepted,
-    ///         rejected, or the target was not found.
-    /// \retval ActorNotFound The target address could not be resolved.
-    mailbox::EnqueueResult try_send(const ActorAddress& target, TypedMessage msg,
-                                    mailbox::DeliveryOptions options = {});
+    /// \return \c DeliveryResult describing the delivery outcome.
+    mailbox::DeliveryResult try_send(const ActorAddress& target, TypedMessage msg,
+                                     mailbox::DeliveryOptions options = {});
 
     /// \brief Try-send with explicit priority and deadline.
     ///
     /// For local targets, delegates directly to
     /// \c ActorSystem::try_deliver_local(). For remote targets, delegates
-    /// to \c ActorRef::try_send().
+    /// to \c ActorRef::try_send(). Maps results to \c DeliveryResult.
     ///
     /// \param[in] target Destination actor address.
     /// \param[in] msg Message to send.
     /// \param[in] priority 0–3 (0 = highest).
     /// \param[in] deadline_ns Absolute deadline in nanoseconds.
     /// \param[in] options Delivery options.
-    /// \return \c EnqueueResult describing the admission outcome.
-    mailbox::EnqueueResult
+    /// \return \c DeliveryResult describing the delivery outcome.
+    mailbox::DeliveryResult
     try_send_with_priority(const ActorAddress& target, TypedMessage msg,
                            uint8_t priority, int64_t deadline_ns,
                            mailbox::DeliveryOptions options = {});
+
+    /// \brief Try-reply to the current sender, returning a delivery result.
+    ///
+    /// \param[in] msg Message to send back.
+    /// \param[in] options Delivery options.
+    /// \return \c DeliveryResult with NoRoute if there is no current sender.
+    mailbox::DeliveryResult
+    try_reply(TypedMessage msg, mailbox::DeliveryOptions options = {});
 
     // ── Replies ───────────────────────────────────────────────────────────
 

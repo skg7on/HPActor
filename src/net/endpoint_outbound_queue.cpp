@@ -69,7 +69,7 @@ bool EndpointOutboundQueue::check_admission(size_t msg_bytes, bool is_control,
            (data_bytes + msg_bytes <= data_limit_bytes);
 }
 
-mailbox::EnqueueResult
+TransportSendResult
 EndpointOutboundQueue::try_enqueue(PendingMessage msg,
                                    mailbox::DeliveryMode mode, TypeTag type_tag) {
     bool is_control = mailbox::is_system_message(type_tag);
@@ -83,17 +83,7 @@ EndpointOutboundQueue::try_enqueue(PendingMessage msg,
     if (!admitted) {
         update_pressure_after_enqueue();
         spinlock_.clear(std::memory_order_release);
-        mailbox::EnqueueResult result;
-        result.code = mailbox::EnqueueResultCode::EndpointBackpressure;
-        result.pressure_ratio = depth_ratio();
-        result.pressure_state = pressure_.current_state();
-        double rate = drain_rate_ema_.load(std::memory_order_acquire);
-        if (rate > 0.0 && msg_bytes > 0) {
-            double remaining = static_cast<double>(msg_bytes) / rate;
-            result.retry_after = std::chrono::milliseconds(
-                static_cast<long long>(remaining * 1000.0));
-        }
-        return result;
+        return TransportSendResult::QueueFull;
     }
 
     if (is_control) {
@@ -109,7 +99,7 @@ EndpointOutboundQueue::try_enqueue(PendingMessage msg,
     update_pressure_after_enqueue();
     spinlock_.clear(std::memory_order_release);
 
-    return mailbox::EnqueueResult{};
+    return TransportSendResult::Sent;
 }
 
 std::optional<PendingMessage> EndpointOutboundQueue::try_dequeue() {

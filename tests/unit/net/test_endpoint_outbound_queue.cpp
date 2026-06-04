@@ -29,6 +29,14 @@ PendingMessage make_msg(size_t payload_size = 100) {
     return msg;
 }
 
+bool is_accepted(TransportSendResult r) {
+    return r == TransportSendResult::Sent;
+}
+
+bool is_queue_full(TransportSendResult r) {
+    return r == TransportSendResult::QueueFull;
+}
+
 class EndpointOutboundQueueTest : public ::testing::Test {
   protected:
     EndpointOutboundLimits limits;
@@ -44,7 +52,7 @@ TEST_F(EndpointOutboundQueueTest, AcceptsUnderLimit) {
     EndpointOutboundQueue q(limits);
     auto r = q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
                            TypeTag::User);
-    EXPECT_TRUE(r.accepted());
+    EXPECT_TRUE(is_accepted(r));
     EXPECT_EQ(q.total_messages(), 1u);
     EXPECT_EQ(q.data_messages(), 1u);
     EXPECT_EQ(q.control_messages(), 0u);
@@ -55,18 +63,15 @@ TEST_F(EndpointOutboundQueueTest, RejectsAtMessageLimit) {
     limits.control_lane_reserve = 0;
     limits.reliable_headroom_pct = 0.0;
     EndpointOutboundQueue q(limits);
-    EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
-                              TypeTag::User)
-                    .accepted());
-    EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
-                              TypeTag::User)
-                    .accepted());
-    EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
-                              TypeTag::User)
-                    .accepted());
+    EXPECT_TRUE(is_accepted(q.try_enqueue(
+        make_msg(50), mailbox::DeliveryMode::BestEffort, TypeTag::User)));
+    EXPECT_TRUE(is_accepted(q.try_enqueue(
+        make_msg(50), mailbox::DeliveryMode::BestEffort, TypeTag::User)));
+    EXPECT_TRUE(is_accepted(q.try_enqueue(
+        make_msg(50), mailbox::DeliveryMode::BestEffort, TypeTag::User)));
     auto r = q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
                            TypeTag::User);
-    EXPECT_EQ(r.code, mailbox::EnqueueResultCode::EndpointBackpressure);
+    EXPECT_TRUE(is_queue_full(r));
     EXPECT_EQ(q.total_messages(), 3u);
 }
 
@@ -76,12 +81,11 @@ TEST_F(EndpointOutboundQueueTest, RejectsAtByteLimit) {
     limits.control_lane_reserve = 0;
     limits.reliable_headroom_pct = 0.0;
     EndpointOutboundQueue q(limits);
-    EXPECT_TRUE(q.try_enqueue(make_msg(60), mailbox::DeliveryMode::BestEffort,
-                              TypeTag::User)
-                    .accepted());
+    EXPECT_TRUE(is_accepted(q.try_enqueue(
+        make_msg(60), mailbox::DeliveryMode::BestEffort, TypeTag::User)));
     auto r = q.try_enqueue(make_msg(60), mailbox::DeliveryMode::BestEffort,
                            TypeTag::User);
-    EXPECT_EQ(r.code, mailbox::EnqueueResultCode::EndpointBackpressure);
+    EXPECT_TRUE(is_queue_full(r));
 }
 
 TEST_F(EndpointOutboundQueueTest, ControlLaneHasHardReserve) {
@@ -92,18 +96,16 @@ TEST_F(EndpointOutboundQueueTest, ControlLaneHasHardReserve) {
     // Fill data lane completely (no reliable headroom)
     size_t data_effective = limits.max_messages - limits.control_lane_reserve;
     for (size_t i = 0; i < data_effective; ++i) {
-        EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
-                                  TypeTag::User)
-                        .accepted());
+        EXPECT_TRUE(is_accepted(q.try_enqueue(
+            make_msg(50), mailbox::DeliveryMode::BestEffort, TypeTag::User)));
     }
     // Data lane should now be full
     auto r = q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
                            TypeTag::User);
-    EXPECT_EQ(r.code, mailbox::EnqueueResultCode::EndpointBackpressure);
+    EXPECT_TRUE(is_queue_full(r));
     // But control messages still accepted (within reserve)
-    EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
-                              TypeTag::SpawnRequestTag)
-                    .accepted());
+    EXPECT_TRUE(is_accepted(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
+                                          TypeTag::SpawnRequestTag)));
     EXPECT_EQ(q.control_messages(), 1u);
 }
 
@@ -114,28 +116,24 @@ TEST_F(EndpointOutboundQueueTest, ReliableHeadroomReserved) {
     EndpointOutboundQueue q(limits);
     // Best-effort cutoff = 10 * 0.70 = 7
     for (size_t i = 0; i < 7; ++i) {
-        EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
-                                  TypeTag::User)
-                        .accepted());
+        EXPECT_TRUE(is_accepted(q.try_enqueue(
+            make_msg(50), mailbox::DeliveryMode::BestEffort, TypeTag::User)));
     }
     // Next best-effort should be rejected
     auto r_be = q.try_enqueue(make_msg(50), mailbox::DeliveryMode::BestEffort,
                               TypeTag::User);
-    EXPECT_EQ(r_be.code, mailbox::EnqueueResultCode::EndpointBackpressure);
+    EXPECT_TRUE(is_queue_full(r_be));
     // But at-least-once should still be accepted (up to 10)
-    EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::AtLeastOnce,
-                              TypeTag::User)
-                    .accepted());
-    EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::AtLeastOnce,
-                              TypeTag::User)
-                    .accepted());
-    EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::AtLeastOnce,
-                              TypeTag::User)
-                    .accepted());
+    EXPECT_TRUE(is_accepted(q.try_enqueue(
+        make_msg(50), mailbox::DeliveryMode::AtLeastOnce, TypeTag::User)));
+    EXPECT_TRUE(is_accepted(q.try_enqueue(
+        make_msg(50), mailbox::DeliveryMode::AtLeastOnce, TypeTag::User)));
+    EXPECT_TRUE(is_accepted(q.try_enqueue(
+        make_msg(50), mailbox::DeliveryMode::AtLeastOnce, TypeTag::User)));
     // 10th message fills it
     auto r_rel = q.try_enqueue(make_msg(50), mailbox::DeliveryMode::AtLeastOnce,
                                TypeTag::User);
-    EXPECT_EQ(r_rel.code, mailbox::EnqueueResultCode::EndpointBackpressure);
+    EXPECT_TRUE(is_queue_full(r_rel));
 }
 
 TEST_F(EndpointOutboundQueueTest, ReliableRejectedBeyondEffective) {
@@ -145,13 +143,12 @@ TEST_F(EndpointOutboundQueueTest, ReliableRejectedBeyondEffective) {
     EndpointOutboundQueue q(limits);
     // Fill completely
     for (size_t i = 0; i < 5; ++i) {
-        EXPECT_TRUE(q.try_enqueue(make_msg(50), mailbox::DeliveryMode::AtLeastOnce,
-                                  TypeTag::User)
-                        .accepted());
+        EXPECT_TRUE(is_accepted(q.try_enqueue(
+            make_msg(50), mailbox::DeliveryMode::AtLeastOnce, TypeTag::User)));
     }
     auto r = q.try_enqueue(make_msg(50), mailbox::DeliveryMode::AtLeastOnce,
                            TypeTag::User);
-    EXPECT_EQ(r.code, mailbox::EnqueueResultCode::EndpointBackpressure);
+    EXPECT_TRUE(is_queue_full(r));
 }
 
 TEST_F(EndpointOutboundQueueTest, DequeuePrefersControl) {
