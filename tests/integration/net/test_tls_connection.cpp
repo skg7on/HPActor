@@ -995,3 +995,78 @@ TEST_F(TlsConnectionTest, EmptyReadBuffer) {
     ::close(server_fd);
 }
 
+// -----------------------------------------------------------------------------
+// Task 10: Lifecycle tests
+// -----------------------------------------------------------------------------
+
+TEST_F(TlsConnectionTest, TwoConnectionsAreIndependent) {
+    auto ctx = make_test_ctx();
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto client = TlsConnection::create_client(
+        LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("localhost:12345"),
+        &ctx, nullptr);
+    client->set_fd(client_fd);
+    client->start_client_handshake();
+
+    auto second = TlsConnection::create_client(
+        hpactor::endpoint_ops::parse_endpoint("localhost:12346"),
+        hpactor::endpoint_ops::parse_endpoint("localhost:54322"),
+        &ctx, nullptr);
+
+    EXPECT_EQ(client->state(), ConnectionState::Handshake);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
+
+TEST_F(TlsConnectionTest, DoubleCloseIsSafe) {
+    auto ctx = make_test_ctx();
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto client = TlsConnection::create_client(
+        LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("localhost:12345"),
+        &ctx, nullptr);
+
+    client->close();
+    EXPECT_EQ(client->state(), ConnectionState::Disconnected);
+
+    client->close();
+    EXPECT_EQ(client->state(), ConnectionState::Disconnected);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
+
+TEST_F(TlsConnectionTest, CloseServerDoesNotAffectClient) {
+    auto server_certs = test::generate_test_certs("close-server");
+    auto client_certs = test::generate_test_certs("close-client");
+    auto server_ctx = test::make_tls_context_from_certs(server_certs, 54321);
+    auto client_ctx = test::make_tls_context_from_certs(client_certs, 12345);
+
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto server = TlsConnection::create_server(
+        server_fd,
+        hpactor::endpoint_ops::parse_endpoint("127.0.0.1:54321"),
+        hpactor::endpoint_ops::parse_endpoint("127.0.0.1:12345"),
+        &server_ctx, nullptr);
+
+    auto client = TlsConnection::create_client(
+        hpactor::endpoint_ops::parse_endpoint("127.0.0.1:12345"),
+        hpactor::endpoint_ops::parse_endpoint("127.0.0.1:54321"),
+        &client_ctx, nullptr);
+    client->set_fd(client_fd);
+
+    client->start_client_handshake();
+    server->handle_read();
+
+    server->close();
+    EXPECT_EQ(server->state(), ConnectionState::Disconnected);
+    EXPECT_NE(client->state(), ConnectionState::Disconnected);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
