@@ -937,3 +937,61 @@ TEST_F(TlsConnectionTest, HandshakeMessagesAccumulated) {
     ::close(pair.client_fd);
     ::close(pair.server_fd);
 }
+
+// -----------------------------------------------------------------------------
+// Task 9: Record framing edge case tests
+// -----------------------------------------------------------------------------
+
+TEST_F(TlsConnectionTest, FragmentedRecordHeader) {
+    auto ctx = make_test_ctx();
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto server = TlsConnection::create_server(
+        server_fd, LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, nullptr);
+
+    uint8_t partial[3] = {0x02, 0x00, 0x00};
+    ssize_t written = ::write(client_fd, partial, 3);
+    ASSERT_EQ(written, 3);
+
+    server->handle_read();
+    EXPECT_NE(server->state(), ConnectionState::Error);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
+
+TEST_F(TlsConnectionTest, MultipleRecordsInOneRead) {
+    auto ctx = make_test_ctx();
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto server = TlsConnection::create_server(
+        server_fd, LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, nullptr);
+
+    StreamBuffer hello = build_raw_client_hello(ctx.public_key());
+    ssize_t written = ::write(client_fd, hello.data(), hello.size());
+    ASSERT_EQ(written, static_cast<ssize_t>(hello.size()));
+
+    server->handle_read();
+    EXPECT_NE(server->state(), ConnectionState::Error);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
+
+TEST_F(TlsConnectionTest, EmptyReadBuffer) {
+    auto ctx = make_test_ctx();
+    auto [client_fd, server_fd] = create_socket_pair();
+
+    auto server = TlsConnection::create_server(
+        server_fd, LocalEndpoint,
+        hpactor::endpoint_ops::parse_endpoint("localhost:12345"), &ctx, nullptr);
+
+    server->handle_read();
+    EXPECT_NE(server->state(), ConnectionState::Error);
+
+    ::close(client_fd);
+    ::close(server_fd);
+}
+
