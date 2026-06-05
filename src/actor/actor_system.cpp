@@ -472,7 +472,12 @@ Actor ActorSystem::resolve_actor(const std::string& name) {
     if (!addr) {
         return Actor{};
     }
-    return Actor{};
+    std::lock_guard<std::mutex> lock(actors_mutex_);
+    auto it = actors_.find(addr.id);
+    if (it == actors_.end()) {
+        return Actor{};
+    }
+    return Actor{it->second};
 }
 
 void ActorSystem::unregister_actor(const std::string& name) {
@@ -958,13 +963,13 @@ net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
 
 result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
                                            const std::string& actor_type,
-                                           const StreamBuffer& /*args*/) {
-    return spawn_remote_async(node_name, actor_type, StreamBuffer{}).get();
+                                           const StreamBuffer& args) {
+    return spawn_remote_async(node_name, actor_type, args).get();
 }
 
 AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
                                            const std::string& actor_type,
-                                           const StreamBuffer& /*args*/) {
+                                           const StreamBuffer& args) {
     AsyncActor handle(endpoint_, config_.spawn_timeout_ms);
 
     if (!config_.enable_network || !transport_) {
@@ -980,6 +985,8 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     ::hpactor::SpawnRequestMessage pb_req;
     pb_req.set_actor_type_name(actor_type);
     pb_req.set_args_type(static_cast<uint32_t>(TypeTag::User));
+    pb_req.set_serialized_args(reinterpret_cast<const char*>(args.data()),
+                               args.size());
     net::to_proto(pb_req.mutable_supervisor(), system_actor_.address());
 
     StreamBuffer request_bytes = proto_registry_.serialize(pb_req);
