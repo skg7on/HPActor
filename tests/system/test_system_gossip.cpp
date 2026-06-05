@@ -52,10 +52,12 @@ static GossipConfig
 cfg_at(uint16_t port, const std::vector<uint16_t>& seed_ports = {}) {
     GossipConfig cfg;
     cfg.gossip_port = port;
-    cfg.protocol_period = std::chrono::milliseconds(100);
-    cfg.ping_timeout = std::chrono::milliseconds(50);
-    cfg.suspicion_timeout = std::chrono::milliseconds(300);
-    cfg.dead_timeout = std::chrono::milliseconds(2000);
+    // Use generous timeouts so tests are reliable under coverage
+    // instrumentation.
+    cfg.protocol_period = std::chrono::milliseconds(200);
+    cfg.ping_timeout = std::chrono::milliseconds(100);
+    cfg.suspicion_timeout = std::chrono::milliseconds(600);
+    cfg.dead_timeout = std::chrono::milliseconds(4000);
     cfg.fanout = 2;
     cfg.indirect_probes = 1;
     cfg.local_state.identity.endpoint = ep(port);
