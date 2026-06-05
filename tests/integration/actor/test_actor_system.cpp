@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 #include <gtest/gtest.h>
@@ -19,4 +21,18 @@
 
 TEST(ActorSystemTest, DefaultConstructNotCopyable) {
     static_assert(!std::is_copy_constructible_v<hpactor::ActorSystem>);
+}
+
+TEST(ActorSystemTest, ResolveActorReturnsRegisteredNamedActor) {
+    hpactor::Config config;
+    hpactor::ActorSystem system{config};
+
+    auto actor = system.spawn<hpactor::EventBasedActor>();
+    ASSERT_TRUE(static_cast<bool>(actor));
+    system.register_actor("named-worker", actor);
+
+    auto resolved = system.resolve_actor("named-worker");
+    EXPECT_TRUE(static_cast<bool>(resolved));
+    EXPECT_EQ(resolved.id(), actor.id());
+    EXPECT_EQ(resolved.address(), actor.address());
 }

@@ -95,3 +95,27 @@ TEST(SpawnSerializationTest, SpawnResponseEncodeViaProtobuf) {
               100u);
     EXPECT_EQ(decoded_resp->error_code(), hpactor::spawn_errors::success);
 }
+
+TEST(SpawnSerializationTest, RequestPreservesArgsBytes) {
+    const std::string payload = "alpha=7";
+
+    hpactor::ProtoTypeRegistry registry;
+    registry.register_system_types();
+
+    ::hpactor::SpawnRequestMessage pb_req;
+    pb_req.set_actor_type_name("ArgsEchoActor");
+    pb_req.set_args_type(static_cast<uint32_t>(hpactor::TypeTag::User));
+    pb_req.set_serialized_args(payload);
+
+    hpactor::StreamBuffer encoded = registry.serialize(pb_req);
+    ASSERT_FALSE(encoded.empty());
+
+    auto decoded = registry.deserialize(hpactor::TypeTag::SpawnRequestTag, encoded);
+    ASSERT_NE(decoded, nullptr);
+    auto* decoded_req =
+        static_cast<::hpactor::SpawnRequestMessage*>(decoded.get());
+    EXPECT_EQ(decoded_req->actor_type_name(), "ArgsEchoActor");
+    EXPECT_EQ(decoded_req->args_type(),
+              static_cast<uint32_t>(hpactor::TypeTag::User));
+    EXPECT_EQ(decoded_req->serialized_args(), payload);
+}
