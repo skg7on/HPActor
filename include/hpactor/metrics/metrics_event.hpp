@@ -59,6 +59,10 @@ enum class MetricEventType : uint8_t {
     kEndpointCircuitState = 32,     ///< Endpoint circuit breaker state.
     kEndpointBackpressureSignal = 33, ///< Endpoint backpressure signal sent.
     kEndpointCircuitTransition = 34,  ///< Endpoint circuit breaker transition.
+    kRateLimitBlocked = 35,   ///< Message deferred by actor rate limiter.
+    kAdmissionRejected = 36,  ///< Message rejected by admission policy.
+    kAdmissionDLQRouted = 37, ///< Message rerouted to DLQ by admission policy.
+    kPerSenderBucketCount = 38, ///< Number of active per-sender buckets.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.
