@@ -18,6 +18,10 @@
 
 namespace hpactor {
 
+/// \brief Sequential phases of the node shutdown state machine.
+///
+/// Drives the system from normal operation through ingress drain,
+/// actor drain, cluster leave, telemetry flush, and final stop.
 enum class ShutdownPhase : uint8_t {
     Running,           ///< Normal operation.
     DrainingIngress,   ///< Refusing new external connections and messages.
