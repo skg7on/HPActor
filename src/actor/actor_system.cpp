@@ -465,6 +465,7 @@ void ActorSystem::set_backpressure_signal_wire_sink_for_test(
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
     registry_.put(name, actor.address());
+    actor_directory_.register_name(name, actor.address());
 }
 
 Actor ActorSystem::resolve_actor(const std::string& name) {

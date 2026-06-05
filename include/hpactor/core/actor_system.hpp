@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/cli/cli_config.hpp>
@@ -678,6 +679,7 @@ class ActorSystem {
     EndPoint endpoint_;
     Clock clock_;
     actor_registry registry_;
+    ActorDirectory actor_directory_;
     std::unordered_map<ActorType, ActorTypeDef> actor_types_;
     Actor system_actor_;
 

@@ -5,6 +5,7 @@
 add_library(hpactor_lib SHARED
     actor/abstract_actor.cpp
     actor/actor_context.cpp
+    actor/actor_directory.cpp
     actor/actor_system.cpp
     actor/daemon_actor.cpp
     actor/event_based_actor.cpp
