@@ -37,9 +37,9 @@ void ActorProxy::send(const ActorAddress& target, TypedMessage msg) {
     (void)try_send(target, std::move(msg));
 }
 
-mailbox::EnqueueResult
+mailbox::DeliveryResult
 ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
-                     mailbox::DeliveryOptions /*options*/) {
+                     mailbox::DeliveryOptions options) {
     if (transport_ == nullptr) {
         // Capture dead letter: no transport available
         if (system_) {
@@ -54,7 +54,8 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
             dl.payload_sample = msg.payload();
             (void)system_->dead_letter(std::move(dl));
         }
-        return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+        return {mailbox::DeliveryStatus::NoRoute, target,
+                MessageId{options.message_id}, 0};
     }
 
     // Resolve via location cache or discovery
@@ -81,7 +82,8 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
                 dl.payload_sample = msg.payload();
                 (void)system_->dead_letter(std::move(dl));
             }
-            return {mailbox::EnqueueResultCode::ActorNotFound, target.id};
+            return {mailbox::DeliveryStatus::NoRoute, target,
+                    MessageId{options.message_id}, 0};
         }
         resolved_target.endpoint = member->identity.endpoint;
         if (location_cache_) {
@@ -95,7 +97,8 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
         msg.sender_address().id != ActorId{0} ? msg.sender_address() : address_;
     net::to_proto(frame.pb_frame.mutable_sender(), sender_addr);
     net::to_proto(frame.pb_frame.mutable_receiver(), resolved_target);
-    frame.pb_frame.set_message_id(generate_message_id().value());
+    auto msg_id = generate_message_id();
+    frame.pb_frame.set_message_id(msg_id.value());
     frame.pb_frame.set_type_tag(static_cast<uint32_t>(msg.type_id()));
     frame.pb_frame.set_payload(reinterpret_cast<const char*>(msg.payload().data()),
                                msg.payload().size());
@@ -104,7 +107,8 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
         net::to_proto(frame.pb_frame.mutable_trace_context(), msg.trace_context());
     }
 
-    if (!transport_->try_send(resolved_target, frame.encode())) {
+    auto tsr = transport_->try_send(resolved_target, frame.encode());
+    if (tsr != TransportSendResult::Sent) {
         // Capture dead letter: transport refused the message
         if (system_) {
             mailbox::DeadLetterRecord dl;
@@ -118,9 +122,9 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
             dl.payload_sample = msg.payload();
             (void)system_->dead_letter(std::move(dl));
         }
-        return {mailbox::EnqueueResultCode::Rejected, target.id};
+        return mailbox::DeliveryResult::from_transport(tsr, target, msg_id);
     }
-    return {mailbox::EnqueueResultCode::Accepted, target.id};
+    return mailbox::DeliveryResult::from_transport(tsr, target, msg_id);
 }
 
 } // namespace hpactor

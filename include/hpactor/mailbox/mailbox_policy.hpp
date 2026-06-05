@@ -25,6 +25,11 @@
 
 namespace hpactor::mailbox {
 
+// Forward declaration — defined in delivery_result.hpp.
+// Cannot include that header here because delivery_result.hpp
+// already includes this file.
+struct DeliveryResult;
+
 struct MailboxCapacity {
     uint32_t max_messages = 1024;
     uint64_t max_bytes = 0;
@@ -193,6 +198,16 @@ struct EnqueueResult {
     [[nodiscard]] FailureReason failure_reason() const noexcept {
         return mailbox::failure_reason(code);
     }
+
+    /// \brief Convert to the user-facing DeliveryResult type.
+    ///
+    /// \param[in] target_addr Target actor address for the result.
+    /// \param[in] msg_id Optional message id for correlation.
+    /// \return DeliveryResult with status mapped from this code.
+    /// \note The caller must include \c delivery_result.hpp for
+    ///       the return type to be complete.
+    DeliveryResult to_delivery_result(const ActorAddress& target_addr,
+                                      MessageId msg_id = {}) const;
 };
 
 struct BackpressureSignal {

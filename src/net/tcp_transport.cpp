@@ -345,10 +345,11 @@ void TcpTransport::stop_listening() {
     acceptor_.close();
 }
 
-bool TcpTransport::try_send(const ActorAddress& target, const StreamBuffer& encoded) {
+TransportSendResult
+TcpTransport::try_send(const ActorAddress& target, const StreamBuffer& encoded) {
     // NOLINTNEXTLINE(readability-simplify-boolean-expr)
     FAULT_INJECT("hpactor.transport.send.drop") {
-        return true; // claim success, silently drop
+        return TransportSendResult::Sent; // claim success, silently drop
     }
     FAULT_INJECT("hpactor.transport.send.delay") {
         _fc->stall(hpactor::fault::FaultDomain::kTransport, /*delay_ticks=*/3);

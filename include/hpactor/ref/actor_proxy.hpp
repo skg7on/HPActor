@@ -83,12 +83,12 @@ class ActorProxy {
     // Send a message to this actor (fire-and-forget)
     void send(const ActorAddress& target, TypedMessage msg);
 
-    // Try-send returning local proxy admission result.
+    // Try-send returning a unified delivery result.
     // Returns Accepted if the message was handed to the transport layer,
-    // or ActorNotFound if no transport is available. This is a "best effort"
-    // result — the remote node's admission outcome is not known locally.
-    mailbox::EnqueueResult try_send(const ActorAddress& target, TypedMessage msg,
-                                    mailbox::DeliveryOptions options = {});
+    // or a descriptive status if delivery failed locally.
+    // The remote node's admission outcome is not known locally.
+    mailbox::DeliveryResult try_send(const ActorAddress& target, TypedMessage msg,
+                                     mailbox::DeliveryOptions options = {});
 
     // Access the underlying transport (for internal use)
     net::Transport* transport() const {

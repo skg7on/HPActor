@@ -32,8 +32,8 @@ struct NullTransport : public net::Transport {
     }
     void listen(uint16_t) override {}
     void stop_listening() override {}
-    bool try_send(const ActorAddress&, const StreamBuffer&) override {
-        return true;
+    TransportSendResult try_send(const ActorAddress&, const StreamBuffer&) override {
+        return TransportSendResult::Sent;
     }
     bool is_connected(EndPoint) const override {
         return false;
@@ -97,7 +97,7 @@ TEST_F(ActorProxyTest, TrySendNoTransport) {
     ActorAddress target(ep_, 0, ActorId{4}, 0);
     TypedMessage msg(TypeTag::User, StreamBuffer{});
     auto result = proxy.try_send(target, std::move(msg));
-    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::ActorNotFound);
+    EXPECT_EQ(result.status, mailbox::DeliveryStatus::NoRoute);
 }
 
 TEST_F(ActorProxyTest, SendFireAndForget) {

@@ -69,23 +69,23 @@ void ConnectionPool::send(const ActorAddress& target, const StreamBuffer& encode
                                 mailbox::DeliveryMode::BestEffort, TypeTag::User);
 }
 
-bool ConnectionPool::try_send(const ActorAddress& target,
-                              const StreamBuffer& encoded) {
+TransportSendResult
+ConnectionPool::try_send(const ActorAddress& target, const StreamBuffer& encoded) {
     FAULT_INJECT("hpactor.connection_pool.try_send.fail") {
-        return false;
+        return TransportSendResult::WriteError;
     }
     if (shutting_down_.load()) {
-        return false;
+        return TransportSendResult::ShuttingDown;
     }
 
     if (!circuit_breaker_.allow_send()) {
-        return false;
+        return TransportSendResult::CircuitOpen;
     }
 
     ConnectionPtr conn = get_connection();
     if (conn) {
         conn->send(encoded);
-        return true;
+        return TransportSendResult::Sent;
     }
 
     PendingMessage msg{target, encoded, std::chrono::steady_clock::now()};
@@ -96,12 +96,12 @@ bool ConnectionPool::try_send(const ActorAddress& target,
     if (metrics_ring_buffer_) {
         metrics::MetricEvent evt{};
         evt.actor_id = pack_endpoint_for_metrics();
-        evt.code = 0; // best_effort / queue_full
+        evt.code = 0;
         evt.value_hi = 1;
         evt.timestamp_ns = static_cast<uint64_t>(
             std::chrono::steady_clock::now().time_since_epoch().count());
 
-        if (result.accepted()) {
+        if (result == TransportSendResult::Sent) {
             evt.event_type = metrics::MetricEventType::kEndpointSendAccepted;
         } else {
             evt.event_type = metrics::MetricEventType::kEndpointSendRejected;
@@ -109,7 +109,7 @@ bool ConnectionPool::try_send(const ActorAddress& target,
         metrics_ring_buffer_->try_push(evt);
     }
 
-    return result.accepted();
+    return result;
 }
 
 void ConnectionPool::send(const StreamBuffer& data) {

@@ -89,9 +89,10 @@ class ConnectionPool {
     // Send message to specific actor on remote node (uses pool)
     void send(const ActorAddress& target, const StreamBuffer& encoded);
 
-    // Try to send message — returns false when no connection is available
-    // and the pending queue is full (or the pool is shutting down).
-    bool try_send(const ActorAddress& target, const StreamBuffer& encoded);
+    // Try to send message — returns TransportSendResult describing whether
+    // the frame was queued or why it was rejected.
+    TransportSendResult
+    try_send(const ActorAddress& target, const StreamBuffer& encoded);
 
     // Send raw bytes to the remote node (uses default target)
     void send(const StreamBuffer& data);
