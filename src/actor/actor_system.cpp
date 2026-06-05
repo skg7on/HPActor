@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/backpressure_coordinator.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
+#include <hpactor/actor/local_delivery_engine.hpp>
+#include <hpactor/actor/shutdown_coordinator.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
@@ -84,6 +87,11 @@ ActorSystem::ActorSystem(const Config& config)
     // Initialize receiver dedup cache for at-least-once delivery
     dedup_cache_ =
         std::make_unique<mailbox::DedupCache>(mailbox::DedupCache::Config{});
+
+    // Initialize extracted runtime components
+    local_delivery_engine_ =
+        std::make_unique<LocalDeliveryEngine>(actor_directory_);
+    backpressure_coordinator_ = std::make_unique<BackpressureCoordinator>(*this);
 
     // Initialize metrics subsystem (before scheduler so instrumentation is
     // ready)
