@@ -13,6 +13,7 @@ set(TEST_SYSTEM_SOURCES
     test_system_observability.cpp
     test_system_loopback_network.cpp
     test_system_tcp_transport.cpp
+    test_system_tls_transport.cpp
     test_system_registrar_server.cpp
     test_system_registrar_client.cpp
     test_system_udp_registrar.cpp

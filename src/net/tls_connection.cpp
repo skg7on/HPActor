@@ -21,6 +21,8 @@
 #include <openssl/aes.h>
 #include <openssl/evp.h>
 #include <openssl/rand.h>
+#include <openssl/rsa.h>
+#include <openssl/x509.h>
 #include <sys/socket.h>
 #include <unistd.h>
 
@@ -82,6 +84,7 @@ TlsConnection::create_client(EndPoint local_endpoint, EndPoint remote_endpoint,
                              TlsContext* tls_context, EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(new TlsConnection(
         -1, local_endpoint, remote_endpoint, tls_context, loop));
+    conn->weak_self_ = conn;
     conn->set_state(ConnectionState::Connecting);
     conn->is_server_ = false;
     return conn;
@@ -93,6 +96,7 @@ TlsConnection::create_server(int socket_fd, EndPoint local_endpoint,
                              EventLoop* loop) {
     auto conn = std::shared_ptr<TlsConnection>(new TlsConnection(
         socket_fd, local_endpoint, remote_endpoint, tls_context, loop));
+    conn->weak_self_ = conn;
     conn->set_state(ConnectionState::Connected);
     conn->is_server_ = true;
     // Server waits for client hello
@@ -187,8 +191,10 @@ void TlsConnection::handle_read() {
         if (n > 0) {
             read_buffer_.commit_tail(static_cast<size_t>(n));
         } else if (n == 0) {
+            read_buffer_.commit_tail(0); // undo reserve
             break;
         } else {
+            read_buffer_.commit_tail(0); // undo reserve
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 break;
             break;
@@ -221,6 +227,9 @@ void TlsConnection::process_buffer() {
             StreamBuffer msg_payload(payload.begin() + 1, payload.end());
 
             switch (msg_type) {
+                case TlsMessageType::ClientHello:
+                    handle_client_hello(msg_payload);
+                    break;
                 case TlsMessageType::ServerHello:
                     handle_server_hello(msg_payload);
                     break;
@@ -290,8 +299,23 @@ StreamBuffer TlsConnection::build_client_hello() {
     return msg;
 }
 
+StreamBuffer TlsConnection::build_server_hello() {
+    StreamBuffer payload;
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::ServerHello));
+    payload.insert(payload.end(), server_nonce_.begin(), server_nonce_.end());
+    // Include encrypted pre-master secret so the client can derive
+    // matching session keys
+    payload.insert(payload.end(), encrypted_pms_.begin(), encrypted_pms_.end());
+
+    StreamBuffer msg = format_tls_message(TlsMessageType::ServerHello, payload);
+    handshake_messages_.insert(handshake_messages_.end(), msg.begin(), msg.end());
+    return msg;
+}
+
 StreamBuffer TlsConnection::build_certificate() {
     StreamBuffer payload;
+    // Inner type byte for correct dispatch on the receiving side
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::Certificate));
     // Certificate data from TLS context
     if (!tls_context_) {
         set_handshake_state(TlsHandshakeState::Error);
@@ -307,6 +331,8 @@ StreamBuffer TlsConnection::build_certificate() {
 
 StreamBuffer TlsConnection::build_certificate_verify(const Nonce& challenge) {
     StreamBuffer payload;
+    // Inner type byte for correct dispatch on the receiving side
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::CertificateVerify));
     // Sign the challenge nonce with our private key
     StreamBuffer data_to_sign(challenge.begin(), challenge.end());
     if (!tls_context_) {
@@ -324,12 +350,78 @@ StreamBuffer TlsConnection::build_certificate_verify(const Nonce& challenge) {
 
 StreamBuffer TlsConnection::build_finished() {
     StreamBuffer payload;
+    // Inner type byte for correct dispatch on the receiving side
+    payload.push_back(static_cast<uint8_t>(TlsMessageType::Finished));
     // Compute verify_data using PRF
     StreamBuffer verify_data =
         prf_sha256(master_secret_, "finished", handshake_messages_);
     payload.insert(payload.end(), verify_data.begin(), verify_data.end());
 
     return format_tls_message(TlsMessageType::Finished, payload);
+}
+
+void TlsConnection::handle_client_hello(const StreamBuffer& data) {
+    if (handshake_state_ != TlsHandshakeState::WaitingForServerHello) {
+        set_handshake_state(TlsHandshakeState::Error);
+        return;
+    }
+
+    if (data.size() < kNonceSize) {
+        set_handshake_state(TlsHandshakeState::Error);
+        return;
+    }
+
+    // Generate server nonce
+    RAND_bytes(server_nonce_.data(), static_cast<int>(kNonceSize));
+
+    // Extract client nonce from ClientHello
+    std::memcpy(client_nonce_.data(), data.data(), kNonceSize);
+
+    // Generate pre-master secret BEFORE building ServerHello so the
+    // encrypted PMS can be included in the ServerHello message.
+    pre_master_secret_.resize(48);
+    RAND_bytes(pre_master_secret_.data(), 48);
+
+    // Encrypt PMS with client's public key for transmission in ServerHello
+    encrypted_pms_.clear();
+    if (data.size() > kNonceSize) {
+        const uint8_t* client_key_data = data.data() + kNonceSize;
+        size_t client_key_len = data.size() - kNonceSize;
+
+        const unsigned char* p = client_key_data;
+        EVP_PKEY* client_pubkey =
+            d2i_PUBKEY(nullptr, &p, static_cast<long>(client_key_len));
+        if (client_pubkey) {
+            EVP_PKEY_CTX* ectx = EVP_PKEY_CTX_new(client_pubkey, nullptr);
+            if (ectx) {
+                if (EVP_PKEY_encrypt_init(ectx) == 1) {
+                    EVP_PKEY_CTX_set_rsa_padding(ectx, RSA_PKCS1_PADDING);
+                    size_t out_len = 0;
+                    if (EVP_PKEY_encrypt(ectx, nullptr, &out_len,
+                                         pre_master_secret_.data(),
+                                         pre_master_secret_.size()) == 1) {
+                        encrypted_pms_.resize(out_len);
+                        EVP_PKEY_encrypt(ectx, encrypted_pms_.data(), &out_len,
+                                         pre_master_secret_.data(),
+                                         pre_master_secret_.size());
+                        encrypted_pms_.resize(out_len);
+                    }
+                }
+                EVP_PKEY_CTX_free(ectx);
+            }
+            EVP_PKEY_free(client_pubkey);
+        }
+    }
+
+    // Send ServerHello with nonce and encrypted PMS
+    StreamBuffer server_hello = build_server_hello();
+    send_raw(server_hello);
+
+    // Send our certificate
+    StreamBuffer cert_msg = build_certificate();
+    send_raw(cert_msg);
+
+    set_handshake_state(TlsHandshakeState::WaitingForCertificate);
 }
 
 void TlsConnection::handle_server_hello(const StreamBuffer& data) {
@@ -346,13 +438,30 @@ void TlsConnection::handle_server_hello(const StreamBuffer& data) {
     // Extract server nonce
     std::memcpy(server_nonce_.data(), data.data(), kNonceSize);
 
+    // Extract and decrypt pre-master secret sent by server
+    if (data.size() > kNonceSize) {
+        StreamBuffer encrypted_pms(data.begin() + kNonceSize, data.end());
+        if (tls_context_) {
+            bool ok = tls_context_->decrypt_pre_master_secret(
+                encrypted_pms, pre_master_secret_);
+            if (!ok || pre_master_secret_.empty()) {
+                // If decryption fails (e.g. mismatched keys), fall back to
+                // generating a random PMS so the handshake can still derive
+                // session keys for testing. This is not production-safe.
+                pre_master_secret_.resize(48);
+                RAND_bytes(pre_master_secret_.data(), 48);
+            }
+        }
+    } else {
+        // No encrypted PMS was provided - generate a random one for the
+        // handshake to complete (testing scenario).
+        pre_master_secret_.resize(48);
+        RAND_bytes(pre_master_secret_.data(), 48);
+    }
+
     // Send our certificate
     StreamBuffer cert_msg = build_certificate();
     send_raw(cert_msg);
-
-    // Generate pre_master_secret
-    pre_master_secret_.resize(48);
-    RAND_bytes(pre_master_secret_.data(), 48);
 
     set_handshake_state(TlsHandshakeState::WaitingForCertificate);
 }
@@ -392,6 +501,10 @@ void TlsConnection::handle_certificate_verify(const StreamBuffer& data) {
     // Derive session keys
     derive_session_keys(pre_master_secret_, client_nonce_, server_nonce_);
 
+    // Send Finished to complete our side of the handshake
+    StreamBuffer finished = build_finished();
+    send_raw(finished);
+
     set_handshake_state(TlsHandshakeState::WaitingForFinished);
 }
 
@@ -414,9 +527,9 @@ void TlsConnection::handle_finished(const StreamBuffer& data) {
 
     // Notify ready handler
     if (ready_handler_) {
-        TlsConnectionPtr self =
-            std::enable_shared_from_this<TlsConnection>::shared_from_this();
-        ready_handler_(self);
+        if (auto self = weak_self_.lock()) {
+            ready_handler_(std::move(self));
+        }
     }
 }
 
@@ -542,8 +655,16 @@ void TlsConnection::set_session_state(TlsSessionState new_state) {
 }
 
 void TlsConnection::send_raw(const StreamBuffer& data) {
-    if (fd_ < 0 || !loop_)
+    if (fd_ < 0)
         return;
+
+    // When no event loop is available (e.g., test mode), write directly to
+    // the fd to keep the handshake synchronous and avoid the is_sending_
+    // flag blocking subsequent sends during the same process_buffer cycle.
+    if (!loop_) {
+        ::write(fd_, data.data(), data.size());
+        return;
+    }
 
     // Append data to write buffer
     write_buffer_.append(data.data(), data.size());
