@@ -9,6 +9,7 @@
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/static_discovery.hpp>
+#include <hpactor/net/transport.hpp>
 
 #include "system_test_fixture.hpp"
 #include "tls_test_helpers.hpp"
@@ -266,4 +267,85 @@ TEST(TlsTransportSystem, LargeMessageOverTls) {
 
     auto result = system.shutdown();
     EXPECT_TRUE(result.has_value());
+}
+
+// ─── Error & Edge Cases ─────────────────────────────────────────
+
+TEST(TlsTransportSystem, ConnectWrongPort) {
+    Config cfg = tls_config(1);
+    cfg.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem system(cfg);
+    ASSERT_TRUE(system.is_running());
+
+    auto* transport = system.transport();
+    ASSERT_NE(transport, nullptr);
+
+    auto dead_ep = hpactor::endpoint_ops::parse_endpoint("127.0.0.1:19998");
+    auto conn = transport->connect(dead_ep);
+
+    if (conn) {
+        EXPECT_NE(conn->state(), net::ConnectionState::Connected);
+    }
+
+    auto result = system.shutdown();
+    EXPECT_TRUE(result.has_value());
+}
+
+TEST(TlsTransportSystem, ShutdownWhileConnected) {
+    Config cfg_a = tls_config(1);
+    cfg_a.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_a(cfg_a);
+    ASSERT_TRUE(sys_a.is_running());
+
+    Config cfg_b = tls_config(1);
+    cfg_b.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem sys_b(cfg_b);
+    ASSERT_TRUE(sys_b.is_running());
+
+    auto conn = sys_a.transport()->connect(sys_b.endpoint());
+    (void)conn;
+
+    auto r_a = sys_a.shutdown();
+    auto r_b = sys_b.shutdown();
+    EXPECT_TRUE(r_a.has_value());
+    EXPECT_TRUE(r_b.has_value());
+}
+
+TEST(TlsTransportSystem, PlaintextMismatch) {
+    auto certs = test::generate_test_certs("tls-mismatch");
+
+    // Plaintext server
+    Config cfg_plain = test::config_with_scheduler(1);
+    cfg_plain.enable_network = true;
+    cfg_plain.tcp_port = 0;
+    cfg_plain.cli.enabled = false;
+    cfg_plain.tracing.enabled = false;
+    cfg_plain.pool.use_tls = false; // plaintext
+    cfg_plain.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem plain_sys(cfg_plain);
+    ASSERT_TRUE(plain_sys.is_running());
+
+    // TLS client
+    Config cfg_tls = tls_config(1);
+    cfg_tls.tls.own_cert_der = certs.cert_der;
+    cfg_tls.tls.own_key_der = certs.key_der;
+    cfg_tls.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+    ActorSystem tls_sys(cfg_tls);
+    ASSERT_TRUE(tls_sys.is_running());
+
+    auto conn = tls_sys.transport()->connect(plain_sys.endpoint());
+
+    if (conn) {
+        EXPECT_NE(conn->state(), net::ConnectionState::Connected);
+    }
+
+    auto r_tls = tls_sys.shutdown();
+    auto r_plain = plain_sys.shutdown();
+    EXPECT_TRUE(r_tls.has_value());
+    EXPECT_TRUE(r_plain.has_value());
 }
