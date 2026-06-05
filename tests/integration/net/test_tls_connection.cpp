@@ -806,7 +806,7 @@ TEST_F(TlsConnectionTest, MultipleEncryptedFrames) {
     }
 
     ASSERT_EQ(received.size(), static_cast<size_t>(kNumFrames));
-    for (int i = 0; i < kNumFrames; i++) {
+    for (size_t i = 0; i < static_cast<size_t>(kNumFrames); i++) {
         EXPECT_EQ(received[i].size(), 4u);
         EXPECT_EQ(received[i][3], static_cast<uint8_t>(i));
     }

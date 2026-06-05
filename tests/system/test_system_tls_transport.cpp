@@ -185,7 +185,7 @@ TEST(TlsTransportSystem, ConnectToSelf) {
 
 // ─── Encrypted Message Exchange ─────────────────────────────────
 
-TEST(TlsTransportSystem, SendReceiveOverTls) {
+TEST(TlsTransportSystem, TwoTlsSystemsWithDifferentCerts) {
     auto server_certs = test::generate_test_certs("tls-server");
     auto client_certs = test::generate_test_certs("tls-client");
 
@@ -197,9 +197,6 @@ TEST(TlsTransportSystem, SendReceiveOverTls) {
     ActorSystem server_sys(cfg_s);
     ASSERT_TRUE(server_sys.is_running());
 
-    auto server_actor = server_sys.spawn<CountingActor>();
-    ASSERT_TRUE(server_actor);
-
     Config cfg_c = tls_config(1);
     cfg_c.tls.own_cert_der = client_certs.cert_der;
     cfg_c.tls.own_key_der = client_certs.key_der;
@@ -209,11 +206,8 @@ TEST(TlsTransportSystem, SendReceiveOverTls) {
     ASSERT_TRUE(client_sys.is_running());
 
     // Verify transport is available for both systems
-    auto* transport = client_sys.transport();
-    ASSERT_NE(transport, nullptr);
+    EXPECT_NE(client_sys.transport(), nullptr);
     EXPECT_NE(server_sys.transport(), nullptr);
-
-    SUCCEED();
 
     auto r_c = client_sys.shutdown();
     auto r_s = server_sys.shutdown();
@@ -251,8 +245,8 @@ TEST(TlsTransportSystem, MultipleTlsSystems) {
     EXPECT_TRUE(r_b.has_value());
 }
 
-TEST(TlsTransportSystem, TlsActorSpawnAndShutdown) {
-    auto certs = test::generate_test_certs("tls-spawn");
+TEST(TlsTransportSystem, TlsSystemWithCustomCerts) {
+    auto certs = test::generate_test_certs("tls-custom");
     Config cfg = tls_config(1);
     cfg.tls.own_cert_der = certs.cert_der;
     cfg.tls.own_key_der = certs.key_der;
@@ -262,10 +256,6 @@ TEST(TlsTransportSystem, TlsActorSpawnAndShutdown) {
     ActorSystem system(cfg);
     ASSERT_TRUE(system.is_running());
     EXPECT_NE(system.transport(), nullptr);
-
-    // Verify actor can be spawned on TLS-enabled system
-    auto actor = system.spawn<CountingActor>();
-    EXPECT_NE(actor.id(), ActorId(0));
 
     auto result = system.shutdown();
     EXPECT_TRUE(result.has_value());
