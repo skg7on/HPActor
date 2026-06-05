@@ -23,6 +23,10 @@ add_executable(test_unit_mailbox
     test_overflow_handler_factory.cpp
     test_multi_lane_queue.cpp
     test_priority_lanes.cpp
+    test_actor_rate_limiter.cpp
+    test_rate_limiter_mailbox.cpp
+    test_admission_policies.cpp
+    test_admission_mailbox.cpp
 )
 target_link_libraries(test_unit_mailbox hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_mailbox)
