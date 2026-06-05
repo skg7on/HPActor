@@ -10,6 +10,8 @@ message InspectStateRequest {
     bool include_children = 5;
     bool include_circuit_breaker = 6;
     bool include_quarantine_info = 7;
+    bool include_rate_limiter = 8;
+    bool include_admission = 9;
 }
 
 message CircuitBreakerInfo {
@@ -55,6 +57,14 @@ message MailboxSnapshot {
     uint64 total_dead_letters = 12;
     string pressure_state = 13;
     string overflow_policy = 14;
+    bool rate_limiter_enabled = 15;
+    double rate_limiter_rate = 16;
+    uint32 rate_limiter_burst = 17;
+    double rate_limiter_current_tokens = 18;
+    uint64 rate_limit_blocked_total = 19;
+    uint32 admission_policy_count = 20;
+    uint64 admission_rejected_total = 21;
+    uint64 admission_dlq_routed_total = 22;
 }
 
 message ChildInfo {

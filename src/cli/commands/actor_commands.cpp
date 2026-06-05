@@ -379,12 +379,130 @@ class ActorUnquarantineCommand final : public ICommand {
     }
 };
 
+class ActorRateCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/rate";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Show actor rate limiter state";
+    }
+    int order() const noexcept override {
+        return 270;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> rate)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        InspectStateRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_include_mailbox(true);
+        req.set_include_rate_limiter(true);
+
+        auto reply = cli->send_and_wait_inspect(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        ctx.output->header("Rate Limiter — Actor " + *id_str);
+
+        std::map<std::string, std::string> kv;
+        auto& mbox = reply->mailbox();
+        kv["Enabled"] = mbox.rate_limiter_enabled() ? "true" : "false";
+        if (mbox.rate_limiter_enabled()) {
+            char buf[32];
+            snprintf(buf, sizeof(buf), "%.1f", mbox.rate_limiter_rate());
+            kv["Rate (msg/s)"] = buf;
+            kv["Burst"] = std::to_string(mbox.rate_limiter_burst());
+            snprintf(buf, sizeof(buf), "%.1f", mbox.rate_limiter_current_tokens());
+            kv["Current tokens"] = buf;
+        }
+        kv["Blocked total"] = std::to_string(mbox.rate_limit_blocked_total());
+        ctx.output->key_value(kv);
+        return result<void>::make();
+    }
+};
+
+class ActorAdmissionCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/admission";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Show actor admission policy state";
+    }
+    int order() const noexcept override {
+        return 280;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> "
+                              "admission)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        InspectStateRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_include_mailbox(true);
+        req.set_include_admission(true);
+
+        auto reply = cli->send_and_wait_inspect(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        ctx.output->header("Admission Policy — Actor " + *id_str);
+
+        std::map<std::string, std::string> kv;
+        auto& mbox = reply->mailbox();
+        kv["Active policies"] = std::to_string(mbox.admission_policy_count());
+        kv["Rejected total"] = std::to_string(mbox.admission_rejected_total());
+        kv["DLQ routed total"] = std::to_string(mbox.admission_dlq_routed_total());
+        ctx.output->key_value(kv);
+        return result<void>::make();
+    }
+};
+
 const CommandRegistration<ActorShowCommand> kRegisterActorShow;
 const CommandRegistration<ActorCircuitCommand> kRegisterActorCircuit;
 const CommandRegistration<ActorKillCommand> kRegisterActorKill;
 const CommandRegistration<ActorQuarantineCommand> kRegisterActorQuarantine;
 const CommandRegistration<ActorUnquarantineCommand> kRegisterActorUnquarantine;
 const CommandRegistration<ActorListCommand> kRegisterActorList;
+const CommandRegistration<ActorRateCommand> kRegisterActorRate;
+const CommandRegistration<ActorAdmissionCommand> kRegisterActorAdmission;
 
 } // anonymous namespace
 } // namespace cli
