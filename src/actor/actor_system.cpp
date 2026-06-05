@@ -226,6 +226,49 @@ ActorSystem::ActorSystem(const Config& config)
     }
 
     fault_controller_.install();
+
+    // Initialize extracted runtime components
+    shutdown_coordinator_ =
+        std::make_unique<ShutdownCoordinator>(ShutdownCoordinatorDependencies{
+            .phase = &shutdown_phase_,
+            .set_ready =
+                [this](bool ready) {
+                    is_ready_.store(ready, std::memory_order_release);
+                },
+            .actor_snapshot = [this]() -> std::vector<ActorId> {
+                std::lock_guard<std::mutex> lock(actors_mutex_);
+                std::vector<ActorId> ids;
+                ids.reserve(actors_.size());
+                for (const auto& [id, _] : actors_) {
+                    (void)_;
+                    ids.push_back(id);
+                }
+                return ids;
+            },
+            .request_actor_drain =
+                [](ActorId id) {
+                    // Drain requests are sent via message passing
+                    // Full integration in follow-up task
+                    (void)id;
+                },
+            .actors_drained = []() -> bool { return true; },
+            .stop_remote_runtime =
+                [this]() {
+                    if (network_loop_) {
+                        network_loop_->stop();
+                    }
+                },
+            .leave_discovery =
+                []() {
+                    // Discovery stop handled by existing shutdown path
+                },
+            .flush_telemetry =
+                [this]() {
+                    if (metrics_ring_buffer_) {
+                        metrics_ring_buffer_.reset();
+                    }
+                },
+        });
 }
 
 ActorSystem::~ActorSystem() {
