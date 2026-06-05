@@ -235,7 +235,7 @@ void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/,
         // Remove the stopped child from our tracking
         auto id = ActorId(pb->actor_id());
         auto it = std::find_if(children_.begin(), children_.end(),
-            [id](const Actor& a) { return a.id() == id; });
+                               [id](const Actor& a) { return a.id() == id; });
         if (it != children_.end()) {
             remove_child(*it);
         }
@@ -256,6 +256,10 @@ SelfSupervisingActor::decide_restart(ActorId child_id, const error& /*err*/) {
     }
 
     if (count >= policy_.max_restarts) {
+        if (policy_.quarantine.enabled &&
+            policy_.quarantine.escalate_on_max_restarts) {
+            return SupervisionDirective::Quarantine;
+        }
         return SupervisionDirective::Stop;
     }
 

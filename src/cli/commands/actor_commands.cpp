@@ -201,8 +201,189 @@ class ActorListCommand final : public ICommand {
     }
 };
 
+class ActorCircuitCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/circuit";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Show circuit breaker state: state, trip count, failure EMA";
+    }
+    int order() const noexcept override {
+        return 150;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> circuit)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        InspectStateRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_include_circuit_breaker(true);
+        req.set_include_quarantine_info(true);
+
+        auto reply = cli->send_and_wait_inspect(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        if (!reply->quarantine_enabled()) {
+            ctx.output->raw("Circuit breaker is not enabled for actor " +
+                            *id_str + ".");
+            return result<void>::make();
+        }
+
+        ctx.output->header("Circuit Breaker — Actor " + *id_str);
+
+        std::map<std::string, std::string> kv;
+        kv["State"] = reply->circuit_breaker().state();
+        kv["Trip count"] = std::to_string(reply->circuit_breaker().trip_count());
+        char ema_buf[32];
+        snprintf(ema_buf, sizeof(ema_buf), "%.3f",
+                 reply->circuit_breaker().failure_ema());
+        kv["Failure EMA"] = ema_buf;
+        if (reply->circuit_breaker().opened_at_ns() > 0) {
+            kv["Opened at (ns)"] =
+                std::to_string(reply->circuit_breaker().opened_at_ns());
+        }
+        if (!reply->quarantine_reason().empty()) {
+            kv["Quarantine reason"] = reply->quarantine_reason();
+        }
+
+        ctx.output->key_value(kv);
+        return result<void>::make();
+    }
+};
+
+class ActorQuarantineCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/quarantine";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Manually quarantine an actor [--reason <text>]";
+    }
+    int order() const noexcept override {
+        return 250;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> quarantine "
+                              "[--reason "
+                              "<text>])");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        QuarantineRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_unquarantine(false);
+        if (auto reason = ctx.get_param("reason")) {
+            req.set_reason(*reason);
+        }
+
+        auto reply = cli->send_and_wait_quarantine(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        if (reply->success()) {
+            ctx.output->raw("Actor " + *id_str + " quarantined.");
+        } else {
+            ctx.output->error("Failed to quarantine actor " + *id_str + ": " +
+                              reply->error_message());
+        }
+        return result<void>::make();
+    }
+};
+
+class ActorUnquarantineCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/unquarantine";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Release an actor from quarantine";
+    }
+    int order() const noexcept override {
+        return 260;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> "
+                              "unquarantine)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        QuarantineRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_unquarantine(true);
+
+        auto reply = cli->send_and_wait_quarantine(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        if (reply->success()) {
+            ctx.output->raw("Actor " + *id_str + " released from quarantine.");
+        } else {
+            ctx.output->error("Failed to unquarantine actor " + *id_str + ": " +
+                              reply->error_message());
+        }
+        return result<void>::make();
+    }
+};
+
 const CommandRegistration<ActorShowCommand> kRegisterActorShow;
+const CommandRegistration<ActorCircuitCommand> kRegisterActorCircuit;
 const CommandRegistration<ActorKillCommand> kRegisterActorKill;
+const CommandRegistration<ActorQuarantineCommand> kRegisterActorQuarantine;
+const CommandRegistration<ActorUnquarantineCommand> kRegisterActorUnquarantine;
 const CommandRegistration<ActorListCommand> kRegisterActorList;
 
 } // anonymous namespace

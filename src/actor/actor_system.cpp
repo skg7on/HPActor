@@ -847,6 +847,54 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                     target, msg, options, priority, deadline_ns);
     }
 
+    // ── Circuit breaker admission gate ──────────────────────────
+    if (auto actor_ptr = get_actor(target)) {
+        if (actor_ptr->is_event_based_actor()) {
+            auto* eba = static_cast<EventBasedActor*>(actor_ptr.get());
+            if (eba->quarantine_enabled()) {
+                auto* cb = eba->circuit_breaker();
+                auto now = std::chrono::steady_clock::now();
+
+                if (cb->state == CircuitBreakerState::kOpen) {
+                    auto elapsed =
+                        std::chrono::duration_cast<std::chrono::milliseconds>(
+                            now - cb->opened_at);
+                    auto cooldown = eba->quarantine_policy().cooldown_period;
+                    if (elapsed >= cooldown) {
+                        cb->state = CircuitBreakerState::kHalfOpen;
+                        cb->half_open_probe_in_flight = true;
+                        if (auto* rb = eba->metrics_ring_buffer()) {
+                            auto now_ns =
+                                std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                    now.time_since_epoch())
+                                    .count();
+                            metrics::MetricEvent evt{};
+                            evt.timestamp_ns = static_cast<uint64_t>(now_ns);
+                            evt.actor_id = target;
+                            evt.event_type =
+                                metrics::MetricEventType::kCircuitStateChange;
+                            evt.code = static_cast<uint8_t>(
+                                CircuitBreakerState::kHalfOpen);
+                            evt.value_hi = cb->trip_count;
+                            rb->try_push(evt);
+                        }
+                        // Fall through — admit the probe message.
+                    } else {
+                        return mailbox::EnqueueResult{
+                            mailbox::EnqueueResultCode::CircuitOpen, target};
+                    }
+                } else if (cb->state == CircuitBreakerState::kHalfOpen) {
+                    if (cb->half_open_probe_in_flight) {
+                        return mailbox::EnqueueResult{
+                            mailbox::EnqueueResultCode::CircuitOpen, target};
+                    }
+                    cb->half_open_probe_in_flight = true;
+                }
+            }
+        }
+    }
+    // ── End circuit breaker admission gate ──────────────────────
+
     msg.set_deadline_ns(deadline_ns);
 
     if (auto dup =
@@ -905,6 +953,14 @@ ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
     (void)try_deliver_local(target, std::move(msg));
+}
+
+void ActorSystem::record_actor_timeout(ActorId target) {
+    auto actor_ptr = get_actor(target);
+    if (!actor_ptr || !actor_ptr->is_event_based_actor())
+        return;
+    auto* eba = static_cast<EventBasedActor*>(actor_ptr.get());
+    eba->record_circuit_breaker_timeout();
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg,

@@ -8,6 +8,15 @@ message InspectStateRequest {
     bool include_state = 3;
     bool include_mailbox = 4;
     bool include_children = 5;
+    bool include_circuit_breaker = 6;
+    bool include_quarantine_info = 7;
+}
+
+message CircuitBreakerInfo {
+    string state = 1;           // "closed", "open", "half_open"
+    uint32 trip_count = 2;      // number of times circuit has tripped
+    double failure_ema = 3;     // exponential moving average failure rate
+    uint64 opened_at_ns = 4;    // monotonic timestamp when circuit opened (0 if not open)
 }
 
 message InspectStateReply {
@@ -16,6 +25,9 @@ message InspectStateReply {
     bytes state_blob = 3;
     MailboxSnapshot mailbox = 4;
     repeated ChildInfo children = 5;
+    CircuitBreakerInfo circuit_breaker = 6;
+    string quarantine_reason = 7;   // reason if quarantined, empty otherwise
+    bool quarantine_enabled = 8;    // whether quarantine is configured
 }
 
 message ActorMetadata {
@@ -106,4 +118,17 @@ message MemoryStatsReply {
     uint64 peak_bytes = 2;
     uint32 segment_count = 3;
     double slab_hit_rate = 4;
+}
+
+// ── Quarantine Control ──
+
+message QuarantineRequest {
+    uint64 target_actor_id = 1;
+    string reason = 2;  // operator-provided reason text
+    bool unquarantine = 3;  // true = release from quarantine
+}
+
+message QuarantineReply {
+    bool success = 1;
+    string error_message = 2;
 }

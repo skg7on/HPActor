@@ -844,6 +844,8 @@ const char* enqueue_code_name(hpactor::mailbox::EnqueueResultCode code) {
             return "endpoint_backpressure";
         case Code::EndpointCircuitOpen:
             return "endpoint_circuit_open";
+        case Code::CircuitOpen:
+            return "circuit_open";
     }
     return "rejected";
 }

@@ -339,6 +339,36 @@ class EventBasedActor : public LocalActor {
     ///       thread (same thread as \c receive()).
     void record_circuit_breaker_result(bool success);
 
+    /// \brief Record a timeout event for circuit breaker rate tracking.
+    ///
+    /// Advances the timeout bucket, computes the timeout rate over the
+    /// observation window, and trips the circuit if the rate exceeds
+    /// \c timeout_rate_threshold. A no-op when quarantine is disabled
+    /// or the threshold is zero.
+    ///
+    /// \note Thread safety: must be called from the owning scheduler
+    ///       thread (same thread as \c receive()).
+    void record_circuit_breaker_timeout();
+
+    /// \brief Check mailbox pressure and trip circuit if threshold exceeded.
+    ///
+    /// Compares the current mailbox pressure ratio (0.0–1.0) against
+    /// \c mailbox_pressure_threshold. When exceeded, trips the circuit
+    /// to \c kOpen. A no-op when quarantine is disabled or the threshold
+    /// is zero.
+    ///
+    /// \note Thread safety: must be called from the owning scheduler
+    ///       thread (same thread as \c receive()).
+    void check_mailbox_pressure();
+
+  private:
+    /// \brief Transition the circuit to \c kOpen and emit a metric.
+    ///
+    /// \param[in] now Current steady_clock timestamp.
+    /// \note Thread safety: must be called from the owning scheduler thread.
+    void trip_circuit(std::chrono::steady_clock::time_point now);
+
+  public:
     // System message handlers invoked from receive().
     bool handle_link_msg(const TypedMessage& msg);
     bool handle_unlink_msg(const TypedMessage& msg);
@@ -368,6 +398,15 @@ class EventBasedActor : public LocalActor {
     void set_metrics_ring_buffer(void* buf) noexcept override {
         metrics_ring_buffer_ =
             static_cast<metrics::MpscRingBuffer<metrics::MetricEvent>*>(buf);
+    }
+
+    /// \brief Access the actor's metrics ring buffer.
+    ///
+    /// \return Pointer to the ring buffer, or \c nullptr if metrics are
+    ///         not configured for this actor.
+    [[nodiscard]] metrics::MpscRingBuffer<metrics::MetricEvent>*
+    metrics_ring_buffer() noexcept {
+        return metrics_ring_buffer_;
     }
 
     void set_logger(void* logger) noexcept override {

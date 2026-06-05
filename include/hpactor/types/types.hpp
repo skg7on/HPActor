@@ -556,6 +556,8 @@ enum class TypeTag : uint32_t {
     TopologyShowResponseTag = 0x5B,
     TopologyRestartRequestTag = 0x5C,
     TopologyRestartResponseTag = 0x5D,
+    QuarantineRequestTag = 0x5E,
+    QuarantineResponseTag = 0x5F,
 
     // Async I/O (0x60 – 0x6F)
     IoCompletionTag = 0x60,

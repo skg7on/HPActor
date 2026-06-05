@@ -90,6 +90,9 @@ DeliveryResult::from_enqueue(const EnqueueResult& er,
         case EnqueueResultCode::EndpointCircuitOpen:
             dr.status = DeliveryStatus::RemoteUnavailable;
             break;
+        case EnqueueResultCode::CircuitOpen:
+            dr.status = DeliveryStatus::RejectedByPolicy;
+            break;
     }
 
     dr.detail_code = static_cast<uint32_t>(er.code);

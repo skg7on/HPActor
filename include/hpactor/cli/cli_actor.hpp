@@ -175,6 +175,18 @@ class CliActor : public DaemonActor {
         ActorId target, const class KillRequest& req,
         std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
 
+    /// \brief Send a QuarantineRequest to a target actor and block on the
+    /// reply.
+    ///
+    /// \param[in] target Actor to quarantine/unquarantine.
+    /// \param[in] req The quarantine request.
+    /// \param[in] timeout Maximum time to wait for a reply.
+    /// \return The reply if received within the timeout, otherwise
+    ///         \c std::nullopt.
+    std::optional<class QuarantineReply> send_and_wait_quarantine(
+        ActorId target, const class QuarantineRequest& req,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+
     /// \brief Enumerate all known actors.
     ///
     /// \param[in] filter Optional substring filter on actor type or behavior

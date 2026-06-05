@@ -131,7 +131,11 @@ class SelfSupervisingActor : public EventBasedActor {
     virtual SupervisionDirective on_failure(ActorId child_id, const error& err);
     void handle_child_down(TypeTag tag, const StreamBuffer& payload);
 
-  private:
+    /// \brief Decide whether to restart, stop, or quarantine a child.
+    ///
+    /// When \c policy_.quarantine.enabled and
+    /// \c escalate_on_max_restarts are set, exceeding \c max_restarts
+    /// within the window produces \c Quarantine instead of \c Stop.
     SupervisionDirective decide_restart(ActorId child_id, const error& err);
 
     ActorVec children_;
