@@ -33,6 +33,10 @@ namespace hpactor {
 // -----------------------------------------------------------------------------
 // Stores factories for actor types that can be remotely spawned.
 // Types are registered at startup with register_type<T>().
+// Type alias for the spawn factory function signature
+using SpawnFactory = std::function<::hpactor::Actor(
+    ::hpactor::ActorSystem&, const ::hpactor::StreamBuffer&, ::hpactor::TypeTag)>;
+
 // Template methods are in header; non-template in actor_type_registry.cpp.
 class ActorTypeRegistry {
   public:
@@ -42,12 +46,15 @@ class ActorTypeRegistry {
     // Template implementation in header
     template <typename T> void register_type(const std::string& name) {
         ActorType id = next_type_id_++;
-        types_by_name_[name] = TypeEntry{id, [](ActorSystem& sys) -> ActorAddress {
-                                             Actor actor = sys.spawn<T>();
-                                             return actor.address();
-                                         }};
+        types_by_name_[name] = TypeEntry{
+            id, [](ActorSystem& sys, const StreamBuffer&, TypeTag) -> Actor {
+                return sys.spawn<T>();
+            }};
         names_by_type_[id] = name;
     }
+
+    // Register a custom factory for remote spawning
+    void register_factory(const std::string& name, SpawnFactory factory);
 
     // Spawn a remote actor by name - returns ActorAddress
     // args and args_type are for future deserialization support
@@ -61,7 +68,7 @@ class ActorTypeRegistry {
   private:
     struct TypeEntry {
         ActorType type_id;
-        std::function<ActorAddress(ActorSystem&)> factory;
+        std::function<Actor(ActorSystem&, const StreamBuffer&, TypeTag)> factory;
     };
 
     std::unordered_map<std::string, TypeEntry> types_by_name_;

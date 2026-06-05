@@ -19,15 +19,15 @@ namespace hpactor {
 
 result<ActorAddress>
 ActorTypeRegistry::spawn(ActorSystem& system, const std::string& name,
-                         const StreamBuffer& /*args*/, TypeTag /*args_type*/) {
+                         const StreamBuffer& args, TypeTag args_type) {
     auto it = types_by_name_.find(name);
     if (it == types_by_name_.end()) {
         return result<ActorAddress>::make(
             error(spawn_errors::unknown_type, "unknown actor type: " + name));
     }
 
-    ActorAddress addr = it->second.factory(system);
-    return result<ActorAddress>::make(std::move(addr));  // NOLINT(performance-move-const-arg)
+    Actor actor = it->second.factory(system, args, args_type);
+    return result<ActorAddress>::make(actor.address());
 }
 
 bool ActorTypeRegistry::has(const std::string& name) const {
@@ -40,6 +40,13 @@ ActorType ActorTypeRegistry::type_id(const std::string& name) const {
         return it->second.type_id;
     }
     return ActorType{0};
+}
+
+void ActorTypeRegistry::register_factory(const std::string& name,
+                                         SpawnFactory factory) {
+    ActorType id = next_type_id_++;
+    types_by_name_[name] = TypeEntry{id, std::move(factory)};
+    names_by_type_[id] = name;
 }
 
 std::string ActorTypeRegistry::type_name(ActorType type) const {

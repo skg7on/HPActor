@@ -12,9 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/backpressure_coordinator.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
+#include <hpactor/actor/local_delivery_engine.hpp>
+#include <hpactor/actor/shutdown_coordinator.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
@@ -84,6 +87,11 @@ ActorSystem::ActorSystem(const Config& config)
     // Initialize receiver dedup cache for at-least-once delivery
     dedup_cache_ =
         std::make_unique<mailbox::DedupCache>(mailbox::DedupCache::Config{});
+
+    // Initialize extracted runtime components
+    local_delivery_engine_ =
+        std::make_unique<LocalDeliveryEngine>(actor_directory_);
+    backpressure_coordinator_ = std::make_unique<BackpressureCoordinator>(*this);
 
     // Initialize metrics subsystem (before scheduler so instrumentation is
     // ready)
@@ -218,6 +226,49 @@ ActorSystem::ActorSystem(const Config& config)
     }
 
     fault_controller_.install();
+
+    // Initialize extracted runtime components
+    shutdown_coordinator_ =
+        std::make_unique<ShutdownCoordinator>(ShutdownCoordinatorDependencies{
+            .phase = &shutdown_phase_,
+            .set_ready =
+                [this](bool ready) {
+                    is_ready_.store(ready, std::memory_order_release);
+                },
+            .actor_snapshot = [this]() -> std::vector<ActorId> {
+                std::lock_guard<std::mutex> lock(actors_mutex_);
+                std::vector<ActorId> ids;
+                ids.reserve(actors_.size());
+                for (const auto& [id, _] : actors_) {
+                    (void)_;
+                    ids.push_back(id);
+                }
+                return ids;
+            },
+            .request_actor_drain =
+                [](ActorId id) {
+                    // Drain requests are sent via message passing
+                    // Full integration in follow-up task
+                    (void)id;
+                },
+            .actors_drained = []() -> bool { return true; },
+            .stop_remote_runtime =
+                [this]() {
+                    if (network_loop_) {
+                        network_loop_->stop();
+                    }
+                },
+            .leave_discovery =
+                []() {
+                    // Discovery stop handled by existing shutdown path
+                },
+            .flush_telemetry =
+                [this]() {
+                    if (metrics_ring_buffer_) {
+                        metrics_ring_buffer_.reset();
+                    }
+                },
+        });
 }
 
 ActorSystem::~ActorSystem() {
@@ -465,6 +516,7 @@ void ActorSystem::set_backpressure_signal_wire_sink_for_test(
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
     registry_.put(name, actor.address());
+    actor_directory_.register_name(name, actor.address());
 }
 
 Actor ActorSystem::resolve_actor(const std::string& name) {
@@ -472,7 +524,12 @@ Actor ActorSystem::resolve_actor(const std::string& name) {
     if (!addr) {
         return Actor{};
     }
-    return Actor{};
+    std::lock_guard<std::mutex> lock(actors_mutex_);
+    auto it = actors_.find(addr.id);
+    if (it == actors_.end()) {
+        return Actor{};
+    }
+    return Actor{it->second};
 }
 
 void ActorSystem::unregister_actor(const std::string& name) {
@@ -1014,13 +1071,13 @@ net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
 
 result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
                                            const std::string& actor_type,
-                                           const StreamBuffer& /*args*/) {
-    return spawn_remote_async(node_name, actor_type, StreamBuffer{}).get();
+                                           const StreamBuffer& args) {
+    return spawn_remote_async(node_name, actor_type, args).get();
 }
 
 AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
                                            const std::string& actor_type,
-                                           const StreamBuffer& /*args*/) {
+                                           const StreamBuffer& args) {
     AsyncActor handle(endpoint_, config_.spawn_timeout_ms);
 
     if (!config_.enable_network || !transport_) {
@@ -1036,6 +1093,8 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     ::hpactor::SpawnRequestMessage pb_req;
     pb_req.set_actor_type_name(actor_type);
     pb_req.set_args_type(static_cast<uint32_t>(TypeTag::User));
+    pb_req.set_serialized_args(reinterpret_cast<const char*>(args.data()),
+                               args.size());
     net::to_proto(pb_req.mutable_supervisor(), system_actor_.address());
 
     StreamBuffer request_bytes = proto_registry_.serialize(pb_req);

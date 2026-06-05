@@ -16,8 +16,10 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/shutdown_phase.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
 #include <hpactor/core/actor_registry.hpp>
@@ -62,6 +64,9 @@ namespace hpactor {
 // Forward declarations
 class AsyncActor;
 class ActorTypeRegistry;
+class LocalDeliveryEngine;
+class BackpressureCoordinator;
+class ShutdownCoordinator;
 
 namespace log {
 class LogManager;
@@ -175,15 +180,6 @@ struct ActorTypeDef {
 };
 
 /// \brief Phases of the node shutdown state machine.
-enum class ShutdownPhase : uint8_t {
-    Running,           ///< Normal operation.
-    DrainingIngress,   ///< Refusing new external connections and messages.
-    DrainingActors,    ///< Draining in-flight actor messages per policy.
-    LeavingCluster,    ///< Notifying peers and handing off shards.
-    FlushingTelemetry, ///< Flushing metrics, logs, and traces.
-    Stopped,           ///< Clean shutdown complete.
-    ForcedStop,        ///< Force-stopped after timeout.
-};
 
 /// \brief Options controlling the shutdown sequence.
 struct ShutdownOptions {
@@ -693,6 +689,10 @@ class ActorSystem {
     EndPoint endpoint_;
     Clock clock_;
     actor_registry registry_;
+    ActorDirectory actor_directory_;
+    std::unique_ptr<LocalDeliveryEngine> local_delivery_engine_;
+    std::unique_ptr<BackpressureCoordinator> backpressure_coordinator_;
+    std::unique_ptr<ShutdownCoordinator> shutdown_coordinator_;
     std::unordered_map<ActorType, ActorTypeDef> actor_types_;
     Actor system_actor_;
 

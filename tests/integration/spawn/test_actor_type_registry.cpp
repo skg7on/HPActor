@@ -33,6 +33,49 @@ class TestActor : public EventBasedActor {
     }
 };
 
+class ArgsEchoActor final : public EventBasedActor {
+  public:
+    ArgsEchoActor(ActorContext* ctx, ActorSystem& sys, std::string value)
+        : EventBasedActor(ctx, sys), value_(std::move(value)) {}
+
+    const std::string& value() const noexcept {
+        return value_;
+    }
+
+  private:
+    std::string value_;
+};
+
+StreamBuffer make_string_args(std::string_view value) {
+    return StreamBuffer{value.begin(), value.end()};
+}
+
+std::string read_string_args(const StreamBuffer& args) {
+    return std::string(reinterpret_cast<const char*>(args.data()), args.size());
+}
+
+TEST(ActorTypeRegistryTest, SpawnPassesArgsToFactory) {
+    ActorTypeRegistry registry;
+    registry.register_factory(
+        "ArgsEchoActor",
+        [](ActorSystem& system, const StreamBuffer& args, TypeTag args_type) -> Actor {
+            EXPECT_EQ(args_type, TypeTag::User);
+            return system.spawn<ArgsEchoActor>(read_string_args(args));
+        });
+
+    Config config;
+    ActorSystem system{config};
+    auto actor_result =
+        registry.spawn(system, "ArgsEchoActor",
+                       make_string_args("remote-payload"), TypeTag::User);
+
+    ASSERT_TRUE(actor_result.has_value());
+    auto spawned = system.get_actor(actor_result.value().id);
+    ASSERT_NE(spawned, nullptr);
+    auto* echo = static_cast<ArgsEchoActor*>(spawned.get());
+    EXPECT_EQ(echo->value(), "remote-payload");
+}
+
 } // namespace
 
 TEST(ActorTypeRegistryTest, RegisterAndLookup) {

@@ -5,6 +5,10 @@
 add_library(hpactor_lib SHARED
     actor/abstract_actor.cpp
     actor/actor_context.cpp
+    actor/actor_directory.cpp
+    actor/local_delivery_engine.cpp
+    actor/backpressure_coordinator.cpp
+    actor/shutdown_coordinator.cpp
     actor/actor_system.cpp
     actor/daemon_actor.cpp
     actor/event_based_actor.cpp
