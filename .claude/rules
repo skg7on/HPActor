@@ -1,0 +1,124 @@
+# HPActor Project Rules For Claude Code
+
+## Warmup
+
+- At the start of a substantive task, read `AGENTS.md`, `CLAUDE.md`, and
+  `CLAUDE_MEMORY.md`.
+- Treat `CLAUDE_MEMORY.md` as the high-level project memory source for this
+  checkout.
+- Treat `docs/architecture/production/` as the production reliability
+  requirement backlog unless code proves a behavior is implemented.
+
+## Worktree Isolation
+
+- Every design or implementation job must happen in a linked git worktree under
+  `.worktrees/<short-task-name>`.
+- Read-only inspection may happen in the main checkout. Specs, plans, source,
+  docs, config, tests, builds, and generated artifacts for a task belong in the
+  task worktree.
+- Before writing, verify the current directory is the worktree path, not the
+  repository root. Prefer relative paths after entering the worktree.
+- Never target files by the main checkout absolute path
+  `/Users/skg7on/Workspace/Projects/HPActor/` when writing task changes.
+- Keep `.worktrees/` ignored. Do not create new task worktrees under the legacy
+  `.worktree/` path.
+- Use the worktree-local `build/` directory for configure, build, and test
+  output.
+- Before committing, verify the branch is the worktree branch. After writing,
+  run `git status` in the worktree and make sure no task files leaked to the
+  main checkout.
+
+## TDDFlow
+
+- After an accepted design/spec and before implementing a feature, bug fix,
+  refactor, or behavior change, invoke `.claude/skills/tddflow-development`.
+- Follow RED, GREEN, REFACTOR for production code changes:
+  write one focused failing test, verify the expected failure, implement the
+  minimum passing code, verify green, then refactor while staying green.
+- Do not write production implementation before observing the failing test
+  unless the user explicitly approves an exception for generated code,
+  throwaway exploration, docs-only work, or configuration-only work.
+- Record RED and GREEN verification commands in the final response for feature
+  and bug-fix tasks.
+
+## Architecture
+
+- HPActor is a C++20 event-based actor framework. Preserve actor boundaries and
+  avoid shared mutable state between actors.
+- Production-facing work must align with the reliability planes:
+  data plane (delivery, mailbox admission, DLQ, reliable messaging, tracing,
+  lifecycle), control plane (cluster failure model, node identity, sharding,
+  placement, rebalancing, shutdown, rolling upgrades), and operations plane
+  (health, admin, security, audit, config reload, incident timelines, chaos and
+  soak testing).
+- Start production-facing design from the relevant document in
+  `docs/architecture/production/`.
+- Capture runtime contracts, failure semantics, observability, operations
+  surface, and acceptance evidence before implementation.
+- Preserve source-compatible defaults for existing actor APIs. Production-grade
+  behavior should be opt-in or safely defaulted.
+- Do not describe backlog items as implemented runtime behavior until the code
+  proves it.
+
+## Implementation
+
+- Use C++20 and the repository's LLVM-style conventions.
+- Do not introduce RTTI, `dynamic_cast`, `typeid`, exception-based control flow,
+  or public APIs that require RTTI or exceptions.
+- Keep exceptions limited to the existing toml++ translation units listed in
+  `CLAUDE.md`.
+- Keep blocking I/O and long-running work out of event-loop and cooperative
+  scheduler paths. Use daemon, blocking, dense-compute, async, or transport
+  abstractions when work can block.
+- Maintain allocator ownership, memory accounting, poisoning/canary
+  assumptions, and actor ownership metadata when adding queues, envelopes,
+  buffers, or actor state.
+- Prefer bounded capacity and explicit failure paths over unbounded growth.
+  Route pressure through typed results, backpressure, or DLQ policy.
+- Keep actor contracts explicit: use protobuf `TypedMessage` type tags for
+  dynamic messages and typed actor signatures for static contracts.
+- Keep generated/protobuf contracts, TypeTags, wire formats, binary topology,
+  and persisted-state changes explicit and compatibility-aware.
+
+## Configuration
+
+- Prefer subsystem-owned extension points over central switches.
+- New TOML subsystem config should use self-registering parsers in
+  `src/config/parsers/`.
+- Parser interfaces must use opaque `TomlTableView`; do not expose public
+  `toml++` headers.
+- Do not grow monolithic parser logic when a subsystem parser can own the
+  behavior.
+
+## Testing
+
+- Tests must be deterministic across platforms, build configurations, and CI.
+- Avoid timing assumptions. Use condition-based polling with generous timeouts
+  for scheduler-dependent tests, or set `scheduler_threads = 0` when inspecting
+  mailbox or lifecycle state directly.
+- Do not assume thread execution order. If a test needs to observe intermediate
+  mailbox or state transitions, disable scheduler threads or inject messages
+  directly.
+- Guard platform-specific syscall behavior with preprocessor checks or assert
+  portable observable outcomes instead of exact errno or signal details.
+- Use non-blocking file descriptors in async epoll/kqueue tests.
+- Do not rely on `assert()` for the condition under test because it may compile
+  out under `NDEBUG`.
+- Use `mailbox->inject_for_test()` for mailbox/drain tests that must avoid
+  scheduler notification races.
+- Match test scope to risk: unit tests for local behavior, integration tests for
+  actor/config/network interactions, and sanitizer, stress, chaos, soak, or
+  compatibility coverage for reliability-plane changes.
+
+## Build And Verification
+
+- Configure with Ninja using
+  `cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`.
+- Build with `ninja -C build`.
+- Prefer the narrowest verification that covers the changed surface: a targeted
+  `ninja` target, one test binary, or `ctest -R <pattern> --output-on-failure`.
+- Run a full configure/build/test cycle only when the change affects build
+  configuration, generated files, broad public headers, cross-cutting runtime
+  behavior, or when the user explicitly asks for it.
+- Do not reconfigure CMake unless CMake files, options, generated protobuf
+  inputs, or toolchain assumptions changed.
