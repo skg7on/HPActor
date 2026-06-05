@@ -31,6 +31,7 @@
 #include <chrono>
 #include <cstdint>
 #include <functional>
+#include <random>
 #include <shared_mutex>
 #include <string>
 #include <unordered_map>
@@ -200,8 +201,13 @@ class GossipMembership : public IServiceDiscovery {
     std::unordered_map<EndPoint, PendingPing> pending_pings_;
     MemberChangeCallback member_change_cb_;
     uint64_t protocol_timer_ = 0;
+    uint64_t join_retry_timer_ = 0;
+    size_t join_seed_index_ = 0;
     bool needs_dissemination_ = false;
     mutable std::shared_mutex members_mutex_;
+    mutable std::mt19937 rng_;
+    bool rng_seeded_ = false;
+    std::unordered_map<EndPoint, EndPoint> forwarded_pings_;
 };
 
 } // namespace hpactor::net

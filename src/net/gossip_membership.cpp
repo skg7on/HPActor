@@ -138,32 +138,6 @@ Member from_pb_member(const PbGossipMember& pb) {
     return m;
 }
 
-// ---- Per-instance state (RNG, join retry, forwarded pings) ----
-
-struct InstanceExtras {
-    std::mt19937 rng;
-    bool rng_seeded = false;
-    size_t join_seed_index = 0;
-    uint64_t join_retry_timer = 0;
-    std::unordered_map<EndPoint, EndPoint> forwarded_pings;
-};
-
-static std::unordered_map<const GossipMembership*, InstanceExtras> s_extras;
-
-static InstanceExtras& extras_for(const GossipMembership* self) {
-    auto& extras = s_extras[self];
-    if (!extras.rng_seeded) {
-        std::random_device rd;
-        extras.rng.seed(rd());
-        extras.rng_seeded = true;
-    }
-    return extras;
-}
-
-static void cleanup_extras(const GossipMembership* self) {
-    s_extras.erase(self);
-}
-
 } // anonymous namespace
 
 // =============================================================================
@@ -196,7 +170,13 @@ void GossipMembership::start() {
         std::chrono::system_clock::now().time_since_epoch().count());
 
     if (transport_) {
-        transport_->bind(config_.gossip_port);
+        if (!transport_->bind(config_.gossip_port)) {
+            HPACTOR_LOG_ERROR(
+                log::LogCategory::kDiscovery, ActorId{0},
+                static_cast<uint32_t>(log::LogEventId::kDiscoveryNodeDead),
+                "gossip bind failed");
+            return;
+        }
         transport_->set_receive_callback(
             [this](const StreamBuffer& data, const std::string& host,
                    uint16_t port) { handle_packet(data, host, port); });
@@ -214,17 +194,15 @@ void GossipMembership::start() {
 
     // Bootstrap: join an existing cluster via a seed, or start a solo cluster.
     if (!config_.seeds.empty()) {
-        auto& ext = extras_for(this);
-        ext.join_seed_index = 0;
+        join_seed_index_ = 0;
         send_join(config_.seeds[0]);
 
         // Recursive retry chain: try the next seed after 1 s if no SyncRsp
         // arrived.
         auto retry_fn = std::make_shared<std::function<void()>>();
         *retry_fn = [this, retry_fn]() {
-            auto& ext_inner = extras_for(this);
-            ext_inner.join_seed_index++;
-            if (ext_inner.join_seed_index >= config_.seeds.size()) {
+            join_seed_index_++;
+            if (join_seed_index_ >= config_.seeds.size()) {
                 return; // No more seeds to try
             }
             {
@@ -233,10 +211,17 @@ void GossipMembership::start() {
                     return; // Already received SyncRsp — joined successfully
                 }
             }
-            send_join(config_.seeds[ext_inner.join_seed_index]);
-            ext_inner.join_retry_timer = loop_->run_after(*retry_fn, 1000);
+            send_join(config_.seeds[join_seed_index_]);
+            join_retry_timer_ = loop_->run_after(*retry_fn, 1000);
         };
-        ext.join_retry_timer = loop_->run_after(*retry_fn, 1000);
+        join_retry_timer_ = loop_->run_after(*retry_fn, 1000);
+    }
+
+    // Seed the per-instance RNG.
+    if (!rng_seeded_) {
+        std::random_device rd;
+        rng_.seed(rd());
+        rng_seeded_ = true;
     }
 
     // Schedule the periodic protocol round.
@@ -253,10 +238,9 @@ void GossipMembership::stop() {
     }
 
     // Cancel the join retry timer if still active.
-    auto& ext = extras_for(this);
-    if (ext.join_retry_timer != 0 && loop_) {
-        loop_->cancel_timer(ext.join_retry_timer);
-        ext.join_retry_timer = 0;
+    if (join_retry_timer_ != 0 && loop_) {
+        loop_->cancel_timer(join_retry_timer_);
+        join_retry_timer_ = 0;
     }
 
     // Send Leave to all known Alive + Suspicious members (best-effort).
@@ -280,9 +264,8 @@ void GossipMembership::stop() {
         std::unique_lock<std::shared_mutex> lock(members_mutex_);
         members_.clear();
         pending_pings_.clear();
+        forwarded_pings_.clear();
     }
-
-    cleanup_extras(this);
 }
 
 // =============================================================================
@@ -833,14 +816,13 @@ void GossipMembership::handle_ack(EndPoint sender, uint64_t inc,
     }
 
     // Check if this ack is for a forwarded PingReq.
-    auto& ext = extras_for(this);
-    auto fwd_it = ext.forwarded_pings.find(sender);
-    if (fwd_it != ext.forwarded_pings.end()) {
+    auto fwd_it = forwarded_pings_.find(sender);
+    if (fwd_it != forwarded_pings_.end()) {
         // We forwarded a Ping on behalf of fwd_it->second.
         // The target (sender) responded, so send IndirectAck to the original
         // requester.
         send_indirect_ack(fwd_it->second, sender);
-        ext.forwarded_pings.erase(fwd_it);
+        forwarded_pings_.erase(fwd_it);
     }
 
     // Clear any pending ping for this sender — the probe succeeded.
@@ -864,8 +846,7 @@ void GossipMembership::handle_ping_req(EndPoint sender, EndPoint target) {
     }
 
     // Forward the ping on behalf of the requester.
-    auto& ext = extras_for(this);
-    ext.forwarded_pings[target] = sender;
+    forwarded_pings_[target] = sender;
 
     // Build piggyback and send Ping to target.
     std::vector<PiggybackEntry> pb;
@@ -936,10 +917,9 @@ void GossipMembership::handle_sync_rsp(std::vector<Member> members) {
     }
 
     // Cancel any pending join retry — we have successfully joined.
-    auto& ext = extras_for(this);
-    if (ext.join_retry_timer != 0 && loop_) {
-        loop_->cancel_timer(ext.join_retry_timer);
-        ext.join_retry_timer = 0;
+    if (join_retry_timer_ != 0 && loop_) {
+        loop_->cancel_timer(join_retry_timer_);
+        join_retry_timer_ = 0;
     }
 
     // Ensure self is still in the table (should always be, but be defensive).
@@ -1278,7 +1258,6 @@ GossipMembership::pick_random_peers(size_t count,
     FAULT_INJECT("hpactor.gossip.pick_random_peers.fail") {
         return {};
     }
-    auto& ext = extras_for(this);
 
     // Collect Alive peers excluding self and explicitly excluded endpoints.
     // Caller holds members_mutex_ — do not re-acquire.
@@ -1299,7 +1278,7 @@ GossipMembership::pick_random_peers(size_t count,
         return candidates;
 
     // Shuffle and pick the first 'count' elements.
-    std::shuffle(candidates.begin(), candidates.end(), ext.rng);
+    std::shuffle(candidates.begin(), candidates.end(), rng_);
     candidates.resize(count);
     return candidates;
 }

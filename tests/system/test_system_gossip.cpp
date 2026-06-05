@@ -82,8 +82,8 @@ cfg_at(uint16_t port, const std::vector<uint16_t>& seed_ports = {}) {
 TEST(GossipSystem, TwoNodeJoinAndDiscovery) {
     if (coverage_build())
         GTEST_SKIP() << "Gossip tests are non-deterministic under coverage";
-    if (!ensure_gossip_ports(50000, 2))
-        GTEST_SKIP() << "Gossip ports 50000-50001 not available";
+    if (!ensure_gossip_ports(49000, 2))
+        GTEST_SKIP() << "Gossip ports 49000-49001 not available";
     Config a_cfg = test::minimal_config();
     a_cfg.enable_network = true;
     ActorSystem sys_a(a_cfg);
@@ -173,8 +173,8 @@ TEST(GossipSystem, FailureDetectionEndToEnd) {
 TEST(GossipSystem, GracefulLeave) {
     if (coverage_build())
         GTEST_SKIP() << "Gossip tests are non-deterministic under coverage";
-    if (!ensure_gossip_ports(50010, 3))
-        GTEST_SKIP() << "Gossip ports 50010-50012 not available";
+    if (!ensure_gossip_ports(51000, 2))
+        GTEST_SKIP() << "Gossip ports 51000-51001 not available";
     Config ac = test::minimal_config();
     ac.enable_network = true;
     ActorSystem sa(ac);
