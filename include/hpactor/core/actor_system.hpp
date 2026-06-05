@@ -179,8 +179,6 @@ struct ActorTypeDef {
     ActorType id;     ///< Numeric type tag.
 };
 
-/// \brief Phases of the node shutdown state machine.
-
 /// \brief Options controlling the shutdown sequence.
 struct ShutdownOptions {
     /// \brief Maximum time for ingress draining.

@@ -20,9 +20,23 @@ namespace hpactor {
 
 class ActorSystem;
 
+/// \brief Coordinates system-wide backpressure signal emission and handling.
+///
+/// Extracted from \c ActorSystem to isolate backpressure logic. Currently
+/// a PIMPL stub wired to the \c ActorSystem backpressure methods. Future
+/// iterations will move signal routing, pressure-state aggregation, and
+/// remote signal serialization into this coordinator.
+///
+/// \note Thread safety: Internally synchronized via PIMPL indirection.
+///       The \c ActorSystem reference must outlive this coordinator.
 class BackpressureCoordinator {
   public:
+    /// \brief Construct and wire into a running actor system.
+    ///
+    /// \param[in] system The owning \c ActorSystem whose backpressure
+    ///                   methods this coordinator will orchestrate.
     explicit BackpressureCoordinator(ActorSystem& system);
+
     ~BackpressureCoordinator();
 
   private:

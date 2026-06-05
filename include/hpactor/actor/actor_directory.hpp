@@ -31,27 +31,108 @@ namespace hpactor {
 
 class AbstractActor;
 
+/// \brief A single entry in the actor directory holding all actor components.
+///
+/// Bundles the actor handle, instance, mailbox, and context for a
+/// registered actor. \c ActorDirectory stores these entries.
 struct ActorDirectoryEntry {
-    Actor actor;
-    std::shared_ptr<AbstractActor> instance;
-    std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>> mailbox;
-    std::shared_ptr<ActorContext> context;
+    Actor actor; ///< Actor handle (address + proxy).
+    std::shared_ptr<AbstractActor> instance; ///< Shared ownership of the actor
+                                             ///< instance.
+    std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>> mailbox; ///< Actor's
+                                                                      ///< mailbox
+                                                                      ///< for
+                                                                      ///< message
+                                                                      ///< enqueue.
+    std::shared_ptr<ActorContext> context; ///< Actor's execution context.
 };
 
+/// \brief Thread-safe registry of live actors, mailboxes, and named addresses.
+///
+/// Each spawned actor is inserted with its mailbox and context. Lookup by
+/// \c ActorId or registered name is O(1) average. Snapshot returns a
+/// consistent copy under the internal mutex.
+///
+/// \note Thread safety: All public methods are internally synchronized via
+///       \c std::mutex. Safe to call from any thread.
 class ActorDirectory {
   public:
+    /// \brief Allocate a fresh, monotonically increasing actor ID.
+    ///
+    /// \return A new \c ActorId unique within this directory.
     ActorId allocate_id();
+
+    /// \brief Insert an entry into the directory.
+    ///
+    /// \param[in] entry The fully constructed actor entry to register.
+    /// \retval true Entry was inserted.
+    /// \retval false An entry for this actor ID already exists.
     bool insert(ActorDirectoryEntry entry);
+
+    /// \brief Find the complete entry for an actor.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return The \c ActorDirectoryEntry if found, or \c std::nullopt.
     std::optional<ActorDirectoryEntry> find(ActorId id) const;
+
+    /// \brief Find the actor handle by ID.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return The \c Actor handle if found, or \c std::nullopt.
     std::optional<Actor> find_actor(ActorId id) const;
+
+    /// \brief Find the mailbox for an actor.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return Shared pointer to the mailbox, or \c nullptr if not found.
     std::shared_ptr<mailbox::MPSCActorMailbox<TypedMessage>>
     find_mailbox(ActorId id) const;
+
+    /// \brief Find the execution context for an actor.
+    ///
+    /// \param[in] id Actor identifier.
+    /// \return Shared pointer to the context, or \c nullptr if not found.
     std::shared_ptr<ActorContext> find_context(ActorId id) const;
+
+    /// \brief Register a name-to-address mapping.
+    ///
+    /// \param[in] name Human-readable actor name.
+    /// \param[in] address Actor address to associate with the name.
+    /// \retval true Name was registered.
+    /// \retval false Name already exists in the directory.
     bool register_name(std::string name, ActorAddress address);
+
+    /// \brief Resolve a registered name to an address.
+    ///
+    /// \param[in] name Previously registered actor name.
+    /// \return The \c ActorAddress if found, or \c std::nullopt.
     std::optional<ActorAddress> resolve_name(const std::string& name) const;
+
+    /// \brief Resolve a registered name to an actor handle.
+    ///
+    /// Combines \c resolve_name() with \c find_actor() to produce
+    /// an \c Actor handle for name-based lookup.
+    /// \param[in] name Previously registered actor name.
+    /// \return The \c Actor handle if found, or \c std::nullopt.
     std::optional<Actor> resolve_actor(const std::string& name) const;
+
+    /// \brief Return a consistent snapshot of all registered entries.
+    ///
+    /// Iterates the internal map under the lock and copies every entry.
+    /// \return A vector of all \c ActorDirectoryEntry values.
+    /// \note Linear in the number of registered actors.
     std::vector<ActorDirectoryEntry> snapshot() const;
+
+    /// \brief Remove an entry from the directory.
+    ///
+    /// \param[in] id Actor identifier to remove.
+    /// \retval true An entry was erased.
+    /// \retval false No entry existed for this ID.
     bool erase(ActorId id);
+
+    /// \brief Current count of registered entries.
+    ///
+    /// \return Number of actors in the directory.
     std::size_t size() const noexcept;
 
   private:
