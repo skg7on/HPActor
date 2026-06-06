@@ -69,6 +69,16 @@ const char* to_string(FailureReason reason) noexcept {
             return "retry_exhausted";
         case FailureReason::SpawnFailed:
             return "spawn_failed";
+        case FailureReason::PassivationDrainTimeout:
+            return "passivation_drain_timeout";
+        case FailureReason::PassivationSnapshotFailed:
+            return "passivation_snapshot_failed";
+        case FailureReason::ReactivationFailed:
+            return "reactivation_failed";
+        case FailureReason::PassivationQueueFull:
+            return "passivation_queue_full";
+        case FailureReason::SchemaVersionMismatch:
+            return "schema_version_mismatch";
         case FailureReason::Unknown:
             return "unknown";
     }
