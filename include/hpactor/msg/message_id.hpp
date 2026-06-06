@@ -15,16 +15,14 @@
 #pragma once
 
 #include <hpactor/adt/id.hpp>
+#include <hpactor/adt/tags.hpp>
 
 #include <atomic>
 
 namespace hpactor {
 
-/// Tag type for message identity.
-struct MessageTag {};
-
 /// Globally unique per-message identifier.
-using MessageId = adt::Id<MessageTag>;
+using MessageId = Id<MessageTag>;
 
 /// Generate a monotonic, globally unique MessageId.
 inline MessageId generate_message_id() {

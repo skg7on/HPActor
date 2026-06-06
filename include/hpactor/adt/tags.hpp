@@ -17,7 +17,7 @@
 namespace hpactor {
 
 struct ActorTag {};
-#include <hpactor/msg/message_id.hpp> // MessageTag, MessageId
+struct MessageTag {};
 struct AlarmTag {};
 
 } // namespace hpactor

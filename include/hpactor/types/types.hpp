@@ -29,6 +29,8 @@
 #include <hpactor/adt/id.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/adt/tags.hpp>
+#include <hpactor/msg/message_id.hpp>
+#include <hpactor/msg/type_tag.hpp>
 #include <hpactor/types/failure_reason.hpp>
 #include <vector>
 
@@ -238,11 +240,6 @@ constexpr ActorType InvalidActorType = 0;
 // incarnation_type - version counter for actor lifecycle
 // -----------------------------------------------------------------------------
 using incarnation_type = uint64_t;
-
-// -----------------------------------------------------------------------------
-// MessageId - unique identifier for a message (moved to msg/ subsystem)
-// -----------------------------------------------------------------------------
-#include <hpactor/msg/message_id.hpp>
 
 // -----------------------------------------------------------------------------
 // error - error code wrapper (no exceptions in hot path)
@@ -499,11 +496,6 @@ struct TraceContext {
 // StreamBuffer - byte buffer type
 // -----------------------------------------------------------------------------
 using adt::StreamBuffer;
-
-// -----------------------------------------------------------------------------
-// TypeTag - moved to msg/type_tag.hpp
-// -----------------------------------------------------------------------------
-#include <hpactor/msg/type_tag.hpp>
 
 } // namespace hpactor
 
