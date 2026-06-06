@@ -434,6 +434,13 @@ void Aggregator::on_event(const MetricEvent& e) {
             }
             break;
         }
+        case MetricEventType::kRateLimitBlocked:
+        case MetricEventType::kAdmissionRejected:
+        case MetricEventType::kAdmissionDLQRouted:
+        case MetricEventType::kPerSenderBucketCount:
+            // Full metric handlers will be wired in Phase 6 (Metrics & CLI).
+            // The event is still emitted into the ring buffer for telemetry.
+            break;
     }
 }
 

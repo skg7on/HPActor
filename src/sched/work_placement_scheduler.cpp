@@ -73,11 +73,16 @@ uint32_t WorkPlacementScheduler::choose_worker(ActorId actor, bool& is_pinned) {
 
 void WorkPlacementScheduler::enqueue_shared(const WorkItem& item,
                                             uint8_t priority, uint32_t worker_id) {
-    if (item.deadline_ns == INT64_MAX) {
-        workers_[worker_id].queues[priority].push_bottom(item);
-    } else {
-        workers_[worker_id].edf_queue.push(item.deadline_ns, item);
-    }
+    (void)priority; // priority is applied when the owner drains into its deque
+    auto& worker = workers_[worker_id];
+    auto* node = new SharedInputNode();
+    node->item = item;
+    node->priority = priority;
+    SharedInputNode* old = worker.shared_input.load(std::memory_order_acquire);
+    do {
+        node->next.store(old, std::memory_order_relaxed);
+    } while (!worker.shared_input.compare_exchange_weak(
+        old, node, std::memory_order_release, std::memory_order_relaxed));
 }
 
 PlacementResult
@@ -133,10 +138,38 @@ bool WorkPlacementScheduler::pop_edf(uint32_t worker_id, WorkItem& out) {
 }
 
 bool WorkPlacementScheduler::pop_local(uint32_t worker_id, WorkItem& out) {
+    auto& worker = workers_[worker_id];
+
+    // Drain the shared-input stack (lock-free, pushed by non-owner threads).
+    // Reverse from LIFO stack order to approximate FIFO before pushing into
+    // the owner's deque, where push_bottom is safe.
+    SharedInputNode* head =
+        worker.shared_input.exchange(nullptr, std::memory_order_acquire);
+    if (head) {
+        // Reverse the singly-linked list.
+        SharedInputNode* prev = nullptr;
+        SharedInputNode* curr = head;
+        while (curr) {
+            SharedInputNode* next = curr->next.load(std::memory_order_relaxed);
+            curr->next.store(prev, std::memory_order_relaxed);
+            prev = curr;
+            curr = next;
+        }
+        // Push reversed (FIFO) items into the owner's deque.
+        while (prev) {
+            SharedInputNode* next = prev->next.load(std::memory_order_relaxed);
+            uint8_t prio = prev->priority;
+            if (prio < num_priorities_) {
+                worker.queues[prio].push_bottom(prev->item);
+            }
+            delete prev;
+            prev = next;
+        }
+    }
+
     if (pop_edf(worker_id, out)) {
         return true;
     }
-    auto& worker = workers_[worker_id];
     for (uint32_t p = 0; p < num_priorities_; ++p) {
         if (worker.queues[p].pop_bottom(out)) {
             return true;
@@ -194,6 +227,29 @@ bool WorkPlacementScheduler::try_steal(uint32_t thief_worker_id, WorkItem& out) 
 
 bool WorkPlacementScheduler::pop_any_for_test(WorkItem& out) {
     for (uint32_t w = 0; w < num_workers_; ++w) {
+        // Drain shared input for this worker first.
+        auto& worker = workers_[w];
+        SharedInputNode* head =
+            worker.shared_input.exchange(nullptr, std::memory_order_acquire);
+        if (head) {
+            SharedInputNode* prev = nullptr;
+            SharedInputNode* curr = head;
+            while (curr) {
+                SharedInputNode* next = curr->next.load(std::memory_order_relaxed);
+                curr->next.store(prev, std::memory_order_relaxed);
+                prev = curr;
+                curr = next;
+            }
+            while (prev) {
+                SharedInputNode* next = prev->next.load(std::memory_order_relaxed);
+                uint8_t prio = prev->priority;
+                if (prio < num_priorities_) {
+                    worker.queues[prio].push_bottom(prev->item);
+                }
+                delete prev;
+                prev = next;
+            }
+        }
         if (pop_edf(w, out)) {
             return true;
         }
@@ -217,6 +273,29 @@ bool WorkPlacementScheduler::pop_one_on_worker_for_test(uint32_t worker_id,
             out = pinned_ready_[worker_id].front();
             pinned_ready_[worker_id].pop_front();
             return true;
+        }
+    }
+    // Drain shared input so tests see work even when workers are paused.
+    auto& worker = workers_[worker_id];
+    SharedInputNode* head =
+        worker.shared_input.exchange(nullptr, std::memory_order_acquire);
+    if (head) {
+        SharedInputNode* prev = nullptr;
+        SharedInputNode* curr = head;
+        while (curr) {
+            SharedInputNode* next = curr->next.load(std::memory_order_relaxed);
+            curr->next.store(prev, std::memory_order_relaxed);
+            prev = curr;
+            curr = next;
+        }
+        while (prev) {
+            SharedInputNode* next = prev->next.load(std::memory_order_relaxed);
+            uint8_t prio = prev->priority;
+            if (prio < num_priorities_) {
+                worker.queues[prio].push_bottom(prev->item);
+            }
+            delete prev;
+            prev = next;
         }
     }
     if (pop_edf(worker_id, out)) {

@@ -408,6 +408,19 @@ bool EventBasedActor::dispatch_cli_message(TypedMessage& msg) {
             pb_mbox->set_total_dead_letters(ms.total_dead_letters);
             pb_mbox->set_pressure_state(ms.pressure_state);
             pb_mbox->set_overflow_policy(ms.overflow_policy);
+            if (req.include_rate_limiter()) {
+                pb_mbox->set_rate_limiter_enabled(ms.rate_limiter_enabled);
+                pb_mbox->set_rate_limiter_rate(ms.rate_limiter_rate);
+                pb_mbox->set_rate_limiter_burst(ms.rate_limiter_burst);
+                pb_mbox->set_rate_limiter_current_tokens(
+                    ms.rate_limiter_current_tokens);
+                pb_mbox->set_rate_limit_blocked_total(ms.rate_limit_blocked_total);
+            }
+            if (req.include_admission()) {
+                pb_mbox->set_admission_policy_count(ms.admission_policy_count);
+                pb_mbox->set_admission_rejected_total(ms.admission_rejected_total);
+                pb_mbox->set_admission_dlq_routed_total(ms.admission_dlq_routed_total);
+            }
         }
 
         if (req.include_circuit_breaker() && quarantine_policy_.enabled) {
@@ -430,6 +443,22 @@ bool EventBasedActor::dispatch_cli_message(TypedMessage& msg) {
                         std::string(to_string(lc->quarantine_reason())));
                 }
             }
+        }
+        if (req.include_rate_limiter() && req.include_mailbox()) {
+            auto ms = mailbox_snapshot();
+            auto* pb_mbox = reply.mutable_mailbox();
+            pb_mbox->set_rate_limiter_enabled(ms.rate_limiter_enabled);
+            pb_mbox->set_rate_limiter_rate(ms.rate_limiter_rate);
+            pb_mbox->set_rate_limiter_burst(ms.rate_limiter_burst);
+            pb_mbox->set_rate_limiter_current_tokens(ms.rate_limiter_current_tokens);
+            pb_mbox->set_rate_limit_blocked_total(ms.rate_limit_blocked_total);
+        }
+        if (req.include_admission() && req.include_mailbox()) {
+            auto ms = mailbox_snapshot();
+            auto* pb_mbox = reply.mutable_mailbox();
+            pb_mbox->set_admission_policy_count(ms.admission_policy_count);
+            pb_mbox->set_admission_rejected_total(ms.admission_rejected_total);
+            pb_mbox->set_admission_dlq_routed_total(ms.admission_dlq_routed_total);
         }
         if (req.include_state()) {
             auto blob = serialize_state();

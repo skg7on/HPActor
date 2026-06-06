@@ -18,6 +18,8 @@
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/actor_rate_limiter.hpp>
+#include <hpactor/mailbox/admission_policy.hpp>
 #include <hpactor/mailbox/detail/backpressure_signal_gate.hpp>
 #include <hpactor/mailbox/detail/overflow_handler_factory.hpp>
 #include <hpactor/mailbox/detail/pressure_state_machine.hpp>
@@ -93,6 +95,19 @@ template <typename T> class MPSCActorMailbox {
         return config_;
     }
 
+    void set_rate_limiter(std::unique_ptr<ActorRateLimiter> limiter) noexcept {
+        rate_limiter_ = std::move(limiter);
+    }
+
+    void set_admission_policies(
+        std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> policies) noexcept {
+        admission_policies_ = std::move(policies);
+    }
+
+    const ActorRateLimiter* rate_limiter() const noexcept {
+        return rate_limiter_.get();
+    }
+
     EnqueueResult try_push(T&& msg, MailboxEnvelopeMeta meta = {}) noexcept {
         FAULT_INJECT("hpactor.mailbox.try_push.fail") {
             EnqueueResult r;
@@ -100,8 +115,25 @@ template <typename T> class MPSCActorMailbox {
             r.target = actor_id_;
             return r;
         }
-        if (meta.estimated_bytes == 0) {
-            meta.estimated_bytes = estimate_node_bytes(msg);
+
+        meta.estimated_bytes = estimate_node_bytes(msg);
+
+        // Admission policy gate — evaluate before lane routing.
+        if (admission_policies_ && !admission_policies_->empty()) {
+            auto adm_result = evaluate_policy_chain(msg, meta);
+            if (adm_result.decision != AdmissionDecision::Accept) {
+                admission_rejected_total_.fetch_add(1, std::memory_order_relaxed);
+                EnqueueResult r;
+                r.code = EnqueueResultCode::Rejected;
+                r.target = actor_id_;
+                r.depth = static_cast<uint32_t>(lanes_.total_depth());
+                r.capacity = config_.capacity.max_messages;
+                r.bytes = reservation_.queued_bytes();
+                r.byte_capacity = config_.capacity.max_bytes;
+                r.pressure_ratio = pressure_ratio();
+                r.pressure_state = pressure_state_.current_state();
+                return r;
+            }
         }
 
         uint8_t lane = route_lane(meta);
@@ -109,8 +141,8 @@ template <typename T> class MPSCActorMailbox {
         // System messages use the dedicated system lane.
         if (lane == MultiLaneQueue<T>::kSystemLaneSentinel) {
             if (static_cast<uint32_t>(
-                    lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel))
-                >= config_.protected_system_messages) {
+                    lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel)) >=
+                config_.protected_system_messages) {
                 update_pressure_state(/*hard_failure=*/true);
                 total_rejected_.fetch_add(1, std::memory_order_relaxed);
                 EnqueueResult r;
@@ -124,12 +156,12 @@ template <typename T> class MPSCActorMailbox {
                 r.pressure_state = pressure_state_.current_state();
                 return r;
             }
-            void* raw = mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+            void* raw =
+                mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
             auto* node = new (raw) T(std::move(msg));
             system_lane_bytes_.fetch_add(meta.estimated_bytes,
                                          std::memory_order_relaxed);
-            enqueue_reserved(node, meta,
-                             MultiLaneQueue<T>::kSystemLaneSentinel);
+            enqueue_reserved(node, meta, MultiLaneQueue<T>::kSystemLaneSentinel);
             return make_result(pressure_state_.code_after_accept());
         }
 
@@ -155,8 +187,8 @@ template <typename T> class MPSCActorMailbox {
                 static_cast<uint32_t>(lanes_.total_depth()),
                 reservation_.queued_bytes(),
                 [this]() { return drop_one_oldest_global(); },
-                nullptr,                                      // dlq
-                [this]() { return drop_one_lowest_priority(); }};  // drop_lowest_priority_fn
+                nullptr,                                          // dlq
+                [this]() { return drop_one_lowest_priority(); }}; // drop_lowest_priority_fn
 
             auto result = overflow_handler_->handle(ctx, reserve_result);
 
@@ -167,10 +199,8 @@ template <typename T> class MPSCActorMailbox {
                     std::chrono::milliseconds(config_.signal_min_interval_ms);
                 if (result.pressure_state == MailboxPressureState::HardPressure) {
                     result.retry_after = base * 2;
-                } else if (result.pressure_state ==
-                               MailboxPressureState::SoftPressure ||
-                           result.pressure_state ==
-                               MailboxPressureState::Recovering) {
+                } else if (result.pressure_state == MailboxPressureState::SoftPressure ||
+                           result.pressure_state == MailboxPressureState::Recovering) {
                     result.retry_after = base;
                 }
             }
@@ -203,7 +233,7 @@ template <typename T> class MPSCActorMailbox {
 
     void enqueue(T* node) noexcept {
         FAULT_INJECT("hpactor.mailbox.enqueue.fail") {
-            return;  // caller sees this as rejected
+            return; // caller sees this as rejected
         }
         uint64_t bytes = estimate_node_bytes(*node);
         if (reservation_.try_reserve(bytes, config_.capacity.max_messages,
@@ -229,7 +259,7 @@ template <typename T> class MPSCActorMailbox {
                           uint8_t lane_idx = 0,
                           bool suppress_wakeup = false) noexcept {
         FAULT_INJECT("hpactor.mailbox.enqueue_reserved.drop") {
-            return;  // drop after capacity committed
+            return; // drop after capacity committed
         }
         bool was_empty = empty();
         lanes_.enqueue(node, lane_idx);
@@ -270,6 +300,25 @@ template <typename T> class MPSCActorMailbox {
     T* dequeue() noexcept {
         lock_consumer();
         T* node = lanes_.dequeue();
+
+        // Rate limiter gate — skip system messages.
+        if (rate_limiter_ && node != nullptr) {
+            bool is_sys = false;
+            if constexpr (std::is_same_v<T, TypedMessage>) {
+                is_sys = is_system_message(node->type_id());
+            }
+            if (!is_sys) {
+                uint64_t now_ns = steady_now_ns();
+                if (!rate_limiter_->try_consume(now_ns)) {
+                    // Re-enqueue to lane 0, suppress wakeup.
+                    MailboxEnvelopeMeta re_meta{};
+                    enqueue_reserved(node, re_meta, 0, true);
+                    unlock_consumer();
+                    return nullptr;
+                }
+            }
+        }
+
         FAULT_INJECT("hpactor.mailbox.dequeue.drop") {
             // Silently drop: release reservation but return null to caller.
             // System messages bypass reservation — skip release for them.
@@ -386,6 +435,23 @@ template <typename T> class MPSCActorMailbox {
         s.high_priority_depth = s.lane_depths[0];
         s.pressure_state = to_string(pressure_state_.current_state());
         s.overflow_policy = to_string(config_.overflow_policy);
+
+        if (rate_limiter_) {
+            s.rate_limiter_enabled = rate_limiter_->is_enabled();
+            s.rate_limiter_rate = rate_limiter_->configured_rate();
+            s.rate_limiter_burst = rate_limiter_->configured_burst();
+            s.rate_limiter_current_tokens = rate_limiter_->current_tokens();
+            s.rate_limit_blocked_total = 0; // FIXME: wire counter in
+                                            // ActorRateLimiter
+        }
+        if (admission_policies_) {
+            s.admission_policy_count =
+                static_cast<uint32_t>(admission_policies_->size());
+            s.admission_rejected_total =
+                admission_rejected_total_.load(std::memory_order_acquire);
+            s.admission_dlq_routed_total = 0; // FIXME: wire counter
+        }
+
         return s;
     }
 
@@ -394,6 +460,26 @@ template <typename T> class MPSCActorMailbox {
                                     bool force = false) noexcept {
         return backpressure_signal_gate_.try_acquire(
             now_ns, state, config_.signal_min_interval_ms, force);
+    }
+
+    AdmissionPolicyResult
+    evaluate_policy_chain(const TypedMessage& msg,
+                          const MailboxEnvelopeMeta& meta) noexcept {
+        for (const auto& policy : *admission_policies_) {
+            auto result = policy->evaluate(
+                msg, meta, config_, static_cast<uint64_t>(lanes_.total_depth()));
+            if (result.decision != AdmissionDecision::Accept) {
+                return result;
+            }
+        }
+        return {};
+    }
+
+    static uint64_t steady_now_ns() noexcept {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
     }
 
   private:
@@ -457,7 +543,7 @@ template <typename T> class MPSCActorMailbox {
 
     void drain_overflow() noexcept {
         FAULT_INJECT("hpactor.mailbox.drain_overflow.fail") {
-            return;  // pretend drained
+            return; // pretend drained
         }
         while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {
             if (reservation_.try_reserve(0, config_.capacity.max_messages,
@@ -481,9 +567,11 @@ template <typename T> class MPSCActorMailbox {
     double pressure_ratio() const noexcept {
         const uint32_t cap = config_.capacity.max_messages;
         // Exclude system lane: max_messages only governs user messages.
-        int64_t user_depth = lanes_.total_depth()
-            - lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel);
-        const uint32_t depth = static_cast<uint32_t>(user_depth > 0 ? user_depth : 0);
+        int64_t user_depth =
+            lanes_.total_depth() -
+            lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel);
+        const uint32_t depth =
+            static_cast<uint32_t>(user_depth > 0 ? user_depth : 0);
         double count_ratio = 0.0;
         if (cap > 0) {
             count_ratio = static_cast<double>(depth) / static_cast<double>(cap);
@@ -492,9 +580,9 @@ template <typename T> class MPSCActorMailbox {
         const uint64_t byte_cap = config_.capacity.max_bytes;
         if (byte_cap > 0) {
             byte_ratio = static_cast<double>(
-                reservation_.queued_bytes()
-                    + system_lane_bytes_.load(std::memory_order_relaxed))
-                / static_cast<double>(byte_cap);
+                             reservation_.queued_bytes() +
+                             system_lane_bytes_.load(std::memory_order_relaxed)) /
+                         static_cast<double>(byte_cap);
         }
         return count_ratio > byte_ratio ? count_ratio : byte_ratio;
     }
@@ -578,6 +666,11 @@ template <typename T> class MPSCActorMailbox {
     MailboxConfig config_;
     std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT;
     std::atomic<bool> mailbox_was_empty_{true};
+
+    // --- Rate limiter ---
+    std::unique_ptr<ActorRateLimiter> rate_limiter_;
+    std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> admission_policies_;
+    std::atomic<uint64_t> admission_rejected_total_{0};
 
     // --- Counters ---
     std::atomic<uint64_t> total_enqueued_{0};

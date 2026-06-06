@@ -196,11 +196,26 @@ class WorkPlacementScheduler {
     /// \param[in] actor Actor ID.
     void unregister_dedicated(ActorId actor);
 
+    /// \brief Node in the lock-free shared-input stack.
+    ///
+    /// External threads push to this stack via CAS; the owning worker
+    /// drains the entire stack and pushes items into its own deque
+    /// safely (as the deque owner). This prevents the race between
+    /// non-owner push_bottom and owner pop_bottom on ChaselevDeque.
+    struct SharedInputNode {
+        WorkItem item;
+        uint8_t priority{0};
+        std::atomic<SharedInputNode*> next{nullptr};
+    };
+
     /// \brief Per-worker queue and EDF state.
     struct alignas(64) WorkerState {
         std::unique_ptr<ChaselevDeque<WorkItem>[]> queues;
         uint32_t index{0};
         EDFQueue edf_queue;
+        /// Lock-free stack for cross-thread work submission.
+        /// Non-owning threads CAS-push; owner drains and reverses.
+        std::atomic<SharedInputNode*> shared_input{nullptr};
     };
 
     /// \return Number of worker threads.
