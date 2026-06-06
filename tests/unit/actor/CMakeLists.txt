@@ -4,6 +4,7 @@ add_executable(test_unit_actor
     test_circuit_breaker_result.cpp
     test_failure_rate_tracker.cpp
     test_lifecycle_state.cpp
+    test_passivation_lifecycle.cpp
     test_proto_registry.cpp
     test_actor_directory.cpp
     test_quarantine_reason.cpp
