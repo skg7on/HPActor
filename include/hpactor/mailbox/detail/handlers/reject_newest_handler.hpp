@@ -19,8 +19,25 @@
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Overflow handler for \c OverflowPolicy::RejectNewest (default).
+///
+/// Rejects the incoming message with backpressure. Increments the rejected
+/// counter, emits a \c kMailboxRejected metric event, and returns \c Rejected
+/// with a \c retry_after duration.
+///
+/// Also used as the fallback for \c OverflowPolicy::BlockWhenAllowed when
+/// blocking is not supported in the current context.
+///
+/// \tparam T Message type stored in the mailbox.
 template <typename T> class RejectNewestHandler : public IOverflowHandler<T> {
   public:
+    /// \brief Handle reservation failure by rejecting the new message.
+    ///
+    /// \param[in,out] ctx Overflow context with counters and metrics buffer.
+    /// \param[in] reason Reservation failure reason (used for backpressure
+    /// classification).
+    /// \return \c Rejected with current mailbox state and pressure
+    /// classification.
     EnqueueResult
     handle(OverflowContext<T>& ctx, ReservationResult reason) override {
         ctx.total_rejected.fetch_add(1, std::memory_order_relaxed);

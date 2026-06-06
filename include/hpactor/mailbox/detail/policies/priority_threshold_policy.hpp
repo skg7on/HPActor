@@ -11,6 +11,16 @@ class PriorityThresholdPolicy : public IAdmissionPolicy {
                                      bool dlq_on_reject = false) noexcept
         : min_priority_(min_priority), dlq_on_reject_(dlq_on_reject) {}
 
+    /// \brief Evaluate whether the message meets the minimum priority
+    /// threshold.
+    ///
+    /// \param[in] msg The message being admitted (unused).
+    /// \param[in] meta Envelope metadata with priority level for comparison.
+    /// \param[in] config Mailbox configuration (unused).
+    /// \param[in] mailbox_depth Current mailbox depth (unused).
+    /// \return \c Accept if \c meta.priority >= \c min_priority_,
+    ///         \c Reject (or \c RerouteToDLQ) otherwise.
+    /// \note Thread safety: lock-free — safe to call from any thread.
     AdmissionPolicyResult
     evaluate(const TypedMessage& msg, const MailboxEnvelopeMeta& meta,
              const MailboxConfig& config, uint64_t mailbox_depth) noexcept override {

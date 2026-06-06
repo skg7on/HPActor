@@ -21,15 +21,38 @@
 
 namespace hpactor::mailbox {
 
+/// \brief Decoded result of deserializing a backpressure signal from the wire.
 struct DecodedBackpressureSignal {
+    /// The backpressure signal carrying target, depth, capacity, and pressure
+    /// ratio.
     BackpressureSignal signal;
+    /// Pressure state at the time of serialization.
     MailboxPressureState state = MailboxPressureState::Normal;
 };
 
+/// \brief Serialize a backpressure signal for remote transmission.
+///
+/// Encodes the signal and pressure state into a compact binary buffer suitable
+/// for attachment to transport frames.
+///
+/// \param[in] signal The backpressure signal to serialize.
+/// \param[in] state The pressure state at serialization time.
+/// \return A \c StreamBuffer owning the serialized payload.
+/// \note Thread safety: safe to call from any thread. Does not access shared
+///       state.
 [[nodiscard]] StreamBuffer
 serialize_backpressure_signal(const BackpressureSignal& signal,
                               MailboxPressureState state);
 
+/// \brief Deserialize a backpressure signal received from a remote node.
+///
+/// Decodes the wire format produced by \c serialize_backpressure_signal().
+///
+/// \param[in] payload The serialized payload received over the transport.
+/// \return A \c DecodedBackpressureSignal on success, or \c std::nullopt if
+///         the payload is malformed or truncated.
+/// \note Thread safety: safe to call from any thread. Does not access shared
+///       state.
 [[nodiscard]] std::optional<DecodedBackpressureSignal>
 deserialize_backpressure_signal(const StreamBuffer& payload);
 

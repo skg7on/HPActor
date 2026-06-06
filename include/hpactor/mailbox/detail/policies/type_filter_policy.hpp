@@ -14,6 +14,19 @@ class TypeFilterPolicy : public IAdmissionPolicy {
         : allowed_(allowed_tags.begin(), allowed_tags.end()),
           blocked_(blocked_tags.begin(), blocked_tags.end()) {}
 
+    /// \brief Evaluate whether the message TypeTag is allowed or blocked.
+    ///
+    /// The blocked set takes priority over the allowed set. If the allowed set
+    /// is non-empty, only tags in the set are admitted. If both sets are empty,
+    /// all tags are admitted.
+    ///
+    /// \param[in] msg The message being admitted (unused).
+    /// \param[in] meta Envelope metadata with \c type_tag for classification.
+    /// \param[in] config Mailbox configuration (unused).
+    /// \param[in] mailbox_depth Current mailbox depth (unused).
+    /// \return \c Accept if the type tag is allowed and not blocked,
+    ///         \c Reject otherwise.
+    /// \note Thread safety: lock-free — safe to call from any thread.
     AdmissionPolicyResult
     evaluate(const TypedMessage& msg, const MailboxEnvelopeMeta& meta,
              const MailboxConfig& config, uint64_t mailbox_depth) noexcept override {
