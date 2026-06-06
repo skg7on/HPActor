@@ -71,6 +71,16 @@ struct MboxSnapshot {
     std::string pressure_state;       ///< Current pressure state label
                                       ///< (Low/High/Critical).
     std::string overflow_policy;      ///< Configured overflow policy name.
+    // Rate limiter
+    bool rate_limiter_enabled = false;
+    double rate_limiter_rate = 0.0;
+    uint32_t rate_limiter_burst = 0;
+    double rate_limiter_current_tokens = 0.0;
+    uint64_t rate_limit_blocked_total = 0;
+    // Admission policy
+    uint32_t admission_policy_count = 0;
+    uint64_t admission_rejected_total = 0;
+    uint64_t admission_dlq_routed_total = 0;
 };
 
 /// \brief Lightweight child-actor entry for CLI introspection.
