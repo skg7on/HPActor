@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "commands/ask_commands.hpp"
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/command_registry.hpp>
@@ -233,6 +234,9 @@ void CliActor::build_command_tree() {
     for (auto* cmd : sorted) {
         mount_command(root.get(), *cmd);
     }
+
+    // Register forward-looking ask commands.
+    cli::register_ask_commands(*root);
 
     command_tree_ = std::move(root);
 }

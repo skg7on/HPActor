@@ -173,6 +173,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/failure_commands.cpp
     cli/commands/fault_commands.cpp
     cli/commands/dlq_commands.cpp
+    cli/commands/ask_commands.cpp
     cli/commands/endpoint_commands.cpp
 )
 

@@ -201,6 +201,45 @@ Behavior make_behavior() override {
 context()->send(target_address, LogMessage{"info", "something happened"});
 ```
 
+**Ask Pattern (Request-Response with Timeout):**
+
+`context()->ask()` sends a message and returns a `RequestHandle<T>` that can be
+polled via `ready()` or blocked on via `get()`. Replies are automatically
+correlated via the `AskManager` subsystem.
+
+```cpp
+// Ask with default timeout from system config
+auto handle = context()->ask<RequestT>(target, msg, RequestTimeout::use_default());
+
+// Block until the response arrives or the timeout fires
+auto result = handle.get();
+if (result) {
+    auto response = result.value();
+    // handle parsed response
+} else {
+    auto err = result.error();
+    // handle timeout or error
+}
+```
+
+`context()->ask_raw()` returns a `RequestHandle<StreamBuffer>` for raw byte-level
+ask/reply patterns:
+
+```cpp
+// Raw ask returning a StreamBuffer
+auto reg = system.ask_manager()->register_ask(
+    self_id, target_addr, RequestTimeout::use_default(),
+    system.config().default_ask_timeout_ms);
+
+// Send the message with reg.msg_id for correlation
+TypedMessage msg(my_type_tag, payload);
+msg.set_ask_message_id(reg.msg_id.value());
+context()->send(target, std::move(msg));
+
+// Wait for the response
+auto result = reg.handle.get();
+```
+
 ---
 
 ## Typed Actors
