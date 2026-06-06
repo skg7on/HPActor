@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/backpressure_coordinator.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
@@ -169,6 +170,9 @@ ActorSystem::ActorSystem(const Config& config)
 
         rpc_channel_ =
             std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
+
+        // Create AskManager for local ask() request tracking
+        ask_manager_ = std::make_unique<AskManager>(scheduler_.get(), this);
 
         if (config_.enable_http_client) {
             http_client_ = std::make_unique<net::HttpClient>(network_loop_.get());

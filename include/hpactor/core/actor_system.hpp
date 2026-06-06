@@ -17,6 +17,7 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/actor/shutdown_phase.hpp>
@@ -314,6 +315,11 @@ class ActorSystem {
         return running_.load(std::memory_order_acquire);
     }
 
+    /// \brief Read-only access to the system configuration.
+    const Config& config() const {
+        return config_;
+    }
+
     // ── Scheduler ─────────────────────────────────────────────────────────
 
     /// \brief Pointer to the scheduler for direct scheduling operations.
@@ -333,6 +339,16 @@ class ActorSystem {
     /// \brief Reference to the RPC channel for remote calls.
     RpcChannel& rpc_channel() {
         return *rpc_channel_;
+    }
+
+    // ── Ask ───────────────────────────────────────────────────────────────
+
+    /// \brief AskManager for local ask() request tracking.
+    AskManager* ask_manager() {
+        return ask_manager_.get();
+    }
+    const AskManager* ask_manager() const {
+        return ask_manager_.get();
     }
 
     // ── HTTP ──────────────────────────────────────────────────────────────
@@ -735,6 +751,8 @@ class ActorSystem {
 
     // RPC channel for remote calls (after transport_ creation)
     std::unique_ptr<RpcChannel> rpc_channel_;
+    // Ask manager for local ask() request tracking
+    std::unique_ptr<AskManager> ask_manager_;
     // HTTP client for outbound HTTP calls
     std::unique_ptr<net::HttpClient> http_client_;
 

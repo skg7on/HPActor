@@ -22,6 +22,8 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
+#include <hpactor/types/request_handle.hpp>
+#include <hpactor/types/request_timeout.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <algorithm>
@@ -194,6 +196,15 @@ class ActorContext {
         current_sender_ = sender;
     }
 
+    /// \brief Current ask message ID for reply routing through AskManager.
+    uint64_t current_ask_message_id() const {
+        return current_ask_message_id_;
+    }
+    /// \brief Set the ask message ID (called by message dispatch).
+    void set_current_ask_message_id(uint64_t id) {
+        current_ask_message_id_ = id;
+    }
+
     // ── Scheduled delivery ────────────────────────────────────────────────
 
     /// \brief Schedule self-delivery of a message after a delay.
@@ -278,6 +289,21 @@ class ActorContext {
     RpcFuture<StreamBuffer>
     rpc(const ActorAddress& target, const StreamBuffer& encoded_request,
         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));
+
+    // ── Ask (request-response with timeout) ────────────────────────────────
+
+    /// \brief Send a request and get a handle for the response.
+    ///
+    /// Routes locally for same-process targets or via RpcChannel for
+    /// remote targets.
+    ///
+    /// \param[in] target Destination actor address.
+    /// \param[in] encoded_request Pre-serialized request payload.
+    /// \param[in] timeout Per-request timeout (default: system config).
+    /// \return RequestHandle that resolves with the response or error.
+    RequestHandle<StreamBuffer>
+    ask_raw(const ActorAddress& target, const StreamBuffer& encoded_request,
+            RequestTimeout timeout = RequestTimeout::use_default());
 
     // ── HTTP egress ───────────────────────────────────────────────────────
 
@@ -408,6 +434,7 @@ class ActorContext {
 
     ActorRefCache ref_cache_;
     ActorAddress current_sender_;
+    uint64_t current_ask_message_id_ = 0;
     BackpressureHandler backpressure_handler_;
     TraceContext current_trace_context_;
     bool has_current_trace_context_{false};

@@ -125,14 +125,25 @@ void EventBasedActor::receive(TypedMessage& msg) {
     ctx = context();
     if (ctx != nullptr) {
         ctx->set_current_sender(msg.sender_address());
+        // Propagate ask_message_id so reply() routes through AskManager
+        ctx->set_current_ask_message_id(msg.ask_message_id());
     }
 
-    if (dispatch_cli_message(msg))
+    if (dispatch_cli_message(msg)) {
+        if (ctx != nullptr) {
+            ctx->set_current_ask_message_id(0);
+        }
         return;
+    }
 
     dispatch_user_message(msg);
     try_drain_completion();
     check_mailbox_pressure();
+
+    // Clear unconsumed ask_message_id
+    if (ctx != nullptr) {
+        ctx->set_current_ask_message_id(0);
+    }
 }
 
 bool EventBasedActor::handle_link_msg(const TypedMessage& msg) {

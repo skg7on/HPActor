@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -184,6 +185,14 @@ ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage ms
 }
 
 void ActorContext::reply(TypedMessage msg) {
+    // If replying to a tracked ask, route through AskManager
+    if (current_ask_message_id_ != 0 && system_ && system_->ask_manager()) {
+        StreamBuffer payload = msg.payload();
+        system_->ask_manager()->on_response(current_ask_message_id_,
+                                            std::move(payload));
+        current_ask_message_id_ = 0;
+        return;
+    }
     if (current_sender_.id != ActorId{0}) {
         send(current_sender_, std::move(msg));
     }
@@ -297,6 +306,36 @@ RpcFuture<StreamBuffer> ActorContext::rpc(const ActorAddress& target,
         has_current_trace_context() ? &current_trace_context() : nullptr;
     return system_->rpc_channel().call_raw(target, encoded_request, timeout_ms,
                                            trace);
+}
+
+RequestHandle<StreamBuffer>
+ActorContext::ask_raw(const ActorAddress& target,
+                      const StreamBuffer& encoded_request, RequestTimeout timeout) {
+    if (!system_) {
+        RequestHandle<StreamBuffer> h;
+        h.resolve_error(error(errors::unknown, "no system"));
+        return h;
+    }
+
+    ActorRef ref = resolve(target);
+
+    if (ref.is_local()) {
+        ActorId requester_id = owner_ ? owner_.address().id : ActorId{0};
+        auto reg = system_->ask_manager()->register_ask(
+            requester_id, target, timeout, system_->config().default_ask_timeout_ms);
+
+        TypedMessage msg(TypeTag::Invalid, encoded_request);
+        msg.set_ask_message_id(reg.msg_id.value());
+        send(target, std::move(msg));
+
+        return std::move(reg.handle);
+    }
+
+    // Remote: not yet bridged through ask(); return error handle
+    RequestHandle<StreamBuffer> h;
+    h.resolve_error(error(errors::unknown, "remote ask not yet supported via "
+                                           "ask_raw"));
+    return h;
 }
 
 RpcFuture<StreamBuffer>
