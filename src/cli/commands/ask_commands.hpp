@@ -3,8 +3,8 @@
 #pragma once
 
 namespace hpactor {
-class CommandNode;
 namespace cli {
+struct CommandNode;
 void register_ask_commands(CommandNode& root);
 } // namespace cli
 } // namespace hpactor
