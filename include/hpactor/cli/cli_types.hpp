@@ -71,16 +71,17 @@ struct MboxSnapshot {
     std::string pressure_state;       ///< Current pressure state label
                                       ///< (Low/High/Critical).
     std::string overflow_policy;      ///< Configured overflow policy name.
+};
 
-    /// \brief Lightweight child-actor entry for CLI introspection.
-    ///
-    /// Named distinctly from protobuf-generated classes to avoid ODR
-    /// collisions.
-    struct ChildEntry {
-        uint64_t actor_id = 0;  ///< Unique actor identifier.
-        std::string actor_type; ///< C++ class name of the child actor.
-        std::string state;      ///< Current lifecycle state string.
-    };
+/// \brief Lightweight child-actor entry for CLI introspection.
+///
+/// Named distinctly from protobuf-generated classes to avoid ODR
+/// collisions.
+struct ChildEntry {
+    uint64_t actor_id = 0;  ///< Unique actor identifier.
+    std::string actor_type; ///< C++ class name of the child actor.
+    std::string state;      ///< Current lifecycle state string.
+};
 
 } // namespace cli
 } // namespace hpactor

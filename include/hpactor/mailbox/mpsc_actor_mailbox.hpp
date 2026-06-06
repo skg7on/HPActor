@@ -604,13 +604,6 @@ std::atomic<bool> mailbox_was_empty_{true};
 // --- Rate limiter ---
 std::unique_ptr<ActorRateLimiter> rate_limiter_;
 
-std::atomic<uint64_t> total_dequeued_{0};
-std::atomic<uint64_t> total_rejected_{0};
-std::atomic<uint64_t> total_dropped_{0};
-std::atomic<uint64_t> total_dead_letters_{0};
-std::atomic<uint64_t> max_depth_{0};
-std::atomic<uint64_t> system_lane_bytes_{0};
-
 // --- Dependencies ---
 ActorContinuationCallback continuation_callback_;
 metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
