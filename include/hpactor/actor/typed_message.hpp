@@ -54,7 +54,8 @@ class TypedMessage {
           sender_address_(other.sender_address_),
           trace_context_(other.trace_context_),
           has_trace_context_(other.has_trace_context_),
-          deadline_ns_(other.deadline_ns_) {
+          deadline_ns_(other.deadline_ns_),
+          ask_message_id_(other.ask_message_id_) {
         // mpsc_next is left default-initialized in the moved-from object
     }
     TypedMessage& operator=(TypedMessage&& other) noexcept {
@@ -65,6 +66,7 @@ class TypedMessage {
         trace_context_ = other.trace_context_;
         has_trace_context_ = other.has_trace_context_;
         deadline_ns_ = other.deadline_ns_;
+        ask_message_id_ = other.ask_message_id_;
         // mpsc_next intentionally not touched — ownership transferred
         return *this;
     }
@@ -144,8 +146,21 @@ class TypedMessage {
 
     // Deadline for delivery, in nanoseconds (monotonic clock).
     // INT64_MAX means no deadline. Set from MailboxEnvelopeMeta at push time.
-    int64_t deadline_ns() const noexcept { return deadline_ns_; }
-    void set_deadline_ns(int64_t ns) noexcept { deadline_ns_ = ns; }
+    int64_t deadline_ns() const noexcept {
+        return deadline_ns_;
+    }
+    void set_deadline_ns(int64_t ns) noexcept {
+        deadline_ns_ = ns;
+    }
+
+    // Ask correlation — set by ActorContext::ask() to link request to response.
+    // Zero means "not an ask-tracked message."
+    uint64_t ask_message_id() const noexcept {
+        return ask_message_id_;
+    }
+    void set_ask_message_id(uint64_t id) noexcept {
+        ask_message_id_ = id;
+    }
 
     // MPSC mailbox intrusive link. Must be named mpsc_next for MPSCMailbox<T>.
     std::atomic<TypedMessage*> mpsc_next{nullptr};
@@ -158,6 +173,7 @@ class TypedMessage {
     TraceContext trace_context_;
     bool has_trace_context_ = false;
     int64_t deadline_ns_ = INT64_MAX;
+    uint64_t ask_message_id_ = 0;
 };
 
 } // namespace hpactor

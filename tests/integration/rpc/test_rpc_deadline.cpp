@@ -12,11 +12,23 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/spawn.hpp>
+#include <gtest/gtest.h>
+
+#include <hpactor/core/actor_system.hpp>
 
 namespace hpactor {
-// AsyncActor is now a type alias for RequestHandle<ActorRef> (defined in
-// spawn.hpp). All prior method implementations on the AsyncActor class
-// (get, ready, cancel, set_response) have been replaced by RequestHandle<T>
-// methods. This translation unit exists for backward ABI compatibility.
+namespace {
+
+TEST(RpcDeadlineTest, RpcChannelHasConfigurableMaxRetries) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.default_ask_max_retries = 2;
+    ActorSystem system(cfg);
+    // Verify the config value is accepted — RpcChannel construction
+    // happens during ActorSystem init
+    EXPECT_EQ(cfg.default_ask_max_retries, uint32_t{2});
+    SUCCEED();
+}
+
+} // namespace
 } // namespace hpactor

@@ -17,6 +17,7 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/actor_directory.hpp>
+#include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/actor/shutdown_phase.hpp>
@@ -50,6 +51,7 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
+#include <hpactor/types/request_timeout.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -62,7 +64,6 @@
 namespace hpactor {
 
 // Forward declarations
-class AsyncActor;
 class ActorTypeRegistry;
 class LocalDeliveryEngine;
 class BackpressureCoordinator;
@@ -314,6 +315,11 @@ class ActorSystem {
         return running_.load(std::memory_order_acquire);
     }
 
+    /// \brief Read-only access to the system configuration.
+    const Config& config() const {
+        return config_;
+    }
+
     // ── Scheduler ─────────────────────────────────────────────────────────
 
     /// \brief Pointer to the scheduler for direct scheduling operations.
@@ -333,6 +339,16 @@ class ActorSystem {
     /// \brief Reference to the RPC channel for remote calls.
     RpcChannel& rpc_channel() {
         return *rpc_channel_;
+    }
+
+    // ── Ask ───────────────────────────────────────────────────────────────
+
+    /// \brief AskManager for local ask() request tracking.
+    AskManager* ask_manager() {
+        return ask_manager_.get();
+    }
+    const AskManager* ask_manager() const {
+        return ask_manager_.get();
     }
 
     // ── HTTP ──────────────────────────────────────────────────────────────
@@ -618,23 +634,32 @@ class ActorSystem {
     /// \param[in] node_name Remote node name.
     /// \param[in] actor_type Registered actor type name.
     /// \param[in] args Serialized constructor arguments.
+    /// \param[in] timeout_override Per-call timeout override; uses system
+    ///            default \c spawn_timeout_ms when default or zero.
     /// \return \c result<ActorRef> with the remote actor reference on
     ///         success, or an error.
     /// \note Thread safety: Safe from non-actor threads.
     result<ActorRef>
     spawn_remote(const std::string& node_name, const std::string& actor_type,
-                 const StreamBuffer& args);
+                 const StreamBuffer& args,
+                 RequestTimeout timeout_override = RequestTimeout::use_default());
 
     /// \brief Asynchronously spawn an actor on a remote node.
     ///
-    /// Returns immediately with an \c AsyncActor handle that can be polled.
+    /// Returns immediately with a \c RequestHandle<ActorRef> that can be polled
+    /// or blocked on. The spawn request is routed through \c RpcChannel for
+    /// reliable delivery with retry and timeout.
+    ///
     /// \param[in] node_name Remote node name.
     /// \param[in] actor_type Registered actor type name.
     /// \param[in] args Serialized constructor arguments.
-    /// \return \c AsyncActor handle for polling completion.
-    AsyncActor
-    spawn_remote_async(const std::string& node_name,
-                       const std::string& actor_type, const StreamBuffer& args);
+    /// \param[in] timeout_override Per-call timeout override; uses system
+    ///            default \c spawn_timeout_ms when default or zero.
+    /// \return \c RequestHandle<ActorRef> handle for polling completion.
+    RequestHandle<ActorRef> spawn_remote_async(
+        const std::string& node_name, const std::string& actor_type,
+        const StreamBuffer& args,
+        RequestTimeout timeout_override = RequestTimeout::use_default());
 
     // ── Actor type registry ───────────────────────────────────────────────
 
@@ -735,6 +760,8 @@ class ActorSystem {
 
     // RPC channel for remote calls (after transport_ creation)
     std::unique_ptr<RpcChannel> rpc_channel_;
+    // Ask manager for local ask() request tracking
+    std::unique_ptr<AskManager> ask_manager_;
     // HTTP client for outbound HTTP calls
     std::unique_ptr<net::HttpClient> http_client_;
 
@@ -768,10 +795,6 @@ class ActorSystem {
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
-
-    // Pending remote spawns awaiting response
-    std::unordered_map<uint64_t, std::shared_ptr<AsyncActor>> pending_spawns_;
-    std::mutex pending_spawns_mutex_;
 };
 
 // -----------------------------------------------------------------------------

@@ -47,8 +47,10 @@ template class RpcFuture<StreamBuffer>;
 // -----------------------------------------------------------------------------
 // RpcChannel implementation
 // -----------------------------------------------------------------------------
-RpcChannel::RpcChannel(net::Transport* transport, sched::IScheduler* scheduler)
-    : transport_(transport), scheduler_(scheduler) {}
+RpcChannel::RpcChannel(net::Transport* transport, sched::IScheduler* scheduler,
+                       uint32_t default_max_retries)
+    : transport_(transport), scheduler_(scheduler),
+      default_max_retries_(default_max_retries) {}
 
 void RpcChannel::abort() {
     std::lock_guard<std::mutex> lock(mutex_);
@@ -85,7 +87,9 @@ void RpcChannel::on_response(const RpcResponseFrame& response) {
 }
 
 void RpcChannel::on_timeout(MessageId msg_id) {
-    FAULT_INJECT("hpactor.rpc.timeout.drop") { return; }
+    FAULT_INJECT("hpactor.rpc.timeout.drop") {
+        return;
+    }
     PendingCall* call_ptr = nullptr;
     uint64_t key = msg_id.value();
     {
@@ -95,6 +99,25 @@ void RpcChannel::on_timeout(MessageId msg_id) {
             return;
         }
         call_ptr = it->second.get();
+    }
+
+    // Enforce total deadline across retries
+    if (call_ptr->deadline != std::chrono::steady_clock::time_point::max()) {
+        auto now = std::chrono::steady_clock::now();
+        if (now >= call_ptr->deadline) {
+            // Total deadline exceeded — fail permanently
+            FAULT_INJECT("hpactor.rpc.deadline.drop") {
+                return;
+            }
+            call_ptr->ready_.store(true, std::memory_order_release);
+            call_ptr->promise.set_value(
+                result<StreamBuffer>::make(error(errors::timeout, "RPC "
+                                                                  "deadline "
+                                                                  "expired")));
+            std::lock_guard<std::mutex> lock(mutex_);
+            pending_.erase(key);
+            return;
+        }
     }
 
     if (call_ptr->retry_count < call_ptr->max_retries) {
@@ -111,8 +134,18 @@ void RpcChannel::on_timeout(MessageId msg_id) {
 }
 
 void RpcChannel::schedule_retry(PendingCall* call) {
-    FAULT_INJECT("hpactor.rpc.retry.drop") { return; }
-    int64_t delay_ns = call->timeout.count() * 1000000;
+    FAULT_INJECT("hpactor.rpc.retry.drop") {
+        return;
+    }
+    auto now = std::chrono::steady_clock::now();
+    auto remaining =
+        std::chrono::duration_cast<std::chrono::milliseconds>(call->deadline - now);
+    auto delay_ms = std::min(call->timeout, remaining);
+    if (delay_ms.count() <= 0) {
+        on_timeout(call->msg_id); // force immediate deadline expiry
+        return;
+    }
+    int64_t delay_ns = delay_ms.count() * 1'000'000LL;
     scheduler_->schedule_after(
         [this, msg_id = call->msg_id]() { on_timeout(msg_id); }, delay_ns);
     send_request(*call, true);
@@ -163,7 +196,7 @@ RpcFuture<StreamBuffer> RpcChannel::call_raw(const ActorAddress& target,
                         .encoded_request = encoded_request,
                         .timeout = timeout_ms,
                         .retry_count = 0,
-                        .max_retries = 5,
+                        .max_retries = static_cast<int>(default_max_retries_),
                         .promise = std::move(*promise_ptr),
                         .enqueued_at = std::chrono::steady_clock::now(),
                         .ready_ = false};
@@ -171,6 +204,13 @@ RpcFuture<StreamBuffer> RpcChannel::call_raw(const ActorAddress& target,
         call_ptr->has_trace_context = true;
         call_ptr->trace_context = *parent_context;
     }
+
+    // Compute total deadline: timeout * (max_retries + 1)
+    std::chrono::milliseconds total_budget = timeout_ms;
+    if (call_ptr->max_retries > 0) {
+        total_budget = timeout_ms * (call_ptr->max_retries + 1);
+    }
+    call_ptr->deadline = call_ptr->enqueued_at + total_budget;
 
     uint64_t key = msg_id.value();
     {

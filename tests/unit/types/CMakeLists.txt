@@ -1,0 +1,7 @@
+add_executable(test_request_timeout test_request_timeout.cpp)
+target_link_libraries(test_request_timeout PRIVATE hpactor GTest::gtest_main)
+gtest_discover_tests(test_request_timeout)
+
+add_executable(test_request_handle test_request_handle.cpp)
+target_link_libraries(test_request_handle PRIVATE hpactor GTest::gtest_main)
+gtest_discover_tests(test_request_handle)

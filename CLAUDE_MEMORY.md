@@ -109,6 +109,25 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Implementation plan: `docs/superpowers/plans/2026-05-29-scheduler-decouple-impl.md`.
 
 **EdgeOps Telemetry Platform:** ✅ Complete (2026-05-31)
+
+**Ask Timeout Standardization (ACT-007):** ✅ Complete (2026-06-06)
+- `RequestTimeout` type — explicit timeout specification (Default, Infinite, explicit Duration, Immediate) with `use_default()` and `never()` named constructors in `include/hpactor/types/request_timeout.hpp`.
+- `RequestHandle<T>` — move-only shared-state future for ask responses with `get()`, `ready()`, `cancel()`, `message_id()`, and `deadline()` in `include/hpactor/types/request_handle.hpp`.
+- `AskManager` subsystem — owned by `ActorSystem`, tracks in-flight ask requests, correlates responses by `MessageId`, schedules timeout timers, and resolves handles on reply or timeout in `include/hpactor/actor/ask_manager.hpp` and `src/actor/ask_manager.cpp`.
+- System config fields: `default_ask_timeout_ms` (default 5000ms) and `default_ask_max_retries` (default 3) in `include/hpactor/config/system_fields.def`.
+- Self-registering TOML parser for `[system.ask]` in `src/config/parsers/` — parses `ask.default_timeout_ms` and `ask.max_retries`.
+- `ActorContext::ask()` and `ActorContext::ask_raw()` — message sending with response correlation via `AskManager`, returns `RequestHandle<StreamBuffer>` or typed `RequestHandle<T>`.
+- `EventBasedActor::receive()` sets `current_ask_message_id` from incoming messages so `reply()` automatically correlates responses.
+- `RpcChannel` deadline enforcement in `on_timeout()` — emits `FailureEnvelope` with `DeadLetterReason::AskTimeout`, supports configurable `max_retries` from system config.
+- `RpcFuture<T>::ready()` non-blocking readiness check.
+- `SpawnReceiver` wiring fix — validates spawn integration with ask subsystem.
+- Metric event types for ask lifecycle: `kAskRegistered`, `kAskResolved`, `kAskTimeout`.
+- `DeadLetterReason::AskTimeout` (38) — ask deadline expiry recorded in DLQ.
+- CLI `/ask pending`, `/ask cancel <msg_id>`, `/ask stats` commands registered in `src/cli/commands/ask_commands.cpp` (forward-looking stubs, AskManager inspection API not yet exposed).
+- Unit tests: `test_request_timeout` (8 tests), `test_request_handle` (12 tests), `test_ask_manager` (10 tests).
+- Integration tests: `test_ask_local` (3 tests — AskManager creation, unready handle, on_response resolution), `test_rpc_deadline` (1 test — configurable max_retries).
+- Design spec: `docs/superpowers/specs/2026-06-01-act-007-ask-timeout-policy.md`.
+- Implementation plan: `docs/superpowers/plans/2026-06-01-act-007-ask-timeout-policy.md`.
 - New complex demo app (`apps/edgeops_telemetry/`) validating actor lifecycle, message routing, rollup aggregation, alert rule evaluation, backpressure handling, DLQ evidence collection, operator query workflows, and same-host role-mode runbook.
 - EdgeOps-specific message types, alert rules engine, and rollup aggregator.
 - Order platform relocated from `examples/` to `apps/order_platform/`.

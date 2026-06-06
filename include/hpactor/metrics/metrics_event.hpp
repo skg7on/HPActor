@@ -63,6 +63,12 @@ enum class MetricEventType : uint8_t {
     kAdmissionRejected = 36,  ///< Message rejected by admission policy.
     kAdmissionDLQRouted = 37, ///< Message rerouted to DLQ by admission policy.
     kPerSenderBucketCount = 38, ///< Number of active per-sender buckets.
+    kAskSent = 39,              ///< An ask request was sent (local or remote).
+    kAskCompleted = 40,         ///< An ask completed successfully.
+    kAskTimeout = 41,           ///< An ask timed out (per-attempt).
+    kAskExpired = 42,           ///< An ask's overall deadline expired.
+    kAskRetry = 43,             ///< An ask was retried.
+    kAskCancelled = 44,         ///< An ask was cancelled by the caller.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

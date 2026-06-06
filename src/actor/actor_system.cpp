@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/backpressure_coordinator.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
@@ -27,6 +28,7 @@
 #include <hpactor/hpactor_config.hpp>
 
 #include <chrono>
+#include <thread>
 
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
@@ -167,8 +169,11 @@ ActorSystem::ActorSystem(const Config& config)
             transport_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
         }
 
-        rpc_channel_ =
-            std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
+        rpc_channel_ = std::make_unique<RpcChannel>(
+            transport_.get(), scheduler_.get(), config_.default_ask_max_retries);
+
+        // Create AskManager for local ask() request tracking
+        ask_manager_ = std::make_unique<AskManager>(scheduler_.get(), this);
 
         if (config_.enable_http_client) {
             http_client_ = std::make_unique<net::HttpClient>(network_loop_.get());
@@ -1071,19 +1076,23 @@ net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
 
 result<ActorRef> ActorSystem::spawn_remote(const std::string& node_name,
                                            const std::string& actor_type,
-                                           const StreamBuffer& args) {
-    return spawn_remote_async(node_name, actor_type, args).get();
+                                           const StreamBuffer& args,
+                                           RequestTimeout timeout_override) {
+    return spawn_remote_async(node_name, actor_type, args, timeout_override).get();
 }
 
-AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
-                                           const std::string& actor_type,
-                                           const StreamBuffer& args) {
-    AsyncActor handle(endpoint_, config_.spawn_timeout_ms);
+RequestHandle<ActorRef>
+ActorSystem::spawn_remote_async(const std::string& node_name,
+                                const std::string& actor_type,
+                                const StreamBuffer& args,
+                                RequestTimeout timeout_override) {
+    auto state = std::make_shared<RequestHandle<ActorRef>::State>();
+    RequestHandle<ActorRef> handle(state);
 
-    if (!config_.enable_network || !transport_) {
-        SpawnResponse resp;
-        resp.error_code = spawn_errors::node_unreachable;
-        handle.set_response(resp);
+    if (!config_.enable_network || !rpc_channel_) {
+        handle.resolve_error(error(spawn_errors::node_unreachable, "networking "
+                                                                   "is "
+                                                                   "disabled"));
         return handle;
     }
 
@@ -1098,29 +1107,59 @@ AsyncActor ActorSystem::spawn_remote_async(const std::string& node_name,
     net::to_proto(pb_req.mutable_supervisor(), system_actor_.address());
 
     StreamBuffer request_bytes = proto_registry_.serialize(pb_req);
-    uint64_t msg_id = generate_message_id().value();
 
-    net::WireFrame frame;
-    net::to_proto(frame.pb_frame.mutable_sender(), system_actor_.address());
-    net::to_proto(
-        frame.pb_frame.mutable_receiver(),
-        ActorAddress{remote_endpoint, SystemActorType, SpawnReceiverId, 0});
-    frame.pb_frame.set_message_id(msg_id);
-    frame.pb_frame.set_flags(net::WireFrame::RpcRequest);
-    frame.pb_frame.set_payload(reinterpret_cast<const char*>(request_bytes.data()),
-                               request_bytes.size());
+    auto timeout_ms = timeout_override.is_default() ? config_.spawn_timeout_ms
+                                                    : timeout_override.value;
 
-    auto pending = std::make_shared<AsyncActor>(std::move(handle));
-    pending->set_message_id(msg_id);
+    ActorAddress target{remote_endpoint, SystemActorType, SpawnReceiverId, 0};
 
-    {
-        std::lock_guard<std::mutex> lock(pending_spawns_mutex_);
-        pending_spawns_.emplace(msg_id, pending);
-    }
+    auto rpc_future = rpc_channel_->call_raw(target, request_bytes, timeout_ms);
 
-    transport_->send(net::from_proto(frame.pb_frame.receiver()), frame.encode());
+    // Bridge RpcFuture -> RequestHandle on a detached background thread.
+    // The RpcChannel handles retry + deadline internally; when the future
+    // resolves we decode the SpawnResponse and populate the handle.
+    std::thread([state, fut = std::move(rpc_future)]() mutable {
+        RequestHandle<ActorRef> inner(state);
+        auto raw_result = fut.get();
+        if (!raw_result.has_value()) {
+            inner.resolve_error(raw_result.error());
+            return;
+        }
 
-    return std::move(*pending);
+        ::hpactor::SpawnResponseMessage pb_resp;
+        if (!pb_resp.ParseFromArray(raw_result.value().data(),
+                                    static_cast<int>(raw_result.value().size()))) {
+            inner.resolve_error(error(spawn_errors::deserialization_failed, "fa"
+                                                                            "il"
+                                                                            "ed"
+                                                                            " t"
+                                                                            "o "
+                                                                            "de"
+                                                                            "co"
+                                                                            "de"
+                                                                            " S"
+                                                                            "pa"
+                                                                            "wn"
+                                                                            "Re"
+                                                                            "sp"
+                                                                            "on"
+                                                                            "s"
+                                                                            "e"));
+            return;
+        }
+
+        if (pb_resp.error_code() != spawn_errors::success) {
+            inner.resolve_error(error(pb_resp.error_code(), "spawn failed"));
+            return;
+        }
+
+        ActorProxy proxy(net::from_proto(pb_resp.actor_addr()),
+                         static_cast<net::Transport*>(nullptr));
+        ActorRef ref(std::move(proxy));
+        inner.resolve(result<ActorRef>::make(std::move(ref)));
+    }).detach();
+
+    return handle;
 }
 
 // -----------------------------------------------------------------------------

@@ -44,6 +44,7 @@ enum class DeadLetterReason : uint8_t {
     Expired = 14,              // message deadline expired before delivery
     EndpointBackpressure = 15, // data lane at capacity for target endpoint
     EndpointCircuitOpen = 16,  // circuit breaker open for target endpoint
+    AskTimeout = 17,           // ask/request timed out without response
 };
 
 enum class DeadLetterSource : uint8_t {
@@ -88,6 +89,8 @@ failure_reason(DeadLetterReason reason) noexcept {
             return FailureReason::Dropped;
         case DeadLetterReason::Expired:
             return FailureReason::Expired;
+        case DeadLetterReason::AskTimeout:
+            return FailureReason::Timeout;
         case DeadLetterReason::EndpointBackpressure:
             return FailureReason::ResourceExhausted;
         case DeadLetterReason::EndpointCircuitOpen:
@@ -148,6 +151,8 @@ failure_source(DeadLetterSource source) noexcept {
             return "DrainPolicyDrop";
         case DeadLetterReason::Expired:
             return "Expired";
+        case DeadLetterReason::AskTimeout:
+            return "ask_timeout";
         case DeadLetterReason::EndpointBackpressure:
             return "EndpointBackpressure";
         case DeadLetterReason::EndpointCircuitOpen:

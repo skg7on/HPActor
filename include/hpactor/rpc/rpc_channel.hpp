@@ -44,6 +44,9 @@ struct PendingCall {
     int max_retries = 5;
     std::promise<result<StreamBuffer>> promise;
     std::chrono::steady_clock::time_point enqueued_at;
+    std::chrono::steady_clock::time_point deadline{
+        std::chrono::steady_clock::time_point::max()};
+    FailureSource source{FailureSource::Rpc};
     std::atomic<bool> ready_{false};
     bool has_trace_context{false};
     TraceContext trace_context{};
@@ -59,6 +62,16 @@ template <typename T> class RpcFuture {
 
     result<T> get(); // blocks until result available or timeout
 
+    /// \brief Non-blocking readiness check.
+    ///
+    /// \return true if the future has been resolved (response arrived or
+    /// error).
+    bool ready() const {
+        if (!inner_.valid())
+            return true;
+        return inner_.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    }
+
   private:
     std::future<result<T>> inner_;
     std::chrono::milliseconds timeout_;
@@ -69,7 +82,8 @@ template <typename T> class RpcFuture {
 // -----------------------------------------------------------------------------
 class RpcChannel {
   public:
-    explicit RpcChannel(net::Transport* transport, sched::IScheduler* scheduler);
+    explicit RpcChannel(net::Transport* transport, sched::IScheduler* scheduler,
+                        uint32_t default_max_retries = 3);
 
     // Raw call - takes pre-encoded StreamBuffer, returns raw bytes response
     // Callers handle their own serialization/deserialization
@@ -96,6 +110,7 @@ class RpcChannel {
 
     net::Transport* transport_;
     sched::IScheduler* scheduler_;
+    uint32_t default_max_retries_ = 3;
 
     std::unordered_map<uint64_t, std::unique_ptr<PendingCall>> pending_;
     mutable std::mutex mutex_;

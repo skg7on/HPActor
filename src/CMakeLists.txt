@@ -10,6 +10,7 @@ add_library(hpactor_lib SHARED
     actor/backpressure_coordinator.cpp
     actor/shutdown_coordinator.cpp
     actor/actor_system.cpp
+    actor/ask_manager.cpp
     actor/daemon_actor.cpp
     actor/event_based_actor.cpp
     actor/local_actor.cpp
@@ -172,6 +173,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/failure_commands.cpp
     cli/commands/fault_commands.cpp
     cli/commands/dlq_commands.cpp
+    cli/commands/ask_commands.cpp
     cli/commands/endpoint_commands.cpp
 )
 
