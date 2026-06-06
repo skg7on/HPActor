@@ -299,6 +299,7 @@ constexpr uint32_t actor_not_found = 3;
 constexpr uint32_t mailbox_full = 4;
 constexpr uint32_t timeout = 5;
 constexpr uint32_t invalid_argument = 6;
+constexpr uint32_t cancelled = 7;
 
 // HTTP protocol errors
 constexpr uint32_t http_parse_error = 2001;
@@ -322,6 +323,9 @@ inline FailureReason error::failure_reason() const noexcept {
             return FailureReason::Timeout;
         case errors::invalid_argument:
             return FailureReason::RejectedByPolicy;
+        case errors::cancelled:
+            return FailureReason::Dropped; // Cancelled by caller — treated as
+                                           // dropped
         default:
             return FailureReason::Unknown;
     }
@@ -341,6 +345,12 @@ template <typename T> class result {
 
     bool has_value() const {
         return has_value_;
+    }
+    bool ok() const {
+        return has_value_;
+    }
+    bool is_error() const {
+        return !has_value_;
     }
     T& value() {
         return std::get<0>(value_);
@@ -368,6 +378,12 @@ template <> class result<void> {
 
     bool has_value() const {
         return has_value_;
+    }
+    bool ok() const {
+        return has_value_;
+    }
+    bool is_error() const {
+        return !has_value_;
     }
     void value() const {} // No-op for void
     const class error& error() const {
