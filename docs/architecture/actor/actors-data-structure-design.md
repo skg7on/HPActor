@@ -7,7 +7,8 @@ This document specifies the Actor implementation for the HPActor C++20 framework
 **Key Design Decisions:**
 - Event-based actors with cooperative scheduling (M:N work-stealing)
 - Pinned dispatcher for daemon, I/O, and compute-heavy actors — isolated at the scheduling layer while remaining in the supervision tree
-- Explicit lifecycle with optional hibernation
+- Explicit lifecycle with passivation for idle actors
+- Durable actor state with snapshot/event-sourcing and schema migration
 - Typed and dynamically typed actor support
 - Hierarchical supervision (OneForOne, AllForOne)
 - Actor references: local handles + distributed addresses
@@ -1073,112 +1074,232 @@ When a `DaemonActor` (or any actor with `DedicatedThread`/`DedicatedPool` policy
 
 ---
 
-## 11. Actor Lifecycle and Hibernation
+## 11. Actor Lifecycle and Passivation
 
 ### 11.1 Lifecycle States
 
+The actor lifecycle state machine is implemented in `lifecycle_state.hpp` and
+`lifecycle_actor.hpp`. All transitions are validated against a constexpr
+transition table and executed via CAS.
+
 ```cpp
-enum class ActorLifecycleState {
-    Created,      // Constructed but not activated
-    Active,       // Processing messages
-    Hibernating,  // Idle, state persisted
-    Deactivating, // Cleanup in progress
-    Dead,         // Fully cleaned up
+enum class LifecycleState : uint8_t {
+    kStarting    = 0,  // Initial spawn, not yet accepting user messages
+    kActive      = 1,  // Processing user messages normally
+    kDraining    = 2,  // Draining mailbox before stop/passivation
+    kStopping    = 3,  // Final cleanup before termination
+    kStopped     = 4,  // Terminated, no messages accepted
+    kFailed      = 5,  // Failure, awaiting supervisor decision
+    kRecovering  = 6,  // Restoring durable state before re-entering kActive
+    kQuarantined = 7,  // Isolated — rejects user messages, accepts system messages
+    kPassivating = 8,  // Draining + snapshotting before hibernation
+    kPassivated  = 9,  // Memory freed, route stub alive, durable state stored
 };
 ```
 
-### 11.2 Lifecycle Manager
+Each state carries metadata in a constexpr `StateDef` table:
 
 ```cpp
-class ActorLifecycle {
-public:
-    ActorLifecycleState state() const { return state_; }
-
-    bool can_activate() const;
-    bool can_hibernate() const;
-    bool can_deactivate() const;
-    bool is_active() const { return state_ == ActorLifecycleState::Active; }
-    bool is_alive() const;
-
-    void activate();
-    void hibernate();
-    void deactivate();
-    void mark_dead();
-
-    void set_idle_timeout(std::chrono::milliseconds timeout);
-    std::chrono::milliseconds idle_timeout() const { return idle_timeout_; }
-    void reset_idle_timer();
-
-private:
-    ActorLifecycleState state_ = ActorLifecycleState::Created;
-    std::chrono::milliseconds idle_timeout_{30000};
-    std::optional<AlarmHandle> idle_alarm_;
+struct StateDef {
+    LifecycleState state;
+    const char* name;
+    bool accepts_user_msgs : 1;
+    bool accepts_system_msgs : 1;
+    uint8_t num_transitions : 3;
+    LifecycleState transitions[7];
 };
 ```
 
-### 11.3 Hibernation Manager
+Key properties:
+- **`kActive`** is the only state that accepts user messages. All others gate
+  them.
+- **`kRecovering`** is entered from `kFailed` (durable recovery after crash) or
+  from `kPassivated` (reactivation triggered by an incoming message).
+- **`kPassivating`** drains the mailbox and persists a snapshot before releasing
+  memory. It accepts system messages (link/unlink, shutdown, CLI inspect) but
+  rejects user messages.
+- **`kPassivated`** has no live actor object — a lightweight `LocalPassivatedRoute`
+  stub owns the lifecycle state in the registry.
+
+### 11.2 LifecycleActor
+
+`LifecycleActor` is a mixin providing CAS-based state transitions with virtual
+hooks invoked after each transition:
 
 ```cpp
-class IHibernationManager {
+class LifecycleActor {
 public:
-    virtual ~IHibernationManager() = default;
-    virtual Task<> save_state(ActorId id, const bytes& state) = 0;
-    virtual Task<bytes> load_state(ActorId id) = 0;
-    virtual Task<> delete_state(ActorId id) = 0;
-};
+    LifecycleState state() const noexcept;
+    bool accepts_user_msgs() const noexcept;
+    bool accepts_system_msgs() const noexcept;
+    uint64_t incarnation() const noexcept;
 
-class hibernating_actor : public event_based_actor {
-public:
-    void set_hibernate_idle_timeout(std::chrono::milliseconds t);
+    bool transition(LifecycleState to);  // validates + CAS + invokes hook
+
+    // Virtual hooks (default = no-op)
+    virtual void on_start() {}
+    virtual void on_drain() {}
+    virtual void on_drain_timeout() {}
+    virtual void on_stop() {}
+    virtual void on_deactivate() {}
+    virtual void on_fail(error err);
+    virtual void on_recover() {}
+    virtual void on_restart() {}
+    virtual void on_quarantined(QuarantineReason reason) {}
+    virtual void on_passivating() {}
+    virtual void on_passivated() {}
 
 protected:
-    virtual bytes capture_state() = 0;
-    virtual void restore_state(const bytes& data) = 0;
-
-    void on_deactivate() override;
-    void on_activate() override;
-
-private:
-    IHibernationManager* hibernation_manager_ = nullptr;
-    std::chrono::milliseconds hibernate_timeout_{30000};
+    std::atomic<uint8_t> state_;
+    std::atomic<uint64_t> incarnation_;
+    error failure_reason_{0};
+    DrainConfig drain_config_{};
+    QuarantineReason quarantine_reason_{};
+    std::chrono::steady_clock::time_point quarantined_at_{};
 };
 ```
 
-### 11.4 ActorHost
+### 11.3 Passivation Protocol
 
-Manages actor execution on a node. Updated to handle dispatch policy during activation.
+Passivation releases an idle actor's memory while preserving its identity and
+(optionally) its durable state. The actor can later be reactivated when a
+message arrives.
+
+**Triggers:**
+
+| Trigger | Mechanism | Config |
+|---------|-----------|--------|
+| Idle timeout | `TimingWheel` timer reset on each user message processed | `PassivationConfig::idle_timeout` (0 = disabled) |
+| Self-request | `ActorContext::passivate()` after work completes | N/A |
+| Memory pressure | `MemoryPressureMonitor` selects LRU actors above high watermark | `PassivationConfig::allow_memory_pressure` (default true) |
+| CLI/admin | `/actor passivate <id>` | CLI enabled |
+
+**Passivation flow:**
+1. `Active → Passivating`: drain mailbox using existing `DrainConfig`
+2. If durable: persist snapshot via `DurableStateStore::write_snapshot()`
+3. If memory-only: serialize via `Hibernatable` → `HibernationRegistry::store()`
+4. `Passivating → Passivated`: release actor memory, install `LocalPassivatedRoute` stub
+
+**Reactivation flow:**
+1. Message arrives at `LocalPassivatedRoute::try_deliver()`
+2. Buffered in bounded reactivation queue; `reactivation_in_progress` flag set
+3. `Passivated → Recovering`
+4. Restore state from `DurableStateStore` or `HibernationRegistry`
+5. `Recovering → Active`: new actor instance replaces route stub; buffered messages delivered
+
+### 11.4 Durable Actor State
+
+#### IDurableActor
+
+Opt-in interface for actors that survive passivation across process restarts:
 
 ```cpp
-class ActorHost {
+class IDurableActor {
 public:
-    ActorHost(ActorSystem& system, NodeId node_id);
-    ~ActorHost();
-
-    ActorId activate_actor(ActorType type, ActorId id);
-    ActorId activate_actor(ActorType type, const std::string& name);
-    void deactivate_actor(ActorId id, bool hibernate = false);
-    void enqueue(ActorId target, MessageVariant msg);
-    void register_actor_type(const ActorTypeDef& def);
-    void set_hibernation_manager(IHibernationManager* mgr);
-
-    NodeId node_id() const { return node_id_; }
-
-private:
-    struct ActorInstance {
-        Actor actor;
-        ActorLifecycle lifecycle;
-        std::optional<AlarmHandle> idle_alarm;
-    };
-
-    ActorId next_actor_id();
-    void setup_dispatch(ActorInstance& instance);  // register with scheduler based on policy
-
-    std::unordered_map<ActorId, ActorInstance> actors_;
-    ActorSystem& system_;
-    NodeId node_id_;
-    ActorId::counter_type id_counter_;
-    IHibernationManager* hibernation_manager_ = nullptr;
+    virtual ~IDurableActor() = default;
+    virtual std::string_view persistence_id() const = 0;
+    virtual result<StreamBuffer> snapshot_state() const = 0;
+    virtual result<void> restore_snapshot(const StreamBuffer& data) = 0;
+    virtual result<void> apply_event(const StreamBuffer& event) { return success(); }
+    virtual result<StreamBuffer> migrate_snapshot(uint32_t from_version,
+                                                   const StreamBuffer& data) {
+        return error::make(FailureReason::SchemaVersionMismatch);
+    }
 };
+```
+
+#### DurableStateStore
+
+Abstracts the persistence backend:
+
+```cpp
+class DurableStateStore {
+public:
+    virtual ~DurableStateStore() = default;
+    virtual result<SnapshotRecord> write_snapshot(std::string_view persistence_id,
+                                                   uint32_t schema_version,
+                                                   StreamBuffer data) = 0;
+    virtual result<SnapshotRecord> load_latest_snapshot(
+        std::string_view persistence_id) = 0;
+    virtual result<void> append_event(std::string_view persistence_id,
+                                      uint64_t sequence, StreamBuffer event) = 0;
+    virtual result<std::vector<EventRecord>> load_events_after(
+        std::string_view persistence_id, uint64_t after_sequence) = 0;
+    virtual result<void> delete_state(std::string_view persistence_id) = 0;
+};
+```
+
+Initial implementations: `InMemoryStateStore` (tests), `FileStateStore`
+(local durability with atomic rename + CRC32C).
+
+### 11.5 Route Handling
+
+The `IActorRoute` interface decouples message delivery from whether the actor
+is active, passivated, or remote:
+
+```cpp
+class IActorRoute {
+public:
+    virtual ~IActorRoute() = default;
+    virtual EnqueueResult try_deliver(TypedMessage msg) = 0;
+    virtual bool is_active() const = 0;
+    virtual LifecycleState state() const = 0;
+    virtual std::string describe() const = 0;
+};
+```
+
+Three implementations:
+
+| Route | When | Behavior |
+|-------|------|----------|
+| `LocalActiveRoute` | Actor is live | Delegates directly to actor mailbox |
+| `LocalPassivatedRoute` | Actor is passivated | Buffers message, triggers reactivation |
+| `ShardOwnedRoute` | Future: cross-node sharding | Forwards to shard owner |
+
+`LocalPassivatedRoute` holds the actor's `ActorId`, `persistence_id`,
+`PassivationRecord`, a bounded `MpscRingBuffer` reactivation queue (default
+capacity 64), and an atomic `reactivation_in_progress` flag. When a message
+arrives, it sets the flag, buffers the message, and spawns a reactivation task.
+Subsequent messages see the flag already set and simply enqueue. If the buffer
+fills, `try_deliver()` returns `EnqueueResult::Rejected` with
+`FailureReason::PassivationQueueFull`.
+
+### 11.6 Passivation Configuration
+
+```cpp
+struct PassivationConfig {
+    std::chrono::milliseconds idle_timeout{0};  // 0 = disabled
+    bool durable = false;
+    bool allow_memory_pressure = true;
+    uint32_t schema_version = 1;
+};
+```
+
+System-level defaults in TOML `[system.passivation]` with per-actor overrides
+in `[[actor]]` blocks. Compile-time gate: `ENABLE_ACTOR_PASSIVATION` (default
+ON). When disabled, all passivation paths are eliminated via
+`HPACTOR_ENABLE_PASSIVATION` preprocessor guard — zero overhead for
+non-passivated actors.
+
+### 11.7 Memory-Level Hibernation (Existing)
+
+`Hibernatable` provides memory-only serialization without durable storage:
+
+```cpp
+class Hibernatable {
+public:
+    virtual ~Hibernatable() = default;
+    virtual size_t serialized_size() const = 0;
+    virtual void serialize_to(std::span<std::byte> buffer) const = 0;
+    virtual void deserialize_from(std::span<const std::byte> buffer) = 0;
+};
+```
+
+`HibernationRegistry` is a singleton, mutex-protected map of
+`ActorId → HibernationBuffer`. Used by actors that want memory release without
+durable persistence. An actor may implement both `IDurableActor` and
+`Hibernatable`: `IDurableActor` takes precedence for passivation;
+`Hibernatable` remains available for non-passivation cold-storage use.
 ```
 
 ---
@@ -1368,29 +1489,40 @@ include/hpactor/
 │   ├── polling_actor.hpp          # PollingActor (DPDK-style)
 │   ├── dense_computing_actor.hpp  # DenseComputingActor (DedicatedPool)
 │   ├── external_msg_gateway.hpp   # ExternalMsgGatewayActor
-│   └── http_server_actor.hpp      # HTTPServerActor
+│   ├── http_server_actor.hpp      # HTTPServerActor
+│   │
+│   ├── lifecycle_state.hpp        # LifecycleState enum + constexpr StateDef table
+│   ├── lifecycle_actor.hpp        # LifecycleActor mixin
+│   ├── passivation_config.hpp     # PassivationConfig, PassivationRecord (NEW)
+│   ├── durable_actor.hpp          # IDurableActor interface (NEW)
+│   ├── durable_state_store.hpp    # DurableStateStore, SnapshotRecord, EventRecord (NEW)
+│   ├── actor_route.hpp            # IActorRoute, LocalActiveRoute, LocalPassivatedRoute (NEW)
+│   └── memory_pressure_monitor.hpp # MemoryPressureMonitor (NEW)
 │
-├── actor_context.hpp              # ActorContext
-├── actor_system.hpp               # ActorSystem
+├── actor_context.hpp              # ActorContext (+ passivate())
+├── actor_system.hpp               # ActorSystem (+ DurableStateStore, PassivationManager)
 ├── behavior.hpp                   # Behavior, message_handler
 ├── typed_behavior.hpp             # typed_behavior<>
 ├── result.hpp                     # result<T>
 │
+├── mem/
+│   ├── hibernatable.hpp           # Hibernatable interface
+│   └── hibernation_registry.hpp   # HibernationRegistry singleton
+│
 ├── sched/
 │   ├── scheduler.hpp              # IScheduler + HybridScheduler
 │   ├── worker_thread.hpp          # WorkerThread
-│   ├── dedicated_thread_pool.hpp  # DedicatedThreadPool (new)
-│   └── dispatch_policy.hpp        # DispatchPolicy, DispatchHints (new)
+│   ├── dedicated_thread_pool.hpp  # DedicatedThreadPool
+│   └── dispatch_policy.hpp        # DispatchPolicy, DispatchHints
 │
 ├── supervision/
 │   ├── supervision.hpp
 │   ├── one_for_one_supervisor.hpp
 │   └── all_for_one_supervisor.hpp
 │
-├── lifecycle/
-│   ├── actor_lifecycle.hpp
-│   ├── hibernation.hpp
-│   └── actor_host.hpp
+├── fault/
+│   ├── fault_controller.hpp
+│   └── passivation_fault_points.hpp  # (NEW) 12 fault injection points
 │
 └── ref/
     ├── actor_address.hpp
@@ -1426,41 +1558,45 @@ include/hpactor/
 - `blocking_actor`, `scoped_actor`
 - `receive()` implementations
 
-### Phase E: DispatchPolicy + Pinned Dispatcher (Next)
+### Phase E: DispatchPolicy + Pinned Dispatcher (Completed)
 - `DispatchPolicy` enum and `DispatchHints` struct
 - `IScheduler` extensions: `register_dedicated_thread()`, `register_dedicated_pool()`
 - `DedicatedThreadPool` implementation
 - `DaemonActor` base class with dedicated thread lifecycle
 - Unit tests
 
-### Phase F: Special Actors
+### Phase F: Special Actors (Completed)
 - `PollingActor` (DPDK-style busy-poll)
 - `DenseComputingActor` (DedicatedPool)
 - `ExternalMsgGatewayActor` (protocol ingress)
 - `HTTPServerActor` (HTTP server on top of gateway)
 - Unit tests + integration tests
 
-### Phase G: Lifecycle & Hibernation
-- `ActorLifecycle` state machine
-- `ActorHost`
-- `IHibernationManager`
-- `hibernating_actor`
+### Phase G: Lifecycle & Hibernation (Completed — Different from original design)
+- `LifecycleState` enum (10 states including `kPassivating`, `kPassivated`)
+- `LifecycleActor` mixin with CAS-based transitions
+- `Hibernatable` interface + `HibernationRegistry` (memory-level only)
+- `PassivationConfig`, `IDurableActor`, `DurableStateStore` — see [ACT-008 Design Spec](../../superpowers/specs/2026-06-06-act-008-actor-passivation-design.md)
 
-### Phase H: References & Proxy
+### Phase H: References & Proxy (Completed)
 - `ActorAddress`, `ActorRef`
 - `ActorProxy` for remote actors
+- `IActorRoute` interface — `LocalActiveRoute`, `LocalPassivatedRoute`
 - Type-safe handles
 
 ---
 
 ## 16. Open Questions
 
-- [ ] What is the default idle timeout before hibernation?
+- [ ] What is the default idle timeout before passivation? (Current proposal: 10 min)
 - [ ] Should blocking actors be spawned with explicit thread affinity?
 - [ ] Maximum number of children per supervisor?
 - [ ] What error types should be defined by default?
 - [ ] Should `DedicatedPool` actors share pools when `pool_size` and `cpu_affinity` match, or always get their own?
-- [ ] For `DaemonActor`: should the dedicated thread drain the mailbox inline, or should mailbox messages be dispatched to the cooperative pool and only the daemon loop runs on the dedicated thread? (Inline is simpler; separate dispatching avoids head-of-line blocking from mailbox processing.)
+- [ ] For `DaemonActor`: should the dedicated thread drain the mailbox inline, or should mailbox messages be dispatched to the cooperative pool and only the daemon loop runs on the dedicated thread?
+- [ ] What is the default reactivation queue capacity? (Current proposal: 64)
+- [ ] Should passivation support a "grace period" where recently-active actors cannot be passivated by memory pressure?
+- [ ] Should `LocalPassivatedRoute` support priority-aware reactivation (higher-priority messages trigger reactivation, lower-priority messages just buffer)?
 
 ---
 

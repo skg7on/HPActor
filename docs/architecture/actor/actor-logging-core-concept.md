@@ -84,6 +84,8 @@ memory = "warning"
 network = "warning"
 registrar = "info"
 actor_state = "debug"
+passivation = "info"
+durable_store = "warning"
 ```
 
 This lets operators turn up `network = "trace"` during an incident without
@@ -101,6 +103,8 @@ Metrics are aggregated signals. Logs are individual events.
 | "Which allocation found a canary mismatch?" | Log |
 | "How many registrar misses per minute?" | Metric |
 | "Which endpoint failed resolution?" | Log |
+| "How many actors are passivated?" | Metric |
+| "Which actor's reactivation failed and why?" | Log |
 
 The two systems should share ideas and infrastructure where useful, but they
 serve different operational jobs.

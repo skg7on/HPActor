@@ -34,11 +34,17 @@ This document specifies an interactive CLI subsystem for introspecting, debuggin
 │  │ (linenoise)  │   │ (Trie-based) │   │ (JSON, pretty,     │    │
 │  │              │   │              │   │  tabular, yaml)    │    │
 │  │ Tab complete │   │ /actor       │   │                    │    │
-│  │ Gray hints   │   │  └─ <id>     │   │ stdout or reply    │    │
-│  │ ANSI color   │   │      ├─ show │   │                    │    │
-│  │ History ↑↓   │   │      ├─ kill │   │                    │    │
-│  │ Ctrl-R search│   │      └─ dump │   │                    │    │
-│  │ Lexer/token  │   │ /system      │   └────────▲───────────┘    │
+│  │ Gray hints   │   │  ├─ <id>     │   │ stdout or reply    │    │
+│  │ ANSI color   │   │  │   ├─ show │   │                    │    │
+│  │ History ↑↓   │   │  │   ├─ kill │   │                    │    │
+│  │ Ctrl-R search│   │  │   └─ dump │   │                    │    │
+│  │ Lexer/token  │   │  ├─ passivate│   │                    │    │
+│  │              │   │  ├─ reactivate│  │                    │    │
+│  │              │   │  └─ list     │   │                    │    │
+│  │              │   │      └─pass..│   │                    │    │
+│  │              │   │ /durable     │   │                    │    │
+│  │              │   │  └─ store    │   │                    │    │
+│  │              │   │ /system      │   └────────▲───────────┘    │
 │  └──────┬───────┘   │  ├─ list     │            │                 │
 │         │           │  ├─ stats    │            │                 │
 │         └───────────┤  └─ config   │            │                 │
@@ -533,15 +539,39 @@ hpactor> /actor 5 show
 | Reply | `ListActorsReply` | `actors[]`, `next_cursor` |
 | Output | Paged table | Interactive paging with filter/search |
 
-### 9.4 `/system stats`
+### 9.4 `/actor passivate <id>`
+
+| Direction | Type | Description |
+|-----------|------|-------------|
+| Request | `PassivationRequest` | `actor_id` |
+| Reply | `PassivationReply` | `success`, `previous_state`, `error_code` (if any) |
+| Output | Status line | `Actor 5 passivating.` or `Error: actor already passivated.` |
+
+### 9.5 `/actor reactivate <id>`
+
+| Direction | Type | Description |
+|-----------|------|-------------|
+| Request | `ReactivationRequest` | `actor_id` |
+| Reply | `ReactivationReply` | `success`, `new_state`, `error_code` (if any) |
+| Output | Status line | `Actor 5 reactivated.` or `Error: actor is not passivated.` |
+
+### 9.6 `/actor list passivated`
+
+| Direction | Type | Description |
+|-----------|------|-------------|
+| Request | `ListActorsRequest` | `filter=passivated`, `cursor`, `limit=50` |
+| Reply | `ListActorsReply` | `actors[]` with `passivated_at`, `persistence_id`, `idle_duration` |
+| Output | Paged table | Columns: ActorId, persistence_id, passivated_at, idle_duration, schema_version |
+
+### 9.7 `/system stats`
 
 | Direction | Type | Description |
 |-----------|------|-------------|
 | Request | `SystemStatsRequest` | (empty) |
-| Reply | `SystemStatsReply` | `total_actors`, `running`, `idle`, `mailbox_total_depth`, `worker_count`, `memory_active_bytes`, `scheduler_utilization` |
+| Reply | `SystemStatsReply` | `total_actors`, `running`, `idle`, `mailbox_total_depth`, `worker_count`, `memory_active_bytes`, `scheduler_utilization`, `passivated_count` |
 | Output | Key-value table + sparkline | Aggregated system summary |
 
-### 9.5 `/system memory`
+### 9.8 `/system memory`
 
 | Direction | Type | Description |
 |-----------|------|-------------|
@@ -549,13 +579,21 @@ hpactor> /actor 5 show
 | Reply | `MemoryStatsReply` | `active_bytes`, `peak_bytes`, `segment_count`, `slab_hit_rate`, `fragmentation_pct` |
 | Output | Key-value table | Memory subsystem snapshot |
 
-### 9.6 `/metrics show`
+### 9.9 `/metrics show`
 
 | Direction | Type | Description |
 |-----------|------|-------------|
 | Request | `MetricsRequest` (existing) | (empty) |
 | Reply | `MetricsResponse` (existing) | OpenMetrics text |
 | Output | Raw text | Forwarded OpenMetrics output |
+
+### 9.10 `/durable store stats`
+
+| Direction | Type | Description |
+|-----------|------|-------------|
+| Request | `DurableStoreStatsRequest` | (empty) |
+| Reply | `DurableStoreStatsReply` | `store_type`, `total_snapshots`, `total_events`, `total_bytes`, `oldest_snapshot_ts` |
+| Output | Key-value table | DurableStateStore statistics |
 
 ---
 
