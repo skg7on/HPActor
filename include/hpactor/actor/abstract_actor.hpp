@@ -42,6 +42,10 @@ class IScheduler;
 namespace mailbox {
 template <typename T> class MPSCActorMailbox;
 } // namespace mailbox
+namespace mem {
+class Hibernatable;
+} // namespace mem
+class IDurableActor;
 
 /// \brief Polymorphic base class for all actor types.
 ///
@@ -133,6 +137,27 @@ class AbstractActor : public std::enable_shared_from_this<AbstractActor> {
         return nullptr;
     }
     virtual const LifecycleActor* as_lifecycle() const {
+        return nullptr;
+    }
+
+    /// \brief RTTI-free downcast to \c IDurableActor.
+    ///
+    /// Returns \c nullptr for actors that do not implement durable state.
+    virtual class IDurableActor* as_durable() {
+        return nullptr;
+    }
+    virtual const class IDurableActor* as_durable() const {
+        return nullptr;
+    }
+
+    /// \brief RTTI-free downcast to \c mem::Hibernatable.
+    ///
+    /// Returns \c nullptr for actors that do not support memory-only
+    /// hibernation.
+    virtual class mem::Hibernatable* as_hibernatable() {
+        return nullptr;
+    }
+    virtual const class mem::Hibernatable* as_hibernatable() const {
         return nullptr;
     }
 
