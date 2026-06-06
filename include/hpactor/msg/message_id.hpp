@@ -14,16 +14,22 @@
 
 #pragma once
 
+#include <hpactor/adt/id.hpp>
+
+#include <atomic>
+
 namespace hpactor {
 
-struct ActorTag {};
-#include <hpactor/msg/message_id.hpp> // MessageTag, MessageId
-struct AlarmTag {};
+/// Tag type for message identity.
+struct MessageTag {};
+
+/// Globally unique per-message identifier.
+using MessageId = adt::Id<MessageTag>;
+
+/// Generate a monotonic, globally unique MessageId.
+inline MessageId generate_message_id() {
+    static std::atomic<uint64_t> next_id_{1};
+    return MessageId(next_id_.fetch_add(1));
+}
 
 } // namespace hpactor
-
-namespace hpactor::sched {
-
-struct TimerTag {};
-
-} // namespace hpactor::sched
