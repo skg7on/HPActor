@@ -92,6 +92,7 @@ class Aggregator {
     MetricFamily* endpoint_send_rejected_family_ = nullptr;
     MetricFamily* endpoint_backpressure_signals_family_ = nullptr;
     MetricFamily* endpoint_circuit_transitions_family_ = nullptr;
+    MetricFamily* delivery_results_family_ = nullptr;
 
     int64_t active_actors_{0};
 

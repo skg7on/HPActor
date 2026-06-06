@@ -17,6 +17,7 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/delivery_mode.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/net/frame.hpp>
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -207,4 +208,91 @@ TEST_F(DeliverySemanticsTest, TypedMessageDeadlineSetAndGet) {
     TypedMessage msg;
     msg.set_deadline_ns(12345);
     EXPECT_EQ(msg.deadline_ns(), 12345);
+}
+
+// ── Remote delivery round-trip (loopback via deliver_remote) ─────────────
+
+TEST(RemoteDeliveryRoundTripTest, DeliverRemoteAccepted) {
+    // System A acts as the "remote" sender.
+    Config cfg_a;
+    cfg_a.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg_a.scheduler_threads = 0;
+    ActorSystem system_a(cfg_a);
+
+    // System B receives the remote message.
+    Config cfg_b;
+    cfg_b.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg_b.scheduler_threads = 0;
+    ActorSystem system_b(cfg_b);
+
+    auto target = system_b.spawn<EventBasedActor>();
+
+    // Construct a wire frame as if sent from system A to system B's actor.
+    ActorAddress sender_addr{
+        endpoint_ops::parse_endpoint("127.0.0.1:9001"),
+        ActorType{0}, ActorId{1}, 0};
+    net::WireFrame frame;
+    net::to_proto(frame.pb_frame.mutable_sender(), sender_addr);
+    net::to_proto(frame.pb_frame.mutable_receiver(), target.address());
+    frame.pb_frame.set_type_tag(static_cast<uint32_t>(TypeTag::User));
+    frame.pb_frame.set_message_id(1);
+
+    // Deliver the remote frame — this exercises the full remote ingress
+    // path and should result in the message being enqueued.
+    system_b.deliver_remote(frame);
+
+    // Verify the message was delivered to the target mailbox.
+    auto* mailbox = system_b.get_mailbox(target.address().id);
+    ASSERT_NE(mailbox, nullptr);
+    TypedMessage msg;
+    EXPECT_TRUE(mailbox->try_pop(msg));
+
+    ShutdownOptions opts;
+    opts.ingress_timeout = std::chrono::milliseconds(10);
+    opts.actor_drain_timeout = std::chrono::milliseconds(10);
+    opts.cluster_leave_timeout = std::chrono::milliseconds(10);
+    system_a.shutdown(opts);
+    system_b.shutdown(opts);
+}
+
+TEST(RemoteDeliveryRoundTripTest, DeliverWithResultToNonexistentActor) {
+    Config cfg;
+    cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
+    ActorSystem system(cfg);
+
+    // Use a non-existent actor id to trigger NoRoute.
+    ActorId bad_id{999999};
+    auto dr = system.deliver_with_result(
+        bad_id, TypedMessage(TypeTag::User, StreamBuffer{1}));
+    EXPECT_FALSE(dr.ok());
+    EXPECT_EQ(dr.status, mailbox::DeliveryStatus::NoRoute);
+    EXPECT_TRUE(dr.retryable());
+
+    ShutdownOptions opts;
+    opts.ingress_timeout = std::chrono::milliseconds(10);
+    opts.actor_drain_timeout = std::chrono::milliseconds(10);
+    opts.cluster_leave_timeout = std::chrono::milliseconds(10);
+    system.shutdown(opts);
+}
+
+TEST(RemoteDeliveryRoundTripTest, DeliverWithResultToLiveActor) {
+    Config cfg;
+    cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
+    cfg.scheduler_threads = 0;
+    ActorSystem system(cfg);
+
+    auto target = system.spawn<EventBasedActor>();
+
+    auto dr = system.deliver_with_result(
+        target.address().id,
+        TypedMessage(TypeTag::User, StreamBuffer{1}));
+    EXPECT_TRUE(dr.ok());
+    EXPECT_EQ(dr.status, mailbox::DeliveryStatus::Accepted);
+
+    ShutdownOptions opts;
+    opts.ingress_timeout = std::chrono::milliseconds(10);
+    opts.actor_drain_timeout = std::chrono::milliseconds(10);
+    opts.cluster_leave_timeout = std::chrono::milliseconds(10);
+    system.shutdown(opts);
 }

@@ -1010,7 +1010,26 @@ ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
                                  mailbox::DeliveryOptions options) {
     auto er =
         try_deliver_local(target, std::move(msg), priority, deadline_ns, options);
-    return mailbox::DeliveryResult::from_enqueue(er, ActorAddress{}, {});
+    auto dr = mailbox::DeliveryResult::from_enqueue(er, ActorAddress{}, {});
+    // Record delivery result on the mailbox for CLI observability.
+    if (auto* mbox = get_mailbox(target)) {
+        mbox->record_delivery_result(dr.status);
+    }
+    // Emit kDeliveryResult metric event.
+    if (metrics_ring_buffer_) {
+        uint64_t ts_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        metrics::MetricEvent evt{};
+        evt.timestamp_ns = ts_ns;
+        evt.actor_id = target;
+        evt.event_type = metrics::MetricEventType::kDeliveryResult;
+        evt.code = static_cast<uint8_t>(dr.status);
+        evt.value_hi = 1;
+        metrics_ring_buffer_->try_push(evt);
+    }
+    return dr;
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
