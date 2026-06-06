@@ -11,6 +11,7 @@ HPActor is a high-performance, production-oriented C++20 Actor framework inspire
 | Build/architecture (Claude) | [CLAUDE.md](CLAUDE.md) |
 | Production reliability roadmap | [docs/architecture/production/production-reliability-plane.md](docs/architecture/production/production-reliability-plane.md) |
 | Feature gap backlog | [docs/architecture/production/feature-gap-refined-requirement-backlog.md](docs/architecture/production/feature-gap-refined-requirement-backlog.md) |
+| Actor concurrency and lock-free mailbox rules | [docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md](docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md) |
 | Architecture docs root | [docs/architecture/](docs/architecture/) |
 | Tutorial | [docs/superpowers/tutorials/actor-framework-tutorial.md](docs/superpowers/tutorials/actor-framework-tutorial.md) |
 

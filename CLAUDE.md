@@ -146,6 +146,15 @@ full-project verification.
 
 HPActor is a C++20 event-based actor framework inspired by CAF (C++ Actor Framework).
 
+### Actor Concurrency Rules
+
+Before designing or implementing features that touch actor delivery, mailboxes,
+lock-free queues, scheduler state, worker placement, timers, or actor
+multi-threading, read
+`docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md`.
+Treat it as the normative rule set for MPSC mailbox use, actor state ownership,
+ready-gate transitions, implementation contracts, and concurrency test design.
+
 ### Production Reliability Direction
 
 The current architecture roadmap is organized around a production reliability

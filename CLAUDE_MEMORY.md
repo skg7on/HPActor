@@ -409,6 +409,7 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Architecture: `docs/architecture/production/production-reliability-plane.md` (24x7 production reliability roadmap)
 - Architecture: `docs/architecture/production/architecture-requirement-backlog.md` (summary production requirement backlog)
 - Architecture: `docs/architecture/production/feature-gap-refined-requirement-backlog.md` (detailed feature-gap requirement backlog)
+- Architecture: `docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md` (normative actor concurrency, MPSC mailbox, scheduler readiness, and concurrency test rules)
 - Architecture: `docs/architecture/production/actor-delivery-semantics-design.md` (delivery result, TTL, retry, duplicate semantics)
 - Architecture: `docs/architecture/production/dead-letter-queue-design.md` (DLQ retention, replay, observability)
 - Architecture: `docs/architecture/production/cluster-failure-model-design.md` (node state, partitions, quarantine, fencing)

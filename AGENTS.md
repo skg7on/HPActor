@@ -71,6 +71,15 @@ full-project verification.
 
 Architecture overview, directory layout, actor type hierarchy, key subsystems, design constraints, build options, and key file locations are documented in [HPACTOR_PROJECT_OUTLINE.md](HPACTOR_PROJECT_OUTLINE.md). Read it after the warmup files to orient yourself in the codebase.
 
+## Actor Concurrency Rules
+
+Before designing or implementing features that touch actor delivery, mailboxes,
+lock-free queues, scheduler state, worker placement, timers, or actor
+multi-threading, read
+`docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md`.
+Treat it as the normative rule set for MPSC mailbox use, actor state ownership,
+ready-gate transitions, implementation contracts, and concurrency test design.
+
 ## Production Reliability Direction
 
 The current architecture roadmap is organized around a production reliability
