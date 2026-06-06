@@ -82,7 +82,8 @@ template <typename T> class RpcFuture {
 // -----------------------------------------------------------------------------
 class RpcChannel {
   public:
-    explicit RpcChannel(net::Transport* transport, sched::IScheduler* scheduler);
+    explicit RpcChannel(net::Transport* transport, sched::IScheduler* scheduler,
+                        uint32_t default_max_retries = 3);
 
     // Raw call - takes pre-encoded StreamBuffer, returns raw bytes response
     // Callers handle their own serialization/deserialization
@@ -109,6 +110,7 @@ class RpcChannel {
 
     net::Transport* transport_;
     sched::IScheduler* scheduler_;
+    uint32_t default_max_retries_ = 3;
 
     std::unordered_map<uint64_t, std::unique_ptr<PendingCall>> pending_;
     mutable std::mutex mutex_;

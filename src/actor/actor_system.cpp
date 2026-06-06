@@ -168,8 +168,8 @@ ActorSystem::ActorSystem(const Config& config)
             transport_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
         }
 
-        rpc_channel_ =
-            std::make_unique<RpcChannel>(transport_.get(), scheduler_.get());
+        rpc_channel_ = std::make_unique<RpcChannel>(
+            transport_.get(), scheduler_.get(), config_.default_ask_max_retries);
 
         // Create AskManager for local ask() request tracking
         ask_manager_ = std::make_unique<AskManager>(scheduler_.get(), this);
