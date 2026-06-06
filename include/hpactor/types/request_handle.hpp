@@ -123,8 +123,13 @@ template <typename T> class RequestHandle {
 
     /// \brief Cancel the pending request.
     ///
-    /// Any blocked get() returns errors::cancelled.
+    /// Any blocked get() returns errors::cancelled. If the handle has already
+    /// been resolved (via resolve() or resolve_error()), cancel() is a no-op
+    /// so that the original result is preserved.
     void cancel() {
+        if (state_->ready.load(std::memory_order_acquire)) {
+            return; // Already resolved — no-op
+        }
         {
             std::lock_guard<std::mutex> lock(state_->mutex);
             state_->cancelled = true;

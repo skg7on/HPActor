@@ -51,6 +51,7 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
+#include <hpactor/types/request_timeout.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>
@@ -63,7 +64,6 @@
 namespace hpactor {
 
 // Forward declarations
-class AsyncActor;
 class ActorTypeRegistry;
 class LocalDeliveryEngine;
 class BackpressureCoordinator;
@@ -634,23 +634,32 @@ class ActorSystem {
     /// \param[in] node_name Remote node name.
     /// \param[in] actor_type Registered actor type name.
     /// \param[in] args Serialized constructor arguments.
+    /// \param[in] timeout_override Per-call timeout override; uses system
+    ///            default \c spawn_timeout_ms when default or zero.
     /// \return \c result<ActorRef> with the remote actor reference on
     ///         success, or an error.
     /// \note Thread safety: Safe from non-actor threads.
     result<ActorRef>
     spawn_remote(const std::string& node_name, const std::string& actor_type,
-                 const StreamBuffer& args);
+                 const StreamBuffer& args,
+                 RequestTimeout timeout_override = RequestTimeout::use_default());
 
     /// \brief Asynchronously spawn an actor on a remote node.
     ///
-    /// Returns immediately with an \c AsyncActor handle that can be polled.
+    /// Returns immediately with a \c RequestHandle<ActorRef> that can be polled
+    /// or blocked on. The spawn request is routed through \c RpcChannel for
+    /// reliable delivery with retry and timeout.
+    ///
     /// \param[in] node_name Remote node name.
     /// \param[in] actor_type Registered actor type name.
     /// \param[in] args Serialized constructor arguments.
-    /// \return \c AsyncActor handle for polling completion.
-    AsyncActor
-    spawn_remote_async(const std::string& node_name,
-                       const std::string& actor_type, const StreamBuffer& args);
+    /// \param[in] timeout_override Per-call timeout override; uses system
+    ///            default \c spawn_timeout_ms when default or zero.
+    /// \return \c RequestHandle<ActorRef> handle for polling completion.
+    RequestHandle<ActorRef> spawn_remote_async(
+        const std::string& node_name, const std::string& actor_type,
+        const StreamBuffer& args,
+        RequestTimeout timeout_override = RequestTimeout::use_default());
 
     // ── Actor type registry ───────────────────────────────────────────────
 
@@ -786,10 +795,6 @@ class ActorSystem {
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
-
-    // Pending remote spawns awaiting response
-    std::unordered_map<uint64_t, std::shared_ptr<AsyncActor>> pending_spawns_;
-    std::mutex pending_spawns_mutex_;
 };
 
 // -----------------------------------------------------------------------------

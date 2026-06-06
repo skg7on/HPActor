@@ -18,12 +18,8 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/failure_reason.hpp>
+#include <hpactor/types/request_handle.hpp>
 #include <hpactor/types/types.hpp>
-
-#include <condition_variable>
-#include <memory>
-#include <mutex>
-#include <variant>
 
 namespace hpactor {
 
@@ -90,54 +86,11 @@ struct SpawnResponse {
 };
 
 // -----------------------------------------------------------------------------
+// AsyncActor — backward-compatible alias for asynchronous remote spawn result
 // -----------------------------------------------------------------------------
-// AsyncActor - handle for asynchronous remote spawn
-// -----------------------------------------------------------------------------
-// Allows non-blocking spawn with result retrieval via get().
-// WARNING: get() blocks the calling thread.
-class AsyncActor {
-  public:
-    AsyncActor();
-    AsyncActor(AsyncActor&& other) noexcept;
-    AsyncActor& operator=(AsyncActor&& other) noexcept;
-
-    // Construct with node_id and timeout
-    AsyncActor(EndPoint endpoint, std::chrono::milliseconds timeout);
-
-    // Wait for response and return result (blocks until response or timeout)
-    result<ActorRef> get();
-
-    // Check if response received (non-blocking)
-    bool ready() const;
-
-    // Cancel pending spawn
-    void cancel();
-
-    // Get associated node ID
-    EndPoint endpoint() const {
-        return endpoint_;
-    }
-
-    // Set response (called by transport layer when response received)
-    void set_response(SpawnResponse response);
-
-    // Message ID for correlation with response
-    void set_message_id(uint64_t id) {
-        message_id_ = id;
-    }
-    uint64_t message_id() const {
-        return message_id_;
-    }
-
-  private:
-    EndPoint endpoint_ = LocalEndpoint;
-    std::chrono::milliseconds timeout_{5000};
-    mutable std::unique_ptr<std::mutex> mutex_;
-    std::unique_ptr<std::condition_variable> cv_;
-    bool ready_ = false;
-    bool cancelled_ = false;
-    SpawnResponse response_{};
-    uint64_t message_id_ = 0; // For correlation with response
-};
+// \deprecated Use \c RequestHandle<ActorRef> directly. This alias is kept for
+//             source compatibility with callers that stored the return value of
+//             \c ActorSystem::spawn_remote_async() as \c AsyncActor.
+using AsyncActor = RequestHandle<ActorRef>;
 
 } // namespace hpactor
