@@ -19,6 +19,8 @@ HPACTOR_SYSTEM_FIELD(max_queue_depth,         size_t,                        "sc
 HPACTOR_SYSTEM_FIELD(enable_network,          bool,                          "network.enabled",              false)
 HPACTOR_SYSTEM_FIELD(tcp_port,                uint16_t,                      "network.tcp_port",             0)
 HPACTOR_SYSTEM_FIELD(spawn_timeout_ms,        std::chrono::milliseconds,     "spawn.timeout_ms",             std::chrono::milliseconds{5000})
+HPACTOR_SYSTEM_FIELD(default_ask_timeout_ms,  std::chrono::milliseconds,     "ask.default_timeout_ms",       std::chrono::milliseconds{5000})
+HPACTOR_SYSTEM_FIELD(default_ask_max_retries, uint32_t,                      "ask.max_retries",              uint32_t{3})
 HPACTOR_SYSTEM_FIELD(enable_http_gateway,     bool,                          "http.enable_gateway",          false)
 HPACTOR_SYSTEM_FIELD(http_port,               uint16_t,                      "http.port",                    8080)
 HPACTOR_SYSTEM_FIELD(http_bind_host,           std::string,                   "http.bind_host",               "0.0.0.0")
