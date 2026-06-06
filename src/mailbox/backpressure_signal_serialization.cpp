@@ -15,7 +15,7 @@
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
 
 #include <hpactor/messages.pb.h>
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/frame.hpp>
 
 namespace hpactor::mailbox {
 

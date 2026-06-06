@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 
 using namespace hpactor;

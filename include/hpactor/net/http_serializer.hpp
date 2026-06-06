@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/actor/typed_message.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -52,14 +52,12 @@ class HttpSerializer {
     // header. Returns the response body bytes and the Content-Type string
     // to set on the HTTP response.
     std::pair<StreamBuffer, std::string>
-    serialize_response(const TypedMessage& msg,
-                       const std::string& accept_header);
+    serialize_response(const TypedMessage& msg, const std::string& accept_header);
 
     // -----------------------------------------------------------------------
     // Egress: TypedMessage → HTTP request body + Content-Type (for HttpClient)
     // -----------------------------------------------------------------------
-    std::pair<StreamBuffer, std::string>
-    serialize_request(const TypedMessage& msg);
+    std::pair<StreamBuffer, std::string> serialize_request(const TypedMessage& msg);
 
     // -----------------------------------------------------------------------
     // Configuration
@@ -81,7 +79,8 @@ class HttpSerializer {
     // Select the best Content-Type for the response based on Accept header
     std::string negotiate_response_type(const std::string& accept_header) const;
 
-    // Minimal JSON escape/wrap utilities (full JSON↔protobuf mapping is a future phase)
+    // Minimal JSON escape/wrap utilities (full JSON↔protobuf mapping is a
+    // future phase)
     static StreamBuffer wrap_as_json_bytes(const StreamBuffer& proto_payload);
     static StreamBuffer wrap_as_text_bytes(const StreamBuffer& payload);
 
@@ -101,31 +100,27 @@ HttpSerializer::deserialize_request(const HttpRequest& req, TypeTag expected_tag
 
     if (content_type.find("application/x-protobuf") != std::string::npos) {
         // Raw protobuf — pass bytes directly as TypedMessage payload
-        return result<TypedMessage>::make(
-            TypedMessage(expected_tag, req.body));
+        return result<TypedMessage>::make(TypedMessage(expected_tag, req.body));
     }
 
     if (content_type.find("application/json") != std::string::npos) {
         // JSON body — store as-is in TypedMessage; the receiving actor
         // is responsible for JSON→protobuf parsing via as<T>().
-        return result<TypedMessage>::make(
-            TypedMessage(expected_tag, req.body));
+        return result<TypedMessage>::make(TypedMessage(expected_tag, req.body));
     }
 
     if (content_type.find("text/plain") != std::string::npos) {
         // Plain text — wrap as bytes payload
-        return result<TypedMessage>::make(
-            TypedMessage(expected_tag, req.body));
+        return result<TypedMessage>::make(TypedMessage(expected_tag, req.body));
     }
 
     // Unknown Content-Type — pass through as raw bytes
-    return result<TypedMessage>::make(
-        TypedMessage(expected_tag, req.body));
+    return result<TypedMessage>::make(TypedMessage(expected_tag, req.body));
 }
 
 inline std::pair<StreamBuffer, std::string>
 HttpSerializer::serialize_response(const TypedMessage& msg,
-                                    const std::string& accept_header) {
+                                   const std::string& accept_header) {
     std::string response_type = negotiate_response_type(accept_header);
 
     if (response_type == "application/x-protobuf") {
@@ -137,7 +132,8 @@ HttpSerializer::serialize_response(const TypedMessage& msg,
     }
 
     // Default: JSON
-    return {wrap_as_json_bytes(msg.payload()), "application/json; charset=utf-8"};
+    return {wrap_as_json_bytes(msg.payload()), "application/json; "
+                                               "charset=utf-8"};
 }
 
 inline std::pair<StreamBuffer, std::string>
@@ -157,8 +153,7 @@ HttpSerializer::negotiate_response_type(const std::string& accept_header) const 
     for (const auto& at : accepted) {
         if (at.media_type == "application/json" ||
             at.media_type == "application/x-protobuf" ||
-            at.media_type == "text/plain" ||
-            at.media_type == "*/*" ||
+            at.media_type == "text/plain" || at.media_type == "*/*" ||
             at.media_type == "text/*") {
             // Return the first concrete match, or default to JSON for wildcards
             if (at.media_type == "*/*" || at.media_type == "text/*") {
@@ -187,12 +182,14 @@ HttpSerializer::parse_accept_header(const std::string& header) const {
         size_t end = header.find_first_of(",;", pos);
         std::string media_type = header.substr(pos, end - pos);
         // Trim trailing whitespace from media type
-        while (!media_type.empty() && (media_type.back() == ' ' || media_type.back() == '\t')) {
+        while (!media_type.empty() &&
+               (media_type.back() == ' ' || media_type.back() == '\t')) {
             media_type.pop_back();
         }
         // Trim leading whitespace
         size_t start = 0;
-        while (start < media_type.size() && (media_type[start] == ' ' || media_type[start] == '\t')) {
+        while (start < media_type.size() &&
+               (media_type[start] == ' ' || media_type[start] == '\t')) {
             ++start;
         }
         media_type = media_type.substr(start);
@@ -203,7 +200,8 @@ HttpSerializer::parse_accept_header(const std::string& header) const {
         float quality = 1.0f;
         if (pos < header.size() && header[pos] == ';') {
             ++pos; // skip ';'
-            while (pos < header.size() && (header[pos] == ' ' || header[pos] == '\t')) {
+            while (pos < header.size() &&
+                   (header[pos] == ' ' || header[pos] == '\t')) {
                 ++pos;
             }
             if (pos + 2 < header.size() &&
@@ -212,7 +210,8 @@ HttpSerializer::parse_accept_header(const std::string& header) const {
                 pos += 2;
                 // Parse float
                 size_t qend = header.find_first_of(",;", pos);
-                std::string qstr = header.substr(pos, qend == std::string::npos ? qend : qend - pos);
+                std::string qstr = header.substr(
+                    pos, qend == std::string::npos ? qend : qend - pos);
                 quality = std::stof(qstr);
                 pos = qend;
             }
@@ -234,7 +233,8 @@ HttpSerializer::parse_accept_header(const std::string& header) const {
     return result;
 }
 
-inline StreamBuffer HttpSerializer::wrap_as_json_bytes(const StreamBuffer& proto_payload) {
+inline StreamBuffer
+HttpSerializer::wrap_as_json_bytes(const StreamBuffer& proto_payload) {
     // Minimal JSON wrapper for protobuf payload.
     // Full JSON↔protobuf conversion is a future phase.
     StreamBuffer result;
@@ -259,8 +259,10 @@ inline StreamBuffer HttpSerializer::wrap_as_json_bytes(const StreamBuffer& proto
     return result;
 }
 
-inline StreamBuffer HttpSerializer::wrap_as_text_bytes(const StreamBuffer& payload) {
-    if (payload.size() == 0) return {};
+inline StreamBuffer
+HttpSerializer::wrap_as_text_bytes(const StreamBuffer& payload) {
+    if (payload.size() == 0)
+        return {};
     return payload;
 }
 

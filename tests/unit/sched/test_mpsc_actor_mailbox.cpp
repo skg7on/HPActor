@@ -16,8 +16,8 @@
 // (was tests/sched/test_actor_mailbox.cpp — renamed for clarity)
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <atomic>

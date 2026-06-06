@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/logger.hpp>
@@ -24,14 +23,15 @@
 #include <hpactor/mailbox/detail/overflow_handler_factory.hpp>
 #include <hpactor/mailbox/detail/pressure_state_machine.hpp>
 #include <hpactor/mailbox/detail/reservation_manager.hpp>
-#include <hpactor/mailbox/delivery_result.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
 #include <hpactor/mailbox/multi_lane_queue.hpp>
 #include <hpactor/mailbox/overflow_queue.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
+#include <hpactor/msg/delivery_result.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <atomic>
@@ -1143,24 +1143,38 @@ template <typename T> class MPSCActorMailbox {
     }
 
     // --- Composed components ---
-    detail::ReservationManager<T> reservation_;            ///< Atomic capacity reservation.
-    detail::PressureStateMachine pressure_state_;          ///< Hysteresis-based pressure tracking.
-    detail::BackpressureSignalGate backpressure_signal_gate_; ///< Rate-limited signal emission.
-    std::unique_ptr<detail::IOverflowHandler<T>> overflow_handler_; ///< Policy-driven overflow handler.
+    detail::ReservationManager<T> reservation_;   ///< Atomic capacity
+                                                  ///< reservation.
+    detail::PressureStateMachine pressure_state_; ///< Hysteresis-based pressure
+                                                  ///< tracking.
+    detail::BackpressureSignalGate backpressure_signal_gate_; ///< Rate-limited
+                                                              ///< signal
+                                                              ///< emission.
+    std::unique_ptr<detail::IOverflowHandler<T>> overflow_handler_; ///< Policy-driven
+                                                                    ///< overflow
+                                                                    ///< handler.
 
     // --- Core queue members ---
-    ActorId actor_id_;                         ///< Owning actor identifier.
-    sched::IScheduler* scheduler_;             ///< Scheduler for wakeup notifications.
-    MultiLaneQueue<T> lanes_{1};               ///< System + user lane storage.
-    OverflowQueue<T> overflow_queue_;          ///< Spill-overflow queue.
-    MailboxConfig config_;                     ///< Active mailbox configuration.
-    std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT; ///< TAS spin-lock for consumer serialization.
+    ActorId actor_id_;                ///< Owning actor identifier.
+    sched::IScheduler* scheduler_;    ///< Scheduler for wakeup notifications.
+    MultiLaneQueue<T> lanes_{1};      ///< System + user lane storage.
+    OverflowQueue<T> overflow_queue_; ///< Spill-overflow queue.
+    MailboxConfig config_;            ///< Active mailbox configuration.
+    std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT; ///< TAS spin-lock for
+                                                        ///< consumer
+                                                        ///< serialization.
     std::atomic<bool> mailbox_was_empty_{true}; ///< Edge-triggered wakeup flag.
 
     // --- Rate limiter ---
-    std::unique_ptr<ActorRateLimiter> rate_limiter_;               ///< Token-bucket rate limiter (consumer-side).
-    std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> admission_policies_; ///< Ordered admission policy chain (producer-side).
-    std::atomic<uint64_t> admission_rejected_total_{0};            ///< Cumulative messages rejected by admission policies.
+    std::unique_ptr<ActorRateLimiter> rate_limiter_; ///< Token-bucket rate
+                                                     ///< limiter
+                                                     ///< (consumer-side).
+    std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>>
+        admission_policies_; ///< Ordered admission policy chain
+                             ///< (producer-side).
+    std::atomic<uint64_t> admission_rejected_total_{0}; ///< Cumulative messages
+                                                        ///< rejected by
+                                                        ///< admission policies.
 
     // Delivery result counters (incremented from deliver_with_result).
     std::atomic<uint64_t> delivery_accepted_total_{0};
@@ -1169,18 +1183,25 @@ template <typename T> class MPSCActorMailbox {
     std::atomic<uint64_t> delivery_retryable_total_{0};
 
     // --- Counters ---
-    std::atomic<uint64_t> total_enqueued_{0};  ///< Cumulative successful enqueues.
-    std::atomic<uint64_t> total_dequeued_{0};  ///< Cumulative successful dequeues.
-    std::atomic<uint64_t> total_rejected_{0};  ///< Cumulative rejected messages.
-    std::atomic<uint64_t> total_dropped_{0};   ///< Cumulative dropped messages.
-    std::atomic<uint64_t> total_dead_letters_{0}; ///< Cumulative dead-lettered messages.
-    std::atomic<uint64_t> max_depth_{0};       ///< Peak observed total depth.
-    std::atomic<uint64_t> system_lane_bytes_{0}; ///< Byte count in the system lane.
+    std::atomic<uint64_t> total_enqueued_{0}; ///< Cumulative successful
+                                              ///< enqueues.
+    std::atomic<uint64_t> total_dequeued_{0}; ///< Cumulative successful
+                                              ///< dequeues.
+    std::atomic<uint64_t> total_rejected_{0}; ///< Cumulative rejected messages.
+    std::atomic<uint64_t> total_dropped_{0};  ///< Cumulative dropped messages.
+    std::atomic<uint64_t> total_dead_letters_{0}; ///< Cumulative dead-lettered
+                                                  ///< messages.
+    std::atomic<uint64_t> max_depth_{0};         ///< Peak observed total depth.
+    std::atomic<uint64_t> system_lane_bytes_{0}; ///< Byte count in the system
+                                                 ///< lane.
 
     // --- Dependencies ---
-    ActorContinuationCallback continuation_callback_; ///< Callback for empty→non-empty transition.
-    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr}; ///< Metrics sink.
-    log::Logger* logger_ = nullptr;              ///< Logger for structured warnings.
+    ActorContinuationCallback continuation_callback_; ///< Callback for
+                                                      ///< empty→non-empty
+                                                      ///< transition.
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{
+        nullptr};                   ///< Metrics sink.
+    log::Logger* logger_ = nullptr; ///< Logger for structured warnings.
 };
 
 } // namespace hpactor::mailbox

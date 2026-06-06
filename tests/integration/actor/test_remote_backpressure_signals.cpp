@@ -18,7 +18,7 @@
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/frame.hpp>
 
 using namespace hpactor;
 

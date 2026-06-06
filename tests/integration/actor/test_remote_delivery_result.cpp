@@ -15,7 +15,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/delivery_result.hpp>
+#include <hpactor/msg/delivery_result.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 
 #include <chrono>
@@ -37,8 +37,7 @@ class ConfigurableMockTransport : public Transport {
         result_ = r;
     }
 
-    TransportSendResult try_send(const ActorAddress&,
-                                 const StreamBuffer&) override {
+    TransportSendResult try_send(const ActorAddress&, const StreamBuffer&) override {
         return result_;
     }
     ConnectionPtr connect(EndPoint, const std::string&, uint16_t) override {

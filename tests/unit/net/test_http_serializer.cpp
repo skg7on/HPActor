@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/typed_message.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/http_serializer.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/types/types.hpp>

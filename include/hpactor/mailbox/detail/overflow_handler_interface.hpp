@@ -16,7 +16,7 @@
 
 #include <hpactor/mailbox/detail/overflow_context.hpp>
 #include <hpactor/mailbox/detail/reservation_manager.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 namespace hpactor::mailbox::detail {
 

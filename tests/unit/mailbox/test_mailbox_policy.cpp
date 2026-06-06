@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/typed_message.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
+#include <hpactor/msg/typed_message.hpp>
 
 using namespace hpactor;
 using namespace hpactor::mailbox;

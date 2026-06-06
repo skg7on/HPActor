@@ -20,12 +20,12 @@
 #include <hpactor/actor/failure_rate_tracker.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/quarantine_policy.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <hpactor/mem/std_allocator.hpp>

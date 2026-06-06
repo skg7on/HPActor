@@ -54,13 +54,13 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/msg/typed_message.hpp>
 
 #include <chrono>
 #include <cstdio>

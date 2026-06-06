@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/adt/stream_buffer.hpp>
-#include <hpactor/mailbox/delivery_result.hpp>
+#include <hpactor/msg/delivery_result.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/rpc/rpc_types.hpp>
 #include <hpactor/types/types.hpp>

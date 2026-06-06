@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/frame.hpp>
 
 using namespace hpactor;
 

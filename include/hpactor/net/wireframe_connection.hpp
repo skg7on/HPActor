@@ -14,11 +14,11 @@
 
 #pragma once
 
+#include <functional>
 #include <hpactor/adt/stream_buffer.hpp>
+#include <hpactor/msg/frame.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/transport.hpp>
-#include <hpactor/net/frame.hpp>
-#include <functional>
 
 namespace hpactor {
 
@@ -38,8 +38,9 @@ using WireFrameConnectionPtr = std::shared_ptr<WireFrameConnection>;
 //   [4 bytes: magic "HPAC"]
 //   [4 bytes: remaining_length in network byte order]
 //   [N bytes: protobuf-serialized ActorMsgFrame]
-class WireFrameConnection : public Connection,
-                            public std::enable_shared_from_this<WireFrameConnection> {
+class WireFrameConnection
+    : public Connection,
+      public std::enable_shared_from_this<WireFrameConnection> {
   public:
     // Create client-side connection with existing connected fd.
     // Sets state to Connected and registers for Read events.
@@ -61,7 +62,8 @@ class WireFrameConnection : public Connection,
 
     // Complete post-connect setup: transitions to Connected, registers for
     // Read events, establishes the read handler, and fires the ready handler.
-    // Static to avoid shared_from_this issues with dual enable_shared_from_this.
+    // Static to avoid shared_from_this issues with dual
+    // enable_shared_from_this.
     static void setup_after_connect(WireFrameConnectionPtr conn);
 
     ~WireFrameConnection();
@@ -90,8 +92,8 @@ class WireFrameConnection : public Connection,
     void handle_send_completion(int result) override;
 
   private:
-    WireFrameConnection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
-                        EventLoop* loop);
+    WireFrameConnection(int fd, EndPoint local_endpoint,
+                        EndPoint remote_endpoint, EventLoop* loop);
 
     // Send raw bytes on socket
     void send_raw(const StreamBuffer& data);

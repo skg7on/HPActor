@@ -15,7 +15,7 @@
 #include <gtest/gtest.h>
 
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 

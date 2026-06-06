@@ -15,15 +15,15 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/actor_ref_cache.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
+#include <hpactor/msg/request_handle.hpp>
+#include <hpactor/msg/request_timeout.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
-#include <hpactor/types/request_handle.hpp>
-#include <hpactor/types/request_timeout.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <algorithm>

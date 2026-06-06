@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/frame.hpp>
 
 #include <hpactor/common.pb.h>
 #include <hpactor/frame.pb.h>

@@ -14,15 +14,14 @@
 
 #include <hpactor/config/toml_config_parser.hpp>
 #include <hpactor/config/toml_parser_registry.hpp>
-#include <hpactor/mailbox/delivery_mode.hpp>
+#include <hpactor/msg/delivery_mode.hpp>
 
 #include <string>
 
 namespace hpactor::config {
 namespace {
 
-static hpactor::mailbox::DeliveryMode
-parse_delivery_mode(const std::string& s) {
+static hpactor::mailbox::DeliveryMode parse_delivery_mode(const std::string& s) {
     if (s == "observable_best_effort")
         return hpactor::mailbox::DeliveryMode::ObservableBestEffort;
     if (s == "at_least_once")
@@ -56,17 +55,14 @@ class DeliveryConfigParser final : public ITomlSystemConfigParser {
         out.delivery.retry_backoff_ms = dt.read_uint32("retry_backoff_ms", 100);
         out.delivery.retry_backoff_max_ms =
             dt.read_uint32("retry_backoff_max_ms", 10000);
-        out.delivery.dedup_window_ms =
-            dt.read_uint32("dedup_window_ms", 300000);
-        out.delivery.dedup_max_entries =
-            dt.read_uint32("dedup_max_entries", 65536);
+        out.delivery.dedup_window_ms = dt.read_uint32("dedup_window_ms", 300000);
+        out.delivery.dedup_max_entries = dt.read_uint32("dedup_max_entries", 65536);
 
         return result<void>::make();
     }
 };
 
-const TomlSystemParserRegistration<DeliveryConfigParser>
-    kRegisterDeliveryConfigParser;
+const TomlSystemParserRegistration<DeliveryConfigParser> kRegisterDeliveryConfigParser;
 
 } // anonymous namespace
 } // namespace hpactor::config

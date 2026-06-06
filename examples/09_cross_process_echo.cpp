@@ -31,10 +31,10 @@
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/registrar.hpp>
 
 #include <atomic>
@@ -57,8 +57,8 @@ static const hpactor::TypeTag KickTag{0x00001001};
 // String message helpers
 // ---------------------------------------------------------------------------
 
-static hpactor::TypedMessage make_string_msg(hpactor::TypeTag tag,
-                                             const std::string& text) {
+static hpactor::TypedMessage
+make_string_msg(hpactor::TypeTag tag, const std::string& text) {
     hpactor::StreamBuffer payload(text.begin(), text.end());
     return hpactor::TypedMessage(tag, std::move(payload));
 }
@@ -83,10 +83,9 @@ class EchoActor : public hpactor::EventBasedActor {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             if (msg.type_id() == EchoMsgTag) {
                 auto text = extract_string(msg.payload());
-                std::cout << "  EchoActor [" << id().value()
-                          << "]: received \"" << text << "\"" << std::endl;
-                context()->reply(
-                    make_string_msg(EchoMsgTag, "echo: " + text));
+                std::cout << "  EchoActor [" << id().value() << "]: received \""
+                          << text << "\"" << std::endl;
+                context()->reply(make_string_msg(EchoMsgTag, "echo: " + text));
             }
         }};
     }
@@ -99,8 +98,7 @@ class EchoActor : public hpactor::EventBasedActor {
 class ClientActor : public hpactor::EventBasedActor {
   public:
     ClientActor(hpactor::ActorContext* ctx, hpactor::ActorSystem& sys,
-                hpactor::ActorAddress target, int expected,
-                std::promise<void> done)
+                hpactor::ActorAddress target, int expected, std::promise<void> done)
         : hpactor::EventBasedActor(ctx, sys), target_(target),
           expected_(expected), done_(std::move(done)) {
         become(make_behavior());
@@ -111,16 +109,14 @@ class ClientActor : public hpactor::EventBasedActor {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             if (msg.type_id() == KickTag) {
                 // Kick received — start sending messages to remote
-                context()->send(target_,
-                                make_string_msg(EchoMsgTag, "hello"));
-                context()->send(target_,
-                                make_string_msg(EchoMsgTag, "world"));
-                context()->send(target_,
-                                make_string_msg(EchoMsgTag, "cross-process"));
+                context()->send(target_, make_string_msg(EchoMsgTag, "hello"));
+                context()->send(target_, make_string_msg(EchoMsgTag, "world"));
+                context()->send(target_, make_string_msg(EchoMsgTag, "cross-"
+                                                                     "proces"
+                                                                     "s"));
             } else if (msg.type_id() == EchoMsgTag) {
                 std::cout << "  client received: \""
-                          << extract_string(msg.payload()) << "\""
-                          << std::endl;
+                          << extract_string(msg.payload()) << "\"" << std::endl;
                 if (++received_ >= expected_) {
                     done_.set_value();
                 }
@@ -159,8 +155,8 @@ static void run_server(uint16_t port) {
     hpactor::ActorSystem system(config);
 
     auto echo = system.spawn<EchoActor>();
-    std::cout << "SERVER: pid=" << getpid()
-              << " endpoint=" << endpoint_str << std::endl;
+    std::cout << "SERVER: pid=" << getpid() << " endpoint=" << endpoint_str
+              << std::endl;
 
     while (!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -181,21 +177,20 @@ static void run_client(uint16_t port) {
     config.enable_network = true;
     config.endpoint = hpactor::endpoint_ops::parse_endpoint("127.0.0.1:0");
     config.tcp_port = 0;
-    config.registrar.static_routes.push_back(
-        hpactor::net::StaticRouteConfig{hpactor::Ipv4Endpoint{}, "127.0.0.1",
-                                         port});
+    config.registrar.static_routes.push_back(hpactor::net::StaticRouteConfig{
+        hpactor::Ipv4Endpoint{}, "127.0.0.1", port});
 
     hpactor::ActorSystem system(config);
 
     auto server_ep = hpactor::endpoint_ops::parse_endpoint(endpoint_str);
     hpactor::ActorAddress echo_addr{server_ep, hpactor::ActorType{0},
-                                     hpactor::ActorId{1}, 0};
+                                    hpactor::ActorId{1}, 0};
 
     // Establish TCP connection to the server before sending messages.
     auto conn = system.transport()->connect(server_ep, "127.0.0.1", port);
     if (!conn) {
-        std::cerr << "CLIENT: failed to connect to server at "
-                  << endpoint_str << std::endl;
+        std::cerr << "CLIENT: failed to connect to server at " << endpoint_str
+                  << std::endl;
         return;
     }
     std::cout << "CLIENT: connected to server" << std::endl;
@@ -205,7 +200,8 @@ static void run_client(uint16_t port) {
     auto client = system.spawn<ClientActor>(echo_addr, 3, std::move(done));
 
     // Kick the client actor to start sending
-    system.deliver_local(client.id(), hpactor::TypedMessage(KickTag, hpactor::StreamBuffer{}));
+    system.deliver_local(client.id(),
+                         hpactor::TypedMessage(KickTag, hpactor::StreamBuffer{}));
 
     // Wait for client to receive all replies or timeout
     auto status = done_future.wait_for(std::chrono::seconds(5));
@@ -226,14 +222,14 @@ int main(int argc, char* argv[]) {
     }
 
     if (mode == "--server") {
-        if (port == 0) port = 17009;
-        std::cout << "=== HPActor Example 09: Cross-Process Echo ==="
-                  << std::endl;
+        if (port == 0)
+            port = 17009;
+        std::cout << "=== HPActor Example 09: Cross-Process Echo ===" << std::endl;
         run_server(port);
     } else if (mode == "--client") {
-        if (port == 0) port = 17009;
-        std::cout << "=== HPActor Example 09: Cross-Process Echo ==="
-                  << std::endl;
+        if (port == 0)
+            port = 17009;
+        std::cout << "=== HPActor Example 09: Cross-Process Echo ===" << std::endl;
         run_client(port);
     } else {
         std::cout << "Usage: " << argv[0]

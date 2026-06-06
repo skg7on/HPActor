@@ -14,7 +14,7 @@
 
 #include <hpactor/config/toml_config_parser.hpp>
 #include <hpactor/config/toml_parser_registry.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 #include <string>
 
@@ -91,8 +91,7 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
             out.mailbox.critical_watermark > 1.0) {
             out.mailbox.critical_watermark = 1.00;
         }
-        out.mailbox.priority_aware =
-            mt.read_bool("priority_aware", false);
+        out.mailbox.priority_aware = mt.read_bool("priority_aware", false);
         out.mailbox.priority_levels =
             static_cast<uint8_t>(mt.read_uint32("priority_levels", 4));
         out.mailbox.protected_system_messages =
@@ -100,8 +99,7 @@ class MailboxConfigParser final : public ITomlSystemConfigParser {
         out.mailbox.backpressure_mode =
             parse_backpressure_mode(mt.read_string("backpressure", "local_and_"
                                                                    "remote"));
-        out.mailbox.max_overflow_depth =
-            mt.read_uint32("max_overflow_depth", 0);
+        out.mailbox.max_overflow_depth = mt.read_uint32("max_overflow_depth", 0);
         out.mailbox.signal_min_interval_ms =
             mt.read_uint32("signal_min_interval_ms", 100);
 

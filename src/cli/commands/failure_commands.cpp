@@ -14,7 +14,7 @@
 
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
-#include <hpactor/types/failure_reason.hpp>
+#include <hpactor/msg/failure_reason.hpp>
 
 #include <map>
 #include <string>

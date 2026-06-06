@@ -14,8 +14,8 @@
 
 // tests/unit/mailbox/test_mailbox_interface.cpp
 #include <gtest/gtest.h>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/mailbox.hpp>
+#include <hpactor/msg/typed_message.hpp>
 
 using namespace hpactor;
 

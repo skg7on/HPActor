@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 #include <atomic>
 #include <cstdint>

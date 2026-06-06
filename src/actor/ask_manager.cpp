@@ -14,8 +14,8 @@
 
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/sched/scheduler_interfaces.hpp>
-#include <hpactor/types/failure_envelope.hpp>
 
 namespace hpactor {
 

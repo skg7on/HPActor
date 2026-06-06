@@ -14,8 +14,8 @@
 
 #pragma once
 
+#include <hpactor/msg/failure_reason.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/types/failure_reason.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <algorithm>

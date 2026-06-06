@@ -14,7 +14,7 @@
 
 #include <cstring>
 #include <gtest/gtest.h>
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/frame.hpp>
 
 using namespace hpactor;
 using namespace hpactor::net;

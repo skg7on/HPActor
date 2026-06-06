@@ -13,19 +13,19 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/mailbox/delivery_mode.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/delivery_mode.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 using namespace hpactor;
 using namespace hpactor::mailbox;
 
 TEST(DeliveryModeTest, ToStringRoundTrip) {
     EXPECT_STREQ(to_string(DeliveryMode::BestEffort), "best_effort");
-    EXPECT_STREQ(to_string(DeliveryMode::ObservableBestEffort),
-                 "observable_best_effort");
+    EXPECT_STREQ(to_string(DeliveryMode::ObservableBestEffort), "observable_"
+                                                                "best_effort");
     EXPECT_STREQ(to_string(DeliveryMode::AtLeastOnce), "at_least_once");
-    EXPECT_STREQ(to_string(DeliveryMode::DurableAtLeastOnce),
-                 "durable_at_least_once");
+    EXPECT_STREQ(to_string(DeliveryMode::DurableAtLeastOnce), "durable_at_"
+                                                              "least_once");
 }
 
 TEST(DeliveryModeTest, Uint8Size) {

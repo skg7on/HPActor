@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/mailbox/detail/overflow_handler_interface.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 namespace hpactor::mailbox::detail {
 

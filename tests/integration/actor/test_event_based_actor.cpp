@@ -12,15 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle_state.hpp>
 #include <hpactor/actor/quarantine_reason.hpp>
-#include <hpactor/actor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/mem/memory_config.hpp>
-#include <hpactor/actor/typed_message.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -55,8 +55,12 @@ class TestEventHandler : public EventBasedActor, public LifecycleActor {
     TestEventHandler(ActorContext* ctx, ActorSystem& sys)
         : EventBasedActor(ctx, sys) {}
 
-    LifecycleActor* as_lifecycle() override { return this; }
-    const LifecycleActor* as_lifecycle() const override { return this; }
+    LifecycleActor* as_lifecycle() override {
+        return this;
+    }
+    const LifecycleActor* as_lifecycle() const override {
+        return this;
+    }
 
     void register_handlers() override {
         if (register_hook) {
@@ -202,8 +206,7 @@ TEST_F(EventBasedActorTest, OnRequestSerializesAndReplies) {
 
     MetricsResponse received_resp;
     ASSERT_TRUE(received_resp.ParseFromArray(
-        reply_msg.payload().data(),
-        static_cast<int>(reply_msg.payload().size())));
+        reply_msg.payload().data(), static_cast<int>(reply_msg.payload().size())));
     EXPECT_EQ(received_resp.body(), "reply_body");
 }
 
@@ -233,8 +236,8 @@ TEST_F(EventBasedActorTest, OnRequestNoReplyWhenResponseEmpty) {
     ASSERT_NE(reply_mbox, nullptr);
 
     TypedMessage reply_msg;
-    EXPECT_FALSE(reply_mbox->try_pop(reply_msg))
-        << "empty response should not trigger reply";
+    EXPECT_FALSE(reply_mbox->try_pop(reply_msg)) << "empty response should not "
+                                                    "trigger reply";
 }
 
 // =============================================================================
@@ -328,9 +331,8 @@ TEST_F(EventBasedActorTest, BecomeReplacesCurrentBehavior) {
     auto* actor = spawn_test_actor();
 
     // Install behavior A
-    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
-        actor->become_trace += "A";
-    }});
+    actor->become(
+        Behavior{[actor](TypedMessage& /*msg*/) { actor->become_trace += "A"; }});
 
     // Inject a message with unknown TypeTag so it falls through to behavior
     inject_message(actor, TypeTag(0x9999), StreamBuffer{});
@@ -340,9 +342,8 @@ TEST_F(EventBasedActorTest, BecomeReplacesCurrentBehavior) {
     EXPECT_EQ(actor->become_trace, "A");
 
     // Install behavior B
-    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
-        actor->become_trace += "B";
-    }});
+    actor->become(
+        Behavior{[actor](TypedMessage& /*msg*/) { actor->become_trace += "B"; }});
 
     inject_message(actor, TypeTag(0x9999), StreamBuffer{});
     ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
@@ -354,9 +355,8 @@ TEST_F(EventBasedActorTest, BecomeEmptyDropsMessages) {
     auto* actor = spawn_test_actor();
 
     // Set up a behavior first
-    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
-        actor->behavior_count++;
-    }});
+    actor->become(
+        Behavior{[actor](TypedMessage& /*msg*/) { actor->behavior_count++; }});
 
     // Verify behavior fires
     inject_message(actor, TypeTag(0x9999), StreamBuffer{});
@@ -451,9 +451,8 @@ TEST_F(EventBasedActorTest, ProtoHandlerPriorityOverBehavior) {
     actor->register_hook = [](TestEventHandler* a) {
         a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
     };
-    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
-        actor->behavior_count++;
-    }});
+    actor->become(
+        Behavior{[actor](TypedMessage& /*msg*/) { actor->behavior_count++; }});
 
     MetricsRequest req;
     inject_and_receive(actor, TypeTag::MetricsRequestTag, req);
@@ -468,9 +467,8 @@ TEST_F(EventBasedActorTest, BehaviorFallbackForUnknownTag) {
     actor->register_hook = [](TestEventHandler* a) {
         a->on<MetricsRequest>([a](const MetricsRequest&) { a->on_count++; });
     };
-    actor->become(Behavior{[actor](TypedMessage& /*msg*/) {
-        actor->behavior_count++;
-    }});
+    actor->become(
+        Behavior{[actor](TypedMessage& /*msg*/) { actor->behavior_count++; }});
 
     // Known tag → proto handler fires
     MetricsRequest req;
@@ -626,7 +624,8 @@ TEST_F(EventBasedActorTest, DownMsgCleansUpLinkedMonitored) {
     down_pb.set_actor_id(other->id().value());
     down_pb.set_reason_code(42);
     StreamBuffer payload(down_pb.ByteSizeLong());
-    (void)down_pb.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
+    (void)down_pb.SerializeToArray(payload.data(),
+                                   static_cast<int>(payload.size()));
 
     inject_message(actor, TypeTag::DownMsg, payload, other->address());
     TypedMessage msg;

@@ -3,8 +3,8 @@
 
 #include <gtest/gtest.h>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/msg/request_timeout.hpp>
 #include <hpactor/spawn.hpp>
-#include <hpactor/types/request_timeout.hpp>
 
 namespace hpactor {
 namespace {

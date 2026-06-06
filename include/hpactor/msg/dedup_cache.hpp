@@ -56,9 +56,8 @@ class DedupCache {
     /// \param[in] message_id The message identifier.
     /// \return true if this (source_node, source_actor, message_id) tuple
     ///         was already seen within the TTL window.
-    [[nodiscard]] bool is_duplicate(EndPoint source_node,
-                                     ActorId source_actor,
-                                     MessageId message_id) noexcept;
+    [[nodiscard]] bool is_duplicate(EndPoint source_node, ActorId source_actor,
+                                    MessageId message_id) noexcept;
 
     /// \brief Remove expired entries.
     ///

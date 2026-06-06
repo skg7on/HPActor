@@ -137,7 +137,7 @@
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/http_client.hpp>
 #include <hpactor/net/http_types.hpp>

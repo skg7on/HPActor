@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/frame.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/types/types.hpp>
 

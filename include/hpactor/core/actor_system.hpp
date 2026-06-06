@@ -31,14 +31,15 @@
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
-#include <hpactor/mailbox/dedup_cache.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/dedup_cache.hpp>
+#include <hpactor/msg/frame.hpp>
+#include <hpactor/msg/request_timeout.hpp>
 #include <hpactor/net/actor_location_cache.hpp>
-#include <hpactor/net/frame.hpp>
 #include <hpactor/net/gossip_membership.hpp>
 #include <hpactor/net/http_client.hpp>
 #include <hpactor/net/registrar.hpp>
@@ -51,7 +52,6 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
-#include <hpactor/types/request_timeout.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>

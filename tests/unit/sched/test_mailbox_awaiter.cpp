@@ -14,9 +14,9 @@
 
 // tests/unit/sched/test_mailbox_awaiter.cpp
 #include <gtest/gtest.h>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/sched/coroutine_awaiters.hpp>
 #include <hpactor/sched/coroutine_task.hpp>
 #include <hpactor/types/types.hpp>
