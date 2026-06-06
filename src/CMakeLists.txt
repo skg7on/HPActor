@@ -39,6 +39,7 @@ add_library(hpactor_lib SHARED
     config/parsers/system_core_config_parser.cpp
     config/parsers/metrics_config_parser.cpp
     config/parsers/logging_config_parser.cpp
+    config/parsers/passivation_config_parser.cpp
     config/parsers/cli_config_parser.cpp
     config/parsers/discovery_config_parser.cpp
     config/parsers/topology_config_parser.cpp
