@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/msg/failure_reason.hpp>
 #include <hpactor/types/failure_envelope.hpp>
-#include <hpactor/types/failure_reason.hpp>
 
 #include <chrono>
 
