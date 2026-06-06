@@ -18,8 +18,19 @@
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Overflow handler for \c OverflowPolicy::DropNewest.
+///
+/// Silently drops the incoming message. Increments the dropped counter,
+/// emits a \c kMailboxDropped metric event, and returns \c DroppedNewest.
+///
+/// \tparam T Message type stored in the mailbox.
 template <typename T> class DropNewestHandler : public IOverflowHandler<T> {
   public:
+    /// \brief Handle reservation failure by silently dropping the new message.
+    ///
+    /// \param[in,out] ctx Overflow context with counters and metrics buffer.
+    /// \param reason Reservation failure reason (unused).
+    /// \return \c DroppedNewest with current mailbox state.
     EnqueueResult
     handle(OverflowContext<T>& ctx, ReservationResult /*reason*/) override {
         ctx.total_dropped.fetch_add(1, std::memory_order_relaxed);

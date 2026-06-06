@@ -18,8 +18,23 @@
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Overflow handler for \c OverflowPolicy::DropOldest.
+///
+/// Attempts to evict the oldest user message via
+/// \c OverflowContext::drop_oldest_fn. On success, returns
+/// \c DroppedExisting so the producer retries reservation. On failure (all
+/// user lanes empty), returns \c Rejected.
+///
+/// \tparam T Message type stored in the mailbox.
 template <typename T> class DropOldestHandler : public IOverflowHandler<T> {
   public:
+    /// \brief Handle reservation failure by evicting the oldest message.
+    ///
+    /// \param[in,out] ctx Overflow context with eviction callback and counters.
+    /// \param[in] reason Reservation failure reason (used for backpressure
+    /// classification).
+    /// \return \c DroppedExisting on successful eviction, \c Rejected
+    /// otherwise.
     EnqueueResult
     handle(OverflowContext<T>& ctx, ReservationResult reason) override {
         if (ctx.drop_oldest_fn && ctx.drop_oldest_fn()) {

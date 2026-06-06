@@ -20,6 +20,19 @@ class PerSenderRatePolicy : public IAdmissionPolicy {
         : rate_per_sec_(rate_per_sec), burst_(burst), max_senders_(max_senders),
           max_purge_threshold_(max_senders * 2) {}
 
+    /// \brief Evaluate whether the sender is within its rate limit.
+    ///
+    /// Looks up or creates a per-sender token bucket. Returns \c Reject if
+    /// the sender has exceeded its configured rate or if the maximum number
+    /// of senders has been reached.
+    ///
+    /// \param[in] msg The message being admitted (unused).
+    /// \param[in] meta Envelope metadata with sender ActorId for rate lookup.
+    /// \param[in] config Mailbox configuration (unused).
+    /// \param[in] mailbox_depth Current mailbox depth (unused).
+    /// \return \c Accept if the sender is within its rate limit,
+    ///         \c Reject otherwise.
+    /// \note Thread safety: acquires internal mutex for bucket map access.
     AdmissionPolicyResult
     evaluate(const TypedMessage& msg, const MailboxEnvelopeMeta& meta,
              const MailboxConfig& config, uint64_t mailbox_depth) noexcept override {

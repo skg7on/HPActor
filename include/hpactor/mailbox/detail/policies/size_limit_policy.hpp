@@ -10,6 +10,16 @@ class SizeLimitPolicy : public IAdmissionPolicy {
     explicit SizeLimitPolicy(uint64_t max_bytes, bool dlq_on_reject = false) noexcept
         : max_bytes_(max_bytes), dlq_on_reject_(dlq_on_reject) {}
 
+    /// \brief Evaluate whether the message exceeds the size limit.
+    ///
+    /// \param[in] msg The message being admitted (unused).
+    /// \param[in] meta Envelope metadata with \c estimated_bytes for
+    /// comparison.
+    /// \param[in] config Mailbox configuration (unused).
+    /// \param[in] mailbox_depth Current mailbox depth (unused).
+    /// \return \c Accept if \c meta.estimated_bytes <= \c max_bytes_,
+    ///         \c Reject (or \c RerouteToDLQ) otherwise.
+    /// \note Thread safety: lock-free — safe to call from any thread.
     AdmissionPolicyResult
     evaluate(const TypedMessage& msg, const MailboxEnvelopeMeta& meta,
              const MailboxConfig& config, uint64_t mailbox_depth) noexcept override {

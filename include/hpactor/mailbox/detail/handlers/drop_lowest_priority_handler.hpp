@@ -18,11 +18,27 @@
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Overflow handler for \c OverflowPolicy::DropLowestPriority.
+///
+/// Attempts to evict the lowest-priority user message via
+/// \c OverflowContext::drop_lowest_priority_fn. On success, returns
+/// \c DroppedExisting so the producer retries reservation. On failure (all
+/// user lanes empty), returns \c Rejected.
+///
+/// \tparam T Message type stored in the mailbox.
 template <typename T>
 class DropLowestPriorityHandler : public IOverflowHandler<T> {
-public:
-    EnqueueResult handle(OverflowContext<T>& ctx,
-                         ReservationResult reason) noexcept override {
+  public:
+    /// \brief Handle reservation failure by evicting the lowest-priority
+    /// message.
+    ///
+    /// \param[in,out] ctx Overflow context with eviction callback and counters.
+    /// \param[in] reason Reservation failure reason (used for backpressure
+    /// classification).
+    /// \return \c DroppedExisting on successful eviction, \c Rejected
+    /// otherwise.
+    EnqueueResult
+    handle(OverflowContext<T>& ctx, ReservationResult reason) noexcept override {
         if (ctx.drop_lowest_priority_fn && ctx.drop_lowest_priority_fn()) {
             EnqueueResult r;
             r.code = EnqueueResultCode::DroppedExisting;

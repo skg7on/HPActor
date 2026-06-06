@@ -20,9 +20,28 @@
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Overflow handler for \c OverflowPolicy::SpillToOverflowQueue.
+///
+/// Moves the incoming message into the overflow queue via
+/// \c OverflowQueue::try_push(). On success, returns \c ReroutedToOverflow
+/// so the producer knows the message was accepted (albeit deferred). On
+/// overflow queue push failure, returns \c Rejected.
+///
+/// Messages in the overflow queue are drained back into the main mailbox
+/// during \c MPSCActorMailbox::dequeue().
+///
+/// \tparam T Message type stored in the mailbox.
 template <typename T>
 class SpillToOverflowHandler : public IOverflowHandler<T> {
   public:
+    /// \brief Handle reservation failure by spilling to the overflow queue.
+    ///
+    /// \param[in,out] ctx Overflow context with overflow queue reference,
+    ///                    counters, and metrics buffer.
+    /// \param[in] reason Reservation failure reason (used for backpressure
+    /// classification).
+    /// \return \c ReroutedToOverflow on success, \c Rejected if the overflow
+    ///         queue push fails.
     EnqueueResult
     handle(OverflowContext<T>& ctx, ReservationResult reason) override {
         if (ctx.overflow_queue.try_push(std::move(const_cast<T&>(ctx.message)))) {

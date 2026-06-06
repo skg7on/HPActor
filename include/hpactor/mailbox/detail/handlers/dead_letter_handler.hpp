@@ -18,8 +18,21 @@
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Overflow handler for \c OverflowPolicy::DeadLetter.
+///
+/// Increments the dead-letter counter, emits a \c kMailboxDeadLetter metric
+/// event, and returns \c ReroutedToDeadLetter. The message is assumed to have
+/// been consumed by an external dead-letter queue — this handler only records
+/// the routing decision.
+///
+/// \tparam T Message type stored in the mailbox.
 template <typename T> class DeadLetterHandler : public IOverflowHandler<T> {
   public:
+    /// \brief Handle a reservation failure by routing to the dead-letter queue.
+    ///
+    /// \param[in,out] ctx Overflow context with counters and metrics buffer.
+    /// \param reason Reservation failure reason (unused).
+    /// \return \c ReroutedToDeadLetter with current mailbox state.
     EnqueueResult
     handle(OverflowContext<T>& ctx, ReservationResult /*reason*/) override {
         ctx.total_dead_letters.fetch_add(1, std::memory_order_relaxed);

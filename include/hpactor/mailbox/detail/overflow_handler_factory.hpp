@@ -28,6 +28,19 @@
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Factory function that maps an \c OverflowPolicy to a concrete
+///        \c IOverflowHandler instance.
+///
+/// The returned handler is a heap-allocated unique_ptr owned by the caller
+/// (typically \c MPSCActorMailbox). \c BlockWhenAllowed falls back to
+/// \c RejectNewestHandler by default.
+///
+/// \tparam T Message type stored in the mailbox.
+/// \param[in] policy The overflow policy to instantiate.
+/// \return A unique_ptr to the corresponding handler. Never returns
+///         \c nullptr.
+/// \note Thread safety: safe to call from any thread. Returns a new
+///       heap-allocated instance with no shared state.
 template <typename T>
 [[nodiscard]] std::unique_ptr<IOverflowHandler<T>>
 make_overflow_handler(OverflowPolicy policy) {

@@ -32,17 +32,28 @@ namespace hpactor::mailbox {
 /// reservation, pressure, overflow policy, metrics, or scheduler wakeup.
 ///
 /// \tparam T Message type with `std::atomic<T*> mpsc_next` member.
-template <typename T>
-class MultiLaneQueue {
-public:
+template <typename T> class MultiLaneQueue {
+  public:
     static constexpr uint8_t kSystemLaneSentinel = 0xFF;
     static constexpr uint8_t kMaxUserLanes = 8;
 
+    /// \brief Construct a multi-lane queue with the given number of user lanes.
+    ///
+    /// \param[in] num_user_lanes Number of user priority lanes (clamped to
+    /// 1–8).
     explicit MultiLaneQueue(uint8_t num_user_lanes = 1)
         : num_user_lanes_(num_user_lanes) {}
 
     // ── Producer (lock-free, multi-producer safe) ─────────────────
 
+    /// \brief Enqueue a message node into a specific lane (lock-free).
+    ///
+    /// \param[in] node Heap-allocated message node. Ownership transfers to
+    ///                 the queue.
+    /// \param[in] lane_idx Target lane: \c kSystemLaneSentinel for the system
+    ///                     lane, or 0..N-1 for a user lane.
+    /// \note Thread safety: lock-free — safe to call from any thread.
+    ///       Multiple producers may enqueue concurrently.
     void enqueue(T* node, uint8_t lane_idx) noexcept {
         if (lane_idx == kSystemLaneSentinel) {
             system_lane_.enqueue(node);
@@ -53,28 +64,42 @@ public:
 
     // ── Consumer (NOT internally locked — caller serializes) ──────
 
-    /// Dequeue in priority order: system lane, then user lanes 0..N-1.
-    /// Returns nullptr if all lanes are empty.
+    /// \brief Dequeue in priority order: system lane, then user lanes 0..N-1.
+    ///
+    /// \return Pointer to the dequeued node, or \c nullptr if all lanes are
+    ///         empty. The caller owns the returned node and must destroy and
+    ///         deallocate it.
+    /// \note Thread safety: NOT internally locked. The caller
+    ///       (\c MPSCActorMailbox) must serialize dequeue via its consumer
+    ///       spin-lock. Safe to call concurrently with producers.
     T* dequeue() noexcept {
         T* node = system_lane_.dequeue();
-        if (node) return node;
+        if (node)
+            return node;
         for (uint8_t i = 0; i < num_user_lanes_; ++i) {
             node = user_lanes_[i].dequeue();
-            if (node) return node;
+            if (node)
+                return node;
         }
         return nullptr;
     }
 
-    /// Drop one message from the highest-priority non-empty user lane.
-    /// Scans lanes 0..N-1 to find the globally oldest message (within
-    /// each lane, MPSC preserves FIFO, and lower lane index = higher
-    /// priority = typically enqueued first since high-priority messages
-    /// are dispatched to low-index lanes).
-    /// Does NOT touch the system lane.
+    /// \brief Drop one message from the highest-priority non-empty user lane.
+    ///
+    /// Scans lanes 0..N-1 to find the globally oldest message. Within each
+    /// lane, MPSC preserves FIFO, and lower lane index = higher priority =
+    /// typically enqueued first since high-priority messages are dispatched
+    /// to low-index lanes. Does NOT touch the system lane.
+    ///
+    /// \return Pointer to the dropped node, or \c nullptr if all user lanes
+    ///         were empty. The caller must release the reservation and handle
+    ///         deferred destruction.
+    /// \note Thread safety: NOT internally locked — caller must serialize.
     T* try_drop_oldest_user_lane() noexcept {
         for (uint8_t i = 0; i < num_user_lanes_; ++i) {
             T* node = user_lanes_[i].dequeue();
-            if (node) return node;
+            if (node)
+                return node;
         }
         return nullptr;
     }
@@ -86,13 +111,23 @@ public:
     T* try_drop_from_lowest_user_lane() noexcept {
         for (int i = static_cast<int>(num_user_lanes_) - 1; i >= 0; --i) {
             T* node = user_lanes_[i].dequeue();
-            if (node) return node;
+            if (node)
+                return node;
         }
         return nullptr;
     }
 
     // ── Pending free (deferred destructor) ────────────────────────
 
+    /// \brief Stage a node for deferred destruction.
+    ///
+    /// Destroys and deallocates any previously staged node, then stores
+    /// \p node for the next call. Used to defer destruction of evicted
+    /// nodes until the consumer lock is released.
+    ///
+    /// \param[in] node Node to stage for deferred destruction. Ownership
+    ///                 transfers to the queue.
+    /// \note Thread safety: NOT internally locked — caller must serialize.
     void set_pending_free(T* node) noexcept {
         if (pending_free_) {
             pending_free_->~T();
@@ -101,6 +136,11 @@ public:
         pending_free_ = node;
     }
 
+    /// \brief Release the staged pending-free node without destroying it.
+    ///
+    /// \return Pointer to the staged node, or \c nullptr if none is staged.
+    ///         The caller assumes ownership.
+    /// \note Thread safety: NOT internally locked — caller must serialize.
     T* release_pending_free() noexcept {
         T* p = pending_free_;
         pending_free_ = nullptr;
@@ -109,13 +149,24 @@ public:
 
     // ── Query ─────────────────────────────────────────────────────
 
+    /// \brief Check whether all lanes are empty.
+    ///
+    /// \return \c true if the system lane and all user lanes are empty.
+    /// \note Thread safety: lock-free — safe to call from any thread.
+    ///       The result may be stale by the time the caller observes it.
     bool empty() const noexcept {
-        if (!system_lane_.empty()) return false;
+        if (!system_lane_.empty())
+            return false;
         for (uint8_t i = 0; i < num_user_lanes_; ++i)
-            if (!user_lanes_[i].empty()) return false;
+            if (!user_lanes_[i].empty())
+                return false;
         return true;
     }
 
+    /// \brief Total depth across all lanes (system + user).
+    ///
+    /// \return Sum of message counts in all lanes.
+    /// \note Thread safety: lock-free — safe to call from any thread.
     int64_t total_depth() const noexcept {
         int64_t d = system_lane_.count();
         for (uint8_t i = 0; i < num_user_lanes_; ++i)
@@ -123,27 +174,55 @@ public:
         return d;
     }
 
+    /// \brief Depth of a single lane.
+    ///
+    /// \param[in] lane_idx Lane index (0..N-1) or \c kSystemLaneSentinel.
+    /// \return Message count in the specified lane.
+    /// \note Thread safety: lock-free — safe to call from any thread.
     int64_t lane_depth(uint8_t lane_idx) const noexcept {
-        if (lane_idx == kSystemLaneSentinel) return system_lane_.count();
+        if (lane_idx == kSystemLaneSentinel)
+            return system_lane_.count();
         return user_lanes_[lane_idx].count();
     }
 
+    /// \brief Current number of user lanes.
+    ///
+    /// \return Number of active user lanes (1–8).
     uint8_t num_user_lanes() const noexcept {
         return num_user_lanes_;
     }
 
+    /// \brief Reconfigure the number of user lanes at runtime.
+    ///
+    /// \param[in] n New lane count (clamped to 1–8).
     void set_num_user_lanes(uint8_t n) {
         num_user_lanes_ = (n >= 1 && n <= kMaxUserLanes) ? n : 1;
     }
 
     // ── Test support ──────────────────────────────────────────────
 
+    /// \brief Inject a message without scheduler notification (test-only).
+    ///
+    /// Delegates to \c enqueue() with the same lane routing.
+    ///
+    /// \param[in] node Heap-allocated message node.
+    /// \param[in] lane_idx Target lane index.
+    /// \note This is a test-only API. Do not use in production code paths.
     void inject_for_test(T* node, uint8_t lane_idx) noexcept {
         enqueue(node, lane_idx);
     }
 
+    /// \brief Drain all lanes and destroy staged free nodes.
+    ///
+    /// Dequeues every message without destroying them (they are leaked —
+    /// the caller must have already drained them), destroys the pending-free
+    /// node, and resets the lane count to 1.
+    ///
+    /// \note Thread safety: NOT internally locked — caller must ensure no
+    ///       concurrent access.
     void reset() noexcept {
-        while (dequeue() != nullptr) {}
+        while (dequeue() != nullptr) {
+        }
         if (pending_free_) {
             pending_free_->~T();
             mem::deallocate(pending_free_);
@@ -152,7 +231,7 @@ public:
         num_user_lanes_ = 1;
     }
 
-private:
+  private:
     MPSCMailbox<T> system_lane_;
     MPSCMailbox<T> user_lanes_[kMaxUserLanes];
     uint8_t num_user_lanes_{1};

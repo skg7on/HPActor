@@ -23,10 +23,32 @@
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Rate-limited gate for backpressure signal emission.
+///
+/// Enforces a minimum interval between backpressure signal emissions per
+/// pressure severity level. Escalations (higher severity) bypass the interval
+/// to ensure timely notification of worsening conditions. Uses lock-free CAS
+/// to coordinate concurrent producer threads.
+///
+/// \note Thread safety: all methods are lock-free and safe to call from any
+///       thread. Internal coordination uses CAS loops on atomic state.
 class BackpressureSignalGate {
   public:
     BackpressureSignalGate() = default;
 
+    /// \brief Attempt to acquire an emission slot.
+    ///
+    /// Returns an emission timestamp if the signal is allowed through; the
+    /// gate allows the first signal, signals after the configured interval,
+    /// and signals with higher severity than the last emitted (escalation).
+    ///
+    /// \param[in] now_ns Current monotonic timestamp in nanoseconds.
+    /// \param[in] state Current pressure state (determines severity).
+    /// \param[in] interval_ms Minimum interval between signals in milliseconds.
+    /// \param[in] force If \c true, bypass rate limiting regardless of state.
+    /// \return The emission sequence number if acquired, or \c std::nullopt
+    ///         if the rate limiter blocked the emission.
+    /// \note Thread safety: lock-free CAS — safe to call from any thread.
     std::optional<uint64_t>
     try_acquire(uint64_t now_ns, MailboxPressureState state,
                 uint32_t interval_ms, bool force = false) noexcept {
@@ -56,6 +78,11 @@ class BackpressureSignalGate {
         }
     }
 
+    /// \brief Current emission sequence number.
+    ///
+    /// \return The total number of signals emitted since construction.
+    /// \note Thread safety: lock-free atomic load — safe to call from any
+    ///       thread.
     uint64_t sequence() const noexcept {
         return sequence_.load(std::memory_order_acquire);
     }

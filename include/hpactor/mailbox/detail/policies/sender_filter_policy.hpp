@@ -12,6 +12,15 @@ class SenderFilterPolicy : public IAdmissionPolicy {
     explicit SenderFilterPolicy(std::vector<uint64_t> blocked_ids) noexcept
         : blocked_(blocked_ids.begin(), blocked_ids.end()) {}
 
+    /// \brief Evaluate whether the sender is in the blocked set.
+    ///
+    /// \param[in] msg The message being admitted (unused).
+    /// \param[in] meta Envelope metadata with sender ActorId for lookup.
+    /// \param[in] config Mailbox configuration (unused).
+    /// \param[in] mailbox_depth Current mailbox depth (unused).
+    /// \return \c Accept if the sender is not in the blocked set,
+    ///         \c Reject otherwise.
+    /// \note Thread safety: lock-free — safe to call from any thread.
     AdmissionPolicyResult
     evaluate(const TypedMessage& msg, const MailboxEnvelopeMeta& meta,
              const MailboxConfig& config, uint64_t mailbox_depth) noexcept override {

@@ -29,22 +29,43 @@ class DeadLetterQueue;
 
 namespace hpactor::mailbox::detail {
 
+/// \brief Context passed to overflow handlers during capacity reservation
+///        failure.
+///
+/// Provides the handler with references to the current message, mailbox
+/// state, counters, and callbacks for eviction (drop-oldest, drop-lowest-
+/// priority). The handler reads from and writes to these fields to produce
+/// an \c EnqueueResult.
+///
+/// \tparam T Message type stored in the mailbox.
 template <typename T> struct OverflowContext {
-    const T& message;
-    MailboxEnvelopeMeta& meta;
-    ReservationManager<T>& reservation;
-    OverflowQueue<T>& overflow_queue;
-    std::atomic<uint64_t>& total_rejected;
-    std::atomic<uint64_t>& total_dropped;
-    std::atomic<uint64_t>& total_dead_letters;
-    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_buf;
-    MailboxConfig& config;
-    ActorId actor_id;
-    uint32_t current_depth;
-    uint64_t current_bytes;
-    std::function<bool()> drop_oldest_fn;
-    mailbox::DeadLetterQueue* dlq = nullptr;
-    std::function<bool()> drop_lowest_priority_fn;
+    const T& message;          ///< The message that could not be enqueued.
+    MailboxEnvelopeMeta& meta; ///< Envelope metadata (mutable for payload
+                               ///< trimming).
+    ReservationManager<T>& reservation;    ///< Reservation manager for capacity
+                                           ///< accounting.
+    OverflowQueue<T>& overflow_queue;      ///< Spill-overflow queue for \c
+                                           ///< SpillToOverflowQueue policy.
+    std::atomic<uint64_t>& total_rejected; ///< Cumulative rejected counter
+                                           ///< (incremented by handler).
+    std::atomic<uint64_t>& total_dropped;  ///< Cumulative dropped counter.
+    std::atomic<uint64_t>& total_dead_letters; ///< Cumulative dead-letter
+                                               ///< counter.
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_buf; ///< Optional
+                                                                ///< metrics
+                                                                ///< ring
+                                                                ///< buffer.
+    MailboxConfig& config;                ///< Current mailbox configuration.
+    ActorId actor_id;                     ///< Owning actor identifier.
+    uint32_t current_depth;               ///< Mailbox depth at overflow time.
+    uint64_t current_bytes;               ///< Queued bytes at overflow time.
+    std::function<bool()> drop_oldest_fn; ///< Callback to evict the oldest user
+                                          ///< message.
+    mailbox::DeadLetterQueue* dlq = nullptr; ///< Optional DLQ pointer (may be
+                                             ///< null).
+    std::function<bool()> drop_lowest_priority_fn; ///< Callback to evict the
+                                                   ///< lowest-priority user
+                                                   ///< message.
 };
 
 } // namespace hpactor::mailbox::detail
