@@ -65,6 +65,10 @@ message MailboxSnapshot {
     uint32 admission_policy_count = 20;
     uint64 admission_rejected_total = 21;
     uint64 admission_dlq_routed_total = 22;
+    uint64 delivery_accepted_total = 23;
+    uint64 delivery_rejected_total = 24;
+    uint64 delivery_failed_total = 25;
+    uint64 delivery_retryable_total = 26;
 }
 
 message ChildInfo {

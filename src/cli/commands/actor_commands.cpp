@@ -495,6 +495,145 @@ class ActorAdmissionCommand final : public ICommand {
     }
 };
 
+class ActorDeliveryCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/delivery";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Show per-actor delivery result counters";
+    }
+    int order() const noexcept override {
+        return 285;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> delivery)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        InspectStateRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_include_mailbox(true);
+
+        auto reply = cli->send_and_wait_inspect(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        ctx.output->header("Delivery Results — Actor " + *id_str);
+
+        std::map<std::string, std::string> kv;
+        auto& mbox = reply->mailbox();
+        kv["Accepted"] = std::to_string(mbox.delivery_accepted_total());
+        kv["Rejected"] = std::to_string(mbox.delivery_rejected_total());
+        kv["Failed (not retryable)"] =
+            std::to_string(mbox.delivery_failed_total());
+        kv["Retryable"] = std::to_string(mbox.delivery_retryable_total());
+        ctx.output->key_value(kv);
+        return result<void>::make();
+    }
+};
+
+class ActorDeliveryStatsCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/delivery-stats";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Show delivery statistics with accept/reject/retry ratios";
+    }
+    int order() const noexcept override {
+        return 286;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> "
+                              "delivery-stats)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        InspectStateRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_include_mailbox(true);
+
+        auto reply = cli->send_and_wait_inspect(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str +
+                              " (timeout or not found)");
+            return result<void>::make();
+        }
+
+        ctx.output->header("Delivery Statistics — Actor " + *id_str);
+
+        auto& mbox = reply->mailbox();
+        uint64_t accepted = mbox.delivery_accepted_total();
+        uint64_t rejected = mbox.delivery_rejected_total();
+        uint64_t failed = mbox.delivery_failed_total();
+        uint64_t retryable = mbox.delivery_retryable_total();
+        uint64_t total = accepted + rejected;
+
+        std::map<std::string, std::string> kv;
+        kv["Accepted"] = std::to_string(accepted);
+        kv["Rejected"] = std::to_string(rejected);
+        kv["Failed (not retryable)"] = std::to_string(failed);
+        kv["Retryable"] = std::to_string(retryable);
+
+        if (total > 0) {
+            char buf[32];
+            double accept_rate = 100.0 * static_cast<double>(accepted) /
+                                 static_cast<double>(total);
+            snprintf(buf, sizeof(buf), "%.1f%%", accept_rate);
+            kv["Accept rate"] = buf;
+
+            double retry_rate = 100.0 * static_cast<double>(retryable) /
+                                static_cast<double>(total);
+            snprintf(buf, sizeof(buf), "%.1f%%", retry_rate);
+            kv["Retryable rate"] = buf;
+
+            double fail_rate = 100.0 * static_cast<double>(failed) /
+                               static_cast<double>(total);
+            snprintf(buf, sizeof(buf), "%.1f%%", fail_rate);
+            kv["Fail rate"] = buf;
+        } else {
+            kv["Accept rate"] = "N/A (no deliveries)";
+            kv["Retryable rate"] = "N/A (no deliveries)";
+            kv["Fail rate"] = "N/A (no deliveries)";
+        }
+
+        ctx.output->key_value(kv);
+        return result<void>::make();
+    }
+};
+
 const CommandRegistration<ActorShowCommand> kRegisterActorShow;
 const CommandRegistration<ActorCircuitCommand> kRegisterActorCircuit;
 const CommandRegistration<ActorKillCommand> kRegisterActorKill;
@@ -503,6 +642,8 @@ const CommandRegistration<ActorUnquarantineCommand> kRegisterActorUnquarantine;
 const CommandRegistration<ActorListCommand> kRegisterActorList;
 const CommandRegistration<ActorRateCommand> kRegisterActorRate;
 const CommandRegistration<ActorAdmissionCommand> kRegisterActorAdmission;
+const CommandRegistration<ActorDeliveryCommand> kRegisterActorDelivery;
+const CommandRegistration<ActorDeliveryStatsCommand> kRegisterActorDeliveryStats;
 
 } // anonymous namespace
 } // namespace cli

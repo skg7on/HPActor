@@ -69,6 +69,9 @@ enum class MetricEventType : uint8_t {
     kAskExpired = 42,           ///< An ask's overall deadline expired.
     kAskRetry = 43,             ///< An ask was retried.
     kAskCancelled = 44,         ///< An ask was cancelled by the caller.
+    kDeliveryResult = 45,       ///< Delivery result emitted from try_send /
+                                ///< try_reply / deliver_with_result.
+                                ///< \c code carries DeliveryStatus value.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

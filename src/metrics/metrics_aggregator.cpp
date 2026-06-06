@@ -17,6 +17,7 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>
+#include <hpactor/mailbox/delivery_result.hpp>
 #include <hpactor/metrics/metrics_aggregator.hpp>
 #include <hpactor/types/types.hpp>
 #include <string>
@@ -152,6 +153,10 @@ void Aggregator::ensure_families_registered() {
                                    "total",
                                    "Total endpoint circuit breaker "
                                    "transitions.",
+                                   MetricType::kCounter);
+    delivery_results_family_ =
+        &registry_.register_family("hpactor_delivery_results_total",
+                                   "Total delivery results by status.",
                                    MetricType::kCounter);
 }
 
@@ -337,8 +342,18 @@ void Aggregator::on_event(const MetricEvent& e) {
         case MetricEventType::kDeliveryFailure:
         case MetricEventType::kDeliveryDuplicate:
         case MetricEventType::kDeliveryExpired:
-            // delivery outcome stubs
             break;
+        case MetricEventType::kDeliveryResult: {
+            auto labels = make_actor_labels(e.actor_id);
+            labels.labels.emplace_back(
+                "status",
+                hpactor::mailbox::to_string(
+                    static_cast<hpactor::mailbox::DeliveryStatus>(e.code)));
+            auto& c = registry_.get_or_create<CounterValue>(
+                *delivery_results_family_, labels);
+            c.total.fetch_add(1, std::memory_order_relaxed);
+            break;
+        }
         case MetricEventType::kActorQuarantined: {
             auto& c = registry_.get_or_create<CounterValue>(
                 *quarantine_total_family_, make_actor_labels(e.actor_id));

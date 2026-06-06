@@ -81,6 +81,11 @@ struct MboxSnapshot {
     uint32_t admission_policy_count = 0;
     uint64_t admission_rejected_total = 0;
     uint64_t admission_dlq_routed_total = 0;
+    // Delivery result counters
+    uint64_t delivery_accepted_total = 0;
+    uint64_t delivery_rejected_total = 0;
+    uint64_t delivery_failed_total = 0;
+    uint64_t delivery_retryable_total = 0;
 };
 
 /// \brief Lightweight child-actor entry for CLI introspection.

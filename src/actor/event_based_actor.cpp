@@ -432,6 +432,12 @@ bool EventBasedActor::dispatch_cli_message(TypedMessage& msg) {
                 pb_mbox->set_admission_rejected_total(ms.admission_rejected_total);
                 pb_mbox->set_admission_dlq_routed_total(ms.admission_dlq_routed_total);
             }
+            // Delivery result counters are always included (like
+            // total_rejected / total_dropped).
+            pb_mbox->set_delivery_accepted_total(ms.delivery_accepted_total);
+            pb_mbox->set_delivery_rejected_total(ms.delivery_rejected_total);
+            pb_mbox->set_delivery_failed_total(ms.delivery_failed_total);
+            pb_mbox->set_delivery_retryable_total(ms.delivery_retryable_total);
         }
 
         if (req.include_circuit_breaker() && quarantine_policy_.enabled) {

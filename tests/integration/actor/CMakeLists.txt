@@ -27,6 +27,7 @@ add_executable(test_integration_actor
     test_backpressure_signals.cpp
     test_remote_backpressure_signals.cpp
     test_delivery_semantics.cpp
+    test_remote_delivery_result.cpp
     test_circuit_breaker_inspect.cpp
     test_circuit_breaker_lifecycle.cpp
     test_quarantine_handler.cpp

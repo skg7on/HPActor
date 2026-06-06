@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/mailbox/delivery_result.hpp>
 #include <hpactor/metrics/metrics_aggregator.hpp>
 #include <hpactor/metrics/metrics_registry.hpp>
 
@@ -187,4 +188,68 @@ TEST_F(MetricsAggregatorTest, EndDrainRecordsActive) {
         }
     }
     EXPECT_TRUE(found);
+}
+
+TEST_F(MetricsAggregatorTest, DeliveryResultEvents) {
+    agg().begin_drain();
+
+    // Accepted
+    MetricEvent accepted{};
+    accepted.actor_id = hpactor::ActorId{10};
+    accepted.event_type = MetricEventType::kDeliveryResult;
+    accepted.code = static_cast<uint8_t>(hpactor::mailbox::DeliveryStatus::Accepted);
+    accepted.value_hi = 1;
+    agg().on_event(accepted);
+
+    // MailboxFull
+    MetricEvent rejected{};
+    rejected.actor_id = hpactor::ActorId{10};
+    rejected.event_type = MetricEventType::kDeliveryResult;
+    rejected.code = static_cast<uint8_t>(hpactor::mailbox::DeliveryStatus::MailboxFull);
+    rejected.value_hi = 1;
+    agg().on_event(rejected);
+
+    // NoRoute
+    MetricEvent no_route{};
+    no_route.actor_id = hpactor::ActorId{10};
+    no_route.event_type = MetricEventType::kDeliveryResult;
+    no_route.code = static_cast<uint8_t>(hpactor::mailbox::DeliveryStatus::NoRoute);
+    no_route.value_hi = 1;
+    agg().on_event(no_route);
+
+    agg().end_drain();
+
+    auto snapshot = registry().snapshot();
+    const MetricRegistry::Snapshot::FamilySnapshot* family = nullptr;
+    for (auto& fam : snapshot.families) {
+        if (fam.name == "hpactor_delivery_results_total") {
+            family = &fam;
+            break;
+        }
+    }
+    ASSERT_NE(family, nullptr) << "hpactor_delivery_results_total family not found";
+
+    // Count by status label
+    uint64_t total = 0;
+    for (auto& [labels, value] : family->counters) {
+        total += value;
+    }
+    EXPECT_EQ(total, 3u);
+
+    // Verify individual status labels exist
+    bool has_accepted = false;
+    bool has_mailbox_full = false;
+    bool has_no_route = false;
+    for (auto& [labels, value] : family->counters) {
+        for (auto& [k, v] : labels.labels) {
+            if (k == "status") {
+                if (v == "accepted") has_accepted = true;
+                if (v == "mailbox_full") has_mailbox_full = true;
+                if (v == "no_route") has_no_route = true;
+            }
+        }
+    }
+    EXPECT_TRUE(has_accepted);
+    EXPECT_TRUE(has_mailbox_full);
+    EXPECT_TRUE(has_no_route);
 }

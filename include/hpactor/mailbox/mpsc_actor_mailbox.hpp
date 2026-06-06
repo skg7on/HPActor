@@ -24,6 +24,7 @@
 #include <hpactor/mailbox/detail/overflow_handler_factory.hpp>
 #include <hpactor/mailbox/detail/pressure_state_machine.hpp>
 #include <hpactor/mailbox/detail/reservation_manager.hpp>
+#include <hpactor/mailbox/delivery_result.hpp>
 #include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mailbox/mpsc_mailbox.hpp>
 #include <hpactor/mailbox/multi_lane_queue.hpp>
@@ -793,8 +794,33 @@ template <typename T> class MPSCActorMailbox {
                 admission_rejected_total_.load(std::memory_order_acquire);
             s.admission_dlq_routed_total = 0; // FIXME: wire counter
         }
+        s.delivery_accepted_total =
+            delivery_accepted_total_.load(std::memory_order_acquire);
+        s.delivery_rejected_total =
+            delivery_rejected_total_.load(std::memory_order_acquire);
+        s.delivery_failed_total =
+            delivery_failed_total_.load(std::memory_order_acquire);
+        s.delivery_retryable_total =
+            delivery_retryable_total_.load(std::memory_order_acquire);
 
         return s;
+    }
+
+    /// \brief Record a delivery outcome for CLI observability.
+    ///
+    /// \param[in] status The delivery status from the caller-facing
+    ///                   DeliveryResult.
+    void record_delivery_result(DeliveryStatus status) noexcept {
+        if (is_accepted(status)) {
+            delivery_accepted_total_.fetch_add(1, std::memory_order_relaxed);
+        } else {
+            delivery_rejected_total_.fetch_add(1, std::memory_order_relaxed);
+            if (is_retryable(status)) {
+                delivery_retryable_total_.fetch_add(1, std::memory_order_relaxed);
+            } else {
+                delivery_failed_total_.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
     }
 
     /// \brief Attempt to acquire a rate-limited backpressure signal emission
@@ -1135,6 +1161,12 @@ template <typename T> class MPSCActorMailbox {
     std::unique_ptr<ActorRateLimiter> rate_limiter_;               ///< Token-bucket rate limiter (consumer-side).
     std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> admission_policies_; ///< Ordered admission policy chain (producer-side).
     std::atomic<uint64_t> admission_rejected_total_{0};            ///< Cumulative messages rejected by admission policies.
+
+    // Delivery result counters (incremented from deliver_with_result).
+    std::atomic<uint64_t> delivery_accepted_total_{0};
+    std::atomic<uint64_t> delivery_rejected_total_{0};
+    std::atomic<uint64_t> delivery_failed_total_{0};
+    std::atomic<uint64_t> delivery_retryable_total_{0};
 
     // --- Counters ---
     std::atomic<uint64_t> total_enqueued_{0};  ///< Cumulative successful enqueues.

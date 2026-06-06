@@ -374,3 +374,116 @@ TEST(ActorUnquarantineCommandTest, NullCliActor) {
 
     EXPECT_NE(out.find("Internal error: no CLI actor"), std::string::npos);
 }
+
+// =============================================================================
+// ActorDeliveryCommand
+// =============================================================================
+
+TEST(ActorDeliveryCommandTest, Metadata) {
+    auto* cmd = find_cmd("actor/<id>/delivery");
+    ASSERT_NE(cmd, nullptr);
+    EXPECT_EQ(cmd->help_text(), "Show per-actor delivery result counters");
+    EXPECT_EQ(cmd->order(), 285);
+}
+
+TEST(ActorDeliveryCommandTest, MissingActorId) {
+    auto* cmd = find_cmd("actor/<id>/delivery");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Missing actor ID"), std::string::npos);
+}
+
+TEST(ActorDeliveryCommandTest, InvalidActorId) {
+    auto* cmd = find_cmd("actor/<id>/delivery");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "garbage";
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Invalid actor ID"), std::string::npos);
+}
+
+TEST(ActorDeliveryCommandTest, NullCliActor) {
+    auto* cmd = find_cmd("actor/<id>/delivery");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "0xABCD";
+    ctx.cli_actor = nullptr;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Internal error: no CLI actor"), std::string::npos);
+}
+
+// =============================================================================
+// ActorDeliveryStatsCommand
+// =============================================================================
+
+TEST(ActorDeliveryStatsCommandTest, Metadata) {
+    auto* cmd = find_cmd("actor/<id>/delivery-stats");
+    ASSERT_NE(cmd, nullptr);
+    EXPECT_EQ(cmd->help_text(), "Show delivery statistics with accept/reject/"
+                                "retry ratios");
+    EXPECT_EQ(cmd->order(), 286);
+}
+
+TEST(ActorDeliveryStatsCommandTest, MissingActorId) {
+    auto* cmd = find_cmd("actor/<id>/delivery-stats");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Missing actor ID"), std::string::npos);
+}
+
+TEST(ActorDeliveryStatsCommandTest, InvalidActorId) {
+    auto* cmd = find_cmd("actor/<id>/delivery-stats");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "garbage";
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Invalid actor ID"), std::string::npos);
+}
+
+TEST(ActorDeliveryStatsCommandTest, NullCliActor) {
+    auto* cmd = find_cmd("actor/<id>/delivery-stats");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+    ctx.params["<id>"] = "0xBEEF";
+    ctx.cli_actor = nullptr;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    EXPECT_NE(out.find("Internal error: no CLI actor"), std::string::npos);
+}
