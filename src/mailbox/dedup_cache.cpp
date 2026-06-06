@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/mailbox/dedup_cache.hpp>
+#include <hpactor/msg/dedup_cache.hpp>
 
 #include <hpactor/fault/fault_macros.hpp>
 
@@ -70,7 +70,7 @@ DedupCache::DedupCache(DedupCache&&) noexcept = default;
 DedupCache& DedupCache::operator=(DedupCache&&) noexcept = default;
 
 bool DedupCache::is_duplicate(EndPoint source_node, ActorId source_actor,
-                               MessageId message_id) noexcept {
+                              MessageId message_id) noexcept {
     DedupKey key{source_node, source_actor, message_id.value()};
 
     std::lock_guard<std::mutex> lock(impl_->mutex);

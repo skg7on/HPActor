@@ -22,7 +22,7 @@
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/messages.pb.h>
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/frame.hpp>
 #include <hpactor/spawn.hpp>
 #include <hpactor/types/types.hpp>
 

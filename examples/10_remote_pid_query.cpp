@@ -33,11 +33,11 @@
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/actor_type_registry.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/registrar.hpp>
 #include <hpactor/spawn.hpp>
 
@@ -65,8 +65,8 @@ static const hpactor::TypeTag KickTag{0x00001005};
 // Serialization helpers (plain C++ structs, no protobuf)
 // ---------------------------------------------------------------------------
 
-static hpactor::StreamBuffer serialize_pid_response(int pid,
-                                             const std::string& hostname) {
+static hpactor::StreamBuffer
+serialize_pid_response(int pid, const std::string& hostname) {
     hpactor::StreamBuffer b;
     b.push_back(static_cast<uint8_t>((pid >> 24) & 0xFF));
     b.push_back(static_cast<uint8_t>((pid >> 16) & 0xFF));
@@ -78,10 +78,8 @@ static hpactor::StreamBuffer serialize_pid_response(int pid,
 
 static std::pair<int, std::string>
 deserialize_pid_response(const hpactor::StreamBuffer& b) {
-    int pid = (static_cast<int>(b[0]) << 24)
-            | (static_cast<int>(b[1]) << 16)
-            | (static_cast<int>(b[2]) << 8)
-            | static_cast<int>(b[3]);
+    int pid = (static_cast<int>(b[0]) << 24) | (static_cast<int>(b[1]) << 16) |
+              (static_cast<int>(b[2]) << 8) | static_cast<int>(b[3]);
     return {pid, std::string(b.begin() + 4, b.end())};
 }
 
@@ -93,10 +91,8 @@ static hpactor::StreamBuffer serialize_actor_count(int count) {
 }
 
 static int deserialize_actor_count(const hpactor::StreamBuffer& b) {
-    return (static_cast<int>(b[0]) << 24)
-         | (static_cast<int>(b[1]) << 16)
-         | (static_cast<int>(b[2]) << 8)
-         | static_cast<int>(b[3]);
+    return (static_cast<int>(b[0]) << 24) | (static_cast<int>(b[1]) << 16) |
+           (static_cast<int>(b[2]) << 8) | static_cast<int>(b[3]);
 }
 
 // =============================================================================
@@ -124,7 +120,7 @@ class ProcessInfoActor : public hpactor::EventBasedActor {
                 int count = static_cast<int>(system().actor_count());
                 auto payload = serialize_actor_count(count);
                 context()->reply(hpactor::TypedMessage(ActorCountResponseTag,
-                                                        std::move(payload)));
+                                                       std::move(payload)));
             } else if (msg.type_id() == ShutdownMsgTag) {
                 set_exit_reason(0);
             }
@@ -149,40 +145,41 @@ class QueryActor : public hpactor::EventBasedActor {
     hpactor::Behavior make_behavior() override {
         return hpactor::Behavior{[this](hpactor::TypedMessage& msg) {
             switch (step_) {
-            case Step::WaitKick:
-                if (msg.type_id() == KickTag) {
-                    step_ = Step::WaitPid;
-                    context()->send(remote_.address(),
-                        hpactor::TypedMessage(QueryPidTag, hpactor::StreamBuffer{}));
-                }
-                break;
-            case Step::WaitPid:
-                if (msg.type_id() == PidResponseTag) {
-                    auto [pid, hostname] =
-                        deserialize_pid_response(msg.payload());
-                    std::cout << "  Remote PID: " << pid << std::endl;
-                    std::cout << "  Remote hostname: " << hostname
-                              << std::endl;
-                    step_ = Step::WaitActorCount;
-                    context()->send(remote_.address(),
-                        hpactor::TypedMessage(QueryActorCountTag,
-                                               hpactor::StreamBuffer{}));
-                }
-                break;
-            case Step::WaitActorCount:
-                if (msg.type_id() == ActorCountResponseTag) {
-                    int count = deserialize_actor_count(msg.payload());
-                    std::cout << "  Remote actor count: " << count
-                              << std::endl;
-                    step_ = Step::Done;
-                    context()->send(remote_.address(),
-                        hpactor::TypedMessage(ShutdownMsgTag,
-                                               hpactor::StreamBuffer{}));
-                    done_.set_value();
-                }
-                break;
-            default:
-                break;
+                case Step::WaitKick:
+                    if (msg.type_id() == KickTag) {
+                        step_ = Step::WaitPid;
+                        context()->send(remote_.address(),
+                                        hpactor::TypedMessage(
+                                            QueryPidTag, hpactor::StreamBuffer{}));
+                    }
+                    break;
+                case Step::WaitPid:
+                    if (msg.type_id() == PidResponseTag) {
+                        auto [pid, hostname] =
+                            deserialize_pid_response(msg.payload());
+                        std::cout << "  Remote PID: " << pid << std::endl;
+                        std::cout << "  Remote hostname: " << hostname << std::endl;
+                        step_ = Step::WaitActorCount;
+                        context()->send(
+                            remote_.address(),
+                            hpactor::TypedMessage(QueryActorCountTag,
+                                                  hpactor::StreamBuffer{}));
+                    }
+                    break;
+                case Step::WaitActorCount:
+                    if (msg.type_id() == ActorCountResponseTag) {
+                        int count = deserialize_actor_count(msg.payload());
+                        std::cout << "  Remote actor count: " << count << std::endl;
+                        step_ = Step::Done;
+                        context()->send(
+                            remote_.address(),
+                            hpactor::TypedMessage(ShutdownMsgTag,
+                                                  hpactor::StreamBuffer{}));
+                        done_.set_value();
+                    }
+                    break;
+                default:
+                    break;
             }
         }};
     }
@@ -217,11 +214,11 @@ static void run_server(uint16_t port) {
 
     hpactor::ActorSystem system(config);
 
-    system.actor_type_registry()
-        .register_type<ProcessInfoActor>("process_info");
+    system.actor_type_registry().register_type<ProcessInfoActor>("process_"
+                                                                 "info");
 
-    std::cout << "SERVER: pid=" << getpid()
-              << " endpoint=" << endpoint_str << std::endl;
+    std::cout << "SERVER: pid=" << getpid() << " endpoint=" << endpoint_str
+              << std::endl;
 
     while (!shutdown_requested.load()) {
         std::this_thread::sleep_for(std::chrono::milliseconds(100));
@@ -242,9 +239,8 @@ static void run_client(uint16_t port) {
     config.enable_network = true;
     config.endpoint = hpactor::endpoint_ops::parse_endpoint("127.0.0.1:0");
     config.tcp_port = 0;
-    config.registrar.static_routes.push_back(
-        hpactor::net::StaticRouteConfig{hpactor::Ipv4Endpoint{}, "127.0.0.1",
-                                         port});
+    config.registrar.static_routes.push_back(hpactor::net::StaticRouteConfig{
+        hpactor::Ipv4Endpoint{}, "127.0.0.1", port});
 
     hpactor::ActorSystem system(config);
 
@@ -252,19 +248,19 @@ static void run_client(uint16_t port) {
     auto server_ep = hpactor::endpoint_ops::parse_endpoint(endpoint_str);
     auto conn = system.transport()->connect(server_ep, "127.0.0.1", port);
     if (!conn) {
-        std::cerr << "CLIENT: failed to connect to server at "
-                  << endpoint_str << std::endl;
+        std::cerr << "CLIENT: failed to connect to server at " << endpoint_str
+                  << std::endl;
         return;
     }
     std::cout << "CLIENT: connected to server" << std::endl;
 
     // Spawn ProcessInfoActor on the server
     std::cout << "CLIENT: spawning remote ProcessInfoActor..." << std::endl;
-    auto result =
-        system.spawn_remote(endpoint_str, "process_info", hpactor::StreamBuffer{});
+    auto result = system.spawn_remote(endpoint_str, "process_info",
+                                      hpactor::StreamBuffer{});
     if (!result.has_value()) {
-        std::cerr << "CLIENT: spawn_remote failed: "
-                  << result.error().message() << std::endl;
+        std::cerr << "CLIENT: spawn_remote failed: " << result.error().message()
+                  << std::endl;
         return;
     }
     hpactor::ActorRef remote_ref = result.value();
@@ -274,8 +270,7 @@ static void run_client(uint16_t port) {
     // Spawn local QueryActor to send queries
     std::promise<void> done;
     auto done_future = done.get_future();
-    auto query = system.spawn<QueryActor>(std::move(remote_ref),
-                                           std::move(done));
+    auto query = system.spawn<QueryActor>(std::move(remote_ref), std::move(done));
 
     // Kick the query actor
     system.deliver_local(query.id(),
@@ -283,8 +278,7 @@ static void run_client(uint16_t port) {
 
     auto status = done_future.wait_for(std::chrono::seconds(10));
     if (status == std::future_status::timeout) {
-        std::cerr << "CLIENT: timed out waiting for query responses"
-                  << std::endl;
+        std::cerr << "CLIENT: timed out waiting for query responses" << std::endl;
     }
 }
 
@@ -300,14 +294,14 @@ int main(int argc, char* argv[]) {
     }
 
     if (mode == "--server") {
-        if (port == 0) port = 17010;
-        std::cout << "=== HPActor Example 10: Remote PID Query ==="
-                  << std::endl;
+        if (port == 0)
+            port = 17010;
+        std::cout << "=== HPActor Example 10: Remote PID Query ===" << std::endl;
         run_server(port);
     } else if (mode == "--client") {
-        if (port == 0) port = 17010;
-        std::cout << "=== HPActor Example 10: Remote PID Query ==="
-                  << std::endl;
+        if (port == 0)
+            port = 17010;
+        std::cout << "=== HPActor Example 10: Remote PID Query ===" << std::endl;
         run_client(port);
     } else {
         std::cout << "Usage: " << argv[0]

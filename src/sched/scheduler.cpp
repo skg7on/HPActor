@@ -18,8 +18,8 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mem/memory_config.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/worker_thread.hpp>
 

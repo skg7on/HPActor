@@ -14,9 +14,9 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/http_client.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/types/types.hpp>

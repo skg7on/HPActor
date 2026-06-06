@@ -16,9 +16,9 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>
 #include <hpactor/messages.pb.h>
+#include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>

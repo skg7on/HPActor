@@ -37,11 +37,11 @@
 // =============================================================================
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/messages.pb.h>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/supervision/all_for_one_supervisor.hpp>
 #include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/supervision.hpp>

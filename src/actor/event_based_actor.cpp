@@ -22,11 +22,11 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/messages.pb.h>
 #include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
-#include <hpactor/types/failure_envelope.hpp>
 
 #include <chrono>
 #include <cstring>

@@ -19,8 +19,8 @@
 #include <hpactor/mailbox/detail/handlers/signal_only_handler.hpp>
 #include <hpactor/mailbox/detail/handlers/spill_to_overflow_handler.hpp>
 #include <hpactor/mailbox/detail/overflow_context.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mailbox/overflow_queue.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>

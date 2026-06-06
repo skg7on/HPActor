@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <hpactor/core/mutex_mailbox.hpp>
+#include <hpactor/msg/typed_message.hpp>
 
 using namespace hpactor;
 

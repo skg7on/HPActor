@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/typed_message.hpp>
+#include <hpactor/msg/typed_message.hpp>
 
 namespace hpactor {
 

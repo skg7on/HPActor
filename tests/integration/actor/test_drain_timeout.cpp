@@ -15,10 +15,10 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_config.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/types/types.hpp>
 

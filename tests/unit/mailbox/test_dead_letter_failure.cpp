@@ -14,8 +14,8 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/mailbox/dead_letter_queue.hpp>
-#include <hpactor/types/failure_envelope.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/failure_envelope.hpp>
 
 // failure_reason(DeadLetterReason) mapping
 TEST(DeadLetterFailureTest, FailureReasonMapping) {

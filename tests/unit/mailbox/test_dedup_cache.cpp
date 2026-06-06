@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/mailbox/dedup_cache.hpp>
+#include <hpactor/msg/dedup_cache.hpp>
 #include <hpactor/ref/actor_address.hpp>
 
 #include <thread>
@@ -176,8 +176,9 @@ TEST(DedupCacheTest, ConcurrentAccess) {
             for (int i = 0; i < kPerThread; ++i) {
                 // Each thread uses a unique actor_id range to avoid too many
                 // collisions (we're testing safety, not dedup logic)
-                (void)cache.is_duplicate(ep, ActorId{static_cast<uint64_t>(t * kPerThread + i + 1)},
-                                   MessageId{static_cast<uint64_t>(i)});
+                (void)cache.is_duplicate(
+                    ep, ActorId{static_cast<uint64_t>(t * kPerThread + i + 1)},
+                    MessageId{static_cast<uint64_t>(i)});
             }
         });
     }

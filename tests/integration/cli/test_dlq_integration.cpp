@@ -16,7 +16,7 @@
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/pretty_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <cli_test_helpers.hpp>

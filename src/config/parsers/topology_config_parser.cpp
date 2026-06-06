@@ -14,8 +14,8 @@
 
 #include <hpactor/config/toml_config_parser.hpp>
 #include <hpactor/config/toml_parser_registry.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 namespace hpactor::config {
 namespace {

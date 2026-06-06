@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/delivery_result.hpp>
 #include <hpactor/metrics/metrics_aggregator.hpp>
 #include <hpactor/metrics/metrics_registry.hpp>
+#include <hpactor/msg/delivery_result.hpp>
 
 #include <gtest/gtest.h>
 
@@ -197,7 +197,8 @@ TEST_F(MetricsAggregatorTest, DeliveryResultEvents) {
     MetricEvent accepted{};
     accepted.actor_id = hpactor::ActorId{10};
     accepted.event_type = MetricEventType::kDeliveryResult;
-    accepted.code = static_cast<uint8_t>(hpactor::mailbox::DeliveryStatus::Accepted);
+    accepted.code =
+        static_cast<uint8_t>(hpactor::mailbox::DeliveryStatus::Accepted);
     accepted.value_hi = 1;
     agg().on_event(accepted);
 
@@ -205,7 +206,8 @@ TEST_F(MetricsAggregatorTest, DeliveryResultEvents) {
     MetricEvent rejected{};
     rejected.actor_id = hpactor::ActorId{10};
     rejected.event_type = MetricEventType::kDeliveryResult;
-    rejected.code = static_cast<uint8_t>(hpactor::mailbox::DeliveryStatus::MailboxFull);
+    rejected.code =
+        static_cast<uint8_t>(hpactor::mailbox::DeliveryStatus::MailboxFull);
     rejected.value_hi = 1;
     agg().on_event(rejected);
 
@@ -227,7 +229,8 @@ TEST_F(MetricsAggregatorTest, DeliveryResultEvents) {
             break;
         }
     }
-    ASSERT_NE(family, nullptr) << "hpactor_delivery_results_total family not found";
+    ASSERT_NE(family, nullptr) << "hpactor_delivery_results_total family not "
+                                  "found";
 
     // Count by status label
     uint64_t total = 0;
@@ -243,9 +246,12 @@ TEST_F(MetricsAggregatorTest, DeliveryResultEvents) {
     for (auto& [labels, value] : family->counters) {
         for (auto& [k, v] : labels.labels) {
             if (k == "status") {
-                if (v == "accepted") has_accepted = true;
-                if (v == "mailbox_full") has_mailbox_full = true;
-                if (v == "no_route") has_no_route = true;
+                if (v == "accepted")
+                    has_accepted = true;
+                if (v == "mailbox_full")
+                    has_mailbox_full = true;
+                if (v == "no_route")
+                    has_no_route = true;
             }
         }
     }

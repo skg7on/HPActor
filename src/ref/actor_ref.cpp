@@ -15,7 +15,7 @@
 // Actor reference implementation - see actor_ref.hpp
 
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/delivery_result.hpp>
+#include <hpactor/msg/delivery_result.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 
 namespace hpactor {

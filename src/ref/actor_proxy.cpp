@@ -15,9 +15,9 @@
 // ActorProxy implementation - see actor_proxy.hpp
 
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/frame.hpp>
 #include <hpactor/net/actor_location_cache.hpp>
-#include <hpactor/net/frame.hpp>
 #include <hpactor/net/service_discovery.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_proxy.hpp>

@@ -15,7 +15,7 @@
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/log/logger.hpp>
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/frame.hpp>
 #include <hpactor/spawn.hpp>
 
 #include <hpactor/messages.pb.h>

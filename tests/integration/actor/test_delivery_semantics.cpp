@@ -15,9 +15,9 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/delivery_mode.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
-#include <hpactor/net/frame.hpp>
+#include <hpactor/msg/delivery_mode.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
+#include <hpactor/msg/frame.hpp>
 
 #include <chrono>
 #include <gtest/gtest.h>
@@ -228,9 +228,8 @@ TEST(RemoteDeliveryRoundTripTest, DeliverRemoteAccepted) {
     auto target = system_b.spawn<EventBasedActor>();
 
     // Construct a wire frame as if sent from system A to system B's actor.
-    ActorAddress sender_addr{
-        endpoint_ops::parse_endpoint("127.0.0.1:9001"),
-        ActorType{0}, ActorId{1}, 0};
+    ActorAddress sender_addr{endpoint_ops::parse_endpoint("127.0.0.1:9001"),
+                             ActorType{0}, ActorId{1}, 0};
     net::WireFrame frame;
     net::to_proto(frame.pb_frame.mutable_sender(), sender_addr);
     net::to_proto(frame.pb_frame.mutable_receiver(), target.address());
@@ -285,8 +284,7 @@ TEST(RemoteDeliveryRoundTripTest, DeliverWithResultToLiveActor) {
     auto target = system.spawn<EventBasedActor>();
 
     auto dr = system.deliver_with_result(
-        target.address().id,
-        TypedMessage(TypeTag::User, StreamBuffer{1}));
+        target.address().id, TypedMessage(TypeTag::User, StreamBuffer{1}));
     EXPECT_TRUE(dr.ok());
     EXPECT_EQ(dr.status, mailbox::DeliveryStatus::Accepted);
 

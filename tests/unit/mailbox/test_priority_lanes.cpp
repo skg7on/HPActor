@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
-#include <gtest/gtest.h>
 #include <atomic>
+#include <gtest/gtest.h>
 
 using namespace hpactor;
 using namespace hpactor::mailbox;
@@ -27,8 +27,7 @@ namespace {
 struct MockScheduler : public sched::IScheduler {
     void start() override {}
     void stop() override {}
-    void notify_ready(ActorId actor, uint8_t priority,
-                      int64_t deadline) override {
+    void notify_ready(ActorId actor, uint8_t priority, int64_t deadline) override {
         last_actor = actor;
         last_priority = priority;
         last_deadline = deadline;
@@ -45,8 +44,12 @@ struct MockScheduler : public sched::IScheduler {
         return {};
     }
     void cancel_timer(sched::TimerHandle) override {}
-    size_t worker_count() const override { return 1; }
-    bool is_running() const override { return true; }
+    size_t worker_count() const override {
+        return 1;
+    }
+    bool is_running() const override {
+        return true;
+    }
     void register_dedicated_thread(ActorId, int) override {}
     void register_dedicated_pool(ActorId, uint32_t) override {}
     void unregister_dedicated(ActorId) override {}
@@ -84,7 +87,7 @@ MailboxEnvelopeMeta sys_meta() {
 // ── Tests with priority_aware = false (default) ──────────────
 
 class PriorityLanesDefaultTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         cfg.capacity.max_messages = 4;
         mbox.set_config(cfg);
@@ -111,7 +114,7 @@ TEST_F(PriorityLanesDefaultTest, AllUserMessagesToLane0FifoDequeue) {
 // ── Tests with priority_aware = true ─────────────────────────
 
 class PriorityLanesTest : public ::testing::Test {
-protected:
+  protected:
     void SetUp() override {
         cfg.capacity.max_messages = 8;
         cfg.priority_aware = true;

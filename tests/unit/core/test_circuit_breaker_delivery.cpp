@@ -16,7 +16,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/quarantine_policy.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 #include <chrono>
 #include <gtest/gtest.h>

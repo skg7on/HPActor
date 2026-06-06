@@ -16,8 +16,8 @@
 
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/msg/request_timeout.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/types/request_timeout.hpp>
 #include <hpactor/types/types.hpp>
 
 namespace hpactor {

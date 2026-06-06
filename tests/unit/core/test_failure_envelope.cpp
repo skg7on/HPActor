@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/types/failure_envelope.hpp>
+#include <hpactor/msg/failure_envelope.hpp>
 
 #include <string>
 

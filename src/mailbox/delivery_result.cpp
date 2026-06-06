@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/mailbox/delivery_result.hpp>
+#include <hpactor/msg/delivery_result.hpp>
 
 namespace hpactor::mailbox {
 

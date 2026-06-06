@@ -16,7 +16,7 @@
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/cli/pretty_formatter.hpp>
-#include <hpactor/types/failure_reason.hpp>
+#include <hpactor/msg/failure_reason.hpp>
 
 #include <gtest/gtest.h>
 
@@ -72,7 +72,8 @@ TEST(FailureReasonsCommandTest, ExecuteContainsAllReasonStrings) {
 
     std::string out = execute_cmd(*cmd);
 
-    // Spot-check a selection of failure reason strings (snake_case from to_string)
+    // Spot-check a selection of failure reason strings (snake_case from
+    // to_string)
     EXPECT_NE(out.find("no_route"), std::string::npos);
     EXPECT_NE(out.find("actor_dead"), std::string::npos);
     EXPECT_NE(out.find("mailbox_full"), std::string::npos);

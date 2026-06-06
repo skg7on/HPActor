@@ -36,12 +36,12 @@
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
 #include <hpactor/mem/std_allocator.hpp>
+#include <hpactor/msg/failure_envelope.hpp>
+#include <hpactor/msg/frame.hpp>
 #include <hpactor/net/async_io_fwd.hpp>
-#include <hpactor/net/frame.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/spawn.hpp>
-#include <hpactor/types/failure_envelope.hpp>
 
 // Protobuf message types for spawn serialization
 #include <hpactor/common.pb.h>

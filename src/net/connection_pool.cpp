@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <hpactor/metrics/metrics_event.hpp>
+#include <hpactor/msg/frame.hpp>
 #include <hpactor/net/connection_pool.hpp>
-#include <hpactor/net/frame.hpp>
 #include <hpactor/spawn.hpp>
 
 #include <hpactor/common.pb.h>

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/actor_context.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/tracing/json_exporter.hpp>
 #include <hpactor/tracing/memory_exporter.hpp>
 #include <hpactor/tracing/otlp_exporter.hpp>
@@ -186,7 +186,7 @@ void TraceManager::finish_span(SpanHandle& span, SpanStatus status) noexcept {
 void TraceManager::inject_message_context(TypedMessage& msg, const ActorContext* ctx,
                                           bool allow_root) {
     FAULT_INJECT("hpactor.tracing.inject_context.corrupt") {
-        return;  // leave message without trace context
+        return; // leave message without trace context
     }
     if (!config_.enabled || msg.has_trace_context()) {
         return;

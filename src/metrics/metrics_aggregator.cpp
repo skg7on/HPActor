@@ -17,8 +17,8 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>
-#include <hpactor/mailbox/delivery_result.hpp>
 #include <hpactor/metrics/metrics_aggregator.hpp>
+#include <hpactor/msg/delivery_result.hpp>
 #include <hpactor/types/types.hpp>
 #include <string>
 
@@ -154,10 +154,11 @@ void Aggregator::ensure_families_registered() {
                                    "Total endpoint circuit breaker "
                                    "transitions.",
                                    MetricType::kCounter);
-    delivery_results_family_ =
-        &registry_.register_family("hpactor_delivery_results_total",
-                                   "Total delivery results by status.",
-                                   MetricType::kCounter);
+    delivery_results_family_ = &registry_.register_family("hpactor_delivery_"
+                                                          "results_total",
+                                                          "Total delivery "
+                                                          "results by status.",
+                                                          MetricType::kCounter);
 }
 
 LabelSet Aggregator::make_actor_labels(ActorId id) {

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/types/request_handle.hpp>
+#include <hpactor/msg/request_handle.hpp>
 #include <thread>
 
 namespace hpactor {

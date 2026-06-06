@@ -21,7 +21,7 @@
 #include <hpactor/actor/stateful_actor.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/sched/scheduler.hpp>
 

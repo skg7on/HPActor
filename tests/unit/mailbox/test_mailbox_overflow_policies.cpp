@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 struct NoopScheduler : public hpactor::sched::IScheduler {
@@ -143,7 +143,8 @@ TEST_F(OverflowPolicyTest, SystemLaneRejectsWhenFull) {
     auto r1 = d.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{1}), sys_meta);
     EXPECT_TRUE(r1.accepted());
 
-    // System lane full — system messages are rejected (not dropped via overflow)
+    // System lane full — system messages are rejected (not dropped via
+    // overflow)
     auto r2 = d.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{2}), sys_meta);
     EXPECT_EQ(r2.code, EnqueueResultCode::Rejected);
 }
@@ -194,8 +195,8 @@ TEST_F(OverflowPolicyTest, DropOldestFreesByteBudget) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
-    uint64_t sz = estimate_message_bytes(
-        TypedMessage(TypeTag::User, StreamBuffer{0}));
+    uint64_t sz =
+        estimate_message_bytes(TypedMessage(TypeTag::User, StreamBuffer{0}));
 
     MailboxConfig cfg;
     cfg.capacity.max_messages = 1;
@@ -284,13 +285,15 @@ TEST_F(OverflowPolicyTest, SignalOnlySystemMessageReserveNotRejected) {
     // Fill normal capacity with user message
     MailboxEnvelopeMeta user_meta;
     user_meta.type_tag = TypeTag::User;
-    auto r1 = mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), user_meta);
+    auto r1 =
+        mbox.try_push(TypedMessage(TypeTag::User, StreamBuffer{1}), user_meta);
     EXPECT_TRUE(r1.accepted());
 
     // System message uses protected reserve, not overflow policy
     MailboxEnvelopeMeta sys_meta;
     sys_meta.type_tag = TypeTag::DownMsg;
-    auto r2 = mbox.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{9}), sys_meta);
+    auto r2 =
+        mbox.try_push(TypedMessage(TypeTag::DownMsg, StreamBuffer{9}), sys_meta);
     EXPECT_TRUE(r2.accepted());
 
     auto s = mbox.snapshot();

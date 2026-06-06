@@ -2,7 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
-#include <hpactor/types/request_timeout.hpp>
+#include <hpactor/msg/request_timeout.hpp>
 
 namespace hpactor {
 namespace {
