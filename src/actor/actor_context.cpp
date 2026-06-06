@@ -266,6 +266,15 @@ void ActorContext::cancel_schedule(AlarmHandle handle) {
     sched->cancel_timer(sched::TimerHandle{handle.value()});
 }
 
+void ActorContext::passivate() {
+    // Self-passivation: the actor's lifecycle is transitioned to
+    // kPassivating after the current handler returns. The
+    // PassivationManager (owned by ActorSystem) handles the protocol.
+    // This method sets a flag that the actor runner checks after
+    // the current activation completes.
+    passivation_requested_ = true;
+}
+
 std::vector<Actor> ActorContext::children() const {
     return children_;
 }
