@@ -18,6 +18,7 @@ add_library(hpactor_lib SHARED
     actor/http_gateway_actor.cpp
     actor/lifecycle_actor.cpp
     actor/blocking_actor.cpp
+    actor/durable/in_memory_state_store.cpp
     actor/scoped_actor.cpp
     actor_type_registry.cpp
     spawn.cpp
