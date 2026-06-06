@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/actor_directory.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <memory>

@@ -15,10 +15,10 @@
 #pragma once
 
 #include <hpactor/mailbox/detail/reservation_manager.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
 #include <hpactor/mailbox/overflow_queue.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 #include <atomic>
 #include <functional>

@@ -15,10 +15,10 @@
 #pragma once
 
 #include <hpactor/core/actor_system_ids.hpp>
+#include <hpactor/msg/failure_reason.hpp>
+#include <hpactor/msg/request_handle.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/types/failure_reason.hpp>
-#include <hpactor/types/request_handle.hpp>
 #include <hpactor/types/types.hpp>
 
 namespace hpactor {

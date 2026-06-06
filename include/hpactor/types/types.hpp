@@ -29,9 +29,9 @@
 #include <hpactor/adt/id.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/adt/tags.hpp>
+#include <hpactor/msg/failure_reason.hpp>
 #include <hpactor/msg/message_id.hpp>
 #include <hpactor/msg/type_tag.hpp>
-#include <hpactor/types/failure_reason.hpp>
 #include <vector>
 
 namespace hpactor {

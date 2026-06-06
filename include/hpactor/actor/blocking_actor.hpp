@@ -16,9 +16,9 @@
 
 #include <hpactor/actor/actor_state.hpp>
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/core/mailbox.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/types/types.hpp>
 

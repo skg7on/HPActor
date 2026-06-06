@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <hpactor/actor/typed_message.hpp>
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/types/types.hpp>

@@ -17,9 +17,9 @@
 #include <hpactor/actor/quarantine_policy.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/log/log_config.hpp>
-#include <hpactor/mailbox/dead_letter_queue.hpp>
-#include <hpactor/mailbox/delivery_mode.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/delivery_mode.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/net/endpoint_circuit_breaker.hpp>
 #include <hpactor/net/endpoint_outbound_queue.hpp>
 #include <hpactor/tracing/trace_config.hpp>

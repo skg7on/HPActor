@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/adt/stream_buffer.hpp>
-#include <hpactor/mailbox/mailbox_policy.hpp>
+#include <hpactor/msg/enqueue_result.hpp>
 
 #include <optional>
 

@@ -14,9 +14,9 @@
 
 #pragma once
 
+#include <hpactor/msg/request_handle.hpp>
+#include <hpactor/msg/request_timeout.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/types/request_handle.hpp>
-#include <hpactor/types/request_timeout.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
