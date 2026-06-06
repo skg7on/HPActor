@@ -441,6 +441,14 @@ void Aggregator::on_event(const MetricEvent& e) {
             // Full metric handlers will be wired in Phase 6 (Metrics & CLI).
             // The event is still emitted into the ring buffer for telemetry.
             break;
+        case MetricEventType::kAskSent:
+        case MetricEventType::kAskCompleted:
+        case MetricEventType::kAskTimeout:
+        case MetricEventType::kAskExpired:
+        case MetricEventType::kAskRetry:
+        case MetricEventType::kAskCancelled:
+            // Ask lifecycle metrics — handlers wired in ACT-007.
+            break;
     }
 }
 

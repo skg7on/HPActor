@@ -44,6 +44,9 @@ struct PendingCall {
     int max_retries = 5;
     std::promise<result<StreamBuffer>> promise;
     std::chrono::steady_clock::time_point enqueued_at;
+    std::chrono::steady_clock::time_point deadline{
+        std::chrono::steady_clock::time_point::max()};
+    FailureSource source{FailureSource::Rpc};
     std::atomic<bool> ready_{false};
     bool has_trace_context{false};
     TraceContext trace_context{};
@@ -58,6 +61,16 @@ template <typename T> class RpcFuture {
     RpcFuture(std::future<result<T>> inner, std::chrono::milliseconds timeout);
 
     result<T> get(); // blocks until result available or timeout
+
+    /// \brief Non-blocking readiness check.
+    ///
+    /// \return true if the future has been resolved (response arrived or
+    /// error).
+    bool ready() const {
+        if (!inner_.valid())
+            return true;
+        return inner_.wait_for(std::chrono::seconds(0)) == std::future_status::ready;
+    }
 
   private:
     std::future<result<T>> inner_;
