@@ -42,10 +42,81 @@
 
 namespace hpactor::mailbox {
 
+/// \brief Callback invoked when a previously empty mailbox receives its first
+///        message.
+///
+/// The callback is called from the enqueue path (producer thread) under the
+/// CAS edge-triggered wakeup protocol: it fires only on the empty→non-empty
+/// transition. The callee is responsible for scheduling or resuming the actor
+/// coroutine.
+///
+/// \note Thread safety: invoked by an arbitrary producer thread. The callee
+///       must be safe to call from any thread.
 using ActorContinuationCallback = std::function<void()>;
 
+/// \brief Lock-free multi-producer, single-consumer actor mailbox with
+///        bounded capacity, priority lanes, backpressure, and overflow
+///        handling.
+///
+/// This is the primary mailbox implementation for event-based actors. It
+/// composes a \c MultiLaneQueue for storage, a \c ReservationManager for
+/// bounded admission, a \c PressureStateMachine for hysteresis-based
+/// backpressure, an \c IOverflowHandler for policy-driven overflow, and a
+/// \c BackpressureSignalGate for rate-limited signal emission.
+///
+/// \par Producer path (lock-free)
+/// Multiple producer threads call \c try_push() concurrently without
+/// blocking. Admission is gated by atomic reservation of message-count and
+/// byte capacity. On rejection, the configured \c OverflowPolicy determines
+/// whether the message is dropped, dead-lettered, spilled to an overflow
+/// queue, or rejected with a backpressure signal.
+///
+/// \par Consumer path (spin-lock serialized)
+/// A single consumer (the actor's scheduler worker) calls \c dequeue().
+/// Dequeue acquires a TAS spin-lock, drains the highest-priority
+/// non-empty lane, releases the corresponding reservation, updates
+/// pressure state, and drains the overflow queue if the policy is
+/// \c SpillToOverflowQueue.
+///
+/// \par Lane routing
+/// System messages (TypeTag < \c TypeTag::User) are routed to a dedicated
+/// system lane that bypasses the capacity reservation system and is
+/// protected by a separate depth guard (\c protected_system_messages).
+/// User messages are routed to lane \c min(priority, num_user_lanes-1).
+///
+/// \par Wakeup protocol
+/// The mailbox uses an edge-triggered CAS wakeup: when the first message
+/// arrives in an empty mailbox, the \c mailbox_was_empty_ flag is CAS'd
+/// from true→false, the continuation callback is invoked, and
+/// \c scheduler_->notify_ready() is called. Subsequent enqueues into a
+/// non-empty mailbox do not re-trigger the wakeup. The consumer resets
+/// the flag to true when \c dequeue() drains the last message.
+///
+/// \tparam T Message type stored in the mailbox. Must have an
+///           \c std::atomic<T*> \c mpsc_next member for the lock-free
+///           queue. Typically \c TypedMessage.
+///
+/// \note Thread safety: producers are lock-free (multi-producer safe).
+///       The consumer path is serialized by a TAS spin-lock. Counter
+///       fields use relaxed atomics and are safe to read from any thread,
+///       but may be stale by the time the caller observes them.
+/// \note Ownership: messages are allocated via \c mem::allocate() on
+///       enqueue. The caller of \c dequeue() or \c try_pop() owns the
+///       returned pointer and must destroy and deallocate it.
 template <typename T> class MPSCActorMailbox {
   public:
+    /// \brief Construct a mailbox for an actor.
+    ///
+    /// Initializes the multi-lane queue, overflow queue, overflow handler,
+    /// and pressure state machine from the supplied configuration.
+    ///
+    /// \param[in] actor_id The owning actor's identifier.
+    /// \param[in] scheduler Scheduler used for \c notify_ready() wakeups.
+    ///                      Must outlive the mailbox.
+    /// \param[in] config Initial mailbox configuration. Defaults to an
+    ///                   unbounded 1024-message capacity with
+    ///                   \c RejectNewest overflow policy.
+    /// \pre \p scheduler must not be null.
     MPSCActorMailbox(ActorId actor_id, sched::IScheduler* scheduler,
                      MailboxConfig config = {}) noexcept
         : actor_id_(actor_id), scheduler_(scheduler), config_(config) {
@@ -58,6 +129,14 @@ template <typename T> class MPSCActorMailbox {
         lanes_.set_num_user_lanes(config_.priority_levels);
     }
 
+    /// \brief Destroy the mailbox.
+    ///
+    /// Destroys and deallocates any message still held in the pending-free
+    /// slot. Messages remaining in lanes are leaked — the actor must drain
+    /// the mailbox before destruction.
+    ///
+    /// \note The caller must ensure no concurrent \c try_push() or
+    ///       \c dequeue() calls are in flight during destruction.
     ~MPSCActorMailbox() {
         T* p = lanes_.release_pending_free();
         if (p) {
@@ -66,10 +145,35 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    /// \brief Register a callback invoked on the empty→non-empty transition.
+    ///
+    /// The callback is called from the enqueue path (producer thread) and
+    /// typically resumes the actor coroutine or schedules the actor for
+    /// execution.
+    ///
+    /// \param[in] callback The continuation to invoke. An empty
+    ///                     \c std::function disables the callback.
+    /// \note Thread safety: the callback is invoked by an arbitrary producer
+    ///       thread. The registered function must be safe to call from any
+    ///       thread.
     void set_continuation_callback(ActorContinuationCallback callback) {
         continuation_callback_ = std::move(callback);
     }
 
+    /// \brief Replace the mailbox configuration at runtime.
+    ///
+    /// Reconfigures capacity, watermarks, overflow policy, overflow handler,
+    /// overflow queue depth, and priority lane count. Existing messages are
+    /// not affected.
+    ///
+    /// \param[in] cfg New configuration. Zero \c max_messages is clamped to
+    ///                1024. \c critical_watermark <= 0 is clamped to
+    ///                \c high_watermark * 2 (or 1.0). If
+    ///                \c critical_watermark < \c high_watermark, it is
+    ///                clamped to \c high_watermark.
+    /// \note Thread safety: not safe to call concurrently with
+    ///       \c try_push() or \c dequeue(). Call from the actor's own
+    ///       thread or during a quiescent period.
     void set_config(const MailboxConfig& cfg) noexcept {
         config_ = cfg;
         if (config_.capacity.max_messages == 0) {
@@ -91,23 +195,113 @@ template <typename T> class MPSCActorMailbox {
         lanes_.set_num_user_lanes(config_.priority_levels);
     }
 
+    /// \brief Read the current mailbox configuration.
+    ///
+    /// \return A const reference to the active \c MailboxConfig.
+    /// \note Thread safety: the returned reference may be invalidated by a
+    ///       concurrent \c set_config() call. Read from the actor's own
+    ///       thread or during a quiescent period.
     const MailboxConfig& config() const noexcept {
         return config_;
     }
 
+    /// \brief Install a rate limiter that gates message consumption on
+    ///        \c dequeue().
+    ///
+    /// When set, \c dequeue() calls \c try_consume() before returning a
+    /// user message. If the rate limiter denies the token, the message is
+    /// re-enqueued to lane 0 with wakeup suppressed. System messages
+    /// bypass the rate limiter.
+    ///
+    /// \param[in] limiter The rate limiter instance. Pass \c nullptr to
+    ///                    disable rate limiting.
+    /// \note Thread safety: the pointer is a non-atomic store. Set before
+    ///       the mailbox is used concurrently, or from the actor's own
+    ///       thread during a quiescent period.
     void set_rate_limiter(std::unique_ptr<ActorRateLimiter> limiter) noexcept {
         rate_limiter_ = std::move(limiter);
     }
 
+    /// \brief Install a chain of admission policies evaluated on
+    ///        \c try_push() before lane routing.
+    ///
+    /// Policies are evaluated in order; the first non-\c Accept decision
+    /// short-circuits the chain and rejects the message. An empty or null
+    /// policy set disables admission gating.
+    ///
+    /// \param[in] policies Shared pointer to an ordered vector of admission
+    ///                     policy instances. Pass \c nullptr or an empty
+    ///                     vector to disable.
+    /// \note Thread safety: the pointer is a non-atomic store. Set before
+    ///       the mailbox is used concurrently, or from the actor's own
+    ///       thread during a quiescent period.
     void set_admission_policies(
         std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> policies) noexcept {
         admission_policies_ = std::move(policies);
     }
 
+    /// \brief Read-only access to the installed rate limiter.
+    ///
+    /// \return Pointer to the \c ActorRateLimiter, or \c nullptr if none
+    ///         is installed.
+    /// \note Thread safety: the returned pointer may be invalidated by a
+    ///       concurrent \c set_rate_limiter() call.
     const ActorRateLimiter* rate_limiter() const noexcept {
         return rate_limiter_.get();
     }
 
+    /// \brief Attempt to enqueue a message into the mailbox (lock-free,
+    ///        multi-producer safe).
+    ///
+    /// This is the primary producer API. Before lane routing, the optional
+    /// admission policy chain is evaluated — if any policy returns a
+    /// non-\c Accept decision, the message is rejected. Accepted messages
+    /// are then routed to the appropriate lane (system or user), go through
+    /// atomic capacity reservation, and delegate to the overflow handler on
+    /// failure.
+    ///
+    /// \par Admission gate
+    /// If \c admission_policies_ is non-empty, \c evaluate_policy_chain()
+    /// runs before lane routing. A non-\c Accept decision increments
+    /// \c admission_rejected_total_ and returns \c Rejected immediately.
+    ///
+    /// \par System messages
+    /// Routed to the dedicated system lane, bypassing capacity reservation.
+    /// Protected by \c protected_system_messages — if the system lane depth
+    /// exceeds this threshold, the message is rejected.
+    ///
+    /// \par User messages
+    /// Admission is gated by \c ReservationManager::try_reserve(). On
+    /// success, the message is allocated and enqueued to the routed lane.
+    /// On failure, the \c IOverflowHandler is invoked with the configured
+    /// policy. If the handler returns \c DroppedExisting (indicating an
+    /// older message was evicted to make room), retry reservation once.
+    ///
+    /// \param[in,out] msg The message to enqueue. Moved-from on successful
+    ///                    enqueue or if the overflow handler consumes it.
+    /// \param[in] meta Envelope metadata (sender, priority, deadline,
+    ///                 estimated bytes). \c estimated_bytes is always
+    ///                 recomputed from the message via
+    ///                 \c estimate_node_bytes().
+    /// \return An \c EnqueueResult describing the outcome. Check
+    ///         \c result.accepted() to determine success. On rejection,
+    ///         \c retry_after may contain a suggested backoff duration.
+    /// \retval Accepted Message was enqueued under normal pressure.
+    /// \retval AcceptedWithSoftPressure Message was enqueued, but the
+    ///         mailbox is above the high watermark.
+    /// \retval Rejected Admission policy denied the message, or capacity
+    ///         reservation failed and the overflow policy did not make
+    ///         room.
+    /// \retval DroppedExisting An older message was evicted; the new
+    ///         message was enqueued in its place.
+    /// \retval ReroutedToDeadLetter Message was sent to the dead-letter
+    ///         queue instead of the mailbox.
+    /// \retval ReroutedToOverflow Message was spilled to the overflow queue.
+    /// \note Thread safety: lock-free and safe to call from any thread.
+    ///       Multiple producers may call concurrently.
+    /// \note The caller must not access \p msg after a successful enqueue
+    ///       (the mailbox owns it). After a rejection where the overflow
+    ///       handler has not consumed it, \p msg remains valid.
     EnqueueResult try_push(T&& msg, MailboxEnvelopeMeta meta = {}) noexcept {
         FAULT_INJECT("hpactor.mailbox.try_push.fail") {
             EnqueueResult r;
@@ -227,10 +421,36 @@ template <typename T> class MPSCActorMailbox {
         return make_result(pressure_state_.code_after_accept());
     }
 
+    /// \brief Fire-and-forget enqueue — discards the admission result.
+    ///
+    /// Equivalent to \c try_push() but the caller does not inspect the
+    /// outcome. Prefer \c try_push() when the caller needs to react to
+    /// rejection, backpressure, or retry timing.
+    ///
+    /// \param[in,out] msg The message to enqueue. Moved-from on success;
+    ///                    remains valid only if silently dropped.
+    /// \note Thread safety: lock-free and safe to call from any thread.
     void push(T&& msg) noexcept {
         (void)try_push(std::move(msg));
     }
 
+    /// \brief Enqueue an already-allocated message node with automatic
+    ///        capacity reservation.
+    ///
+    /// Used by internal paths (e.g., the scheduler replaying a deferred
+    /// message) where the message is already heap-allocated. Attempts
+    /// reservation; on failure, rejects and emits a \c kMailboxRejected
+    /// metric event.
+    ///
+    /// \param[in] node Heap-allocated message node. Ownership transfers to
+    ///                 the mailbox on success; leaked by the caller on
+    ///                 rejection (the caller cannot safely deallocate
+    ///                 after a rejected \c enqueue() because the scheduler
+    ///                 may have already processed it).
+    /// \note Thread safety: lock-free and safe to call from any thread.
+    /// \note Prefer \c try_push() for new messages. Use \c enqueue() only
+    ///       when the message is already allocated and the caller can
+    ///       tolerate silent rejection.
     void enqueue(T* node) noexcept {
         FAULT_INJECT("hpactor.mailbox.enqueue.fail") {
             return; // caller sees this as rejected
@@ -255,6 +475,27 @@ template <typename T> class MPSCActorMailbox {
         enqueue_reserved(node, meta);
     }
 
+    /// \brief Enqueue a message node whose capacity has already been
+    ///        reserved.
+    ///
+    /// Appends the node to the specified lane, updates depth and pressure
+    /// state, emits a \c kMailboxEnqueue metric event, and triggers the
+    /// edge-triggered wakeup if the mailbox was previously empty.
+    ///
+    /// \param[in] node Heap-allocated message node. Ownership transfers
+    ///                 to the mailbox.
+    /// \param[in] meta Envelope metadata for priority, deadline, and
+    ///                 byte accounting.
+    /// \param[in] lane_idx Target lane index. Use
+    ///                     \c MultiLaneQueue<T>::kSystemLaneSentinel for
+    ///                     system messages, 0..N-1 for user lanes.
+    /// \param[in] suppress_wakeup If true, the scheduler wakeup and
+    ///                            continuation callback are not invoked
+    ///                            even if the mailbox was empty. Used
+    ///                            during overflow drain to avoid
+    ///                            redundant wakeups.
+    /// \note Thread safety: lock-free and safe to call from any thread
+    ///       (the inner \c MultiLaneQueue::enqueue() is lock-free).
     void enqueue_reserved(T* node, const MailboxEnvelopeMeta& meta,
                           uint8_t lane_idx = 0,
                           bool suppress_wakeup = false) noexcept {
@@ -297,6 +538,28 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    /// \brief Dequeue the highest-priority message from the mailbox
+    ///        (single-consumer, spin-lock serialized).
+    ///
+    /// Acquires the consumer spin-lock, drains the highest-priority
+    /// non-empty lane (system lane first, then user lanes 0..N-1). If a
+    /// rate limiter is installed, \c try_consume() is checked before
+    /// returning a user message — on denial the message is re-enqueued
+    /// to lane 0 and \c nullptr is returned. On successful dequeue,
+    /// releases the corresponding reservation, updates pressure state,
+    /// drains the overflow queue if applicable, and emits a
+    /// \c kMailboxDequeue metric event.
+    ///
+    /// \return A pointer to the dequeued message node, or \c nullptr if the
+    ///         mailbox is empty or the rate limiter denied the token. The
+    ///         caller owns the returned node and must destroy and deallocate
+    ///         it.
+    /// \note Thread safety: serialized by a TAS spin-lock — only one
+    ///       consumer (the actor's scheduler worker) may call this at a
+    ///       time. Safe to call concurrently with producers.
+    /// \note If the mailbox becomes empty after dequeue,
+    ///       \c mailbox_was_empty_ is set to \c true, re-arming the
+    ///       edge-triggered wakeup for the next enqueue.
     T* dequeue() noexcept {
         lock_consumer();
         T* node = lanes_.dequeue();
@@ -364,6 +627,17 @@ template <typename T> class MPSCActorMailbox {
         return node;
     }
 
+    /// \brief Dequeue a message and move it into an output parameter.
+    ///
+    /// Combines \c dequeue(), move, destructor, and deallocation in a
+    /// single call. Convenient for callers that need the message by value
+    /// rather than as a raw pointer.
+    ///
+    /// \param[out] out Receives the dequeued message by move.
+    /// \return \c true if a message was dequeued, \c false if the mailbox
+    ///         was empty.
+    /// \note Thread safety: inherits the consumer spin-lock from
+    ///       \c dequeue(). Single-consumer only.
     bool try_pop(T& out) noexcept {
         T* node = dequeue();
         if (!node)
@@ -374,27 +648,83 @@ template <typename T> class MPSCActorMailbox {
         return true;
     }
 
+    /// \brief Check whether the mailbox is empty.
+    ///
+    /// \return \c true if all lanes (system + user) are empty.
+    /// \note Thread safety: lock-free and safe to call from any thread.
+    ///       The result may be stale by the time the caller observes it.
     bool empty() const noexcept {
         return lanes_.empty();
     }
 
+    /// \brief Check whether the mailbox was empty at the last consumer
+    ///        observation.
+    ///
+    /// This reflects the state of the edge-triggered wakeup flag, not the
+    /// real-time empty status. It is set to \c true by \c dequeue() when
+    /// the last message is drained, and CAS'd to \c false by the first
+    /// subsequent enqueue.
+    ///
+    /// \return \c true if the wakeup flag is armed (mailbox was empty at
+    ///         last consumer observation).
+    /// \note Thread safety: lock-free (atomic load with acquire ordering).
     bool was_empty() const noexcept {
         return mailbox_was_empty_.load(std::memory_order_acquire);
     }
 
+    /// \brief Force-set the wakeup flag.
+    ///
+    /// Used by test infrastructure and actor lifecycle transitions to
+    /// re-arm or disarm the edge-triggered wakeup without going through
+    /// the normal enqueue/dequeue paths.
+    ///
+    /// \param[in] val The value to store in the wakeup flag.
+    /// \note Thread safety: atomic store with release ordering.
     void set_was_empty(bool val) noexcept {
         mailbox_was_empty_.store(val, std::memory_order_release);
     }
 
+    /// \brief Wire a metrics ring buffer for instrumentation.
+    ///
+    /// When set, enqueue, dequeue, reject, and drop events are emitted to
+    /// this buffer. Pass \c nullptr to disable metrics emission.
+    ///
+    /// \param[in] buf Pointer to a \c MpscRingBuffer, or \c nullptr.
+    /// \note Thread safety: the pointer is a raw non-atomic store. Set
+    ///       before the mailbox is used concurrently, or from the actor's
+    ///       own thread during a quiescent period.
     void
     set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf) noexcept {
         metrics_ring_buffer_ = buf;
     }
 
+    /// \brief Wire a logger for structured log emission.
+    ///
+    /// When set, high-depth warnings are emitted via \c HPACTOR_LOG_WARNING.
+    /// Pass \c nullptr to disable logging.
+    ///
+    /// \param[in] logger Pointer to a \c Logger, or \c nullptr.
+    /// \note Thread safety: the pointer is a raw non-atomic store. Set
+    ///       before the mailbox is used concurrently, or from the actor's
+    ///       own thread during a quiescent period.
     void set_logger(log::Logger* logger) noexcept {
         logger_ = logger;
     }
 
+    /// \brief Inject a message directly into the mailbox without triggering
+    ///        scheduler wakeup.
+    ///
+    /// Bypasses capacity reservation, pressure state, metrics, and the
+    /// continuation callback. Intended for test code that needs to
+    /// pre-populate the mailbox and inspect its state without scheduler
+    /// interference.
+    ///
+    /// \param[in] node Heap-allocated message node. Ownership transfers
+    ///                 to the mailbox.
+    /// \note This is a test-only API. Do not use in production code paths.
+    /// \note Thread safety: not safe for concurrent use with producers
+    ///       or the consumer. Call from the test thread with the scheduler
+    ///       paused (\c scheduler_threads = 0).
     void inject_for_test(T* node) noexcept {
         reservation_.inject_count(estimate_node_bytes(*node));
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
@@ -402,6 +732,18 @@ template <typename T> class MPSCActorMailbox {
         mailbox_was_empty_.store(false, std::memory_order_release);
     }
 
+    /// \brief Capture a point-in-time snapshot of mailbox state for CLI
+    ///        introspection.
+    ///
+    /// Reads depth, capacity, byte accounting, pressure ratio (as ppm),
+    /// cumulative counters, overflow queue stats, per-lane depths,
+    /// pressure state label, and — when installed — rate limiter token
+    /// state and admission policy chain statistics.
+    ///
+    /// \return A \c cli::MboxSnapshot populated with current mailbox state.
+    /// \note Thread safety: reads atomic counters and queries the overflow
+    ///       queue under its internal lock. Safe to call from any thread,
+    ///       but individual fields may reflect different points in time.
     cli::MboxSnapshot snapshot() const {
         cli::MboxSnapshot s;
         s.depth = static_cast<uint32_t>(lanes_.total_depth());
@@ -455,6 +797,22 @@ template <typename T> class MPSCActorMailbox {
         return s;
     }
 
+    /// \brief Attempt to acquire a rate-limited backpressure signal emission
+    ///        slot.
+    ///
+    /// The \c BackpressureSignalGate enforces a minimum interval between
+    /// signal emissions per pressure state, preventing signal storms during
+    /// sustained overload.
+    ///
+    /// \param[in] now_ns Current monotonic timestamp in nanoseconds.
+    /// \param[in] state Current pressure state used for interval selection.
+    /// \param[in] force If \c true, bypass the rate limiter and acquire
+    ///                  unconditionally.
+    /// \return The emission timestamp (in nanoseconds) if a slot was
+    ///         acquired, or \c std::nullopt if the rate limiter blocked
+    ///         the emission.
+    /// \note Thread safety: the underlying gate uses atomics and is safe
+    ///       to call from any thread.
     std::optional<uint64_t>
     try_acquire_backpressure_signal(uint64_t now_ns, MailboxPressureState state,
                                     bool force = false) noexcept {
@@ -462,6 +820,20 @@ template <typename T> class MPSCActorMailbox {
             now_ns, state, config_.signal_min_interval_ms, force);
     }
 
+    /// \brief Evaluate the admission policy chain against a message.
+    ///
+    /// Iterates \c admission_policies_ in order. The first policy returning
+    /// a non-\c Accept decision short-circuits the chain. If all policies
+    /// accept (or the chain is empty), returns a default-constructed result
+    /// with \c AdmissionDecision::Accept.
+    ///
+    /// \param[in] msg The message being admitted.
+    /// \param[in] meta Envelope metadata for the message.
+    /// \return The first non-\c Accept \c AdmissionPolicyResult, or a
+    ///         default (Accept) result.
+    /// \note Thread safety: reads \c admission_policies_ and
+    ///       \c lanes_.total_depth() without locking. Safe to call from
+    ///       producer threads.
     AdmissionPolicyResult
     evaluate_policy_chain(const TypedMessage& msg,
                           const MailboxEnvelopeMeta& meta) noexcept {
@@ -475,6 +847,13 @@ template <typename T> class MPSCActorMailbox {
         return {};
     }
 
+    /// \brief Read the current monotonic clock in nanoseconds.
+    ///
+    /// Wraps \c std::chrono::steady_clock::now() for use by the rate
+    /// limiter and other time-sensitive paths.
+    ///
+    /// \return Current steady-clock timestamp in nanoseconds since epoch.
+    /// \note Thread safety: safe to call from any thread.
     static uint64_t steady_now_ns() noexcept {
         return static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -483,6 +862,17 @@ template <typename T> class MPSCActorMailbox {
     }
 
   private:
+    /// \brief Drop the oldest message from the highest-priority non-empty
+    ///        user lane.
+    ///
+    /// Acquires the consumer lock, dequeues from the first non-empty user
+    /// lane (lowest index = highest priority), releases the reservation,
+    /// updates counters, and stages the node for deferred destruction via
+    /// \c set_pending_free().
+    ///
+    /// \return \c true if a message was dropped, \c false if all user
+    ///         lanes were empty.
+    /// \note Thread safety: acquires the consumer spin-lock internally.
     bool drop_one_oldest_global() noexcept {
         FAULT_INJECT("hpactor.mailbox.drop_oldest.fail") {
             return false;
@@ -512,6 +902,16 @@ template <typename T> class MPSCActorMailbox {
         return true;
     }
 
+    /// \brief Drop one message from the lowest-priority non-empty user
+    ///        lane.
+    ///
+    /// Scans user lanes from lowest to highest priority, dequeues the
+    /// first found message, releases the reservation, updates counters,
+    /// and stages the node for deferred destruction.
+    ///
+    /// \return \c true if a message was dropped, \c false if all user
+    ///         lanes were empty.
+    /// \note Thread safety: acquires the consumer spin-lock internally.
     bool drop_one_lowest_priority() noexcept {
         FAULT_INJECT("hpactor.mailbox.drop_lowest_priority.fail") {
             return false;
@@ -541,6 +941,16 @@ template <typename T> class MPSCActorMailbox {
         return true;
     }
 
+    /// \brief Drain messages from the overflow queue back into the main
+    ///        mailbox.
+    ///
+    /// Only active when \c overflow_policy is \c SpillToOverflowQueue.
+    /// Iterates while capacity is available, popping from the overflow
+    /// queue and enqueuing into the main lanes with \c suppress_wakeup
+    /// to avoid redundant scheduler notifications.
+    ///
+    /// \note Thread safety: called from \c dequeue() under the consumer
+    ///       spin-lock.
     void drain_overflow() noexcept {
         FAULT_INJECT("hpactor.mailbox.drain_overflow.fail") {
             return; // pretend drained
@@ -564,6 +974,17 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    /// \brief Compute the current pressure ratio as max(count_ratio,
+    ///        byte_ratio).
+    ///
+    /// Count ratio = user_depth / max_messages.
+    /// Byte ratio = (queued_bytes + system_lane_bytes) / max_bytes.
+    /// System lane depth is excluded from the count ratio because
+    /// \c max_messages governs only user messages.
+    ///
+    /// \return The larger of the count and byte pressure ratios, in [0, ∞).
+    /// \note Thread safety: reads atomics with relaxed ordering. Safe to
+    ///       call from any thread.
     double pressure_ratio() const noexcept {
         const uint32_t cap = config_.capacity.max_messages;
         // Exclude system lane: max_messages only governs user messages.
@@ -587,12 +1008,25 @@ template <typename T> class MPSCActorMailbox {
         return count_ratio > byte_ratio ? count_ratio : byte_ratio;
     }
 
+    /// \brief Update the pressure state machine from the current ratio.
+    ///
+    /// \param[in] hard_failure If \c true, immediately transition to
+    ///                         \c HardPressure regardless of ratio.
+    /// \note Thread safety: the \c PressureStateMachine uses internal
+    ///       atomics and is safe to call from any thread.
     void update_pressure_state(bool hard_failure = false) noexcept {
         pressure_state_.update(pressure_ratio(), hard_failure,
                                config_.high_watermark, config_.low_watermark,
                                config_.critical_watermark);
     }
 
+    /// \brief Update the peak-depth counter if the current depth exceeds
+    ///        the recorded maximum.
+    ///
+    /// Uses a CAS loop to handle concurrent producers.
+    ///
+    /// \note Thread safety: lock-free CAS loop — safe to call from any
+    ///       thread.
     void update_max_depth() noexcept {
         uint64_t depth = static_cast<uint64_t>(lanes_.total_depth());
         uint64_t prev = max_depth_.load(std::memory_order_acquire);
@@ -604,6 +1038,15 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    /// \brief Build an \c EnqueueResult from a result code.
+    ///
+    /// Populates depth, capacity, byte accounting, pressure ratio, pressure
+    /// state, and a rate-limited \c retry_after duration.
+    ///
+    /// \param[in] code The admission result code.
+    /// \param[in] reason The backpressure reason (default:
+    ///                   \c HighWatermark).
+    /// \return A fully populated \c EnqueueResult.
     EnqueueResult
     make_result(EnqueueResultCode code,
                 BackpressureReason reason = BackpressureReason::HighWatermark) const noexcept {
@@ -628,6 +1071,13 @@ template <typename T> class MPSCActorMailbox {
         return r;
     }
 
+    /// \brief Estimate the byte footprint of a message node.
+    ///
+    /// For \c TypedMessage, uses \c estimate_message_bytes() (header +
+    /// payload). For other types, returns \c sizeof(T).
+    ///
+    /// \param[in] node The message to estimate.
+    /// \return Estimated byte count for reservation accounting.
     static uint64_t estimate_node_bytes(const T& node) noexcept {
         if constexpr (std::is_same_v<T, TypedMessage>) {
             return estimate_message_bytes(node);
@@ -636,6 +1086,15 @@ template <typename T> class MPSCActorMailbox {
         }
     }
 
+    /// \brief Determine the target lane for a message.
+    ///
+    /// System messages (TypeTag < \c TypeTag::User) are routed to the
+    /// system lane sentinel. User messages are routed to
+    /// \c min(priority, num_user_lanes - 1). When \c priority_aware is
+    /// \c false, all user messages go to lane 0.
+    ///
+    /// \param[in] meta Envelope metadata with type_tag and priority.
+    /// \return Lane index (0..N-1) or \c kSystemLaneSentinel.
     uint8_t route_lane(const MailboxEnvelopeMeta& meta) const noexcept {
         if (is_system_message(meta.type_tag))
             return MultiLaneQueue<T>::kSystemLaneSentinel;
@@ -644,47 +1103,52 @@ template <typename T> class MPSCActorMailbox {
         return std::min<uint8_t>(meta.priority, lanes_.num_user_lanes() - 1);
     }
 
+    /// \brief Acquire the consumer spin-lock (TAS).
+    ///
+    /// Spins until the lock is acquired. Only the consumer (actor's
+    /// scheduler worker) calls this.
     void lock_consumer() noexcept {
         while (consumer_lock_.test_and_set(std::memory_order_acquire)) {
         }
     }
+    /// \brief Release the consumer spin-lock.
     void unlock_consumer() noexcept {
         consumer_lock_.clear(std::memory_order_release);
     }
 
     // --- Composed components ---
-    detail::ReservationManager<T> reservation_;
-    detail::PressureStateMachine pressure_state_;
-    detail::BackpressureSignalGate backpressure_signal_gate_;
-    std::unique_ptr<detail::IOverflowHandler<T>> overflow_handler_;
+    detail::ReservationManager<T> reservation_;            ///< Atomic capacity reservation.
+    detail::PressureStateMachine pressure_state_;          ///< Hysteresis-based pressure tracking.
+    detail::BackpressureSignalGate backpressure_signal_gate_; ///< Rate-limited signal emission.
+    std::unique_ptr<detail::IOverflowHandler<T>> overflow_handler_; ///< Policy-driven overflow handler.
 
     // --- Core queue members ---
-    ActorId actor_id_;
-    sched::IScheduler* scheduler_;
-    MultiLaneQueue<T> lanes_{1};
-    OverflowQueue<T> overflow_queue_;
-    MailboxConfig config_;
-    std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT;
-    std::atomic<bool> mailbox_was_empty_{true};
+    ActorId actor_id_;                         ///< Owning actor identifier.
+    sched::IScheduler* scheduler_;             ///< Scheduler for wakeup notifications.
+    MultiLaneQueue<T> lanes_{1};               ///< System + user lane storage.
+    OverflowQueue<T> overflow_queue_;          ///< Spill-overflow queue.
+    MailboxConfig config_;                     ///< Active mailbox configuration.
+    std::atomic_flag consumer_lock_ = ATOMIC_FLAG_INIT; ///< TAS spin-lock for consumer serialization.
+    std::atomic<bool> mailbox_was_empty_{true}; ///< Edge-triggered wakeup flag.
 
     // --- Rate limiter ---
-    std::unique_ptr<ActorRateLimiter> rate_limiter_;
-    std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> admission_policies_;
-    std::atomic<uint64_t> admission_rejected_total_{0};
+    std::unique_ptr<ActorRateLimiter> rate_limiter_;               ///< Token-bucket rate limiter (consumer-side).
+    std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> admission_policies_; ///< Ordered admission policy chain (producer-side).
+    std::atomic<uint64_t> admission_rejected_total_{0};            ///< Cumulative messages rejected by admission policies.
 
     // --- Counters ---
-    std::atomic<uint64_t> total_enqueued_{0};
-    std::atomic<uint64_t> total_dequeued_{0};
-    std::atomic<uint64_t> total_rejected_{0};
-    std::atomic<uint64_t> total_dropped_{0};
-    std::atomic<uint64_t> total_dead_letters_{0};
-    std::atomic<uint64_t> max_depth_{0};
-    std::atomic<uint64_t> system_lane_bytes_{0};
+    std::atomic<uint64_t> total_enqueued_{0};  ///< Cumulative successful enqueues.
+    std::atomic<uint64_t> total_dequeued_{0};  ///< Cumulative successful dequeues.
+    std::atomic<uint64_t> total_rejected_{0};  ///< Cumulative rejected messages.
+    std::atomic<uint64_t> total_dropped_{0};   ///< Cumulative dropped messages.
+    std::atomic<uint64_t> total_dead_letters_{0}; ///< Cumulative dead-lettered messages.
+    std::atomic<uint64_t> max_depth_{0};       ///< Peak observed total depth.
+    std::atomic<uint64_t> system_lane_bytes_{0}; ///< Byte count in the system lane.
 
     // --- Dependencies ---
-    ActorContinuationCallback continuation_callback_;
-    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
-    log::Logger* logger_ = nullptr;
+    ActorContinuationCallback continuation_callback_; ///< Callback for empty→non-empty transition.
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr}; ///< Metrics sink.
+    log::Logger* logger_ = nullptr;              ///< Logger for structured warnings.
 };
 
 } // namespace hpactor::mailbox
