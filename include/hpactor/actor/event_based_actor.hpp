@@ -209,7 +209,9 @@ class EventBasedActor : public LocalActor {
     }
 
     sched::MailboxAwaiter<TypedMessage> make_mailbox_awaiter() {
-        return sched::MailboxAwaiter<TypedMessage>{coro_handle_.promise(), mailbox_};
+        return sched::MailboxAwaiter<TypedMessage>{
+            coro_handle_.promise(), mailbox_, home_system().dead_letter_queue(),
+            home_system().metrics_ring_buffer(), id()};
     }
 
     void ensure_coroutine_started() {

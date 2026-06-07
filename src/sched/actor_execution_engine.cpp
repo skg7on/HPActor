@@ -16,8 +16,12 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/log/logger.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
+#include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/msg/failure_reason.hpp>
+#include <hpactor/msg/typed_message.hpp>
 
 #include <chrono>
 
@@ -82,6 +86,27 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
         uint64_t now_ns = steady_now_ns();
         if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {
             emit_expired_metric(context, item.actor, now_ns);
+
+            // Record to dead-letter queue when enabled.
+            auto* dlq = system_.dead_letter_queue();
+            if (dlq && dlq->config().enabled) {
+                hpactor::mailbox::DeadLetterRecord dl;
+                dl.reason = hpactor::mailbox::DeadLetterReason::Expired;
+                dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
+                dl.sender = msg.sender_address();
+                dl.target = actor.address();
+                dl.type_tag = msg.type_id();
+                dl.deadline_ns = msg.deadline_ns();
+                dl.payload_sample = msg.payload();
+                dl.timestamp_ns = now_ns;
+                if (msg.has_trace_context()) {
+                    auto& tc = msg.trace_context();
+                    std::memcpy(&dl.trace_id_hi, tc.trace_id.bytes.data(), 8);
+                    std::memcpy(&dl.trace_id_lo, tc.trace_id.bytes.data() + 8, 8);
+                    std::memcpy(&dl.span_id, tc.span_id.bytes.data(), 8);
+                }
+                (void)dlq->try_push(std::move(dl));
+            }
         } else {
             actor.receive(msg);
         }

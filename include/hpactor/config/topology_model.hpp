@@ -126,6 +126,9 @@ struct DeliveryConfig {
     uint32_t dedup_window_ms = 300000;
     /// \brief Maximum dedup cache entries.
     uint32_t dedup_max_entries = 65536;
+    /// \brief Default message TTL in milliseconds (0 = disabled).
+    ///        Messages without an explicit deadline inherit this TTL.
+    uint32_t default_message_ttl_ms = 0;
 };
 
 /// \brief Global system configuration from TOML [system] section.

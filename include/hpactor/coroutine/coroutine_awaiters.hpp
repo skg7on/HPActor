@@ -14,13 +14,17 @@
 
 #pragma once
 
+#include <hpactor/coroutine/coroutine_task.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/metrics/metrics_ring_buffer.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/failure_reason.hpp>
 #include <hpactor/msg/typed_message.hpp>
-#include <hpactor/coroutine/coroutine_task.hpp>
 #include <hpactor/sched/scheduler_interfaces.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 
 #if HPACTOR_SUPPORT_COROUTINES
@@ -31,12 +35,16 @@ namespace hpactor::sched {
 
 // MailboxAwaiter: awaitable for co_await actor.receive()
 // Suspends when mailbox is empty, resumes when message arrives
-// T is the message type (e.g., Message<MessageVariant>)
+// T is the message type (e.g., TypedMessage)
 template <typename T> class MailboxAwaiter {
   public:
-    explicit MailboxAwaiter(CoroutinePromise& promise,
-                            mailbox::MPSCActorMailbox<T>* mailbox) noexcept
-        : promise_(promise), mailbox_(mailbox) {}
+    explicit MailboxAwaiter(
+        CoroutinePromise& promise, mailbox::MPSCActorMailbox<T>* mailbox,
+        mailbox::DeadLetterQueue* dlq = nullptr,
+        metrics::MpscRingBuffer<metrics::MetricEvent>* metrics = nullptr,
+        ActorId actor_id = ActorId{}) noexcept
+        : promise_(promise), mailbox_(mailbox), dlq_(dlq), metrics_(metrics),
+          actor_id_(actor_id) {}
 
     // Return true if message already available (don't suspend)
     bool await_ready() const noexcept {
@@ -71,19 +79,70 @@ template <typename T> class MailboxAwaiter {
 
     // Called when resuming (message arrived)
     T await_resume() noexcept {
-        // Dequeue and return the message
-        auto* msg = mailbox_->dequeue();
-        if (msg) {
-            // Return by moving the Message out
+        while (true) {
+            auto* msg = mailbox_->dequeue();
+            if (!msg) {
+                return T{}; // Mailbox empty
+            }
+
+            // Check message deadline before returning to the handler.
+            int64_t deadline = msg->deadline_ns();
+            if (deadline != INT64_MAX) {
+                uint64_t now_ns = static_cast<uint64_t>(
+                    std::chrono::duration_cast<std::chrono::nanoseconds>(
+                        std::chrono::steady_clock::now().time_since_epoch())
+                        .count());
+                if (mailbox::is_expired(deadline, now_ns)) {
+                    // Emit metric
+                    if (metrics_) {
+                        metrics::MetricEvent evt{};
+                        evt.timestamp_ns = now_ns;
+                        evt.actor_id = actor_id_;
+                        evt.event_type = metrics::MetricEventType::kDeliveryExpired;
+                        evt.code = static_cast<uint8_t>(FailureReason::Expired);
+                        evt.value_hi = 1;
+                        metrics_->try_push(evt);
+                    }
+
+                    // Record to dead-letter queue
+                    if (dlq_ && dlq_->config().enabled) {
+                        mailbox::DeadLetterRecord dl;
+                        dl.reason = mailbox::DeadLetterReason::Expired;
+                        dl.source = mailbox::DeadLetterSource::LocalDelivery;
+                        dl.sender = msg->sender_address();
+                        dl.type_tag = msg->type_id();
+                        dl.deadline_ns = deadline;
+                        dl.payload_sample = msg->payload();
+                        dl.timestamp_ns = now_ns;
+                        if (msg->has_trace_context()) {
+                            auto& tc = msg->trace_context();
+                            std::memcpy(&dl.trace_id_hi,
+                                        tc.trace_id.bytes.data(), 8);
+                            std::memcpy(&dl.trace_id_lo,
+                                        tc.trace_id.bytes.data() + 8, 8);
+                            std::memcpy(&dl.span_id, tc.span_id.bytes.data(), 8);
+                        }
+                        (void)dlq_->try_push(std::move(dl));
+                    }
+
+                    // Destroy expired message and loop for next
+                    msg->~T();
+                    mem::deallocate(msg);
+                    continue;
+                }
+            }
+
+            // Message is valid — return to handler.
             return std::move(*msg);
         }
-        // Return empty message if dequeue failed
-        return T{};
     }
 
   private:
     CoroutinePromise& promise_;
     mailbox::MPSCActorMailbox<T>* mailbox_;
+    mailbox::DeadLetterQueue* dlq_{nullptr};
+    metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_{nullptr};
+    ActorId actor_id_{};
 };
 
 // TimerAwaiter: awaitable for co_await scheduler.schedule_after(delay)
