@@ -12,14 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/msg/dedup_cache.hpp>
+#include <hpactor/adt/dedup_cache.hpp>
 
 #include <hpactor/fault/fault_macros.hpp>
 
 #include <mutex>
 #include <unordered_map>
 
-namespace hpactor::mailbox {
+namespace hpactor::adt {
 
 // ── Key type ──────────────────────────────────────────────────────────────
 
@@ -79,7 +79,7 @@ bool DedupCache::is_duplicate(EndPoint source_node, ActorId source_actor,
     if (it != impl_->entries.end()) {
         impl_->hits++;
         bool result = true;
-        FAULT_INJECT("hpactor.mailbox.dedup.is_duplicate.corrupt") {
+        FAULT_INJECT("hpactor.adt.dedup.is_duplicate.corrupt") {
             result = !result;
         }
         return result;
@@ -104,7 +104,7 @@ bool DedupCache::is_duplicate(EndPoint source_node, ActorId source_actor,
     }
 
     bool result = false;
-    FAULT_INJECT("hpactor.mailbox.dedup.is_duplicate.corrupt") {
+    FAULT_INJECT("hpactor.adt.dedup.is_duplicate.corrupt") {
         result = !result;
     }
     return result;
@@ -147,4 +147,4 @@ uint64_t DedupCache::insertions() const noexcept {
     return impl_->inserts;
 }
 
-} // namespace hpactor::mailbox
+} // namespace hpactor::adt

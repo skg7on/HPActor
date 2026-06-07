@@ -19,7 +19,7 @@
 #include <cstdint>
 #include <memory>
 
-namespace hpactor::mailbox {
+namespace hpactor::adt {
 
 /// \brief Bounded receiver-side deduplication cache for at-least-once
 ///        delivery.
@@ -78,4 +78,4 @@ class DedupCache {
     std::unique_ptr<Impl> impl_;
 };
 
-} // namespace hpactor::mailbox
+} // namespace hpactor::adt

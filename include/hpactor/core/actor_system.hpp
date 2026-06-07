@@ -22,6 +22,7 @@
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/actor/lifecycle/shutdown_phase.hpp>
+#include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
 #include <hpactor/core/actor_registry.hpp>
@@ -37,7 +38,6 @@
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
-#include <hpactor/msg/dedup_cache.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/msg/request_timeout.hpp>
 #include <hpactor/net/actor_location_cache.hpp>
@@ -529,10 +529,10 @@ class ActorSystem {
     }
 
     // Receiver dedup cache for at-least-once delivery
-    mailbox::DedupCache* dedup_cache() {
+    adt::DedupCache* dedup_cache() {
         return dedup_cache_.get();
     }
-    const mailbox::DedupCache* dedup_cache() const {
+    const adt::DedupCache* dedup_cache() const {
         return dedup_cache_.get();
     }
 
@@ -795,7 +795,7 @@ class ActorSystem {
     std::unique_ptr<mailbox::DeadLetterQueue> dead_letters_;
 
     // Receiver dedup cache for at-least-once delivery
-    std::unique_ptr<mailbox::DedupCache> dedup_cache_;
+    std::unique_ptr<adt::DedupCache> dedup_cache_;
 
     // Tracing subsystem
     tracing::TraceConfig tracing_config_;

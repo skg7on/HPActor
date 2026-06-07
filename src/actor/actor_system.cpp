@@ -90,8 +90,7 @@ ActorSystem::ActorSystem(const Config& config)
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
 
     // Initialize receiver dedup cache for at-least-once delivery
-    dedup_cache_ =
-        std::make_unique<mailbox::DedupCache>(mailbox::DedupCache::Config{});
+    dedup_cache_ = std::make_unique<adt::DedupCache>(adt::DedupCache::Config{});
 
     // Initialize extracted runtime components
     local_delivery_engine_ =
@@ -748,7 +747,7 @@ reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
 // If the message is a tracked duplicate, record the metric and return an
 // Accepted result.  Returns nullopt when the message is not a duplicate.
 [[nodiscard]] std::optional<hpactor::mailbox::EnqueueResult>
-try_accept_duplicate(MetricBuf* metrics, hpactor::mailbox::DedupCache* dedup_cache,
+try_accept_duplicate(MetricBuf* metrics, hpactor::adt::DedupCache* dedup_cache,
                      hpactor::EndPoint endpoint, hpactor::ActorId target,
                      const hpactor::TypedMessage& msg,
                      const hpactor::mailbox::DeliveryOptions& options) {
