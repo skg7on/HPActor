@@ -17,8 +17,6 @@
 #include <hpactor/actor/passivation_config.hpp>
 #include <hpactor/types/types.hpp>
 
-#include <memory>
-
 namespace hpactor {
 
 class ActorSystem;
@@ -52,14 +50,6 @@ class PassivationManager {
     /// \return true if passivation started successfully.
     bool begin_passivation(ActorId actor_id, PassivationRecord::Trigger trigger);
 
-    /// \brief Handle actor self-passivation request.
-    ///
-    /// Called after the current handler returns when
-    /// ActorContext::passivate() was invoked.
-    ///
-    /// \param[in] actor The actor requesting passivation.
-    void handle_self_passivation(LocalActor& actor);
-
     /// \brief Reactivate a passivated actor.
     ///
     /// Restores state from DurableStateStore or HibernationRegistry,
@@ -82,7 +72,6 @@ class PassivationManager {
 
   private:
     result<void> drain_actor(ActorId actor_id);
-    result<void> persist_and_release(ActorId actor_id, PassivationRecord record);
 
     ActorSystem& system_;
     DurableStateStore* durable_store_;

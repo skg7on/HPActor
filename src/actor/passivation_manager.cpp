@@ -130,10 +130,6 @@ bool PassivationManager::begin_passivation(ActorId actor_id,
     return true;
 }
 
-void PassivationManager::handle_self_passivation(LocalActor& actor) {
-    begin_passivation(actor.id(), PassivationRecord::Trigger::kSelf);
-}
-
 result<LocalActor*> PassivationManager::reactivate(IActorRoute& route) {
     FAULT_INJECT("hpactor.passivation.reactivation.restore_fail") {
         return result<LocalActor*>::make(
@@ -243,14 +239,6 @@ result<void> PassivationManager::drain_actor(ActorId actor_id) {
             error(static_cast<uint32_t>(FailureReason::PassivationDrainTimeout)));
     }
 
-    return result<void>::make();
-}
-
-result<void> PassivationManager::persist_and_release(ActorId /*actor_id*/,
-                                                     PassivationRecord /*record*/) {
-    // The persist + release logic is handled inline in begin_passivation().
-    // This method exists as an extension point for async snapshot writes
-    // and deferred memory release.
     return result<void>::make();
 }
 
