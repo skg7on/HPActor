@@ -28,9 +28,9 @@
 //
 // =============================================================================
 
+#include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
 #include <hpactor/actor_context.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/typed_message.hpp>
 

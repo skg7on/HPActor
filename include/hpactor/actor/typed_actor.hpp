@@ -17,7 +17,7 @@
 #include <memory>
 
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/typed_behavior.hpp>
+#include <hpactor/actor/typed_behavior.hpp>
 
 namespace hpactor {
 

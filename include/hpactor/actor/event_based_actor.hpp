@@ -15,12 +15,12 @@
 #pragma once
 
 #include <hpactor/actor/actor_state.hpp>
+#include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/lifecycle/circuit_breaker.hpp>
 #include <hpactor/actor/lifecycle/drain_config.hpp>
 #include <hpactor/actor/lifecycle/failure_rate_tracker.hpp>
 #include <hpactor/actor/lifecycle/quarantine_policy.hpp>
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>

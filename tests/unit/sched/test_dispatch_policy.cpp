@@ -18,10 +18,10 @@
 #include <gtest/gtest.h>
 #include <thread>
 
+#include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/daemon_actor.hpp>
 #include <hpactor/actor/dense_computing_actor.hpp>
 #include <hpactor/actor/polling_actor.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
