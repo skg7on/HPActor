@@ -108,6 +108,11 @@ void LocalPassivatedRoute::transition_to_recovering() {
 
 void LocalPassivatedRoute::set_state(LifecycleState s) {
     lifecycle_state_.store(static_cast<uint8_t>(s), std::memory_order_release);
+    // Clear the reactivation flag when reaching a terminal state
+    if (s == LifecycleState::kActive || s == LifecycleState::kFailed ||
+        s == LifecycleState::kStopped) {
+        reactivation_in_progress_.store(false, std::memory_order_release);
+    }
 }
 
 } // namespace hpactor

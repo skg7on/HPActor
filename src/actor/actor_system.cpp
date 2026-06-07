@@ -178,14 +178,6 @@ ActorSystem::ActorSystem(const Config& config)
         // Create AskManager for local ask() request tracking
         ask_manager_ = std::make_unique<AskManager>(scheduler_.get(), this);
 
-        // Create PassivationManager with InMemoryStateStore by default.
-        {
-            auto durable_store = std::make_unique<InMemoryStateStore>();
-            PassivationConfig defaults;
-            passivation_manager_ = std::make_unique<PassivationManager>(
-                *this, durable_store.release(), defaults);
-        }
-
         if (config_.enable_http_client) {
             http_client_ = std::make_unique<net::HttpClient>(network_loop_.get());
         }
@@ -233,6 +225,14 @@ ActorSystem::ActorSystem(const Config& config)
                 std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
                     SpawnReceiverId, scheduler_.get(), mailbox_config_for_spawn()));
         }
+    }
+
+    // Initialize PassivationManager (independent of networking)
+    {
+        auto durable_store = std::make_unique<InMemoryStateStore>();
+        PassivationConfig defaults;
+        passivation_manager_ = std::make_unique<PassivationManager>(
+            *this, durable_store.release(), defaults);
     }
 
     // Spawn CLI actor (runtime opt-in via config_.cli.enabled)
