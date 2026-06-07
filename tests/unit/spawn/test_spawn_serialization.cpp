@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
-#include <hpactor/spawn.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <hpactor/common.pb.h>

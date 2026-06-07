@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor_type_registry.hpp>
+#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 namespace hpactor {

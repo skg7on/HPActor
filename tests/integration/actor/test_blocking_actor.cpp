@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/blocking_actor.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/scoped_actor.hpp>
-#include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 #include <gtest/gtest.h>

@@ -24,8 +24,8 @@ add_library(hpactor_lib SHARED
     mailbox/memory_pressure_monitor.cpp
     actor/lifecycle/passivation_manager.cpp
     actor/scoped_actor.cpp
-    actor_type_registry.cpp
-    spawn.cpp
+    actor/actor_type_registry.cpp
+    actor/spawn.cpp
     ref/actor_proxy.cpp
     ref/actor_ref.cpp
     supervision/supervision.cpp

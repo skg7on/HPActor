@@ -30,8 +30,8 @@
 //
 // =============================================================================
 
+#include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/typed_actor.hpp>
-#include <hpactor/actor_context.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/typed_message.hpp>
 

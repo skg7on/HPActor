@@ -18,12 +18,12 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/common.pb.h>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/messages.pb.h>
 #include <hpactor/msg/frame.hpp>
-#include <hpactor/spawn.hpp>
 #include <hpactor/types/types.hpp>
 
 using namespace hpactor;

@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor_context.hpp>
+#include <hpactor/actor/actor_context.hpp>
 
 namespace hpactor {
 
@@ -40,7 +40,9 @@ class LocalActor : public AbstractActor {
     LocalActor(ActorContext* ctx, ActorSystem& sys);
     LocalActor(ActorId id, ActorContext* ctx, ActorSystem& sys);
 
-    ActorContext* actor_context() override { return ctx_; }
+    ActorContext* actor_context() override {
+        return ctx_;
+    }
 
   public:
     virtual void on_activate() {}

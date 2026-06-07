@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor_context.hpp>
+#include <hpactor/actor/actor_context.hpp>
 
 using namespace hpactor;
 

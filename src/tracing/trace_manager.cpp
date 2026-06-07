@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor_context.hpp>
+#include <hpactor/actor/actor_context.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/tracing/json_exporter.hpp>
 #include <hpactor/tracing/memory_exporter.hpp>

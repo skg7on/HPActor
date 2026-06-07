@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/metrics/metrics_ring_buffer.hpp>
 #include <hpactor/net/acceptor.hpp>
@@ -26,7 +27,6 @@
 #include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/rpc/rpc_types.hpp>
-#include <hpactor/spawn.hpp>
 
 #include <atomic>
 #include <chrono>

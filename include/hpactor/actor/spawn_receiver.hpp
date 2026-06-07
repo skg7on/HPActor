@@ -14,10 +14,10 @@
 
 #pragma once
 
+#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor_type_registry.hpp>
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/msg/frame.hpp>
-#include <hpactor/spawn.hpp>
 
 namespace hpactor {
 
