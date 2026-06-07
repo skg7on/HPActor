@@ -18,6 +18,11 @@ add_library(hpactor_lib SHARED
     actor/http_gateway_actor.cpp
     actor/lifecycle_actor.cpp
     actor/blocking_actor.cpp
+    actor/durable/in_memory_state_store.cpp
+    actor/durable/file_state_store.cpp
+    actor/actor_route.cpp
+    actor/memory_pressure_monitor.cpp
+    actor/passivation_manager.cpp
     actor/scoped_actor.cpp
     actor_type_registry.cpp
     spawn.cpp
@@ -35,6 +40,7 @@ add_library(hpactor_lib SHARED
     config/parsers/system_core_config_parser.cpp
     config/parsers/metrics_config_parser.cpp
     config/parsers/logging_config_parser.cpp
+    config/parsers/passivation_config_parser.cpp
     config/parsers/cli_config_parser.cpp
     config/parsers/discovery_config_parser.cpp
     config/parsers/topology_config_parser.cpp

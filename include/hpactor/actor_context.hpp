@@ -219,6 +219,15 @@ class ActorContext {
     /// \param[in] handle The handle returned by \c schedule().
     void cancel_schedule(AlarmHandle handle);
 
+    /// \brief Request self-passivation after the current message completes.
+    ///
+    /// The passivation is deferred until the current handler returns,
+    /// ensuring consistent state for snapshotting. If the actor is not
+    /// in \c kActive state, this call is a no-op.
+    ///
+    /// \note Callable only from within an actor handler.
+    void passivate();
+
     // ── Children management ───────────────────────────────────────────────
 
     /// \brief List of direct child actors.
@@ -438,6 +447,7 @@ class ActorContext {
     BackpressureHandler backpressure_handler_;
     TraceContext current_trace_context_;
     bool has_current_trace_context_{false};
+    bool passivation_requested_{false};
 };
 
 } // namespace hpactor

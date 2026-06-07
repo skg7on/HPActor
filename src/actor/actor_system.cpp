@@ -14,10 +14,13 @@
 
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/backpressure_coordinator.hpp>
+#include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/local_delivery_engine.hpp>
+#include <hpactor/actor/passivation_config.hpp>
+#include <hpactor/actor/passivation_manager.hpp>
 #include <hpactor/actor/shutdown_coordinator.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
@@ -222,6 +225,14 @@ ActorSystem::ActorSystem(const Config& config)
                 std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
                     SpawnReceiverId, scheduler_.get(), mailbox_config_for_spawn()));
         }
+    }
+
+    // Initialize PassivationManager (independent of networking)
+    {
+        auto durable_store = std::make_unique<InMemoryStateStore>();
+        PassivationConfig defaults;
+        passivation_manager_ = std::make_unique<PassivationManager>(
+            *this, durable_store.release(), defaults);
     }
 
     // Spawn CLI actor (runtime opt-in via config_.cli.enabled)

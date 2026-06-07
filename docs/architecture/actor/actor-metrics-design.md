@@ -101,6 +101,11 @@ struct alignas(32) MetricEvent {
 | `kSupervisorRestart (7)` | Supervisor restarted a child | child_actor_id |
 | `kMemoryAlloc (8)` | Memory allocated via slab allocator | size_bytes |
 | `kMemoryFree (9)` | Memory freed via slab allocator | size_bytes |
+| `kPassivationStarted (27)` | Actor began passivation transition | trigger (idle=0,self=1,mem=2,cli=3) |
+| `kPassivationCompleted (28)` | Actor reached kPassivated state | snapshot_size_bytes |
+| `kReactivationStarted (29)` | Message triggered reactivation | — |
+| `kReactivationCompleted (30)` | Actor reached kActive after reactivation | restore_duration_ms |
+| `kReactivationFailed (31)` | Reactivation failed, actor entered kFailed | failure_reason_code |
 
 ### Derived Metrics
 
@@ -112,6 +117,12 @@ Events are aggregated into these OpenMetrics families:
 | `hpactor_mailbox_messages_total` | Counter | Enqueue | `actor_id`, `actor_type` |
 | `hpactor_message_processing_seconds` | Histogram | MessageProcessed | `actor_id`, `actor_type` |
 | `hpactor_actor_lifecycle_total` | Counter | Spawned, Terminated | `event_type` |
+| `hpactor_actor_passivation_total` | Counter | — | `trigger=[idle,self,memory_pressure,cli]` |
+| `hpactor_actor_reactivation_total` | Counter | — | `outcome=[success,failed]` |
+| `hpactor_actor_passivated_count` | Gauge | — | — |
+| `hpactor_passivation_drain_duration_ms` | Histogram | — | — |
+| `hpactor_passivation_snapshot_duration_ms` | Histogram | — | — |
+| `hpactor_reactivation_restore_duration_ms` | Histogram | — | — |
 | `hpactor_actors_active` | Gauge | Spawned (+1), Terminated (−1) | (none) |
 | `hpactor_scheduler_dispatches_total` | Counter | Dispatch | `worker_id` |
 | `hpactor_scheduler_steals_total` | Counter | Steal | `source_worker` |

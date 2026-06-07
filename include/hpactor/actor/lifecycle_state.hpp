@@ -28,6 +28,11 @@ enum class LifecycleState : uint8_t {
     kRecovering = 6,
     kQuarantined = 7, ///< Isolated — rejects user messages, accepts system
                       ///< messages.
+    kPassivating = 8, ///< Draining + snapshotting before hibernation.
+                      ///< Rejects user messages, accepts system messages.
+    kPassivated = 9,  ///< Memory freed, route stub alive, durable state
+                      ///< stored. Rejects user messages, accepts system
+                      ///< messages (reactivation wakeup, shutdown).
 };
 
 struct StateDef {
@@ -50,9 +55,9 @@ constexpr StateDef kStateMachine[] = {
      "active",
      true,
      true,
-     4,
-     {LifecycleState::kDraining, LifecycleState::kStopping,
-      LifecycleState::kFailed, LifecycleState::kQuarantined}},
+     5,
+     {LifecycleState::kDraining, LifecycleState::kStopping, LifecycleState::kFailed,
+      LifecycleState::kQuarantined, LifecycleState::kPassivating}},
     {LifecycleState::kDraining,
      "draining",
      false,
@@ -80,11 +85,23 @@ constexpr StateDef kStateMachine[] = {
      3,
      {LifecycleState::kActive, LifecycleState::kFailed, LifecycleState::kQuarantined}},
     {LifecycleState::kQuarantined, "quarantined", false, true, 1, {LifecycleState::kStopped}},
+    {LifecycleState::kPassivating,
+     "passivating",
+     false,
+     true,
+     2,
+     {LifecycleState::kPassivated, LifecycleState::kFailed}},
+    {LifecycleState::kPassivated,
+     "passivated",
+     false,
+     true,
+     3,
+     {LifecycleState::kRecovering, LifecycleState::kStopped, LifecycleState::kFailed}},
 };
 
-static_assert(sizeof(kStateMachine) / sizeof(StateDef) == 8, "kStateMachine "
-                                                             "must have "
-                                                             "exactly 8 "
-                                                             "entries");
+static_assert(sizeof(kStateMachine) / sizeof(StateDef) == 10, "kStateMachine "
+                                                              "must have "
+                                                              "exactly 10 "
+                                                              "entries");
 
 } // namespace hpactor

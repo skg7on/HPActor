@@ -75,6 +75,10 @@ bool LifecycleActor::transition(LifecycleState to) {
     } else if (to == LifecycleState::kQuarantined) {
         quarantined_at_ = std::chrono::steady_clock::now();
         on_quarantined(quarantine_reason_);
+    } else if (to == LifecycleState::kPassivating) {
+        on_passivating();
+    } else if (to == LifecycleState::kPassivated) {
+        on_passivated();
     }
 
     return true;

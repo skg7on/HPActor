@@ -30,6 +30,7 @@ option(ENABLE_COVERAGE "Enable code coverage instrumentation (gcc/clang)" OFF)
 option(ENABLE_TESTS "Build tests" ON)
 option(ENABLE_RELACY_TESTS "Build relacy-based exhaustive verification tests" OFF)
 option(ENABLE_FAULT_INJECTION "Enable deterministic fault injection hooks" ON)
+option(ENABLE_ACTOR_PASSIVATION "Enable actor passivation subsystem" ON)
 option(ENABLE_CLANG_TIDY "Run clang-tidy during C++ builds when clang-tidy >= 20 is available" OFF)
 
 # =============================================================================
@@ -75,6 +76,7 @@ set(HPACTOR_ENABLE_CLI ${ENABLE_CLI})
 set(HPACTOR_ENABLE_ACTOR_LOGGING ${ENABLE_ACTOR_LOGGING})
 set(HPACTOR_ENABLE_ACTOR_TRACING ${ENABLE_ACTOR_TRACING})
 set(HPACTOR_ENABLE_FAULT_INJECTION ${ENABLE_FAULT_INJECTION})
+set(HPACTOR_ENABLE_PASSIVATION ${ENABLE_ACTOR_PASSIVATION})
 
 configure_file(
     ${CMAKE_SOURCE_DIR}/include/hpactor/hpactor_config.hpp.in

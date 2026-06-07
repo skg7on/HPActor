@@ -227,6 +227,27 @@ Rules:
 9. Dedicated-thread actors are registered with the scheduler and suppressed
    from shared placement. Feature code must not enqueue their activations onto
    cooperative queues unless the design changes that contract explicitly.
+10. A passivated actor (`LifecycleState::kPassivated`) has no live actor object
+    and no scheduler work items. The `LocalPassivatedRoute` stub owns the
+    lifecycle state in the registry. During passivation, no scheduler thread may
+    call `receive()` on the passivated actor.
+11. Reactivation is triggered by the first message arriving at
+    `LocalPassivatedRoute::try_deliver()`. The triggering thread (a producer)
+    sets `reactivation_in_progress` and spawns a reactivation task. Subsequent
+    producers see the flag already set and only enqueue to the bounded
+    reactivation buffer. The reactivation task is the single consumer of the
+    reactivation buffer during recovery.
+12. The reactivation buffer is a bounded MPSC queue. Producers may enqueue
+    concurrently. Only the reactivation task (after recovery succeeds) drains
+    the buffer into the new actor's mailbox. If the buffer fills before
+    reactivation completes, `try_deliver()` returns
+    `EnqueueResult::Rejected` with `FailureReason::PassivationQueueFull`.
+13. Passivation state transitions (`Active → Passivating → Passivated`,
+    `Passivated → Recovering → Active`) are validated through the same
+    constexpr transition table and CAS as all other lifecycle transitions.
+    The route stub owns the lifecycle state during `kPassivated` — there is
+    no actor object to CAS against, so the stub performs the CAS directly
+    on the stored atomic state.
 
 ## Multi-Threaded Actor Programming Rules
 
@@ -269,6 +290,12 @@ threaded execution must answer these questions in its design:
    terminated, quarantined, or I/O waiting?
 10. Which tests prove no duplicate execution, no lost wakeup, bounded memory,
     and correct ordering under concurrency?
+11. **Passivation-specific**: Who owns the lifecycle state during `kPassivated`?
+12. **Passivation-specific**: What is the single consumer of the reactivation buffer?
+13. **Passivation-specific**: How is duplicate reactivation prevented?
+14. **Passivation-specific**: What happens when the reactivation buffer fills?
+15. **Passivation-specific**: How is the route stub upgraded to a live actor
+    without a window where messages are lost or duplicated?
 
 ## Implementation Rules
 

@@ -146,6 +146,18 @@ class LifecycleActor {
     ///       owning scheduler thread or supervisor thread.
     virtual void on_quarantined(QuarantineReason /*reason*/) {}
 
+    /// \brief Hook invoked after transition to \c kPassivating.
+    ///
+    /// Default starts draining the actor's mailbox. Override to add
+    /// custom pre-passivation logic.
+    virtual void on_passivating() {}
+
+    /// \brief Hook invoked after transition to \c kPassivated.
+    ///
+    /// Default releases actor memory and installs the route stub.
+    /// Override to add custom post-passivation logic.
+    virtual void on_passivated() {}
+
     // NOTE: LifecycleActor does NOT override as_lifecycle().
     // Each lifecycle actor class must explicitly override
     // AbstractActor::as_lifecycle() to return this. Example:

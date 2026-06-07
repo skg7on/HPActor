@@ -25,7 +25,7 @@ namespace hpactor {
 /// Numeric ranges partition the failure space: route (0-9), lifecycle
 /// (10-19), resource (20-29), time (30-39), policy (40-49), transport
 /// (50-59), dedup (60-69), shutdown (70-79), reliable messaging (80-89),
-/// spawn (90-99). \c Unknown = 255 is the sentinel.
+/// spawn (90-99), passivation (100-109). \c Unknown = 255 is the sentinel.
 enum class FailureReason : uint8_t {
     // ── Route / addressing (0-9) ────────────────────────────────
     NoRoute = 0,           ///< Actor or node not found for the target address.
@@ -81,6 +81,13 @@ enum class FailureReason : uint8_t {
     // ── Spawn (90-99) ───────────────────────────────────────────
     SpawnFailed = 90, ///< Remote spawn failed (codec, permission, node, type).
 
+    // ── Passivation (100-109) ───────────────────────────────────
+    PassivationDrainTimeout = 100, ///< Drain did not complete within deadline.
+    PassivationSnapshotFailed = 101, ///< Durable store write failed.
+    ReactivationFailed = 102,        ///< Restore from durable store failed.
+    PassivationQueueFull = 103,      ///< Reactivation buffer exhausted.
+    SchemaVersionMismatch = 104,     ///< Stored schema has no migration path.
+
     // ── Sentinel ────────────────────────────────────────────────
     Unknown = 255, ///< Unclassified failure. Must not be used for new
                    ///< production paths.
@@ -123,7 +130,13 @@ constexpr bool retryable(FailureReason reason) noexcept {
         case FailureReason::ShuttingDown:
         case FailureReason::ResourceExhausted:
         case FailureReason::RemoteUnavailable:
+        case FailureReason::PassivationDrainTimeout:
+        case FailureReason::PassivationSnapshotFailed:
+        case FailureReason::ReactivationFailed:
+        case FailureReason::PassivationQueueFull:
             return true;
+        case FailureReason::SchemaVersionMismatch:
+            return false;
         default:
             return false;
     }
