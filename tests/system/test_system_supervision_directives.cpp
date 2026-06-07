@@ -18,8 +18,8 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/actor/lifecycle_actor.hpp>
-#include <hpactor/actor/lifecycle_state.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_state.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/transport.hpp>
 #include <hpactor/ref/actor_proxy.hpp>

@@ -17,7 +17,7 @@
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/msg/typed_message.hpp>
-#include <hpactor/sched/coroutine_task.hpp>
+#include <hpactor/coroutine/coroutine_task.hpp>
 #include <hpactor/sched/scheduler_interfaces.hpp>
 
 #include <atomic>

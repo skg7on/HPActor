@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/sched/timing_wheel.hpp>
+#include <hpactor/timer/timing_wheel.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 
 #include <chrono>

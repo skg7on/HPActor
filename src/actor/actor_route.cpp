@@ -14,7 +14,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_route.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
 
 #include <sstream>

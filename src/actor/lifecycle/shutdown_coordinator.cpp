@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/shutdown_coordinator.hpp>
+#include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
 
 namespace hpactor {
 

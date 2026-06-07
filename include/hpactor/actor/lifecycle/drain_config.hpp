@@ -15,7 +15,7 @@
 #pragma once
 
 #include <chrono>
-#include <hpactor/actor/drain_policy.hpp>
+#include <hpactor/actor/lifecycle/drain_policy.hpp>
 
 namespace hpactor {
 

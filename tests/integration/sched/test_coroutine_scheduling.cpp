@@ -17,8 +17,8 @@
 #include <gtest/gtest.h>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/coroutine/coroutine_awaiters.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
-#include <hpactor/sched/coroutine_awaiters.hpp>
 
 // Fixture for tests that need an ActorSystem with scheduler disabled.
 class CoroutineSchedulingIntegrationTest : public ::testing::Test {

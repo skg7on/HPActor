@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/quarantine_policy.hpp>
+#include <hpactor/actor/lifecycle/quarantine_policy.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/supervision/supervision.hpp>
 

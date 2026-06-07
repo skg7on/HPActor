@@ -12,12 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/circuit_breaker.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/failure_rate_tracker.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
-#include <hpactor/actor/lifecycle_state.hpp>
-#include <hpactor/actor/quarantine_policy.hpp>
+#include <hpactor/actor/lifecycle/circuit_breaker.hpp>
+#include <hpactor/actor/lifecycle/failure_rate_tracker.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_state.hpp>
+#include <hpactor/actor/lifecycle/quarantine_policy.hpp>
 #include <hpactor/adt/mpsc_ring_buffer.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/metrics/metrics_event.hpp>

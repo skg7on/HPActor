@@ -18,8 +18,8 @@
 #pragma once
 
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
-#include <hpactor/actor/lifecycle_state.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_state.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 

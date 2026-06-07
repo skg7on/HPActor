@@ -24,7 +24,7 @@
 // constraints: no timing assumptions, no assumed thread execution order).
 
 #include <gtest/gtest.h>
-#include <hpactor/sched/coroutine_frame_pool.hpp>
+#include <hpactor/coroutine/coroutine_frame_pool.hpp>
 
 #include <cstring>
 #include <vector>

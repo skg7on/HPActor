@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/actor/passivation_config.hpp>
+#include <hpactor/actor/lifecycle/passivation_config.hpp>
 #include <hpactor/types/types.hpp>
 
 namespace hpactor {

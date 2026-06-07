@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/local_delivery_engine.hpp>
+#include <hpactor/mailbox/local_delivery_engine.hpp>
 #include <hpactor/mailbox/multi_lane_queue.hpp>
 #include <hpactor/msg/typed_message.hpp>
 

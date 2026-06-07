@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/lifecycle_state.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_state.hpp>
 
 using namespace hpactor;
 

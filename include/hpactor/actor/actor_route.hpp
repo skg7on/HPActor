@@ -14,8 +14,8 @@
 
 #pragma once
 
-#include <hpactor/actor/lifecycle_state.hpp>
-#include <hpactor/actor/passivation_config.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_state.hpp>
+#include <hpactor/actor/lifecycle/passivation_config.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <atomic>

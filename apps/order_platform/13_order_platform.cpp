@@ -128,7 +128,7 @@
 
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/stateful_actor.hpp>
 #include <hpactor/actor/typed_actor.hpp>
 #include <hpactor/actor_context.hpp>

@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/failure_rate_tracker.hpp>
+#include <hpactor/actor/lifecycle/failure_rate_tracker.hpp>
 
 #include <chrono>
 

@@ -6,9 +6,9 @@ add_library(hpactor_lib SHARED
     actor/abstract_actor.cpp
     actor/actor_context.cpp
     actor/actor_directory.cpp
-    actor/local_delivery_engine.cpp
-    actor/backpressure_coordinator.cpp
-    actor/shutdown_coordinator.cpp
+    mailbox/local_delivery_engine.cpp
+    mailbox/backpressure_coordinator.cpp
+    actor/lifecycle/shutdown_coordinator.cpp
     actor/actor_system.cpp
     actor/ask_manager.cpp
     actor/daemon_actor.cpp
@@ -16,13 +16,13 @@ add_library(hpactor_lib SHARED
     actor/local_actor.cpp
     actor/spawn_receiver.cpp
     actor/http_gateway_actor.cpp
-    actor/lifecycle_actor.cpp
+    actor/lifecycle/lifecycle_actor.cpp
     actor/blocking_actor.cpp
     actor/durable/in_memory_state_store.cpp
     actor/durable/file_state_store.cpp
     actor/actor_route.cpp
-    actor/memory_pressure_monitor.cpp
-    actor/passivation_manager.cpp
+    mailbox/memory_pressure_monitor.cpp
+    actor/lifecycle/passivation_manager.cpp
     actor/scoped_actor.cpp
     actor_type_registry.cpp
     spawn.cpp
@@ -55,7 +55,7 @@ add_library(hpactor_lib SHARED
     core/proto_type_registry.cpp
     types/typed_message.cpp
     types/failure_reason.cpp
-    actor/quarantine_reason.cpp
+    actor/lifecycle/quarantine_reason.cpp
     net/event_loop.cpp
     net/acceptor.cpp
     net/connection.cpp
@@ -88,9 +88,9 @@ add_library(hpactor_lib SHARED
     sched/worker_thread.cpp
     sched/edf_queue.cpp
     sched/a2ws.cpp
-    sched/timing_wheel.cpp
-    adt/calendar_queue.cpp
-    sched/coroutine_frame_pool.cpp
+    timer/timing_wheel.cpp
+    timer/calendar_queue.cpp
+    coroutine/coroutine_frame_pool.cpp
     sched/dedicated_thread_pool.cpp
     mem/segment_provider.cpp
     mem/slab_cache.cpp

@@ -14,9 +14,9 @@
 
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
-#include <hpactor/actor/lifecycle_state.hpp>
-#include <hpactor/actor/quarantine_reason.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_state.hpp>
+#include <hpactor/actor/lifecycle/quarantine_reason.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/mem/memory_config.hpp>

@@ -17,7 +17,7 @@
 #include <hpactor/supervision/one_for_one_supervisor.hpp>
 #include <hpactor/supervision/supervision.hpp>
 
-#include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/messages.pb.h>
 #include <hpactor/metrics/metrics_event.hpp>
 

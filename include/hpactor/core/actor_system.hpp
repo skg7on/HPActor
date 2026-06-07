@@ -18,10 +18,10 @@
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/actor_directory.hpp>
 #include <hpactor/actor/ask_manager.hpp>
-#include <hpactor/actor/drain_config.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
-#include <hpactor/actor/passivation_manager.hpp>
-#include <hpactor/actor/shutdown_phase.hpp>
+#include <hpactor/actor/lifecycle/drain_config.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/passivation_manager.hpp>
+#include <hpactor/actor/lifecycle/shutdown_phase.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
 #include <hpactor/core/actor_registry.hpp>

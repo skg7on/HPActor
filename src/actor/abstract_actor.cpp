@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor_context.hpp>
 #include <hpactor/messages.pb.h>
 

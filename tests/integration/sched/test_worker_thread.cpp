@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // tests/integration/sched/test_worker_thread.cpp
-#include <hpactor/sched/coroutine_frame_pool.hpp>
+#include <hpactor/coroutine/coroutine_frame_pool.hpp>
 #include <hpactor/sched/worker_thread.hpp>
 
 #include <gtest/gtest.h>

@@ -13,15 +13,13 @@
 // limitations under the License.
 
 #include <hpactor/actor/ask_manager.hpp>
-#include <hpactor/actor/backpressure_coordinator.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
+#include <hpactor/actor/lifecycle/passivation_config.hpp>
+#include <hpactor/actor/lifecycle/passivation_manager.hpp>
+#include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/actor/local_delivery_engine.hpp>
-#include <hpactor/actor/passivation_config.hpp>
-#include <hpactor/actor/passivation_manager.hpp>
-#include <hpactor/actor/shutdown_coordinator.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
@@ -29,6 +27,8 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/mailbox/backpressure_coordinator.hpp>
+#include <hpactor/mailbox/local_delivery_engine.hpp>
 
 #include <chrono>
 #include <thread>

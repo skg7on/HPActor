@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/hpactor_config.hpp>
-#include <hpactor/sched/coroutine_task.hpp>
+#include <hpactor/coroutine/coroutine_task.hpp>
 #include <hpactor/sched/scheduler_interfaces.hpp>
 #include <hpactor/types/types.hpp>
 

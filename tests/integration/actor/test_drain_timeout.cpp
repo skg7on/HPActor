@@ -14,7 +14,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
