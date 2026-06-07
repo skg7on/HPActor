@@ -401,6 +401,11 @@ bool EventBasedActor::dispatch_cli_message(TypedMessage& msg) {
         pb_meta->set_actor_type(meta.actor_type);
         pb_meta->set_state(meta.state);
         pb_meta->set_incarnation(meta.incarnation);
+        pb_meta->set_messages_processed(meta.messages_processed);
+        pb_meta->set_uptime_ms(meta.uptime_ms);
+        if (!meta.behavior_name.empty()) {
+            pb_meta->set_behavior_name(meta.behavior_name);
+        }
 
         if (req.include_mailbox()) {
             auto ms = mailbox_snapshot();
