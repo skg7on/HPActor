@@ -43,7 +43,7 @@
 #include <hpactor/msg/typed_message.hpp>
 
 #if HPACTOR_SUPPORT_COROUTINES
-#    include <hpactor/sched/coroutine_awaiters.hpp>
+#    include <hpactor/coroutine/coroutine_awaiters.hpp>
 #endif
 
 #include <algorithm>

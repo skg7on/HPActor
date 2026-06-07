@@ -22,7 +22,7 @@
 #include <chrono>
 
 #if HPACTOR_SUPPORT_COROUTINES
-#    include <hpactor/sched/coroutine_task.hpp>
+#    include <hpactor/coroutine/coroutine_task.hpp>
 #endif
 
 namespace hpactor::sched {

@@ -17,9 +17,9 @@
 #include <atomic>
 #include <cstdint>
 
-#include <hpactor/actor/drain_config.hpp>
-#include <hpactor/actor/lifecycle_state.hpp>
-#include <hpactor/actor/quarantine_reason.hpp>
+#include <hpactor/actor/lifecycle/drain_config.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_state.hpp>
+#include <hpactor/actor/lifecycle/quarantine_reason.hpp>
 #include <hpactor/types/types.hpp> // complete error type needed for value members
 
 namespace hpactor {

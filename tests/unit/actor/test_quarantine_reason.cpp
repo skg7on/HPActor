@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/quarantine_reason.hpp>
+#include <hpactor/actor/lifecycle/quarantine_reason.hpp>
 
 #include <string>
 

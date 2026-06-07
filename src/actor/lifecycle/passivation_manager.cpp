@@ -14,11 +14,11 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_route.hpp>
-#include <hpactor/actor/durable_actor.hpp>
+#include <hpactor/actor/durable/durable_actor.hpp>
 #include <hpactor/actor/durable_state_store.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/actor/passivation_manager.hpp>
+#include <hpactor/actor/lifecycle/passivation_manager.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mem/hibernatable.hpp>

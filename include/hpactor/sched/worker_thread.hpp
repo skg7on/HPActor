@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/actor_fwd.hpp>
-#include <hpactor/sched/coroutine_frame_pool.hpp>
+#include <hpactor/coroutine/coroutine_frame_pool.hpp>
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>

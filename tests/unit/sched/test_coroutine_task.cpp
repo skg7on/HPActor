@@ -14,8 +14,8 @@
 
 // tests/unit/sched/test_coroutine_task.cpp
 #include <gtest/gtest.h>
+#include <hpactor/coroutine/coroutine_task.hpp>
 #include <hpactor/hpactor_config.hpp>
-#include <hpactor/sched/coroutine_task.hpp>
 #include <hpactor/types/types.hpp>
 
 #if HPACTOR_SUPPORT_COROUTINES

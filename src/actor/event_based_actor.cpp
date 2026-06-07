@@ -14,8 +14,8 @@
 
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor/lifecycle_actor.hpp>
-#include <hpactor/actor/quarantine_reason.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/quarantine_reason.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>

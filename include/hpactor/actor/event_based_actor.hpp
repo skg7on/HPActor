@@ -15,11 +15,11 @@
 #pragma once
 
 #include <hpactor/actor/actor_state.hpp>
-#include <hpactor/actor/circuit_breaker.hpp>
-#include <hpactor/actor/drain_config.hpp>
-#include <hpactor/actor/failure_rate_tracker.hpp>
+#include <hpactor/actor/lifecycle/circuit_breaker.hpp>
+#include <hpactor/actor/lifecycle/drain_config.hpp>
+#include <hpactor/actor/lifecycle/failure_rate_tracker.hpp>
+#include <hpactor/actor/lifecycle/quarantine_policy.hpp>
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/actor/quarantine_policy.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
@@ -36,9 +36,9 @@
 #include <unordered_map>
 
 #if HPACTOR_SUPPORT_COROUTINES
-#    include <hpactor/sched/actor_coroutine.hpp>
-#    include <hpactor/sched/coroutine_awaiters.hpp>
-#    include <hpactor/sched/coroutine_task.hpp>
+#    include <hpactor/coroutine/actor_coroutine.hpp>
+#    include <hpactor/coroutine/coroutine_awaiters.hpp>
+#    include <hpactor/coroutine/coroutine_task.hpp>
 #endif
 
 namespace hpactor {

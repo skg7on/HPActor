@@ -242,6 +242,21 @@ AbstractActor (interface base)
 | `GossipMembership` | `net/gossip_membership.hpp` | SWIM protocol for decentralized cross-server discovery |
 | `ActorLocationCache` | `net/actor_location_cache.hpp` | TTL cache for ActorId → EndPoint resolution |
 
+### Header Placement Rules
+
+New public headers must be placed according to architecture module boundaries:
+
+| Concern | Directory |
+|---------|-----------|
+| Timer types (timing wheel, calendar queue) | `include/hpactor/timer/` |
+| Coroutine infrastructure (tasks, awaiters, frame pool) | `include/hpactor/coroutine/` |
+| Lifecycle, shutdown, passivation, drain, quarantine, circuit breaker | `include/hpactor/actor/lifecycle/` |
+| Mailbox admission, backpressure, delivery, pressure monitoring | `include/hpactor/mailbox/` |
+| Durable actor state | `include/hpactor/actor/durable/` |
+| Scheduler internals (scheduler, workers, queues, EDF, A2WS, dispatch) | `include/hpactor/sched/` |
+
+New source files follow the same directory structure under `src/`.
+
 ### Production Architecture Backlog
 
 The production reliability docs are architecture requirements and design

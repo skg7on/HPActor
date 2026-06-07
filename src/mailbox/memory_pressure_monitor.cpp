@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/memory_pressure_monitor.hpp>
+#include <hpactor/mailbox/memory_pressure_monitor.hpp>
 
 #if defined(__APPLE__)
 #    include <mach/mach.h>

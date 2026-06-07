@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <hpactor/actor/actor_route.hpp>
-#include <hpactor/actor/passivation_config.hpp>
+#include <hpactor/actor/lifecycle/passivation_config.hpp>
 
 using namespace hpactor;
 

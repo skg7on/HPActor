@@ -17,7 +17,7 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
-#include <hpactor/actor/shutdown_phase.hpp>
+#include <hpactor/actor/lifecycle/shutdown_phase.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <memory>

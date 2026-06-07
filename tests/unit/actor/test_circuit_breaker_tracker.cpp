@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/actor/circuit_breaker.hpp>
+#include <hpactor/actor/lifecycle/circuit_breaker.hpp>
 
 #include <string>
 

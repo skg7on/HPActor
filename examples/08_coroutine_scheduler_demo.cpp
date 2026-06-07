@@ -36,9 +36,9 @@
 #include <hpactor/actor_context.hpp>
 #include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/coroutine/coroutine_awaiters.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
-#include <hpactor/sched/coroutine_awaiters.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <atomic>

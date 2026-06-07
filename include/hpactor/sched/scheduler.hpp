@@ -20,12 +20,12 @@
 #include <hpactor/sched/a2ws.hpp>
 #include <hpactor/sched/actor_execution_engine.hpp>
 #include <hpactor/sched/actor_ready_gate.hpp>
-#include <hpactor/sched/calendar_queue.hpp>
 #include <hpactor/sched/edf_queue.hpp>
 #include <hpactor/sched/scheduler_interfaces.hpp>
-#include <hpactor/sched/timing_wheel.hpp>
 #include <hpactor/sched/work_placement_scheduler.hpp>
 #include <hpactor/sched/work_queue.hpp>
+#include <hpactor/timer/calendar_queue.hpp>
+#include <hpactor/timer/timing_wheel.hpp>
 
 #include <atomic>
 #include <condition_variable>

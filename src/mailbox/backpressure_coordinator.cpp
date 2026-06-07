@@ -12,24 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/actor/quarantine_reason.hpp>
+#include <hpactor/mailbox/backpressure_coordinator.hpp>
+#include <hpactor/core/actor_system.hpp>
 
 namespace hpactor {
 
-const char* to_string(QuarantineReason reason) noexcept {
-    switch (reason) {
-        case QuarantineReason::SupervisionEscalation:
-            return "supervision_escalation";
-        case QuarantineReason::CircuitBreakerTrip:
-            return "circuit_breaker_trip";
-        case QuarantineReason::MailboxPressure:
-            return "mailbox_pressure";
-        case QuarantineReason::OperatorAction:
-            return "operator_action";
-        case QuarantineReason::RecoveryFailure:
-            return "recovery_failure";
-    }
-    return "unknown";
+struct BackpressureCoordinator::Impl {
+    ActorSystem* system;
+};
+
+BackpressureCoordinator::BackpressureCoordinator(ActorSystem& system)
+    : impl_(std::make_unique<Impl>()) {
+    impl_->system = &system;
 }
+
+BackpressureCoordinator::~BackpressureCoordinator() = default;
 
 } // namespace hpactor
