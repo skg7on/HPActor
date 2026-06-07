@@ -38,7 +38,6 @@ enum class DeliveryStatus : uint8_t;
 struct DeliveryResult;
 enum class EnqueueResultCode : uint8_t;
 struct EnqueueResult;
-class DedupCache;
 enum class DeadLetterReason : uint8_t;
 enum class DeadLetterSource : uint8_t;
 struct DeadLetterRecord;

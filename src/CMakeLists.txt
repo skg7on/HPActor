@@ -31,7 +31,7 @@ add_library(hpactor_lib SHARED
     supervision/supervision.cpp
     mailbox/dead_letter_queue.cpp
     mailbox/delivery_result.cpp
-    mailbox/dedup_cache.cpp
+    adt/dedup_cache.cpp
     mailbox/backpressure_signal_serialization.cpp
     config/actor_factory_registry.cpp
     config/toml_parser.cpp
@@ -60,8 +60,8 @@ add_library(hpactor_lib SHARED
     net/acceptor.cpp
     net/connection.cpp
     net/tcp_transport.cpp
-    net/frame.cpp
-    net/frame_protobuf.cpp
+    msg/frame.cpp
+    msg/frame_protobuf.cpp
     net/tls_context.cpp
     net/tls_connection.cpp
     net/wireframe_connection.cpp

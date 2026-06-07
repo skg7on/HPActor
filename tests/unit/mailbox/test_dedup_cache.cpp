@@ -13,14 +13,14 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/msg/dedup_cache.hpp>
+#include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/ref/actor_address.hpp>
 
 #include <thread>
 #include <vector>
 
 using namespace hpactor;
-using namespace hpactor::mailbox;
+using namespace hpactor::adt;
 
 namespace {
 
