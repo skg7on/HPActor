@@ -130,7 +130,13 @@ constexpr bool retryable(FailureReason reason) noexcept {
         case FailureReason::ShuttingDown:
         case FailureReason::ResourceExhausted:
         case FailureReason::RemoteUnavailable:
+        case FailureReason::PassivationDrainTimeout:
+        case FailureReason::PassivationSnapshotFailed:
+        case FailureReason::ReactivationFailed:
+        case FailureReason::PassivationQueueFull:
             return true;
+        case FailureReason::SchemaVersionMismatch:
+            return false;
         default:
             return false;
     }
