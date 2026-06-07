@@ -15,6 +15,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/mem/thread_local_allocator.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/sched/actor_execution_engine.hpp>
 #include <hpactor/sched/actor_ready_gate.hpp>
@@ -202,7 +203,10 @@ TEST(DeadlineEnforcementRunnerTest, ExpiredWhileQueuedDroppedBeforeHandler) {
     // bypassing the pre-enqueue expiry check.
     auto* mbox = system->get_mailbox(target.id());
     ASSERT_NE(mbox, nullptr);
-    auto* injected = new TypedMessage(TypeTag::User, StreamBuffer{1});
+    // Allocate via HPActor memory system to match mem::deallocate in try_pop.
+    void* mem =
+        mem::allocate(mem::RegionType::kMessage, sizeof(TypedMessage), ActorId{});
+    auto* injected = new (mem) TypedMessage(TypeTag::User, StreamBuffer{1});
     injected->set_deadline_ns(1); // nanosecond 1 — definitely expired
     mbox->inject_for_test(injected);
 
@@ -267,8 +271,12 @@ TEST(DeadlineEnforcementCoroutineTest, ExpiredMessageSkippedInAwaitResume) {
     promise.actor_id = ActorId{42};
     promise.state.set(ActorState::kRunning);
 
-    // Inject an expired message into the mailbox.
-    auto* expired = new TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3});
+    // Allocate via HPActor memory system to match mem::deallocate in
+    // await_resume.
+    void* coro_mem =
+        mem::allocate(mem::RegionType::kMessage, sizeof(TypedMessage), ActorId{});
+    auto* expired =
+        new (coro_mem) TypedMessage(TypeTag::User, StreamBuffer{1, 2, 3});
     expired->set_deadline_ns(1); // nanosecond 1 — definitely expired
     mbox.inject_for_test(expired);
 
