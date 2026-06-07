@@ -18,10 +18,28 @@
 
 namespace hpactor {
 
+/// \brief An RPC response frame delivered from the transport layer to
+///        \c RpcChannel.
+///
+/// Carries the correlation \c MessageId, the response payload, and
+/// optional distributed trace context propagated from the responder.
 struct RpcResponseFrame {
+    /// \brief Correlation id matching the original RPC request.
     MessageId msg_id;
+
+    /// \brief Serialized response payload.
+    ///
+    /// Ownership: the transport layer populates this buffer. The
+    /// receiver (typically \c RpcChannel::on_response()) moves the
+    /// data into the corresponding \c PendingCall promise.
     StreamBuffer payload;
+
+    /// \brief Whether \c trace_context contains valid trace data
+    ///        propagated from the responder.
     bool has_trace_context{false};
+
+    /// \brief Trace context propagated from the responder for
+    ///        distributed tracing span correlation.
     TraceContext trace_context{};
 };
 
