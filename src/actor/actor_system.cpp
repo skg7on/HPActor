@@ -14,10 +14,13 @@
 
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/backpressure_coordinator.hpp>
+#include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/local_delivery_engine.hpp>
+#include <hpactor/actor/passivation_config.hpp>
+#include <hpactor/actor/passivation_manager.hpp>
 #include <hpactor/actor/shutdown_coordinator.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/actor_type_registry.hpp>
@@ -174,6 +177,14 @@ ActorSystem::ActorSystem(const Config& config)
 
         // Create AskManager for local ask() request tracking
         ask_manager_ = std::make_unique<AskManager>(scheduler_.get(), this);
+
+        // Create PassivationManager with InMemoryStateStore by default.
+        {
+            auto durable_store = std::make_unique<InMemoryStateStore>();
+            PassivationConfig defaults;
+            passivation_manager_ = std::make_unique<PassivationManager>(
+                *this, durable_store.release(), defaults);
+        }
 
         if (config_.enable_http_client) {
             http_client_ = std::make_unique<net::HttpClient>(network_loop_.get());

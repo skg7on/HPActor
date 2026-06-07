@@ -20,6 +20,7 @@
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/drain_config.hpp>
 #include <hpactor/actor/lifecycle_actor.hpp>
+#include <hpactor/actor/passivation_manager.hpp>
 #include <hpactor/actor/shutdown_phase.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
@@ -349,6 +350,14 @@ class ActorSystem {
     }
     const AskManager* ask_manager() const {
         return ask_manager_.get();
+    }
+
+    /// \brief PassivationManager for actor passivation and reactivation.
+    PassivationManager* passivation_manager() {
+        return passivation_manager_.get();
+    }
+    const PassivationManager* passivation_manager() const {
+        return passivation_manager_.get();
     }
 
     // ── HTTP ──────────────────────────────────────────────────────────────
@@ -762,6 +771,8 @@ class ActorSystem {
     std::unique_ptr<RpcChannel> rpc_channel_;
     // Ask manager for local ask() request tracking
     std::unique_ptr<AskManager> ask_manager_;
+    // Passivation manager for actor passivation and reactivation
+    std::unique_ptr<PassivationManager> passivation_manager_;
     // HTTP client for outbound HTTP calls
     std::unique_ptr<net::HttpClient> http_client_;
 
