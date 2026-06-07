@@ -138,26 +138,28 @@ FileStateStore::load_latest_snapshot(std::string_view persistence_id) {
 }
 
 result<void>
-FileStateStore::append_event(std::string_view persistence_id, uint64_t sequence,
-                             StreamBuffer /*event*/) {
-    std::lock_guard<std::mutex> lock(mutex_);
-    std::string key(persistence_id);
-    if (next_sequences_[key] > sequence) {
-        return result<void>::make();
-    }
-    if (next_sequences_[key] != sequence) {
-        return result<void>::make(
-            error(static_cast<uint32_t>(FailureReason::Unknown)));
-    }
-    next_sequences_[key]++;
-    return result<void>::make();
+FileStateStore::append_event(std::string_view /*persistence_id*/,
+                             uint64_t /*sequence*/, StreamBuffer /*event*/) {
+    // Event journaling to disk is not yet implemented for FileStateStore.
+    // Callers should use InMemoryStateStore for event-sourced actors until
+    // disk-backed event persistence is added in a follow-on change.
+    return result<void>::make(
+        error(static_cast<uint32_t>(FailureReason::Unknown), "FileStateStore "
+                                                             "event "
+                                                             "persistence not "
+                                                             "yet "
+                                                             "implemented"));
 }
 
 result<std::vector<EventRecord>>
 FileStateStore::load_events_after(std::string_view /*persistence_id*/,
                                   uint64_t /*after_sequence*/) {
-    std::vector<EventRecord> empty;
-    return result<std::vector<EventRecord>>::make(std::move(empty));
+    return result<std::vector<EventRecord>>::make(
+        error(static_cast<uint32_t>(FailureReason::Unknown), "FileStateStore "
+                                                             "event "
+                                                             "persistence not "
+                                                             "yet "
+                                                             "implemented"));
 }
 
 result<void> FileStateStore::delete_state(std::string_view persistence_id) {

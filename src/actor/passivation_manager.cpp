@@ -203,11 +203,17 @@ result<LocalActor*> PassivationManager::reactivate(IActorRoute& route) {
     // Success: mark as Active
     passivated->set_state(LifecycleState::kActive);
 
-    // The caller is responsible for replacing the route stub with
-    // the actual reconstructed actor in the registry.
-    // For now, nullptr indicates "reactivation protocol completed
-    // successfully but actor reconstruction is handled externally."
-    return result<LocalActor*>::make(static_cast<LocalActor*>(nullptr));
+    // Actor reconstruction requires the actor factory and registry
+    // integration. The reactivation protocol completed successfully
+    // (state restored, route stub transitioned), but the caller must
+    // construct the new actor instance and replace the route stub.
+    return result<LocalActor*>::make(
+        error(static_cast<uint32_t>(FailureReason::Unknown), "reactivation "
+                                                             "protocol "
+                                                             "succeeded; actor "
+                                                             "reconstruction "
+                                                             "requires factory "
+                                                             "integration"));
 }
 
 result<void> PassivationManager::drain_actor(ActorId actor_id) {
@@ -215,12 +221,6 @@ result<void> PassivationManager::drain_actor(ActorId actor_id) {
         // Simulated stall — drain still "completes" for testability
     }
 
-    // Drain is handled by the actor's existing drain infrastructure.
-    // The actor processes remaining messages in its mailbox during
-    // the kPassivating state. The drain timeout is enforced by a
-    // TimingWheel alarm set by the lifecycle hooks.
-    //
-    // For now, we validate the actor exists and is in Passivating state.
     auto actor = system_.get_actor(actor_id);
     if (!actor) {
         return result<void>::make(
@@ -231,6 +231,16 @@ result<void> PassivationManager::drain_actor(ActorId actor_id) {
     if (!lifecycle || lifecycle->state() != LifecycleState::kPassivating) {
         return result<void>::make(
             error(static_cast<uint32_t>(FailureReason::Unknown)));
+    }
+
+    // Verify the mailbox is empty before snapshot. The lifecycle
+    // on_passivating() hook starts the drain; the scheduler processes
+    // remaining messages. We poll once — if there are still messages
+    // queued, the drain hasn't completed yet and we must not snapshot.
+    auto snapshot = actor->mailbox_snapshot();
+    if (snapshot.depth > 0) {
+        return result<void>::make(
+            error(static_cast<uint32_t>(FailureReason::PassivationDrainTimeout)));
     }
 
     return result<void>::make();

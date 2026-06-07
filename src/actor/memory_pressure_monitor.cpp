@@ -45,9 +45,10 @@ uint8_t MemoryPressureMonitor::current_pressure_pct() const {
     mach_port_t host = mach_host_self();
     vm_statistics64_data_t vm_stats;
     mach_msg_type_number_t count = HOST_VM_INFO64_COUNT;
-    if (host_statistics64(host, HOST_VM_INFO64,
-                          reinterpret_cast<host_info64_t>(&vm_stats),
-                          &count) != KERN_SUCCESS) {
+    kern_return_t kr = host_statistics64(
+        host, HOST_VM_INFO64, reinterpret_cast<host_info64_t>(&vm_stats), &count);
+    mach_port_deallocate(mach_task_self(), host);
+    if (kr != KERN_SUCCESS) {
         return 0;
     }
     uint64_t total = vm_stats.wire_count + vm_stats.active_count +
