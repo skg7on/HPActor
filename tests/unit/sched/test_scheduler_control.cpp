@@ -19,9 +19,9 @@
 #include <gtest/gtest.h>
 #include <thread>
 
+#include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor_context.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/sched/scheduler.hpp>

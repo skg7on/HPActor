@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/actor/typed_actor.hpp>
-#include <hpactor/typed_behavior.hpp>
+#include <hpactor/actor/typed_behavior.hpp>
 
 #include <gtest/gtest.h>
 #include <type_traits>
