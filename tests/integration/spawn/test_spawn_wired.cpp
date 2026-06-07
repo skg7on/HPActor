@@ -2,9 +2,9 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <gtest/gtest.h>
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/request_timeout.hpp>
-#include <hpactor/spawn.hpp>
 
 namespace hpactor {
 namespace {

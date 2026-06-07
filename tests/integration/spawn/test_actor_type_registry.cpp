@@ -14,9 +14,9 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor_type_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 using namespace hpactor;

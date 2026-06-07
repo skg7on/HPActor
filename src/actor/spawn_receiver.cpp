@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/msg/frame.hpp>
-#include <hpactor/spawn.hpp>
 
 #include <hpactor/messages.pb.h>
 

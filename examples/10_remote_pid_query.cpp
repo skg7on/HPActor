@@ -32,14 +32,14 @@
 //
 // =============================================================================
 
+#include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/actor_context.hpp>
-#include <hpactor/actor_type_registry.hpp>
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/registrar.hpp>
-#include <hpactor/spawn.hpp>
 
 #include <atomic>
 #include <csignal>

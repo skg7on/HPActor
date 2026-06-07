@@ -14,8 +14,8 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
-#include <hpactor/actor_type_registry.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 using namespace hpactor;

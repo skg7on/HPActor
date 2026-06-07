@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
@@ -21,7 +22,6 @@
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
-#include <hpactor/actor_type_registry.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -33,6 +33,7 @@
 #include <chrono>
 #include <thread>
 
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/log/log_manager.hpp>
@@ -44,7 +45,6 @@
 #include <hpactor/net/async_io_fwd.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/sched/scheduler.hpp>
-#include <hpactor/spawn.hpp>
 
 // Protobuf message types for spawn serialization
 #include <hpactor/common.pb.h>

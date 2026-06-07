@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/net/connection_pool.hpp>
-#include <hpactor/spawn.hpp>
 
 #include <hpactor/common.pb.h>
 #include <hpactor/fault/fault_macros.hpp>
