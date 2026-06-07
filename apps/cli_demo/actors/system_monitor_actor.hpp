@@ -15,8 +15,8 @@
 #pragma once
 
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/behavior.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/core/actor_system.hpp>
 
