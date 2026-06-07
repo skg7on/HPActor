@@ -54,7 +54,8 @@ struct LogRingBuffer {
 class LogActor : public StatefulActor<LogRingBuffer> {
   public:
     LogActor(ActorContext* ctx, ActorSystem& sys)
-        : StatefulActor<LogRingBuffer>(ctx, sys) {
+        : StatefulActor<LogRingBuffer>(ctx, sys),
+          epoch_start_(std::chrono::steady_clock::now()) {
         become(make_behavior());
     }
 
@@ -64,7 +65,7 @@ class LogActor : public StatefulActor<LogRingBuffer> {
         m.actor_type = "LogActor";
         m.state = "Running";
         m.messages_processed = processed_.load();
-        m.uptime_ms = 0;
+        m.uptime_ms = elapsed_ms();
         return m;
     }
 
@@ -97,8 +98,16 @@ class LogActor : public StatefulActor<LogRingBuffer> {
     }
 
   private:
+    uint64_t elapsed_ms() const {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - epoch_start_)
+                .count());
+    }
+
     uint64_t total_events_ = 0;
     std::atomic<uint64_t> processed_{0};
+    std::chrono::steady_clock::time_point epoch_start_;
 };
 
 } // namespace hpactor::apps::cli_demo

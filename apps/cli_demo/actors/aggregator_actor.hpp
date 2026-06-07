@@ -41,7 +41,8 @@ namespace hpactor::apps::cli_demo {
 class AggregatorActor : public EventBasedActor {
   public:
     AggregatorActor(ActorContext* ctx, ActorSystem& sys)
-        : EventBasedActor(ctx, sys) {
+        : EventBasedActor(ctx, sys),
+          epoch_start_(std::chrono::steady_clock::now()) {
         latencies_.reserve(4096);
         become(make_behavior());
     }
@@ -52,7 +53,7 @@ class AggregatorActor : public EventBasedActor {
         m.actor_type = "AggregatorActor";
         m.state = "Running";
         m.messages_processed = processed_.load();
-        m.uptime_ms = 0;
+        m.uptime_ms = elapsed_ms();
         return m;
     }
 
@@ -105,6 +106,13 @@ class AggregatorActor : public EventBasedActor {
     }
 
   private:
+    uint64_t elapsed_ms() const {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - epoch_start_)
+                .count());
+    }
+
     uint64_t total_processed_ = 0;
     double avg_latency_us_ = 0.0;
     double p50_us_ = 0.0;
@@ -112,6 +120,7 @@ class AggregatorActor : public EventBasedActor {
     uint32_t active_workers_ = 4;
     std::vector<double> latencies_;
     std::atomic<uint64_t> processed_{0};
+    std::chrono::steady_clock::time_point epoch_start_;
 };
 
 } // namespace hpactor::apps::cli_demo

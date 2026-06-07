@@ -117,7 +117,9 @@ struct WorkerConfig {
 class WorkerActor : public EventBasedActor {
   public:
     WorkerActor(ActorContext* ctx, ActorSystem& sys, WorkerConfig cfg)
-        : EventBasedActor(ctx, sys), cfg_(cfg), rate_limiter_configured_(false) {
+        : EventBasedActor(ctx, sys), cfg_(cfg),
+          epoch_start_(std::chrono::steady_clock::now()),
+          rate_limiter_configured_(false) {
         if (cfg.quarantine_enabled) {
             QuarantinePolicy qp;
             qp.enabled = true;
@@ -163,7 +165,7 @@ class WorkerActor : public EventBasedActor {
         m.actor_type = "WorkerActor";
         m.state = healthy_ ? "Running" : "Unhealthy";
         m.messages_processed = processed_.load();
-        m.uptime_ms = 0;
+        m.uptime_ms = elapsed_ms();
         std::ostringstream oss;
         oss << "worker-" << cfg_.worker_id;
         m.behavior_name = oss.str();
@@ -299,9 +301,17 @@ class WorkerActor : public EventBasedActor {
                             make_msg(PeriodicTickTag));
     }
 
+    uint64_t elapsed_ms() const {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - epoch_start_)
+                .count());
+    }
+
     WorkerConfig cfg_;
     ActorAddress aggregator_addr_;
     ActorAddress log_addr_;
+    std::chrono::steady_clock::time_point epoch_start_;
     bool rate_limiter_configured_ = false;
     uint64_t tasks_processed_ = 0;
     double avg_latency_us_ = 0.0;

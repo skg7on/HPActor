@@ -39,7 +39,8 @@ namespace hpactor::apps::cli_demo {
 class SystemMonitorActor : public EventBasedActor {
   public:
     SystemMonitorActor(ActorContext* ctx, ActorSystem& sys)
-        : EventBasedActor(ctx, sys) {
+        : EventBasedActor(ctx, sys),
+          epoch_start_(std::chrono::steady_clock::now()) {
         become(make_behavior());
     }
 
@@ -49,7 +50,7 @@ class SystemMonitorActor : public EventBasedActor {
         m.actor_type = "SystemMonitorActor";
         m.state = "Running";
         m.messages_processed = processed_.load();
-        m.uptime_ms = 0;
+        m.uptime_ms = elapsed_ms();
         return m;
     }
 
@@ -74,6 +75,13 @@ class SystemMonitorActor : public EventBasedActor {
     }
 
   private:
+    uint64_t elapsed_ms() const {
+        return static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::milliseconds>(
+                std::chrono::steady_clock::now() - epoch_start_)
+                .count());
+    }
+
     void gather_stats() {
         total_messages_ = 0;
         running_actors_ = 0;
@@ -104,6 +112,7 @@ class SystemMonitorActor : public EventBasedActor {
     uint32_t idle_actors_ = 0;
     double scheduler_utilization_ = 0.0;
     std::atomic<uint64_t> processed_{0};
+    std::chrono::steady_clock::time_point epoch_start_;
 };
 
 } // namespace hpactor::apps::cli_demo
