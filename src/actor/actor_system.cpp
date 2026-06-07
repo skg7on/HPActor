@@ -786,9 +786,6 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
                    const hpactor::TypedMessage& msg,
                    const hpactor::mailbox::DeliveryOptions& options,
                    uint8_t priority, int64_t deadline_ns) {
-    if (options.delivery_mode < hpactor::mailbox::DeliveryMode::ObservableBestEffort) {
-        return std::nullopt;
-    }
     uint64_t now_ns = static_cast<uint64_t>(
         std::chrono::duration_cast<std::chrono::nanoseconds>(
             std::chrono::steady_clock::now().time_since_epoch())
@@ -966,6 +963,23 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
         }
     }
     // ── End circuit breaker admission gate ──────────────────────
+
+    // Auto-apply system default TTL when no explicit deadline is set.
+    if (deadline_ns == INT64_MAX && config_.default_message_ttl_ms.count() > 0) {
+        uint64_t now_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+        uint64_t ttl_ns =
+            static_cast<uint64_t>(config_.default_message_ttl_ms.count()) *
+            1'000'000ULL;
+        // Guard against overflow: if ttl_ns would wrap, use INT64_MAX - 1
+        if (ttl_ns > static_cast<uint64_t>(INT64_MAX) - now_ns) {
+            deadline_ns = INT64_MAX - 1;
+        } else {
+            deadline_ns = static_cast<int64_t>(now_ns + ttl_ns);
+        }
+    }
 
     msg.set_deadline_ns(deadline_ns);
 
