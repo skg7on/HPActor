@@ -162,6 +162,14 @@ struct Config {
     /// \brief Force shutdown after all phase timeouts expire.
     bool shutdown_force_after_timeout{true};
 
+    /// \brief Default message TTL in milliseconds.
+    ///
+    /// When non-zero, every message without an explicit deadline receives
+    /// this TTL computed from the current monotonic clock. Zero (default)
+    /// means no default TTL — messages without an explicit deadline are
+    /// never expired by the runtime.
+    std::chrono::milliseconds default_message_ttl_ms{0};
+
     /// \brief Timer backend selection.
     sched::TimerBackend timer_backend = sched::TimerBackend::TimingWheel;
 

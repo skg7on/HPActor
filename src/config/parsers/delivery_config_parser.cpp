@@ -57,6 +57,8 @@ class DeliveryConfigParser final : public ITomlSystemConfigParser {
             dt.read_uint32("retry_backoff_max_ms", 10000);
         out.delivery.dedup_window_ms = dt.read_uint32("dedup_window_ms", 300000);
         out.delivery.dedup_max_entries = dt.read_uint32("dedup_max_entries", 65536);
+        out.delivery.default_message_ttl_ms =
+            dt.read_uint32("default_message_ttl_ms", 0);
 
         return result<void>::make();
     }
