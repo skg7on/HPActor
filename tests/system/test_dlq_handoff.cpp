@@ -91,3 +91,99 @@ TEST(DlqHandoffSystemTest, SnapshotRecordsViaSystem) {
     auto snap = dlq->snapshot();
     EXPECT_EQ(snap.depth, 3u);
 }
+
+// ── DLQ routing policy integration ─────────────────────────────────────
+
+// When routing_policy is Never, even a missing-actor failure must not
+// produce a dead-letter record.
+TEST(DlqRoutingPolicySystemTest, NeverPolicySuppressesDlqOnMissingActor) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = false;
+    cfg.cli.enabled = false;
+    cfg.dead_letters.enabled = true;
+    cfg.dead_letters.routing_policy = mailbox::DeadLetterRoutingPolicy::Never;
+
+    ActorSystem system(cfg);
+    auto* dlq = system.dead_letter_queue();
+    ASSERT_NE(dlq, nullptr);
+
+    // Send to a non-existent actor — BestEffort delivery mode.
+    TypedMessage msg(TypeTag{100}, StreamBuffer{1, 2, 3});
+    mailbox::DeliveryOptions opts;
+    opts.delivery_mode = mailbox::DeliveryMode::BestEffort;
+    auto result = system.try_deliver_local(ActorId{9999}, std::move(msg),
+                                           /*priority=*/0, INT64_MAX, opts);
+
+    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::ActorNotFound);
+
+    // Policy = Never → no DLQ record should have been created.
+    auto snap = system.dead_letter_snapshot();
+    EXPECT_EQ(snap.depth, 0u) << "Never policy must suppress DLQ routing for "
+                                 "missing actors";
+}
+
+// When routing_policy is Always and DLQ is enabled, a missing-actor
+// failure must produce a dead-letter record.
+TEST(DlqRoutingPolicySystemTest, AlwaysPolicyRoutesMissingActorToDlq) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = false;
+    cfg.cli.enabled = false;
+    cfg.dead_letters.enabled = true;
+    cfg.dead_letters.routing_policy = mailbox::DeadLetterRoutingPolicy::Always;
+
+    ActorSystem system(cfg);
+    auto* dlq = system.dead_letter_queue();
+    ASSERT_NE(dlq, nullptr);
+
+    TypedMessage msg(TypeTag{100}, StreamBuffer{1, 2, 3});
+    mailbox::DeliveryOptions opts;
+    opts.delivery_mode = mailbox::DeliveryMode::BestEffort;
+    auto result = system.try_deliver_local(ActorId{9999}, std::move(msg),
+                                           /*priority=*/0, INT64_MAX, opts);
+
+    EXPECT_EQ(result.code, mailbox::EnqueueResultCode::ActorNotFound);
+
+    // Policy = Always → even BestEffort failures create DLQ records.
+    auto snap = system.dead_letter_snapshot();
+    EXPECT_EQ(snap.depth, 1u) << "Always policy must route missing-actor "
+                                 "failures to DLQ";
+    EXPECT_EQ(snap.total_pushed, 1u);
+}
+
+// TrackedOnly policy should suppress BestEffort but route AtLeastOnce.
+TEST(DlqRoutingPolicySystemTest, TrackedOnlyPolicyGatesByDeliveryMode) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = false;
+    cfg.cli.enabled = false;
+    cfg.dead_letters.enabled = true;
+    cfg.dead_letters.routing_policy = mailbox::DeadLetterRoutingPolicy::TrackedOnly;
+
+    ActorSystem system(cfg);
+
+    // BestEffort → no DLQ
+    {
+        TypedMessage msg(TypeTag{100}, StreamBuffer{1, 2, 3});
+        mailbox::DeliveryOptions opts;
+        opts.delivery_mode = mailbox::DeliveryMode::BestEffort;
+        (void)system.try_deliver_local(ActorId{9999}, std::move(msg),
+                                       /*priority=*/0, INT64_MAX, opts);
+        auto snap = system.dead_letter_snapshot();
+        EXPECT_EQ(snap.depth, 0u) << "TrackedOnly must suppress BestEffort DLQ "
+                                     "routing";
+    }
+
+    // AtLeastOnce → DLQ
+    {
+        TypedMessage msg(TypeTag{100}, StreamBuffer{4, 5, 6});
+        mailbox::DeliveryOptions opts;
+        opts.delivery_mode = mailbox::DeliveryMode::AtLeastOnce;
+        (void)system.try_deliver_local(ActorId{9999}, std::move(msg),
+                                       /*priority=*/0, INT64_MAX, opts);
+        auto snap = system.dead_letter_snapshot();
+        EXPECT_EQ(snap.depth, 1u) << "TrackedOnly must route AtLeastOnce "
+                                     "failures to DLQ";
+    }
+}

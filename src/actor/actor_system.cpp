@@ -693,14 +693,50 @@ void set_dlq_trace_fields(hpactor::mailbox::DeadLetterRecord& dl,
     dl.span_id = sp;
 }
 
+// Push a DLQ record for a circuit-breaker rejection if policy permits.
+// Shared by kOpen and kHalfOpen rejection paths in try_deliver_local.
+void push_circuit_open_dlq(hpactor::mailbox::DeadLetterQueue* dlq,
+                           const hpactor::TypedMessage& msg,
+                           const hpactor::mailbox::DeliveryOptions& options,
+                           hpactor::EndPoint endpoint, hpactor::ActorId target,
+                           uint8_t priority, int64_t deadline_ns) noexcept {
+    if (!dlq || !dlq->config().enabled ||
+        !hpactor::mailbox::should_route_to_dlq(options.delivery_mode,
+                                               dlq->config().routing_policy)) {
+        return;
+    }
+    hpactor::mailbox::DeadLetterRecord dl;
+    dl.reason = hpactor::mailbox::DeadLetterReason::EndpointCircuitOpen;
+    dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
+    dl.sender = msg.sender_address();
+    dl.target = hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
+    dl.type_tag = msg.type_id();
+    dl.message_id = options.message_id;
+    dl.frame_flags = options.flags;
+    dl.priority = priority;
+    dl.deadline_ns = deadline_ns;
+    dl.payload_sample = msg.payload();
+    dl.timestamp_ns = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(
+            std::chrono::steady_clock::now().time_since_epoch())
+            .count());
+    if (msg.has_trace_context()) {
+        set_dlq_trace_fields(dl, msg.trace_context());
+    }
+    (void)dlq->try_push(std::move(dl));
+}
+
 // Build the EnqueueResult + observability for a missing-actor target.
+// DLQ routing is gated by DeadLetterRoutingPolicy × DeliveryMode.
 [[nodiscard]] hpactor::mailbox::EnqueueResult
 reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
                      hpactor::EndPoint endpoint, hpactor::ActorId target,
                      const hpactor::TypedMessage& msg,
                      const hpactor::mailbox::DeliveryOptions& options,
                      uint8_t priority, int64_t deadline_ns) {
-    if (dlq) {
+    if (dlq && dlq->config().enabled &&
+        hpactor::mailbox::should_route_to_dlq(options.delivery_mode,
+                                              dlq->config().routing_policy)) {
         hpactor::mailbox::DeadLetterRecord dl;
         dl.reason = hpactor::mailbox::DeadLetterReason::ActorNotFound;
         dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
@@ -808,7 +844,9 @@ try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
         evt.value_hi = 1;
         metrics->try_push(evt);
     }
-    if (dlq) {
+    if (dlq && dlq->config().enabled &&
+        hpactor::mailbox::should_route_to_dlq(options.delivery_mode,
+                                              dlq->config().routing_policy)) {
         hpactor::mailbox::DeadLetterRecord dl;
         dl.reason = hpactor::mailbox::DeadLetterReason::Expired;
         dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
@@ -845,9 +883,12 @@ void emit_rejection_observability(
         return;
     }
 
-    // Dead-letter when the overflow policy mandates it.
+    // Dead-letter when the overflow policy mandates it AND the delivery
+    // mode meets the routing policy threshold.
     if (dlq && dlq->config().enabled &&
-        overflow_policy == hpactor::mailbox::OverflowPolicy::DeadLetter) {
+        overflow_policy == hpactor::mailbox::OverflowPolicy::DeadLetter &&
+        hpactor::mailbox::should_route_to_dlq(options.delivery_mode,
+                                              dlq->config().routing_policy)) {
         hpactor::mailbox::DeadLetterRecord dl;
         dl.reason = hpactor::mailbox::DeadLetterReason::OverflowPolicy;
         dl.source = hpactor::mailbox::DeadLetterSource::MailboxAdmission;
@@ -949,11 +990,17 @@ ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                         }
                         // Fall through — admit the probe message.
                     } else {
+                        push_circuit_open_dlq(dead_letters_.get(), msg, options,
+                                              endpoint_, target, priority,
+                                              deadline_ns);
                         return mailbox::EnqueueResult{
                             mailbox::EnqueueResultCode::CircuitOpen, target};
                     }
                 } else if (cb->state == CircuitBreakerState::kHalfOpen) {
                     if (cb->half_open_probe_in_flight) {
+                        push_circuit_open_dlq(dead_letters_.get(), msg, options,
+                                              endpoint_, target, priority,
+                                              deadline_ns);
                         return mailbox::EnqueueResult{
                             mailbox::EnqueueResultCode::CircuitOpen, target};
                     }
