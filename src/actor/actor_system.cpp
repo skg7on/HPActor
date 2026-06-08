@@ -32,6 +32,7 @@
 #include <hpactor/mailbox/local_delivery_engine.hpp>
 
 #include <chrono>
+#include <mutex>
 #include <thread>
 
 #include <hpactor/actor/spawn.hpp>
@@ -82,13 +83,17 @@ ActorSystem::ActorSystem(const Config& config)
           *this, config.scheduler_threads, 4, config.timer_backend,
           config.scheduler_start_paused)),
       actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
+    // ── System protobuf types ──────────────────────────────────────────
     proto_registry_.register_system_types();
 
+    // ── Dead-letter queue ──────────────────────────────────────────────
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
 
+    // ── Receiver dedup cache ───────────────────────────────────────────
     dedup_cache_ = std::make_unique<adt::DedupCache>(adt::DedupCache::Config{});
 
+    // ── Extracted runtime components ───────────────────────────────────
     local_delivery_engine_ =
         std::make_unique<LocalDeliveryEngine>(actor_directory_);
     {
@@ -101,8 +106,9 @@ ActorSystem::ActorSystem(const Config& config)
             std::make_unique<BackpressureCoordinator>(std::move(bp_cfg));
     }
 
-    // Initialize the delivery pipeline — the central message admission
-    // boundary. MUST be created before the scheduler starts.
+    // ── Delivery pipeline ──────────────────────────────────────────────
+    // MUST be created before the scheduler starts so that early-boot
+    // actor spawns can deliver messages through it.
     {
         mailbox::DeliveryPipeline::Config pipeline_cfg;
         pipeline_cfg.dlq = dead_letters_.get();
@@ -134,6 +140,7 @@ ActorSystem::ActorSystem(const Config& config)
             std::make_unique<mailbox::DeliveryPipeline>(std::move(pipeline_cfg));
     }
 
+    // ── Metrics subsystem ──────────────────────────────────────────────
     if (metrics_config_.enabled) {
         metrics_ring_buffer_ =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
@@ -143,6 +150,7 @@ ActorSystem::ActorSystem(const Config& config)
             metrics_ring_buffer_.get());
     }
 
+    // ── Logging subsystem ──────────────────────────────────────────────
     if (logging_config_.enabled) {
         log_manager_ = std::make_unique<log::LogManager>(logging_config_);
         log_manager_->start();
@@ -376,11 +384,13 @@ void ActorSystem::maybe_emit_backpressure_signal(
     const mailbox::EnqueueResult& /*result*/,
     const mailbox::MailboxEnvelopeMeta& /*meta*/, bool /*emit_requested*/,
     mailbox::BackpressureMode /*backpressure_mode*/) {
-    HPACTOR_LOG_WARNING(log::LogCategory::kActor, ActorId{0}, 0,
-                        "maybe_emit_backpressure_signal is deprecated — "
-                        "backpressure "
-                        "is now handled by DeliveryPipeline; this call is a "
-                        "no-op");
+    static std::once_flag once;
+    std::call_once(once, [] {
+        HPACTOR_LOG_WARNING(log::LogCategory::kActor, ActorId{0}, 0,
+                            "maybe_emit_backpressure_signal is deprecated — "
+                            "backpressure is now handled by DeliveryPipeline; "
+                            "this call is a no-op");
+    });
 }
 
 void ActorSystem::emit_local_backpressure_signal(
@@ -866,7 +876,11 @@ result<void> ActorSystem::shutdown() {
 }
 
 result<void> ActorSystem::shutdown(const ShutdownOptions& opts) {
-    shutdown_coordinator_->execute(opts);
+    bool clean = shutdown_coordinator_->execute(opts);
+    if (!clean) {
+        error err(errors::timeout);
+        return result<void>::make(std::move(err));
+    }
     return result<void>::make();
 }
 

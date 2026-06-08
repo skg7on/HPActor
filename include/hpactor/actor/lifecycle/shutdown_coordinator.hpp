@@ -84,7 +84,11 @@ class ShutdownCoordinator {
     ///
     /// \param[in] opts Shutdown options controlling per-phase timeouts
     ///                 and force-stop behaviour.
-    void execute(const ShutdownOptions& opts);
+    /// \return \c true if shutdown completed cleanly through all phases.
+    /// \retval true  All phases completed normally.
+    /// \retval false Force-stop was triggered — the system was killed
+    ///               before clean completion.
+    bool execute(const ShutdownOptions& opts);
 
     /// \brief Current shutdown phase.
     ///

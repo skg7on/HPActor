@@ -123,7 +123,7 @@ class BackpressureCoordinator {
     /// ID is zero (no sender) or the directory is unavailable.
     ///
     /// \param[in] signal The backpressure signal to deliver locally.
-    void deliver_to_sender(const mailbox::BackpressureSignal& signal);
+    void deliver_to_sender(const mailbox::BackpressureSignal& signal) const;
 
     // ── Test support ─────────────────────────────────────────────────
 

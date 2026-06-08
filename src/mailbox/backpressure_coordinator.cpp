@@ -77,7 +77,8 @@ bool BackpressureCoordinator::handle_remote_signal(const net::WireFrame& frame) 
     return true;
 }
 
-void BackpressureCoordinator::deliver_to_sender(const mailbox::BackpressureSignal& signal) {
+void BackpressureCoordinator::deliver_to_sender(
+    const mailbox::BackpressureSignal& signal) const {
     if (signal.sender.id == ActorId{0})
         return;
     if (!config_.actor_directory)

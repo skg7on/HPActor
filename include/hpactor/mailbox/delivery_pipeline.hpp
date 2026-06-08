@@ -178,7 +178,7 @@ class DeliveryPipeline {
                           const DeliveryOptions& options, uint8_t priority,
                           int64_t deadline_ns);
 
-    int64_t apply_default_ttl(int64_t deadline_ns) const;
+    int64_t apply_default_ttl(int64_t deadline_ns) const noexcept;
 
     std::optional<EnqueueResult>
     check_duplicate(ActorId target, const TypedMessage& msg,

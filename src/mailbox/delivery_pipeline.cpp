@@ -219,7 +219,7 @@ DeliveryPipeline::check_circuit_breaker(ActorId target, const TypedMessage& msg,
 
 // ── Pipeline stage: default TTL application ────────────────────────────────
 
-int64_t DeliveryPipeline::apply_default_ttl(int64_t deadline_ns) const {
+int64_t DeliveryPipeline::apply_default_ttl(int64_t deadline_ns) const noexcept {
     if (deadline_ns != INT64_MAX || config_.default_message_ttl_ms.count() == 0) {
         return deadline_ns;
     }
