@@ -63,6 +63,8 @@ class DeadLettersConfigParser final : public ITomlSystemConfigParser {
             dt.read_bool("alert_on_first_failure", false);
         out.dead_letters.alert_threshold_per_minute =
             dt.read_uint32("alert_threshold_per_minute", 100);
+        out.dead_letters.routing_policy = hpactor::mailbox::parse_routing_policy(
+            dt.read_string("routing_policy", "always"));
 
         return result<void>::make();
     }
