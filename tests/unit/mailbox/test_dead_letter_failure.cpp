@@ -96,3 +96,113 @@ TEST(DeadLetterFailureTest, ToStringDeadLetterSource) {
                                                                 "on");
     EXPECT_STREQ(to_string(DeadLetterSource::Replay), "Replay");
 }
+
+// ── DeadLetterRoutingPolicy ────────────────────────────────────────────
+
+TEST(DeadLetterRoutingPolicyTest, DefaultConstructedIsNever) {
+    using namespace hpactor::mailbox;
+    DeadLetterRoutingPolicy policy{};
+    // Zero-initialised enum naturally maps to Never=0. The safe production
+    // default (Always) is enforced by DeadLetterConfig, not the raw enum.
+    EXPECT_EQ(policy, DeadLetterRoutingPolicy::Never);
+}
+
+TEST(DeadLetterRoutingPolicyTest, Uint8Size) {
+    EXPECT_EQ(sizeof(hpactor::mailbox::DeadLetterRoutingPolicy), 1);
+}
+
+// ── should_route_to_dlq decision matrix ────────────────────────────────
+
+TEST(DeadLetterRoutingPolicyTest, NeverSuppressesAll) {
+    using namespace hpactor::mailbox;
+    EXPECT_FALSE(should_route_to_dlq(DeliveryMode::BestEffort,
+                                     DeadLetterRoutingPolicy::Never));
+    EXPECT_FALSE(should_route_to_dlq(DeliveryMode::ObservableBestEffort,
+                                     DeadLetterRoutingPolicy::Never));
+    EXPECT_FALSE(should_route_to_dlq(DeliveryMode::AtLeastOnce,
+                                     DeadLetterRoutingPolicy::Never));
+    EXPECT_FALSE(should_route_to_dlq(DeliveryMode::DurableAtLeastOnce,
+                                     DeadLetterRoutingPolicy::Never));
+}
+
+TEST(DeadLetterRoutingPolicyTest, AlwaysRoutesAll) {
+    using namespace hpactor::mailbox;
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::BestEffort,
+                                    DeadLetterRoutingPolicy::Always));
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::ObservableBestEffort,
+                                    DeadLetterRoutingPolicy::Always));
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::AtLeastOnce,
+                                    DeadLetterRoutingPolicy::Always));
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::DurableAtLeastOnce,
+                                    DeadLetterRoutingPolicy::Always));
+}
+
+TEST(DeadLetterRoutingPolicyTest, TrackedOnlyRoutesAtLeastOnceAndAbove) {
+    using namespace hpactor::mailbox;
+    EXPECT_FALSE(should_route_to_dlq(DeliveryMode::BestEffort,
+                                     DeadLetterRoutingPolicy::TrackedOnly));
+    EXPECT_FALSE(should_route_to_dlq(DeliveryMode::ObservableBestEffort,
+                                     DeadLetterRoutingPolicy::TrackedOnly));
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::AtLeastOnce,
+                                    DeadLetterRoutingPolicy::TrackedOnly));
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::DurableAtLeastOnce,
+                                    DeadLetterRoutingPolicy::TrackedOnly));
+}
+
+TEST(DeadLetterRoutingPolicyTest, ObservableAndAboveRoutesObservableAndAbove) {
+    using namespace hpactor::mailbox;
+    EXPECT_FALSE(should_route_to_dlq(
+        DeliveryMode::BestEffort, DeadLetterRoutingPolicy::ObservableAndAbove));
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::ObservableBestEffort,
+                                    DeadLetterRoutingPolicy::ObservableAndAbove));
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::AtLeastOnce,
+                                    DeadLetterRoutingPolicy::ObservableAndAbove));
+    EXPECT_TRUE(should_route_to_dlq(DeliveryMode::DurableAtLeastOnce,
+                                    DeadLetterRoutingPolicy::ObservableAndAbove));
+}
+
+TEST(DeadLetterRoutingPolicyTest, ToStringRoundTrip) {
+    using namespace hpactor::mailbox;
+    EXPECT_STREQ(to_string(DeadLetterRoutingPolicy::Never), "never");
+    EXPECT_STREQ(to_string(DeadLetterRoutingPolicy::TrackedOnly), "tracked_"
+                                                                  "only");
+    EXPECT_STREQ(to_string(DeadLetterRoutingPolicy::ObservableAndAbove), "obser"
+                                                                         "vable"
+                                                                         "_and_"
+                                                                         "abov"
+                                                                         "e");
+    EXPECT_STREQ(to_string(DeadLetterRoutingPolicy::Always), "always");
+}
+
+TEST(DeadLetterRoutingPolicyTest, ParseFromString) {
+    using namespace hpactor::mailbox;
+    EXPECT_EQ(parse_routing_policy("never"), DeadLetterRoutingPolicy::Never);
+    EXPECT_EQ(parse_routing_policy("tracked_only"),
+              DeadLetterRoutingPolicy::TrackedOnly);
+    EXPECT_EQ(parse_routing_policy("observable_and_above"),
+              DeadLetterRoutingPolicy::ObservableAndAbove);
+    EXPECT_EQ(parse_routing_policy("always"), DeadLetterRoutingPolicy::Always);
+    EXPECT_EQ(parse_routing_policy("garbage"), DeadLetterRoutingPolicy::Always);
+    EXPECT_EQ(parse_routing_policy(""), DeadLetterRoutingPolicy::Always);
+}
+
+// ── DeadLetterConfig routing_policy field ─────────────────────────────
+
+TEST(DeadLetterConfigRoutingPolicyTest, DefaultConfigRoutesAlways) {
+    hpactor::mailbox::DeadLetterConfig cfg{};
+    EXPECT_TRUE(cfg.enabled);
+    EXPECT_EQ(cfg.routing_policy, hpactor::mailbox::DeadLetterRoutingPolicy::Always);
+}
+
+TEST(DeadLetterConfigRoutingPolicyTest, ExplicitRoutingPolicyRoundTrip) {
+    hpactor::mailbox::DeadLetterConfig cfg{};
+    cfg.routing_policy = hpactor::mailbox::DeadLetterRoutingPolicy::Never;
+    EXPECT_EQ(cfg.routing_policy, hpactor::mailbox::DeadLetterRoutingPolicy::Never);
+    cfg.routing_policy = hpactor::mailbox::DeadLetterRoutingPolicy::TrackedOnly;
+    EXPECT_EQ(cfg.routing_policy,
+              hpactor::mailbox::DeadLetterRoutingPolicy::TrackedOnly);
+    cfg.routing_policy =
+        hpactor::mailbox::DeadLetterRoutingPolicy::ObservableAndAbove;
+    EXPECT_EQ(cfg.routing_policy,
+              hpactor::mailbox::DeadLetterRoutingPolicy::ObservableAndAbove);
+}

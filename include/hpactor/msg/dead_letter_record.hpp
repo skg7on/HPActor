@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/adt/stream_buffer.hpp>
+#include <hpactor/msg/delivery_mode.hpp>
 #include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/msg/failure_reason.hpp>
 #include <hpactor/ref/actor_address.hpp>
@@ -23,6 +24,7 @@
 #include <cstdint>
 #include <deque>
 #include <mutex>
+#include <string>
 #include <vector>
 
 namespace hpactor::mailbox {
@@ -211,6 +213,91 @@ enum class DeadLetterOverflowPolicy : uint8_t {
     MetadataOnly,     ///< Store only metadata, discard the payload sample.
 };
 
+/// \brief System-level policy for routing undeliverable messages to the
+///        dead-letter queue.
+///
+/// Controls the delivery-mode threshold above which failed messages are
+/// recorded. Messages below the threshold are silently dropped (metrics
+/// and logs still fire). The policy is held in \c DeadLetterConfig and
+/// evaluated by \c should_route_to_dlq().
+enum class DeadLetterRoutingPolicy : uint8_t {
+    /// Never route to DLQ. All undeliverable messages are silently
+    /// dropped. Metrics and logs still record the failure.
+    Never = 0,
+
+    /// Route only tracked-delivery messages (\c AtLeastOnce and
+    /// \c DurableAtLeastOnce). BestEffort and ObservableBestEffort
+    /// failures are silently dropped.
+    TrackedOnly = 1,
+
+    /// Route observable-best-effort and stronger delivery modes.
+    /// Only \c BestEffort messages are silently dropped on failure.
+    ObservableAndAbove = 2,
+
+    /// Route all undeliverable messages to DLQ regardless of delivery
+    /// mode. This is the safe production default.
+    Always = 3,
+};
+
+/// \brief Human-readable snake_case string for a \c DeadLetterRoutingPolicy.
+///
+/// \param[in] policy The routing policy to stringify.
+/// \return A null-terminated string literal. Never returns \c nullptr.
+[[nodiscard]] constexpr const char*
+to_string(DeadLetterRoutingPolicy policy) noexcept {
+    switch (policy) {
+        case DeadLetterRoutingPolicy::Never:
+            return "never";
+        case DeadLetterRoutingPolicy::TrackedOnly:
+            return "tracked_only";
+        case DeadLetterRoutingPolicy::ObservableAndAbove:
+            return "observable_and_above";
+        case DeadLetterRoutingPolicy::Always:
+            return "always";
+    }
+    return "always";
+}
+
+/// \brief Parse a routing policy string from TOML config.
+///
+/// Accepts snake_case variants. Unknown or empty strings fall back to
+/// \c Always (the safe production default).
+///
+/// \param[in] s The string to parse (case-sensitive).
+/// \return The corresponding \c DeadLetterRoutingPolicy.
+[[nodiscard]] inline DeadLetterRoutingPolicy
+parse_routing_policy(const std::string& s) noexcept {
+    if (s == "never")
+        return DeadLetterRoutingPolicy::Never;
+    if (s == "tracked_only")
+        return DeadLetterRoutingPolicy::TrackedOnly;
+    if (s == "observable_and_above")
+        return DeadLetterRoutingPolicy::ObservableAndAbove;
+    return DeadLetterRoutingPolicy::Always;
+}
+
+/// \brief Decide whether a delivery failure should produce a dead-letter
+///        record.
+///
+/// Crosses the message's \c DeliveryMode with the system-level
+/// \c DeadLetterRoutingPolicy to produce a boolean routing decision.
+///
+/// \param[in] mode The delivery mode of the failed message.
+/// \param[in] policy The system-level DLQ routing policy.
+/// \return \c true if a \c DeadLetterRecord should be pushed.
+/// \note Thread safety: constexpr — safe to call from any context.
+[[nodiscard]] constexpr bool
+should_route_to_dlq(DeliveryMode mode, DeadLetterRoutingPolicy policy) noexcept {
+    if (policy == DeadLetterRoutingPolicy::Never)
+        return false;
+    if (policy == DeadLetterRoutingPolicy::Always)
+        return true;
+    if (policy == DeadLetterRoutingPolicy::TrackedOnly)
+        return is_tracked_delivery(mode);
+    // ObservableAndAbove
+    return mode >= DeliveryMode::ObservableBestEffort;
+}
+
 /// \brief Configuration for a \c DeadLetterQueue instance.
 struct DeadLetterConfig {
     bool enabled = true;
@@ -222,6 +309,11 @@ struct DeadLetterConfig {
     bool store_payload = true;
     bool alert_on_first_failure = false;
     uint32_t alert_threshold_per_minute = 100;
+    /// System-level policy controlling which \c DeliveryMode levels
+    /// produce dead-letter records on failure. Defaults to \c Always
+    /// for safe production operation — no undeliverable message is
+    /// silently lost without operator intent.
+    DeadLetterRoutingPolicy routing_policy = DeadLetterRoutingPolicy::Always;
 };
 
 /// \brief A single dead-letter record stored in the dead-letter queue.

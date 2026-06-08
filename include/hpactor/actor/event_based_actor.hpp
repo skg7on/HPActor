@@ -162,8 +162,10 @@ class EventBasedActor : public LocalActor {
             auto& req = *static_cast<ReqT*>(raw.get());
             ResT res = (*handler_ptr)(req);
             StreamBuffer result(res.ByteSizeLong());
-            (void)res.SerializeToArray(result.data(),
-                                       static_cast<int>(result.size()));
+            if (!result.empty()) {
+                (void)res.SerializeToArray(result.data(),
+                                           static_cast<int>(result.size()));
+            }
             return result;
         };
 
