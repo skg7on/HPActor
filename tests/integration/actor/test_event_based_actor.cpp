@@ -718,6 +718,17 @@ TEST_F(EventBasedActorTest, ActiveActorAcceptsUserMessages) {
 
 TEST_F(EventBasedActorTest, InspectStateRequestReturnsMetadata) {
     auto* actor = spawn_test_actor();
+    ASSERT_NE(actor, nullptr);
+
+    // Ensure the actor is in Active state before processing.  A newly
+    // spawned actor starts in kStarting; some internal paths (mailbox
+    // snapshot, metadata collection) may access state that is only fully
+    // wired after the kStarting -> kActive transition.
+    auto* actor_lc = actor->as_lifecycle();
+    ASSERT_NE(actor_lc, nullptr);
+    if (actor_lc->state() == LifecycleState::kStarting) {
+        actor_lc->transition(LifecycleState::kActive);
+    }
 
     cli::InspectStateRequest req;
     req.set_include_mailbox(true);
@@ -727,11 +738,25 @@ TEST_F(EventBasedActorTest, InspectStateRequestReturnsMetadata) {
     (void)req.SerializeToArray(payload.data(), static_cast<int>(payload.size()));
 
     auto* reply_target = spawn_test_actor();
+    ASSERT_NE(reply_target, nullptr);
+
+    auto* reply_lc = reply_target->as_lifecycle();
+    ASSERT_NE(reply_lc, nullptr);
+    if (reply_lc->state() == LifecycleState::kStarting) {
+        reply_lc->transition(LifecycleState::kActive);
+    }
+
     inject_message(actor, TypeTag::InspectStateRequestTag, payload,
                    reply_target->address());
     TypedMessage msg;
     ASSERT_TRUE(actor->get_mailbox()->try_pop(msg));
 
+    // Verify the actor context is available before calling receive().
+    // Under rare conditions (e.g. coverage-instrumented builds on
+    // resource-constrained CI runners), the context may not be fully
+    // wired; an explicit check turns a potential SEGFAULT into a clear
+    // test failure.
+    ASSERT_NE(actor->context(), nullptr);
     EXPECT_NO_FATAL_FAILURE(actor->receive(msg));
 
     auto* reply_mbox = reply_target->get_mailbox();
