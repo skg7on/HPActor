@@ -692,22 +692,8 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
         ::hpactor::SpawnResponseMessage pb_resp;
         if (!pb_resp.ParseFromArray(raw_result.value().data(),
                                     static_cast<int>(raw_result.value().size()))) {
-            inner.resolve_error(error(spawn_errors::deserialization_failed, "fa"
-                                                                            "il"
-                                                                            "ed"
-                                                                            " t"
-                                                                            "o "
-                                                                            "de"
-                                                                            "co"
-                                                                            "de"
-                                                                            " S"
-                                                                            "pa"
-                                                                            "wn"
-                                                                            "Re"
-                                                                            "sp"
-                                                                            "on"
-                                                                            "s"
-                                                                            "e"));
+            inner.resolve_error(error(spawn_errors::deserialization_failed,
+                                      "failed to decode SpawnResponse"));
             return;
         }
 
