@@ -73,28 +73,66 @@ class BackpressureCoordinator {
     };
 
     /// \brief Construct with injected dependencies.
+    ///
+    /// \param[in] config Injected configuration.  Pointed-to objects must
+    ///                   outlive the coordinator.  Pointers may be updated
+    ///                   after construction via \c set_*() methods.
     explicit BackpressureCoordinator(Config config);
+
+    /// \brief Destroy the coordinator.  No-op — all resources are owned
+    ///        by the injected components.
     ~BackpressureCoordinator();
 
     // ── Signal emission ──────────────────────────────────────────────
 
+    /// \brief Emit a backpressure signal to a local sender.
+    ///
+    /// Records a metric event and delivers the signal to the sender's
+    /// \c ActorContext::handle_backpressure() handler.
+    ///
+    /// \param[in] signal The backpressure signal to deliver.
+    /// \param[in] state  Current mailbox pressure state for metrics tagging.
     void emit_local_signal(const mailbox::BackpressureSignal& signal,
                            mailbox::MailboxPressureState state);
 
+    /// \brief Emit a backpressure signal to a remote sender.
+    ///
+    /// Serializes the signal, records a metric event, and sends it via
+    /// the injected transport (or test wire sink).
+    ///
+    /// \param[in] signal The backpressure signal to serialize and send.
+    /// \param[in] state  Current mailbox pressure state for metrics tagging.
     void emit_remote_signal(const mailbox::BackpressureSignal& signal,
                             mailbox::MailboxPressureState state);
 
     // ── Signal handling ──────────────────────────────────────────────
 
     /// \brief Handle an incoming remote backpressure signal from the wire.
-    /// \return true if the signal was decoded and delivered successfully.
+    ///
+    /// \param[in] frame WireFrame containing the serialized backpressure
+    ///                  signal payload.
+    /// \return \c true if the signal was decoded and delivered successfully.
+    /// \retval true  Signal was decoded and delivered to the sender.
+    /// \retval false Deserialization failed — the frame was silently dropped.
     bool handle_remote_signal(const net::WireFrame& frame);
 
-    /// \brief Deliver a backpressure signal to the sender's ActorContext.
+    /// \brief Deliver a backpressure signal to the sender's \c ActorContext.
+    ///
+    /// Looks up the sender in the actor directory and calls
+    /// \c handle_backpressure() on its context.  No-op when the sender
+    /// ID is zero (no sender) or the directory is unavailable.
+    ///
+    /// \param[in] signal The backpressure signal to deliver locally.
     void deliver_to_sender(const mailbox::BackpressureSignal& signal);
 
     // ── Test support ─────────────────────────────────────────────────
 
+    /// \brief Set a test wire sink that intercepts outbound backpressure
+    ///        frames instead of sending them through the transport.
+    ///
+    /// \param[in] sink Callback invoked with the sender address and
+    ///                 encoded frame bytes.  Pass an empty function to
+    ///                 clear the sink.
     void set_wire_sink_for_test(WireSink sink);
 
     /// \brief Update the metrics ring buffer pointer after construction.

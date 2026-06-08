@@ -50,10 +50,17 @@ template <typename T> class MPSCActorMailbox;
 class DeliveryPipeline {
   public:
     /// \brief Callback to emit a backpressure signal to a local sender.
+    ///
+    /// \param[in] signal The backpressure signal to deliver to the sender's
+    ///                   \c ActorContext.
+    /// \param[in] state  Current mailbox pressure state for metrics tagging.
     using LocalBackpressureEmitter =
         std::function<void(const BackpressureSignal& signal, MailboxPressureState state)>;
 
     /// \brief Callback to serialize and send a backpressure signal remotely.
+    ///
+    /// \param[in] signal The backpressure signal to serialize and wire-send.
+    /// \param[in] state  Current mailbox pressure state for metrics tagging.
     using RemoteBackpressureEmitter =
         std::function<void(const BackpressureSignal& signal, MailboxPressureState state)>;
 
@@ -88,7 +95,15 @@ class DeliveryPipeline {
         RemoteBackpressureEmitter emit_remote_backpressure;
     };
 
+    /// \brief Construct the delivery pipeline with injected dependencies.
+    ///
+    /// \param[in] config Injected configuration.  Pointed-to objects
+    ///                   (DLQ, metrics ring buffer, dedup cache) must
+    ///                   outlive the pipeline.  Callbacks are copied.
     explicit DeliveryPipeline(Config config);
+
+    /// \brief Destroy the pipeline.  No-op — all resources are owned by
+    ///        the injected components.
     ~DeliveryPipeline();
 
     DeliveryPipeline(const DeliveryPipeline&) = delete;
@@ -96,19 +111,58 @@ class DeliveryPipeline {
     DeliveryPipeline(DeliveryPipeline&&) = delete;
     DeliveryPipeline& operator=(DeliveryPipeline&&) = delete;
 
+    /// \brief Attempt to deliver a message to a local actor with full
+    ///        admission control.
+    ///
+    /// Runs the complete pipeline: actor lookup → circuit breaker gate →
+    /// TTL default application → dedup check → deadline check →
+    /// mailbox enqueue → rejection observability → backpressure signal.
+    ///
+    /// \param[in] target      Actor ID to deliver to.
+    /// \param[in] msg         Message to deliver (moved into the pipeline).
+    /// \param[in] priority    0–3 (0 = highest priority).
+    /// \param[in] deadline_ns Absolute delivery deadline in nanoseconds
+    ///                       (\c INT64_MAX = no deadline).
+    /// \param[in] options     Delivery options (mode, message_id, flags).
+    /// \return \c EnqueueResult describing acceptance or rejection.
+    /// \retval Accepted              Message was enqueued.
+    /// \retval ActorNotFound         Target actor does not exist.
+    /// \retval CircuitOpen           Target actor's circuit breaker is open.
+    /// \retval Rejected              Mailbox at hard capacity.
     EnqueueResult
     try_deliver(ActorId target, TypedMessage msg, uint8_t priority = 0,
                 int64_t deadline_ns = INT64_MAX, DeliveryOptions options = {});
 
+    /// \brief Deliver with a user-facing \c DeliveryResult.
+    ///
+    /// Wraps \c try_deliver() and converts the internal \c EnqueueResult
+    /// to \c DeliveryResult.  Also records the delivery result on the
+    /// mailbox and emits a \c kDeliveryResult metric event.
+    ///
+    /// \param[in] target      Actor ID to deliver to.
+    /// \param[in] msg         Message to deliver (moved).
+    /// \param[in] priority    0–3 (0 = highest).
+    /// \param[in] deadline_ns Absolute delivery deadline.
+    /// \param[in] options     Delivery options.
+    /// \return \c DeliveryResult describing the delivery outcome.
     DeliveryResult
     deliver_with_result(ActorId target, TypedMessage msg, uint8_t priority = 0,
                         int64_t deadline_ns = INT64_MAX,
                         DeliveryOptions options = {});
 
+    /// \brief Read-only access to the injected configuration.
+    ///
+    /// \return A const reference to the pipeline's \c Config.
     const Config& config() const noexcept {
         return config_;
     }
 
+    /// \brief Update the metrics ring buffer pointer after construction.
+    ///
+    /// Used when the ring buffer is created after the pipeline (e.g.,
+    /// during \c ActorSystem constructor ordering).
+    ///
+    /// \param[in] m Pointer to the metrics ring buffer, or \c nullptr.
     void set_metrics(metrics::MpscRingBuffer<metrics::MetricEvent>* m) {
         config_.metrics = m;
     }

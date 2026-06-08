@@ -60,15 +60,42 @@ struct ShutdownCoordinatorDependencies {
 /// Receives dependency callbacks from \c ActorSystem and advances through
 /// each \c ShutdownPhase in order: ingress drain, actor drain, cluster
 /// leave, telemetry flush, and stop.
+///
+/// \note Thread safety: \c phase() and \c accepting_ingress() are safe to
+///       call from any thread.  \c execute() must be called from a single
+///       control thread (typically the main thread or shutdown signal
+///       handler).
 class ShutdownCoordinator {
   public:
+    /// \brief Construct with injected dependency callbacks.
+    ///
+    /// \param[in] deps Callback bundle.  Each callback may be null; the
+    ///                 coordinator skips null entries during shutdown.
     explicit ShutdownCoordinator(ShutdownCoordinatorDependencies deps);
 
     /// \brief Execute the full shutdown sequence with phase timeouts and
     ///        force-stop behaviour.
+    ///
+    /// Advances through DrainingIngress → DrainingActors →
+    /// LeavingCluster → FlushingTelemetry → Stopped.  DrainingActors
+    /// uses a two-pass approach: non-system actors first, system actors
+    /// last.  If \c ShutdownOptions::force_after_timeout is \c true, any
+    /// phase that exceeds its deadline triggers an immediate forced stop.
+    ///
+    /// \param[in] opts Shutdown options controlling per-phase timeouts
+    ///                 and force-stop behaviour.
     void execute(const ShutdownOptions& opts);
 
+    /// \brief Current shutdown phase.
+    ///
+    /// \return The phase last written by the coordinator, or
+    ///         \c ShutdownPhase::Running if the phase pointer is null.
     ShutdownPhase phase() const noexcept;
+
+    /// \brief Returns \c true only while the system is in the Running phase.
+    ///
+    /// Used to gate ingress acceptance at network and spawn boundaries.
+    /// \return \c true if the current phase is \c ShutdownPhase::Running.
     bool accepting_ingress() const noexcept;
 
   private:
