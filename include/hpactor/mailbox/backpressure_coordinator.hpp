@@ -14,34 +14,151 @@
 
 #pragma once
 
-#include <memory>
+#include <hpactor/msg/enqueue_result.hpp>
+#include <hpactor/msg/frame.hpp>
+#include <hpactor/types/types.hpp>
+
+#include <functional>
 
 namespace hpactor {
 
-class ActorSystem;
+class ActorDirectory;
+
+namespace net {
+class EventLoop;
+class TcpTransport;
+struct WireFrame;
+} // namespace net
 
 /// \brief Coordinates system-wide backpressure signal emission and handling.
 ///
-/// Extracted from \c ActorSystem to isolate backpressure logic. Currently
-/// a PIMPL stub wired to the \c ActorSystem backpressure methods. Future
-/// iterations will move signal routing, pressure-state aggregation, and
-/// remote signal serialization into this coordinator.
+/// Owns the logic for emitting local and remote backpressure signals,
+/// including metrics instrumentation, serialization, and wire transport.
+/// Extracted from \c ActorSystem. Structured logging is kept in ActorSystem
+/// wrapper methods so they can use the HPACTOR_LOG_WARNING macro.
 ///
-/// \note Thread safety: Internally synchronized via PIMPL indirection.
-///       The \c ActorSystem reference must outlive this coordinator.
+/// \note Thread safety: All injected pointers must outlive this coordinator.
+///       Signal routing is synchronous and may be called from any thread.
 class BackpressureCoordinator {
   public:
-    /// \brief Construct and wire into a running actor system.
-    ///
-    /// \param[in] system The owning \c ActorSystem whose backpressure
-    ///                   methods this coordinator will orchestrate.
-    explicit BackpressureCoordinator(ActorSystem& system);
+    using WireSink = std::function<bool(const ActorAddress&, const StreamBuffer&)>;
 
+    /// \brief Injected dependencies.
+    ///
+    /// Pointers may be null — the coordinator safely skips metrics emission
+    /// and wire transport when the corresponding pointer is null.  Pointers
+    /// can be updated after construction via the \c set_*() methods (used
+    /// during \c ActorSystem constructor ordering).
+    struct Config {
+        /// \brief Opaque pointer to a
+        ///        \c metrics::MpscRingBuffer<metrics::MetricEvent>.
+        ///
+        /// Stored as \c void* to avoid including the heavyweight metrics
+        /// ring-buffer header (which would create a circular dependency
+        /// through its \c using alias).  The implementation casts back to
+        /// the concrete type.  Set via \c set_metrics_ring_buffer().
+        /// \pre Must point to a valid ring buffer, or be \c nullptr.
+        void* metrics_ring_buffer = nullptr;
+
+        /// \brief Transport for sending backpressure signals to remote
+        ///        producers.  May be \c nullptr when networking is disabled.
+        net::TcpTransport* transport = nullptr;
+
+        /// \brief Actor directory for delivering signals to local senders'
+        ///        \c ActorContext handles.  Must not be \c nullptr.
+        ActorDirectory* actor_directory = nullptr;
+
+        /// \brief Local endpoint for source identification in signal frames.
+        EndPoint endpoint{};
+    };
+
+    /// \brief Construct with injected dependencies.
+    ///
+    /// \param[in] config Injected configuration.  Pointed-to objects must
+    ///                   outlive the coordinator.  Pointers may be updated
+    ///                   after construction via \c set_*() methods.
+    explicit BackpressureCoordinator(Config config);
+
+    /// \brief Destroy the coordinator.  No-op — all resources are owned
+    ///        by the injected components.
     ~BackpressureCoordinator();
 
+    // ── Signal emission ──────────────────────────────────────────────
+
+    /// \brief Emit a backpressure signal to a local sender.
+    ///
+    /// Records a metric event and delivers the signal to the sender's
+    /// \c ActorContext::handle_backpressure() handler.
+    ///
+    /// \param[in] signal The backpressure signal to deliver.
+    /// \param[in] state  Current mailbox pressure state for metrics tagging.
+    void emit_local_signal(const mailbox::BackpressureSignal& signal,
+                           mailbox::MailboxPressureState state);
+
+    /// \brief Emit a backpressure signal to a remote sender.
+    ///
+    /// Serializes the signal, records a metric event, and sends it via
+    /// the injected transport (or test wire sink).
+    ///
+    /// \param[in] signal The backpressure signal to serialize and send.
+    /// \param[in] state  Current mailbox pressure state for metrics tagging.
+    void emit_remote_signal(const mailbox::BackpressureSignal& signal,
+                            mailbox::MailboxPressureState state);
+
+    // ── Signal handling ──────────────────────────────────────────────
+
+    /// \brief Handle an incoming remote backpressure signal from the wire.
+    ///
+    /// \param[in] frame WireFrame containing the serialized backpressure
+    ///                  signal payload.
+    /// \return \c true if the signal was decoded and delivered successfully.
+    /// \retval true  Signal was decoded and delivered to the sender.
+    /// \retval false Deserialization failed — the frame was silently dropped.
+    bool handle_remote_signal(const net::WireFrame& frame);
+
+    /// \brief Deliver a backpressure signal to the sender's \c ActorContext.
+    ///
+    /// Looks up the sender in the actor directory and calls
+    /// \c handle_backpressure() on its context.  No-op when the sender
+    /// ID is zero (no sender) or the directory is unavailable.
+    ///
+    /// \param[in] signal The backpressure signal to deliver locally.
+    void deliver_to_sender(const mailbox::BackpressureSignal& signal) const;
+
+    // ── Test support ─────────────────────────────────────────────────
+
+    /// \brief Set a test wire sink that intercepts outbound backpressure
+    ///        frames instead of sending them through the transport.
+    ///
+    /// \param[in] sink Callback invoked with the sender address and
+    ///                 encoded frame bytes.  Pass an empty function to
+    ///                 clear the sink.
+    void set_wire_sink_for_test(WireSink sink);
+
+    /// \brief Update the metrics ring buffer pointer after construction.
+    ///
+    /// The pointer is stored opaquely as \c void* to avoid including the
+    /// metrics ring-buffer header.  The implementation casts back to
+    /// \c metrics::MpscRingBuffer<metrics::MetricEvent>* at each use site.
+    /// Callers must pass the concrete pointer type; the cast is safe
+    /// because there is exactly one metrics ring buffer type in the system.
+    ///
+    /// \param[in] metrics Pointer to the metrics ring buffer, or \c nullptr.
+    void set_metrics_ring_buffer(void* metrics) noexcept {
+        config_.metrics_ring_buffer = metrics;
+    }
+
+    /// \brief Update the transport pointer after construction.
+    ///
+    /// \param[in] transport Pointer to the TCP transport, or \c nullptr
+    ///                      when networking is disabled.
+    void set_transport(net::TcpTransport* transport) noexcept {
+        config_.transport = transport;
+    }
+
   private:
-    struct Impl;
-    std::unique_ptr<Impl> impl_;
+    Config config_;
+    WireSink wire_sink_for_test_;
 };
 
 } // namespace hpactor

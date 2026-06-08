@@ -8,6 +8,7 @@ add_library(hpactor_lib SHARED
     actor/actor_directory.cpp
     mailbox/local_delivery_engine.cpp
     mailbox/backpressure_coordinator.cpp
+    mailbox/delivery_pipeline.cpp
     actor/lifecycle/shutdown_coordinator.cpp
     actor/actor_system.cpp
     actor/ask_manager.cpp
