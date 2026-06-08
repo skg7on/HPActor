@@ -28,6 +28,7 @@
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/backpressure_coordinator.hpp>
+#include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/mailbox/local_delivery_engine.hpp>
 
 #include <chrono>
@@ -46,7 +47,6 @@
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
-// Protobuf message types for spawn serialization
 #include <hpactor/common.pb.h>
 #include <hpactor/messages.pb.h>
 
@@ -82,39 +82,73 @@ ActorSystem::ActorSystem(const Config& config)
           *this, config.scheduler_threads, 4, config.timer_backend,
           config.scheduler_start_paused)),
       actor_type_registry_(std::make_unique<ActorTypeRegistry>()) {
-    // Register system protobuf types
     proto_registry_.register_system_types();
 
-    // Initialize dead-letter queue
     dead_letters_ =
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
 
-    // Initialize receiver dedup cache for at-least-once delivery
     dedup_cache_ = std::make_unique<adt::DedupCache>(adt::DedupCache::Config{});
 
-    // Initialize extracted runtime components
     local_delivery_engine_ =
         std::make_unique<LocalDeliveryEngine>(actor_directory_);
-    backpressure_coordinator_ = std::make_unique<BackpressureCoordinator>(*this);
+    {
+        BackpressureCoordinator::Config bp_cfg;
+        bp_cfg.metrics_ring_buffer = nullptr;
+        bp_cfg.transport = nullptr;
+        bp_cfg.actor_directory = &actor_directory_;
+        bp_cfg.endpoint = endpoint_;
+        backpressure_coordinator_ =
+            std::make_unique<BackpressureCoordinator>(std::move(bp_cfg));
+    }
 
-    // Initialize metrics subsystem (before scheduler so instrumentation is
-    // ready)
+    // Initialize the delivery pipeline — the central message admission
+    // boundary. MUST be created before the scheduler starts.
+    {
+        mailbox::DeliveryPipeline::Config pipeline_cfg;
+        pipeline_cfg.dlq = dead_letters_.get();
+        pipeline_cfg.metrics = nullptr;
+        pipeline_cfg.dedup_cache = dedup_cache_.get();
+        pipeline_cfg.endpoint = endpoint_;
+        pipeline_cfg.default_message_ttl_ms = config_.default_message_ttl_ms;
+
+        pipeline_cfg.get_actor = [this](ActorId id) {
+            auto entry = actor_directory_.find(id);
+            return entry.has_value() ? entry->instance : nullptr;
+        };
+        pipeline_cfg.get_mailbox = [this](ActorId id) {
+            auto mailbox = actor_directory_.find_mailbox(id);
+            return mailbox.get();
+        };
+        pipeline_cfg.emit_local_backpressure =
+            [this](const mailbox::BackpressureSignal& signal,
+                   mailbox::MailboxPressureState state) {
+                emit_local_backpressure_signal(signal, state);
+            };
+        pipeline_cfg.emit_remote_backpressure =
+            [this](const mailbox::BackpressureSignal& signal,
+                   mailbox::MailboxPressureState state) {
+                emit_remote_backpressure_signal(signal, state);
+            };
+
+        delivery_pipeline_ =
+            std::make_unique<mailbox::DeliveryPipeline>(std::move(pipeline_cfg));
+    }
+
     if (metrics_config_.enabled) {
         metrics_ring_buffer_ =
             std::make_shared<metrics::MpscRingBuffer<metrics::MetricEvent>>();
         scheduler_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
+        delivery_pipeline_->set_metrics(metrics_ring_buffer_.get());
+        backpressure_coordinator_->set_metrics_ring_buffer(
+            metrics_ring_buffer_.get());
     }
 
-    // Initialize logging subsystem before starting the scheduler so that
-    // worker threads see a valid global logger, not a dangling pointer
-    // left over from a previous ActorSystem instance.
     if (logging_config_.enabled) {
         log_manager_ = std::make_unique<log::LogManager>(logging_config_);
         log_manager_->start();
         logger_ = &log_manager_->logger();
     }
 
-    // Wire logger to scheduler for scheduler-event logs
     if (logger_) [[unlikely]] {
         scheduler_->set_logger(logger_);
     }
@@ -129,14 +163,13 @@ ActorSystem::ActorSystem(const Config& config)
         network_loop_ = std::make_unique<net::EventLoop>();
         network_loop_->set_actor_system(this);
 
-        // ── Service discovery backend ────────────────────────────
         if (config.service_discovery) {
             discovery_ = config.service_discovery;
         } else if (config.registrar.udp_port > 0) {
             auto reg = std::make_shared<net::UdpRegistrar>(
                 config.registrar, endpoint_, network_loop_.get());
             discovery_ = reg;
-            registrar_ = reg; // shared ownership for registrar() accessor
+            registrar_ = reg;
         } else {
             discovery_ =
                 std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
@@ -148,8 +181,6 @@ ActorSystem::ActorSystem(const Config& config)
             if (!joined) {
                 on_node_dead(m.identity.endpoint);
             }
-            // Note: proactive connection pool warming (prewarm_pool) will be
-            // integrated in a follow-up task when ConnectionPool is updated.
         });
 
         location_cache_ = std::make_shared<net::ActorLocationCache>();
@@ -164,9 +195,8 @@ ActorSystem::ActorSystem(const Config& config)
 
         transport_ = std::make_unique<net::TcpTransport>(endpoint_, config.tls,
                                                          config.pool, nullptr);
+        backpressure_coordinator_->set_transport(transport_.get());
 
-        // Propagate metrics ring buffer to transport for connection pool
-        // metrics
         if (metrics_ring_buffer_) {
             transport_->set_metrics_ring_buffer(metrics_ring_buffer_.get());
         }
@@ -174,7 +204,6 @@ ActorSystem::ActorSystem(const Config& config)
         rpc_channel_ = std::make_unique<RpcChannel>(
             transport_.get(), scheduler_.get(), config_.default_ask_max_retries);
 
-        // Create AskManager for local ask() request tracking
         ask_manager_ = std::make_unique<AskManager>(scheduler_.get(), this);
 
         if (config_.enable_http_client) {
@@ -191,11 +220,9 @@ ActorSystem::ActorSystem(const Config& config)
                 [this](const hpactor::RpcResponseFrame& response) {
                     rpc_channel_->on_response(response);
                 });
-
             transport_->set_actor_message_handler([this](const net::WireFrame& frame) {
                 this->deliver_remote(frame);
             });
-
             transport_->listen(config.tcp_port);
         }
 
@@ -212,21 +239,21 @@ ActorSystem::ActorSystem(const Config& config)
         spawn_receiver->set_address(
             ActorAddress{endpoint_, SystemActorType, SpawnReceiverId, 0});
 
-        {
-            std::lock_guard<std::mutex> lock(actors_mutex_);
-            actors_.emplace(SpawnReceiverId, spawn_receiver);
-        }
+        auto spawn_mailbox =
+            std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
+                SpawnReceiverId, scheduler_.get(), mailbox_config_for_spawn());
+        auto spawn_ctx =
+            std::make_shared<ActorContext>(Actor(spawn_receiver), this);
+        spawn_receiver->set_context(spawn_ctx.get());
 
-        {
-            std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-            mailboxes_.emplace(
-                SpawnReceiverId,
-                std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    SpawnReceiverId, scheduler_.get(), mailbox_config_for_spawn()));
-        }
+        ActorDirectoryEntry spawn_entry;
+        spawn_entry.actor = Actor(spawn_receiver);
+        spawn_entry.instance = spawn_receiver;
+        spawn_entry.mailbox = spawn_mailbox;
+        spawn_entry.context = spawn_ctx;
+        actor_directory_.insert(std::move(spawn_entry));
     }
 
-    // Initialize PassivationManager (independent of networking)
     {
         auto durable_store = std::make_unique<InMemoryStateStore>();
         PassivationConfig defaults;
@@ -234,7 +261,6 @@ ActorSystem::ActorSystem(const Config& config)
             *this, durable_store.release(), defaults);
     }
 
-    // Spawn CLI actor (runtime opt-in via config_.cli.enabled)
     if (config_.cli.enabled) {
         auto spawned = spawn<cli::CliActor>(config_.cli);
         cli_actor_ = std::static_pointer_cast<cli::CliActor>(spawned.get());
@@ -242,41 +268,37 @@ ActorSystem::ActorSystem(const Config& config)
 
     fault_controller_.install();
 
-    // Initialize extracted runtime components
     shutdown_coordinator_ =
         std::make_unique<ShutdownCoordinator>(ShutdownCoordinatorDependencies{
             .phase = &shutdown_phase_,
+            .running = &running_,
             .set_ready =
                 [this](bool ready) {
                     is_ready_.store(ready, std::memory_order_release);
                 },
-            .actor_snapshot = [this]() -> std::vector<ActorId> {
-                std::lock_guard<std::mutex> lock(actors_mutex_);
-                std::vector<ActorId> ids;
-                ids.reserve(actors_.size());
-                for (const auto& [id, _] : actors_) {
-                    (void)_;
-                    ids.push_back(id);
-                }
-                return ids;
-            },
-            .request_actor_drain =
-                [](ActorId id) {
-                    // Drain requests are sent via message passing
-                    // Full integration in follow-up task
-                    (void)id;
+            .actor_snapshot =
+                [this]() {
+                    auto entries = actor_directory_.snapshot();
+                    std::vector<std::pair<ActorId, bool>> ids;
+                    ids.reserve(entries.size());
+                    for (const auto& entry : entries) {
+                        ids.emplace_back(entry.actor.id(),
+                                         entry.instance->is_system_actor());
+                    }
+                    return ids;
                 },
-            .actors_drained = []() -> bool { return true; },
+            .get_actor = [this](ActorId id) { return get_actor(id); },
+            .get_mailbox_raw = [this](ActorId id) -> void* {
+                auto mailbox = actor_directory_.find_mailbox(id);
+                return static_cast<void*>(mailbox.get());
+            },
             .stop_remote_runtime =
                 [this]() {
                     if (network_loop_) {
                         network_loop_->stop();
                     }
                 },
-            .leave_discovery =
-                []() {
-                    // Discovery stop handled by existing shutdown path
-                },
+            .leave_discovery = []() {},
             .flush_telemetry =
                 [this]() {
                     if (metrics_ring_buffer_) {
@@ -326,18 +348,15 @@ void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
 }
 
 void ActorSystem::on_node_dead(EndPoint dead_ep) {
-    // Find all actors linked to or monitoring actors on the dead endpoint.
-    // Uses the internal actor_contexts_ map directly (actor_context() is
-    // a protected member of AbstractActor, not accessible from ActorSystem).
-    std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
-    for (const auto& [id, ctx] : actor_contexts_) {
-        if (!ctx)
+    auto entries = actor_directory_.snapshot();
+    for (const auto& entry : entries) {
+        if (!entry.context)
             continue;
-        for (const auto& addr : ctx->linked_actors()) {
+        for (const auto& addr : entry.context->linked_actors()) {
             if (addr.endpoint == dead_ep) {
                 TypedMessage down(TypeTag::DownMsg, StreamBuffer{});
                 down.set_sender_address(ActorAddress{dead_ep, 0, ActorId(0), 0});
-                deliver_local(id, std::move(down));
+                deliver_local(entry.actor.id(), std::move(down));
                 break;
             }
         }
@@ -346,103 +365,26 @@ void ActorSystem::on_node_dead(EndPoint dead_ep) {
         location_cache_->evict_node(dead_ep);
 }
 
+// ── Backpressure API (logging wrappers around BackpressureCoordinator) ───────
+
 void ActorSystem::signal_backpressure(const mailbox::BackpressureSignal& signal) {
-    if (signal.sender.id == ActorId{0})
-        return; // no sender
-
-    std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
-    auto it = actor_contexts_.find(signal.sender.id);
-    if (it != actor_contexts_.end() && it->second) {
-        it->second->handle_backpressure(signal);
-    }
+    backpressure_coordinator_->deliver_to_sender(signal);
 }
-
-namespace {
-
-bool local_signal_enabled(mailbox::BackpressureMode mode) noexcept {
-    return mode == mailbox::BackpressureMode::LocalSignal ||
-           mode == mailbox::BackpressureMode::LocalAndRemoteSignal;
-}
-
-bool remote_signal_enabled(mailbox::BackpressureMode mode) noexcept {
-    return mode == mailbox::BackpressureMode::RemoteSignal ||
-           mode == mailbox::BackpressureMode::LocalAndRemoteSignal;
-}
-
-bool pressure_result_should_signal(const mailbox::EnqueueResult& result) noexcept {
-    if (result.code == mailbox::EnqueueResultCode::AcceptedWithSoftPressure) {
-        return true;
-    }
-    return !result.accepted() && result.retryable();
-}
-
-} // namespace
 
 void ActorSystem::maybe_emit_backpressure_signal(
-    mailbox::MPSCActorMailbox<TypedMessage>* mailbox,
-    const mailbox::EnqueueResult& result, const mailbox::MailboxEnvelopeMeta& meta,
-    bool emit_requested, mailbox::BackpressureMode backpressure_mode) {
-    if (!emit_requested || mailbox == nullptr ||
-        !pressure_result_should_signal(result)) {
-        return;
-    }
-
-    const auto mode = backpressure_mode;
-    const bool sender_is_remote =
-        meta.sender.endpoint != endpoint_ && meta.sender.id != ActorId{0};
-
-    if (sender_is_remote && !remote_signal_enabled(mode)) {
-        return;
-    }
-    if (!sender_is_remote && !local_signal_enabled(mode)) {
-        return;
-    }
-
-    const uint64_t now_ns = static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch())
-            .count());
-    // Force past the rate limiter when the message was rejected — the sender
-    // must always be notified of dropped messages regardless of how recently
-    // a soft-pressure warning was issued.
-    const bool is_rejection = !result.accepted();
-    auto sequence = mailbox->try_acquire_backpressure_signal(
-        now_ns, result.pressure_state, is_rejection);
-    if (!sequence.has_value()) {
-        return;
-    }
-
-    mailbox::BackpressureSignal signal;
-    signal.target = ActorAddress{endpoint_, ActorType{0}, result.target, 0};
-    signal.sender = meta.sender;
-    signal.reason = result.pressure_reason;
-    signal.depth = result.depth;
-    signal.capacity = result.capacity;
-    signal.bytes = result.bytes;
-    signal.byte_capacity = result.byte_capacity;
-    signal.pressure_ratio = result.pressure_ratio;
-    signal.retry_after = result.retry_after;
-    signal.sequence = sequence.value();
-
-    if (sender_is_remote) {
-        emit_remote_backpressure_signal(signal, result.pressure_state);
-    } else {
-        emit_local_backpressure_signal(signal, result.pressure_state);
-    }
+    mailbox::MPSCActorMailbox<TypedMessage>* /*mailbox*/,
+    const mailbox::EnqueueResult& /*result*/,
+    const mailbox::MailboxEnvelopeMeta& /*meta*/, bool /*emit_requested*/,
+    mailbox::BackpressureMode /*backpressure_mode*/) {
+    HPACTOR_LOG_WARNING(log::LogCategory::kActor, ActorId{0}, 0,
+                        "maybe_emit_backpressure_signal is deprecated — "
+                        "backpressure "
+                        "is now handled by DeliveryPipeline; this call is a "
+                        "no-op");
 }
 
 void ActorSystem::emit_local_backpressure_signal(
     const mailbox::BackpressureSignal& signal, mailbox::MailboxPressureState state) {
-    if (metrics_ring_buffer_) {
-        metrics::MetricEvent evt{};
-        evt.actor_id = signal.target.id;
-        evt.event_type = metrics::MetricEventType::kBackpressureSignal;
-        evt.code = static_cast<uint8_t>(signal.reason);
-        evt.aux = static_cast<uint8_t>(state);
-        evt.value_hi = 1;
-        metrics_ring_buffer_->try_push(evt);
-    }
-
     if (state == mailbox::MailboxPressureState::HardPressure) {
         HPACTOR_LOG_WARNING(
             log::LogCategory::kMailbox, signal.target.id, 0,
@@ -453,29 +395,11 @@ void ActorSystem::emit_local_backpressure_signal(
             log::field("retry_after_ms",
                        static_cast<uint64_t>(signal.retry_after.count())));
     }
-
-    signal_backpressure(signal);
+    backpressure_coordinator_->emit_local_signal(signal, state);
 }
 
 void ActorSystem::emit_remote_backpressure_signal(
     const mailbox::BackpressureSignal& signal, mailbox::MailboxPressureState state) {
-    auto payload = mailbox::serialize_backpressure_signal(signal, state);
-    if (payload.empty()) {
-        return;
-    }
-
-    // Emit metrics unconditionally — the signal was generated and we need
-    // observability regardless of whether the wire send succeeds.
-    if (metrics_ring_buffer_) {
-        metrics::MetricEvent evt{};
-        evt.actor_id = signal.target.id;
-        evt.event_type = metrics::MetricEventType::kBackpressureSignal;
-        evt.code = static_cast<uint8_t>(signal.reason);
-        evt.aux = static_cast<uint8_t>(state);
-        evt.value_hi = 1;
-        metrics_ring_buffer_->try_push(evt);
-    }
-
     if (state == mailbox::MailboxPressureState::HardPressure) {
         HPACTOR_LOG_WARNING(
             log::LogCategory::kMailbox, signal.target.id, 0,
@@ -486,27 +410,8 @@ void ActorSystem::emit_remote_backpressure_signal(
             log::field("retry_after_ms",
                        static_cast<uint64_t>(signal.retry_after.count())));
     }
-
-    net::WireFrame frame;
-    net::to_proto(frame.pb_frame.mutable_sender(), signal.target);
-    net::to_proto(frame.pb_frame.mutable_receiver(), signal.sender);
-    frame.pb_frame.set_type_tag(
-        static_cast<uint32_t>(TypeTag::BackpressureSignalTag));
-    frame.pb_frame.set_message_id(signal.sequence);
-    frame.pb_frame.set_payload(reinterpret_cast<const char*>(payload.data()),
-                               payload.size());
-
-    TransportSendResult sent = TransportSendResult::NotConnected;
-    auto encoded = frame.encode();
-    if (backpressure_signal_wire_sink_for_test_) {
-        sent = backpressure_signal_wire_sink_for_test_(signal.sender, encoded)
-                   ? TransportSendResult::Sent
-                   : TransportSendResult::WriteError;
-    } else if (transport_) {
-        sent = transport_->try_send(signal.sender, encoded);
-    }
-
-    if (sent != TransportSendResult::Sent) {
+    backpressure_coordinator_->emit_remote_signal(signal, state);
+    if (!transport_ && !backpressure_signal_wire_sink_for_test_) {
         HPACTOR_LOG_WARNING(log::LogCategory::kMailbox, signal.target.id, 0,
                             "backpressure_signal_remote_send_failed",
                             log::field("sender", signal.sender.id.value()));
@@ -514,20 +419,15 @@ void ActorSystem::emit_remote_backpressure_signal(
 }
 
 bool ActorSystem::handle_remote_backpressure_signal(const net::WireFrame& frame) {
-    StreamBuffer payload(frame.pb_frame.payload().begin(),
-                         frame.pb_frame.payload().end());
-    auto decoded = mailbox::deserialize_backpressure_signal(payload);
-    if (!decoded.has_value()) {
-        return false;
-    }
-    signal_backpressure(decoded->signal);
-    return true;
+    return backpressure_coordinator_->handle_remote_signal(frame);
 }
 
 void ActorSystem::set_backpressure_signal_wire_sink_for_test(
     BackpressureSignalWireSink sink) {
-    backpressure_signal_wire_sink_for_test_ = std::move(sink);
+    backpressure_coordinator_->set_wire_sink_for_test(std::move(sink));
 }
+
+// ── Actor registry ──────────────────────────────────────────────────────────
 
 void ActorSystem::register_actor(const std::string& name, Actor actor) {
     registry_.put(name, actor.address());
@@ -535,16 +435,11 @@ void ActorSystem::register_actor(const std::string& name, Actor actor) {
 }
 
 Actor ActorSystem::resolve_actor(const std::string& name) {
-    ActorAddress addr = registry_.get(name);
-    if (!addr) {
-        return Actor{};
+    auto actor_opt = actor_directory_.resolve_actor(name);
+    if (actor_opt.has_value()) {
+        return actor_opt.value();
     }
-    std::lock_guard<std::mutex> lock(actors_mutex_);
-    auto it = actors_.find(addr.id);
-    if (it == actors_.end()) {
-        return Actor{};
-    }
-    return Actor{it->second};
+    return Actor{};
 }
 
 void ActorSystem::unregister_actor(const std::string& name) {
@@ -564,33 +459,27 @@ ActorTypeDef ActorSystem::get_actor_type(ActorType type) const {
 }
 
 std::shared_ptr<AbstractActor> ActorSystem::get_actor(ActorId id) {
-    std::lock_guard<std::mutex> lock(actors_mutex_);
-    auto it = actors_.find(id);
-    if (it != actors_.end()) {
-        return it->second;
+    auto entry = actor_directory_.find(id);
+    if (entry.has_value()) {
+        return entry->instance;
     }
     return nullptr;
 }
 
 mailbox::MPSCActorMailbox<TypedMessage>* ActorSystem::get_mailbox(ActorId id) {
-    std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-    auto it = mailboxes_.find(id);
-    if (it != mailboxes_.end()) {
-        return it->second.get();
-    }
-    return nullptr;
+    auto mailbox = actor_directory_.find_mailbox(id);
+    return mailbox.get();
 }
 
 size_t ActorSystem::actor_count() const {
-    std::lock_guard<std::mutex> lock(actors_mutex_);
-    return actors_.size();
+    return actor_directory_.size();
 }
 
 void ActorSystem::for_each_actor(
     std::function<void(ActorId, AbstractActor&)> callback) const {
-    std::lock_guard<std::mutex> lock(actors_mutex_);
-    for (auto& [id, actor] : actors_) {
-        callback(id, *actor);
+    auto entries = actor_directory_.snapshot();
+    for (const auto& entry : entries) {
+        callback(entry.actor.id(), *entry.instance);
     }
 }
 
@@ -598,9 +487,8 @@ cli::CliActor* ActorSystem::cli_actor() const {
     return cli_actor_.get();
 }
 
-// -----------------------------------------------------------------------------
-// Dead-letter queue
-// -----------------------------------------------------------------------------
+// ── Dead-letter queue ───────────────────────────────────────────────────────
+
 bool ActorSystem::dead_letter(mailbox::DeadLetterRecord record) noexcept {
     if (!dead_letters_) {
         return false;
@@ -622,9 +510,8 @@ bool ActorSystem::pop_dead_letter(mailbox::DeadLetterRecord& out) noexcept {
     return dead_letters_->try_pop(out);
 }
 
-// -----------------------------------------------------------------------------
-// Mailbox config helpers
-// -----------------------------------------------------------------------------
+// ── Mailbox config helpers ──────────────────────────────────────────────────
+
 mailbox::MailboxConfig ActorSystem::mailbox_config_for_spawn() const {
     mailbox::MailboxConfig cfg;
     cfg.capacity.max_messages = config_.mailbox.default_capacity;
@@ -670,441 +557,26 @@ ActorSystem::mailbox_config_for_actor_def(const config::ActorDef& def) const {
     return cfg;
 }
 
-// -----------------------------------------------------------------------------
-// Delivery pipeline helpers (anonymous namespace)
-// -----------------------------------------------------------------------------
-namespace {
+// ── Delivery pipeline (delegates to DeliveryPipeline) ───────────────────────
 
-using MetricBuf = hpactor::metrics::MpscRingBuffer<hpactor::metrics::MetricEvent>;
-
-// Populate the trace fields on a DeadLetterRecord from a TraceContext.
-// TraceId and SpanId are stored as big-endian byte arrays (W3C format);
-// convert to uint64_t fields for the DLQ record.
-void set_dlq_trace_fields(hpactor::mailbox::DeadLetterRecord& dl,
-                          const hpactor::TraceContext& tc) noexcept {
-    uint64_t hi = 0, lo = 0, sp = 0;
-    for (size_t i = 0; i < 8; ++i) {
-        hi = (hi << 8) | tc.trace_id.bytes[i];
-        lo = (lo << 8) | tc.trace_id.bytes[i + 8];
-        sp = (sp << 8) | tc.span_id.bytes[i];
-    }
-    dl.trace_id_hi = hi;
-    dl.trace_id_lo = lo;
-    dl.span_id = sp;
-}
-
-// Push a DLQ record for a circuit-breaker rejection if policy permits.
-// Shared by kOpen and kHalfOpen rejection paths in try_deliver_local.
-void push_circuit_open_dlq(hpactor::mailbox::DeadLetterQueue* dlq,
-                           const hpactor::TypedMessage& msg,
-                           const hpactor::mailbox::DeliveryOptions& options,
-                           hpactor::EndPoint endpoint, hpactor::ActorId target,
-                           uint8_t priority, int64_t deadline_ns) noexcept {
-    if (!dlq || !dlq->config().enabled ||
-        !hpactor::mailbox::should_route_to_dlq(options.delivery_mode,
-                                               dlq->config().routing_policy)) {
-        return;
-    }
-    hpactor::mailbox::DeadLetterRecord dl;
-    dl.reason = hpactor::mailbox::DeadLetterReason::EndpointCircuitOpen;
-    dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
-    dl.sender = msg.sender_address();
-    dl.target = hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
-    dl.type_tag = msg.type_id();
-    dl.message_id = options.message_id;
-    dl.frame_flags = options.flags;
-    dl.priority = priority;
-    dl.deadline_ns = deadline_ns;
-    dl.payload_sample = msg.payload();
-    dl.timestamp_ns = static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch())
-            .count());
-    if (msg.has_trace_context()) {
-        set_dlq_trace_fields(dl, msg.trace_context());
-    }
-    (void)dlq->try_push(std::move(dl));
-}
-
-// Build the EnqueueResult + observability for a missing-actor target.
-// DLQ routing is gated by DeadLetterRoutingPolicy × DeliveryMode.
-[[nodiscard]] hpactor::mailbox::EnqueueResult
-reject_missing_actor(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
-                     hpactor::EndPoint endpoint, hpactor::ActorId target,
-                     const hpactor::TypedMessage& msg,
-                     const hpactor::mailbox::DeliveryOptions& options,
-                     uint8_t priority, int64_t deadline_ns) {
-    if (dlq && dlq->config().enabled &&
-        hpactor::mailbox::should_route_to_dlq(options.delivery_mode,
-                                              dlq->config().routing_policy)) {
-        hpactor::mailbox::DeadLetterRecord dl;
-        dl.reason = hpactor::mailbox::DeadLetterReason::ActorNotFound;
-        dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
-        dl.sender = msg.sender_address();
-        dl.target =
-            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
-        dl.type_tag = msg.type_id();
-        dl.message_id = options.message_id;
-        dl.frame_flags = options.flags;
-        dl.priority = priority;
-        dl.deadline_ns = deadline_ns;
-        dl.payload_sample = msg.payload();
-        dl.timestamp_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        if (msg.has_trace_context()) {
-            set_dlq_trace_fields(dl, msg.trace_context());
-        }
-        (void)dlq->try_push(std::move(dl));
-    }
-
-    hpactor::mailbox::EnqueueResult r;
-    r.code = hpactor::mailbox::EnqueueResultCode::ActorNotFound;
-    r.target = target;
-    if (metrics) {
-        hpactor::FailureEnvelope env = hpactor::make_failure_envelope(
-            hpactor::FailureReason::NoRoute, target, msg.sender_address(),
-            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0},
-            hpactor::MessageId{options.message_id}, hpactor::TraceContext{},
-            hpactor::FailureSource::ActorRuntime,
-            "target actor not found in registry");
-        hpactor::metrics::MetricEvent evt{};
-        evt.timestamp_ns = env.timestamp_ns;
-        evt.actor_id = target;
-        evt.event_type = hpactor::metrics::MetricEventType::kDeliveryFailure;
-        evt.code = static_cast<uint8_t>(env.reason);
-        evt.value_hi = 1;
-        metrics->try_push(evt);
-    }
-    return r;
-}
-
-// If the message is a tracked duplicate, record the metric and return an
-// Accepted result.  Returns nullopt when the message is not a duplicate.
-[[nodiscard]] std::optional<hpactor::mailbox::EnqueueResult>
-try_accept_duplicate(MetricBuf* metrics, hpactor::adt::DedupCache* dedup_cache,
-                     hpactor::EndPoint endpoint, hpactor::ActorId target,
-                     const hpactor::TypedMessage& msg,
-                     const hpactor::mailbox::DeliveryOptions& options) {
-    if (!hpactor::mailbox::is_tracked_delivery(options.delivery_mode) ||
-        !dedup_cache || options.message_id == 0) {
-        return std::nullopt;
-    }
-    hpactor::ActorId sender_id = msg.sender_address().id;
-    if (!dedup_cache->is_duplicate(endpoint, sender_id,
-                                   hpactor::MessageId{options.message_id})) {
-        return std::nullopt;
-    }
-    if (metrics) {
-        uint64_t ts_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        hpactor::metrics::MetricEvent evt{};
-        evt.timestamp_ns = ts_ns;
-        evt.actor_id = target;
-        evt.event_type = hpactor::metrics::MetricEventType::kDeliveryDuplicate;
-        evt.code = static_cast<uint8_t>(hpactor::FailureReason::Duplicate);
-        evt.value_hi = 1;
-        metrics->try_push(evt);
-    }
-    return hpactor::mailbox::EnqueueResult{
-        hpactor::mailbox::EnqueueResultCode::Accepted, target};
-}
-
-// If the message has a delivery deadline and it has already expired,
-// record the metric + dead-letter and return a Rejected result.
-// Returns nullopt when the deadline has not expired.
-[[nodiscard]] std::optional<hpactor::mailbox::EnqueueResult>
-try_reject_expired(hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
-                   hpactor::EndPoint endpoint, hpactor::ActorId target,
-                   const hpactor::TypedMessage& msg,
-                   const hpactor::mailbox::DeliveryOptions& options,
-                   uint8_t priority, int64_t deadline_ns) {
-    uint64_t now_ns = static_cast<uint64_t>(
-        std::chrono::duration_cast<std::chrono::nanoseconds>(
-            std::chrono::steady_clock::now().time_since_epoch())
-            .count());
-    if (!hpactor::mailbox::is_expired(deadline_ns, now_ns)) {
-        return std::nullopt;
-    }
-    if (metrics) {
-        hpactor::FailureEnvelope env = hpactor::make_failure_envelope(
-            hpactor::FailureReason::Expired, target, msg.sender_address(),
-            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0},
-            hpactor::MessageId{options.message_id}, msg.trace_context(),
-            hpactor::FailureSource::ActorRuntime,
-            "message deadline expired before enqueue");
-        hpactor::metrics::MetricEvent evt{};
-        evt.timestamp_ns = env.timestamp_ns;
-        evt.actor_id = target;
-        evt.event_type = hpactor::metrics::MetricEventType::kDeliveryExpired;
-        evt.code = static_cast<uint8_t>(hpactor::FailureReason::Expired);
-        evt.value_hi = 1;
-        metrics->try_push(evt);
-    }
-    if (dlq && dlq->config().enabled &&
-        hpactor::mailbox::should_route_to_dlq(options.delivery_mode,
-                                              dlq->config().routing_policy)) {
-        hpactor::mailbox::DeadLetterRecord dl;
-        dl.reason = hpactor::mailbox::DeadLetterReason::Expired;
-        dl.source = hpactor::mailbox::DeadLetterSource::LocalDelivery;
-        dl.sender = msg.sender_address();
-        dl.target =
-            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
-        dl.type_tag = msg.type_id();
-        dl.message_id = options.message_id;
-        dl.frame_flags = options.flags;
-        dl.priority = priority;
-        dl.deadline_ns = deadline_ns;
-        dl.payload_sample = msg.payload();
-        dl.timestamp_ns = now_ns;
-        if (msg.has_trace_context()) {
-            set_dlq_trace_fields(dl, msg.trace_context());
-        }
-        (void)dlq->try_push(std::move(dl));
-    }
-    return hpactor::mailbox::EnqueueResult{
-        hpactor::mailbox::EnqueueResultCode::Rejected, target};
-}
-
-// Emit metrics, logging, and dead-letter dispatch for a rejected enqueue
-// result.  Idempotent — does nothing when the result is accepted.
-void emit_rejection_observability(
-    hpactor::mailbox::DeadLetterQueue* dlq, MetricBuf* metrics,
-    hpactor::EndPoint endpoint, hpactor::ActorId target,
-    const hpactor::StreamBuffer& msg_payload, const hpactor::TraceContext& msg_trace,
-    bool msg_has_trace, const hpactor::mailbox::MailboxEnvelopeMeta& meta,
-    const hpactor::mailbox::EnqueueResult& result,
-    const hpactor::mailbox::DeliveryOptions& options,
-    hpactor::mailbox::OverflowPolicy overflow_policy) {
-    if (result.accepted()) {
-        return;
-    }
-
-    // Dead-letter when the overflow policy mandates it AND the delivery
-    // mode meets the routing policy threshold.
-    if (dlq && dlq->config().enabled &&
-        overflow_policy == hpactor::mailbox::OverflowPolicy::DeadLetter &&
-        hpactor::mailbox::should_route_to_dlq(options.delivery_mode,
-                                              dlq->config().routing_policy)) {
-        hpactor::mailbox::DeadLetterRecord dl;
-        dl.reason = hpactor::mailbox::DeadLetterReason::OverflowPolicy;
-        dl.source = hpactor::mailbox::DeadLetterSource::MailboxAdmission;
-        dl.sender = meta.sender;
-        dl.target =
-            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0};
-        dl.type_tag = meta.type_tag;
-        dl.message_id = meta.message_id;
-        dl.frame_flags = meta.flags;
-        dl.priority = meta.priority;
-        dl.deadline_ns = meta.deadline_ns;
-        dl.mailbox_depth = result.depth;
-        dl.mailbox_capacity = result.capacity;
-        dl.timestamp_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        dl.payload_sample = msg_payload;
-        if (msg_has_trace) {
-            set_dlq_trace_fields(dl, msg_trace);
-        }
-        (void)dlq->try_push(std::move(dl));
-    }
-
-    // Failure envelope metric.
-    if (metrics) {
-        hpactor::FailureEnvelope env = hpactor::make_failure_envelope(
-            result.failure_reason(), target, meta.sender,
-            hpactor::ActorAddress{endpoint, hpactor::ActorType{0}, target, 0},
-            hpactor::MessageId{options.message_id}, hpactor::TraceContext{},
-            hpactor::FailureSource::Mailbox, "mailbox admission rejected");
-        hpactor::metrics::MetricEvent evt{};
-        evt.timestamp_ns = env.timestamp_ns;
-        evt.actor_id = target;
-        evt.event_type = hpactor::metrics::MetricEventType::kDeliveryFailure;
-        evt.code = static_cast<uint8_t>(env.reason);
-        evt.value_hi = 1;
-        metrics->try_push(evt);
-    }
-
-    // Structured log warning.
-    HPACTOR_LOG_WARNING(
-        hpactor::log::LogCategory::kActor, target, 0, "delivery_failure",
-        hpactor::log::field_lit("reason",
-                                hpactor::to_string(result.failure_reason())),
-        hpactor::log::field(
-            "retryable", result.failure_reason() != hpactor::FailureReason::Unknown &&
-                             hpactor::retryable(result.failure_reason())),
-        hpactor::log::field("depth", static_cast<uint64_t>(result.depth)),
-        hpactor::log::field("capacity", static_cast<uint64_t>(result.capacity)));
-}
-
-} // namespace
-
-// -----------------------------------------------------------------------------
-// try_deliver_local — bounded admission boundary
-// -----------------------------------------------------------------------------
 mailbox::EnqueueResult
 ActorSystem::try_deliver_local(ActorId target, TypedMessage msg,
                                uint8_t priority, int64_t deadline_ns,
                                mailbox::DeliveryOptions options) {
-    auto* mailbox = get_mailbox(target);
-    if (mailbox == nullptr) {
-        return reject_missing_actor(dead_letters_.get(),
-                                    metrics_ring_buffer_.get(), endpoint_,
-                                    target, msg, options, priority, deadline_ns);
-    }
-
-    // ── Circuit breaker admission gate ──────────────────────────
-    if (auto actor_ptr = get_actor(target)) {
-        if (actor_ptr->is_event_based_actor()) {
-            auto* eba = static_cast<EventBasedActor*>(actor_ptr.get());
-            if (eba->quarantine_enabled()) {
-                auto* cb = eba->circuit_breaker();
-                auto now = std::chrono::steady_clock::now();
-
-                if (cb->state == CircuitBreakerState::kOpen) {
-                    auto elapsed =
-                        std::chrono::duration_cast<std::chrono::milliseconds>(
-                            now - cb->opened_at);
-                    auto cooldown = eba->quarantine_policy().cooldown_period;
-                    if (elapsed >= cooldown) {
-                        cb->state = CircuitBreakerState::kHalfOpen;
-                        cb->half_open_probe_in_flight = true;
-                        if (auto* rb = eba->metrics_ring_buffer()) {
-                            auto now_ns =
-                                std::chrono::duration_cast<std::chrono::nanoseconds>(
-                                    now.time_since_epoch())
-                                    .count();
-                            metrics::MetricEvent evt{};
-                            evt.timestamp_ns = static_cast<uint64_t>(now_ns);
-                            evt.actor_id = target;
-                            evt.event_type =
-                                metrics::MetricEventType::kCircuitStateChange;
-                            evt.code = static_cast<uint8_t>(
-                                CircuitBreakerState::kHalfOpen);
-                            evt.value_hi = cb->trip_count;
-                            rb->try_push(evt);
-                        }
-                        // Fall through — admit the probe message.
-                    } else {
-                        push_circuit_open_dlq(dead_letters_.get(), msg, options,
-                                              endpoint_, target, priority,
-                                              deadline_ns);
-                        return mailbox::EnqueueResult{
-                            mailbox::EnqueueResultCode::CircuitOpen, target};
-                    }
-                } else if (cb->state == CircuitBreakerState::kHalfOpen) {
-                    if (cb->half_open_probe_in_flight) {
-                        push_circuit_open_dlq(dead_letters_.get(), msg, options,
-                                              endpoint_, target, priority,
-                                              deadline_ns);
-                        return mailbox::EnqueueResult{
-                            mailbox::EnqueueResultCode::CircuitOpen, target};
-                    }
-                    cb->half_open_probe_in_flight = true;
-                }
-            }
-        }
-    }
-    // ── End circuit breaker admission gate ──────────────────────
-
-    // Auto-apply system default TTL when no explicit deadline is set.
-    if (deadline_ns == INT64_MAX && config_.default_message_ttl_ms.count() > 0) {
-        uint64_t now_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        uint64_t ttl_ns =
-            static_cast<uint64_t>(config_.default_message_ttl_ms.count()) *
-            1'000'000ULL;
-        // Guard against overflow: if ttl_ns would wrap, use INT64_MAX - 1
-        if (ttl_ns > static_cast<uint64_t>(INT64_MAX) - now_ns) {
-            deadline_ns = INT64_MAX - 1;
-        } else {
-            deadline_ns = static_cast<int64_t>(now_ns + ttl_ns);
-        }
-    }
-
-    msg.set_deadline_ns(deadline_ns);
-
-    if (auto dup =
-            try_accept_duplicate(metrics_ring_buffer_.get(), dedup_cache_.get(),
-                                 endpoint_, target, msg, options)) {
-        return *dup;
-    }
-    if (auto expired = try_reject_expired(
-            dead_letters_.get(), metrics_ring_buffer_.get(), endpoint_, target,
-            msg, options, priority, deadline_ns)) {
-        return *expired;
-    }
-
-    mailbox::MailboxEnvelopeMeta meta;
-    meta.sender = msg.sender_address();
-    meta.type_tag = msg.type_id();
-    meta.priority = priority;
-    meta.deadline_ns = deadline_ns;
-    meta.flags = options.flags;
-    meta.message_id = options.message_id;
-    if (options.no_drop) {
-        meta.flags |= net::WireFrame::NoDrop;
-    }
-
-    const auto bp_mode = mailbox->config().backpressure_mode;
-    // Extract payload and trace before the move — needed for DLQ on rejection.
-    const StreamBuffer& msg_payload = msg.payload();
-    TraceContext msg_trace;
-    bool msg_has_trace = msg.has_trace_context();
-    if (msg_has_trace) {
-        msg_trace = msg.trace_context();
-    }
-    auto result = mailbox->try_push(std::move(msg), meta);
-
-    if (!result.accepted()) {
-        emit_rejection_observability(
-            dead_letters_.get(), metrics_ring_buffer_.get(), endpoint_, target,
-            msg_payload, msg_trace, msg_has_trace, meta, result, options,
-            mailbox->config().overflow_policy);
-    }
-
-    maybe_emit_backpressure_signal(mailbox, result, meta,
-                                   options.emit_backpressure, bp_mode);
-
-    return result;
+    return delivery_pipeline_->try_deliver(target, std::move(msg), priority,
+                                           deadline_ns, options);
 }
 
 mailbox::DeliveryResult
 ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
                                  uint8_t priority, int64_t deadline_ns,
                                  mailbox::DeliveryOptions options) {
-    auto er =
-        try_deliver_local(target, std::move(msg), priority, deadline_ns, options);
-    auto dr = mailbox::DeliveryResult::from_enqueue(er, ActorAddress{}, {});
-    // Record delivery result on the mailbox for CLI observability.
-    if (auto* mbox = get_mailbox(target)) {
-        mbox->record_delivery_result(dr.status);
-    }
-    // Emit kDeliveryResult metric event.
-    if (metrics_ring_buffer_) {
-        uint64_t ts_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-        metrics::MetricEvent evt{};
-        evt.timestamp_ns = ts_ns;
-        evt.actor_id = target;
-        evt.event_type = metrics::MetricEventType::kDeliveryResult;
-        evt.code = static_cast<uint8_t>(dr.status);
-        evt.value_hi = 1;
-        metrics_ring_buffer_->try_push(evt);
-    }
-    return dr;
+    return delivery_pipeline_->deliver_with_result(
+        target, std::move(msg), priority, deadline_ns, options);
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
-    (void)try_deliver_local(target, std::move(msg));
+    (void)delivery_pipeline_->try_deliver(target, std::move(msg));
 }
 
 void ActorSystem::record_actor_timeout(ActorId target) {
@@ -1117,13 +589,14 @@ void ActorSystem::record_actor_timeout(ActorId target) {
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
                                 uint8_t priority, int64_t deadline_ns) {
-    (void)try_deliver_local(target, std::move(msg), priority, deadline_ns, {});
+    (void)delivery_pipeline_->try_deliver(target, std::move(msg), priority,
+                                          deadline_ns, {});
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     if (static_cast<TypeTag>(frame.pb_frame.type_tag()) ==
         TypeTag::BackpressureSignalTag) {
-        (void)handle_remote_backpressure_signal(frame);
+        (void)backpressure_coordinator_->handle_remote_signal(frame);
         return;
     }
     StreamBuffer payload(frame.pb_frame.payload().begin(),
@@ -1143,21 +616,13 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
-    // Pack the completion into a StreamBuffer for mailbox delivery.
-    // The binary layout is a flat memcpy of the OpCompletion struct —
-    // it is local-only (same process, same address space), so no
-    // endianness or portability concerns.
     StreamBuffer payload(sizeof(net::OpCompletion));
     std::memcpy(payload.data(), &completion, sizeof(net::OpCompletion));
-
     TypedMessage msg(TypeTag::IoCompletionTag, std::move(payload));
     deliver_local(completion.actor, std::move(msg));
 }
 
 net::Transport* ActorSystem::get_transport_for(const EndPoint& /*endpoint*/) {
-    // TcpTransport already handles per-endpoint routing via its internal pools_
-    // map — TcpTransport::send() calls get_or_create_pool(target.endpoint)
-    // internally. Return the single transport_ for all remote endpoints.
     if (!config_.enable_network) {
         return nullptr;
     }
@@ -1181,14 +646,12 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
 
     if (!config_.enable_network || !rpc_channel_) {
         handle.resolve_error(error(spawn_errors::node_unreachable, "networking "
-                                                                   "is "
                                                                    "disabled"));
         return handle;
     }
 
     auto remote_endpoint = endpoint_ops::parse_endpoint(node_name);
 
-    // Serialize spawn request using protobuf
     ::hpactor::SpawnRequestMessage pb_req;
     pb_req.set_actor_type_name(actor_type);
     pb_req.set_args_type(static_cast<uint32_t>(TypeTag::User));
@@ -1205,9 +668,6 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
 
     auto rpc_future = rpc_channel_->call_raw(target, request_bytes, timeout_ms);
 
-    // Bridge RpcFuture -> RequestHandle on a detached background thread.
-    // The RpcChannel handles retry + deadline internally; when the future
-    // resolves we decode the SpawnResponse and populate the handle.
     std::thread([state, fut = std::move(rpc_future)]() mutable {
         RequestHandle<ActorRef> inner(state);
         auto raw_result = fut.get();
@@ -1252,50 +712,35 @@ ActorSystem::spawn_remote_async(const std::string& node_name,
     return handle;
 }
 
-// -----------------------------------------------------------------------------
-// spawn_configured — spawn a pre-constructed actor with ActorDef config
-// -----------------------------------------------------------------------------
+// ── spawn_configured ────────────────────────────────────────────────────────
+
 Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
                                     const config::ActorDef& def) {
     FAULT_INJECT("hpactor.actor.spawn.fail") {
         return {};
     }
-    ActorId id(next_actor_id_.fetch_add(1));
+    ActorId id = actor_directory_.allocate_id();
     actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
     actor->set_type_name(def.behavior);
 
-    {
-        std::lock_guard<std::mutex> lock(actors_mutex_);
-        actors_.emplace(id, actor);
-    }
+    auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
+        id, scheduler_.get(), mailbox_config_for_actor_def(def));
+    auto* mbox = mailbox_ptr.get();
 
-    // Create mailbox with capacity from ActorDef, capture pointer while lock is
-    // held
-    mailbox::MPSCActorMailbox<TypedMessage>* mbox = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-        auto [it, _] = mailboxes_.emplace(
-            id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    id, scheduler_.get(), mailbox_config_for_actor_def(def)));
-        mbox = it->second.get();
-    }
-
-    // Create actor context and set it on the actor
     auto* local = static_cast<LocalActor*>(actor.get());
-    auto actor_ctx = std::make_unique<ActorContext>(Actor(actor), this);
+    auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), this);
     local->set_context(actor_ctx.get());
-    {
-        std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
-        actor_contexts_.emplace(id, std::move(actor_ctx));
-    }
 
-    // Set scheduler and mailbox on actor
+    ActorDirectoryEntry entry;
+    entry.actor = Actor(actor);
+    entry.instance = actor;
+    entry.mailbox = mailbox_ptr;
+    entry.context = actor_ctx;
+    actor_directory_.insert(std::move(entry));
+
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mbox);
 
-    // Register with scheduler. Actor class policy is authoritative for
-    // specialized actors such as DaemonActor and DenseComputingActor; TOML can
-    // only upgrade otherwise-cooperative actors.
     auto policy = actor->dispatch_policy();
     auto hints = actor->dispatch_hints();
     if (policy == sched::DispatchPolicy::Cooperative) {
@@ -1323,7 +768,6 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
             break;
     }
 
-    // Configure quarantine & circuit breaker for this actor
     if (def.quarantine.enabled) {
         if (auto* eba = actor->is_event_based_actor()
                             ? static_cast<EventBasedActor*>(actor.get())
@@ -1332,15 +776,13 @@ Actor ActorSystem::spawn_configured(std::shared_ptr<AbstractActor> actor,
         }
     }
 
-    // Activate the actor (DaemonActor starts its thread here, etc.)
     local->on_activate();
 
     return Actor(actor);
 }
 
-// -----------------------------------------------------------------------------
-// load_topology — convenience entry point for TOML-based bootstrapping
-// -----------------------------------------------------------------------------
+// ── load_topology ───────────────────────────────────────────────────────────
+
 result<void> ActorSystem::load_topology(const std::string& toml_path) {
     auto parse_result = config::TomlParser::parse(toml_path);
     if (!parse_result.has_value()) {
@@ -1349,7 +791,6 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     auto& model = parse_result.value();
 
-    // Apply system-level metrics config from topology
     if (model.system.metrics_enabled) {
         metrics_config_.enabled = model.system.metrics_enabled;
         metrics_config_.ring_buffer_capacity =
@@ -1357,22 +798,17 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
         metrics_config_.metrics_path = model.system.metrics_path;
     }
 
-    // Apply system-level logging config from topology
     logging_config_ = model.system.logging;
 
-// Apply shared system fields from topology
-// NOLINTBEGIN(cppcoreguidelines-macro-usage)
 #define HPACTOR_SYSTEM_TOML_FIELD(name, type, toml, def)                       \
     config_.name = static_cast<decltype(config_.name)>(model.system.name);
 #include <hpactor/config/system_toml_fields.def>
 #undef HPACTOR_SYSTEM_TOML_FIELD
 
-// Apply mailbox defaults from topology
 #define HPACTOR_MAILBOX_FIELD(name, type, toml, def)                           \
     config_.mailbox.name = model.system.mailbox.name;
 #include <hpactor/config/mailbox_fields.def>
 #undef HPACTOR_MAILBOX_FIELD
-    // NOLINTEND(cppcoreguidelines-macro-usage)
 
     config_.dead_letters = model.system.dead_letters;
     dead_letters_ =
@@ -1380,8 +816,6 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
     apply_tracing_config(model.system.tracing);
 
-    // Wire transport outbound limits and circuit breaker config into pool
-    // config.
     config_.pool.outbound_limits = model.system.transport_outbound_limits;
     config_.pool.circuit_breaker_cfg = model.system.transport_circuit_breaker;
     if (transport_) {
@@ -1391,7 +825,6 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     HPACTOR_LOG_INFO(log::LogCategory::kConfig, ActorId{0}, 0,
                      "topology bootstrap complete");
 
-    // Validate all behaviors are registered
     auto& registry = config::ActorFactoryRegistry::instance();
     for (const auto& actor_def : model.actors) {
         if (!registry.has(actor_def.behavior)) {
@@ -1400,7 +833,6 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
         }
     }
 
-    // Spawn actors in topological order; track numeric IDs for SystemInit
     std::vector<ActorId, mem::MemStdAllocator<ActorId>> spawned_ids(
         mem::MemStdAllocator<ActorId>(system_actor_.id(),
                                       mem::RegionType::kInternal));
@@ -1410,13 +842,11 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
 
         Actor actor_handle = spawn_configured(std::move(actor_ptr), actor_def);
 
-        // Register in name registry
         registry_.put(actor_def.id, actor_handle.address());
 
         spawned_ids.push_back(actor_handle.id());
     }
 
-    // Broadcast SystemInit to all spawned actors
     ActorAddress sys_addr = system_actor_.address();
     StreamBuffer empty_payload;
     for (ActorId id : spawned_ids) {
@@ -1429,213 +859,14 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     return result<void>::make();
 }
 
-} // namespace hpactor
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// Shutdown helpers (anonymous namespace, uses public ActorSystem API only)
-// ═══════════════════════════════════════════════════════════════════════════════
-
-namespace hpactor {
-namespace {
-
-struct ActorDrainInfo {
-    ActorId id;
-    bool is_system;
-};
-
-void initiate_actor_drain(ActorSystem& sys, ActorId id) {
-    auto actor = sys.get_actor(id);
-    if (!actor)
-        return;
-
-    auto* lc = actor->as_lifecycle();
-    if (lc == nullptr) {
-        // No lifecycle: call on_exit directly if EventBasedActor
-        if (actor->is_event_based_actor()) {
-            static_cast<EventBasedActor*>(actor.get())->on_exit();
-        }
-        return;
-    }
-
-    auto state = lc->state();
-    // Skip actors that are already stopping or stopped
-    if (state == LifecycleState::kStopping || state == LifecycleState::kStopped)
-        return;
-
-    auto policy = lc->drain_config().policy;
-
-    if (policy == DrainPolicy::ImmediateStop) {
-        // Drain mailbox synchronously (dead-letter all messages)
-        if (actor->is_event_based_actor()) {
-            static_cast<EventBasedActor*>(actor.get())->drain_all_immediate();
-        } else {
-            auto* mailbox = sys.get_mailbox(id);
-            if (mailbox) {
-                TypedMessage msg;
-                while (mailbox->try_pop(msg)) {
-                    // Messages dropped — equivalent to dead-lettering
-                }
-            }
-        }
-        // Drive lifecycle: kActive -> kStopping -> kStopped
-        lc->transition(LifecycleState::kStopping);
-        lc->transition(LifecycleState::kStopped);
-        // Notify linked/monitored actors
-        if (actor->is_event_based_actor()) {
-            static_cast<EventBasedActor*>(actor.get())->on_exit();
-        }
-    } else {
-        // Drain / DropUserMessages / deferred policies:
-        // transition to kDraining, let EventBasedActor::receive() / drain
-        // timer handle completion.
-        if (state == LifecycleState::kActive) {
-            lc->transition(LifecycleState::kDraining);
-        }
-        // Start drain timer if EventBasedActor
-        if (actor->is_event_based_actor()) {
-            static_cast<EventBasedActor*>(actor.get())->start_drain_timer();
-        } else {
-            // Non-EventBasedActor with lifecycle but no drain timer:
-            // transition directly to stopped.
-            lc->transition(LifecycleState::kStopping);
-            lc->transition(LifecycleState::kStopped);
-        }
-    }
-}
-
-void poll_drain_complete(ActorSystem& sys, ActorId id,
-                         std::chrono::steady_clock::time_point deadline) {
-    while (std::chrono::steady_clock::now() < deadline) {
-        auto actor = sys.get_actor(id);
-        if (!actor)
-            return; // Actor removed from registry
-
-        auto* lc = actor->as_lifecycle();
-        if (lc == nullptr)
-            return; // No lifecycle — already handled
-
-        if (lc->state() == LifecycleState::kStopped)
-            return; // Drain complete
-
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-}
-
-} // anonymous namespace
-} // namespace hpactor
-
-// ═══════════════════════════════════════════════════════════════════════════════
-// ActorSystem — shutdown implementation
-// ═══════════════════════════════════════════════════════════════════════════════
-
-namespace hpactor {
+// ── Shutdown (delegates to ShutdownCoordinator) ─────────────────────────────
 
 result<void> ActorSystem::shutdown() {
     return shutdown(ShutdownOptions{});
 }
 
 result<void> ActorSystem::shutdown(const ShutdownOptions& opts) {
-    ShutdownPhase phase = ShutdownPhase::Running;
-
-    // Helper: check if we should force-stop (modifies phase/running in place)
-    auto check_force = [&](std::chrono::steady_clock::time_point deadline) -> bool {
-        if (!opts.force_after_timeout)
-            return false;
-        if (std::chrono::steady_clock::now() < deadline)
-            return false;
-        phase = ShutdownPhase::ForcedStop;
-        shutdown_phase_.store(ShutdownPhase::ForcedStop, std::memory_order_release);
-        running_.store(false, std::memory_order_release);
-        return true;
-    };
-
-    // ── Phase: DrainingIngress ──────────────────────────────────────────
-    phase = ShutdownPhase::DrainingIngress;
-    shutdown_phase_.store(ShutdownPhase::DrainingIngress, std::memory_order_release);
-    is_ready_.store(false, std::memory_order_release);
-
-    auto ingress_deadline = std::chrono::steady_clock::now() + opts.ingress_timeout;
-    // (HTTP gateway / remote spawn gating deferred to follow-up tasks)
-    if (check_force(ingress_deadline))
-        return result<void>::make();
-
-    // ── Phase: DrainingActors ──────────────────────────────────────────
-    phase = ShutdownPhase::DrainingActors;
-    shutdown_phase_.store(ShutdownPhase::DrainingActors, std::memory_order_release);
-    auto actor_deadline =
-        std::chrono::steady_clock::now() + opts.actor_drain_timeout;
-
-    // Collect actor IDs under lock, then drain in order
-    {
-        std::vector<ActorDrainInfo> actors;
-        for_each_actor([&](ActorId id, AbstractActor& actor) {
-            actors.push_back({id, actor.is_system_actor()});
-        });
-        // Lock released — safe to call into actors
-
-        // Pass 1: initiate drain for non-system actors
-        for (auto& info : actors) {
-            if (info.is_system)
-                continue;
-            initiate_actor_drain(*this, info.id);
-            if (check_force(actor_deadline))
-                break;
-        }
-        // Poll non-system actors to completion
-        if (!check_force(actor_deadline)) {
-            for (const auto& info : actors) {
-                if (info.is_system)
-                    continue;
-                poll_drain_complete(*this, info.id, actor_deadline);
-                if (check_force(actor_deadline))
-                    break;
-            }
-        }
-
-        // Pass 2: initiate drain for system actors (last)
-        if (!check_force(actor_deadline)) {
-            for (auto& info : actors) {
-                if (!info.is_system)
-                    continue;
-                initiate_actor_drain(*this, info.id);
-                if (check_force(actor_deadline))
-                    break;
-            }
-        }
-        // Poll system actors to completion
-        if (!check_force(actor_deadline)) {
-            for (const auto& info : actors) {
-                if (!info.is_system)
-                    continue;
-                poll_drain_complete(*this, info.id, actor_deadline);
-                if (check_force(actor_deadline))
-                    break;
-            }
-        }
-    }
-
-    if (check_force(actor_deadline))
-        return result<void>::make();
-
-    // ── Phase: LeavingCluster ──────────────────────────────────────────
-    phase = ShutdownPhase::LeavingCluster;
-    shutdown_phase_.store(ShutdownPhase::LeavingCluster, std::memory_order_release);
-    auto leave_deadline =
-        std::chrono::steady_clock::now() + opts.cluster_leave_timeout;
-    // (Full implementation deferred until sharding)
-    if (check_force(leave_deadline))
-        return result<void>::make();
-
-    // ── Phase: FlushingTelemetry ──────────────────────────────────────
-    phase = ShutdownPhase::FlushingTelemetry;
-    shutdown_phase_.store(ShutdownPhase::FlushingTelemetry,
-                          std::memory_order_release);
-    // Best-effort flush of logs, metrics, DLQ — no blocking
-
-    // ── Phase: Stopped ─────────────────────────────────────────────────
-    phase = ShutdownPhase::Stopped;
-    shutdown_phase_.store(ShutdownPhase::Stopped, std::memory_order_release);
-    running_.store(false, std::memory_order_release);
+    shutdown_coordinator_->execute(opts);
     return result<void>::make();
 }
 

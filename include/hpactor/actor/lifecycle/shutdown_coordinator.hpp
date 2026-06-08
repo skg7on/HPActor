@@ -17,6 +17,7 @@
 #include <atomic>
 #include <chrono>
 #include <functional>
+#include <hpactor/actor/lifecycle/shutdown_options.hpp>
 #include <hpactor/actor/lifecycle/shutdown_phase.hpp>
 #include <hpactor/types/types.hpp>
 
@@ -34,14 +35,18 @@ namespace hpactor {
 struct ShutdownCoordinatorDependencies {
     /// \brief Shared atomic phase that the coordinator advances.
     std::atomic<ShutdownPhase>* phase{nullptr};
+    /// \brief Shared atomic running flag.
+    std::atomic<bool>* running{nullptr};
     /// \brief Set the system readiness flag.
     std::function<void(bool)> set_ready;
-    /// \brief Snapshot all live actor IDs for drain.
-    std::function<std::vector<ActorId>()> actor_snapshot;
-    /// \brief Request a specific actor begin draining.
-    std::function<void(ActorId)> request_actor_drain;
-    /// \brief Returns \c true when all actors have completed draining.
-    std::function<bool()> actors_drained;
+    /// \brief Snapshot all live actor IDs with system/non-system
+    /// classification.
+    std::function<std::vector<std::pair<ActorId, bool>>()> actor_snapshot;
+    /// \brief Look up an actor instance by ID.
+    std::function<std::shared_ptr<class AbstractActor>(ActorId)> get_actor;
+    /// \brief Look up an actor's mailbox by ID (returns void* to avoid
+    ///        template instantiation; callee casts back).
+    std::function<void*(ActorId)> get_mailbox_raw;
     /// \brief Stop the remote runtime (RPC, transport accept loop).
     std::function<void()> stop_remote_runtime;
     /// \brief Leave the service discovery group.
@@ -55,38 +60,23 @@ struct ShutdownCoordinatorDependencies {
 /// Receives dependency callbacks from \c ActorSystem and advances through
 /// each \c ShutdownPhase in order: ingress drain, actor drain, cluster
 /// leave, telemetry flush, and stop.
-///
-/// \note Thread safety: \c phase() and \c accepting_ingress() are safe to
-///       call from any thread. \c shutdown() should be called from a single
-///       control thread.
 class ShutdownCoordinator {
   public:
-    /// \brief Construct with injected dependency callbacks.
-    ///
-    /// \param[in] deps Callback bundle. Each callback may be null; the
-    ///                 coordinator skips null entries during shutdown.
     explicit ShutdownCoordinator(ShutdownCoordinatorDependencies deps);
 
-    /// \brief Execute the full shutdown sequence.
-    ///
-    /// Advances through DrainingIngress, DrainingActors, LeavingCluster,
-    /// FlushingTelemetry, and Stopped phases in order.
-    /// \param[in] drain_timeout Maximum time to wait for actor drain.
-    void shutdown(std::chrono::milliseconds drain_timeout);
+    /// \brief Execute the full shutdown sequence with phase timeouts and
+    ///        force-stop behaviour.
+    void execute(const ShutdownOptions& opts);
 
-    /// \brief Current shutdown phase.
-    ///
-    /// \return The phase last written by the coordinator, or
-    ///         \c ShutdownPhase::Running if the phase pointer is null.
     ShutdownPhase phase() const noexcept;
-
-    /// \brief Returns \c true only while the system is in the Running phase.
-    ///
-    /// Used to gate ingress acceptance at network and spawn boundaries.
     bool accepting_ingress() const noexcept;
 
   private:
     void set_phase(ShutdownPhase phase) noexcept;
+    void initiate_actor_drain(ActorId id);
+    void poll_drain_complete(ActorId id,
+                             std::chrono::steady_clock::time_point deadline);
+
     ShutdownCoordinatorDependencies deps_;
 };
 

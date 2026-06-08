@@ -21,6 +21,7 @@
 #include <hpactor/actor/lifecycle/drain_config.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/passivation_manager.hpp>
+#include <hpactor/actor/lifecycle/shutdown_options.hpp>
 #include <hpactor/actor/lifecycle/shutdown_phase.hpp>
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/cli/cli_config.hpp>
@@ -33,6 +34,7 @@
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
+#include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -187,18 +189,6 @@ struct Config {
 struct ActorTypeDef {
     std::string name; ///< Human-readable type name.
     ActorType id;     ///< Numeric type tag.
-};
-
-/// \brief Options controlling the shutdown sequence.
-struct ShutdownOptions {
-    /// \brief Maximum time for ingress draining.
-    std::chrono::milliseconds ingress_timeout{5'000};
-    /// \brief Maximum time for actor message draining.
-    std::chrono::milliseconds actor_drain_timeout{30'000};
-    /// \brief Maximum time for cluster leave handshake.
-    std::chrono::milliseconds cluster_leave_timeout{10'000};
-    /// \brief Force shutdown after all phase timeouts expire.
-    bool force_after_timeout{true};
 };
 
 /// \brief The actor runtime environment.
@@ -731,25 +721,16 @@ class ActorSystem {
     actor_registry registry_;
     ActorDirectory actor_directory_;
     std::unique_ptr<LocalDeliveryEngine> local_delivery_engine_;
+    std::unique_ptr<mailbox::DeliveryPipeline> delivery_pipeline_;
     std::unique_ptr<BackpressureCoordinator> backpressure_coordinator_;
     std::unique_ptr<ShutdownCoordinator> shutdown_coordinator_;
     std::unordered_map<ActorType, ActorTypeDef> actor_types_;
     Actor system_actor_;
 
-    // Actor registry - maps ActorId to actor instance
-    std::unordered_map<ActorId, std::shared_ptr<AbstractActor>> actors_;
-    mutable std::mutex actors_mutex_;
-
-    // Actor mailboxes - maps ActorId to mailbox
-    std::unordered_map<ActorId, std::unique_ptr<mailbox::MPSCActorMailbox<TypedMessage>>> mailboxes_;
-    std::mutex mailboxes_mutex_;
-
-    // Actor contexts - maps ActorId to context
-    std::unordered_map<ActorId, std::unique_ptr<ActorContext>> actor_contexts_;
-    std::mutex actor_contexts_mutex_;
-
-    // Actor ID generator
-    std::atomic<uint64_t> next_actor_id_{1};
+    // Actor storage consolidated into actor_directory_ above.
+    // Use actor_directory_.find() / find_actor() / find_mailbox() /
+    // find_context() / insert() / snapshot() / size() / erase()
+    // instead of the previous separate maps + mutexes + ID generator.
 
     // Running flag for network thread loop
     std::atomic<bool> running_{true};
@@ -822,7 +803,7 @@ class ActorSystem {
 
 template <typename T, typename... Args>
 Actor ActorSystem::spawn(Args&&... args) {
-    ActorId id(next_actor_id_.fetch_add(1));
+    ActorId id = actor_directory_.allocate_id();
     auto actor = std::make_shared<T>(nullptr, *this, std::forward<Args>(args)...);
     actor->set_address(ActorAddress(endpoint_, actor->type(), id, 0));
     if constexpr (requires { T::kActorTypeName; }) {
@@ -831,49 +812,33 @@ Actor ActorSystem::spawn(Args&&... args) {
         actor->set_type_name("unknown");
     }
 
-    {
-        std::lock_guard<std::mutex> lock(actors_mutex_);
-        actors_.emplace(id, actor);
-    }
+    auto mailbox_ptr = std::make_shared<mailbox::MPSCActorMailbox<TypedMessage>>(
+        id, scheduler_.get(), mailbox_config_for_spawn());
+    auto* mbox = mailbox_ptr.get();
 
-    // Create mailbox, capture pointer while lock is held
-    mailbox::MPSCActorMailbox<TypedMessage>* mbox = nullptr;
-    {
-        std::lock_guard<std::mutex> lock(mailboxes_mutex_);
-        auto [it, _] = mailboxes_.emplace(
-            id, std::make_unique<mailbox::MPSCActorMailbox<TypedMessage>>(
-                    id, scheduler_.get(), mailbox_config_for_spawn()));
-        mbox = it->second.get();
-    }
-
-    // Create actor context and set it on the actor
-    auto actor_ctx = std::make_unique<ActorContext>(Actor(actor), this);
+    auto actor_ctx = std::make_shared<ActorContext>(Actor(actor), this);
     actor->set_context(actor_ctx.get());
-    {
-        std::lock_guard<std::mutex> lock(actor_contexts_mutex_);
-        actor_contexts_.emplace(id, std::move(actor_ctx));
-    }
 
-    // Set scheduler and mailbox on actor
+    ActorDirectoryEntry entry;
+    entry.actor = Actor(actor);
+    entry.instance = actor;
+    entry.mailbox = mailbox_ptr;
+    entry.context = actor_ctx;
+    actor_directory_.insert(std::move(entry));
+
     actor->set_scheduler(scheduler_.get());
     actor->set_mailbox(mbox);
 
-    // Wire metrics ring buffer to actor and mailbox
     if (metrics_ring_buffer_) [[unlikely]] {
         mbox->set_metrics_ring_buffer(metrics_ring_buffer_.get());
         actor->set_metrics_ring_buffer(metrics_ring_buffer_.get());
     }
 
-    // Wire logger to actor and mailbox
     if (logger_) [[unlikely]] {
         mbox->set_logger(logger_);
         actor->set_logger(logger_);
     }
 
-    // Register with scheduler based on dispatch policy.
-    // Cooperative actors go onto the work-stealing pool. Dedicated actors
-    // are registered with the scheduler but NOT placed on the cooperative
-    // pool — they manage their own threads or use DedicatedThreadPool.
     switch (actor->dispatch_policy()) {
         case sched::DispatchPolicy::Cooperative:
             scheduler_->notify_ready(id, 0, INT64_MAX);
@@ -887,10 +852,8 @@ Actor ActorSystem::spawn(Args&&... args) {
             break;
     }
 
-    // Activate the actor (DaemonActor starts its thread here, etc.)
     actor->on_activate();
 
-    // Transition lifecycle to ACTIVE if actor has lifecycle management
     if (auto* lc = actor->as_lifecycle()) {
         lc->transition(LifecycleState::kActive);
     }
