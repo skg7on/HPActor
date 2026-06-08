@@ -1,7 +1,0 @@
-# CMake generated Testfile for 
-# Source directory: /Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/tests/integration/metrics
-# Build directory: /Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/build-asan/tests/integration/metrics
-# 
-# This file includes the relevant testing commands required for 
-# testing this directory and lists subdirectories to be tested as well.
-include("/Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/build-asan/tests/integration/metrics/test_integration_metrics[1]_include.cmake")

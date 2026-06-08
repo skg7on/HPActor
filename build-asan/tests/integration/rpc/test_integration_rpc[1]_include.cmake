@@ -1,5 +1,0 @@
-if(EXISTS "/Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/build-asan/tests/integration/rpc/test_integration_rpc[1]_tests.cmake")
-  include("/Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/build-asan/tests/integration/rpc/test_integration_rpc[1]_tests.cmake")
-else()
-  add_test(test_integration_rpc_NOT_BUILT test_integration_rpc_NOT_BUILT)
-endif()
