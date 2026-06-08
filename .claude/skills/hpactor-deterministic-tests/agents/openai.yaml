@@ -1,0 +1,4 @@
+interface:
+  display_name: "HPActor Deterministic Tests"
+  short_description: "Design HPActor tests without flakes"
+  default_prompt: "Use this before adding or reviewing HPActor tests that involve timers, schedulers, threads, callbacks, or CI-sensitive behavior."
