@@ -1,0 +1,5 @@
+if(EXISTS "/Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/build-asan/tests/integration/actor/test_integration_actor[1]_tests.cmake")
+  include("/Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/build-asan/tests/integration/actor/test_integration_actor[1]_tests.cmake")
+else()
+  add_test(test_integration_actor_NOT_BUILT test_integration_actor_NOT_BUILT)
+endif()

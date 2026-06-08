@@ -105,7 +105,7 @@ void ShutdownCoordinator::poll_drain_complete(
     }
 }
 
-bool ShutdownCoordinator::execute(const ShutdownOptions& opts) {
+void ShutdownCoordinator::execute(const ShutdownOptions& opts) {
     auto check_force = [&](std::chrono::steady_clock::time_point deadline) -> bool {
         if (!opts.force_after_timeout)
             return false;
@@ -122,7 +122,7 @@ bool ShutdownCoordinator::execute(const ShutdownOptions& opts) {
         deps_.set_ready(false);
     auto ingress_deadline = std::chrono::steady_clock::now() + opts.ingress_timeout;
     if (check_force(ingress_deadline))
-        return false;
+        return;
 
     set_phase(ShutdownPhase::DrainingActors);
     auto actor_deadline =
@@ -139,7 +139,7 @@ bool ShutdownCoordinator::execute(const ShutdownOptions& opts) {
         (void)is_sys;
         initiate_actor_drain(id);
         if (check_force(actor_deadline))
-            return false;
+            return;
     }
     if (!check_force(actor_deadline)) {
         for (const auto& [id, is_sys] : actors) {
@@ -147,7 +147,7 @@ bool ShutdownCoordinator::execute(const ShutdownOptions& opts) {
                 continue;
             poll_drain_complete(id, actor_deadline);
             if (check_force(actor_deadline))
-                return false;
+                return;
         }
     }
 
@@ -159,7 +159,7 @@ bool ShutdownCoordinator::execute(const ShutdownOptions& opts) {
             (void)is_sys;
             initiate_actor_drain(id);
             if (check_force(actor_deadline))
-                return false;
+                return;
         }
     }
     if (!check_force(actor_deadline)) {
@@ -168,11 +168,11 @@ bool ShutdownCoordinator::execute(const ShutdownOptions& opts) {
                 continue;
             poll_drain_complete(id, actor_deadline);
             if (check_force(actor_deadline))
-                return false;
+                return;
         }
     }
     if (check_force(actor_deadline))
-        return false;
+        return;
 
     set_phase(ShutdownPhase::LeavingCluster);
     auto leave_deadline =
@@ -182,7 +182,7 @@ bool ShutdownCoordinator::execute(const ShutdownOptions& opts) {
     if (deps_.stop_remote_runtime)
         deps_.stop_remote_runtime();
     if (check_force(leave_deadline))
-        return false;
+        return;
 
     set_phase(ShutdownPhase::FlushingTelemetry);
     if (deps_.flush_telemetry)
@@ -191,8 +191,6 @@ bool ShutdownCoordinator::execute(const ShutdownOptions& opts) {
     set_phase(ShutdownPhase::Stopped);
     if (deps_.running)
         deps_.running->store(false, std::memory_order_release);
-
-    return true;
 }
 
 } // namespace hpactor

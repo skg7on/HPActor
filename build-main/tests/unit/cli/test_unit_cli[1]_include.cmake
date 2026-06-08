@@ -1,0 +1,5 @@
+if(EXISTS "/Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/build-main/tests/unit/cli/test_unit_cli[1]_tests.cmake")
+  include("/Users/skg7on/Workspace/Projects/HPActor/.claude/worktrees/refactor-actor-system-v2/build-main/tests/unit/cli/test_unit_cli[1]_tests.cmake")
+else()
+  add_test(test_unit_cli_NOT_BUILT test_unit_cli_NOT_BUILT)
+endif()

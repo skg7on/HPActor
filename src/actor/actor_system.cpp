@@ -308,10 +308,11 @@ ActorSystem::ActorSystem(const Config& config)
                 },
             .leave_discovery = []() {},
             .flush_telemetry =
-                [this]() {
-                    if (metrics_ring_buffer_) {
-                        metrics_ring_buffer_.reset();
-                    }
+                []() {
+                    // Metrics ring buffer is NOT destroyed here — scheduler
+                    // workers hold raw pointers to it and may still be running.
+                    // The ActorSystem destructor cleans it up after
+                    // scheduler_->stop() ensures all workers have exited.
                 },
         });
 }
@@ -586,6 +587,8 @@ ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
 }
 
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
+    if (!delivery_pipeline_)
+        return;
     (void)delivery_pipeline_->try_deliver(target, std::move(msg));
 }
 
@@ -876,11 +879,7 @@ result<void> ActorSystem::shutdown() {
 }
 
 result<void> ActorSystem::shutdown(const ShutdownOptions& opts) {
-    bool clean = shutdown_coordinator_->execute(opts);
-    if (!clean) {
-        error err(errors::timeout);
-        return result<void>::make(std::move(err));
-    }
+    shutdown_coordinator_->execute(opts);
     return result<void>::make();
 }
 

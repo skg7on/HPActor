@@ -82,13 +82,13 @@ class ShutdownCoordinator {
     /// last.  If \c ShutdownOptions::force_after_timeout is \c true, any
     /// phase that exceeds its deadline triggers an immediate forced stop.
     ///
+    /// Callers can inspect the current phase via \c phase() to determine
+    /// whether shutdown completed cleanly (\c Stopped) or was force-stopped
+    /// (\c ForcedStop).
+    ///
     /// \param[in] opts Shutdown options controlling per-phase timeouts
     ///                 and force-stop behaviour.
-    /// \return \c true if shutdown completed cleanly through all phases.
-    /// \retval true  All phases completed normally.
-    /// \retval false Force-stop was triggered — the system was killed
-    ///               before clean completion.
-    bool execute(const ShutdownOptions& opts);
+    void execute(const ShutdownOptions& opts);
 
     /// \brief Current shutdown phase.
     ///
