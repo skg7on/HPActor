@@ -16,12 +16,14 @@
 
 #include <hpactor/msg/delivery_mode.hpp>
 #include <hpactor/msg/failure_reason.hpp>
+#include <hpactor/msg/retry_policy.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>
 #include <cstdint>
+#include <optional>
 
 namespace hpactor::mailbox {
 
@@ -124,6 +126,11 @@ struct DeliveryOptions {
     uint64_t message_id = 0; ///< Sender-assigned message identifier for
                              ///< dedup/correlation.
     uint32_t flags = 0;      ///< Per-message flags (reserved for future use).
+
+    /// Retry policy for AtLeastOnce/DurableAtLeastOnce delivery modes.
+    /// When absent and delivery_mode >= AtLeastOnce, a system-default
+    /// policy is used (max 5 attempts, 5s timeout, exponential backoff).
+    std::optional<msg::RetryPolicy> retry_policy;
 };
 
 /// \brief Metadata attached to every message enqueued into a mailbox.
