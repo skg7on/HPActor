@@ -53,6 +53,7 @@ enum class DeadLetterReason : uint8_t {
                                ///< endpoint.
     EndpointCircuitOpen = 16, ///< Circuit breaker open for the target endpoint.
     AskTimeout = 17,          ///< Ask/request timed out without a response.
+    RetryExhausted = 18, ///< Reliable delivery retries exhausted without ACK.
 };
 
 /// \brief Origin of a dead-lettered message within the system.
@@ -108,6 +109,8 @@ failure_reason(DeadLetterReason reason) noexcept {
             return FailureReason::ResourceExhausted;
         case DeadLetterReason::EndpointCircuitOpen:
             return FailureReason::RemoteUnavailable;
+        case DeadLetterReason::RetryExhausted:
+            return FailureReason::RetryExhausted;
     }
     return FailureReason::Unknown;
 }
@@ -174,6 +177,8 @@ failure_source(DeadLetterSource source) noexcept {
             return "Expired";
         case DeadLetterReason::AskTimeout:
             return "ask_timeout";
+        case DeadLetterReason::RetryExhausted:
+            return "RetryExhausted";
         case DeadLetterReason::EndpointBackpressure:
             return "EndpointBackpressure";
         case DeadLetterReason::EndpointCircuitOpen:
