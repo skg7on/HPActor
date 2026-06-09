@@ -291,8 +291,8 @@ HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
     auto interval = std::make_shared<int64_t>(interval_ns);
     auto callback = std::make_shared<timer_callback>(std::move(cb));
 
-    std::function<void()> recurring;
-    recurring = [this, cancelled, interval, callback, recurring]() {
+    auto recurring = std::make_shared<std::function<void()>>();
+    *recurring = [this, cancelled, interval, callback, recurring]() {
         if (cancelled->load(std::memory_order_acquire))
             return;
         if (running_.load(std::memory_order_acquire)) {
@@ -300,7 +300,7 @@ HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
             if (!cancelled->load(std::memory_order_acquire)) {
                 std::visit(
                     [&](auto& backend) {
-                        static_cast<void>(backend.schedule(*interval, recurring));
+                        static_cast<void>(backend.schedule(*interval, *recurring));
                     },
                     timer_backend_);
             }
@@ -308,7 +308,7 @@ HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
     };
 
     auto id = std::visit(
-        [&](auto& backend) { return backend.schedule(*interval, recurring); },
+        [&](auto& backend) { return backend.schedule(*interval, *recurring); },
         timer_backend_);
     {
         std::lock_guard<std::mutex> lock(cancellation_mutex_);

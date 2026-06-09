@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/timer/timing_wheel.hpp>
 #include <hpactor/fault/fault_macros.hpp>
+#include <hpactor/timer/timing_wheel.hpp>
 
 #include <chrono>
 
@@ -52,6 +52,7 @@ uint64_t TimingWheel::schedule(int64_t delay_ns, TimerCallback callback) {
 }
 
 uint64_t TimingWheel::schedule_at(int64_t expire_ns, TimerCallback callback) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     return add_timer_internal(expire_ns, std::move(callback));
 }
 
@@ -68,6 +69,7 @@ TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {
 }
 
 bool TimingWheel::cancel(uint64_t timer_id) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     FAULT_INJECT("hpactor.timing_wheel.cancel.fail") {
         return false;
     }
@@ -137,6 +139,7 @@ TimingWheel::Timer* TimingWheel::remove_timer(uint64_t timer_id) {
 }
 
 uint32_t TimingWheel::advance(int64_t now_ns) {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     FAULT_INJECT("hpactor.timing_wheel.advance.skip") {
         return 0;
     }
