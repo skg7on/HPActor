@@ -20,6 +20,7 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <vector>
 
 namespace hpactor::sched {
@@ -113,6 +114,9 @@ class TimingWheel {
     std::vector<Timer*> all_timers_;
     // For thread-safe timer management
     std::atomic<bool> timers_modified_{false};
+    // Protects all bucket operations (schedule/cancel/advance may be called
+    // from different threads).
+    mutable std::recursive_mutex mutex_;
 };
 
 } // namespace hpactor::sched
