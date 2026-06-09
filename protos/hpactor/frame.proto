@@ -21,3 +21,39 @@ message ActorMsgFrame {
   bytes payload = 6;
   PbTraceContext trace_context = 7;
 }
+
+// ── Reliable messaging control frames ─────────────────────────────────────
+
+enum NackReason {
+  NACK_UNSPECIFIED = 0;
+  NACK_MAILBOX_FULL = 1;       // retryable — sender should back off
+  NACK_ACTOR_DEAD = 2;         // non-retryable — route to DLQ
+  NACK_EXPIRED = 3;            // non-retryable — route to DLQ
+  NACK_REJECTED_BY_POLICY = 4; // non-retryable — route to DLQ
+  NACK_DUPLICATE = 5;          // already seen — treat as ACK
+}
+
+message AckFrame {
+  uint64 message_id = 1;
+  hpactor.PbActorAddress sender = 2;
+  uint64 sender_node_id = 3;
+}
+
+message NackFrame {
+  uint64 message_id = 1;
+  hpactor.PbActorAddress sender = 2;
+  uint64 sender_node_id = 3;
+  NackReason reason = 4;
+  uint32 retry_after_ms = 5;
+}
+
+// Envelope wrapper for frame type dispatch.
+// Replaces raw ActorMsgFrame on the wire when the peer supports
+// reliable messaging (negotiated in handshake, follow-up issue).
+message WireEnvelope {
+  oneof payload {
+    ActorMsgFrame data_frame = 1;
+    AckFrame ack_frame = 2;
+    NackFrame nack_frame = 3;
+  }
+}
