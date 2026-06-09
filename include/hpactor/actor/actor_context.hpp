@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/core/actor_ref_cache.hpp>
+#include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/request_handle.hpp>
 #include <hpactor/msg/request_timeout.hpp>
@@ -135,8 +136,8 @@ class ActorContext {
     /// \param[in] msg Message to send.
     /// \param[in] options Delivery options (deadline, priority, idempotency).
     /// \return \c DeliveryResult describing the delivery outcome.
-    mailbox::DeliveryResult try_send(const ActorAddress& target, TypedMessage msg,
-                                     mailbox::DeliveryOptions options = {});
+    msg::DeliveryReceipt try_send(const ActorAddress& target, TypedMessage msg,
+                                  mailbox::DeliveryOptions options = {});
 
     /// \brief Try-send with explicit priority and deadline.
     ///
@@ -150,7 +151,7 @@ class ActorContext {
     /// \param[in] deadline_ns Absolute deadline in nanoseconds.
     /// \param[in] options Delivery options.
     /// \return \c DeliveryResult describing the delivery outcome.
-    mailbox::DeliveryResult
+    msg::DeliveryReceipt
     try_send_with_priority(const ActorAddress& target, TypedMessage msg,
                            uint8_t priority, int64_t deadline_ns,
                            mailbox::DeliveryOptions options = {});
@@ -160,7 +161,7 @@ class ActorContext {
     /// \param[in] msg Message to send back.
     /// \param[in] options Delivery options.
     /// \return \c DeliveryResult with NoRoute if there is no current sender.
-    mailbox::DeliveryResult
+    msg::DeliveryReceipt
     try_reply(TypedMessage msg, mailbox::DeliveryOptions options = {});
 
     // ── Replies ───────────────────────────────────────────────────────────
