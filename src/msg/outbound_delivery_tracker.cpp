@@ -41,7 +41,7 @@ OutboundDeliveryTracker::track(StreamBuffer serialized_frame, EndPoint remote,
 
     pending_.emplace(raw_id, std::move(ps));
 
-    emit_metric(static_cast<::hpactor::metrics::MetricEventType>(46), 0);
+    emit_metric(::hpactor::metrics::MetricEventType::kReliableTracked, 0);
     return DeliveryReceipt(state);
 }
 
@@ -50,7 +50,7 @@ void OutboundDeliveryTracker::on_ack(MessageId msg_id, EndPoint /*from*/) {
     result.status = mailbox::DeliveryStatus::Accepted;
     result.message_id = msg_id;
     resolve(msg_id, result);
-    emit_metric(static_cast<::hpactor::metrics::MetricEventType>(47),
+    emit_metric(::hpactor::metrics::MetricEventType::kReliableAckReceived,
                 static_cast<uint8_t>(mailbox::DeliveryStatus::Accepted));
 }
 
@@ -75,7 +75,7 @@ void OutboundDeliveryTracker::on_nack(MessageId msg_id, EndPoint /*from*/,
     if (it == pending_.end())
         return;
 
-    emit_metric(static_cast<::hpactor::metrics::MetricEventType>(48),
+    emit_metric(::hpactor::metrics::MetricEventType::kReliableNackReceived,
                 static_cast<uint8_t>(status));
 
     if (is_retryable_nack(status)) {
@@ -115,7 +115,7 @@ void OutboundDeliveryTracker::process_retries(
                                 : mailbox::DeliveryStatus::TransportError;
                     exhausted.message_id = ps.msg_id;
                     to_resolve.emplace_back(ps.msg_id, exhausted);
-                    emit_metric(static_cast<::hpactor::metrics::MetricEventType>(50),
+                    emit_metric(::hpactor::metrics::MetricEventType::kReliableExhausted,
                                 ps.retry_count);
                     it = pending_.erase(it);
                     continue;
@@ -125,7 +125,7 @@ void OutboundDeliveryTracker::process_retries(
                 ps.next_retry_ns =
                     now_ns + static_cast<uint64_t>(backoff.count()) * 1'000'000ULL;
                 to_resend.push_back(std::move(ps));
-                emit_metric(static_cast<::hpactor::metrics::MetricEventType>(49),
+                emit_metric(::hpactor::metrics::MetricEventType::kReliableRetry,
                             ps.retry_count);
             } else if (ps.next_retry_ns == 0 &&
                        ps.policy.per_attempt_timeout.count() > 0) {
@@ -135,7 +135,7 @@ void OutboundDeliveryTracker::process_retries(
                     expired_result.status = mailbox::DeliveryStatus::Expired;
                     expired_result.message_id = ps.msg_id;
                     to_resolve.emplace_back(ps.msg_id, expired_result);
-                    emit_metric(static_cast<::hpactor::metrics::MetricEventType>(50),
+                    emit_metric(::hpactor::metrics::MetricEventType::kReliableExhausted,
                                 ps.retry_count);
                     it = pending_.erase(it);
                     continue;
@@ -188,7 +188,7 @@ void OutboundDeliveryTracker::cancel(MessageId msg_id) {
     result.status = mailbox::DeliveryStatus::Cancelled;
     result.message_id = msg_id;
     resolve(msg_id, result);
-    emit_metric(static_cast<::hpactor::metrics::MetricEventType>(51), 0);
+    emit_metric(::hpactor::metrics::MetricEventType::kReliableCancelled, 0);
 }
 
 size_t OutboundDeliveryTracker::pending() const noexcept {

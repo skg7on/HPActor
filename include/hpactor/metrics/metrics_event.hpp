@@ -72,6 +72,16 @@ enum class MetricEventType : uint8_t {
     kDeliveryResult = 45,       ///< Delivery result emitted from try_send /
                                 ///< try_reply / deliver_with_result.
                                 ///< \c code carries DeliveryStatus value.
+    kReliableTracked = 46,      ///< PendingSend added to outbound tracker.
+    kReliableAckReceived = 47,  ///< AckFrame processed; code carries
+                                ///< DeliveryStatus.
+    kReliableNackReceived = 48, ///< NackFrame processed; code carries
+                                ///< DeliveryStatus.
+    kReliableRetry = 49,        ///< Frame re-sent on retry; code carries
+                                ///< attempt_number.
+    kReliableExhausted = 50,    ///< Retries exhausted; code carries
+                                ///< total_attempts.
+    kReliableCancelled = 51,    ///< DeliveryReceipt::cancel() called.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.

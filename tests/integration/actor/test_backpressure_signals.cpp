@@ -69,8 +69,8 @@ TEST_F(BackpressureSignalsTest, SignalOnSoftPressure) {
     // Send one message: depth 1 of capacity 2 = 0.5, meets high_watermark
     auto result = sender_ctx->try_send(
         target.address(), TypedMessage(TypeTag::User, StreamBuffer{1}));
-    EXPECT_TRUE(result.accepted());
-    EXPECT_EQ(result.status, mailbox::DeliveryStatus::AcceptedWithPressure);
+    EXPECT_TRUE(result.get().accepted());
+    EXPECT_EQ(result.get().status, mailbox::DeliveryStatus::AcceptedWithPressure);
     EXPECT_TRUE(signaled);
 }
 
@@ -90,7 +90,7 @@ TEST_F(BackpressureSignalsTest, NoSignalWhenEmitBackpressureDisabled) {
 
     auto result = sender_ctx->try_send(
         target.address(), TypedMessage(TypeTag::User, StreamBuffer{1}), options);
-    EXPECT_TRUE(result.accepted());
+    EXPECT_TRUE(result.get().accepted());
     EXPECT_FALSE(signaled);
 }
 
@@ -113,8 +113,8 @@ TEST_F(BackpressureSignalsTest, NoSignalWhenBelowWatermark) {
 
     auto result = sender_ctx->try_send(
         target.address(), TypedMessage(TypeTag::User, StreamBuffer{1}));
-    EXPECT_TRUE(result.accepted());
-    EXPECT_EQ(result.status, mailbox::DeliveryStatus::Accepted);
+    EXPECT_TRUE(result.get().accepted());
+    EXPECT_EQ(result.get().status, mailbox::DeliveryStatus::Accepted);
     EXPECT_FALSE(signaled);
 }
 
@@ -137,7 +137,7 @@ TEST_F(BackpressureSignalsTest, DisabledModeSuppressesLocalSignal) {
 
     auto result = sender_local->context()->try_send(
         target.address(), TypedMessage(TypeTag::User, StreamBuffer{1}));
-    EXPECT_TRUE(result.accepted());
+    EXPECT_TRUE(result.get().accepted());
     EXPECT_FALSE(signaled);
 }
 
@@ -168,15 +168,17 @@ TEST_F(BackpressureSignalsTest, HardCapacityFailureSignalsRetryAfter) {
     ASSERT_TRUE(sender_ctx
                     ->try_send(target.address(),
                                TypedMessage(TypeTag::User, StreamBuffer{1}))
+                    .get()
                     .accepted());
     ASSERT_TRUE(sender_ctx
                     ->try_send(target.address(),
                                TypedMessage(TypeTag::User, StreamBuffer{2}))
+                    .get()
                     .accepted());
     auto rejected = sender_ctx->try_send(
         target.address(), TypedMessage(TypeTag::User, StreamBuffer{3}));
 
-    EXPECT_FALSE(rejected.accepted());
+    EXPECT_FALSE(rejected.get().accepted());
     EXPECT_TRUE(signaled);
     EXPECT_EQ(observed.reason, mailbox::BackpressureReason::HardCapacity);
     EXPECT_EQ(observed.target.id, target.id());

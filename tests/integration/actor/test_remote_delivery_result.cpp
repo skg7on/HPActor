@@ -163,8 +163,8 @@ TEST_F(RemoteDeliveryResultTest, TryReplyReturnsDeliveryResult) {
     // message processing. Since scheduler_threads=0, we test that try_reply
     // returns NoRoute when there's no current message.
     auto result = ctx.try_reply(TypedMessage(TypeTag::User, StreamBuffer{1}));
-    EXPECT_FALSE(result.ok());
-    EXPECT_EQ(result.status, DeliveryStatus::NoRoute);
+    EXPECT_FALSE(result.get().ok());
+    EXPECT_EQ(result.get().status, DeliveryStatus::NoRoute);
 }
 
 } // namespace

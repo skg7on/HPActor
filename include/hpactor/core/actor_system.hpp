@@ -71,6 +71,9 @@ class ActorTypeRegistry;
 class LocalDeliveryEngine;
 class BackpressureCoordinator;
 class ShutdownCoordinator;
+namespace msg {
+class OutboundDeliveryTracker;
+}
 
 namespace log {
 class LogManager;
@@ -526,6 +529,13 @@ class ActorSystem {
         return dead_letters_.get();
     }
 
+    /// \brief Access the outbound delivery tracker.
+    ///
+    /// Returns nullptr if reliable messaging is not configured.
+    msg::OutboundDeliveryTracker* outbound_tracker() noexcept {
+        return outbound_tracker_.get();
+    }
+
     // Receiver dedup cache for at-least-once delivery
     adt::DedupCache* dedup_cache() {
         return dedup_cache_.get();
@@ -749,6 +759,7 @@ class ActorSystem {
     std::shared_ptr<net::IServiceDiscovery> discovery_;
     std::shared_ptr<net::ActorLocationCache> location_cache_;
     uint64_t cache_purge_timer_ = 0;
+    uint64_t retry_timer_ = 0;
     std::unique_ptr<net::EventLoop> network_loop_;
     std::thread network_thread_;
 
@@ -782,6 +793,9 @@ class ActorSystem {
 
     // Dead-letter queue
     std::unique_ptr<mailbox::DeadLetterQueue> dead_letters_;
+
+    // Outbound delivery tracker for at-least-once delivery
+    std::unique_ptr<msg::OutboundDeliveryTracker> outbound_tracker_;
 
     // Receiver dedup cache for at-least-once delivery
     std::unique_ptr<adt::DedupCache> dedup_cache_;

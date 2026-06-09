@@ -59,8 +59,8 @@ TEST_F(DeliverySemanticsTest, BestEffortDefaultAccepted) {
     opts.delivery_mode = DeliveryMode::BestEffort;
     auto result = ctx.try_send(
         target_.address(), TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
-    EXPECT_TRUE(result.accepted());
-    EXPECT_EQ(result.status, DeliveryStatus::Accepted);
+    EXPECT_TRUE(result.get().accepted());
+    EXPECT_EQ(result.get().status, DeliveryStatus::Accepted);
 }
 
 TEST_F(DeliverySemanticsTest, DefaultOptionsBestEffort) {
@@ -69,7 +69,7 @@ TEST_F(DeliverySemanticsTest, DefaultOptionsBestEffort) {
 
     auto result = ctx.try_send(target_.address(),
                                TypedMessage(TypeTag::User, StreamBuffer{1}));
-    EXPECT_TRUE(result.accepted());
+    EXPECT_TRUE(result.get().accepted());
 }
 
 // ── ObservableBestEffort ───────────────────────────────────────────────────
@@ -81,7 +81,7 @@ TEST_F(DeliverySemanticsTest, ObservableBestEffortAccepted) {
     opts.delivery_mode = DeliveryMode::ObservableBestEffort;
     auto result = ctx.try_send(
         target_.address(), TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
-    EXPECT_TRUE(result.accepted());
+    EXPECT_TRUE(result.get().accepted());
 }
 
 // ── AtLeastOnce ────────────────────────────────────────────────────────────
@@ -94,7 +94,7 @@ TEST_F(DeliverySemanticsTest, AtLeastOnceAccepted) {
     opts.message_id = 42;
     auto result = ctx.try_send(
         target_.address(), TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
-    EXPECT_TRUE(result.accepted());
+    EXPECT_TRUE(result.get().accepted());
 }
 
 TEST_F(DeliverySemanticsTest, AtLeastOnceDuplicateSuppressed) {
@@ -107,13 +107,13 @@ TEST_F(DeliverySemanticsTest, AtLeastOnceDuplicateSuppressed) {
     // First send → accepted and delivered.
     auto r1 = ctx.try_send(target_.address(),
                            TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
-    EXPECT_TRUE(r1.accepted());
+    EXPECT_TRUE(r1.get().accepted());
 
     // Second send with same message_id → accepted (duplicate suppressed).
     auto r2 = ctx.try_send(target_.address(),
                            TypedMessage(TypeTag::User, StreamBuffer{2}), opts);
-    EXPECT_TRUE(r2.accepted());
-    EXPECT_EQ(r2.status, DeliveryStatus::Accepted);
+    EXPECT_TRUE(r2.get().accepted());
+    EXPECT_EQ(r2.get().status, DeliveryStatus::Accepted);
 
     // Verify mailbox has only one message (the first).
     auto* mailbox = system_->get_mailbox(target_.address().id);
@@ -134,11 +134,11 @@ TEST_F(DeliverySemanticsTest, AtLeastOnceNoDedupWithoutMessageId) {
 
     auto r1 = ctx.try_send(target_.address(),
                            TypedMessage(TypeTag::User, StreamBuffer{1}), opts);
-    EXPECT_TRUE(r1.accepted());
+    EXPECT_TRUE(r1.get().accepted());
 
     auto r2 = ctx.try_send(target_.address(),
                            TypedMessage(TypeTag::User, StreamBuffer{2}), opts);
-    EXPECT_TRUE(r2.accepted());
+    EXPECT_TRUE(r2.get().accepted());
 
     // Both messages should be in the mailbox.
     auto* mailbox = system_->get_mailbox(target_.address().id);
@@ -158,8 +158,8 @@ TEST_F(DeliverySemanticsTest, TrySendToDeadActorReturnsActorNotFound) {
     missing_addr.id = ActorId{99999};
     auto result =
         ctx.try_send(missing_addr, TypedMessage(TypeTag::User, StreamBuffer{1}));
-    EXPECT_EQ(result.status, DeliveryStatus::NoRoute);
-    EXPECT_EQ(result.failure_reason(), FailureReason::NoRoute);
+    EXPECT_EQ(result.get().status, DeliveryStatus::NoRoute);
+    EXPECT_EQ(result.get().failure_reason(), FailureReason::NoRoute);
 }
 
 // ── Deadline enforcement ───────────────────────────────────────────────────
@@ -175,7 +175,7 @@ TEST_F(DeliverySemanticsTest, ExpiredMessageRejectedAtEnqueue) {
         DeliveryOptions{.delivery_mode = DeliveryMode::ObservableBestEffort});
 
     // Should be rejected because deadline is in the past.
-    EXPECT_FALSE(result.accepted());
+    EXPECT_FALSE(result.get().accepted());
 }
 
 // ── Source compatibility ───────────────────────────────────────────────────

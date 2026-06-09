@@ -184,6 +184,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/dlq_commands.cpp
     cli/commands/ask_commands.cpp
     cli/commands/endpoint_commands.cpp
+    cli/commands/reliable_commands.cpp
 )
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------
