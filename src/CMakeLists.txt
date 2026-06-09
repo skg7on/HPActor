@@ -63,6 +63,7 @@ add_library(hpactor_lib SHARED
     net/tcp_transport.cpp
     msg/frame.cpp
     msg/frame_protobuf.cpp
+    msg/delivery_receipt.cpp
     net/tls_context.cpp
     net/tls_connection.cpp
     net/wireframe_connection.cpp
