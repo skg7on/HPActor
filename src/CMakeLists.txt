@@ -64,6 +64,7 @@ add_library(hpactor_lib SHARED
     msg/frame.cpp
     msg/frame_protobuf.cpp
     msg/delivery_receipt.cpp
+    msg/outbound_delivery_tracker.cpp
     net/tls_context.cpp
     net/tls_connection.cpp
     net/wireframe_connection.cpp
