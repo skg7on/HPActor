@@ -67,6 +67,8 @@ const char* to_string(FailureReason reason) noexcept {
             return "shutting_down";
         case FailureReason::RetryExhausted:
             return "retry_exhausted";
+        case FailureReason::Cancelled:
+            return "cancelled";
         case FailureReason::SpawnFailed:
             return "spawn_failed";
         case FailureReason::PassivationDrainTimeout:

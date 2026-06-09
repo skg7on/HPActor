@@ -77,6 +77,7 @@ enum class FailureReason : uint8_t {
 
     // ── Reliable messaging (80-89) ──────────────────────────────
     RetryExhausted = 80, ///< All retry attempts exhausted without ACK.
+    Cancelled = 81,      ///< Delivery tracking was cancelled by the caller.
 
     // ── Spawn (90-99) ───────────────────────────────────────────
     SpawnFailed = 90, ///< Remote spawn failed (codec, permission, node, type).

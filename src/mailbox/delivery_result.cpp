@@ -47,6 +47,8 @@ const char* to_string(DeliveryStatus s) noexcept {
             return "transport_error";
         case DeliveryStatus::ShuttingDown:
             return "shutting_down";
+        case DeliveryStatus::Cancelled:
+            return "cancelled";
     }
     return "accepted";
 }
