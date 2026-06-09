@@ -529,9 +529,13 @@ class ActorSystem {
         return dead_letters_.get();
     }
 
-    /// \brief Access the outbound delivery tracker.
+    /// \brief Access the outbound delivery tracker for at-least-once delivery.
     ///
-    /// Returns nullptr if reliable messaging is not configured.
+    /// \return A pointer to the \c OutboundDeliveryTracker, or \c nullptr
+    ///         if the tracker has not been initialized. The tracker is
+    ///         always initialized when the \c ActorSystem is constructed.
+    /// \note Thread safety: The returned pointer is stable for the lifetime
+    ///       of the \c ActorSystem. Callers may cache it.
     msg::OutboundDeliveryTracker* outbound_tracker() noexcept {
         return outbound_tracker_.get();
     }

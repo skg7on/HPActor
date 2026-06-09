@@ -127,9 +127,9 @@ struct DeliveryOptions {
                              ///< dedup/correlation.
     uint32_t flags = 0;      ///< Per-message flags (reserved for future use).
 
-    /// Retry policy for AtLeastOnce/DurableAtLeastOnce delivery modes.
-    /// When absent and delivery_mode >= AtLeastOnce, a system-default
-    /// policy is used (max 5 attempts, 5s timeout, exponential backoff).
+    ///< Retry policy for \c AtLeastOnce and \c DurableAtLeastOnce modes.
+    ///< When absent, the system-default policy is used (max 5 attempts,
+    ///< 5s timeout, exponential backoff 100ms–30s with jitter).
     std::optional<msg::RetryPolicy> retry_policy;
 };
 
