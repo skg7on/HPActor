@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
-#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mem/slab_cache.hpp>
 
 #include <cstring>
@@ -58,7 +58,7 @@ void* SlabCache::allocate(ActorId owner) noexcept {
         }
         // Check poison pattern — first bytes should be 0xAA
         auto* user = static_cast<uint8_t*>(block->user_data());
-        size_t usz = user_size(bs);
+        size_t usz = size_for_class(size_class_);
         for (size_t i = 0; i < usz && i < 16; ++i) {
             if (user[i] != kPoisonByte) {
                 // use-after-free detected
@@ -118,7 +118,7 @@ void SlabCache::deallocate(void* user_ptr) noexcept {
                           log::field_ptr("ptr", user_ptr));
     }
     // Poison user data to catch use-after-free
-    std::memset(user_ptr, kPoisonByte, user_size(bs));
+    std::memset(user_ptr, kPoisonByte, size_for_class(size_class_));
 #endif
 
     hdr->magic = kFreedMagic;

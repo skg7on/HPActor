@@ -60,11 +60,15 @@ TEST(SizeClassTest, ClassForSizeRoundsUpCorrectly) {
 }
 
 TEST(SizeClassTest, BlockSizeIncludesHeaderAndFooterOverhead) {
-    EXPECT_EQ(block_size(SizeClass::k32B), 32U + 40);   // 72
-    EXPECT_EQ(block_size(SizeClass::k64B), 64U + 40);   // 104
-    EXPECT_EQ(block_size(SizeClass::k4KB), 4096U + 40); // 4136
+    // Block sizes are rounded up to 32-byte alignment for AllocHeader.
+    EXPECT_EQ(block_size(SizeClass::k32B), 96U);  // (32+40)=72 → round up to 96
+    EXPECT_EQ(block_size(SizeClass::k64B), 128U); // (64+40)=104 → round up to
+                                                  // 128
+    EXPECT_EQ(block_size(SizeClass::k4KB), 4160U); // (4096+40)=4136 → round up
+                                                   // to 4160
 }
 
 TEST(SizeClassTest, UserSizeSubtractsOverhead) {
+    // user_size() handles the alignment padding via size-class lookup.
     EXPECT_EQ(user_size(block_size(SizeClass::k128B)), 128U);
 }

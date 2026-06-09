@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mem/alloc_header.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/mem/memory_telemetry.hpp>
 #include <hpactor/mem/memory_tracker.hpp>
 #include <hpactor/mem/segment_provider.hpp>
 #include <hpactor/mem/slab_cache.hpp>
-#include <hpactor/fault/fault_macros.hpp>
 
 #include <cstdlib>
 #include <cstring>
@@ -32,7 +32,7 @@ namespace {
 
 void* fallback_allocate(RegionType region, SizeClass sc, ActorId owner) noexcept {
     const size_t bytes = block_size(sc);
-    void* raw = std::malloc(bytes); // NOLINT
+    void* raw = std::aligned_alloc(kAllocAlignment, bytes); // NOLINT
     if (!raw) {
         return nullptr;
     }
