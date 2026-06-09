@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/mem/thread_local_allocator.hpp>
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/worker_thread.hpp>
-#include <hpactor/fault/fault_controller.hpp>
 
 #include <chrono>
 #include <thread>
@@ -55,13 +55,13 @@ void WorkerThread::start() {
             mem::set_thread_allocator(allocator_);
         }
         if (fault_controller_) {
-            reinterpret_cast<::hpactor::fault::FaultController*>(
-                fault_controller_)->install();
+            reinterpret_cast<::hpactor::fault::FaultController*>(fault_controller_)
+                ->install();
         }
         thread_loop();
         if (fault_controller_) {
-            reinterpret_cast<::hpactor::fault::FaultController*>(
-                fault_controller_)->remove();
+            reinterpret_cast<::hpactor::fault::FaultController*>(fault_controller_)
+                ->remove();
         }
     });
 }
@@ -165,7 +165,8 @@ void WorkerThread::backoff() {
     if (c < 4) {
         std::this_thread::yield();
     } else {
-        uint32_t backoff_us = std::min<uint32_t>(1024u, 10u << (c - 4));
+        uint32_t shift = (c > 35) ? 31u : (c - 4);
+        uint32_t backoff_us = std::min<uint32_t>(1024u, 10u << shift);
         std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
     }
 }
