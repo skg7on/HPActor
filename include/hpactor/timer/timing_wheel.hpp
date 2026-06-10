@@ -196,11 +196,11 @@ class TimingWheel {
     /// \brief Protects all bucket operations.
     ///
     /// \c schedule(), \c cancel(), \c advance(), \c empty(), \c size(),
-    /// and the destructor acquire this mutex.  It is recursive so that
-    /// \c schedule() or \c cancel() called from within a deferred
-    /// callback (fired by \c advance() outside the lock) may re-acquire
-    /// it safely.
-    mutable std::recursive_mutex mutex_;
+    /// and the destructor acquire this mutex.  Callbacks registered via
+    /// \c schedule() are fired by \c advance() **outside** the lock, so
+    /// a callback that calls back into \c schedule() or \c cancel()
+    /// acquires the mutex as a new owner — recursion is not required.
+    mutable std::mutex mutex_;
 };
 
 } // namespace hpactor::sched

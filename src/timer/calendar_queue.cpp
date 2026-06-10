@@ -113,7 +113,7 @@ uint64_t CalendarQueue::schedule(int64_t delay_ns, TimerCallback cb) {
 }
 
 uint64_t CalendarQueue::schedule_at(int64_t expire_ns, TimerCallback cb) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto* timer = make_timer(std::move(cb), expire_ns);
     timer_map_[timer->id] = timer;
     int64_t now = last_advance_ns_;
@@ -147,7 +147,7 @@ void CalendarQueue::insert_timer(Timer* timer, int64_t now_ns) {
 }
 
 bool CalendarQueue::cancel(uint64_t timer_id) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = timer_map_.find(timer_id);
     if (it == timer_map_.end())
         return false;
@@ -198,7 +198,7 @@ uint32_t CalendarQueue::advance(int64_t now_ns) {
     std::vector<TimerCallback> pending;
 
     {
-        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        std::lock_guard<std::mutex> lock(mutex_);
         if (now_ns <= last_advance_ns_)
             return 0;
         if (last_advance_ns_ == 0) {
@@ -253,7 +253,7 @@ uint32_t CalendarQueue::advance(int64_t now_ns) {
 }
 
 bool CalendarQueue::empty() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return timer_map_.empty();
 }
 
