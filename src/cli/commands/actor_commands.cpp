@@ -100,7 +100,8 @@ class ActorShowCommand final : public ICommand {
         ctx.output->key_value(kv);
 
         if (!reply->state_blob().empty()) {
-            ctx.output->raw("\nDetails:\n" + reply->state_blob());
+            ctx.output->header("Details");
+            ctx.output->raw(reply->state_blob());
         }
         return result<void>::make();
     }
