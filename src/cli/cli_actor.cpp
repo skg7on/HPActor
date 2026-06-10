@@ -101,7 +101,11 @@ CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
         return std::nullopt;
 
     TypedMessage msg(TypeTag::InspectStateRequestTag, req);
-    context()->send(actor->address(), std::move(msg));
+    msg.set_sender_address(address());
+    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+    if (!enqueue_result.accepted()) {
+        return std::nullopt;
+    }
 
     auto payload = poll_for_response(TypeTag::InspectStateResponseTag, timeout);
     if (!payload)
@@ -132,7 +136,11 @@ CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
         return std::nullopt;
 
     TypedMessage msg(TypeTag::KillRequestTag, req);
-    context()->send(actor->address(), std::move(msg));
+    msg.set_sender_address(address());
+    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+    if (!enqueue_result.accepted()) {
+        return std::nullopt;
+    }
 
     auto payload = poll_for_response(TypeTag::KillResponseTag, timeout);
     if (!payload)
@@ -158,7 +166,11 @@ CliActor::send_and_wait_quarantine(ActorId target, const QuarantineRequest& req,
         return std::nullopt;
 
     TypedMessage msg(TypeTag::QuarantineRequestTag, req);
-    context()->send(actor->address(), std::move(msg));
+    msg.set_sender_address(address());
+    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+    if (!enqueue_result.accepted()) {
+        return std::nullopt;
+    }
 
     auto payload = poll_for_response(TypeTag::QuarantineResponseTag, timeout);
     if (!payload)
