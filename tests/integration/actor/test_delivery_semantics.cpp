@@ -172,7 +172,8 @@ TEST_F(DeliverySemanticsTest, ExpiredMessageRejectedAtEnqueue) {
     auto result = ctx.try_send_with_priority(
         target_.address(), TypedMessage(TypeTag::User, StreamBuffer{1}),
         /*priority=*/0, past_deadline,
-        DeliveryOptions{.delivery_mode = DeliveryMode::ObservableBestEffort});
+        DeliveryOptions{false, false, true, DeliveryMode::ObservableBestEffort,
+                        0, 0, std::nullopt});
 
     // Should be rejected because deadline is in the past.
     EXPECT_FALSE(result.get().accepted());
