@@ -111,7 +111,17 @@ CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
     if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size()))) {
         return std::nullopt;
     }
-    return reply;
+    // Serialize and re-parse to guarantee the reply owns all string data
+    // independently of the ephemeral StreamBuffer payload.  Without this,
+    // some protobuf/allocator combinations may alias string fields back to
+    // the payload buffer, producing garbled values once payload goes out of
+    // scope.
+    std::string wire = reply.SerializeAsString();
+    InspectStateReply safe_reply;
+    if (!safe_reply.ParseFromString(wire)) {
+        return std::nullopt;
+    }
+    return safe_reply;
 }
 
 std::optional<KillReply>
@@ -132,7 +142,12 @@ CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
     if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size()))) {
         return std::nullopt;
     }
-    return reply;
+    std::string wire = reply.SerializeAsString();
+    KillReply safe_reply;
+    if (!safe_reply.ParseFromString(wire)) {
+        return std::nullopt;
+    }
+    return safe_reply;
 }
 
 std::optional<QuarantineReply>
@@ -153,7 +168,12 @@ CliActor::send_and_wait_quarantine(ActorId target, const QuarantineRequest& req,
     if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size()))) {
         return std::nullopt;
     }
-    return reply;
+    std::string wire = reply.SerializeAsString();
+    QuarantineReply safe_reply;
+    if (!safe_reply.ParseFromString(wire)) {
+        return std::nullopt;
+    }
+    return safe_reply;
 }
 
 // ---------------------------------------------------------------------------
