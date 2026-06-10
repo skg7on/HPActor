@@ -25,38 +25,62 @@
 
 namespace hpactor::sched {
 
-// -----------------------------------------------------------------------------
-// TimingWheel: Hierarchical timer wheel for efficient timeout management
-// -----------------------------------------------------------------------------
-// Implements a hierarchical timing wheel (similar to Linux kernel timer wheel)
-// for O(1) timer insert and cancel operations.
-//
-// The wheel has multiple levels, each with a different granularity:
-// - Level 0: 1ms resolution, 256 slots
-// - Level 1: 256ms resolution, 256 slots
-// - Level 2: ~65ms resolution, 256 slots (covers ~16 seconds)
-// - Level 3: ~16s resolution, 256 slots (covers ~70 minutes)
-//
-// Each level covers a different range of time, allowing efficient management
-// of timers from 1ms to hours.
-// -----------------------------------------------------------------------------
+/// \brief Hierarchical timer wheel for O(1) timer insert and cancel.
+///
+/// Modeled after the Linux kernel timer wheel.  The wheel has multiple
+/// levels, each with a different granularity, enabling efficient
+/// management of timers from 1 ms to hours:
+///
+/// | Level | Resolution | Buckets | Coverage       |
+/// |-------|------------|---------|----------------|
+/// | 0     | 1 ms       | 256     | 256 ms         |
+/// | 1     | 256 ms     | 256     | ~65.5 s        |
+/// | 2     | ~65.5 s    | 256     | ~4.66 hours    |
+/// | 3     | ~4.66 h    | 256     | ~49.7 days     |
+///
+/// Higher-level buckets are cascaded down to lower levels as time
+/// advances so that timers eventually reach level 0 and fire.
+///
+/// \note **Thread safety**: \c schedule(), \c schedule_at(), \c cancel(),
+///       and \c advance() are safe to call from any thread.  All bucket
+///       operations are serialized by an internal \c std::recursive_mutex.
+///       Callbacks registered via \c schedule() are fired on the calling
+///       thread of \c advance() **without** the internal mutex held, so
+///       callbacks may safely call back into \c schedule() or \c cancel()
+///       without deadlock.
+///
+/// \note **Advance cap**: \c advance() caps each time step to at most
+///       100 ms to prevent a positive feedback loop where slow callback
+///       execution causes the timer thread to fall behind, producing
+///       larger time windows and exponentially more callbacks in
+///       successive calls.
 class TimingWheel {
   public:
+    /// \brief Callback type invoked when a scheduled timer expires.
+    ///
+    /// \note Callbacks are fired on the thread that calls \c advance().
     using TimerCallback = std::function<void()>;
 
+    /// \brief A single entry in the timing wheel.
     struct Timer : mem::SlabAllocated<Timer> {
-        int64_t expire_ns;      // absolute expiration time
-        uint64_t id;            // unique timer id
-        TimerCallback callback; // called when timer fires
-        bool cancelled{false};  // set to true to cancel
+        int64_t expire_ns;      ///< Absolute expiration time (monotonic
+                                ///< clock, nanoseconds).
+        uint64_t id;            ///< Unique timer identifier.
+        TimerCallback callback; ///< Callback to invoke on expiry.
+        bool cancelled{false};  ///< Set to \c true to cancel before fire.
     };
 
-    // Configure wheel with tick duration and levels
-    // tick_ns: duration of one tick at level 0 (e.g., 1ms = 1,000,000)
-    // num_levels: number of wheel levels (default 4)
+    /// \brief Construct a timing wheel.
+    /// \param[in] tick_ns Duration of one tick at level 0, in nanoseconds.
+    ///                    Default is 1 ms (1'000'000 ns).
+    /// \param[in] num_levels Number of hierarchical levels.  Default is 4.
     explicit TimingWheel(int64_t tick_ns = 1'000'000, uint32_t num_levels = 4);
 
-    // Destructor - cancels all pending timers
+    /// \brief Destructor — deletes all pending timers.
+    ///
+    /// \warning Pending timer callbacks are **not** invoked.  Callers
+    ///          that need graceful cancellation should call \c cancel()
+    ///          on every outstanding timer before destroying the wheel.
     ~TimingWheel();
 
     TimingWheel(const TimingWheel&) = delete;
@@ -64,31 +88,92 @@ class TimingWheel {
     TimingWheel(TimingWheel&&) = delete;
     TimingWheel& operator=(TimingWheel&&) = delete;
 
-    // Schedule a timer to fire after the given duration (in ns)
-    // Returns a TimerHandle that can be used to cancel the timer
+    /// \brief Schedule a one-shot timer.
+    ///
+    /// \param[in] delay_ns Relative delay in nanoseconds from the wheel's
+    ///                     current time (see \c current_time()).
+    /// \param[in] callback Callback to invoke when the timer expires.
+    /// \return A unique timer identifier suitable for \c cancel().
+    ///         Returns 0 if the fault-injection site
+    ///         \c hpactor.timing_wheel.schedule.fail fires.
+    /// \note Thread-safe.  Acquires the internal mutex.
     uint64_t schedule(int64_t delay_ns, TimerCallback callback);
 
-    // Schedule a timer to fire at the given absolute time
+    /// \brief Schedule a one-shot timer at an absolute expiration time.
+    ///
+    /// \param[in] expire_ns Absolute expiration time in nanoseconds
+    ///                      (monotonic clock).
+    /// \param[in] callback Callback to invoke when the timer expires.
+    /// \return A unique timer identifier suitable for \c cancel().
+    /// \note Thread-safe.  Acquires the internal mutex.
     uint64_t schedule_at(int64_t expire_ns, TimerCallback callback);
 
-    // Cancel a previously scheduled timer
-    // Returns true if timer was found and cancelled
+    /// \brief Cancel a previously scheduled timer.
+    ///
+    /// If the timer has already fired or was already cancelled this is
+    /// a no-op that returns \c false.
+    ///
+    /// \param[in] timer_id Timer identifier returned by \c schedule() or
+    ///                     \c schedule_at().
+    /// \retval true  Timer was found, removed from the wheel, and marked
+    ///               cancelled.
+    /// \retval false Timer was not found (already fired, cancelled, or
+    ///               invalid \p timer_id).
+    /// \note Thread-safe.  Acquires the internal mutex.
     bool cancel(uint64_t timer_id);
 
-    // Advance the wheel by the given number of ticks
-    // Calls callbacks for all expired timers
-    // Returns number of timers that fired
+    /// \brief Advance the wheel to the given absolute time.
+    ///
+    /// Processes all buckets that have become due between the last
+    /// advance time and \p now_ns.  Expired timers are collected under
+    /// the internal mutex; their callbacks are invoked **after** the
+    /// mutex is released so that callbacks may safely call \c schedule()
+    /// or \c cancel() without blocking other threads on the mutex.
+    ///
+    /// Each advance step is capped to at most 100 ms.  If \p now_ns
+    /// exceeds the last advance time by more than 100 ms the wheel
+    /// advances by exactly 100 ms; the remaining time is covered by
+    /// subsequent calls.
+    ///
+    /// \param[in] now_ns Current absolute time in nanoseconds (monotonic
+    ///                   clock).  Must be greater than the last \p now_ns
+    ///                   passed to this function.  Capped internally at
+    ///                   \c old_time + 100ms.
+    /// \return The number of timer callbacks that were invoked.
+    /// \note Thread-safe.  Acquires the internal mutex only while
+    ///       collecting expired timers; releases it before firing
+    ///       callbacks.
     uint32_t advance(int64_t now_ns);
 
-    // Get current time according to the wheel
+    /// \brief Current time according to the wheel.
+    ///
+    /// Updated by \c advance().  Used as the base for relative delays
+    /// passed to \c schedule().
+    ///
+    /// \return The last \p now_ns value (capped) passed to \c advance().
+    /// \note Lock-free.  Safe to call from any thread.
     int64_t current_time() const {
         return current_time_.load(std::memory_order_relaxed);
     }
 
-    // Check if there are pending timers
+    /// \brief Check whether the wheel has no pending timers.
+    ///
+    /// \retval true  All buckets at every level are empty.
+    /// \retval false At least one pending timer exists.
+    /// \note This is a point-in-time check.  The result may be stale by
+    ///       the time the caller observes it unless external
+    ///       synchronization is used.
     bool empty() const;
 
-    // Number of pending timers (approximate)
+    /// \brief Approximate number of pending timers.
+    ///
+    /// Sums the size of every bucket at every level.  The count may be
+    /// stale immediately after the call returns.
+    ///
+    /// \return Total pending timer count across all buckets.
+    /// \note Lock-free but not atomic — concurrent \c schedule() or
+    ///       \c cancel() calls may produce a snapshot that includes or
+    ///       excludes in-flight modifications.
     size_t size() const;
 
   private:
