@@ -139,87 +139,99 @@ TimingWheel::Timer* TimingWheel::remove_timer(uint64_t timer_id) {
 }
 
 uint32_t TimingWheel::advance(int64_t now_ns) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    FAULT_INJECT("hpactor.timing_wheel.advance.skip") {
-        return 0;
-    }
-    int64_t old_time = current_time_.load(std::memory_order_relaxed);
-    if (now_ns <= old_time) {
-        return 0;
-    }
+    // Collect expired timer callbacks under the lock, then fire them
+    // outside the lock.  This prevents deadlocks where a callback
+    // (e.g. deliver_local → notify_ready → enqueue_admitted) acquires
+    // another mutex while a worker thread is blocked on mutex_ inside
+    // schedule().
+    std::vector<TimerCallback> pending;
 
-    current_time_.store(now_ns, std::memory_order_relaxed);
-
-    uint32_t fired = 0;
-
-    // Process all levels
-    for (uint32_t level = 0; level < num_levels_; ++level) {
-        uint64_t level_offset = static_cast<uint64_t>(old_time / tick_ns_);
-        for (uint32_t l = 0; l < level; ++l) {
-            level_offset /= 256;
+    {
+        std::lock_guard<std::recursive_mutex> lock(mutex_);
+        FAULT_INJECT("hpactor.timing_wheel.advance.skip") {
+            return 0;
         }
-        uint32_t start_bucket =
-            static_cast<uint32_t>(level_offset) & levels_[level].mask;
-
-        uint64_t end_offset = static_cast<uint64_t>(now_ns / tick_ns_);
-        for (uint32_t l = 0; l < level; ++l) {
-            end_offset /= 256;
+        int64_t old_time = current_time_.load(std::memory_order_relaxed);
+        if (now_ns <= old_time) {
+            return 0;
         }
-        uint32_t end_bucket =
-            static_cast<uint32_t>(end_offset) & levels_[level].mask;
 
-        // Process buckets from start to end (wrapping around)
-        uint32_t num_buckets = levels_[level].num_buckets;
-        uint32_t count =
-            ((end_bucket - start_bucket + num_buckets) % num_buckets) + 1;
+        current_time_.store(now_ns, std::memory_order_relaxed);
 
-        for (uint32_t i = 0; i < count; ++i) {
-            uint32_t bucket_idx = (start_bucket + i) % num_buckets;
-            auto& bucket = levels_[level].buckets[bucket_idx];
+        // Process all levels
+        for (uint32_t level = 0; level < num_levels_; ++level) {
+            uint64_t level_offset = static_cast<uint64_t>(old_time / tick_ns_);
+            for (uint32_t l = 0; l < level; ++l) {
+                level_offset /= 256;
+            }
+            uint32_t start_bucket =
+                static_cast<uint32_t>(level_offset) & levels_[level].mask;
 
-            for (auto it = bucket.begin(); it != bucket.end();) {
-                Timer* timer = *it;
-                if (timer->cancelled) {
-                    it = bucket.erase(it);
-                    delete timer;
-                    continue;
-                }
+            uint64_t end_offset = static_cast<uint64_t>(now_ns / tick_ns_);
+            for (uint32_t l = 0; l < level; ++l) {
+                end_offset /= 256;
+            }
+            uint32_t end_bucket =
+                static_cast<uint32_t>(end_offset) & levels_[level].mask;
 
-                if (timer->expire_ns <= now_ns) {
-                    // Timer expired, fire it
-                    it = bucket.erase(it);
-                    timer->callback();
-                    delete timer;
-                    ++fired;
-                } else {
-                    // Timer not yet expired, might need to cascade to lower
-                    // level
-                    if (level > 0) {
-                        // Recalculate which bucket this timer should be in
-                        // at this (lower) level
-                        uint32_t lower_level = level - 1;
-                        int64_t lower_offset = now_ns / tick_ns_;
-                        for (uint32_t l = 0; l <= lower_level; ++l) {
-                            lower_offset /= 256;
-                        }
-                        uint32_t lower_bucket =
-                            static_cast<uint32_t>(lower_offset) &
-                            levels_[lower_level].mask;
+            // Process buckets from start to end (wrapping around)
+            uint32_t num_buckets = levels_[level].num_buckets;
+            uint32_t count =
+                ((end_bucket - start_bucket + num_buckets) % num_buckets) + 1;
 
-                        timer->id &= 0xFFFFFFFFFFFFULL;
-                        timer->id |= (static_cast<uint64_t>(lower_level) << 48);
-                        bucket.erase(it);
-                        levels_[lower_level].buckets[lower_bucket].push_back(timer);
-                        it = bucket.begin(); // Reset since we erased
+            for (uint32_t i = 0; i < count; ++i) {
+                uint32_t bucket_idx = (start_bucket + i) % num_buckets;
+                auto& bucket = levels_[level].buckets[bucket_idx];
+
+                for (auto it = bucket.begin(); it != bucket.end();) {
+                    Timer* timer = *it;
+                    if (timer->cancelled) {
+                        it = bucket.erase(it);
+                        delete timer;
                         continue;
                     }
-                    ++it;
+
+                    if (timer->expire_ns <= now_ns) {
+                        // Collect for deferred fire outside the lock.
+                        it = bucket.erase(it);
+                        pending.push_back(std::move(timer->callback));
+                        delete timer;
+                    } else {
+                        // Timer not yet expired, might need to cascade to lower
+                        // level
+                        if (level > 0) {
+                            // Recalculate which bucket this timer should be in
+                            // at this (lower) level
+                            uint32_t lower_level = level - 1;
+                            int64_t lower_offset = now_ns / tick_ns_;
+                            for (uint32_t l = 0; l <= lower_level; ++l) {
+                                lower_offset /= 256;
+                            }
+                            uint32_t lower_bucket =
+                                static_cast<uint32_t>(lower_offset) &
+                                levels_[lower_level].mask;
+
+                            timer->id &= 0xFFFFFFFFFFFFULL;
+                            timer->id |= (static_cast<uint64_t>(lower_level) << 48);
+                            bucket.erase(it);
+                            levels_[lower_level].buckets[lower_bucket].push_back(
+                                timer);
+                            it = bucket.begin(); // Reset since we erased
+                            continue;
+                        }
+                        ++it;
+                    }
                 }
             }
         }
     }
+    // Lock released — fire callbacks safely outside the critical section.
 
-    return fired;
+    for (auto& cb : pending) {
+        cb();
+    }
+
+    return static_cast<uint32_t>(pending.size());
 }
 
 bool TimingWheel::empty() const {

@@ -103,15 +103,19 @@ void HybridScheduler::stop() {
     // Wake any workers parked in wait_if_paused so they see running_ == false
     // and exit their loop.
     resume_workers();
+
+    // Stop the timer thread first: workers may be blocked on
+    // TimingWheel::schedule() waiting for the mutex held by advance().
+    // Once the timer thread exits, the mutex is released and workers
+    // can unblock and join.
+    if (timer_thread_.joinable()) {
+        timer_thread_.join();
+    }
+
     for (auto& worker : worker_threads_) {
         worker->stop();
     }
     worker_threads_.clear();
-
-    // Stop and join timer thread
-    if (timer_thread_.joinable()) {
-        timer_thread_.join();
-    }
 }
 
 bool HybridScheduler::try_admit_ready(ActorId actor) noexcept {
