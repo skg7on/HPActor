@@ -100,7 +100,7 @@ class ActorShowCommand final : public ICommand {
         ctx.output->key_value(kv);
 
         if (!reply->state_blob().empty()) {
-            ctx.output->raw("State: " + reply->state_blob());
+            ctx.output->raw("\nDetails:\n" + reply->state_blob());
         }
         return result<void>::make();
     }
@@ -619,8 +619,8 @@ class ActorDeliveryStatsCommand final : public ICommand {
             snprintf(buf, sizeof(buf), "%.1f%%", retry_rate);
             kv["Retryable rate"] = buf;
 
-            double fail_rate = 100.0 * static_cast<double>(failed) /
-                               static_cast<double>(total);
+            double fail_rate =
+                100.0 * static_cast<double>(failed) / static_cast<double>(total);
             snprintf(buf, sizeof(buf), "%.1f%%", fail_rate);
             kv["Fail rate"] = buf;
         } else {
