@@ -193,7 +193,7 @@ class CalendarQueue {
     int64_t last_advance_ns_ = 0;
 
     std::atomic<uint64_t> next_id_{1};
-    mutable std::recursive_mutex mutex_;
+    mutable std::mutex mutex_;
 
     TimerStorageFactory make_storage_;
     TimerStorageDeleter destroy_storage_;

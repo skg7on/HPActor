@@ -157,6 +157,33 @@ TEST_F(CircuitBreakerDeliveryTest, CooldownNotExpiredKeepsOpen) {
     EXPECT_EQ(result.code, EnqueueResultCode::CircuitOpen);
 }
 
+// ── System message exemption: system messages bypass circuit breaker ────
+
+TEST_F(CircuitBreakerDeliveryTest, OpenCircuitAdmitsSystemMessage) {
+    eba_->circuit_breaker()->state = CircuitBreakerState::kOpen;
+    eba_->circuit_breaker()->opened_at = std::chrono::steady_clock::now();
+
+    // System messages (tag < 0x1000) must bypass the circuit breaker so
+    // that CLI/admin commands can always reach the actor for inspection.
+    TypedMessage sys_msg(TypeTag::InspectStateRequestTag, StreamBuffer{1});
+    auto result = system_->try_deliver_local(target_.id(), std::move(sys_msg));
+
+    EXPECT_EQ(result.code, EnqueueResultCode::Accepted);
+    EXPECT_TRUE(result.accepted());
+}
+
+TEST_F(CircuitBreakerDeliveryTest, HalfOpenWithProbeAdmitsSystemMessage) {
+    eba_->circuit_breaker()->state = CircuitBreakerState::kHalfOpen;
+    eba_->circuit_breaker()->half_open_probe_in_flight = true;
+
+    // System messages must bypass even when a probe is in flight.
+    TypedMessage sys_msg(TypeTag::InspectStateRequestTag, StreamBuffer{1});
+    auto result = system_->try_deliver_local(target_.id(), std::move(sys_msg));
+
+    EXPECT_EQ(result.code, EnqueueResultCode::Accepted);
+    EXPECT_TRUE(result.accepted());
+}
+
 // ── Zero-overhead: quarantine disabled → no circuit breaker check ───────
 
 TEST_F(CircuitBreakerDeliveryTest, NoQuarantineNoOverhead) {

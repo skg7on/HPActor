@@ -113,7 +113,7 @@ uint64_t CalendarQueue::schedule(int64_t delay_ns, TimerCallback cb) {
 }
 
 uint64_t CalendarQueue::schedule_at(int64_t expire_ns, TimerCallback cb) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto* timer = make_timer(std::move(cb), expire_ns);
     timer_map_[timer->id] = timer;
     int64_t now = last_advance_ns_;
@@ -147,7 +147,7 @@ void CalendarQueue::insert_timer(Timer* timer, int64_t now_ns) {
 }
 
 bool CalendarQueue::cancel(uint64_t timer_id) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     auto it = timer_map_.find(timer_id);
     if (it == timer_map_.end())
         return false;
@@ -193,51 +193,67 @@ void CalendarQueue::cascade_remote(int64_t now_ns) {
 }
 
 uint32_t CalendarQueue::advance(int64_t now_ns) {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
-    if (now_ns <= last_advance_ns_)
-        return 0;
-    if (last_advance_ns_ == 0) {
-        last_advance_ns_ = now_ns;
-        return 0;
-    }
+    // Collect expired timer callbacks under the lock, then fire them
+    // outside the lock (same pattern as TimingWheel::advance).
+    std::vector<TimerCallback> pending;
 
-    uint32_t fired = 0;
-    uint32_t buckets_processed = 0;
-
-    while (last_advance_ns_ + fine_bucket_ns_ <= now_ns &&
-           buckets_processed < max_advance_buckets_) {
-        auto& bucket = fine_wheel_[current_fine_];
-        Timer* t = bucket.head;
-        while (t) {
-            Timer* next = t->next;
-            bucket.unlink(t);
-            timer_map_.erase(t->id);
-            if (t->expire_ns <= now_ns) {
-                t->callback();
-                fired++;
-            }
-            destroy_timer(t);
-            t = next;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        if (now_ns <= last_advance_ns_)
+            return 0;
+        if (last_advance_ns_ == 0) {
+            last_advance_ns_ = now_ns;
+            return 0;
         }
 
-        last_advance_ns_ += fine_bucket_ns_;
-        current_fine_ = (current_fine_ + 1) & fine_mask_;
-        buckets_processed++;
+        // Cap the advance step (same rationale as TimingWheel::advance).
+        static constexpr int64_t kMaxAdvanceNs = 100'000'000; // 100 ms
+        if (now_ns - last_advance_ns_ > kMaxAdvanceNs) {
+            now_ns = last_advance_ns_ + kMaxAdvanceNs;
+        }
 
-        if (current_fine_ == 0) {
-            cascade_coarse(now_ns);
-            current_coarse_ = (current_coarse_ + 1) & coarse_mask_;
-            if (current_coarse_ == 0) {
-                cascade_remote(now_ns);
-                current_remote_ = (current_remote_ + 1) & remote_mask_;
+        uint32_t buckets_processed = 0;
+
+        while (last_advance_ns_ + fine_bucket_ns_ <= now_ns &&
+               buckets_processed < max_advance_buckets_) {
+            auto& bucket = fine_wheel_[current_fine_];
+            Timer* t = bucket.head;
+            while (t) {
+                Timer* next = t->next;
+                bucket.unlink(t);
+                timer_map_.erase(t->id);
+                if (t->expire_ns <= now_ns) {
+                    pending.push_back(std::move(t->callback));
+                }
+                destroy_timer(t);
+                t = next;
+            }
+
+            last_advance_ns_ += fine_bucket_ns_;
+            current_fine_ = (current_fine_ + 1) & fine_mask_;
+            buckets_processed++;
+
+            if (current_fine_ == 0) {
+                cascade_coarse(now_ns);
+                current_coarse_ = (current_coarse_ + 1) & coarse_mask_;
+                if (current_coarse_ == 0) {
+                    cascade_remote(now_ns);
+                    current_remote_ = (current_remote_ + 1) & remote_mask_;
+                }
             }
         }
     }
-    return fired;
+    // Lock released — fire callbacks safely outside the critical section.
+
+    for (auto& cb : pending) {
+        cb();
+    }
+
+    return static_cast<uint32_t>(pending.size());
 }
 
 bool CalendarQueue::empty() const {
-    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    std::lock_guard<std::mutex> lock(mutex_);
     return timer_map_.empty();
 }
 
