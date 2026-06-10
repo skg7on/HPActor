@@ -36,10 +36,18 @@ TimingWheel::TimingWheel(int64_t tick_ns, uint32_t num_levels)
 }
 
 TimingWheel::~TimingWheel() {
-    // Cancel all timers
-    for (Timer* timer : all_timers_) {
-        timer->cancelled = true;
-        delete timer;
+    // Iterate all buckets and delete pending timers.  We do not fire
+    // callbacks during destruction — callers that need graceful
+    // cancellation should call cancel() on every outstanding timer
+    // before destroying the wheel.
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
+    for (auto& level : levels_) {
+        for (auto& bucket : level.buckets) {
+            for (Timer* timer : bucket) {
+                delete timer;
+            }
+            bucket.clear();
+        }
     }
 }
 
@@ -75,7 +83,7 @@ bool TimingWheel::cancel(uint64_t timer_id) {
     }
     Timer* timer = remove_timer(timer_id);
     if (timer) {
-        timer->cancelled = true;
+        delete timer;
         return true;
     }
     return false;
@@ -247,6 +255,7 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
 }
 
 bool TimingWheel::empty() const {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     for (const auto& level : levels_) {
         for (const auto& bucket : level.buckets) {
             if (!bucket.empty()) {
@@ -258,6 +267,7 @@ bool TimingWheel::empty() const {
 }
 
 size_t TimingWheel::size() const {
+    std::lock_guard<std::recursive_mutex> lock(mutex_);
     size_t count = 0;
     for (const auto& level : levels_) {
         for (const auto& bucket : level.buckets) {

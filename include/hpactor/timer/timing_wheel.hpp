@@ -108,15 +108,14 @@ class TimingWheel {
     /// \note Thread-safe.  Acquires the internal mutex.
     uint64_t schedule_at(int64_t expire_ns, TimerCallback callback);
 
-    /// \brief Cancel a previously scheduled timer.
+    /// \brief Cancel and destroy a previously scheduled timer.
     ///
-    /// If the timer has already fired or was already cancelled this is
-    /// a no-op that returns \c false.
+    /// The timer is removed from the wheel and its memory is freed.
+    /// Its callback is **not** invoked.
     ///
     /// \param[in] timer_id Timer identifier returned by \c schedule() or
     ///                     \c schedule_at().
-    /// \retval true  Timer was found, removed from the wheel, and marked
-    ///               cancelled.
+    /// \retval true  Timer was found, removed, and deleted.
     /// \retval false Timer was not found (already fired, cancelled, or
     ///               invalid \p timer_id).
     /// \note Thread-safe.  Acquires the internal mutex.
@@ -160,20 +159,19 @@ class TimingWheel {
     ///
     /// \retval true  All buckets at every level are empty.
     /// \retval false At least one pending timer exists.
-    /// \note This is a point-in-time check.  The result may be stale by
-    ///       the time the caller observes it unless external
-    ///       synchronization is used.
+    /// \note Thread-safe.  Acquires the internal mutex for a consistent
+    ///       snapshot.  The result may be stale by the time the caller
+    ///       observes it.
     bool empty() const;
 
-    /// \brief Approximate number of pending timers.
+    /// \brief Number of pending timers.
     ///
-    /// Sums the size of every bucket at every level.  The count may be
-    /// stale immediately after the call returns.
+    /// Sums the size of every bucket at every level.
     ///
     /// \return Total pending timer count across all buckets.
-    /// \note Lock-free but not atomic — concurrent \c schedule() or
-    ///       \c cancel() calls may produce a snapshot that includes or
-    ///       excludes in-flight modifications.
+    /// \note Thread-safe.  Acquires the internal mutex for a consistent
+    ///       snapshot.  The count may be stale immediately after the
+    ///       call returns.
     size_t size() const;
 
   private:
@@ -195,12 +193,13 @@ class TimingWheel {
     std::atomic<int64_t> current_time_{0};
     std::atomic<uint64_t> next_timer_id_{1};
 
-    // All pending timers (for iteration and size)
-    std::vector<Timer*> all_timers_;
-    // For thread-safe timer management
-    std::atomic<bool> timers_modified_{false};
-    // Protects all bucket operations (schedule/cancel/advance may be called
-    // from different threads).
+    /// \brief Protects all bucket operations.
+    ///
+    /// \c schedule(), \c cancel(), \c advance(), \c empty(), \c size(),
+    /// and the destructor acquire this mutex.  It is recursive so that
+    /// \c schedule() or \c cancel() called from within a deferred
+    /// callback (fired by \c advance() outside the lock) may re-acquire
+    /// it safely.
     mutable std::recursive_mutex mutex_;
 };
 
