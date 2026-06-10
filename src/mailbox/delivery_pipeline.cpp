@@ -180,6 +180,13 @@ DeliveryPipeline::check_circuit_breaker(ActorId target, const TypedMessage& msg,
         return std::nullopt;
     }
 
+    // System messages (tag < TypeTag::User) bypass the circuit breaker so
+    // that CLI/admin commands (inspect, kill, quarantine/unquarantine) can
+    // always reach the actor regardless of circuit state.
+    if (is_system_message(msg.type_id())) {
+        return std::nullopt;
+    }
+
     auto* cb = eba->circuit_breaker();
     auto now = std::chrono::steady_clock::now();
 
