@@ -54,7 +54,8 @@ class OutboundDeliveryTracker {
         uint8_t retry_count = 0;       ///< Retries already attempted.
         uint64_t deadline_ns = 0;   ///< Absolute monotonic deadline (0 = none).
         uint64_t next_retry_ns = 0; ///< Absolute monotonic (0 = awaiting ACK).
-        DeliveryReceipt receipt;    ///< Handle returned to caller.
+        uint32_t retry_after_ms = 0; ///< Hint from last NACK (0 = use backoff).
+        DeliveryReceipt receipt;     ///< Handle returned to caller.
     };
 
     /// \brief Callback for emitting metrics events.

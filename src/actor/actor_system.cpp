@@ -211,8 +211,12 @@ ActorSystem::ActorSystem(const Config& config)
             retry_timer_ = network_loop_->run_every(
                 [this]() {
                     if (outbound_tracker_) {
+                        uint64_t now_ns = static_cast<uint64_t>(
+                            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                std::chrono::steady_clock::now().time_since_epoch())
+                                .count());
                         outbound_tracker_->process_retries(
-                            0, // timestamp provided by tracker
+                            now_ns,
                             [](const msg::OutboundDeliveryTracker::PendingSend&) {
                                 // Resend via transport (implemented in
                                 // follow-up).

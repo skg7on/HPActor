@@ -61,7 +61,6 @@ static bool is_retryable_nack(mailbox::DeliveryStatus s) {
 void OutboundDeliveryTracker::on_nack(MessageId msg_id, EndPoint /*from*/,
                                       uint32_t reason_code,
                                       uint32_t retry_after_ms) {
-    (void)retry_after_ms; // stored in policy for future use
     auto status = static_cast<mailbox::DeliveryStatus>(reason_code);
 
     // Duplicate is treated as ACK — receiver already has the message.
@@ -79,8 +78,9 @@ void OutboundDeliveryTracker::on_nack(MessageId msg_id, EndPoint /*from*/,
                 static_cast<uint8_t>(status));
 
     if (is_retryable_nack(status)) {
-        // Schedule retry: next_retry_ns set to 1 (sentinel for "ASAP").
-        it->second.next_retry_ns = 1;
+        // Schedule retry; honour the receiver's retry-after hint.
+        it->second.retry_after_ms = retry_after_ms;
+        it->second.next_retry_ns = 1; // sentinel for "ASAP"
     } else {
         // Non-retryable: resolve immediately.
         mailbox::DeliveryResult result;
@@ -97,7 +97,10 @@ void OutboundDeliveryTracker::on_nack(MessageId msg_id, EndPoint /*from*/,
 
 void OutboundDeliveryTracker::process_retries(
     uint64_t now_ns, std::function<void(const PendingSend&)> resend_callback) {
-    std::vector<std::pair<MessageId, mailbox::DeliveryResult>> to_resolve;
+    // Store (result, SharedState) pairs so we can resolve outside the lock
+    // without re-looking-up entries that were already erased.
+    std::vector<std::pair<mailbox::DeliveryResult, std::shared_ptr<DeliveryReceipt::SharedState>>>
+        to_resolve;
     std::vector<PendingSend> to_resend;
 
     {
@@ -108,25 +111,35 @@ void OutboundDeliveryTracker::process_retries(
             bool expired = ps.deadline_ns > 0 && now_ns >= ps.deadline_ns;
 
             if (ps.next_retry_ns > 0 && now_ns >= ps.next_retry_ns) {
-                if (ps.retry_count >= ps.policy.max_attempts || expired) {
+                // Pre-increment check: will the NEXT attempt exceed the limit?
+                if (ps.retry_count + 1 >= ps.policy.max_attempts || expired) {
                     mailbox::DeliveryResult exhausted;
                     exhausted.status =
                         expired ? mailbox::DeliveryStatus::Expired
                                 : mailbox::DeliveryStatus::TransportError;
                     exhausted.message_id = ps.msg_id;
-                    to_resolve.emplace_back(ps.msg_id, exhausted);
+                    uint8_t count = ps.retry_count;
+                    to_resolve.emplace_back(exhausted, ps.receipt.state_);
                     emit_metric(::hpactor::metrics::MetricEventType::kReliableExhausted,
-                                ps.retry_count);
+                                count);
                     it = pending_.erase(it);
                     continue;
                 }
                 ps.retry_count++;
-                auto backoff = ps.policy.backoff_delay(ps.retry_count + 1);
-                ps.next_retry_ns =
-                    now_ns + static_cast<uint64_t>(backoff.count()) * 1'000'000ULL;
+                // Use the hint from NackFrame if present, otherwise backoff.
+                uint64_t delay_ns;
+                if (ps.retry_after_ms > 0) {
+                    delay_ns =
+                        static_cast<uint64_t>(ps.retry_after_ms) * 1'000'000ULL;
+                } else {
+                    auto backoff = ps.policy.backoff_delay(ps.retry_count);
+                    delay_ns = static_cast<uint64_t>(backoff.count()) * 1'000'000ULL;
+                }
+                ps.next_retry_ns = now_ns + delay_ns;
+                uint8_t count = ps.retry_count;
                 to_resend.push_back(std::move(ps));
                 emit_metric(::hpactor::metrics::MetricEventType::kReliableRetry,
-                            ps.retry_count);
+                            count);
             } else if (ps.next_retry_ns == 0 &&
                        ps.policy.per_attempt_timeout.count() > 0) {
                 // First send: start the per-attempt timeout.
@@ -134,7 +147,7 @@ void OutboundDeliveryTracker::process_retries(
                     mailbox::DeliveryResult expired_result;
                     expired_result.status = mailbox::DeliveryStatus::Expired;
                     expired_result.message_id = ps.msg_id;
-                    to_resolve.emplace_back(ps.msg_id, expired_result);
+                    to_resolve.emplace_back(expired_result, ps.receipt.state_);
                     emit_metric(::hpactor::metrics::MetricEventType::kReliableExhausted,
                                 ps.retry_count);
                     it = pending_.erase(it);
@@ -149,8 +162,10 @@ void OutboundDeliveryTracker::process_retries(
         }
     }
 
-    for (auto& [msg_id, result] : to_resolve) {
-        resolve(msg_id, result);
+    for (auto& [result, state] : to_resolve) {
+        if (state) {
+            state->resolve(result);
+        }
     }
     for (const auto& ps : to_resend) {
         resend_callback(ps);
@@ -176,10 +191,16 @@ void OutboundDeliveryTracker::cancel_endpoint(EndPoint endpoint,
             }
         }
     }
+    size_t cancelled_count = to_resolve.size();
     for (auto& [result, state] : to_resolve) {
         if (state) {
             state->resolve(result);
         }
+    }
+    if (cancelled_count > 0) {
+        emit_metric(
+            ::hpactor::metrics::MetricEventType::kReliableCancelled,
+            static_cast<uint8_t>(cancelled_count > 255 ? 255 : cancelled_count));
     }
 }
 
