@@ -30,6 +30,7 @@
 #include <hpactor/mailbox/backpressure_coordinator.hpp>
 #include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/mailbox/local_delivery_engine.hpp>
+#include <hpactor/msg/outbound_delivery_tracker.hpp>
 
 #include <chrono>
 #include <mutex>
@@ -106,12 +107,16 @@ ActorSystem::ActorSystem(const Config& config)
             std::make_unique<BackpressureCoordinator>(std::move(bp_cfg));
     }
 
+    // ── Outbound delivery tracker ─────────────────────────────────────
+    outbound_tracker_ = std::make_unique<msg::OutboundDeliveryTracker>();
+
     // ── Delivery pipeline ──────────────────────────────────────────────
     // MUST be created before the scheduler starts so that early-boot
     // actor spawns can deliver messages through it.
     {
         mailbox::DeliveryPipeline::Config pipeline_cfg;
         pipeline_cfg.dlq = dead_letters_.get();
+        pipeline_cfg.outbound_tracker = outbound_tracker_.get();
         pipeline_cfg.metrics = nullptr;
         pipeline_cfg.dedup_cache = dedup_cache_.get();
         pipeline_cfg.endpoint = endpoint_;
@@ -199,6 +204,26 @@ ActorSystem::ActorSystem(const Config& config)
                         location_cache_->purge_expired();
                 },
                 60000);
+        }
+
+        // Periodic retry processing for at-least-once delivery.
+        if (outbound_tracker_ && network_loop_) {
+            retry_timer_ = network_loop_->run_every(
+                [this]() {
+                    if (outbound_tracker_) {
+                        uint64_t now_ns = static_cast<uint64_t>(
+                            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                                std::chrono::steady_clock::now().time_since_epoch())
+                                .count());
+                        outbound_tracker_->process_retries(
+                            now_ns,
+                            [](const msg::OutboundDeliveryTracker::PendingSend&) {
+                                // Resend via transport (implemented in
+                                // follow-up).
+                            });
+                    }
+                },
+                100); // poll every 100ms
         }
 
         transport_ = std::make_unique<net::TcpTransport>(endpoint_, config.tls,
@@ -607,6 +632,29 @@ void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
+    // ── ACK/NACK control frame dispatch ────────────────────────────────
+    constexpr uint32_t kControlAck = 1 << 5;
+    constexpr uint32_t kControlNack = 1 << 6;
+    uint32_t flags = frame.pb_frame.flags();
+
+    if ((flags & kControlAck) && outbound_tracker_) {
+        outbound_tracker_->on_ack(MessageId{frame.pb_frame.message_id()},
+                                  net::from_proto(frame.pb_frame.sender()).endpoint);
+        return;
+    }
+    if ((flags & kControlNack) && outbound_tracker_) {
+        uint32_t reason_code = frame.pb_frame.type_tag();
+        uint32_t retry_after_ms = 0;
+        if (frame.pb_frame.payload().size() >= sizeof(uint32_t)) {
+            std::memcpy(&retry_after_ms, frame.pb_frame.payload().data(),
+                        sizeof(uint32_t));
+        }
+        outbound_tracker_->on_nack(MessageId{frame.pb_frame.message_id()},
+                                   net::from_proto(frame.pb_frame.sender()).endpoint,
+                                   reason_code, retry_after_ms);
+        return;
+    }
+
     if (static_cast<TypeTag>(frame.pb_frame.type_tag()) ==
         TypeTag::BackpressureSignalTag) {
         (void)backpressure_coordinator_->handle_remote_signal(frame);

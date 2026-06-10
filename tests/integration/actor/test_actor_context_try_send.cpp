@@ -52,8 +52,8 @@ TEST_F(ActorContextTrySendTest, Accepted) {
 
     auto ok = ctx.try_send(target_.address(),
                            TypedMessage(TypeTag::User, StreamBuffer{1}));
-    ASSERT_TRUE(ok.accepted());
-    EXPECT_EQ(ok.status, mailbox::DeliveryStatus::Accepted);
+    ASSERT_TRUE(ok.get().accepted());
+    EXPECT_EQ(ok.get().status, mailbox::DeliveryStatus::Accepted);
 
     auto* mailbox = system_->get_mailbox(target_.address().id);
     ASSERT_NE(mailbox, nullptr);
@@ -70,13 +70,13 @@ TEST_F(ActorContextTrySendTest, FullMailbox) {
     for (int i = 0; i < 4; ++i) {
         auto ok = ctx.try_send(target_.address(),
                                TypedMessage(TypeTag::User, StreamBuffer{1}));
-        ASSERT_TRUE(ok.accepted());
+        ASSERT_TRUE(ok.get().accepted());
     }
 
     // Next message should be rejected (mailbox full)
     auto full = ctx.try_send(target_.address(),
                              TypedMessage(TypeTag::User, StreamBuffer{2}));
-    EXPECT_FALSE(full.accepted());
+    EXPECT_FALSE(full.get().accepted());
 }
 
 TEST_F(ActorContextTrySendTest, ActorNotFound) {
@@ -86,7 +86,7 @@ TEST_F(ActorContextTrySendTest, ActorNotFound) {
     missing_addr.id = ActorId{99999};
     auto missing =
         ctx.try_send(missing_addr, TypedMessage(TypeTag::User, StreamBuffer{3}));
-    EXPECT_EQ(missing.status, mailbox::DeliveryStatus::NoRoute);
+    EXPECT_EQ(missing.get().status, mailbox::DeliveryStatus::NoRoute);
 }
 
 TEST_F(ActorContextTrySendTest, WithPriority) {
@@ -95,7 +95,7 @@ TEST_F(ActorContextTrySendTest, WithPriority) {
     auto ok = ctx.try_send_with_priority(
         target_.address(), TypedMessage(TypeTag::User, StreamBuffer{42}),
         /*priority=*/0, /*deadline_ns=*/INT64_MAX);
-    ASSERT_TRUE(ok.accepted());
+    ASSERT_TRUE(ok.get().accepted());
 
     auto* mailbox = system_->get_mailbox(target_.address().id);
     ASSERT_NE(mailbox, nullptr);
@@ -110,7 +110,7 @@ TEST_F(ActorContextTrySendTest, SetsSenderAddress) {
 
     auto ok = ctx.try_send(target_.address(),
                            TypedMessage(TypeTag::User, StreamBuffer{7}));
-    ASSERT_TRUE(ok.accepted());
+    ASSERT_TRUE(ok.get().accepted());
 
     auto* mailbox = system_->get_mailbox(target_.address().id);
     ASSERT_NE(mailbox, nullptr);

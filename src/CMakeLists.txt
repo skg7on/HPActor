@@ -63,6 +63,8 @@ add_library(hpactor_lib SHARED
     net/tcp_transport.cpp
     msg/frame.cpp
     msg/frame_protobuf.cpp
+    msg/delivery_receipt.cpp
+    msg/outbound_delivery_tracker.cpp
     net/tls_context.cpp
     net/tls_connection.cpp
     net/wireframe_connection.cpp
@@ -182,6 +184,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/dlq_commands.cpp
     cli/commands/ask_commands.cpp
     cli/commands/endpoint_commands.cpp
+    cli/commands/reliable_commands.cpp
 )
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------

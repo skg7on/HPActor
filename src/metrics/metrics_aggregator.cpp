@@ -465,6 +465,15 @@ void Aggregator::on_event(const MetricEvent& e) {
         case MetricEventType::kAskCancelled:
             // Ask lifecycle metrics — handlers wired in ACT-007.
             break;
+        case MetricEventType::kReliableTracked:
+        case MetricEventType::kReliableAckReceived:
+        case MetricEventType::kReliableNackReceived:
+        case MetricEventType::kReliableRetry:
+        case MetricEventType::kReliableExhausted:
+        case MetricEventType::kReliableCancelled:
+            // Reliable messaging metrics — counters incremented in
+            // OutboundDeliveryTracker.
+            break;
     }
 }
 

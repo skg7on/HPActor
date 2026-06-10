@@ -21,6 +21,10 @@
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/types/types.hpp>
 
+namespace hpactor::msg {
+class OutboundDeliveryTracker;
+}
+
 #include <chrono>
 #include <cstdint>
 #include <functional>
@@ -93,6 +97,11 @@ class DeliveryPipeline {
 
         /// \brief Emit a backpressure signal to a remote sender.
         RemoteBackpressureEmitter emit_remote_backpressure;
+
+        /// \brief Outbound tracker for AtLeastOnce/DurableAtLeastOnce modes.
+        /// When non-null and delivery_mode >= AtLeastOnce with an enabled
+        /// retry policy, accepted deliveries are also tracked for retry.
+        msg::OutboundDeliveryTracker* outbound_tracker = nullptr;
     };
 
     /// \brief Construct the delivery pipeline with injected dependencies.

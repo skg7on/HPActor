@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/core/actor_ref_cache.hpp>
+#include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/request_handle.hpp>
 #include <hpactor/msg/request_timeout.hpp>
@@ -125,42 +126,48 @@ class ActorContext {
     void send_with_priority(const ActorAddress& target, TypedMessage msg,
                             uint8_t priority, int64_t deadline_ns);
 
-    /// \brief Try-send returning a unified delivery result.
+    /// \brief Try-send returning a \c DeliveryReceipt for observing the
+    /// outcome.
     ///
     /// Resolves the target address, stamps the sender address, and delegates
-    /// to \c ActorRef::try_send(). Returns a \c DeliveryResult suitable for
-    /// user-facing logic (retry, backoff, error handling).
+    /// to \c ActorRef::try_send(). For \c BestEffort and
+    /// \c ObservableBestEffort modes, the receipt wraps an immediately
+    /// resolved \c DeliveryResult. For \c AtLeastOnce and
+    /// \c DurableAtLeastOnce modes with an enabled retry policy, the
+    /// receipt is pending until ACK, NACK, timeout, or cancellation.
     ///
     /// \param[in] target Destination actor address.
     /// \param[in] msg Message to send.
-    /// \param[in] options Delivery options (deadline, priority, idempotency).
-    /// \return \c DeliveryResult describing the delivery outcome.
-    mailbox::DeliveryResult try_send(const ActorAddress& target, TypedMessage msg,
-                                     mailbox::DeliveryOptions options = {});
+    /// \param[in] options Delivery options (mode, priority, retry policy).
+    /// \return A \c DeliveryReceipt that can be polled, awaited, or discarded.
+    msg::DeliveryReceipt try_send(const ActorAddress& target, TypedMessage msg,
+                                  mailbox::DeliveryOptions options = {});
 
     /// \brief Try-send with explicit priority and deadline.
     ///
-    /// For local targets, delegates directly to
+    /// For local targets, delegates to
     /// \c ActorSystem::try_deliver_local(). For remote targets, delegates
-    /// to \c ActorRef::try_send(). Maps results to \c DeliveryResult.
+    /// to \c ActorRef::try_send(). Returns a \c DeliveryReceipt.
     ///
     /// \param[in] target Destination actor address.
     /// \param[in] msg Message to send.
     /// \param[in] priority 0–3 (0 = highest).
-    /// \param[in] deadline_ns Absolute deadline in nanoseconds.
-    /// \param[in] options Delivery options.
-    /// \return \c DeliveryResult describing the delivery outcome.
-    mailbox::DeliveryResult
+    /// \param[in] deadline_ns Absolute deadline in nanoseconds
+    ///                       (\c INT64_MAX = no deadline).
+    /// \param[in] options Delivery options (mode, retry policy).
+    /// \return A \c DeliveryReceipt wrapping the delivery outcome.
+    msg::DeliveryReceipt
     try_send_with_priority(const ActorAddress& target, TypedMessage msg,
                            uint8_t priority, int64_t deadline_ns,
                            mailbox::DeliveryOptions options = {});
 
-    /// \brief Try-reply to the current sender, returning a delivery result.
+    /// \brief Try-reply to the current sender, returning a \c DeliveryReceipt.
     ///
     /// \param[in] msg Message to send back.
-    /// \param[in] options Delivery options.
-    /// \return \c DeliveryResult with NoRoute if there is no current sender.
-    mailbox::DeliveryResult
+    /// \param[in] options Delivery options (mode, retry policy).
+    /// \return A \c DeliveryReceipt wrapping \c NoRoute if there is no
+    ///         current sender, or the delivery outcome otherwise.
+    msg::DeliveryReceipt
     try_reply(TypedMessage msg, mailbox::DeliveryOptions options = {});
 
     // ── Replies ───────────────────────────────────────────────────────────

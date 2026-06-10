@@ -98,6 +98,9 @@ enum class DeliveryStatus : uint8_t {
     /// The local actor system is shutting down and not accepting new
     /// messages.
     ShuttingDown = 11,
+
+    /// Tracking was cancelled by the caller via DeliveryReceipt::cancel().
+    Cancelled = 12,
 };
 
 /// \brief Check if a DeliveryStatus represents successful delivery.
@@ -146,6 +149,8 @@ enum class DeliveryStatus : uint8_t {
             return FailureReason::TransportError;
         case DeliveryStatus::ShuttingDown:
             return FailureReason::ShuttingDown;
+        case DeliveryStatus::Cancelled:
+            return FailureReason::Cancelled;
     }
     return FailureReason::Unknown;
 }
