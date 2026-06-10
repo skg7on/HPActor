@@ -206,6 +206,12 @@ uint32_t CalendarQueue::advance(int64_t now_ns) {
             return 0;
         }
 
+        // Cap the advance step (same rationale as TimingWheel::advance).
+        static constexpr int64_t kMaxAdvanceNs = 100'000'000; // 100 ms
+        if (now_ns - last_advance_ns_ > kMaxAdvanceNs) {
+            now_ns = last_advance_ns_ + kMaxAdvanceNs;
+        }
+
         uint32_t buckets_processed = 0;
 
         while (last_advance_ns_ + fine_bucket_ns_ <= now_ns &&

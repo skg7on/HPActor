@@ -156,6 +156,18 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
             return 0;
         }
 
+        // Cap the advance step to prevent a positive feedback loop: if
+        // firing callbacks takes longer than the tick interval the timer
+        // thread falls behind, each successive advance() processes a
+        // larger time window, generating more callbacks, making the
+        // problem worse.  By limiting each step to at most 100 ms we
+        // guarantee bounded work per call and let the timer thread
+        // catch up over successive iterations.
+        static constexpr int64_t kMaxAdvanceNs = 100'000'000; // 100 ms
+        if (now_ns - old_time > kMaxAdvanceNs) {
+            now_ns = old_time + kMaxAdvanceNs;
+        }
+
         current_time_.store(now_ns, std::memory_order_relaxed);
 
         // Process all levels
