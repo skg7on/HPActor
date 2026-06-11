@@ -23,6 +23,7 @@
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mailbox/actor_rate_limiter.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
+#include <hpactor/tracing/trace_manager.hpp>
 
 #include "../messages.hpp"
 
@@ -267,8 +268,17 @@ class WorkerActor : public EventBasedActor {
         double throughput = 1000.0 + static_cast<double>(tl_rng.next() % 4000);
         data[1] = throughput;
         delivery_accepted_.fetch_add(1);
-        context()->send(aggregator_addr_,
-                        make_msg(WorkerResultTag, std::move(payload)));
+
+        // Inject trace context for distributed tracing demo
+        if (auto* tm = system().trace_manager()) {
+            TypedMessage result_msg =
+                make_msg(WorkerResultTag, std::move(payload));
+            tm->inject_message_context(result_msg, context(), false);
+            context()->send(aggregator_addr_, std::move(result_msg));
+        } else {
+            context()->send(aggregator_addr_,
+                            make_msg(WorkerResultTag, std::move(payload)));
+        }
 
         // Log milestone events to LogActor
         if (tasks_processed_ % 100 == 0) {

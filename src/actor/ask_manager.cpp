@@ -55,6 +55,10 @@ AskManager::register_ask(ActorId requester_id, ActorAddress target,
     pending->requester_id = requester_id;
     pending->target = target;
     pending->handle = RequestHandle<StreamBuffer>(state);
+    auto reg_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      now.time_since_epoch())
+                      .count();
+    pending->registered_at_ns = static_cast<uint64_t>(reg_ns);
 
     RegistrationResult result;
     result.msg_id = MessageId(key);
@@ -66,6 +70,8 @@ AskManager::register_ask(ActorId requester_id, ActorAddress target,
         std::lock_guard<std::mutex> lock(mutex_);
         pending_.emplace(key, std::move(pending));
     }
+
+    total_registered_.fetch_add(1, std::memory_order_relaxed);
 
     // Schedule the timeout callback. If on_response() already resolved the
     // ask between the emplace above and this line, the callback will find
@@ -93,6 +99,7 @@ bool AskManager::on_response(uint64_t ask_msg_id, StreamBuffer response) {
     // Resolve outside the lock to avoid re-entrancy issues if the
     // resolution notifies a waiting thread that re-enters AskManager.
     pending->handle.resolve(result<StreamBuffer>::make(std::move(response)));
+    total_resolved_.fetch_add(1, std::memory_order_relaxed);
     return true;
 }
 
@@ -125,6 +132,58 @@ void AskManager::on_timeout(uint64_t ask_msg_id) {
 
     pending->handle.resolve_error(error(errors::timeout, "local ask timed "
                                                          "out"));
+    total_timed_out_.fetch_add(1, std::memory_order_relaxed);
+}
+
+std::vector<AskManager::SnapshotEntry> AskManager::snapshot() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<SnapshotEntry> result;
+    result.reserve(pending_.size());
+
+    auto now = std::chrono::steady_clock::now();
+    auto now_ns = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch())
+            .count());
+
+    for (auto& [id, pending] : pending_) {
+        SnapshotEntry entry;
+        entry.msg_id = pending->msg_id;
+        entry.requester_id = pending->requester_id.value();
+        uint64_t diff_ns = (now_ns > pending->registered_at_ns)
+                               ? (now_ns - pending->registered_at_ns)
+                               : 0;
+        entry.elapsed_ms = diff_ns / 1'000'000ULL;
+        entry.deadline_remaining_ms = 0;
+        result.push_back(entry);
+    }
+    return result;
+}
+
+bool AskManager::cancel(uint64_t msg_id) {
+    std::unique_ptr<PendingAsk> pending;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = pending_.find(msg_id);
+        if (it == pending_.end()) {
+            return false;
+        }
+        pending = std::move(it->second);
+        pending_.erase(it);
+    }
+    pending->handle.resolve_error(error(errors::cancelled, "ask cancelled by "
+                                                           "operator"));
+    total_cancelled_.fetch_add(1, std::memory_order_relaxed);
+    return true;
+}
+
+AskManager::Stats AskManager::stats() const {
+    Stats s;
+    s.total_registered = total_registered_.load(std::memory_order_relaxed);
+    s.total_resolved = total_resolved_.load(std::memory_order_relaxed);
+    s.total_timed_out = total_timed_out_.load(std::memory_order_relaxed);
+    s.total_cancelled = total_cancelled_.load(std::memory_order_relaxed);
+    s.pending = pending_count();
+    return s;
 }
 
 void AskManager::abort() {

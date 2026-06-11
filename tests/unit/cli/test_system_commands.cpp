@@ -81,9 +81,11 @@ TEST(SystemMemoryCommandTest, Execute) {
     cmd->execute(ctx);
     std::string out = fmt.finalize();
 
-    EXPECT_NE(out.find("System Memory"), std::string::npos);
-    EXPECT_NE(out.find("Memory subsystem active"), std::string::npos);
-    EXPECT_NE(out.find("/metrics show"), std::string::npos);
+    EXPECT_NE(out.find("Memory Regions"), std::string::npos);
+    EXPECT_NE(out.find("Region"), std::string::npos);
+    EXPECT_NE(out.find("Active"), std::string::npos);
+    EXPECT_NE(out.find("Actor"), std::string::npos);
+    EXPECT_NE(out.find("Message"), std::string::npos);
 }
 
 // =============================================================================

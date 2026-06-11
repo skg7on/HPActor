@@ -38,13 +38,23 @@ class MetricsActor : public EventBasedActor {
   public:
     /// \brief Construct the metrics actor.
     ///
+    /// \param[in] ctx Actor context (always nullptr during construction).
     /// \param[in] system The actor system.
     /// \param[in] ring_buffer Shared metric event ring buffer to drain.
-    MetricsActor(ActorSystem& system,
+    MetricsActor(ActorContext* ctx, ActorSystem& system,
                  std::shared_ptr<MpscRingBuffer<MetricEvent>> ring_buffer);
 
     /// \brief Register the /metrics request handler.
     void register_handlers() override;
+
+    /// \brief Format a human-readable metrics snapshot from the current
+    ///        ring-buffer state.
+    ///
+    /// Drains the shared ring buffer through the aggregator, takes a
+    /// registry snapshot, and returns a formatted multi-line string.
+    /// \return Formatted metrics text, or "No metrics registered yet."
+    ///         if the registry is empty.
+    std::string format_snapshot();
 
     /// \brief MetricsActor is always a system actor.
     bool is_system_actor() const override {

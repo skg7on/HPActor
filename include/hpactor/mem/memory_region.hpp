@@ -158,4 +158,42 @@ class MemoryRegionRegistry {
     std::array<RegionLimit, kNumRegionTypes> limits_{};
 };
 
+/// \brief Return a human-readable name for a region type.
+///
+/// \param[in] region The region type.
+/// \return String like "Actor", "Message", etc.
+inline const char* to_string(RegionType region) noexcept {
+    switch (region) {
+        case RegionType::kActor:
+            return "Actor";
+        case RegionType::kMessage:
+            return "Message";
+        case RegionType::kCoroutine:
+            return "Coroutine";
+        case RegionType::kNetwork:
+            return "Network";
+        case RegionType::kInternal:
+            return "Internal";
+        case RegionType::kHibernate:
+            return "Hibernate";
+    }
+    return "Unknown";
+}
+
+/// \brief Return a human-readable name for a memory pressure state.
+///
+/// \param[in] state The pressure state.
+/// \return String like "normal", "high", "hard-limit".
+inline const char* to_string(MemoryPressureState state) noexcept {
+    switch (state) {
+        case MemoryPressureState::kNormal:
+            return "normal";
+        case MemoryPressureState::kHigh:
+            return "high";
+        case MemoryPressureState::kHardLimit:
+            return "hard-limit";
+    }
+    return "unknown";
+}
+
 } // namespace hpactor::mem

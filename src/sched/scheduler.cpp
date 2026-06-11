@@ -440,4 +440,20 @@ void HybridScheduler::unregister_dedicated(ActorId actor) {
     placement_.unregister_dedicated(actor);
 }
 
+std::vector<WorkerSnapshot> HybridScheduler::worker_snapshots() const {
+    std::vector<WorkerSnapshot> result;
+    result.reserve(worker_threads_.size());
+    for (size_t i = 0; i < worker_threads_.size(); ++i) {
+        WorkerSnapshot ws;
+        ws.worker_index = static_cast<uint16_t>(i);
+        ws.is_idle = !worker_threads_[i]->is_running() ||
+                     worker_threads_[i]->depth() == 0;
+        ws.steals_attempted = worker_threads_[i]->donation_count();
+        ws.steals_successful = 0;
+        ws.actors_executed = 0;
+        result.push_back(ws);
+    }
+    return result;
+}
+
 } // namespace hpactor::sched

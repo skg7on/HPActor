@@ -19,10 +19,12 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 namespace hpactor {
 
@@ -107,6 +109,40 @@ class AskManager {
         return pending_.size();
     }
 
+    /// \brief Lightweight snapshot entry for CLI introspection.
+    struct SnapshotEntry {
+        uint64_t msg_id;
+        uint64_t requester_id;
+        uint64_t elapsed_ms;
+        uint64_t deadline_remaining_ms;
+    };
+
+    /// \brief Snapshot of pending ask metadata for CLI introspection.
+    ///
+    /// \return A vector of snapshot entries, one per pending ask.
+    [[nodiscard]] std::vector<SnapshotEntry> snapshot() const;
+
+    /// \brief Cancel a pending ask by message ID.
+    ///
+    /// Resolves the handle with errors::cancelled and removes the entry.
+    /// Safe to call when the ask has already resolved (no-op).
+    ///
+    /// \param[in] msg_id The message ID to cancel.
+    /// \return true if found and cancelled, false if already resolved.
+    bool cancel(uint64_t msg_id);
+
+    /// \brief Statistics for the ask subsystem.
+    struct Stats {
+        uint64_t total_registered{0};
+        uint64_t total_resolved{0};
+        uint64_t total_timed_out{0};
+        uint64_t total_cancelled{0};
+        size_t pending{0};
+    };
+
+    /// \brief Snapshot of ask manager statistics.
+    [[nodiscard]] Stats stats() const;
+
   private:
     /// \brief Internal record for a single in-flight ask.
     struct PendingAsk {
@@ -125,12 +161,20 @@ class AskManager {
         /// reference the same shared State, so resolving here unblocks
         /// the caller's get().
         RequestHandle<StreamBuffer> handle;
+
+        /// \brief Monotonic timestamp when the ask was registered.
+        uint64_t registered_at_ns = 0;
     };
 
     sched::IScheduler* scheduler_;
     ActorSystem* system_;
     std::unordered_map<uint64_t, std::unique_ptr<PendingAsk>> pending_;
     mutable std::mutex mutex_;
+
+    std::atomic<uint64_t> total_registered_{0};
+    std::atomic<uint64_t> total_resolved_{0};
+    std::atomic<uint64_t> total_timed_out_{0};
+    std::atomic<uint64_t> total_cancelled_{0};
 };
 
 } // namespace hpactor
