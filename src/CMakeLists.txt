@@ -186,6 +186,9 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/ask_commands.cpp
     cli/commands/endpoint_commands.cpp
     cli/commands/reliable_commands.cpp
+    cli/commands/tracing_commands.cpp
+    cli/commands/log_commands.cpp
+    cli/commands/scheduler_commands.cpp
 )
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------
