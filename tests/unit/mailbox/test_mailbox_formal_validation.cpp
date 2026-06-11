@@ -74,6 +74,18 @@ struct MockScheduler : public hpactor::sched::IScheduler {
     int64_t last_deadline = 0;
 };
 
+/// Helper to create a TypedMessage with a given TypeTag.
+static TypedMessage make_msg(TypeTag tag) {
+    return TypedMessage(tag, StreamBuffer{0x01});
+}
+
+/// Helper to allocate and construct a TypedMessage on the heap.
+static TypedMessage* make_msg_raw(TypeTag tag, ActorId aid) {
+    auto* raw = static_cast<TypedMessage*>(
+        mem::allocate(mem::RegionType::kMessage, sizeof(TypedMessage), aid));
+    return new (raw) TypedMessage(tag, StreamBuffer{0x01});
+}
+
 // ==========================================================================
 // Bug 1 — DrainOverflowByteAccounting
 // ==========================================================================
@@ -95,21 +107,17 @@ TEST_F(DrainOverflowByteAccounting, NoUnderflowWhenDrainReservesCorrectBytes) {
 
     // Fill the mailbox to capacity.
     for (int i = 0; i < 4; i++) {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::User;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::User), meta);
         ASSERT_TRUE(result.accepted());
     }
 
     // Push one more — should spill to overflow.
     {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::User;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::User), meta);
         EXPECT_EQ(result.code, EnqueueResultCode::ReroutedToOverflow);
     }
 
@@ -130,11 +138,9 @@ TEST_F(DrainOverflowByteAccounting, NoUnderflowWhenDrainReservesCorrectBytes) {
 
     // Subsequent enqueues must still succeed.
     {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::User;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::User), meta);
         EXPECT_TRUE(result.accepted())
             << "mailbox bricked after drain — byte capacity permanently exceeded";
     }
@@ -146,20 +152,16 @@ TEST_F(DrainOverflowByteAccounting, SubsequentEnqueuesSucceedAfterDrain) {
 
     // Fill mailbox.
     {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::User;
-        ASSERT_TRUE(mb.try_push(std::move(m), meta).accepted());
+        ASSERT_TRUE(mb.try_push(make_msg(TypeTag::User), meta).accepted());
     }
 
     // Spill to overflow.
     for (int i = 0; i < 3; i++) {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::User;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::User), meta);
         ASSERT_EQ(result.code, EnqueueResultCode::ReroutedToOverflow);
     }
 
@@ -174,11 +176,9 @@ TEST_F(DrainOverflowByteAccounting, SubsequentEnqueuesSucceedAfterDrain) {
 
     // Enqueue 10 more messages — all must succeed.
     for (int i = 0; i < 10; i++) {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::User;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::User), meta);
         EXPECT_TRUE(result.accepted())
             << "enqueue " << i << " failed after overflow drain cycle";
         // Drain immediately to make room.
@@ -211,11 +211,7 @@ TEST_F(WakeupProtocolRace, ProducerWakeupAfterConsumerResetsFlag) {
 
     // Inject one message (simulating a message already in the mailbox).
     {
-        auto* raw = static_cast<TypedMessage*>(mem::allocate(
-            mem::RegionType::kMessage, sizeof(TypedMessage), ActorId{3}));
-        auto* node = new (raw) TypedMessage();
-        node->set_type_id(TypeTag::User);
-        mb.inject_for_test(node);
+        mb.inject_for_test(make_msg_raw(TypeTag::User, ActorId{3}));
     }
 
     // Dequeue it — consumer resets mailbox_was_empty_ = true.
@@ -230,11 +226,7 @@ TEST_F(WakeupProtocolRace, ProducerWakeupAfterConsumerResetsFlag) {
     // Now enqueue — must trigger wakeup since flag was true.
     int before = scheduler.notify_ready_count.load();
     {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
-        MailboxEnvelopeMeta meta;
-        meta.type_tag = TypeTag::User;
-        mb.push(std::move(m));
+        mb.push(make_msg(TypeTag::User));
     }
     int after = scheduler.notify_ready_count.load();
     EXPECT_GT(after, before) << "wakeup was lost — notify_ready not called";
@@ -245,11 +237,7 @@ TEST_F(WakeupProtocolRace, NoSpuriousWakeupWhenMailboxAlreadyNonEmpty) {
 
     // Inject two messages.
     for (int i = 0; i < 2; i++) {
-        auto* raw = static_cast<TypedMessage*>(mem::allocate(
-            mem::RegionType::kMessage, sizeof(TypedMessage), ActorId{4}));
-        auto* node = new (raw) TypedMessage();
-        node->set_type_id(TypeTag::User);
-        mb.inject_for_test(node);
+        mb.inject_for_test(make_msg_raw(TypeTag::User, ActorId{4}));
     }
 
     // Dequeue only one — mailbox still has one, flag is false.
@@ -265,11 +253,7 @@ TEST_F(WakeupProtocolRace, NoSpuriousWakeupWhenMailboxAlreadyNonEmpty) {
     // Enqueue — should NOT trigger another wakeup (actor already scheduled).
     int before = scheduler.notify_ready_count.load();
     {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
-        MailboxEnvelopeMeta meta;
-        meta.type_tag = TypeTag::User;
-        mb.push(std::move(m));
+        mb.push(make_msg(TypeTag::User));
     }
     int after = scheduler.notify_ready_count.load();
     EXPECT_EQ(after, before)
@@ -295,22 +279,18 @@ TEST_F(SystemLaneDepthGuard, RejectsWhenAtLimit) {
 
     // Enqueue up to the limit.
     for (uint32_t i = 0; i < cfg.protected_system_messages; i++) {
-        TypedMessage m;
-        m.set_type_id(TypeTag::DownMsg);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::DownMsg;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::DownMsg), meta);
         ASSERT_TRUE(result.accepted())
             << "system message " << i << " should be accepted (below limit)";
     }
 
     // Next system message must be rejected.
     {
-        TypedMessage m;
-        m.set_type_id(TypeTag::DownMsg);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::DownMsg;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::DownMsg), meta);
         EXPECT_EQ(result.code, EnqueueResultCode::Rejected)
             << "system message should be rejected at limit";
     }
@@ -321,11 +301,9 @@ TEST_F(SystemLaneDepthGuard, ReleasesOnDequeue) {
 
     // Enqueue one system message.
     {
-        TypedMessage m;
-        m.set_type_id(TypeTag::DownMsg);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::DownMsg;
-        ASSERT_TRUE(mb.try_push(std::move(m), meta).accepted());
+        ASSERT_TRUE(mb.try_push(make_msg(TypeTag::DownMsg), meta).accepted());
     }
 
     // Dequeue it.
@@ -338,11 +316,9 @@ TEST_F(SystemLaneDepthGuard, ReleasesOnDequeue) {
 
     // After dequeue, we should be able to enqueue up to the limit again.
     for (uint32_t i = 0; i < cfg.protected_system_messages; i++) {
-        TypedMessage m;
-        m.set_type_id(TypeTag::DownMsg);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::DownMsg;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::DownMsg), meta);
         ASSERT_TRUE(result.accepted())
             << "system message " << i << " should be accepted after dequeue";
     }
@@ -367,22 +343,18 @@ TEST_F(DroppedExistingRetryAccounting, RejectedCounterNotIncrementedOnRetrySucce
 
     // Fill mailbox to capacity.
     for (int i = 0; i < 2; i++) {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::User;
-        ASSERT_TRUE(mb.try_push(std::move(m), meta).accepted());
+        ASSERT_TRUE(mb.try_push(make_msg(TypeTag::User), meta).accepted());
     }
 
     auto snap_before = mb.snapshot();
 
     // The next enqueue triggers DropOldest overflow — drops oldest — retries.
     {
-        TypedMessage m;
-        m.set_type_id(TypeTag::User);
         MailboxEnvelopeMeta meta;
         meta.type_tag = TypeTag::User;
-        auto result = mb.try_push(std::move(m), meta);
+        auto result = mb.try_push(make_msg(TypeTag::User), meta);
         EXPECT_TRUE(result.accepted());
     }
 
