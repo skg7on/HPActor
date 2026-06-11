@@ -382,6 +382,14 @@ class ActorSystem {
         return trace_manager_.get();
     }
 
+    /// \brief Log manager (nullptr if logging is disabled).
+    log::LogManager* log_manager() noexcept {
+        return log_manager_.get();
+    }
+    const log::LogManager* log_manager() const noexcept {
+        return log_manager_.get();
+    }
+
     /// \brief Apply a new tracing configuration at runtime.
     void apply_tracing_config(const tracing::TraceConfig& config);
 
