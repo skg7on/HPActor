@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/actor/daemon_actor.hpp>
+#include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 namespace hpactor {
@@ -45,10 +46,23 @@ void DaemonActor::on_deactivate() {
 void DaemonActor::daemon_loop() {
     on_daemon_start();
     while (running_.load(std::memory_order_acquire)) {
-        if (!run_once()) break;
+        if (!run_once())
+            break;
     }
     on_daemon_stop();
     running_.store(false, std::memory_order_release);
+
+    // When the daemon exits voluntarily (run_once() returned false), the
+    // lifecycle is still kActive — the shutdown coordinator's
+    // poll_drain_complete() would spin for the full drain timeout waiting for
+    // kStopped. Self-transition here so shutdown completes immediately.
+    if (auto* lc = as_lifecycle()) {
+        auto s = lc->state();
+        if (s == LifecycleState::kActive || s == LifecycleState::kDraining) {
+            lc->transition(LifecycleState::kStopping);
+            lc->transition(LifecycleState::kStopped);
+        }
+    }
 }
 
 } // namespace hpactor
