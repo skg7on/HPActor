@@ -122,6 +122,27 @@ class AskManager {
     /// \return A vector of snapshot entries, one per pending ask.
     [[nodiscard]] std::vector<SnapshotEntry> snapshot() const;
 
+    /// \brief Cancel a pending ask by message ID.
+    ///
+    /// Resolves the handle with errors::cancelled and removes the entry.
+    /// Safe to call when the ask has already resolved (no-op).
+    ///
+    /// \param[in] msg_id The message ID to cancel.
+    /// \return true if found and cancelled, false if already resolved.
+    bool cancel(uint64_t msg_id);
+
+    /// \brief Statistics for the ask subsystem.
+    struct Stats {
+        uint64_t total_registered{0};
+        uint64_t total_resolved{0};
+        uint64_t total_timed_out{0};
+        uint64_t total_cancelled{0};
+        size_t pending{0};
+    };
+
+    /// \brief Snapshot of ask manager statistics.
+    [[nodiscard]] Stats stats() const;
+
   private:
     /// \brief Internal record for a single in-flight ask.
     struct PendingAsk {
@@ -149,6 +170,11 @@ class AskManager {
     ActorSystem* system_;
     std::unordered_map<uint64_t, std::unique_ptr<PendingAsk>> pending_;
     mutable std::mutex mutex_;
+
+    std::atomic<uint64_t> total_registered_{0};
+    std::atomic<uint64_t> total_resolved_{0};
+    std::atomic<uint64_t> total_timed_out_{0};
+    std::atomic<uint64_t> total_cancelled_{0};
 };
 
 } // namespace hpactor

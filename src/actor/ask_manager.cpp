@@ -71,6 +71,8 @@ AskManager::register_ask(ActorId requester_id, ActorAddress target,
         pending_.emplace(key, std::move(pending));
     }
 
+    total_registered_.fetch_add(1, std::memory_order_relaxed);
+
     // Schedule the timeout callback. If on_response() already resolved the
     // ask between the emplace above and this line, the callback will find
     // nothing and return harmlessly.
@@ -97,6 +99,7 @@ bool AskManager::on_response(uint64_t ask_msg_id, StreamBuffer response) {
     // Resolve outside the lock to avoid re-entrancy issues if the
     // resolution notifies a waiting thread that re-enters AskManager.
     pending->handle.resolve(result<StreamBuffer>::make(std::move(response)));
+    total_resolved_.fetch_add(1, std::memory_order_relaxed);
     return true;
 }
 
@@ -129,6 +132,7 @@ void AskManager::on_timeout(uint64_t ask_msg_id) {
 
     pending->handle.resolve_error(error(errors::timeout, "local ask timed "
                                                          "out"));
+    total_timed_out_.fetch_add(1, std::memory_order_relaxed);
 }
 
 std::vector<AskManager::SnapshotEntry> AskManager::snapshot() const {
@@ -153,6 +157,33 @@ std::vector<AskManager::SnapshotEntry> AskManager::snapshot() const {
         result.push_back(entry);
     }
     return result;
+}
+
+bool AskManager::cancel(uint64_t msg_id) {
+    std::unique_ptr<PendingAsk> pending;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = pending_.find(msg_id);
+        if (it == pending_.end()) {
+            return false;
+        }
+        pending = std::move(it->second);
+        pending_.erase(it);
+    }
+    pending->handle.resolve_error(error(errors::cancelled, "ask cancelled by "
+                                                           "operator"));
+    total_cancelled_.fetch_add(1, std::memory_order_relaxed);
+    return true;
+}
+
+AskManager::Stats AskManager::stats() const {
+    Stats s;
+    s.total_registered = total_registered_.load(std::memory_order_relaxed);
+    s.total_resolved = total_resolved_.load(std::memory_order_relaxed);
+    s.total_timed_out = total_timed_out_.load(std::memory_order_relaxed);
+    s.total_cancelled = total_cancelled_.load(std::memory_order_relaxed);
+    s.pending = pending_count();
+    return s;
 }
 
 void AskManager::abort() {
