@@ -142,8 +142,8 @@ TEST_F(ConcurrentProducerFlood, ByteAccountingNeverUnderflows) {
     consumer.join();
 
     auto snap = mb.snapshot();
-    uint64_t accounted = snap.total_enqueued + snap.total_rejected +
-                         snap.total_dropped + snap.total_dead_letters;
+    uint64_t accounted =
+        snap.total_enqueued + snap.total_rejected + snap.total_dead_letters;
     EXPECT_EQ(accounted, static_cast<uint64_t>(total_sent.load()))
         << "message accounting mismatch";
 
@@ -192,8 +192,8 @@ TEST_F(ConcurrentProducerFlood, AllMessagesAccountedFor) {
     }
 
     auto snap = mb.snapshot();
-    uint64_t accounted = snap.total_enqueued + snap.total_rejected +
-                         snap.total_dropped + snap.total_dead_letters;
+    uint64_t accounted =
+        snap.total_enqueued + snap.total_rejected + snap.total_dead_letters;
     EXPECT_EQ(accounted, static_cast<uint64_t>(total_sent.load()))
         << "not all messages accounted for: sent=" << total_sent.load()
         << " accounted=" << accounted;
