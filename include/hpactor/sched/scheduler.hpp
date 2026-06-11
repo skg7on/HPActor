@@ -65,6 +65,15 @@ struct SchedulerDrainResult {
     bool idle = true;    ///< \c true if no more ready actors remain.
 };
 
+/// \brief Lightweight snapshot of a worker thread for CLI inspection.
+struct WorkerSnapshot {
+    uint16_t worker_index{0};
+    uint64_t actors_executed{0};
+    uint64_t steals_attempted{0};
+    uint64_t steals_successful{0};
+    bool is_idle{false};
+};
+
 /// \brief Abstract interface for actor schedulers.
 ///
 /// The scheduler is the core execution engine — it routes ready actors to
@@ -133,6 +142,11 @@ class IScheduler : public IActorReadyNotifier,
 
     /// \brief Number of worker threads.
     virtual size_t worker_count() const = 0;
+
+    /// \brief Snapshot of per-worker thread statistics.
+    virtual std::vector<WorkerSnapshot> worker_snapshots() const {
+        return {};
+    }
 
     /// \brief Returns \c true while workers are running.
     virtual bool is_running() const = 0;
@@ -262,6 +276,8 @@ class HybridScheduler : public IScheduler {
     void register_dedicated_thread(ActorId actor, int cpu_affinity) override;
     void register_dedicated_pool(ActorId actor, uint32_t pool_size) override;
     void unregister_dedicated(ActorId actor) override;
+
+    std::vector<WorkerSnapshot> worker_snapshots() const override;
 
     // Worker control (deterministic testing)
     void pause_workers() noexcept override;
