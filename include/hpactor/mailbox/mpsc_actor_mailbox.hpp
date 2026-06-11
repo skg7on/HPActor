@@ -729,9 +729,19 @@ template <typename T> class MPSCActorMailbox {
     ///       or the consumer. Call from the test thread with the scheduler
     ///       paused (\c scheduler_threads = 0).
     void inject_for_test(T* node) noexcept {
-        reservation_.inject_count(estimate_node_bytes(*node));
+        uint64_t bytes = estimate_node_bytes(*node);
+        uint8_t lane = 0;
+        if constexpr (std::is_same_v<T, TypedMessage>) {
+            if (is_system_message(node->type_id())) {
+                lane = MultiLaneQueue<T>::kSystemLaneSentinel;
+                system_lane_bytes_.fetch_add(bytes, std::memory_order_relaxed);
+            }
+        }
+        if (lane != MultiLaneQueue<T>::kSystemLaneSentinel) {
+            reservation_.inject_count(bytes);
+        }
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
-        lanes_.enqueue(node, 0);
+        lanes_.enqueue(node, lane);
         mailbox_was_empty_.store(false, std::memory_order_release);
     }
 
