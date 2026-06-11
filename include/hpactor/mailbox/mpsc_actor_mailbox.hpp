@@ -1025,17 +1025,23 @@ template <typename T> class MPSCActorMailbox {
             return; // pretend drained
         }
         while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {
-            if (reservation_.try_reserve(0, config_.capacity.max_messages,
-                                         config_.capacity.max_bytes) !=
-                detail::ReservationResult::Reserved)
-                break;
+            // Pop first so we know the actual byte size for reservation.
             T overflow_msg;
-            if (!overflow_queue_.try_pop(overflow_msg)) {
-                reservation_.release(0);
+            if (!overflow_queue_.try_pop(overflow_msg))
+                break;
+            uint64_t bytes = estimate_node_bytes(overflow_msg);
+            auto reserve_result = reservation_.try_reserve(
+                bytes, config_.capacity.max_messages, config_.capacity.max_bytes);
+            if (reserve_result != detail::ReservationResult::Reserved) {
+                // Cannot drain now — push back to overflow queue.
+                // If push-back fails (queue full), drop the message.
+                if (!overflow_queue_.try_push(std::move(overflow_msg))) {
+                    total_dropped_.fetch_add(1, std::memory_order_relaxed);
+                }
                 break;
             }
             MailboxEnvelopeMeta meta;
-            meta.estimated_bytes = estimate_node_bytes(overflow_msg);
+            meta.estimated_bytes = bytes;
             enqueue_reserved(new (mem::allocate(mem::RegionType::kMessage,
                                                 sizeof(T), actor_id_))
                                  T(std::move(overflow_msg)),
