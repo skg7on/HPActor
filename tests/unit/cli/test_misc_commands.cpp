@@ -52,14 +52,14 @@ TEST(MetricsShowCommandTest, Metadata) {
     EXPECT_EQ(cmd->order(), 100);
 }
 
-TEST(MetricsShowCommandTest, ExecuteShowsNotImplemented) {
+TEST(MetricsShowCommandTest, ExecuteShowsErrorWhenNoSystem) {
     auto* cmd = find_cmd("metrics/show");
     ASSERT_NE(cmd, nullptr);
 
     std::string out = execute_cmd(*cmd);
 
     EXPECT_NE(out.find("Metrics"), std::string::npos);
-    EXPECT_NE(out.find("not yet implemented"), std::string::npos);
+    EXPECT_NE(out.find("no actor system"), std::string::npos);
 }
 
 // =============================================================================
@@ -73,12 +73,12 @@ TEST(TopologyShowCommandTest, Metadata) {
     EXPECT_EQ(cmd->order(), 100);
 }
 
-TEST(TopologyShowCommandTest, ExecuteShowsNotImplemented) {
+TEST(TopologyShowCommandTest, ExecuteShowsErrorWhenNoSystem) {
     auto* cmd = find_cmd("topology/show");
     ASSERT_NE(cmd, nullptr);
 
     std::string out = execute_cmd(*cmd);
 
     EXPECT_NE(out.find("Topology"), std::string::npos);
-    EXPECT_NE(out.find("not yet implemented"), std::string::npos);
+    EXPECT_NE(out.find("no actor system"), std::string::npos);
 }

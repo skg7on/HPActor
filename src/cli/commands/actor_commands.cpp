@@ -635,6 +635,122 @@ class ActorDeliveryStatsCommand final : public ICommand {
     }
 };
 
+class ActorLinksCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/links";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Show linked and monitored actors";
+    }
+    int order() const noexcept override {
+        return 287;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> links)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        InspectStateRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_include_state(true);
+
+        auto reply = cli->send_and_wait_inspect(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str);
+            return result<void>::make();
+        }
+
+        ctx.output->header("Links — Actor " + *id_str);
+        if (!reply->state_blob().empty()) {
+            ctx.output->raw(reply->state_blob());
+        } else {
+            ctx.output->raw("No link information available for this actor.");
+        }
+        return result<void>::make();
+    }
+};
+
+class ActorBackpressureCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "actor/<id>/backpressure";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Show backpressure signal state and mailbox pressure";
+    }
+    int order() const noexcept override {
+        return 288;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto id_str = ctx.get_param("<id>");
+        if (!id_str) {
+            ctx.output->error("Missing actor ID (usage: /actor <id> backpressure)");
+            return result<void>::make();
+        }
+        ActorId target_id = parse_actor_id(*id_str);
+        if (target_id == ActorId{0}) {
+            ctx.output->error("Invalid actor ID: " + *id_str);
+            return result<void>::make();
+        }
+
+        auto* cli = ctx.cli_actor;
+        if (!cli) {
+            ctx.output->error("Internal error: no CLI actor");
+            return result<void>::make();
+        }
+
+        InspectStateRequest req;
+        req.set_target_actor_id(target_id.value());
+        req.set_include_mailbox(true);
+
+        auto reply = cli->send_and_wait_inspect(target_id, req);
+        if (!reply) {
+            ctx.output->error("No response from actor " + *id_str);
+            return result<void>::make();
+        }
+
+        auto& mbox = reply->mailbox();
+        ctx.output->header("Backpressure — Actor " + *id_str);
+
+        std::map<std::string, std::string> kv;
+        kv["Pressure state"] = mbox.pressure_state();
+        char depth_buf[64];
+        snprintf(depth_buf, sizeof(depth_buf), "%u/%u (%.1f%%)", mbox.depth(),
+                 mbox.capacity(),
+                 mbox.capacity() > 0
+                     ? 100.0 * mbox.depth() / static_cast<double>(mbox.capacity())
+                     : 0.0);
+        kv["Depth"] = depth_buf;
+        char byte_buf[64];
+        snprintf(byte_buf, sizeof(byte_buf), "%llu / %llu",
+                 static_cast<unsigned long long>(mbox.queued_bytes()),
+                 static_cast<unsigned long long>(mbox.byte_capacity()));
+        kv["Byte utilization"] = byte_buf;
+        kv["Total rejected"] = std::to_string(mbox.total_rejected());
+        kv["Total dropped"] = std::to_string(mbox.total_dropped());
+        kv["Total dead letters"] = std::to_string(mbox.total_dead_letters());
+        kv["Overflow policy"] = mbox.overflow_policy();
+        ctx.output->key_value(kv);
+        return result<void>::make();
+    }
+};
+
 const CommandRegistration<ActorShowCommand> kRegisterActorShow;
 const CommandRegistration<ActorCircuitCommand> kRegisterActorCircuit;
 const CommandRegistration<ActorKillCommand> kRegisterActorKill;
@@ -645,6 +761,8 @@ const CommandRegistration<ActorRateCommand> kRegisterActorRate;
 const CommandRegistration<ActorAdmissionCommand> kRegisterActorAdmission;
 const CommandRegistration<ActorDeliveryCommand> kRegisterActorDelivery;
 const CommandRegistration<ActorDeliveryStatsCommand> kRegisterActorDeliveryStats;
+const CommandRegistration<ActorLinksCommand> kRegisterActorLinks;
+const CommandRegistration<ActorBackpressureCommand> kRegisterActorBackpressure;
 
 } // anonymous namespace
 } // namespace cli

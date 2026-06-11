@@ -204,6 +204,17 @@ class CliActor : public DaemonActor {
     /// \return The resolved history file path.
     static std::string get_history_path(const CliConfig& config);
 
+    /// \brief Build an InspectStateReply for the CliActor itself without
+    ///        going through the mailbox (avoids self-deadlock).
+    ///
+    /// Called from \c send_and_wait_inspect() when the target is the
+    /// CliActor's own actor ID.
+    ///
+    /// \param[in] req The inspect request (controls which sections to include).
+    /// \return A fully populated \c InspectStateReply.
+    InspectStateReply
+    build_self_inspect_reply(const class InspectStateRequest& req);
+
   private:
     void build_command_tree();
     void execute_tokens(const std::vector<Token>& tokens);

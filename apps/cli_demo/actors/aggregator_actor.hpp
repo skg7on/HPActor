@@ -18,6 +18,7 @@
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/tracing/trace_manager.hpp>
 
 #include "../messages.hpp"
 
@@ -73,6 +74,8 @@ class AggregatorActor : public EventBasedActor {
         return Behavior{[this](TypedMessage& msg) {
             processed_.fetch_add(1);
             if (msg.type_id() == WorkerResultTag) {
+                // Incoming trace context (if any) was injected by WorkerActor
+                // and is available via msg.trace_context() for span creation.
                 if (msg.payload().size() >= 16) {
                     auto* data =
                         reinterpret_cast<const double*>(msg.payload().data());
