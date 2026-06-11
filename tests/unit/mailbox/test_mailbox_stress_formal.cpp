@@ -33,6 +33,10 @@
 using namespace hpactor;
 using namespace hpactor::mailbox;
 
+static TypedMessage make_msg(TypeTag tag) {
+    return TypedMessage(tag, StreamBuffer{0x01});
+}
+
 struct StressMockScheduler : public hpactor::sched::IScheduler {
     void start() override {}
     void stop() override {}
@@ -95,16 +99,15 @@ TEST_F(ConcurrentProducerFlood, ByteAccountingNeverUnderflows) {
             while (!start.load(std::memory_order_acquire)) {
             }
             for (int i = 0; i < kMsgsPerProducer; i++) {
-                TypedMessage m;
-                m.set_type_id(TypeTag::User);
                 MailboxEnvelopeMeta meta;
-                meta.type_tag = TypeTag::User;
                 meta.priority = static_cast<uint8_t>(i % 4);
                 if (i % 10 == 0) {
-                    m.set_type_id(TypeTag::DownMsg);
                     meta.type_tag = TypeTag::DownMsg;
+                    mb.push(make_msg(TypeTag::DownMsg));
+                } else {
+                    meta.type_tag = TypeTag::User;
+                    mb.push(make_msg(TypeTag::User));
                 }
-                mb.push(std::move(m));
                 total_sent.fetch_add(1, std::memory_order_relaxed);
             }
         });
@@ -162,11 +165,7 @@ TEST_F(ConcurrentProducerFlood, AllMessagesAccountedFor) {
             while (!start.load(std::memory_order_acquire)) {
             }
             for (int i = 0; i < kMsgsPerProducer; i++) {
-                TypedMessage m;
-                m.set_type_id(TypeTag::User);
-                MailboxEnvelopeMeta meta;
-                meta.type_tag = TypeTag::User;
-                mb.push(std::move(m));
+                mb.push(make_msg(TypeTag::User));
                 total_sent.fetch_add(1, std::memory_order_relaxed);
             }
         });
@@ -186,6 +185,7 @@ TEST_F(ConcurrentProducerFlood, AllMessagesAccountedFor) {
             mem::deallocate(node);
             drained++;
             idle = 0;
+            (void)drained;
         } else {
             idle++;
         }
@@ -222,11 +222,7 @@ TEST_F(LostWakeupDetection, NoMessagesLeftBehindSingleProducer) {
 
     std::thread producer([&]() {
         for (int i = 0; i < kTotal; i++) {
-            TypedMessage m;
-            m.set_type_id(TypeTag::User);
-            MailboxEnvelopeMeta meta;
-            meta.type_tag = TypeTag::User;
-            mb.push(std::move(m));
+            mb.push(make_msg(TypeTag::User));
             if (i % 10 == 0) {
                 std::this_thread::sleep_for(std::chrono::microseconds(rng() % 50));
             }
@@ -273,11 +269,7 @@ TEST_F(LostWakeupDetection, NoMessagesLeftBehindMultiProducer) {
             }
             std::mt19937 local_rng(static_cast<unsigned>(t * 137 + 42));
             for (int i = 0; i < kMsgsPerProducer; i++) {
-                TypedMessage m;
-                m.set_type_id(TypeTag::User);
-                MailboxEnvelopeMeta meta;
-                meta.type_tag = TypeTag::User;
-                mb.push(std::move(m));
+                mb.push(make_msg(TypeTag::User));
                 if (i % 20 == 0) {
                     std::this_thread::sleep_for(
                         std::chrono::microseconds(local_rng() % 100));
@@ -348,11 +340,7 @@ TEST_F(PendingFreeConcurrency, NoDoubleFreeUnderContention) {
             while (!start.load(std::memory_order_acquire)) {
             }
             for (int i = 0; i < kMsgsPerProducer; i++) {
-                TypedMessage m;
-                m.set_type_id(TypeTag::User);
-                MailboxEnvelopeMeta meta;
-                meta.type_tag = TypeTag::User;
-                mb.push(std::move(m));
+                mb.push(make_msg(TypeTag::User));
             }
             producers_done.fetch_add(1, std::memory_order_relaxed);
         });
