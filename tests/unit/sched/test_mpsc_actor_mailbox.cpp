@@ -122,3 +122,49 @@ TEST_F(MPSCActorMailboxTest, PushConvenienceMethod) {
     EXPECT_FALSE(node->payload().empty());
     mem::deallocate(node);
 }
+
+// Test 5: Repeated drain+refill cycles: each empty→non-empty transition
+// must trigger exactly one notify_ready call.  This exercises the
+// mailbox_was_empty_ re-arm logic.
+TEST_F(MPSCActorMailboxTest, RepeatedDrainRefillCyclesNotifyOnceEach) {
+    MPSCActorMailbox<TypedMessage> mb(ActorId{1}, &scheduler);
+    constexpr int kCycles = 100;
+
+    for (int i = 0; i < kCycles; ++i) {
+        // Enqueue to empty mailbox → must call notify_ready
+        auto r = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{0x01}));
+        EXPECT_TRUE(r.accepted());
+        EXPECT_EQ(scheduler.notify_ready_count.load(), i + 1);
+
+        // Second enqueue to non-empty mailbox → no notify_ready
+        r = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{0x02}));
+        EXPECT_TRUE(r.accepted());
+        EXPECT_EQ(scheduler.notify_ready_count.load(), i + 1);
+
+        // Drain completely
+        auto* n1 = mb.dequeue();
+        ASSERT_NE(n1, nullptr);
+        mem::deallocate(n1);
+        auto* n2 = mb.dequeue();
+        ASSERT_NE(n2, nullptr);
+        mem::deallocate(n2);
+
+        EXPECT_EQ(scheduler.notify_ready_count.load(), i + 1);
+    }
+}
+
+// Test 6: After dequeue from empty mailbox returns nullptr, the flag is
+// left armed so the next real enqueue calls notify_ready.
+TEST_F(MPSCActorMailboxTest, DequeueEmptyThenEnqueueNotifies) {
+    MPSCActorMailbox<TypedMessage> mb(ActorId{1}, &scheduler);
+
+    // Dequeue from empty mailbox
+    auto* node = mb.dequeue();
+    EXPECT_EQ(node, nullptr);
+
+    // Enqueue — must call notify_ready because mailbox was empty
+    auto r = mb.try_push(TypedMessage(TypeTag::User, StreamBuffer{0x01}));
+    EXPECT_TRUE(r.accepted());
+    EXPECT_EQ(scheduler.notify_ready_count.load(), 1);
+    mem::deallocate(mb.dequeue());
+}
