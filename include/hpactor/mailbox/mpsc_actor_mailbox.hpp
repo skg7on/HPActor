@@ -923,8 +923,8 @@ template <typename T> class MPSCActorMailbox {
         if (empty()) {
             mailbox_was_empty_.store(true, std::memory_order_release);
         }
-        unlock_consumer();
         lanes_.set_pending_free(node);
+        unlock_consumer();
         return true;
     }
 
@@ -962,8 +962,8 @@ template <typename T> class MPSCActorMailbox {
         if (empty()) {
             mailbox_was_empty_.store(true, std::memory_order_release);
         }
-        unlock_consumer();
         lanes_.set_pending_free(node);
+        unlock_consumer();
         return true;
     }
 
