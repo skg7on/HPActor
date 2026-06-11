@@ -158,6 +158,10 @@ template <typename T> class MPSCActorMailbox {
     ///       thread. The registered function must be safe to call from any
     ///       thread.
     void set_continuation_callback(ActorContinuationCallback callback) {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_continuation_callback: mailbox already in active use");
+#endif
         continuation_callback_ = std::move(callback);
     }
 
@@ -220,6 +224,10 @@ template <typename T> class MPSCActorMailbox {
     ///       the mailbox is used concurrently, or from the actor's own
     ///       thread during a quiescent period.
     void set_rate_limiter(std::unique_ptr<ActorRateLimiter> limiter) noexcept {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_rate_limiter: mailbox already in active use");
+#endif
         rate_limiter_ = std::move(limiter);
     }
 
@@ -238,6 +246,10 @@ template <typename T> class MPSCActorMailbox {
     ///       thread during a quiescent period.
     void set_admission_policies(
         std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> policies) noexcept {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_admission_policies: mailbox already in active use");
+#endif
         admission_policies_ = std::move(policies);
     }
 
@@ -304,6 +316,10 @@ template <typename T> class MPSCActorMailbox {
     ///       (the mailbox owns it). After a rejection where the overflow
     ///       handler has not consumed it, \p msg remains valid.
     EnqueueResult try_push(T&& msg, MailboxEnvelopeMeta meta = {}) noexcept {
+#ifdef HPACTOR_DEBUG
+        in_active_use_.store(true, std::memory_order_release);
+#endif
+
         FAULT_INJECT("hpactor.mailbox.try_push.fail") {
             EnqueueResult r;
             r.code = EnqueueResultCode::Rejected;
@@ -564,6 +580,10 @@ template <typename T> class MPSCActorMailbox {
     ///       \c mailbox_was_empty_ is set to \c true, re-arming the
     ///       edge-triggered wakeup for the next enqueue.
     T* dequeue() noexcept {
+#ifdef HPACTOR_DEBUG
+        in_active_use_.store(true, std::memory_order_release);
+#endif
+
         lock_consumer();
         T* node = lanes_.dequeue();
 
@@ -698,6 +718,10 @@ template <typename T> class MPSCActorMailbox {
     ///       own thread during a quiescent period.
     void
     set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf) noexcept {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_metrics_ring_buffer: mailbox already in active use");
+#endif
         metrics_ring_buffer_ = buf;
     }
 
@@ -711,6 +735,10 @@ template <typename T> class MPSCActorMailbox {
     ///       before the mailbox is used concurrently, or from the actor's
     ///       own thread during a quiescent period.
     void set_logger(log::Logger* logger) noexcept {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_logger: mailbox already in active use");
+#endif
         logger_ = logger;
     }
 
@@ -1206,6 +1234,11 @@ template <typename T> class MPSCActorMailbox {
     std::atomic<uint64_t> max_depth_{0};         ///< Peak observed total depth.
     std::atomic<uint64_t> system_lane_bytes_{0}; ///< Byte count in the system
                                                  ///< lane.
+
+    // --- Debug quiescence guard ---
+#ifdef HPACTOR_DEBUG
+    std::atomic<bool> in_active_use_{false};
+#endif
 
     // --- Dependencies ---
     ActorContinuationCallback continuation_callback_; ///< Callback for
