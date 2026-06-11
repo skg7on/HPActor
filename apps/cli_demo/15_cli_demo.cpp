@@ -81,6 +81,7 @@
 #include "actors/dlq_demo_actor.hpp"
 #include "actors/health_check_actor.hpp"
 #include "actors/log_actor.hpp"
+#include "actors/query_actor.hpp"
 #include "actors/system_monitor_actor.hpp"
 #include "actors/worker_actor.hpp"
 #include "messages.hpp"
@@ -194,6 +195,7 @@ int main() {
     auto health_check = system.spawn<cli_demo::HealthCheckActor>();
     auto broadcast = system.spawn<cli_demo::BroadcastActor>();
     auto dlq_demo = system.spawn<cli_demo::DlqDemoActor>();
+    auto query_actor = system.spawn<cli_demo::QueryActor>();
 
     // ── Spawn 4 workers with different configurations ────────────────────
 
@@ -279,6 +281,11 @@ int main() {
                         .get();
     dlq_raw->set_target_actors(worker_addrs);
 
+    auto* query_raw = std::static_pointer_cast<cli_demo::QueryActor>(
+                          system.get_actor(query_actor.id()))
+                          .get();
+    query_raw->set_clock_addr(clock.address());
+
     // Rate limiters are configured automatically in WorkerActor::set_mailbox().
     // Workers with rate_limit > 0 (Worker-1 at 100msg/s, Worker-2 at 500msg/s)
     // will have their mailbox rate limiters set during spawn initialization.
@@ -295,6 +302,7 @@ int main() {
     send_to_actor(system, monitor.id(), cli_demo::StartTag);
     send_to_actor(system, clock.id(), cli_demo::PeriodicTickTag);
     send_to_actor(system, dlq_demo.id(), cli_demo::StartTag);
+    send_to_actor(system, query_actor.id(), cli_demo::StartTag);
 
     // Let the actors initialize before the user starts typing
     std::this_thread::sleep_for(std::chrono::milliseconds(100));

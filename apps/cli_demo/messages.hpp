@@ -38,6 +38,7 @@ inline constexpr TypeTag MonitorReplyTag{0x00010008};
 inline constexpr TypeTag PeriodicTickTag{0x00010009};
 inline constexpr TypeTag StartTag{0x0001000A};
 inline constexpr TypeTag DlqGenerateTag{0x0001000B};
+inline constexpr TypeTag QueryTriggerTag{0x0001000C};
 
 // =============================================================================
 // Payload helpers
