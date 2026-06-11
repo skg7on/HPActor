@@ -628,3 +628,125 @@ message counts (up to 5 per producer).
 - `include/hpactor/mailbox/multi_lane_queue.hpp` — lane container
 - `include/hpactor/mailbox/overflow_queue.hpp` — mutex-protected spill queue
 - `include/hpactor/mailbox/detail/pressure_state_machine.hpp` — hysteresis state machine
+
+---
+
+# Appendix: Implementation Plan
+
+Status: **Approved — ready for writing-plans**
+
+## Implementation Order
+
+Bugs ordered by dependency chain — simpler first to build momentum, complex
+protocol changes last:
+
+| Step | Bug | Complexity | Files Touched |
+|------|-----|-----------|---------------|
+| 1 | Bug 3 — `pending_free_` race | Low | `mpsc_actor_mailbox.hpp` |
+| 2 | Bug 5 — `total_rejected_` undercount | Low | `mpsc_actor_mailbox.hpp` |
+| 3 | Bug 7 — `inject_for_test` routing | Low | `mpsc_actor_mailbox.hpp` |
+| 4 | Bug 6 — unsynchronized config | Low | `mpsc_actor_mailbox.hpp` |
+| 5 | Bug 4 — system lane guard | Medium | `mpsc_actor_mailbox.hpp` |
+| 6 | Bug 1 — drain byte underflow | High | `mpsc_actor_mailbox.hpp` |
+| 7 | Bug 2 — lost wakeup | High | `mpsc_actor_mailbox.hpp` |
+
+For each bug: RED (failing test) → GREEN (minimal fix) → REFACTOR (cleanup).
+
+## Production Code Changes
+
+**Primary file:** `include/hpactor/mailbox/mpsc_actor_mailbox.hpp`
+
+**Bug 3 fix** — Move `set_pending_free(node)` before `unlock_consumer()` in
+`drop_one_oldest_global()` and `drop_one_lowest_priority()`.
+
+**Bug 5 fix** — Add `total_rejected_.fetch_add(1, relaxed)` and
+`update_pressure_state(true)` in the DroppedExisting retry-failure path.
+
+**Bug 7 fix** — Add system-message detection to `inject_for_test()`: route to
+system lane sentinel when `is_system_message(node->type_id())`, update
+`system_lane_bytes_` accordingly.
+
+**Bug 6 fix** — Add `#ifdef HPACTOR_DEBUG` atomic `in_active_use_` flag.
+Assert it's false in `set_rate_limiter()`, `set_admission_policies()`,
+`set_continuation_callback()`, `set_metrics_ring_buffer()`, `set_logger()`.
+Set to true on first `try_push()` or `dequeue()`.
+
+**Bug 4 fix** — New member `std::atomic<uint32_t> system_lane_reserved_{0}`.
+Producer: CAS-based admission loop replacing `lane_depth() >= limit` check.
+Consumer: `fetch_sub(1, release)` in dequeue system message path.
+
+**Bug 1 fix** — Restructure `drain_overflow()`: pop first, estimate bytes,
+reserve with actual byte count. On reservation failure, push back to overflow
+queue (drop if push-back fails).
+
+**Bug 2 fix** — Two-sided protocol change:
+- Producer: remove `empty()` gate, always attempt CAS on `mailbox_was_empty_`
+- Consumer (`dequeue()`): add double-check after `unlock_consumer()` —
+  if `!lanes_.empty()`, CAS the flag and self-requeue via `notify_ready()`
+
+## New Test Files
+
+### `tests/unit/mailbox/test_mailbox_formal_validation.cpp`
+
+Deterministic tests, `scheduler_threads=0`, mock `IActorReadyNotifier`:
+
+| Suite | Tests | Bug |
+|-------|-------|-----|
+| DrainOverflowByteAccounting | UnderflowWhenDrainReservesZeroBytes, SubsequentEnqueuesSucceedAfterDrain, PushBackOnReservationFailure | 1 |
+| WakeupProtocolRace | ProducerWakeupAfterConsumerResetsFlag, NoWakeupWhenMailboxNotEmpty, ConsumerDoubleCheckCatchesConcurrentEnqueue | 2 |
+| SystemLaneDepthGuard | RejectsWhenAtLimit, ReleasesOnDequeue | 4 |
+| DroppedExistingRetryAccounting | RejectsWithIncrementedCounter_RetryFailure, RejectsWithIncrementedCounter_RetrySuccess | 5 |
+
+### `tests/unit/mailbox/test_mailbox_stress_formal.cpp`
+
+Multi-threaded, designed for TSAN/ASAN:
+
+| Suite | Tests | Bug |
+|-------|-------|-----|
+| ConcurrentProducerFlood | ByteAccountingNeverUnderflows, AllMessagesAccountedFor, SystemLaneDepthNeverExceedsLimit | 1,2,4 |
+| OverflowDrainConsistency | DrainPreservesMessageCount, ByteAccountingStaysBounded | 1 |
+| LostWakeupDetection | NoMessagesLeftBehind_SingleProducer, NoMessagesLeftBehind_MultiProducer | 2 |
+| PendingFreeConcurrency | NoDoubleFreeUnderTSAN, NoLeakedNodesAfterQuiescence | 3 |
+
+### `tests/unit/mailbox/test_mpsc_relacy.cpp` (extend)
+
+New Relacy suites following existing `MPSC_2Producers` pattern:
+
+| Suite | Threads | Description |
+|-------|---------|-------------|
+| MPSC_WakeupProtocol | 3 | 2 producers + 1 consumer, exhaustive schedule exploration of wakeup flag protocol |
+| MPSC_PendingFreeRace | 3 | 2 evictors calling set_pending_free, explore all interleavings |
+| MPSC_ReservationPairing | 3 | Interleave try_reserve/release with drain_overflow-style reserve(0), verify byte accounting never wraps |
+
+## Build Changes
+
+`tests/unit/mailbox/CMakeLists.txt` — add two new test targets:
+
+```cmake
+add_mailbox_test(test_mailbox_formal_validation)
+add_mailbox_test(test_mailbox_stress_formal)
+```
+
+## Verification Gating
+
+Each bug is complete when:
+1. RED: new test reproduces the failure
+2. GREEN: fix applied, test passes
+3. REFACTOR: code clean, test still passes
+
+Per-bug verification commands (narrowest scope):
+
+| Step | Verify |
+|------|--------|
+| Bug 3 | `./build/tests/unit/mailbox/test_mailbox_stress_formal --gtest_filter="*PendingFree*"` (TSAN) |
+| Bug 5 | `./build/tests/unit/mailbox/test_mailbox_formal_validation --gtest_filter="*DroppedExisting*"` |
+| Bug 7 | `./build/tests/unit/mailbox/test_mailbox_formal_validation --gtest_filter="*InjectForTest*"` |
+| Bug 6 | Build with `-DHPACTOR_DEBUG=ON`, run existing tests |
+| Bug 4 | `./build/tests/unit/mailbox/test_mailbox_formal_validation --gtest_filter="*SystemLane*"` |
+| Bug 1 | `./build/tests/unit/mailbox/test_mailbox_formal_validation --gtest_filter="*DrainOverflow*"` |
+| Bug 2 | `./build/tests/unit/mailbox/test_mpsc_relacy --gtest_filter="*Wakeup*"` |
+
+Full verification after all fixes:
+```bash
+ctest --output-on-failure --parallel 8
+ctest -R "mpsc_stress|mailbox_stress" --output-on-failure  # under TSAN build
