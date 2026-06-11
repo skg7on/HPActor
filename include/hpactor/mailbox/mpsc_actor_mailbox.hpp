@@ -351,22 +351,24 @@ template <typename T> class MPSCActorMailbox {
 
         // System messages use the dedicated system lane.
         if (lane == MultiLaneQueue<T>::kSystemLaneSentinel) {
-            if (static_cast<uint32_t>(
-                    lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel)) >=
-                config_.protected_system_messages) {
-                update_pressure_state(/*hard_failure=*/true);
-                total_rejected_.fetch_add(1, std::memory_order_relaxed);
-                EnqueueResult r;
-                r.code = EnqueueResultCode::Rejected;
-                r.target = actor_id_;
-                r.depth = static_cast<uint32_t>(lanes_.total_depth());
-                r.capacity = config_.capacity.max_messages;
-                r.bytes = reservation_.queued_bytes();
-                r.byte_capacity = config_.capacity.max_bytes;
-                r.pressure_ratio = pressure_ratio();
-                r.pressure_state = pressure_state_.current_state();
-                return r;
-            }
+            uint32_t cur = system_lane_reserved_.load(std::memory_order_acquire);
+            do {
+                if (cur >= config_.protected_system_messages) {
+                    update_pressure_state(/*hard_failure=*/true);
+                    total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                    EnqueueResult r;
+                    r.code = EnqueueResultCode::Rejected;
+                    r.target = actor_id_;
+                    r.depth = static_cast<uint32_t>(lanes_.total_depth());
+                    r.capacity = config_.capacity.max_messages;
+                    r.bytes = reservation_.queued_bytes();
+                    r.byte_capacity = config_.capacity.max_bytes;
+                    r.pressure_ratio = pressure_ratio();
+                    r.pressure_state = pressure_state_.current_state();
+                    return r;
+                }
+            } while (!system_lane_reserved_.compare_exchange_weak(
+                cur, cur + 1, std::memory_order_acq_rel, std::memory_order_acquire));
             void* raw =
                 mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
             auto* node = new (raw) T(std::move(msg));
@@ -630,6 +632,7 @@ template <typename T> class MPSCActorMailbox {
                 reservation_.release(bytes);
             } else {
                 system_lane_bytes_.fetch_sub(bytes, std::memory_order_relaxed);
+                system_lane_reserved_.fetch_sub(1, std::memory_order_release);
             }
             total_dequeued_.fetch_add(1, std::memory_order_relaxed);
             update_pressure_state();
@@ -1234,6 +1237,9 @@ template <typename T> class MPSCActorMailbox {
     std::atomic<uint64_t> max_depth_{0};         ///< Peak observed total depth.
     std::atomic<uint64_t> system_lane_bytes_{0}; ///< Byte count in the system
                                                  ///< lane.
+    std::atomic<uint32_t> system_lane_reserved_{0}; ///< Atomic admission
+                                                    ///< counter for system lane
+                                                    ///< depth guard.
 
     // --- Debug quiescence guard ---
 #ifdef HPACTOR_DEBUG
