@@ -96,6 +96,15 @@ CliActor::poll_for_response(TypeTag expected_tag, std::chrono::milliseconds time
 std::optional<InspectStateReply>
 CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
                                 std::chrono::milliseconds timeout) {
+    // Self-inspection: when the target is the CliActor itself, build the
+    // reply inline instead of sending to our own mailbox and deadlocking
+    // in poll_for_response() — the daemon thread is the only consumer of
+    // this mailbox and it is busy waiting for a response that can never
+    // arrive.
+    if (target == id()) {
+        return build_self_inspect_reply(req);
+    }
+
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -186,6 +195,84 @@ CliActor::send_and_wait_quarantine(ActorId target, const QuarantineRequest& req,
         return std::nullopt;
     }
     return safe_reply;
+}
+
+// ---------------------------------------------------------------------------
+// Self-inspection — builds reply inline to avoid self-deadlock
+// ---------------------------------------------------------------------------
+
+InspectStateReply
+CliActor::build_self_inspect_reply(const InspectStateRequest& req) {
+    InspectStateReply reply;
+
+    // Metadata (same structure as EventBasedActor::dispatch_cli_message)
+    auto meta = to_metadata();
+    auto* pb_meta = reply.mutable_metadata();
+    pb_meta->set_actor_id(meta.actor_id);
+    pb_meta->set_actor_type(meta.actor_type);
+    pb_meta->set_state(meta.state);
+    pb_meta->set_incarnation(meta.incarnation);
+    pb_meta->set_messages_processed(meta.messages_processed);
+    pb_meta->set_uptime_ms(meta.uptime_ms);
+    if (!meta.behavior_name.empty()) {
+        pb_meta->set_behavior_name(meta.behavior_name);
+    }
+
+    // Mailbox snapshot
+    if (req.include_mailbox()) {
+        auto ms = mailbox_snapshot();
+        auto* pb_mbox = reply.mutable_mailbox();
+        pb_mbox->set_depth(ms.depth);
+        pb_mbox->set_total_enqueued(ms.total_enqueued);
+        pb_mbox->set_total_dequeued(ms.total_dequeued);
+        pb_mbox->set_max_depth(ms.max_depth);
+        pb_mbox->set_high_priority_depth(ms.high_priority_depth);
+        pb_mbox->set_capacity(ms.capacity);
+        pb_mbox->set_queued_bytes(ms.queued_bytes);
+        pb_mbox->set_byte_capacity(ms.byte_capacity);
+        pb_mbox->set_pressure_ratio_ppm(ms.pressure_ratio_ppm);
+        pb_mbox->set_total_rejected(ms.total_rejected);
+        pb_mbox->set_total_dropped(ms.total_dropped);
+        pb_mbox->set_total_dead_letters(ms.total_dead_letters);
+        pb_mbox->set_pressure_state(ms.pressure_state);
+        pb_mbox->set_overflow_policy(ms.overflow_policy);
+        pb_mbox->set_delivery_accepted_total(ms.delivery_accepted_total);
+        pb_mbox->set_delivery_rejected_total(ms.delivery_rejected_total);
+        pb_mbox->set_delivery_failed_total(ms.delivery_failed_total);
+        pb_mbox->set_delivery_retryable_total(ms.delivery_retryable_total);
+        if (req.include_rate_limiter()) {
+            pb_mbox->set_rate_limiter_enabled(ms.rate_limiter_enabled);
+            pb_mbox->set_rate_limiter_rate(ms.rate_limiter_rate);
+            pb_mbox->set_rate_limiter_burst(ms.rate_limiter_burst);
+            pb_mbox->set_rate_limiter_current_tokens(ms.rate_limiter_current_tokens);
+            pb_mbox->set_rate_limit_blocked_total(ms.rate_limit_blocked_total);
+        }
+        if (req.include_admission()) {
+            pb_mbox->set_admission_policy_count(ms.admission_policy_count);
+            pb_mbox->set_admission_rejected_total(ms.admission_rejected_total);
+            pb_mbox->set_admission_dlq_routed_total(ms.admission_dlq_routed_total);
+        }
+    }
+
+    // Quarantine info
+    if (req.include_quarantine_info()) {
+        reply.set_quarantine_enabled(quarantine_enabled());
+        if (auto* lc = as_lifecycle()) {
+            if (lc->is_quarantined()) {
+                reply.set_quarantine_reason(
+                    std::string(to_string(lc->quarantine_reason())));
+            }
+        }
+    }
+
+    // Serialized state
+    if (req.include_state()) {
+        auto blob = serialize_state();
+        reply.set_state_blob(
+            std::string(reinterpret_cast<const char*>(blob.data()), blob.size()));
+    }
+
+    return reply;
 }
 
 // ---------------------------------------------------------------------------
