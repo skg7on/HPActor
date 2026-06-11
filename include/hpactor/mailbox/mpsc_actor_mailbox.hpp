@@ -412,6 +412,8 @@ template <typename T> class MPSCActorMailbox {
                     return make_result(pressure_state_.code_after_accept());
                 }
                 result.code = EnqueueResultCode::Rejected;
+                total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                update_pressure_state(/*hard_failure=*/true);
             }
             return result;
         }
