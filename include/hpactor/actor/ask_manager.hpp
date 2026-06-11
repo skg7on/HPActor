@@ -19,10 +19,12 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <atomic>
 #include <chrono>
 #include <memory>
 #include <mutex>
 #include <unordered_map>
+#include <vector>
 
 namespace hpactor {
 
@@ -107,6 +109,19 @@ class AskManager {
         return pending_.size();
     }
 
+    /// \brief Lightweight snapshot entry for CLI introspection.
+    struct SnapshotEntry {
+        uint64_t msg_id;
+        uint64_t requester_id;
+        uint64_t elapsed_ms;
+        uint64_t deadline_remaining_ms;
+    };
+
+    /// \brief Snapshot of pending ask metadata for CLI introspection.
+    ///
+    /// \return A vector of snapshot entries, one per pending ask.
+    [[nodiscard]] std::vector<SnapshotEntry> snapshot() const;
+
   private:
     /// \brief Internal record for a single in-flight ask.
     struct PendingAsk {
@@ -125,6 +140,9 @@ class AskManager {
         /// reference the same shared State, so resolving here unblocks
         /// the caller's get().
         RequestHandle<StreamBuffer> handle;
+
+        /// \brief Monotonic timestamp when the ask was registered.
+        uint64_t registered_at_ns = 0;
     };
 
     sched::IScheduler* scheduler_;

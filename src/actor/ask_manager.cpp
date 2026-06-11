@@ -55,6 +55,10 @@ AskManager::register_ask(ActorId requester_id, ActorAddress target,
     pending->requester_id = requester_id;
     pending->target = target;
     pending->handle = RequestHandle<StreamBuffer>(state);
+    auto reg_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                      now.time_since_epoch())
+                      .count();
+    pending->registered_at_ns = static_cast<uint64_t>(reg_ns);
 
     RegistrationResult result;
     result.msg_id = MessageId(key);
@@ -125,6 +129,30 @@ void AskManager::on_timeout(uint64_t ask_msg_id) {
 
     pending->handle.resolve_error(error(errors::timeout, "local ask timed "
                                                          "out"));
+}
+
+std::vector<AskManager::SnapshotEntry> AskManager::snapshot() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<SnapshotEntry> result;
+    result.reserve(pending_.size());
+
+    auto now = std::chrono::steady_clock::now();
+    auto now_ns = static_cast<uint64_t>(
+        std::chrono::duration_cast<std::chrono::nanoseconds>(now.time_since_epoch())
+            .count());
+
+    for (auto& [id, pending] : pending_) {
+        SnapshotEntry entry;
+        entry.msg_id = pending->msg_id;
+        entry.requester_id = pending->requester_id.value();
+        uint64_t diff_ns = (now_ns > pending->registered_at_ns)
+                               ? (now_ns - pending->registered_at_ns)
+                               : 0;
+        entry.elapsed_ms = diff_ns / 1'000'000ULL;
+        entry.deadline_remaining_ms = 0;
+        result.push_back(entry);
+    }
+    return result;
 }
 
 void AskManager::abort() {
