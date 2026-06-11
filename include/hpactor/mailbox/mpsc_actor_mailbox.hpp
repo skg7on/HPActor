@@ -523,7 +523,6 @@ template <typename T> class MPSCActorMailbox {
         FAULT_INJECT("hpactor.mailbox.enqueue_reserved.drop") {
             return; // drop after capacity committed
         }
-        bool was_empty = empty();
         lanes_.enqueue(node, lane_idx);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
         update_max_depth();
@@ -546,7 +545,12 @@ template <typename T> class MPSCActorMailbox {
             metrics_ring_buffer_->try_push(evt);
         }
 
-        if (was_empty && !suppress_wakeup) {
+        // Edge-triggered wakeup: always attempt to claim the wakeup right.
+        // If mailbox_was_empty_ was true, we are the first enqueue after
+        // the consumer observed emptiness — notify the scheduler.
+        // Spurious wakeups are safe: the consumer dequeues, finds nothing,
+        // and returns to idle.
+        if (!suppress_wakeup) {
             bool expected = true;
             if (mailbox_was_empty_.compare_exchange_strong(
                     expected, false, std::memory_order_acq_rel,
@@ -642,6 +646,21 @@ template <typename T> class MPSCActorMailbox {
             drain_overflow();
         }
         unlock_consumer();
+
+        // Double-check after unlock: a producer may have enqueued between
+        // our dequeue() and the mailbox_was_empty_ store above. If the
+        // producer saw our store, its CAS already triggered notify_ready.
+        // If not, the producer's CAS failed because it read false —
+        // we must self-requeue.
+        if (!lanes_.empty()) {
+            bool expected = true;
+            if (mailbox_was_empty_.compare_exchange_strong(
+                    expected, false, std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
+                // We claimed the wakeup — no producer did. Self-notify.
+                scheduler_->notify_ready(actor_id_, 0, 0);
+            }
+        }
 
         if (metrics_ring_buffer_) [[unlikely]] {
             metrics::MetricEvent evt{};
