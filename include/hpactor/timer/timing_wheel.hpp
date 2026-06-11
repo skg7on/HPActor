@@ -43,11 +43,12 @@ namespace hpactor::sched {
 ///
 /// \note **Thread safety**: \c schedule(), \c schedule_at(), \c cancel(),
 ///       and \c advance() are safe to call from any thread.  All bucket
-///       operations are serialized by an internal \c std::recursive_mutex.
+///       operations are serialized by an internal \c std::mutex.
 ///       Callbacks registered via \c schedule() are fired on the calling
 ///       thread of \c advance() **without** the internal mutex held, so
 ///       callbacks may safely call back into \c schedule() or \c cancel()
-///       without deadlock.
+///       without deadlock (the callback acquires the mutex as a new owner;
+///       recursion is not required).
 ///
 /// \note **Advance cap**: \c advance() caps each time step to at most
 ///       100 ms to prevent a positive feedback loop where slow callback
@@ -67,7 +68,6 @@ class TimingWheel {
                                 ///< clock, nanoseconds).
         uint64_t id;            ///< Unique timer identifier.
         TimerCallback callback; ///< Callback to invoke on expiry.
-        bool cancelled{false};  ///< Set to \c true to cancel before fire.
     };
 
     /// \brief Construct a timing wheel.
@@ -182,16 +182,16 @@ class TimingWheel {
     };
 
     uint64_t add_timer_internal(int64_t expire_ns, TimerCallback callback);
-    void cascade_level(uint32_t level, int64_t now);
     void insert_timer(Timer* timer);
     Timer* remove_timer(uint64_t timer_id);
 
     int64_t tick_ns_;
     uint32_t num_levels_;
     std::vector<WheelLevel> levels_;
+    std::vector<int64_t> level_ranges_; ///< Precomputed range per level.
 
     std::atomic<int64_t> current_time_{0};
-    std::atomic<uint64_t> next_timer_id_{1};
+    uint64_t next_timer_id_{1};
 
     /// \brief Protects all bucket operations.
     ///
