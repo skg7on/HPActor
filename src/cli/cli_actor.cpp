@@ -109,11 +109,18 @@ CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
     if (!actor)
         return std::nullopt;
 
-    TypedMessage msg(TypeTag::InspectStateRequestTag, req);
-    msg.set_sender_address(address());
-    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-    if (!enqueue_result.accepted()) {
-        return std::nullopt;
+    // Retry delivery within the timeout window: a transient mailbox-full
+    // condition (e.g. DlqDemoActor burst) must not permanently block CLI.
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+        TypedMessage msg(TypeTag::InspectStateRequestTag, req);
+        msg.set_sender_address(address());
+        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+        if (enqueue_result.accepted())
+            break;
+        if (std::chrono::steady_clock::now() >= deadline)
+            return std::nullopt;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     auto payload = poll_for_response(TypeTag::InspectStateResponseTag, timeout);
@@ -144,11 +151,16 @@ CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
     if (!actor)
         return std::nullopt;
 
-    TypedMessage msg(TypeTag::KillRequestTag, req);
-    msg.set_sender_address(address());
-    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-    if (!enqueue_result.accepted()) {
-        return std::nullopt;
+    auto kill_deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+        TypedMessage msg(TypeTag::KillRequestTag, req);
+        msg.set_sender_address(address());
+        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+        if (enqueue_result.accepted())
+            break;
+        if (std::chrono::steady_clock::now() >= kill_deadline)
+            return std::nullopt;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     auto payload = poll_for_response(TypeTag::KillResponseTag, timeout);
@@ -174,11 +186,16 @@ CliActor::send_and_wait_quarantine(ActorId target, const QuarantineRequest& req,
     if (!actor)
         return std::nullopt;
 
-    TypedMessage msg(TypeTag::QuarantineRequestTag, req);
-    msg.set_sender_address(address());
-    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-    if (!enqueue_result.accepted()) {
-        return std::nullopt;
+    auto q_deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+        TypedMessage msg(TypeTag::QuarantineRequestTag, req);
+        msg.set_sender_address(address());
+        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+        if (enqueue_result.accepted())
+            break;
+        if (std::chrono::steady_clock::now() >= q_deadline)
+            return std::nullopt;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
     }
 
     auto payload = poll_for_response(TypeTag::QuarantineResponseTag, timeout);
