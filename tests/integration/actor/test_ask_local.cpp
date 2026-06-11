@@ -63,5 +63,111 @@ TEST(AskLocalTest, OnResponseResolvesHandle) {
     EXPECT_TRUE(reg.handle.ready());
 }
 
+TEST(AskLocalTest, SnapshotReturnsEmptyWhenNoPending) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = true;
+    ActorSystem system(cfg);
+
+    auto snap = system.ask_manager()->snapshot();
+    EXPECT_TRUE(snap.empty());
+}
+
+TEST(AskLocalTest, SnapshotReturnsPendingEntries) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = true;
+    ActorSystem system(cfg);
+
+    auto result = system.ask_manager()->register_ask(
+        ActorId{1}, ActorAddress{}, RequestTimeout::use_default(),
+        std::chrono::milliseconds(5000));
+
+    auto snap = system.ask_manager()->snapshot();
+    EXPECT_EQ(snap.size(), 1ULL);
+    EXPECT_EQ(snap[0].msg_id, result.msg_id.value());
+    EXPECT_EQ(snap[0].requester_id, 1ULL);
+    EXPECT_GE(snap[0].elapsed_ms, 0ULL);
+}
+
+TEST(AskLocalTest, CancelRemovesPendingAsk) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = true;
+    ActorSystem system(cfg);
+
+    auto result = system.ask_manager()->register_ask(
+        ActorId{1}, ActorAddress{}, RequestTimeout::use_default(),
+        std::chrono::milliseconds(5000));
+
+    bool cancelled = system.ask_manager()->cancel(result.msg_id.value());
+    EXPECT_TRUE(cancelled);
+    EXPECT_EQ(system.ask_manager()->pending_count(), 0ULL);
+
+    bool cancelled_again = system.ask_manager()->cancel(result.msg_id.value());
+    EXPECT_FALSE(cancelled_again);
+}
+
+TEST(AskLocalTest, StatsReflectOperations) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = true;
+    ActorSystem system(cfg);
+
+    auto result = system.ask_manager()->register_ask(
+        ActorId{1}, ActorAddress{}, RequestTimeout::use_default(),
+        std::chrono::milliseconds(5000));
+
+    auto stats = system.ask_manager()->stats();
+    EXPECT_EQ(stats.total_registered, 1ULL);
+    EXPECT_EQ(stats.pending, 1ULL);
+
+    system.ask_manager()->cancel(result.msg_id.value());
+
+    stats = system.ask_manager()->stats();
+    EXPECT_EQ(stats.total_cancelled, 1ULL);
+    EXPECT_EQ(stats.pending, 0ULL);
+}
+
+TEST(AskLocalTest, SnapshotUpdatesAfterResolution) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = true;
+    ActorSystem system(cfg);
+
+    auto result = system.ask_manager()->register_ask(
+        ActorId{1}, ActorAddress{}, RequestTimeout::use_default(),
+        std::chrono::milliseconds(5000));
+
+    EXPECT_EQ(system.ask_manager()->snapshot().size(), 1ULL);
+
+    StreamBuffer response;
+    response.append(reinterpret_cast<const uint8_t*>("ok"), 2);
+    system.ask_manager()->on_response(result.msg_id.value(), std::move(response));
+
+    EXPECT_TRUE(system.ask_manager()->snapshot().empty());
+}
+
+TEST(AskLocalTest, StatsReflectSuccessfulResolution) {
+    Config cfg;
+    cfg.scheduler_threads = 0;
+    cfg.enable_network = true;
+    ActorSystem system(cfg);
+
+    auto result = system.ask_manager()->register_ask(
+        ActorId{1}, ActorAddress{}, RequestTimeout::use_default(),
+        std::chrono::milliseconds(5000));
+
+    StreamBuffer response;
+    response.append(reinterpret_cast<const uint8_t*>("ok"), 2);
+    system.ask_manager()->on_response(result.msg_id.value(), std::move(response));
+
+    auto stats = system.ask_manager()->stats();
+    EXPECT_EQ(stats.total_registered, 1ULL);
+    EXPECT_EQ(stats.total_resolved, 1ULL);
+    EXPECT_EQ(stats.total_cancelled, 0ULL);
+    EXPECT_EQ(stats.pending, 0ULL);
+}
+
 } // namespace
 } // namespace hpactor
