@@ -16,6 +16,7 @@
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/mem/memory_region.hpp>
 #include <hpactor/types/types.hpp>
 
 #include "command_utils.hpp"
@@ -75,10 +76,37 @@ class SystemMemoryCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        ctx.output->header("System Memory");
-        ctx.output->key_value({{"Status", "Memory subsystem active"},
-                               {"Note", "Use /metrics show for detailed memory "
-                                        "stats"}});
+        ctx.output->header("Memory Regions");
+
+        auto& reg = mem::MemoryRegionRegistry::instance();
+
+        std::vector<std::string> cols = {"Region",     "Active", "Limit",
+                                         "Pressure",   "Allocs", "Frees",
+                                         "Corruptions"};
+        std::vector<std::vector<std::string>> rows;
+
+        // Iterate over all 6 region types
+        static constexpr mem::RegionType kRegions[] = {
+            mem::RegionType::kActor,     mem::RegionType::kMessage,
+            mem::RegionType::kCoroutine, mem::RegionType::kNetwork,
+            mem::RegionType::kInternal,  mem::RegionType::kHibernate};
+
+        for (auto region : kRegions) {
+            auto snap = reg.snapshot(region);
+            rows.push_back({
+                mem::to_string(region),
+                format_bytes(snap.active_bytes),
+                snap.limit.hard_limit_bytes > 0
+                    ? format_bytes(snap.limit.hard_limit_bytes)
+                    : "unlimited",
+                mem::to_string(snap.pressure),
+                std::to_string(snap.alloc_count),
+                std::to_string(snap.free_count),
+                std::to_string(snap.corruption_events),
+            });
+        }
+
+        ctx.output->table(cols, rows);
         return result<void>::make();
     }
 };

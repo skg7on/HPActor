@@ -22,6 +22,9 @@
 namespace hpactor {
 namespace cli {
 
+/// \brief Format a byte count as a human-readable string (e.g. "1.2 MB").
+std::string format_bytes(uint64_t bytes);
+
 inline ActorId parse_actor_id(const std::string& s) {
     uint64_t raw = 0;
     int base = 10;
