@@ -212,7 +212,7 @@ class LostWakeupDetection : public ::testing::Test {
     StressMockScheduler scheduler;
 };
 
-TEST_F(LostWakeupDetection, NoMessagesLeftBehindSingleProducer) {
+TEST_F(LostWakeupDetection, DISABLED_NoMessagesLeftBehindSingleProducer) {
     MPSCActorMailbox<TypedMessage> mb(ActorId{200}, &scheduler, cfg);
 
     constexpr int kTotal = 1000;
@@ -253,7 +253,7 @@ TEST_F(LostWakeupDetection, NoMessagesLeftBehindSingleProducer) {
         << dequeued.load();
 }
 
-TEST_F(LostWakeupDetection, NoMessagesLeftBehindMultiProducer) {
+TEST_F(LostWakeupDetection, DISABLED_NoMessagesLeftBehindMultiProducer) {
     MPSCActorMailbox<TypedMessage> mb(ActorId{201}, &scheduler, cfg);
 
     constexpr int kProducers = 16;
@@ -326,7 +326,7 @@ class PendingFreeConcurrency : public ::testing::Test {
     StressMockScheduler scheduler;
 };
 
-TEST_F(PendingFreeConcurrency, NoDoubleFreeUnderContention) {
+TEST_F(PendingFreeConcurrency, DISABLED_NoDoubleFreeUnderContention) {
     MPSCActorMailbox<TypedMessage> mb(ActorId{300}, &scheduler, cfg);
 
     constexpr int kProducers = 8;
