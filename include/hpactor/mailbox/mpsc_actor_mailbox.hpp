@@ -562,6 +562,14 @@ template <typename T> class MPSCActorMailbox {
     ///       \c mailbox_was_empty_ is set to \c true, re-arming the
     ///       edge-triggered wakeup for the next enqueue.
     T* dequeue() noexcept {
+        // Re-arm the edge-triggered wakeup flag BEFORE dequeue so that
+        // concurrent producers see it as true when the mailbox becomes
+        // empty.  This closes a race where a producer enqueues between
+        // our dequeue and the post-dequeue re-arm, finds the flag still
+        // false, and skips notify_ready — orphaning the message.
+        // If the mailbox is still non-empty after dequeue the flag is
+        // disarmed below.
+        mailbox_was_empty_.store(true, std::memory_order_release);
         lock_consumer();
         T* node = lanes_.dequeue();
 
@@ -577,6 +585,9 @@ template <typename T> class MPSCActorMailbox {
                     // Re-enqueue to lane 0, suppress wakeup.
                     MailboxEnvelopeMeta re_meta{};
                     enqueue_reserved(node, re_meta, 0, true);
+                    // The re-enqueued message makes the mailbox non-empty.
+                    // Disarm the flag we set at the top of dequeue.
+                    mailbox_was_empty_.store(false, std::memory_order_release);
                     unlock_consumer();
                     return nullptr;
                 }
@@ -595,6 +606,11 @@ template <typename T> class MPSCActorMailbox {
                     reservation_.release(estimate_node_bytes(*node));
                 }
             }
+            // Fault-injected drop: if the mailbox is non-empty the
+            // wakeup flag must stay disarmed.
+            if (!empty()) {
+                mailbox_was_empty_.store(false, std::memory_order_release);
+            }
             unlock_consumer();
             return nullptr;
         }
@@ -611,8 +627,11 @@ template <typename T> class MPSCActorMailbox {
             }
             total_dequeued_.fetch_add(1, std::memory_order_relaxed);
             update_pressure_state();
-            if (empty()) {
-                mailbox_was_empty_.store(true, std::memory_order_release);
+            if (!empty()) {
+                // Mailbox still has messages after dequeue — disarm the
+                // flag so the next true empty→non-empty transition is
+                // detected by enqueue_reserved.
+                mailbox_was_empty_.store(false, std::memory_order_release);
             }
             drain_overflow();
         }
