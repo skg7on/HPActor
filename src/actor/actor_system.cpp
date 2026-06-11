@@ -43,6 +43,7 @@
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
 #include <hpactor/mem/std_allocator.hpp>
+#include <hpactor/metrics/metrics_actor.hpp>
 #include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/net/async_io_fwd.hpp>
@@ -153,6 +154,9 @@ ActorSystem::ActorSystem(const Config& config)
         delivery_pipeline_->set_metrics(metrics_ring_buffer_.get());
         backpressure_coordinator_->set_metrics_ring_buffer(
             metrics_ring_buffer_.get());
+
+        auto m_actor = spawn<metrics::MetricsActor>(metrics_ring_buffer_);
+        metrics_actor_ = static_cast<metrics::MetricsActor*>(m_actor.get().get());
     }
 
     // ── Logging subsystem ──────────────────────────────────────────────
@@ -521,6 +525,10 @@ void ActorSystem::for_each_actor(
 
 cli::CliActor* ActorSystem::cli_actor() const {
     return cli_actor_.get();
+}
+
+metrics::MetricsActor* ActorSystem::metrics_actor() const {
+    return metrics_actor_;
 }
 
 // ── Dead-letter queue ───────────────────────────────────────────────────────

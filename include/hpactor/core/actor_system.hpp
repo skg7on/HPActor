@@ -84,6 +84,10 @@ namespace cli {
 class CliActor;
 } // namespace cli
 
+namespace metrics {
+class MetricsActor;
+} // namespace metrics
+
 // Scheduler interface forward declaration
 namespace sched {
 class IScheduler;
@@ -407,6 +411,11 @@ class ActorSystem {
     auto* metrics_ring_buffer() const {
         return metrics_ring_buffer_.get();
     }
+
+    /// \brief MetricsActor instance.
+    ///
+    /// Returns \c nullptr if metrics are disabled or not yet spawned.
+    metrics::MetricsActor* metrics_actor() const;
 
     // ── CLI ───────────────────────────────────────────────────────────────
 
@@ -786,9 +795,10 @@ class ActorSystem {
     // CLI actor (DaemonActor, spawned when cli.enabled = true)
     std::shared_ptr<cli::CliActor> cli_actor_;
 
-    // Metrics configuration and ring buffer
+    // Metrics configuration, ring buffer, and actor
     metrics::MetricsConfig metrics_config_;
     std::shared_ptr<metrics::MpscRingBuffer<metrics::MetricEvent>> metrics_ring_buffer_;
+    metrics::MetricsActor* metrics_actor_{nullptr};
 
     // Logging subsystem
     log::LogConfig logging_config_;

@@ -12,8 +12,14 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/cli/cli_types.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/core/actor_system.hpp>
+#include <hpactor/metrics/metrics_actor.hpp>
+
+#include <cstdio>
+#include <string>
 
 namespace hpactor {
 namespace cli {
@@ -33,7 +39,18 @@ class MetricsShowCommand final : public ICommand {
 
     result<void> execute(CommandContext& ctx) const override {
         ctx.output->header("Metrics");
-        ctx.output->raw("metrics show — not yet implemented");
+        auto* sys = ctx.system;
+        if (!sys) {
+            ctx.output->error("Internal error: no actor system");
+            return result<void>::make();
+        }
+        auto* metrics_actor = sys->metrics_actor();
+        if (!metrics_actor) {
+            ctx.output->raw("Metrics subsystem is not enabled.");
+            return result<void>::make();
+        }
+        std::string snapshot = metrics_actor->format_snapshot();
+        ctx.output->raw(snapshot);
         return result<void>::make();
     }
 };
@@ -52,7 +69,31 @@ class TopologyShowCommand final : public ICommand {
 
     result<void> execute(CommandContext& ctx) const override {
         ctx.output->header("Topology");
-        ctx.output->raw("topology show — not yet implemented");
+        auto* sys = ctx.system;
+        if (!sys) {
+            ctx.output->error("Internal error: no actor system");
+            return result<void>::make();
+        }
+
+        std::string tree;
+        tree += "ActorSystem";
+        auto* sched = sys->scheduler();
+        if (sched) {
+            tree += " (" + std::to_string(sched->worker_count()) +
+                    " scheduler threads, A2WS)";
+        }
+        tree += "\n";
+
+        sys->for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
+            auto meta = actor.to_metadata();
+            char line[256];
+            const char* marker = actor.is_system_actor() ? " [system]" : "";
+            int n = snprintf(line, sizeof(line), "  %s%s\n",
+                             meta.actor_type.c_str(), marker);
+            tree.append(line, static_cast<size_t>(n));
+        });
+
+        ctx.output->raw(tree);
         return result<void>::make();
     }
 };
