@@ -21,6 +21,7 @@ namespace hpactor::sched {
 
 TimingWheel::TimingWheel(int64_t tick_ns, uint32_t num_levels)
     : tick_ns_(tick_ns), num_levels_(num_levels), levels_(num_levels),
+      level_ranges_(num_levels),
       current_time_(std::chrono::steady_clock::now().time_since_epoch().count()) {
     // Initialize each level
     // Level 0: 256 buckets of tick_ns each
@@ -32,6 +33,13 @@ TimingWheel::TimingWheel(int64_t tick_ns, uint32_t num_levels)
         levels_[level].buckets.resize(num_buckets);
         levels_[level].num_buckets = num_buckets;
         levels_[level].mask = num_buckets - 1;
+
+        // Precompute range for this level: tick_ns * 256^(level+1)
+        int64_t range = tick_ns_;
+        for (uint32_t k = 0; k <= level; ++k) {
+            range *= 256;
+        }
+        level_ranges_[level] = range;
     }
 }
 
@@ -68,9 +76,8 @@ uint64_t
 TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {
     auto* timer = new Timer;
     timer->expire_ns = expire_ns;
-    timer->id = next_timer_id_.fetch_add(1);
+    timer->id = next_timer_id_++;
     timer->callback = std::move(callback);
-    timer->cancelled = false;
 
     insert_timer(timer);
     return timer->id;
@@ -97,16 +104,11 @@ void TimingWheel::insert_timer(Timer* timer) {
 
     // Calculate which level and bucket
     int64_t diff = expire - now;
-    uint32_t level = 0;
+    uint32_t level = num_levels_ - 1; // default to highest level
 
-    // Find the appropriate level for this timer
-    // Level covers tick_ns * 256^(level+1) time range
+    // Find the appropriate level for this timer using precomputed ranges.
     for (uint32_t l = 0; l < num_levels_; ++l) {
-        int64_t level_range = tick_ns_;
-        for (uint32_t k = 0; k <= l; ++k) {
-            level_range *= 256;
-        }
-        if (diff < level_range) {
+        if (diff < level_ranges_[l]) {
             level = l;
             break;
         }
@@ -136,7 +138,7 @@ TimingWheel::Timer* TimingWheel::remove_timer(uint64_t timer_id) {
     // This is O(buckets) but timers at higher levels are fewer
     for (auto& bucket : levels_[level].buckets) {
         for (auto it = bucket.begin(); it != bucket.end(); ++it) {
-            if ((*it)->id == timer_id) {
+            if (((*it)->id & 0xFFFFFFFFFFFFULL) == timer_id) {
                 Timer* timer = *it;
                 bucket.erase(it);
                 return timer;
@@ -205,11 +207,6 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
 
                 for (auto it = bucket.begin(); it != bucket.end();) {
                     Timer* timer = *it;
-                    if (timer->cancelled) {
-                        it = bucket.erase(it);
-                        delete timer;
-                        continue;
-                    }
 
                     if (timer->expire_ns <= now_ns) {
                         // Collect for deferred fire outside the lock.
@@ -224,7 +221,7 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
                             // at this (lower) level
                             uint32_t lower_level = level - 1;
                             int64_t lower_offset = now_ns / tick_ns_;
-                            for (uint32_t l = 0; l <= lower_level; ++l) {
+                            for (uint32_t l = 0; l < lower_level; ++l) {
                                 lower_offset /= 256;
                             }
                             uint32_t lower_bucket =
@@ -233,10 +230,9 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
 
                             timer->id &= 0xFFFFFFFFFFFFULL;
                             timer->id |= (static_cast<uint64_t>(lower_level) << 48);
-                            bucket.erase(it);
+                            it = bucket.erase(it);
                             levels_[lower_level].buckets[lower_bucket].push_back(
                                 timer);
-                            it = bucket.begin(); // Reset since we erased
                             continue;
                         }
                         ++it;
