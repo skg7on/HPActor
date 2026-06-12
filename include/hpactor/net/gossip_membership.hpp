@@ -143,6 +143,7 @@ class GossipMembership : public IServiceDiscovery {
     FRIEND_TEST(GossipProtocolIntegrationTest, MemberChangeCallback);
     FRIEND_TEST(GossipProtocolIntegrationTest, TombstonePurging);
     FRIEND_TEST(GossipProtocolIntegrationTest, FaultInjectionPacketLoss);
+    FRIEND_TEST(GossipProtocolIntegrationTest, FailureDetectionEndToEnd);
 #endif
 
   private:

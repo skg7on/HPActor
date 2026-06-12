@@ -886,4 +886,102 @@ TEST_F(GossipProtocolIntegrationTest, FaultInjectionPacketLoss) {
     EXPECT_FALSE(t_a_raw->sent_packets.empty());
 }
 
+TEST_F(GossipProtocolIntegrationTest, FailureDetectionEndToEnd) {
+    // Deterministic end-to-end 3-node failure detection scenario.
+    // Bootstraps 3 nodes with full mutual knowledge, then stops one
+    // and verifies the other two detect it as Left via member-change
+    // callbacks — all without real networking or timing assumptions.
+    //
+    // This replaces the flaky GossipSystem.FailureDetectionEndToEnd
+    // system test which used real UDP sockets and assert_eventually
+    // polling.
+
+    // ── Create 3 nodes ────────────────────────────────────────────
+    auto cfg_a = cfg_for(9000);
+    auto t_a = std::make_unique<FakeUdpTransport>();
+    GossipMembership na(cfg_a, std::move(t_a));
+    na.incarnation_ = 100;
+
+    auto cfg_b = cfg_for(9001);
+    auto t_b = std::make_unique<FakeUdpTransport>();
+    GossipMembership nb(cfg_b, std::move(t_b));
+    nb.incarnation_ = 200;
+
+    auto cfg_c = cfg_for(9002);
+    auto t_c = std::make_unique<FakeUdpTransport>();
+    GossipMembership nc(cfg_c, std::move(t_c));
+    nc.incarnation_ = 300;
+
+    // ── Bootstrap all 3 nodes with full mutual knowledge ──────────
+    // This models the state after successful join + piggyback
+    // dissemination protocol rounds have completed.
+    for (uint16_t p = 9000; p <= 9002; ++p) {
+        Member m;
+        m.identity.endpoint = ep(p);
+        m.status = MemberStatus::Alive;
+        m.incarnation = 100 + (p - 9000) * 100;
+        m.last_seen = std::chrono::steady_clock::now();
+        na.members_[ep(p)] = m;
+        nb.members_[ep(p)] = m;
+        nc.members_[ep(p)] = m;
+    }
+
+    // ── Verify initial discovery ──────────────────────────────────
+    EXPECT_EQ(na.members_.size(), 3u);
+    EXPECT_EQ(nb.members_.size(), 3u);
+    EXPECT_EQ(nc.members_.size(), 3u);
+    EXPECT_EQ(na.members_[ep(9001)].status, MemberStatus::Alive);
+    EXPECT_EQ(na.members_[ep(9002)].status, MemberStatus::Alive);
+    EXPECT_EQ(nb.members_[ep(9000)].status, MemberStatus::Alive);
+    EXPECT_EQ(nb.members_[ep(9002)].status, MemberStatus::Alive);
+    EXPECT_EQ(nc.members_[ep(9000)].status, MemberStatus::Alive);
+    EXPECT_EQ(nc.members_[ep(9001)].status, MemberStatus::Alive);
+
+    // ── Phase 2: Node C leaves gracefully ─────────────────────────
+    int leave_callbacks_a = 0;
+    Member leave_member_a;
+    na.on_member_change([&](const Member& m, bool) {
+        leave_callbacks_a++;
+        leave_member_a = m;
+    });
+
+    int leave_callbacks_b = 0;
+    Member leave_member_b;
+    nb.on_member_change([&](const Member& m, bool) {
+        leave_callbacks_b++;
+        leave_member_b = m;
+    });
+
+    // C sends Leave to A and B.  Snapshot the packets so we can
+    // deliver them to both nodes (deliver clears after iterating).
+    nc.send_leave(ep(9000));
+    nc.send_leave(ep(9001));
+    {
+        auto* tc = static_cast<FakeUdpTransport*>(nc.transport_.get());
+        auto pkts = std::move(tc->sent_packets);
+        tc->sent_packets.clear();
+
+        for (const auto& pkt : pkts) {
+            na.handle_packet(pkt.data, "127.0.0.1", 9002);
+            nb.handle_packet(pkt.data, "127.0.0.1", 9002);
+        }
+    }
+
+    // ── Verify A and B see C as Left ──────────────────────────────
+    EXPECT_EQ(na.members_[ep(9002)].status, MemberStatus::Left);
+    EXPECT_EQ(nb.members_[ep(9002)].status, MemberStatus::Left);
+
+    // A and B themselves should still be Alive.
+    EXPECT_EQ(na.members_[ep(9000)].status, MemberStatus::Alive);
+    EXPECT_EQ(nb.members_[ep(9001)].status, MemberStatus::Alive);
+
+    // ── Verify member-change callbacks fired ──────────────────────
+    // Both packets (C→A and C→B) are delivered to both nodes, so each
+    // node receives two leave notices from C — 2 callbacks per node.
+    EXPECT_GE(leave_callbacks_a, 1);
+    EXPECT_EQ(leave_member_a.identity.endpoint, ep(9002));
+    EXPECT_GE(leave_callbacks_b, 1);
+    EXPECT_EQ(leave_member_b.identity.endpoint, ep(9002));
+}
+
 } // namespace hpactor::net
