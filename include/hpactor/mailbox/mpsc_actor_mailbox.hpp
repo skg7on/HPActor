@@ -663,8 +663,14 @@ template <typename T> class MPSCActorMailbox {
         if (!node)
             return false;
         out = std::move(*node);
-        node->~T();
-        mem::deallocate(node);
+        // Defer freeing `node` by one dequeue: a concurrent producer may hold
+        // `prev = node` from head_.exchange() and write prev->mpsc_next after
+        // we return. Freeing immediately causes a use-after-free that leaves
+        // stub_.mpsc_next == nullptr permanently, causing the consumer spin at
+        // mpsc_mailbox.hpp:66 to never exit. set_pending_free destroys+frees
+        // the *previously* staged node (safe — no producer references it) and
+        // stages `node` for the next call.
+        lanes_.set_pending_free(node);
         return true;
     }
 
