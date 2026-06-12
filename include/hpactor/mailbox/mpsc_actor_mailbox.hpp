@@ -158,6 +158,10 @@ template <typename T> class MPSCActorMailbox {
     ///       thread. The registered function must be safe to call from any
     ///       thread.
     void set_continuation_callback(ActorContinuationCallback callback) {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_continuation_callback: mailbox already in active use");
+#endif
         continuation_callback_ = std::move(callback);
     }
 
@@ -220,6 +224,10 @@ template <typename T> class MPSCActorMailbox {
     ///       the mailbox is used concurrently, or from the actor's own
     ///       thread during a quiescent period.
     void set_rate_limiter(std::unique_ptr<ActorRateLimiter> limiter) noexcept {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_rate_limiter: mailbox already in active use");
+#endif
         rate_limiter_ = std::move(limiter);
     }
 
@@ -238,6 +246,10 @@ template <typename T> class MPSCActorMailbox {
     ///       thread during a quiescent period.
     void set_admission_policies(
         std::shared_ptr<std::vector<std::unique_ptr<IAdmissionPolicy>>> policies) noexcept {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_admission_policies: mailbox already in active use");
+#endif
         admission_policies_ = std::move(policies);
     }
 
@@ -304,6 +316,10 @@ template <typename T> class MPSCActorMailbox {
     ///       (the mailbox owns it). After a rejection where the overflow
     ///       handler has not consumed it, \p msg remains valid.
     EnqueueResult try_push(T&& msg, MailboxEnvelopeMeta meta = {}) noexcept {
+#ifdef HPACTOR_DEBUG
+        in_active_use_.store(true, std::memory_order_release);
+#endif
+
         FAULT_INJECT("hpactor.mailbox.try_push.fail") {
             EnqueueResult r;
             r.code = EnqueueResultCode::Rejected;
@@ -335,22 +351,24 @@ template <typename T> class MPSCActorMailbox {
 
         // System messages use the dedicated system lane.
         if (lane == MultiLaneQueue<T>::kSystemLaneSentinel) {
-            if (static_cast<uint32_t>(
-                    lanes_.lane_depth(MultiLaneQueue<T>::kSystemLaneSentinel)) >=
-                config_.protected_system_messages) {
-                update_pressure_state(/*hard_failure=*/true);
-                total_rejected_.fetch_add(1, std::memory_order_relaxed);
-                EnqueueResult r;
-                r.code = EnqueueResultCode::Rejected;
-                r.target = actor_id_;
-                r.depth = static_cast<uint32_t>(lanes_.total_depth());
-                r.capacity = config_.capacity.max_messages;
-                r.bytes = reservation_.queued_bytes();
-                r.byte_capacity = config_.capacity.max_bytes;
-                r.pressure_ratio = pressure_ratio();
-                r.pressure_state = pressure_state_.current_state();
-                return r;
-            }
+            uint32_t cur = system_lane_reserved_.load(std::memory_order_acquire);
+            do {
+                if (cur >= config_.protected_system_messages) {
+                    update_pressure_state(/*hard_failure=*/true);
+                    total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                    EnqueueResult r;
+                    r.code = EnqueueResultCode::Rejected;
+                    r.target = actor_id_;
+                    r.depth = static_cast<uint32_t>(lanes_.total_depth());
+                    r.capacity = config_.capacity.max_messages;
+                    r.bytes = reservation_.queued_bytes();
+                    r.byte_capacity = config_.capacity.max_bytes;
+                    r.pressure_ratio = pressure_ratio();
+                    r.pressure_state = pressure_state_.current_state();
+                    return r;
+                }
+            } while (!system_lane_reserved_.compare_exchange_weak(
+                cur, cur + 1, std::memory_order_acq_rel, std::memory_order_acquire));
             void* raw =
                 mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
             auto* node = new (raw) T(std::move(msg));
@@ -412,6 +430,8 @@ template <typename T> class MPSCActorMailbox {
                     return make_result(pressure_state_.code_after_accept());
                 }
                 result.code = EnqueueResultCode::Rejected;
+                total_rejected_.fetch_add(1, std::memory_order_relaxed);
+                update_pressure_state(/*hard_failure=*/true);
             }
             return result;
         }
@@ -503,7 +523,6 @@ template <typename T> class MPSCActorMailbox {
         FAULT_INJECT("hpactor.mailbox.enqueue_reserved.drop") {
             return; // drop after capacity committed
         }
-        bool was_empty = empty();
         lanes_.enqueue(node, lane_idx);
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
         update_max_depth();
@@ -526,7 +545,12 @@ template <typename T> class MPSCActorMailbox {
             metrics_ring_buffer_->try_push(evt);
         }
 
-        if (was_empty && !suppress_wakeup) {
+        // Edge-triggered wakeup: always attempt to claim the wakeup right.
+        // If mailbox_was_empty_ was true, we are the first enqueue after
+        // the consumer observed emptiness — notify the scheduler.
+        // Spurious wakeups are safe: the consumer dequeues, finds nothing,
+        // and returns to idle.
+        if (!suppress_wakeup) {
             bool expected = true;
             if (mailbox_was_empty_.compare_exchange_strong(
                     expected, false, std::memory_order_acq_rel,
@@ -562,6 +586,9 @@ template <typename T> class MPSCActorMailbox {
     ///       \c mailbox_was_empty_ is set to \c true, re-arming the
     ///       edge-triggered wakeup for the next enqueue.
     T* dequeue() noexcept {
+#ifdef HPACTOR_DEBUG
+        in_active_use_.store(true, std::memory_order_release);
+#endif
         // Re-arm the edge-triggered wakeup flag BEFORE dequeue so that
         // concurrent producers see it as true when the mailbox becomes
         // empty.  This closes a race where a producer enqueues between
@@ -624,6 +651,7 @@ template <typename T> class MPSCActorMailbox {
                 reservation_.release(bytes);
             } else {
                 system_lane_bytes_.fetch_sub(bytes, std::memory_order_relaxed);
+                system_lane_reserved_.fetch_sub(1, std::memory_order_release);
             }
             total_dequeued_.fetch_add(1, std::memory_order_relaxed);
             update_pressure_state();
@@ -636,6 +664,21 @@ template <typename T> class MPSCActorMailbox {
             drain_overflow();
         }
         unlock_consumer();
+
+        // Double-check after unlock: a producer may have enqueued between
+        // our dequeue() and the mailbox_was_empty_ store above. If the
+        // producer saw our store, its CAS already triggered notify_ready.
+        // If not, the producer's CAS failed because it read false —
+        // we must self-requeue.
+        if (!lanes_.empty()) {
+            bool expected = true;
+            if (mailbox_was_empty_.compare_exchange_strong(
+                    expected, false, std::memory_order_acq_rel,
+                    std::memory_order_acquire)) {
+                // We claimed the wakeup — no producer did. Self-notify.
+                scheduler_->notify_ready(actor_id_, 0, 0);
+            }
+        }
 
         if (metrics_ring_buffer_) [[unlikely]] {
             metrics::MetricEvent evt{};
@@ -721,6 +764,10 @@ template <typename T> class MPSCActorMailbox {
     ///       own thread during a quiescent period.
     void
     set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf) noexcept {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_metrics_ring_buffer: mailbox already in active use");
+#endif
         metrics_ring_buffer_ = buf;
     }
 
@@ -734,6 +781,10 @@ template <typename T> class MPSCActorMailbox {
     ///       before the mailbox is used concurrently, or from the actor's
     ///       own thread during a quiescent period.
     void set_logger(log::Logger* logger) noexcept {
+#ifdef HPACTOR_DEBUG
+        assert(!in_active_use_.load(std::memory_order_acquire) &&
+               "set_logger: mailbox already in active use");
+#endif
         logger_ = logger;
     }
 
@@ -752,9 +803,19 @@ template <typename T> class MPSCActorMailbox {
     ///       or the consumer. Call from the test thread with the scheduler
     ///       paused (\c scheduler_threads = 0).
     void inject_for_test(T* node) noexcept {
-        reservation_.inject_count(estimate_node_bytes(*node));
+        uint64_t bytes = estimate_node_bytes(*node);
+        uint8_t lane = 0;
+        if constexpr (std::is_same_v<T, TypedMessage>) {
+            if (is_system_message(node->type_id())) {
+                lane = MultiLaneQueue<T>::kSystemLaneSentinel;
+                system_lane_bytes_.fetch_add(bytes, std::memory_order_relaxed);
+            }
+        }
+        if (lane != MultiLaneQueue<T>::kSystemLaneSentinel) {
+            reservation_.inject_count(bytes);
+        }
         total_enqueued_.fetch_add(1, std::memory_order_relaxed);
-        lanes_.enqueue(node, 0);
+        lanes_.enqueue(node, lane);
         mailbox_was_empty_.store(false, std::memory_order_release);
     }
 
@@ -948,8 +1009,8 @@ template <typename T> class MPSCActorMailbox {
         if (empty()) {
             mailbox_was_empty_.store(true, std::memory_order_release);
         }
-        unlock_consumer();
         lanes_.set_pending_free(node);
+        unlock_consumer();
         return true;
     }
 
@@ -987,8 +1048,8 @@ template <typename T> class MPSCActorMailbox {
         if (empty()) {
             mailbox_was_empty_.store(true, std::memory_order_release);
         }
-        unlock_consumer();
         lanes_.set_pending_free(node);
+        unlock_consumer();
         return true;
     }
 
@@ -1007,17 +1068,23 @@ template <typename T> class MPSCActorMailbox {
             return; // pretend drained
         }
         while (config_.overflow_policy == OverflowPolicy::SpillToOverflowQueue) {
-            if (reservation_.try_reserve(0, config_.capacity.max_messages,
-                                         config_.capacity.max_bytes) !=
-                detail::ReservationResult::Reserved)
-                break;
+            // Pop first so we know the actual byte size for reservation.
             T overflow_msg;
-            if (!overflow_queue_.try_pop(overflow_msg)) {
-                reservation_.release(0);
+            if (!overflow_queue_.try_pop(overflow_msg))
+                break;
+            uint64_t bytes = estimate_node_bytes(overflow_msg);
+            auto reserve_result = reservation_.try_reserve(
+                bytes, config_.capacity.max_messages, config_.capacity.max_bytes);
+            if (reserve_result != detail::ReservationResult::Reserved) {
+                // Cannot drain now — push back to overflow queue.
+                // If push-back fails (queue full), drop the message.
+                if (!overflow_queue_.try_push(std::move(overflow_msg))) {
+                    total_dropped_.fetch_add(1, std::memory_order_relaxed);
+                }
                 break;
             }
             MailboxEnvelopeMeta meta;
-            meta.estimated_bytes = estimate_node_bytes(overflow_msg);
+            meta.estimated_bytes = bytes;
             enqueue_reserved(new (mem::allocate(mem::RegionType::kMessage,
                                                 sizeof(T), actor_id_))
                                  T(std::move(overflow_msg)),
@@ -1219,6 +1286,14 @@ template <typename T> class MPSCActorMailbox {
     std::atomic<uint64_t> max_depth_{0};         ///< Peak observed total depth.
     std::atomic<uint64_t> system_lane_bytes_{0}; ///< Byte count in the system
                                                  ///< lane.
+    std::atomic<uint32_t> system_lane_reserved_{0}; ///< Atomic admission
+                                                    ///< counter for system lane
+                                                    ///< depth guard.
+
+    // --- Debug quiescence guard ---
+#ifdef HPACTOR_DEBUG
+    std::atomic<bool> in_active_use_{false};
+#endif
 
     // --- Dependencies ---
     ActorContinuationCallback continuation_callback_; ///< Callback for
