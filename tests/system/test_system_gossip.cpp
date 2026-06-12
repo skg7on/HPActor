@@ -116,7 +116,10 @@ TEST(GossipSystem, TwoNodeJoinAndDiscovery) {
     sys_a.shutdown();
 }
 
-TEST(GossipSystem, FailureDetectionEndToEnd) {
+// Disabled: timing-dependent real-UDP test, superseded by the deterministic
+// GossipProtocolIntegrationTest.FailureDetectionEndToEnd in
+// test_gossip_membership.cpp.
+TEST(GossipSystem, DISABLED_FailureDetectionEndToEnd) {
     if (coverage_build())
         GTEST_SKIP() << "Gossip tests are non-deterministic under coverage";
     if (!ensure_gossip_ports(50000, 3))
