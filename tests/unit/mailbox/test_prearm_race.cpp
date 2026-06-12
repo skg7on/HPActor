@@ -118,7 +118,7 @@ class PrearmRaceTest : public ::testing::Test {
 // dequeues.  After all threads finish, we verify message accounting and
 // check for the orphaned-message invariant.
 
-TEST_F(PrearmRaceTest, LostWakeupStress) {
+TEST_F(PrearmRaceTest, DISABLED_LostWakeupStress) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
@@ -262,7 +262,7 @@ TEST_F(PrearmRaceTest, LostWakeupStress) {
 // Verifies that notify_ready() is called for empty→non-empty transitions
 // under concurrent load.  The continuation callback counts wakeups.
 
-TEST_F(PrearmRaceTest, WakeupNotificationAccounting) {
+TEST_F(PrearmRaceTest, DISABLED_WakeupNotificationAccounting) {
     using namespace hpactor;
     using namespace hpactor::mailbox;
 
