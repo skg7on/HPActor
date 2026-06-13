@@ -429,6 +429,27 @@ void CliActor::execute_tokens(const std::vector<Token>& tokens) {
         std::string param_value;
         auto* child = node->find_child(tok.value, param_value);
         if (!child) {
+            // If the current node can execute, treat remaining tokens as
+            // positional arguments instead of unknown sub-commands.
+            if (node->execute) {
+                // Collect this token and all remaining tokens as args
+                ctx.args.push_back(tok.value);
+                for (++i; i < tokens.size(); ++i) {
+                    if (tokens[i].type == TokenType::Eof)
+                        break;
+                    if (tokens[i].type == TokenType::Flag) {
+                        ctx.params[tokens[i].value] = "true";
+                        continue;
+                    }
+                    if (tokens[i].type == TokenType::FlagWithArg) {
+                        ctx.params[tokens[i].value] =
+                            tokens[i].arg.value_or("true");
+                        continue;
+                    }
+                    ctx.args.push_back(tokens[i].value);
+                }
+                break;
+            }
             auto suggestion = node->suggest(tok.value);
             std::string err = "Unknown command '" + tok.value + "'";
             if (!suggestion.empty()) {

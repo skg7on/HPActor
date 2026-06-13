@@ -63,17 +63,21 @@ static void print_splash() {
     std::cout
         << "\n"
         << "+--------------------------------------------------------------+\n"
-        << "|     HPActor App 16 — Bench Perf                               |\n"
-        << "|     Actor System Performance Benchmark                        |\n"
+        << "|     HPActor App 16 — Bench Perf                              |\n"
+        << "|     Actor System Performance Benchmark                       |\n"
         << "+--------------------------------------------------------------+\n"
         << "|                                                              |\n"
         << "|  Presets:                                                    |\n"
         << "|    many-actors — 5000 workers, 10us burn, 100Hz              |\n"
         << "|    hot-actor   — 1 hot (500us, 1000Hz) + 1000 cold           |\n"
+        << "|    fan-in      — 5000 workers → 1 collector, 1000Hz          |\n"
+        << "|                                                              |\n"
+        << "|  Actor pool: 5000 cold workers + 10 hot actors               |\n"
+        << "|  Scheduler: 8 threads, 16384 mailbox capacity                |\n"
         << "|                                                              |\n"
         << "|  Try:                                                        |\n"
         << "|    /bench list              — see all presets                |\n"
-        << "|    /bench start many-actors — run throughput test            |\n"
+        << "|    /bench start fan-in      — extreme fan-in stress test     |\n"
         << "|    /bench status            — check progress                 |\n"
         << "|    /bench report            — view results                   |\n"
         << "|    /quit                    — exit                           |\n"
@@ -135,8 +139,6 @@ int main() {
             system.get_actor(w.id())));
     }
 
-    std::cout << "Spawned " << kMaxColdWorkers << " cold workers." << std::endl;
-
     // ── Spawn hot actors ───────────────────────────────────────────────
 
     std::vector<std::shared_ptr<bench_perf::BenchHotActor>> hot_actors;
@@ -152,13 +154,10 @@ int main() {
             system.get_actor(h.id())));
     }
 
-    std::cout << "Spawned " << kMaxHotActors << " hot actors." << std::endl;
-
     // ── Wire coordinator ───────────────────────────────────────────────
 
-    auto* coord_raw = std::static_pointer_cast<bench_perf::BenchCoordinatorActor>(
-                          system.get_actor(coordinator.id()))
-                          .get();
+    auto* coord_raw =
+        static_cast<bench_perf::BenchCoordinatorActor*>(coordinator.get().get());
     coord_raw->set_worker_addrs(cold_addrs, hot_addrs, collector.address());
 
     // Let actors initialize before CLI takes over

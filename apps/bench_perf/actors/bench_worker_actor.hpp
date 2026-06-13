@@ -42,6 +42,8 @@ namespace hpactor::apps::bench_perf {
 /// collector. Group = 0 (cold).
 class BenchWorkerActor : public EventBasedActor {
   public:
+    static constexpr const char* kActorTypeName = "BenchWorkerActor";
+
     BenchWorkerActor(ActorContext* ctx, ActorSystem& sys,
                      ActorAddress collector_addr, uint32_t worker_index)
         : EventBasedActor(ctx, sys), collector_addr_(collector_addr),
