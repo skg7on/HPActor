@@ -59,6 +59,8 @@ struct BenchmarkPreset {
 /// CLI commands.
 class BenchCoordinatorActor : public EventBasedActor {
   public:
+    static constexpr const char* kActorTypeName = "BenchCoordinatorActor";
+
     BenchCoordinatorActor(ActorContext* ctx, ActorSystem& sys)
         : EventBasedActor(ctx, sys),
           epoch_start_(std::chrono::steady_clock::now()) {
@@ -134,6 +136,14 @@ class BenchCoordinatorActor : public EventBasedActor {
         }
         if (!preset) {
             last_error_ = "Unknown preset: " + preset_name;
+            return;
+        }
+
+        // Guard against early CLI commands arriving before main() finishes
+        // wiring
+        if (cold_worker_addrs_.empty() && hot_worker_addrs_.empty()) {
+            last_error_ =
+                "Workers not yet initialized. Please wait a moment and try again.";
             return;
         }
 

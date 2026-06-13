@@ -46,6 +46,8 @@ namespace hpactor::apps::bench_perf {
 /// divided by elapsed seconds.
 class BenchCollectorActor : public EventBasedActor {
   public:
+    static constexpr const char* kActorTypeName = "BenchCollectorActor";
+
     explicit BenchCollectorActor(ActorContext* ctx, ActorSystem& sys)
         : EventBasedActor(ctx, sys),
           epoch_start_(std::chrono::steady_clock::now()) {
@@ -65,6 +67,7 @@ class BenchCollectorActor : public EventBasedActor {
     }
 
     std::vector<uint8_t> serialize_state() const override {
+        const_cast<BenchCollectorActor*>(this)->recompute_percentiles();
         return build_report_vec();
     }
 

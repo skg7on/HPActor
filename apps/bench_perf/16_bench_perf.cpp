@@ -156,9 +156,8 @@ int main() {
 
     // ── Wire coordinator ───────────────────────────────────────────────
 
-    auto* coord_raw = std::static_pointer_cast<bench_perf::BenchCoordinatorActor>(
-                          system.get_actor(coordinator.id()))
-                          .get();
+    auto* coord_raw =
+        static_cast<bench_perf::BenchCoordinatorActor*>(coordinator.get().get());
     coord_raw->set_worker_addrs(cold_addrs, hot_addrs, collector.address());
 
     // Let actors initialize before CLI takes over

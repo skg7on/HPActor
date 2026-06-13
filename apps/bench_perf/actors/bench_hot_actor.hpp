@@ -42,6 +42,8 @@ namespace hpactor::apps::bench_perf {
 /// samples with \c group = 1 (hot) to the collector.
 class BenchHotActor : public EventBasedActor {
   public:
+    static constexpr const char* kActorTypeName = "BenchHotActor";
+
     BenchHotActor(ActorContext* ctx, ActorSystem& sys,
                   ActorAddress collector_addr, uint32_t hot_index = 0)
         : EventBasedActor(ctx, sys), collector_addr_(collector_addr),
