@@ -94,7 +94,7 @@ class BenchStartCommand final : public ICommand {
 
         if (ctx.args.empty()) {
             ctx.output->error("Usage: /bench start <preset>");
-            ctx.output->raw("Available presets: many-actors, hot-actor");
+            ctx.output->raw("Available presets: many-actors, hot-actor, fan-in");
             return result<void>::make();
         }
 
@@ -427,6 +427,8 @@ class BenchListCommand final : public ICommand {
             "  many-actors  — 5000 workers, 10us burn, 100Hz (throughput test)");
         ctx.output->raw(
             "  hot-actor    — 1 hot actor (500us, 1000Hz) + 1000 cold workers (fairness test)");
+        ctx.output->raw(
+            "  fan-in       — 5000 workers, 1us burn, 1000Hz → single collector (extreme fan-in stress test)");
         ctx.output->raw("");
         ctx.output->raw("Use /bench start <preset> to run.");
         return result<void>::make();
@@ -453,7 +455,8 @@ class BenchHelpCommand final : public ICommand {
 
     result<void> execute(CommandContext& ctx) const override {
         ctx.output->header("Benchmark Commands");
-        ctx.output->raw("  /bench start <preset>  — Start a benchmark run");
+        ctx.output->raw(
+            "  /bench start <preset>  — Start (presets: many-actors, hot-actor, fan-in)");
         ctx.output->raw("  /bench stop            — Stop the current run");
         ctx.output->raw("  /bench status          — Show current run status");
         ctx.output->raw("  /bench report [group]  — Full latency/throughput report");

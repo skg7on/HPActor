@@ -71,6 +71,10 @@ class BenchCoordinatorActor : public EventBasedActor {
             {"hot-actor",
              "1 hot actor (500us, 1000Hz) + 1000 cold workers (10us, 10Hz) — fairness test",
              1000, 10, 10, 1, 500, 1000, 30000});
+        presets_.push_back(
+            {"fan-in",
+             "5000 workers, 1us burn, 1000Hz → single collector — extreme fan-in stress test",
+             5000, 1, 1000, 0, 500, 1000, 30000});
         become(make_behavior());
     }
 
