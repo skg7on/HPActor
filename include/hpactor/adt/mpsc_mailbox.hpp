@@ -15,7 +15,6 @@
 #pragma once
 
 #include <atomic>
-#include <thread>
 
 namespace hpactor::adt {
 
@@ -46,13 +45,6 @@ template <typename T> class MPSCMailbox {
     void enqueue(T* node) noexcept {
         node->mpsc_next.store(nullptr, std::memory_order_relaxed);
         T* prev = head_.exchange(node, std::memory_order_acq_rel);
-        // Full barrier: on ARM64 the exchange(acq_rel) may become
-        // visible before the mpsc_next store below, causing the
-        // consumer to see head_ updated but tail_->mpsc_next == nullptr
-        // and spin forever.  The seq_cst fence forces the exchange to
-        // drain before the store, so the consumer always sees the
-        // updated mpsc_next when it observes the new head_.
-        std::atomic_thread_fence(std::memory_order_seq_cst);
         prev->mpsc_next.store(node, std::memory_order_release);
         count_.fetch_add(1, std::memory_order_release);
     }
@@ -63,6 +55,13 @@ template <typename T> class MPSCMailbox {
     // Callers must serialize through an external lock when the consumer
     // path can be entered from multiple contexts (e.g. normal dispatch
     // and overflow-driven drop_one_oldest).
+    //
+    // On ARM64 the producer's head_.exchange may become visible before
+    // the mpsc_next store, making the oldest element appear temporarily
+    // unreachable.  Rather than spinning (which cannot make progress
+    // when the producer thread is asleep), we return nullptr and let
+    // the caller retry — the RequeueReady mechanism will re-dispatch
+    // the actor once the producer completes the enqueue.
     T* dequeue() noexcept {
         T* t = tail_.load(std::memory_order_acquire);
         T* next = t->mpsc_next.load(std::memory_order_acquire);
@@ -70,34 +69,16 @@ template <typename T> class MPSCMailbox {
         if (next == nullptr) {
             if (head_.load(std::memory_order_acquire) == t)
                 return nullptr;
-            // Bounded spin: the producer has updated head_ but not yet
-            // written mpsc_next.  Yield after a threshold to let the
-            // producer thread run rather than spinning forever.
-            for (int spin = 0;; ++spin) {
-                next = t->mpsc_next.load(std::memory_order_acquire);
-                if (next != nullptr)
-                    break;
-                if (spin >= 1000) {
-                    std::this_thread::yield();
-                    spin = 0;
-                }
-            }
+            // Producer has exchanged head_ but mpsc_next isn't visible
+            // yet — return nullptr, caller will retry.
+            return nullptr;
         }
 
         T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
         if (next_next == nullptr) {
             T* h = head_.load(std::memory_order_acquire);
-            if (h != next) {
-                for (int spin = 0;; ++spin) {
-                    next_next = next->mpsc_next.load(std::memory_order_acquire);
-                    if (next_next != nullptr)
-                        break;
-                    if (spin >= 1000) {
-                        std::this_thread::yield();
-                        spin = 0;
-                    }
-                }
-            }
+            if (h != next)
+                return nullptr; // producer hasn't linked the next node yet
         }
 
         t->mpsc_next.store(next_next, std::memory_order_release);
@@ -105,24 +86,10 @@ template <typename T> class MPSCMailbox {
         if (next_next == nullptr) {
             T* h = head_.load(std::memory_order_acquire);
             if (h != next) {
-                // Producer enqueued between the first head_ check (line 72)
-                // and the chain update (line 80).  The node we are about to
-                // return is no longer the head — a new node was inserted
-                // behind it.  Spin until the producer completes its
-                // mpsc_next store so we can correctly link stub_ to the new
-                // head.  Without this spin, t->mpsc_next stays nullptr while
-                // head_ points past the stub, causing the next dequeue() to
-                // spin forever in the first wait loop (lines 65–67).
-                for (int spin = 0;; ++spin) {
-                    next_next = next->mpsc_next.load(std::memory_order_acquire);
-                    if (next_next != nullptr)
-                        break;
-                    if (spin >= 1000) {
-                        std::this_thread::yield();
-                        spin = 0;
-                    }
-                }
-                t->mpsc_next.store(next_next, std::memory_order_release);
+                // Producer enqueued between head_ check and chain update.
+                // Rather than spinning for mpsc_next, leave the chain as-is
+                // and return nullptr — the next dequeue() will fix it up.
+                return nullptr;
             }
         }
 
