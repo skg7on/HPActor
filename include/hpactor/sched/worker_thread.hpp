@@ -21,6 +21,7 @@
 #include <atomic>
 #include <cstdint>
 #include <functional>
+#include <pthread.h>
 #include <thread>
 #include <vector>
 
@@ -103,6 +104,23 @@ class WorkerThread {
     // Check if running
     bool is_running() const {
         return running_.load(std::memory_order_acquire);
+    }
+
+    /// \brief Native OS thread identifier for CLI introspection.
+    ///
+    /// On Apple platforms, uses \c pthread_threadid_np to obtain a compact
+    /// 64-bit integral ID.  On other platforms, falls back to a hash of
+    /// \c std::thread::id (which is already a small integer on Linux).
+    uint64_t thread_id() const {
+#ifdef __APPLE__
+        uint64_t tid = 0;
+        // const_cast: native_handle() is logically const but std::thread
+        // does not mark it so (known C++ standard library limitation).
+        pthread_threadid_np(const_cast<std::thread&>(thread_).native_handle(), &tid);
+        return tid;
+#else
+        return std::hash<std::thread::id>{}(thread_.get_id());
+#endif
     }
 
     // For scheduling coordination: donation count for work-stealing decisions

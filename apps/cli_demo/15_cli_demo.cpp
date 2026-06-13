@@ -56,6 +56,7 @@
 //     /fault clear           — clear fault schedule
 //     /failure reasons       — list all canonical failure reasons
 //     /failure summary       — failure subsystem status
+//     /system uptime         — show actor system uptime
 //     /system stats          — system-wide statistics
 //     /system memory         — memory subsystem status
 //     /system list           — list all system actors
@@ -144,6 +145,8 @@ static void print_splash() {
         << "║    /fault status        — fault injection system status      ║\n"
         << "║    /failure reasons     — canonical failure reasons          ║\n"
         << "║    /system stats        — system-wide statistics             ║\n"
+        << "║    /system uptime       — actor system uptime                ║\n"
+        << "║    /scheduler workers   — worker threads (with thread ID)    ║\n"
         << "║    /quit                — graceful shutdown                  ║\n"
         << "║                                                              ║\n"
         << "╚══════════════════════════════════════════════════════════════╝\n"

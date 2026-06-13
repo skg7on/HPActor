@@ -321,6 +321,14 @@ class ActorSystem {
         return running_.load(std::memory_order_acquire);
     }
 
+    /// \brief System uptime since construction.
+    ///
+    /// \return Elapsed time in milliseconds since \c ActorSystem construction.
+    std::chrono::milliseconds uptime() const {
+        return std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::steady_clock::now() - start_time_);
+    }
+
     /// \brief Read-only access to the system configuration.
     const Config& config() const {
         return config_;
@@ -762,6 +770,9 @@ class ActorSystem {
     // Use actor_directory_.find() / find_actor() / find_mailbox() /
     // find_context() / insert() / snapshot() / size() / erase()
     // instead of the previous separate maps + mutexes + ID generator.
+
+    // System start time for uptime tracking
+    std::chrono::steady_clock::time_point start_time_;
 
     // Running flag for network thread loop
     std::atomic<bool> running_{true};

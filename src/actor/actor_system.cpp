@@ -81,6 +81,7 @@ void actor_registry::erase(const std::string& name) {
 // -----------------------------------------------------------------------------
 ActorSystem::ActorSystem(const Config& config)
     : config_(config), endpoint_(config.endpoint), registry_(endpoint_),
+      start_time_(std::chrono::steady_clock::now()),
       scheduler_(std::make_unique<sched::HybridScheduler>(
           *this, config.scheduler_threads, 4, config.timer_backend,
           config.scheduler_start_paused)),

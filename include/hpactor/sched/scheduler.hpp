@@ -79,6 +79,7 @@ struct WorkerSnapshot {
     uint64_t cv_escalations{0};
     uint64_t cv_notify_wakes{0};
     uint64_t cv_timeout_wakes{0};
+    uint64_t thread_id{0}; ///< Hashed \c std::thread::id for display.
 };
 
 /// \brief Abstract interface for actor schedulers.
