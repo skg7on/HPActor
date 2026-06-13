@@ -64,6 +64,18 @@ class MetricsActor : public EventBasedActor {
     /// \brief Actor type name constant.
     static constexpr const char* kActorTypeName = "MetricsActor";
 
+    /// \brief Return metadata for CLI introspection.
+    ///
+    /// Overrides the base to report "Running" state rather than falling
+    /// back to "unknown" (MetricsActor does not use the lifecycle system).
+    cli::ActorMeta to_metadata() const override {
+        cli::ActorMeta m;
+        m.actor_id = id().value();
+        m.actor_type = std::string(type_name());
+        m.state = "Running";
+        return m;
+    }
+
   private:
     std::shared_ptr<MpscRingBuffer<MetricEvent>> ring_buffer_;
     MetricRegistry registry_;

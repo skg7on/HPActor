@@ -57,6 +57,18 @@ class CliActor : public DaemonActor {
     /// \brief Actor type name for CLI introspection and actor listing.
     static constexpr const char* kActorTypeName = "CliActor";
 
+    /// \brief Return metadata for CLI introspection.
+    ///
+    /// Overrides the base to report state from is_running() rather than
+    /// falling back to "unknown" (CliActor does not use the lifecycle system).
+    cli::ActorMeta to_metadata() const override {
+        cli::ActorMeta m;
+        m.actor_id = id().value();
+        m.actor_type = std::string(type_name());
+        m.state = running_ ? "Running" : "Stopped";
+        return m;
+    }
+
     /// \brief Construct the CLI actor.
     ///
     /// \param[in] ctx Actor context.
