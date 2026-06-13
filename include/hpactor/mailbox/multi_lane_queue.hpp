@@ -119,31 +119,90 @@ template <typename T> class MultiLaneQueue {
 
     // ── Pending free (deferred destructor) ────────────────────────
 
+    /// \brief Number of deferred-free slots.
+    ///
+    /// Each slot delays destruction by one \c set_pending_free() call,
+    /// giving producers that captured a node via \c head_.exchange()
+    /// more time to complete \c prev->mpsc_next.store() before the node
+    /// is freed.  A single slot (the old design) is prone to
+    /// use-after-free under concurrent load when an OS-preempted
+    /// producer outlasts two \c try_pop() cycles on the same mailbox.
+    static constexpr uint8_t kPendingFreeRingSize = 8;
+
     /// \brief Stage a node for deferred destruction.
     ///
-    /// Destroys and deallocates any previously staged node, then stores
-    /// \p node for the next call. Used to defer destruction of evicted
-    /// nodes until the consumer lock is released.
+    /// Writes \p node into a ring buffer of \c kPendingFreeRingSize
+    /// slots.  When the ring is full, the oldest entry is destroyed and
+    /// deallocated — yielding a multi-cycle deferral window.  This
+    /// prevents the use-after-free that occurs when a producer is
+    /// preempted between \c head_.exchange() and
+    /// \c prev->mpsc_next.store() and the consumer frees the captured
+    /// node on the very next \c set_pending_free().
     ///
     /// \param[in] node Node to stage for deferred destruction. Ownership
     ///                 transfers to the queue.
     /// \note Thread safety: NOT internally locked — caller must serialize.
     void set_pending_free(T* node) noexcept {
-        if (pending_free_) {
-            pending_free_->~T();
-            mem::deallocate(pending_free_);
+        // When the ring is full the slot we are about to overwrite
+        // holds the oldest entry — destroy and deallocate it.
+        if (pending_free_count_ == kPendingFreeRingSize) {
+            T* oldest = pending_free_ring_[pending_free_write_idx_];
+            oldest->~T();
+            mem::deallocate(oldest);
+        } else {
+            pending_free_count_++;
         }
-        pending_free_ = node;
+        pending_free_ring_[pending_free_write_idx_] = node;
+        pending_free_write_idx_ = static_cast<uint8_t>(
+            (pending_free_write_idx_ + 1) % kPendingFreeRingSize);
     }
 
-    /// \brief Release the staged pending-free node without destroying it.
+    /// \brief Drain and destroy all staged pending-free nodes.
     ///
-    /// \return Pointer to the staged node, or \c nullptr if none is staged.
-    ///         The caller assumes ownership.
+    /// Iterates every occupied ring slot, calls the destructor, and
+    /// deallocates the backing memory.  After this call the ring is
+    /// empty.
+    ///
+    /// \note Thread safety: NOT internally locked — caller must serialize.
+    /// \note The old single-slot API returned the staged pointer; this
+    ///       multi-slot variant drains everything in one call.
+    void drain_pending_free() noexcept {
+        uint8_t count = pending_free_count_;
+        // oldest entry is at (write_idx - count) mod ring_size
+        uint8_t idx = static_cast<uint8_t>(
+            (pending_free_write_idx_ + kPendingFreeRingSize - count) %
+            kPendingFreeRingSize);
+        for (uint8_t i = 0; i < count; ++i) {
+            T* node = pending_free_ring_[idx];
+            node->~T();
+            mem::deallocate(node);
+            idx = static_cast<uint8_t>((idx + 1) % kPendingFreeRingSize);
+        }
+        pending_free_count_ = 0;
+        pending_free_write_idx_ = 0;
+    }
+
+    /// \brief Release the first staged pending-free node without
+    ///        destroying it (used by the mailbox destructor).
+    ///
+    /// When the ring contains exactly one entry this behaves like the
+    /// old single-slot API.  When the ring is empty returns \c nullptr.
+    /// Callers that receive a non-null pointer own it and must destroy
+    /// and deallocate it.
+    ///
+    /// \return Pointer to the oldest staged node, or \c nullptr if the
+    ///         ring is empty.
     /// \note Thread safety: NOT internally locked — caller must serialize.
     T* release_pending_free() noexcept {
-        T* p = pending_free_;
-        pending_free_ = nullptr;
+        if (pending_free_count_ == 0)
+            return nullptr;
+        uint8_t idx = static_cast<uint8_t>(
+            (pending_free_write_idx_ + kPendingFreeRingSize - pending_free_count_) %
+            kPendingFreeRingSize);
+        T* p = pending_free_ring_[idx];
+        // Shift remaining entries to keep the ring consistent for any
+        // subsequent set_pending_free / drain_pending_free calls.
+        pending_free_count_--;
         return p;
     }
 
@@ -215,19 +274,15 @@ template <typename T> class MultiLaneQueue {
     /// \brief Drain all lanes and destroy staged free nodes.
     ///
     /// Dequeues every message without destroying them (they are leaked —
-    /// the caller must have already drained them), destroys the pending-free
-    /// node, and resets the lane count to 1.
+    /// the caller must have already drained them), destroys all
+    /// pending-free ring entries, and resets the lane count to 1.
     ///
     /// \note Thread safety: NOT internally locked — caller must ensure no
     ///       concurrent access.
     void reset() noexcept {
         while (dequeue() != nullptr) {
         }
-        if (pending_free_) {
-            pending_free_->~T();
-            mem::deallocate(pending_free_);
-            pending_free_ = nullptr;
-        }
+        drain_pending_free();
         num_user_lanes_ = 1;
     }
 
@@ -235,7 +290,15 @@ template <typename T> class MultiLaneQueue {
     MPSCMailbox<T> system_lane_;
     MPSCMailbox<T> user_lanes_[kMaxUserLanes];
     uint8_t num_user_lanes_{1};
-    T* pending_free_{nullptr};
+
+    // Deferred-free ring buffer: nodes survive kPendingFreeRingSize
+    // set_pending_free() calls before being destroyed.  This gives
+    // preempted producers enough time to complete their mpsc_next
+    // stores, preventing the use-after-free that corrupts the MPSC
+    // chain and causes the consumer to spin forever.
+    T* pending_free_ring_[kPendingFreeRingSize]{};
+    uint8_t pending_free_write_idx_{0};
+    uint8_t pending_free_count_{0};
 };
 
 } // namespace hpactor::mailbox
