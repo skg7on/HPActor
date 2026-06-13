@@ -71,6 +71,9 @@ static void print_splash() {
         << "|    many-actors — 5000 workers, 10us burn, 100Hz              |\n"
         << "|    hot-actor   — 1 hot (500us, 1000Hz) + 1000 cold           |\n"
         << "|                                                              |\n"
+        << "|  Actor pool: 5000 cold workers + 10 hot actors               |\n"
+        << "|  Scheduler: 8 threads, 16384 mailbox capacity               |\n"
+        << "|                                                              |\n"
         << "|  Try:                                                        |\n"
         << "|    /bench list              — see all presets                |\n"
         << "|    /bench start many-actors — run throughput test            |\n"
@@ -135,8 +138,6 @@ int main() {
             system.get_actor(w.id())));
     }
 
-    std::cout << "Spawned " << kMaxColdWorkers << " cold workers." << std::endl;
-
     // ── Spawn hot actors ───────────────────────────────────────────────
 
     std::vector<std::shared_ptr<bench_perf::BenchHotActor>> hot_actors;
@@ -151,8 +152,6 @@ int main() {
         hot_actors.push_back(std::static_pointer_cast<bench_perf::BenchHotActor>(
             system.get_actor(h.id())));
     }
-
-    std::cout << "Spawned " << kMaxHotActors << " hot actors." << std::endl;
 
     // ── Wire coordinator ───────────────────────────────────────────────
 
