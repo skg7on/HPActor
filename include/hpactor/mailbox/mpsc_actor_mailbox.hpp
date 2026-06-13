@@ -132,18 +132,14 @@ template <typename T> class MPSCActorMailbox {
 
     /// \brief Destroy the mailbox.
     ///
-    /// Destroys and deallocates any message still held in the pending-free
-    /// slot. Messages remaining in lanes are leaked — the actor must drain
-    /// the mailbox before destruction.
+    /// Drains and deallocates all pending-free ring entries. Messages
+    /// remaining in lanes are leaked — the actor must drain the mailbox
+    /// before destruction.
     ///
     /// \note The caller must ensure no concurrent \c try_push() or
     ///       \c dequeue() calls are in flight during destruction.
     ~MPSCActorMailbox() {
-        T* p = lanes_.release_pending_free();
-        if (p) {
-            p->~T();
-            mem::deallocate(p);
-        }
+        lanes_.drain_pending_free();
     }
 
     /// \brief Register a callback invoked on the empty→non-empty transition.
