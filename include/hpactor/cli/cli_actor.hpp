@@ -54,6 +54,9 @@ class MemoryStatsReply;
 ///       methods are called from that thread unless noted otherwise.
 class CliActor : public DaemonActor {
   public:
+    /// \brief Actor type name for CLI introspection and actor listing.
+    static constexpr const char* kActorTypeName = "CliActor";
+
     /// \brief Construct the CLI actor.
     ///
     /// \param[in] ctx Actor context.

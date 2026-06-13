@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/pretty_formatter.hpp>
@@ -238,4 +239,12 @@ TEST(SystemStopCommandTest, ForceFlagParsed) {
     std::string out = fmt.finalize();
 
     EXPECT_NE(out.find("Internal error"), std::string::npos);
+}
+
+// =============================================================================
+// CliActor kActorTypeName
+// =============================================================================
+
+TEST(CliActorTest, HasActorTypeName) {
+    EXPECT_STREQ(hpactor::cli::CliActor::kActorTypeName, "CliActor");
 }
