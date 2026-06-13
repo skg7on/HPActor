@@ -46,6 +46,13 @@ template <typename T> class MPSCMailbox {
     void enqueue(T* node) noexcept {
         node->mpsc_next.store(nullptr, std::memory_order_relaxed);
         T* prev = head_.exchange(node, std::memory_order_acq_rel);
+        // Full barrier: on ARM64 the exchange(acq_rel) may become
+        // visible before the mpsc_next store below, causing the
+        // consumer to see head_ updated but tail_->mpsc_next == nullptr
+        // and spin forever.  The seq_cst fence forces the exchange to
+        // drain before the store, so the consumer always sees the
+        // updated mpsc_next when it observes the new head_.
+        std::atomic_thread_fence(std::memory_order_seq_cst);
         prev->mpsc_next.store(node, std::memory_order_release);
         count_.fetch_add(1, std::memory_order_release);
     }
