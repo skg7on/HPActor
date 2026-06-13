@@ -109,6 +109,13 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
         } else {
             actor.receive(msg);
         }
+    } else {
+        // try_pop returned nullptr.  On ARM64 the mpsc_next store may
+        // not be visible yet even though empty() reports false (count_
+        // is visible).  Go idle and let the producer's notify_ready
+        // (called after enqueue completion) re-admit the actor.
+        actor_state.set(ActorState::kIdle);
+        return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};
     }
 
     // Cap RequeueReady cycles to prevent one high-traffic actor from

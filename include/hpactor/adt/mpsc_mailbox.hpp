@@ -44,49 +44,53 @@ template <typename T> class MPSCMailbox {
     // Chain: head_ -> node -> old_head -> ... -> oldest -> nullptr
     void enqueue(T* node) noexcept {
         node->mpsc_next.store(nullptr, std::memory_order_relaxed);
-        T* prev = head_.exchange(node, std::memory_order_seq_cst);
-        // seq_cst store: on ARM64 this is stlr + DMB, forming a total
-        // order with the seq_cst exchange above and the consumer's
-        // seq_cst loads.  Guarantees that when the consumer observes
-        // the updated head_ it also observes this mpsc_next store.
-        prev->mpsc_next.store(node, std::memory_order_seq_cst);
+        T* prev = head_.exchange(node, std::memory_order_acq_rel);
+        prev->mpsc_next.store(node, std::memory_order_release);
         count_.fetch_add(1, std::memory_order_release);
     }
 
     // Consumer: dequeue oldest node, or nullptr if empty.
     //
     // Single-consumer: only one thread may call dequeue() at a time.
-    // Uses seq_cst loads to participate in the total order with the
-    // producer's seq_cst exchange+store, deterministically preventing
-    // the ARM64 torn-write observation that caused unbounded spinning.
+    // Callers must serialize through an external lock when the consumer
+    // path can be entered from multiple contexts (e.g. normal dispatch
+    // and overflow-driven drop_one_oldest).
+    //
+    // On ARM64 the producer's head_.exchange may become visible before
+    // the mpsc_next store, making the oldest element appear temporarily
+    // unreachable.  Rather than spinning (which cannot make progress
+    // when the producer thread is asleep), we return nullptr and let
+    // the caller retry — the RequeueReady mechanism will re-dispatch
+    // the actor once the producer completes the enqueue.
     T* dequeue() noexcept {
         T* t = tail_.load(std::memory_order_acquire);
-        T* next = t->mpsc_next.load(std::memory_order_seq_cst);
+        T* next = t->mpsc_next.load(std::memory_order_acquire);
 
         if (next == nullptr) {
-            if (head_.load(std::memory_order_seq_cst) == t)
+            if (head_.load(std::memory_order_acquire) == t)
                 return nullptr;
-            // The producer's seq_cst exchange is visible but the
-            // seq_cst mpsc_next store may be a single instruction
-            // behind in the global total order — one retry.
-            next = t->mpsc_next.load(std::memory_order_seq_cst);
-            if (next == nullptr)
-                return nullptr;
+            // Producer has exchanged head_ but mpsc_next isn't visible
+            // yet — return nullptr, caller will retry.
+            return nullptr;
         }
 
-        T* next_next = next->mpsc_next.load(std::memory_order_seq_cst);
+        T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
         if (next_next == nullptr) {
-            T* h = head_.load(std::memory_order_seq_cst);
+            T* h = head_.load(std::memory_order_acquire);
             if (h != next)
-                return nullptr;
+                return nullptr; // producer hasn't linked the next node yet
         }
 
         t->mpsc_next.store(next_next, std::memory_order_release);
 
         if (next_next == nullptr) {
-            T* h = head_.load(std::memory_order_seq_cst);
-            if (h != next)
+            T* h = head_.load(std::memory_order_acquire);
+            if (h != next) {
+                // Producer enqueued between head_ check and chain update.
+                // Rather than spinning for mpsc_next, leave the chain as-is
+                // and return nullptr — the next dequeue() will fix it up.
                 return nullptr;
+            }
         }
 
         if (next_next == t) {
@@ -94,7 +98,7 @@ template <typename T> class MPSCMailbox {
         }
 
         {
-            T* h = head_.load(std::memory_order_seq_cst);
+            T* h = head_.load(std::memory_order_acquire);
             if (h == next) {
                 if (!head_.compare_exchange_strong(next, static_cast<T*>(&stub_),
                                                    std::memory_order_release,
