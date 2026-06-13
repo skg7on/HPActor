@@ -12,9 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/pretty_formatter.hpp>
+#include <hpactor/mem/memory_config.hpp>
 
 #include <gtest/gtest.h>
 
@@ -238,4 +240,38 @@ TEST(SystemStopCommandTest, ForceFlagParsed) {
     std::string out = fmt.finalize();
 
     EXPECT_NE(out.find("Internal error"), std::string::npos);
+}
+
+// =============================================================================
+// SystemMemoryCommand — per-actor memory
+// =============================================================================
+
+TEST(SystemMemoryCommandTest, PerActorMemoryColumns) {
+    auto* cmd = find_cmd("system/memory");
+    ASSERT_NE(cmd, nullptr);
+
+    PrettyFormatter fmt;
+    CommandContext ctx;
+    ctx.output = &fmt;
+
+    cmd->execute(ctx);
+    std::string out = fmt.finalize();
+
+    // The output should now include per-actor memory section
+    // when memory tracking is enabled.
+    if constexpr (hpactor::mem::kMemoryTrackingEnabled) {
+        EXPECT_NE(out.find("Per-Actor Memory"), std::string::npos);
+        EXPECT_NE(out.find("Current"), std::string::npos);
+        EXPECT_NE(out.find("Peak"), std::string::npos);
+    } else {
+        EXPECT_NE(out.find("disabled"), std::string::npos);
+    }
+}
+
+// =============================================================================
+// CliActor kActorTypeName
+// =============================================================================
+
+TEST(CliActorTest, HasActorTypeName) {
+    EXPECT_STREQ(hpactor::cli::CliActor::kActorTypeName, "CliActor");
 }
