@@ -138,6 +138,7 @@ void WorkerThread::thread_loop() {
         }
 
         if (got_work) {
+            reset_backoff();
             if (processor_) {
                 processor_(item);
             }
@@ -146,6 +147,7 @@ void WorkerThread::thread_loop() {
 
         // Local empty - try stealing from another worker
         if (try_steal(item)) {
+            reset_backoff();
             if (processor_) {
                 processor_(item);
             }
@@ -159,16 +161,22 @@ void WorkerThread::thread_loop() {
 }
 
 void WorkerThread::backoff() {
-    static thread_local uint32_t count = 0;
-    uint32_t c = count++;
+    uint32_t c = backoff_counter_++;
 
     if (c < 4) {
         std::this_thread::yield();
-    } else {
-        uint32_t shift = (c > 35) ? 31u : (c - 4);
-        uint32_t backoff_us = std::min<uint32_t>(1024u, 10u << shift);
-        std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
+        return;
     }
+
+    // Exponential backoff: 10us * 2^(c-4), capped at 1024us.
+    // Cap the shift at 7 to avoid unsigned overflow (10u << 31 wraps to 0
+    // on 32-bit, producing sleep_for(0us) which spins the core at 100%).
+    uint32_t shift = (c - 4 > 7) ? 7u : (c - 4);
+    uint32_t backoff_us = 10u << shift;
+    if (backoff_us > 1024u) {
+        backoff_us = 1024u;
+    }
+    std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
 }
 
 } // namespace hpactor::sched
