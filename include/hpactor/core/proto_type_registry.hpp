@@ -241,6 +241,16 @@ class ProtoTypeRegistry {
 
     void register_system_types();
 
+  public:
+    /// Function pointer type for subsystem message registration.
+    /// Called by register_system_types() after core types are registered.
+    using SubsystemRegistrar = void (*)(ProtoTypeRegistry&);
+
+    /// Register a subsystem's message types.
+    /// Thread-safe. May be called during static initialization.
+    /// Order between subsystems is unspecified.
+    static void register_subsystem(SubsystemRegistrar registrar);
+
   private:
     struct Entry {
         std::string type_name;

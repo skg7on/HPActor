@@ -1,0 +1,3 @@
+add_executable(test_accelerator_types test_accelerator_types.cpp)
+target_link_libraries(test_accelerator_types PRIVATE hpactor GTest::gtest_main)
+gtest_discover_tests(test_accelerator_types)

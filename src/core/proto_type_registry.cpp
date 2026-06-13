@@ -17,7 +17,24 @@
 #include <hpactor/common.pb.h>
 #include <hpactor/messages.pb.h>
 
+#include <mutex>
+#include <vector>
+
 namespace hpactor {
+namespace {
+
+std::vector<ProtoTypeRegistry::SubsystemRegistrar>& subsystem_registrars() {
+    static std::vector<ProtoTypeRegistry::SubsystemRegistrar> regs;
+    return regs;
+}
+
+} // namespace
+
+void ProtoTypeRegistry::register_subsystem(SubsystemRegistrar fn) {
+    static std::mutex mu;
+    std::lock_guard<std::mutex> lock(mu);
+    subsystem_registrars().push_back(fn);
+}
 
 void ProtoTypeRegistry::register_system_types() {
     register_type<::hpactor::DownMessage>(TypeTag::DownMsg, "hpactor."
@@ -48,6 +65,11 @@ void ProtoTypeRegistry::register_system_types() {
                                                    "SpawnResponseMessage");
     register_type<::hpactor::BackpressureSignalMessage>(
         TypeTag::BackpressureSignalTag, "hpactor.BackpressureSignalMessage");
+
+    // ── Subsystem types (0x80–0xFF, registered via register_subsystem) ──
+    for (auto fn : subsystem_registrars()) {
+        fn(*this);
+    }
 }
 
 } // namespace hpactor

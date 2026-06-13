@@ -84,8 +84,27 @@ enum class TypeTag : uint32_t {
     // ── Backpressure control (0x70–0x7F) ─────────────────────────────────
     BackpressureSignalTag = 0x70, ///< Backpressure signal (local or remote).
 
+    // ── Subsystem extension range (0x80–0xFF) ────────────────────────────
+    // 256 slots reserved for subsystem-defined TypeTags.
+    //
+    // Subsystems declare their tags as inline constexpr in their own headers:
+    //   namespace hpactor::ai {
+    //   inline constexpr TypeTag kAiLeaseRequestTag =
+    //       make_subsystem_tag(0x80);
+    //   }
+    //
+    // These are NOT added to the TypeTag enum. They are constexpr variables
+    // that implicitly convert to TypeTag. This keeps the core enum closed
+    // while subsystems own their tag definitions.
+
     // ── Application range ────────────────────────────────────────────────
     User = 0x00001000, ///< Start of application-defined message tags.
 };
+
+/// Construct a TypeTag from a subsystem-range value (0x80–0xFF).
+/// Compile-time only via consteval; the value must be a constant expression.
+consteval TypeTag make_subsystem_tag(uint32_t value) {
+    return static_cast<TypeTag>(value);
+}
 
 } // namespace hpactor
