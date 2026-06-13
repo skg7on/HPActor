@@ -109,15 +109,6 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
         } else {
             actor.receive(msg);
         }
-    } else if (!mailbox->empty()) {
-        // try_pop returned nullptr but the mailbox reports non-empty.
-        // On ARM64 the producer's mpsc_next store may not be visible
-        // yet — pause briefly and retry once rather than immediately
-        // entering the RequeueReady loop.
-        std::this_thread::sleep_for(std::chrono::microseconds(100));
-        if (mailbox->try_pop(msg)) {
-            actor.receive(msg);
-        }
     }
 
     // Cap RequeueReady cycles to prevent one high-traffic actor from
