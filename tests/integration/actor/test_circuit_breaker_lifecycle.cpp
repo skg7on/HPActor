@@ -22,6 +22,7 @@
 
 #include <chrono>
 #include <gtest/gtest.h>
+#include <scheduler_test_driver.hpp>
 #include <thread>
 
 using namespace hpactor;
@@ -60,6 +61,7 @@ class CircuitBreakerLifecycleTest : public ::testing::Test {
         Config cfg;
         cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
         cfg.scheduler_threads = 1;
+        cfg.scheduler_start_paused = true;
         system_ = std::make_unique<ActorSystem>(cfg);
     }
     void TearDown() override {
@@ -101,6 +103,8 @@ TEST_F(CircuitBreakerLifecycleTest, HealthyActorNeverTrips) {
     ASSERT_NE(eba, nullptr);
     eba->configure_quarantine(policy);
 
+    hpactor::test::SchedulerTestDriver driver(*system_);
+
     // Send messages — all succeed
     for (int i = 0; i < 20; ++i) {
         TypedMessage msg(TypeTag::User, StreamBuffer{1});
@@ -108,10 +112,10 @@ TEST_F(CircuitBreakerLifecycleTest, HealthyActorNeverTrips) {
         system_->deliver_local(target.id(), std::move(msg));
     }
 
-    // Wait for processing
+    // Drain the scheduler until all messages are processed
     auto* lta =
         static_cast<LifecycleTestActor*>(system_->get_actor(target.id()).get());
-    bool all_received = wait_for([&] { return lta->received_ >= 20; });
+    bool all_received = driver.drain_until([&] { return lta->received_ >= 20; });
     EXPECT_TRUE(all_received);
     EXPECT_EQ(lta->received_, 20u);
 
