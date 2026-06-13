@@ -82,10 +82,18 @@ template <typename T> class MPSCMailbox {
         if (next_next == nullptr) {
             T* h = head_.load(std::memory_order_acquire);
             if (h != next) {
-                next_next = next->mpsc_next.load(std::memory_order_acquire);
-                if (next_next) {
-                    t->mpsc_next.store(next_next, std::memory_order_release);
-                }
+                // Producer enqueued between the first head_ check (line 72)
+                // and the chain update (line 80).  The node we are about to
+                // return is no longer the head — a new node was inserted
+                // behind it.  Spin until the producer completes its
+                // mpsc_next store so we can correctly link stub_ to the new
+                // head.  Without this spin, t->mpsc_next stays nullptr while
+                // head_ points past the stub, causing the next dequeue() to
+                // spin forever in the first wait loop (lines 65–67).
+                do {
+                    next_next = next->mpsc_next.load(std::memory_order_acquire);
+                } while (next_next == nullptr);
+                t->mpsc_next.store(next_next, std::memory_order_release);
             }
         }
 
