@@ -1,0 +1,10 @@
+// protos/hpactor/ai_resource.proto
+syntax = "proto3";
+package hpactor;
+
+import "hpactor/common.proto";
+
+// Placeholder — full messages added in Task 3.
+message PbDeviceLeaseRequest {
+  PbActorAddress requester = 1;
+}

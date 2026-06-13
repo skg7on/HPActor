@@ -128,6 +128,8 @@ add_library(hpactor_lib SHARED
     ../third_party/llhttp/llhttp.c
     ../third_party/llhttp/api.c
     ../third_party/llhttp/http.c
+    ai/accelerator_types.cpp
+    ai/ai_message_registry.cpp
 )
 
 target_include_directories(hpactor_lib
