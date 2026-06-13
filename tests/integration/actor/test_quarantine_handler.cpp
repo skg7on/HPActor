@@ -20,7 +20,7 @@
 #include <hpactor/core/actor_system.hpp>
 
 #include <gtest/gtest.h>
-#include <thread>
+#include <scheduler_test_driver.hpp>
 
 using namespace hpactor;
 using namespace hpactor::cli;
@@ -48,6 +48,7 @@ class QuarantineHandlerTest : public ::testing::Test {
         Config cfg;
         cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
         cfg.scheduler_threads = 1;
+        cfg.scheduler_start_paused = true;
         system_ = std::make_unique<ActorSystem>(cfg);
     }
     void TearDown() override {
@@ -60,23 +61,12 @@ class QuarantineHandlerTest : public ::testing::Test {
         }
     }
 
-    template <typename F>
-    bool
-    wait_for(F&& pred,
-             std::chrono::milliseconds timeout = std::chrono::milliseconds(5000)) {
-        auto deadline = std::chrono::steady_clock::now() + timeout;
-        while (std::chrono::steady_clock::now() < deadline) {
-            if (pred())
-                return true;
-            std::this_thread::sleep_for(std::chrono::milliseconds(5));
-        }
-        return pred();
-    }
-
     std::unique_ptr<ActorSystem> system_;
 };
 
 TEST_F(QuarantineHandlerTest, QuarantineTransitionsToQuarantined) {
+    hpactor::test::SchedulerTestDriver driver(*system_);
+
     auto target = system_->spawn<QuarantineTestActor>();
     auto* lc = static_cast<LifecycleActor*>(
         system_->get_actor(target.id())->as_lifecycle());
@@ -92,13 +82,15 @@ TEST_F(QuarantineHandlerTest, QuarantineTransitionsToQuarantined) {
     msg.set_sender_address(target.address());
     system_->deliver_local(target.id(), std::move(msg));
 
-    bool changed =
-        wait_for([&] { return lc->state() == LifecycleState::kQuarantined; });
+    bool changed = driver.drain_until(
+        [&] { return lc->state() == LifecycleState::kQuarantined; });
     EXPECT_TRUE(changed);
     EXPECT_EQ(lc->state(), LifecycleState::kQuarantined);
 }
 
 TEST_F(QuarantineHandlerTest, UnquarantineTransitionsBackToActive) {
+    hpactor::test::SchedulerTestDriver driver(*system_);
+
     auto target = system_->spawn<QuarantineTestActor>();
     auto* lc = static_cast<LifecycleActor*>(
         system_->get_actor(target.id())->as_lifecycle());
@@ -116,12 +108,14 @@ TEST_F(QuarantineHandlerTest, UnquarantineTransitionsBackToActive) {
     system_->deliver_local(target.id(), std::move(msg));
 
     bool changed =
-        wait_for([&] { return lc->state() == LifecycleState::kActive; });
+        driver.drain_until([&] { return lc->state() == LifecycleState::kActive; });
     EXPECT_TRUE(changed);
     EXPECT_EQ(lc->state(), LifecycleState::kActive);
 }
 
 TEST_F(QuarantineHandlerTest, UnquarantineResetsCircuitBreaker) {
+    hpactor::test::SchedulerTestDriver driver(*system_);
+
     QuarantinePolicy policy;
     policy.enabled = true;
     policy.failure_rate_threshold = 5;
@@ -150,7 +144,7 @@ TEST_F(QuarantineHandlerTest, UnquarantineResetsCircuitBreaker) {
     system_->deliver_local(target.id(), std::move(msg));
 
     bool changed =
-        wait_for([&] { return lc->state() == LifecycleState::kActive; });
+        driver.drain_until([&] { return lc->state() == LifecycleState::kActive; });
     EXPECT_TRUE(changed) << "Expected Actor to unquarantine and become Active";
     EXPECT_EQ(lc->state(), LifecycleState::kActive);
     EXPECT_EQ(eba->circuit_breaker()->state, CircuitBreakerState::kClosed);
