@@ -144,6 +144,9 @@ class WorkerThread {
   private:
     void thread_loop();
     void backoff();
+    void reset_backoff() {
+        backoff_counter_ = 0;
+    }
 
     Config config_;
     std::thread thread_;
@@ -173,6 +176,11 @@ class WorkerThread {
 
     // Pluggable pause handler (set by scheduler for test harness)
     PauseHandler pause_handler_;
+
+    // Backoff counter for adaptive idle polling.
+    // Reset to 0 when work is found so the worker stays responsive;
+    // increments on each idle iteration to ramp sleep duration.
+    uint32_t backoff_counter_{0};
 };
 
 } // namespace hpactor::sched
