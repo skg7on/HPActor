@@ -182,3 +182,20 @@ TEST_F(TimingWheelTest, AdvanceWithNoExpiredTimersReturnsZero) {
     uint32_t r = wheel_.advance(t0 + ONE_MS);
     EXPECT_EQ(r, 0U);
 }
+
+// ---------------------------------------------------------------------------
+// next_deadline()
+// ---------------------------------------------------------------------------
+
+TEST_F(TimingWheelTest, NextDeadlineEmpty) {
+    EXPECT_EQ(wheel_.next_deadline(), INT64_MAX);
+}
+
+TEST_F(TimingWheelTest, NextDeadlineWithTimers) {
+    auto now = wheel_.current_time();
+    wheel_.schedule(5'000'000, [] {});
+    wheel_.schedule(10'000'000, [] {});
+    int64_t nd = wheel_.next_deadline();
+    EXPECT_GE(nd, now + 5'000'000);
+    EXPECT_LE(nd, now + 5'000'000 + 2'000'000);
+}

@@ -164,6 +164,15 @@ class TimingWheel {
     ///       observes it.
     bool empty() const;
 
+    /// \brief Return the earliest timer expiration time, or INT64_MAX if empty.
+    ///
+    /// \return The minimum expiration time of all pending timers, or
+    ///         \c INT64_MAX if no timers are pending.
+    /// \note Thread-safe.  Acquires the internal mutex for a consistent
+    ///       snapshot.  The result may be stale by the time the caller
+    ///       observes it.
+    int64_t next_deadline() const;
+
     /// \brief Number of pending timers.
     ///
     /// Sums the size of every bucket at every level.
@@ -185,6 +194,8 @@ class TimingWheel {
     void insert_timer(Timer* timer);
     Timer* remove_timer(uint64_t timer_id);
 
+    void recompute_min_deadline();
+
     int64_t tick_ns_;
     uint32_t num_levels_;
     std::vector<WheelLevel> levels_;
@@ -192,6 +203,11 @@ class TimingWheel {
 
     std::atomic<int64_t> current_time_{0};
     uint64_t next_timer_id_{1};
+
+    /// Cached minimum deadline across all pending timers.
+    /// Updated under mutex_ during schedule(), advance(), cancel().
+    /// Read lock-free by next_deadline().
+    std::atomic<int64_t> min_deadline_{INT64_MAX};
 
     /// \brief Protects all bucket operations.
     ///
