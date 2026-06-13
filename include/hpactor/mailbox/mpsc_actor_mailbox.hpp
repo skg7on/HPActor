@@ -589,15 +589,17 @@ template <typename T> class MPSCActorMailbox {
 #ifdef HPACTOR_DEBUG
         in_active_use_.store(true, std::memory_order_release);
 #endif
-        // Re-arm the edge-triggered wakeup flag BEFORE dequeue so that
-        // concurrent producers see it as true when the mailbox becomes
-        // empty.  This closes a race where a producer enqueues between
-        // our dequeue and the post-dequeue re-arm, finds the flag still
-        // false, and skips notify_ready — orphaning the message.
-        // If the mailbox is still non-empty after dequeue the flag is
-        // disarmed below.
-        mailbox_was_empty_.store(true, std::memory_order_release);
+        // Acquire the consumer lock BEFORE re-arming the wakeup flag.
+        // This closes a race where a producer checks empty() before we
+        // lock, finds the mailbox non-empty, but then enqueues after we
+        // dequeue the last message — capturing a stale was_empty=false
+        // and skipping the notify_ready CAS, orphaning the message.
+        // By re-arming under the lock, the producer's empty() check is
+        // serialized: a check before the lock sees non-empty (no wakeup
+        // needed — we're about to dequeue), and a check after unlock
+        // sees the re-armed flag and fires the CAS correctly.
         lock_consumer();
+        mailbox_was_empty_.store(true, std::memory_order_release);
         T* node = lanes_.dequeue();
 
         // Rate limiter gate — skip system messages.
