@@ -147,16 +147,20 @@ class BenchCollectorActor : public EventBasedActor {
         if (group == 0) {
             cold_latencies_.push_back(static_cast<double>(latency_us));
             if (cold_latencies_.size() > kReservoirSize)
-                cold_latencies_.erase(cold_latencies_.begin(),
-                                      cold_latencies_.begin() +
-                                          (cold_latencies_.size() - kReservoirSize));
+                cold_latencies_.erase(
+                    cold_latencies_.begin(),
+                    cold_latencies_.begin() +
+                        static_cast<ptrdiff_t>(cold_latencies_.size() -
+                                               kReservoirSize));
             cold_count_.fetch_add(1, std::memory_order_relaxed);
         } else {
             hot_latencies_.push_back(static_cast<double>(latency_us));
             if (hot_latencies_.size() > kReservoirSize)
-                hot_latencies_.erase(hot_latencies_.begin(),
-                                     hot_latencies_.begin() +
-                                         (hot_latencies_.size() - kReservoirSize));
+                hot_latencies_.erase(
+                    hot_latencies_.begin(),
+                    hot_latencies_.begin() +
+                        static_cast<ptrdiff_t>(hot_latencies_.size() -
+                                               kReservoirSize));
             hot_count_.fetch_add(1, std::memory_order_relaxed);
         }
     }

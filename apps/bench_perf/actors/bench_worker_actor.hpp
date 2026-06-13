@@ -25,7 +25,6 @@
 #include <chrono>
 #include <cstdint>
 #include <cstring>
-#include <iomanip>
 #include <sstream>
 #include <string>
 #include <vector>
@@ -132,8 +131,11 @@ class BenchWorkerActor : public EventBasedActor {
     void schedule_next() {
         if (!running_)
             return;
-        uint64_t interval_us = (rate_hz_ > 0) ? (1'000'000 / rate_hz_) : 10'000;
-        context()->schedule(std::chrono::microseconds(interval_us),
+        // schedule() takes milliseconds — compute interval in ms, minimum 1ms
+        uint32_t interval_ms = (rate_hz_ > 0) ? (1000 / rate_hz_) : 10;
+        if (interval_ms == 0)
+            interval_ms = 1;
+        context()->schedule(std::chrono::milliseconds(interval_ms),
                             make_msg(PeriodicTickTag));
     }
 
