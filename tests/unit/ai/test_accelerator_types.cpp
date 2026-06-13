@@ -442,6 +442,53 @@ TEST(MessageTraits, LeaseReplyTagMatches) {
               hpactor::ai::kAiLeaseReplyTag);
 }
 
+// ── AcceleratorConfig ───────────────────────────────────────────────
+#include <hpactor/ai/accelerator_config.hpp>
+
+TEST(AcceleratorConfig, DefaultsDisabled) {
+    hpactor::ai::AcceleratorConfig cfg;
+    EXPECT_FALSE(cfg.enabled);
+    EXPECT_TRUE(cfg.enable_cpu_probe);
+    EXPECT_TRUE(cfg.allow_cpu_fallback);
+    EXPECT_FALSE(cfg.allow_empty_inventory);
+    EXPECT_FALSE(cfg.require_resource_plane_ready);
+    EXPECT_EQ(cfg.probe_interval_ms, 1000u);
+    EXPECT_EQ(cfg.missing_device_grace_ms, 5000u);
+    EXPECT_EQ(cfg.lease_ttl_ms, 30000u);
+    EXPECT_EQ(cfg.min_lease_ttl_ms, 1000u);
+    EXPECT_EQ(cfg.max_lease_ttl_ms, 300000u);
+    EXPECT_EQ(cfg.admission_policy,
+              hpactor::ai::AdmissionPolicyKind::MostFreeMemory);
+    EXPECT_EQ(cfg.cpu_host_memory_budget_bytes, 0u);
+    EXPECT_EQ(cfg.cpu_compute_units, 0u);
+    EXPECT_TRUE(cfg.mock_devices.empty());
+}
+
+TEST(MockDeviceConfig, Defaults) {
+    hpactor::ai::MockDeviceConfig dev;
+    EXPECT_EQ(dev.kind, hpactor::ai::DeviceKind::Mock);
+    EXPECT_EQ(dev.vendor, hpactor::ai::DeviceVendor::Mock);
+    EXPECT_EQ(dev.health, hpactor::ai::DeviceHealth::Healthy);
+    EXPECT_FALSE(dev.exclusive_only);
+}
+
+// ── NodeResourceSummary ─────────────────────────────────────────────
+#include <hpactor/ai/node_resource_summary.hpp>
+
+TEST(NodeResourceSummary, DefaultsNotReady) {
+    hpactor::ai::NodeResourceSummary summary;
+    EXPECT_FALSE(summary.ready);
+    EXPECT_FALSE(summary.draining);
+    EXPECT_EQ(summary.ledger_epoch, 0u);
+    EXPECT_TRUE(summary.devices.empty());
+}
+
+TEST(DeviceCapacitySummary, DefaultConstruction) {
+    hpactor::ai::DeviceCapacitySummary dev;
+    EXPECT_EQ(dev.active_leases, 0u);
+    EXPECT_FALSE(dev.exclusive_in_use);
+}
+
 TEST(MessageTraits, AllTenMessagesHaveTraits) {
     EXPECT_NE(hpactor::MessageTraits<hpactor::PbDeviceLeaseRequest>::tag(),
               hpactor::TypeTag::Invalid);
