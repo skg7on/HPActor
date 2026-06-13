@@ -4,7 +4,148 @@ package hpactor;
 
 import "hpactor/common.proto";
 
-// Placeholder — full messages added in Task 3.
+// ── Resource quantities ─────────────────────────────────────────────
+message PbResourceQuantities {
+  uint64 device_memory_bytes = 1;
+  uint64 host_memory_bytes = 2;
+  uint64 pinned_host_memory_bytes = 3;
+  uint32 compute_units = 4;
+  uint32 stream_slots = 5;
+  uint32 copy_engine_slots = 6;
+  uint64 kv_cache_bytes = 7;
+  uint32 batch_slots = 8;
+  bool exclusive_device = 9;
+}
+
+// ── Device selector ─────────────────────────────────────────────────
+message PbDeviceSelector {
+  uint32 kind = 1;
+  uint64 exact_device_id = 2;
+  uint32 required_kind = 3;
+  uint32 required_vendor = 4;
+  repeated string required_label_keys = 5;
+  repeated string required_label_values = 6;
+  int32 preferred_numa_node = 7;
+  string preferred_topology_group = 8;
+  bool allow_cpu_fallback = 9;
+}
+
+// ── Lease request / reply ───────────────────────────────────────────
 message PbDeviceLeaseRequest {
   PbActorAddress requester = 1;
+  string workload_id = 2;
+  string model_or_job = 3;
+  string tenant_id = 4;
+  PbResourceQuantities requested = 5;
+  PbDeviceSelector selector = 6;
+  uint32 ttl_ms = 7;
+  uint32 priority = 8;
+  bool allow_degraded_device = 9;
+  bool exclusive = 10;
+}
+
+message PbDeviceLeaseReply {
+  bool granted = 1;
+  uint64 lease_id = 2;
+  uint64 device_local_id = 3;
+  uint64 ledger_epoch = 4;
+  uint32 reason = 5;
+  string detail = 6;
+  PbResourceQuantities reserved = 7;
+  uint64 expires_at_ns = 8;
+}
+
+// ── Lease lifecycle messages ────────────────────────────────────────
+message PbDeviceLeaseActivate {
+  uint64 lease_id = 1;
+  PbActorAddress owner = 2;
+}
+
+message PbDeviceLeaseRenew {
+  uint64 lease_id = 1;
+  PbActorAddress owner = 2;
+  uint32 ttl_ms = 3;
+}
+
+message PbDeviceLeaseRelease {
+  uint64 lease_id = 1;
+  PbActorAddress owner = 2;
+  uint32 reason = 3;
+}
+
+message PbDeviceLeaseRevoked {
+  uint64 lease_id = 1;
+  uint64 device_local_id = 2;
+  uint32 reason = 3;
+  string detail = 4;
+}
+
+// ── Probe snapshot messages ─────────────────────────────────────────
+message PbDeviceDescriptor {
+  uint64 device_local_id = 1;
+  uint32 kind = 2;
+  uint32 vendor = 3;
+  string backend = 4;
+  string name = 5;
+  string stable_key = 6;
+  uint32 backend_ordinal = 7;
+  uint64 parent_device_id = 8;
+  int32 numa_node = 9;
+  string topology_group = 10;
+  PbResourceQuantities total = 11;
+  PbResourceQuantities allocatable = 12;
+  uint64 capabilities = 13;
+  uint32 health = 14;
+  repeated string label_keys = 15;
+  repeated string label_values = 16;
+}
+
+message PbDeviceSnapshotUpdate {
+  string probe_name = 1;
+  uint64 probe_epoch = 2;
+  uint64 generated_at_ns = 3;
+  repeated PbDeviceDescriptor devices = 4;
+  bool snapshot_available = 5;
+  uint32 error_reason = 6;
+  string error_detail = 7;
+}
+
+// ── Snapshot and summary messages ───────────────────────────────────
+message PbResourceSnapshotRequest {
+  uint32 max_devices = 1;
+  uint32 max_leases = 2;
+}
+
+message PbResourceSnapshotReply {
+  uint64 ledger_epoch = 1;
+  uint64 generated_at_ns = 2;
+  bool ready = 3;
+  bool draining = 4;
+  repeated PbDeviceDescriptor devices = 5;
+  bool device_list_truncated = 6;
+}
+
+message PbDeviceCapacitySummary {
+  uint64 device_local_id = 1;
+  uint32 kind = 2;
+  uint32 vendor = 3;
+  string backend = 4;
+  uint32 health = 5;
+  PbResourceQuantities allocatable = 6;
+  PbResourceQuantities reserved = 7;
+  PbResourceQuantities available = 8;
+  uint32 active_leases = 9;
+  bool exclusive_in_use = 10;
+  repeated string label_keys = 11;
+  repeated string label_values = 12;
+  string topology_group = 13;
+}
+
+message PbNodeResourceSummary {
+  PbEndpoint node_endpoint = 1;
+  uint64 ledger_epoch = 2;
+  uint64 generated_at_ns = 3;
+  bool ready = 4;
+  bool draining = 5;
+  repeated PbDeviceCapacitySummary devices = 6;
 }
