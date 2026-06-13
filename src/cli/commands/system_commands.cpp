@@ -185,6 +185,62 @@ class SystemListCommand final : public ICommand {
     }
 };
 
+class SystemUptimeCommand final : public ICommand {
+  public:
+    std::string_view path() const noexcept override {
+        return "system/uptime";
+    }
+    std::string_view help_text() const noexcept override {
+        return "Show actor system uptime";
+    }
+    int order() const noexcept override {
+        return 80;
+    }
+
+    result<void> execute(CommandContext& ctx) const override {
+        auto* sys = ctx.system;
+        if (!sys) {
+            ctx.output->error("Internal error: no actor system");
+            return result<void>::make();
+        }
+
+        auto uptime_ms = sys->uptime();
+        auto total_seconds =
+            std::chrono::duration_cast<std::chrono::seconds>(uptime_ms).count();
+
+        auto days = total_seconds / 86400;
+        auto hours = (total_seconds % 86400) / 3600;
+        auto minutes = (total_seconds % 3600) / 60;
+        auto seconds = total_seconds % 60;
+
+        char buf[128];
+        if (days > 0) {
+            snprintf(buf, sizeof(buf), "%lldd %lldh %lldm %llds",
+                     static_cast<long long>(days), static_cast<long long>(hours),
+                     static_cast<long long>(minutes),
+                     static_cast<long long>(seconds));
+        } else if (hours > 0) {
+            snprintf(buf, sizeof(buf), "%lldh %lldm %llds",
+                     static_cast<long long>(hours), static_cast<long long>(minutes),
+                     static_cast<long long>(seconds));
+        } else if (minutes > 0) {
+            snprintf(buf, sizeof(buf), "%lldm %llds",
+                     static_cast<long long>(minutes),
+                     static_cast<long long>(seconds));
+        } else {
+            snprintf(buf, sizeof(buf), "%llds", static_cast<long long>(seconds));
+        }
+
+        ctx.output->header("System Uptime");
+        std::map<std::string, std::string> kv;
+        kv["Uptime"] = buf;
+        kv["Uptime (ms)"] = std::to_string(uptime_ms.count());
+        kv["Uptime (seconds)"] = std::to_string(total_seconds);
+        ctx.output->key_value(kv);
+        return result<void>::make();
+    }
+};
+
 class SystemDrainCommand final : public ICommand {
   public:
     std::string_view path() const noexcept override {
@@ -286,6 +342,7 @@ class SystemStopCommand final : public ICommand {
     }
 };
 
+const CommandRegistration<SystemUptimeCommand> kRegisterSystemUptime;
 const CommandRegistration<SystemStatsCommand> kRegisterSystemStats;
 const CommandRegistration<SystemMemoryCommand> kRegisterSystemMemory;
 const CommandRegistration<SystemListCommand> kRegisterSystemList;

@@ -105,6 +105,13 @@ class WorkerThread {
         return running_.load(std::memory_order_acquire);
     }
 
+    // Native thread identifier for CLI introspection.
+    // Returns a hashed value suitable for display as a unique worker
+    // identifier.
+    uint64_t thread_id() const {
+        return std::hash<std::thread::id>{}(thread_.get_id());
+    }
+
     // For scheduling coordination: donation count for work-stealing decisions
     uint64_t donation_count() const {
         return donation_count_.load(std::memory_order_relaxed);

@@ -477,6 +477,7 @@ std::vector<WorkerSnapshot> HybridScheduler::worker_snapshots() const {
         ws.cv_escalations = worker_threads_[i]->diag_cv_escalations();
         ws.cv_notify_wakes = worker_threads_[i]->diag_cv_notify_wakes();
         ws.cv_timeout_wakes = worker_threads_[i]->diag_cv_timeout_wakes();
+        ws.thread_id = worker_threads_[i]->thread_id();
         result.push_back(ws);
     }
     return result;
