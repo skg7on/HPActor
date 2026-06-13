@@ -203,3 +203,192 @@ TEST(ResourceAdmissionReasonMapping, ToFailureReason) {
     EXPECT_EQ(hpactor::ai::to_failure_reason(R::ProbeSnapshotInvalid),
               F::RejectedByPolicy);
 }
+
+// ── DeviceId ────────────────────────────────────────────────────────
+TEST(DeviceIdValidation, ZeroIsInvalid) {
+    EXPECT_FALSE(hpactor::ai::is_valid_device_local_id(0));
+}
+
+TEST(DeviceIdValidation, NonZeroIsValid) {
+    EXPECT_TRUE(hpactor::ai::is_valid_device_local_id(1));
+    EXPECT_TRUE(hpactor::ai::is_valid_device_local_id(UINT64_MAX));
+}
+
+TEST(DeviceId, DefaultConstruction) {
+    hpactor::ai::DeviceId id;
+    EXPECT_EQ(id.node_local_id, 0u);
+    EXPECT_EQ(id.kind, hpactor::ai::DeviceKind::Cpu);
+}
+
+TEST(DeviceId, Equality) {
+    hpactor::ai::DeviceId a{1, hpactor::ai::DeviceKind::Gpu};
+    hpactor::ai::DeviceId b{1, hpactor::ai::DeviceKind::Gpu};
+    hpactor::ai::DeviceId c{2, hpactor::ai::DeviceKind::Gpu};
+    EXPECT_EQ(a, b);
+    EXPECT_NE(a, c);
+}
+
+// ── ResourceQuantities ──────────────────────────────────────────────
+TEST(ResourceQuantities, DefaultIsZero) {
+    hpactor::ai::ResourceQuantities q;
+    EXPECT_EQ(q.device_memory_bytes, 0u);
+    EXPECT_EQ(q.host_memory_bytes, 0u);
+    EXPECT_EQ(q.compute_units, 0u);
+    EXPECT_FALSE(q.exclusive_device);
+}
+
+TEST(ResourceQuantities, FitsWithinEmptyRequest) {
+    hpactor::ai::ResourceQuantities available;
+    available.device_memory_bytes = 1024;
+    hpactor::ai::ResourceQuantities request;
+    EXPECT_TRUE(request.fits_within(available));
+}
+
+TEST(ResourceQuantities, FitsWithinExactFit) {
+    hpactor::ai::ResourceQuantities available;
+    available.device_memory_bytes = 1024;
+    available.compute_units = 8;
+    hpactor::ai::ResourceQuantities request;
+    request.device_memory_bytes = 1024;
+    request.compute_units = 8;
+    EXPECT_TRUE(request.fits_within(available));
+}
+
+TEST(ResourceQuantities, FitsWithinMemoryExceeded) {
+    hpactor::ai::ResourceQuantities available;
+    available.device_memory_bytes = 1024;
+    hpactor::ai::ResourceQuantities request;
+    request.device_memory_bytes = 2048;
+    EXPECT_FALSE(request.fits_within(available));
+}
+
+TEST(ResourceQuantities, FitsWithinComputeExceeded) {
+    hpactor::ai::ResourceQuantities available;
+    available.compute_units = 4;
+    hpactor::ai::ResourceQuantities request;
+    request.compute_units = 8;
+    EXPECT_FALSE(request.fits_within(available));
+}
+
+TEST(ResourceQuantities, FitsWithinExclusiveConflict) {
+    hpactor::ai::ResourceQuantities available;
+    available.exclusive_device = true;
+    hpactor::ai::ResourceQuantities request;
+    request.device_memory_bytes = 100;
+    EXPECT_FALSE(request.fits_within(available));
+}
+
+TEST(ResourceQuantities, FitsWithinPartialFields) {
+    hpactor::ai::ResourceQuantities available;
+    available.device_memory_bytes = 1024;
+    available.compute_units = 8;
+    hpactor::ai::ResourceQuantities request;
+    request.device_memory_bytes = 512;
+    EXPECT_TRUE(request.fits_within(available));
+}
+
+TEST(ResourceQuantities, AddSaturating) {
+    hpactor::ai::ResourceQuantities a;
+    a.device_memory_bytes = 100;
+    hpactor::ai::ResourceQuantities b;
+    b.device_memory_bytes = 200;
+    auto result = a.add(b);
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(result.value().device_memory_bytes, 300u);
+}
+
+TEST(ResourceQuantities, AddSaturatingOverflow) {
+    hpactor::ai::ResourceQuantities a;
+    a.device_memory_bytes = UINT64_MAX;
+    hpactor::ai::ResourceQuantities b;
+    b.device_memory_bytes = 1;
+    auto result = a.add(b);
+    EXPECT_TRUE(result.has_value());
+    EXPECT_EQ(result.value().device_memory_bytes, UINT64_MAX);
+}
+
+TEST(ResourceQuantities, SubtractNormal) {
+    hpactor::ai::ResourceQuantities a;
+    a.device_memory_bytes = 300;
+    hpactor::ai::ResourceQuantities b;
+    b.device_memory_bytes = 100;
+    auto result = a.subtract(b);
+    EXPECT_TRUE(result.has_value());
+}
+
+TEST(ResourceQuantities, SubtractUnderflow) {
+    hpactor::ai::ResourceQuantities a;
+    a.device_memory_bytes = 100;
+    hpactor::ai::ResourceQuantities b;
+    b.device_memory_bytes = 200;
+    auto result = a.subtract(b);
+    EXPECT_FALSE(result.has_value());
+}
+
+// ── DeviceSelector ──────────────────────────────────────────────────
+TEST(DeviceSelectorValidation, ExactDeviceWithValidId) {
+    hpactor::ai::DeviceSelector sel;
+    sel.kind = hpactor::ai::DeviceSelectorKind::ExactDevice;
+    sel.exact_device = hpactor::ai::DeviceId{42, hpactor::ai::DeviceKind::Gpu};
+    EXPECT_TRUE(hpactor::ai::is_valid_selector(sel));
+}
+
+TEST(DeviceSelectorValidation, ExactDeviceWithZeroId) {
+    hpactor::ai::DeviceSelector sel;
+    sel.kind = hpactor::ai::DeviceSelectorKind::ExactDevice;
+    sel.exact_device = hpactor::ai::DeviceId{0, hpactor::ai::DeviceKind::Gpu};
+    EXPECT_FALSE(hpactor::ai::is_valid_selector(sel));
+}
+
+TEST(DeviceSelectorValidation, AnyIsAlwaysValid) {
+    hpactor::ai::DeviceSelector sel;
+    sel.kind = hpactor::ai::DeviceSelectorKind::Any;
+    EXPECT_TRUE(hpactor::ai::is_valid_selector(sel));
+}
+
+TEST(DeviceSelectorValidation, KindIsValid) {
+    hpactor::ai::DeviceSelector sel;
+    sel.kind = hpactor::ai::DeviceSelectorKind::Kind;
+    sel.required_kind = hpactor::ai::DeviceKind::Gpu;
+    EXPECT_TRUE(hpactor::ai::is_valid_selector(sel));
+}
+
+TEST(DeviceSelectorValidation, VendorIsValid) {
+    hpactor::ai::DeviceSelector sel;
+    sel.kind = hpactor::ai::DeviceSelectorKind::Vendor;
+    sel.required_vendor = hpactor::ai::DeviceVendor::Apple;
+    EXPECT_TRUE(hpactor::ai::is_valid_selector(sel));
+}
+
+TEST(DeviceSelectorValidation, LabelMatchIsValid) {
+    hpactor::ai::DeviceSelector sel;
+    sel.kind = hpactor::ai::DeviceSelectorKind::LabelMatch;
+    sel.required_labels.push_back({"zone", "local"});
+    EXPECT_TRUE(hpactor::ai::is_valid_selector(sel));
+}
+
+// ── DeviceLeaseRequest ──────────────────────────────────────────────
+TEST(DeviceLeaseRequest, DefaultConstruction) {
+    hpactor::ai::DeviceLeaseRequest req;
+    EXPECT_EQ(req.ttl.count(), 30000);
+    EXPECT_EQ(req.priority, 0u);
+    EXPECT_FALSE(req.allow_degraded_device);
+    EXPECT_FALSE(req.exclusive);
+}
+
+// ── DeviceLease ─────────────────────────────────────────────────────
+TEST(DeviceLease, DefaultState) {
+    hpactor::ai::DeviceLease lease;
+    EXPECT_EQ(lease.lease_id, 0u);
+    EXPECT_EQ(lease.state, hpactor::ai::LeaseState::Pending);
+    EXPECT_EQ(lease.granted_epoch, 0u);
+}
+
+// ── DeviceDescriptor ────────────────────────────────────────────────
+TEST(DeviceDescriptor, DefaultConstruction) {
+    hpactor::ai::DeviceDescriptor desc;
+    EXPECT_EQ(desc.id.node_local_id, 0u);
+    EXPECT_EQ(desc.kind, hpactor::ai::DeviceKind::Cpu);
+    EXPECT_EQ(desc.vendor, hpactor::ai::DeviceVendor::Unknown);
+    EXPECT_EQ(desc.health, hpactor::ai::DeviceHealth::Unknown);
+}
