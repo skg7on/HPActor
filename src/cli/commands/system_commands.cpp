@@ -16,7 +16,9 @@
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/mem/memory_config.hpp>
 #include <hpactor/mem/memory_region.hpp>
+#include <hpactor/mem/memory_tracker.hpp>
 #include <hpactor/types/types.hpp>
 
 #include "command_utils.hpp"
@@ -107,6 +109,42 @@ class SystemMemoryCommand final : public ICommand {
         }
 
         ctx.output->table(cols, rows);
+
+        // ── Per-actor memory table ──────────────────────────────────────
+        if constexpr (mem::kMemoryTrackingEnabled) {
+            ctx.output->header("Per-Actor Memory");
+
+            std::vector<std::string> mem_cols = {"ID",   "Type",   "Current",
+                                                 "Peak", "Allocs", "Frees"};
+            std::vector<std::vector<std::string>> mem_rows;
+
+            auto* sys = ctx.system;
+            if (sys) {
+                auto& tracker = mem::MemoryTracker::instance();
+                sys->for_each_actor([&](ActorId actor_id, AbstractActor& actor) {
+                    mem::ActorMemoryStats stats;
+                    tracker.snapshot(actor_id, stats);
+
+                    char id_buf[32];
+                    snprintf(id_buf, sizeof(id_buf), "0x%04llX",
+                             static_cast<unsigned long long>(actor_id.value()));
+
+                    auto meta = actor.to_metadata();
+                    mem_rows.push_back({
+                        id_buf,
+                        meta.actor_type,
+                        format_bytes(stats.current_bytes),
+                        format_bytes(stats.peak_bytes),
+                        std::to_string(stats.alloc_count),
+                        std::to_string(stats.free_count),
+                    });
+                });
+            }
+            ctx.output->table(mem_cols, mem_rows);
+        } else {
+            ctx.output->raw("Per-actor memory tracking is disabled at compile time.");
+        }
+
         return result<void>::make();
     }
 };
