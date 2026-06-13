@@ -469,9 +469,14 @@ bool CliActor::run_once() {
 
     std::string line = line_editor_.readline("hpactor> ");
     if (line.empty()) {
-        printf("\nGoodbye.\n");
-        running_ = false;
-        return false;
+        // Empty input from user (just ENTER) is a no-op.
+        // EOF on stdin also returns empty — distinguish by checking feof.
+        if (std::feof(stdin)) {
+            printf("\nGoodbye.\n");
+            running_ = false;
+            return false;
+        }
+        return true; // no-op, keep running
     }
 
     auto tokens = Lexer::tokenize(line);
