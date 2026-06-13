@@ -69,6 +69,11 @@ void WorkerThread::start() {
 void WorkerThread::stop() {
     stop_requested_.store(true, std::memory_order_release);
     running_.store(false, std::memory_order_release);
+    // Wake the worker if it is blocked on its sleep CV so it can observe
+    // the stop_requested_ flag and exit the thread loop promptly.
+    if (owner_ && config_.worker_index < owner_->placement_workers().size()) {
+        owner_->placement_workers()[config_.worker_index].wake_if_blocking();
+    }
     if (thread_.joinable()) {
         thread_.join();
     }
@@ -138,6 +143,7 @@ void WorkerThread::thread_loop() {
         }
 
         if (got_work) {
+            diag_work_found_.fetch_add(1, std::memory_order_relaxed);
             reset_backoff();
             if (processor_) {
                 processor_(item);
@@ -147,6 +153,7 @@ void WorkerThread::thread_loop() {
 
         // Local empty - try stealing from another worker
         if (try_steal(item)) {
+            diag_work_found_.fetch_add(1, std::memory_order_relaxed);
             reset_backoff();
             if (processor_) {
                 processor_(item);
@@ -154,9 +161,73 @@ void WorkerThread::thread_loop() {
             continue;
         }
 
-        // No work available - mark as donation candidate and backoff
-        increment_donations();
-        backoff();
+        // No work available — poll briefly then escalate to CV blocking.
+        // Standalone workers (no owner_ scheduler) keep polling; CV blocking
+        // requires access to the placement layer's per-worker state.
+        //
+        // kPollThreshold = kYieldIters (4 yield iterations in backoff())
+        //                + kSleepIters (4 escalating µs sleeps before CV).
+        static constexpr uint32_t kYieldIters = 4;
+        static constexpr uint32_t kSleepIters = 4;
+        static constexpr uint32_t kPollThreshold = kYieldIters + kSleepIters;
+        if (!owner_ || backoff_counter_ < kPollThreshold) {
+            diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);
+            increment_donations();
+            backoff();
+            continue;
+        }
+
+        // Escalate to CV-based blocking.
+        {
+            auto& ws = owner_->placement_workers()[config_.worker_index];
+            ws.is_blocking_.store(true, std::memory_order_seq_cst);
+
+            if (owner_->pop_local(item, config_.worker_index) || try_steal(item)) {
+                diag_work_found_.fetch_add(1, std::memory_order_relaxed);
+                ws.is_blocking_.store(false, std::memory_order_release);
+                reset_backoff();
+                if (processor_)
+                    processor_(item);
+                continue;
+            }
+
+            diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
+
+            // Compute EDF-aware CV timeout.  Wake before the earliest
+            // deadline expires so another worker can steal deadline work.
+            auto now = std::chrono::steady_clock::now();
+            auto timeout = std::chrono::milliseconds(100);
+            int64_t edf_ns = owner_->edf_next_deadline();
+            if (edf_ns != INT64_MAX) {
+                int64_t now_ns = now.time_since_epoch().count();
+                int64_t delta_ns = edf_ns - now_ns;
+                if (delta_ns <= 0)
+                    delta_ns = 1'000'000; // overdue: 1 ms floor
+                auto delta_ms =
+                    std::chrono::duration_cast<std::chrono::milliseconds>(
+                        std::chrono::nanoseconds(delta_ns));
+                // Wake 1 ms before the deadline to leave steal + dispatch
+                // headroom.
+                auto margin = std::chrono::milliseconds(1);
+                timeout = (delta_ms > margin) ? (delta_ms - margin)
+                                              : std::chrono::milliseconds(1);
+                if (timeout > std::chrono::milliseconds(100))
+                    timeout = std::chrono::milliseconds(100);
+            }
+
+            std::unique_lock<std::mutex> lk(ws.sleep_mutex_);
+            bool timed_out = !ws.sleep_cv_.wait_for(lk, timeout, [&] {
+                return !ws.is_blocking_.load(std::memory_order_relaxed) ||
+                       stop_requested_.load(std::memory_order_relaxed) ||
+                       !running_.load(std::memory_order_relaxed);
+            });
+            if (timed_out) {
+                diag_cv_timeout_wakes_.fetch_add(1, std::memory_order_relaxed);
+            } else {
+                diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
+            }
+        }
+        reset_backoff();
     }
 }
 
@@ -168,14 +239,14 @@ void WorkerThread::backoff() {
         return;
     }
 
-    // Exponential backoff: 10us * 2^(c-4), capped at 1024us.
-    // Cap the shift at 7 to avoid unsigned overflow (10u << 31 wraps to 0
+    // Exponential backoff: 10us * 2^(c-4), capped at 50ms.
+    // Cap the shift at 28 to avoid unsigned overflow (10u << 31 wraps to 0
     // on 32-bit, producing sleep_for(0us) which spins the core at 100%).
-    uint32_t shift = (c - 4 > 7) ? 7u : (c - 4);
+    // The std::min at 50ms provides the effective backoff ceiling — the
+    // shift ramps through it (10u << 13 = 81,920us → capped to 50,000).
+    uint32_t shift = (c - 4 > 28) ? 28u : (c - 4);
     uint32_t backoff_us = 10u << shift;
-    if (backoff_us > 1024u) {
-        backoff_us = 1024u;
-    }
+    backoff_us = std::min(backoff_us, 50000u);
     std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
 }
 

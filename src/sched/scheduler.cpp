@@ -23,6 +23,7 @@
 #include <hpactor/sched/scheduler.hpp>
 #include <hpactor/sched/worker_thread.hpp>
 
+#include <algorithm>
 #include <chrono>
 #include <variant>
 
@@ -84,12 +85,25 @@ void HybridScheduler::start() {
     timer_thread_ = std::thread([this] {
         while (running_.load(std::memory_order_acquire)) {
             if (!workers_paused_.load(std::memory_order_acquire)) {
+                // Advance first so already-due timers fire before we sleep.
+                advance_time(
+                    std::chrono::steady_clock::now().time_since_epoch().count());
+                // Read the cached next deadline (lock-free).
+                int64_t next_ns = INT64_MAX;
+                std::visit(
+                    [&](auto& backend) { next_ns = backend.next_deadline(); },
+                    timer_backend_);
                 auto now =
                     std::chrono::steady_clock::now().time_since_epoch().count();
-                std::visit([&](auto& backend) { backend.advance(now); },
-                           timer_backend_);
+                // Sleep until the deadline.  Floor at 1 ms to avoid
+                // tight-looping; cap at 100 ms for shutdown responsiveness.
+                int64_t sleep_ns = std::max(
+                    std::min(next_ns - now, static_cast<int64_t>(100'000'000)),
+                    static_cast<int64_t>(1'000'000));
+                std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_ns));
+            } else {
+                std::this_thread::sleep_for(std::chrono::milliseconds(1));
             }
-            std::this_thread::sleep_for(std::chrono::milliseconds(1));
         }
     });
 }
@@ -229,12 +243,19 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         tl_current_worker_id,
         metrics_ring_buffer_,
         logger_,
+        workers_paused_.load(std::memory_order_relaxed),
     };
 
     auto result =
         executor_.run(*actor, item, execution_context, system_.use_coroutines());
     if (result.disposition == ActorRunDisposition::RequeueReady) {
-        enqueue_admitted(WorkItem{item.actor, result.deadline_ns, item.sequence},
+        // Carry a sequence counter so BehaviorActorRunner::run() can cap
+        // consecutive RequeueReady cycles and force a yield.  Wrap at 128
+        // so the counter resets naturally after a forced yield.
+        uint64_t next_seq = item.sequence + 1;
+        if (next_seq > 128)
+            next_seq = 0;
+        enqueue_admitted(WorkItem{item.actor, result.deadline_ns, next_seq},
                          result.priority);
     }
 }
@@ -451,9 +472,25 @@ std::vector<WorkerSnapshot> HybridScheduler::worker_snapshots() const {
         ws.steals_attempted = worker_threads_[i]->donation_count();
         ws.steals_successful = 0;
         ws.actors_executed = 0;
+        ws.work_found = worker_threads_[i]->diag_work_found();
+        ws.idle_iters = worker_threads_[i]->diag_idle_iters();
+        ws.cv_escalations = worker_threads_[i]->diag_cv_escalations();
+        ws.cv_notify_wakes = worker_threads_[i]->diag_cv_notify_wakes();
+        ws.cv_timeout_wakes = worker_threads_[i]->diag_cv_timeout_wakes();
         result.push_back(ws);
     }
     return result;
+}
+
+int64_t HybridScheduler::edf_next_deadline() noexcept {
+    int64_t earliest = INT64_MAX;
+    int64_t deadline = 0;
+    for (auto& ws : placement_.workers()) {
+        if (ws.edf_queue.peek(deadline) && deadline < earliest) {
+            earliest = deadline;
+        }
+    }
+    return earliest;
 }
 
 } // namespace hpactor::sched
