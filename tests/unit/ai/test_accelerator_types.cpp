@@ -392,3 +392,75 @@ TEST(DeviceDescriptor, DefaultConstruction) {
     EXPECT_EQ(desc.vendor, hpactor::ai::DeviceVendor::Unknown);
     EXPECT_EQ(desc.health, hpactor::ai::DeviceHealth::Unknown);
 }
+
+// ── TypeTag Values ──────────────────────────────────────────────────
+#include <hpactor/ai/ai_type_tags.hpp>
+#include <hpactor/ai_resource.pb.h>
+#include <hpactor/msg/type_tag.hpp>
+#include <set>
+
+TEST(TypeTagValues, AllTagsUnique) {
+    std::set<uint32_t> values;
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiLeaseRequestTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiLeaseReplyTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiLeaseActivateTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiLeaseRenewTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiLeaseReleaseTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiLeaseRevokedTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiResourceSnapshotRequestTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiResourceSnapshotReplyTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiDeviceSnapshotUpdateTag));
+    values.insert(static_cast<uint32_t>(hpactor::ai::kAiNodeResourceSummaryTag));
+    EXPECT_EQ(values.size(), 10u);
+}
+
+TEST(TypeTagValues, AllInSubsystemRange) {
+    auto check = [](hpactor::TypeTag tag) {
+        uint32_t v = static_cast<uint32_t>(tag);
+        EXPECT_GE(v, 0x80u);
+        EXPECT_LE(v, 0x89u);
+    };
+    check(hpactor::ai::kAiLeaseRequestTag);
+    check(hpactor::ai::kAiLeaseReplyTag);
+    check(hpactor::ai::kAiLeaseActivateTag);
+    check(hpactor::ai::kAiLeaseRenewTag);
+    check(hpactor::ai::kAiLeaseReleaseTag);
+    check(hpactor::ai::kAiLeaseRevokedTag);
+    check(hpactor::ai::kAiResourceSnapshotRequestTag);
+    check(hpactor::ai::kAiResourceSnapshotReplyTag);
+    check(hpactor::ai::kAiDeviceSnapshotUpdateTag);
+    check(hpactor::ai::kAiNodeResourceSummaryTag);
+}
+
+TEST(MessageTraits, LeaseRequestTagMatches) {
+    EXPECT_EQ(hpactor::MessageTraits<hpactor::PbDeviceLeaseRequest>::tag(),
+              hpactor::ai::kAiLeaseRequestTag);
+}
+
+TEST(MessageTraits, LeaseReplyTagMatches) {
+    EXPECT_EQ(hpactor::MessageTraits<hpactor::PbDeviceLeaseReply>::tag(),
+              hpactor::ai::kAiLeaseReplyTag);
+}
+
+TEST(MessageTraits, AllTenMessagesHaveTraits) {
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbDeviceLeaseRequest>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbDeviceLeaseReply>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbDeviceLeaseActivate>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbDeviceLeaseRenew>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbDeviceLeaseRelease>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbDeviceLeaseRevoked>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbResourceSnapshotRequest>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbResourceSnapshotReply>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbDeviceSnapshotUpdate>::tag(),
+              hpactor::TypeTag::Invalid);
+    EXPECT_NE(hpactor::MessageTraits<hpactor::PbNodeResourceSummary>::tag(),
+              hpactor::TypeTag::Invalid);
+}
