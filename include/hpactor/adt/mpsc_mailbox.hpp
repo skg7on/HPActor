@@ -55,6 +55,13 @@ template <typename T> class MPSCMailbox {
     // Callers must serialize through an external lock when the consumer
     // path can be entered from multiple contexts (e.g. normal dispatch
     // and overflow-driven drop_one_oldest).
+    //
+    // On ARM64 the producer's head_.exchange may become visible before
+    // the mpsc_next store, making the oldest element appear temporarily
+    // unreachable.  Rather than spinning (which cannot make progress
+    // when the producer thread is asleep), we return nullptr and let
+    // the caller retry — the RequeueReady mechanism will re-dispatch
+    // the actor once the producer completes the enqueue.
     T* dequeue() noexcept {
         T* t = tail_.load(std::memory_order_acquire);
         T* next = t->mpsc_next.load(std::memory_order_acquire);
@@ -62,19 +69,16 @@ template <typename T> class MPSCMailbox {
         if (next == nullptr) {
             if (head_.load(std::memory_order_acquire) == t)
                 return nullptr;
-            do {
-                next = t->mpsc_next.load(std::memory_order_acquire);
-            } while (next == nullptr);
+            // Producer has exchanged head_ but mpsc_next isn't visible
+            // yet — return nullptr, caller will retry.
+            return nullptr;
         }
 
         T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
         if (next_next == nullptr) {
             T* h = head_.load(std::memory_order_acquire);
-            if (h != next) {
-                do {
-                    next_next = next->mpsc_next.load(std::memory_order_acquire);
-                } while (next_next == nullptr);
-            }
+            if (h != next)
+                return nullptr; // producer hasn't linked the next node yet
         }
 
         t->mpsc_next.store(next_next, std::memory_order_release);
@@ -82,18 +86,10 @@ template <typename T> class MPSCMailbox {
         if (next_next == nullptr) {
             T* h = head_.load(std::memory_order_acquire);
             if (h != next) {
-                // Producer enqueued between the first head_ check (line 72)
-                // and the chain update (line 80).  The node we are about to
-                // return is no longer the head — a new node was inserted
-                // behind it.  Spin until the producer completes its
-                // mpsc_next store so we can correctly link stub_ to the new
-                // head.  Without this spin, t->mpsc_next stays nullptr while
-                // head_ points past the stub, causing the next dequeue() to
-                // spin forever in the first wait loop (lines 65–67).
-                do {
-                    next_next = next->mpsc_next.load(std::memory_order_acquire);
-                } while (next_next == nullptr);
-                t->mpsc_next.store(next_next, std::memory_order_release);
+                // Producer enqueued between head_ check and chain update.
+                // Rather than spinning for mpsc_next, leave the chain as-is
+                // and return nullptr — the next dequeue() will fix it up.
+                return nullptr;
             }
         }
 

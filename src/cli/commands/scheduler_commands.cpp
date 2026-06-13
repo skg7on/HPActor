@@ -47,11 +47,18 @@ class SchedulerWorkersCommand final : public ICommand {
             return result<void>::make();
         }
 
-        std::vector<std::string> cols = {"Worker", "Steal Donations", "Idle"};
+        std::vector<std::string> cols = {"Worker",   "Work",   "IdleIters",
+                                         "CV→block", "CV¬ify", "CV⏰",
+                                         "Steals",   "Idle"};
         std::vector<std::vector<std::string>> rows;
         for (auto& ws : snaps) {
             rows.push_back({
                 std::to_string(ws.worker_index),
+                std::to_string(ws.work_found),
+                std::to_string(ws.idle_iters),
+                std::to_string(ws.cv_escalations),
+                std::to_string(ws.cv_notify_wakes),
+                std::to_string(ws.cv_timeout_wakes),
                 std::to_string(ws.steals_attempted),
                 ws.is_idle ? "yes" : "no",
             });

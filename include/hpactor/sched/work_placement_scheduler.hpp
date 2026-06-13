@@ -22,6 +22,7 @@
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
+#include <condition_variable>
 #include <cstdint>
 #include <deque>
 #include <functional>
@@ -216,6 +217,25 @@ class WorkPlacementScheduler {
         /// Lock-free stack for cross-thread work submission.
         /// Non-owning threads CAS-push; owner drains and reverses.
         std::atomic<SharedInputNode*> shared_input{nullptr};
+
+        /// Set by owner when entering CV-blocking sleep.  Enqueue threads
+        /// read this flag; if true they acquire \c sleep_mutex_ and notify
+        /// \c sleep_cv_ so the owner wakes immediately.
+        std::atomic<bool> is_blocking_{false};
+        /// Mutex paired with \c sleep_cv_ for blocking-wakeup signalling.
+        mutable std::mutex sleep_mutex_;
+        /// Signalled by enqueue threads when \c is_blocking_ is true.
+        std::condition_variable sleep_cv_;
+
+        /// Wake a worker blocked on \c sleep_cv_ (idempotent, safe from
+        /// any thread).  If the worker is not blocking this is a no-op.
+        void wake_if_blocking() {
+            if (is_blocking_.load(std::memory_order_acquire)) {
+                std::lock_guard<std::mutex> lk(sleep_mutex_);
+                is_blocking_.store(false, std::memory_order_release);
+                sleep_cv_.notify_one();
+            }
+        }
     };
 
     /// \return Number of worker threads.

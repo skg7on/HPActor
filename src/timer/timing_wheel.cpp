@@ -79,6 +79,12 @@ TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {
     timer->id = next_timer_id_++;
     timer->callback = std::move(callback);
 
+    // Update the cached minimum deadline (mutex_ already held by caller).
+    int64_t cur = min_deadline_.load(std::memory_order_relaxed);
+    if (expire_ns < cur) {
+        min_deadline_.store(expire_ns, std::memory_order_release);
+    }
+
     insert_timer(timer);
     return timer->id;
 }
@@ -90,6 +96,10 @@ bool TimingWheel::cancel(uint64_t timer_id) {
     }
     Timer* timer = remove_timer(timer_id);
     if (timer) {
+        // If the cancelled timer was the earliest, recompute.
+        if (timer->expire_ns <= min_deadline_.load(std::memory_order_relaxed)) {
+            recompute_min_deadline();
+        }
         delete timer;
         return true;
     }
@@ -240,6 +250,9 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
                 }
             }
         }
+        if (!pending.empty()) {
+            recompute_min_deadline();
+        }
     }
     // Lock released — fire callbacks safely outside the critical section.
 
@@ -271,6 +284,24 @@ size_t TimingWheel::size() const {
         }
     }
     return count;
+}
+
+int64_t TimingWheel::next_deadline() const {
+    // Lock-free read of the cached minimum.  Updated under mutex_ by
+    // schedule(), advance(), and cancel().
+    return min_deadline_.load(std::memory_order_acquire);
+}
+
+void TimingWheel::recompute_min_deadline() {
+    int64_t m = INT64_MAX;
+    for (const auto& level : levels_) {
+        for (const auto& bucket : level.buckets) {
+            for (const Timer* timer : bucket) {
+                m = std::min(m, timer->expire_ns);
+            }
+        }
+    }
+    min_deadline_.store(m, std::memory_order_release);
 }
 
 } // namespace hpactor::sched

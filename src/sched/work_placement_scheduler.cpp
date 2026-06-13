@@ -83,6 +83,8 @@ void WorkPlacementScheduler::enqueue_shared(const WorkItem& item,
         node->next.store(old, std::memory_order_relaxed);
     } while (!worker.shared_input.compare_exchange_weak(
         old, node, std::memory_order_release, std::memory_order_relaxed));
+
+    worker.wake_if_blocking();
 }
 
 PlacementResult

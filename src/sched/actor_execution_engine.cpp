@@ -87,7 +87,6 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
         if (mailbox::is_expired(msg.deadline_ns(), now_ns)) {
             emit_expired_metric(context, item.actor, now_ns);
 
-            // Record to dead-letter queue when enabled.
             auto* dlq = system_.dead_letter_queue();
             if (dlq && dlq->config().enabled) {
                 hpactor::mailbox::DeadLetterRecord dl;
@@ -110,9 +109,29 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
         } else {
             actor.receive(msg);
         }
+    } else {
+        // try_pop returned nullptr.  On ARM64 the mpsc_next store may
+        // not be visible yet even though empty() reports false (count_
+        // is visible).  Go idle and let the producer's notify_ready
+        // (called after enqueue completion) re-admit the actor.
+        actor_state.set(ActorState::kIdle);
+        return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};
     }
 
-    if (!mailbox->empty()) {
+    // Cap RequeueReady cycles to prevent one high-traffic actor from
+    // monopolising a worker.  The budget is carried in item.sequence
+    // (incremented by execute_actor on each RequeueReady round-trip).
+    // After kRequeueBudget consecutive cycles, force the actor to kIdle
+    // so other actors get a chance to run.  If the mailbox still has
+    // messages the double-check below will re-admit the actor via
+    // try_mark_ready (external notification path), naturally interleaving
+    // it with other work.
+    // Skip the cap when workers are paused (deterministic test mode).
+    static constexpr uint64_t kRequeueBudget = 64;
+    bool budget_exhausted =
+        !context.workers_paused && item.sequence >= kRequeueBudget;
+
+    if (!mailbox->empty() && !budget_exhausted) {
         auto admission = ready_gate_.mark_ready_already_admitted(actor);
         if (admission.accepted() ||
             admission.code == ReadyAdmissionCode::AlreadyReady) {

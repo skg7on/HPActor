@@ -131,6 +131,15 @@ class CalendarQueue {
     /// \return true if the queue is empty.
     bool empty() const;
 
+    /// \brief Return the earliest timer expiration time, or INT64_MAX if empty.
+    ///
+    /// \return The minimum expiration time of all pending timers, or
+    ///         \c INT64_MAX if no timers are pending.
+    /// \note Thread-safe.  Acquires the internal mutex for a consistent
+    ///       snapshot.  The result may be stale by the time the caller
+    ///       observes it.
+    int64_t next_deadline() const;
+
     /// \brief Number of pending timers in the queue.
     ///
     /// \return The count of timers that have not yet fired or been cancelled.

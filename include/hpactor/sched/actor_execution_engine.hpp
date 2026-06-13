@@ -55,6 +55,7 @@ struct ActorExecutionContext {
     uint32_t worker_id{UINT32_MAX};
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics{nullptr};
     log::Logger* logger{nullptr};
+    bool workers_paused{false};
 };
 
 /// \brief Runs one activation of a behavior-based event actor.

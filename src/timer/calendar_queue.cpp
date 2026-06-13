@@ -257,4 +257,13 @@ bool CalendarQueue::empty() const {
     return timer_map_.empty();
 }
 
+int64_t CalendarQueue::next_deadline() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    int64_t min_expire = INT64_MAX;
+    for (const auto& [id, timer] : timer_map_) {
+        min_expire = std::min(min_expire, timer->expire_ns);
+    }
+    return min_expire;
+}
+
 } // namespace hpactor::adt

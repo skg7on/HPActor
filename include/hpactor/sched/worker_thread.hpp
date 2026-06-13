@@ -141,6 +141,23 @@ class WorkerThread {
     // Try to steal work using A2WS victim selection
     bool try_steal(WorkItem& out);
 
+    // ── Diagnostic accessors ────────────────────────────────────────
+    uint64_t diag_work_found() const {
+        return diag_work_found_.load(std::memory_order_relaxed);
+    }
+    uint64_t diag_idle_iters() const {
+        return diag_idle_iters_.load(std::memory_order_relaxed);
+    }
+    uint64_t diag_cv_escalations() const {
+        return diag_cv_escalations_.load(std::memory_order_relaxed);
+    }
+    uint64_t diag_cv_notify_wakes() const {
+        return diag_cv_notify_wakes_.load(std::memory_order_relaxed);
+    }
+    uint64_t diag_cv_timeout_wakes() const {
+        return diag_cv_timeout_wakes_.load(std::memory_order_relaxed);
+    }
+
   private:
     void thread_loop();
     void backoff();
@@ -181,6 +198,13 @@ class WorkerThread {
     // Reset to 0 when work is found so the worker stays responsive;
     // increments on each idle iteration to ramp sleep duration.
     uint32_t backoff_counter_{0};
+
+    // ── Diagnostic counters (exposed via WorkerSnapshot) ────────────
+    std::atomic<uint64_t> diag_work_found_{0};
+    std::atomic<uint64_t> diag_idle_iters_{0};
+    std::atomic<uint64_t> diag_cv_escalations_{0};
+    std::atomic<uint64_t> diag_cv_notify_wakes_{0};
+    std::atomic<uint64_t> diag_cv_timeout_wakes_{0};
 };
 
 } // namespace hpactor::sched

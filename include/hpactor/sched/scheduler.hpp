@@ -72,6 +72,13 @@ struct WorkerSnapshot {
     uint64_t steals_attempted{0};
     uint64_t steals_successful{0};
     bool is_idle{false};
+
+    // Adaptive wakeup diagnostics
+    uint64_t work_found{0};
+    uint64_t idle_iters{0};
+    uint64_t cv_escalations{0};
+    uint64_t cv_notify_wakes{0};
+    uint64_t cv_timeout_wakes{0};
 };
 
 /// \brief Abstract interface for actor schedulers.
@@ -306,6 +313,24 @@ class HybridScheduler : public IScheduler {
     /// \param[in] worker_id Owning worker index.
     /// \return \c true if work was available.
     bool pop_local(WorkItem& out, uint32_t worker_id);
+
+    /// \brief Return the earliest EDF deadline across all workers.
+    ///
+    /// Peeks at every worker's EDF queue without popping.  Used by the
+    /// worker blocking-wakeup path to compute a safe CV timeout that
+    /// guarantees deadline-sensitive work is stolen before it expires.
+    ///
+    /// \return Earliest deadline in nanoseconds, or \c INT64_MAX if all
+    ///         EDF queues are empty.
+    int64_t edf_next_deadline() noexcept;
+
+    /// \brief Return a reference to the placement layer's worker state vector.
+    ///
+    /// Used by WorkerThread to access per-worker CV fields for adaptive
+    /// blocking-wakeup.  Not intended for general use.
+    std::vector<WorkPlacementScheduler::WorkerState>& placement_workers() noexcept {
+        return placement_.workers();
+    }
 
     /// \brief Read the current worker ID from thread-local storage.
     uint32_t current_worker_id() const;
