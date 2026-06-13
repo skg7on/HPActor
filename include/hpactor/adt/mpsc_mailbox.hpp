@@ -15,6 +15,7 @@
 #pragma once
 
 #include <atomic>
+#include <thread>
 
 namespace hpactor::adt {
 
@@ -62,18 +63,33 @@ template <typename T> class MPSCMailbox {
         if (next == nullptr) {
             if (head_.load(std::memory_order_acquire) == t)
                 return nullptr;
-            do {
+            // Bounded spin: the producer has updated head_ but not yet
+            // written mpsc_next.  Yield after a threshold to let the
+            // producer thread run rather than spinning forever.
+            for (int spin = 0;; ++spin) {
                 next = t->mpsc_next.load(std::memory_order_acquire);
-            } while (next == nullptr);
+                if (next != nullptr)
+                    break;
+                if (spin >= 1000) {
+                    std::this_thread::yield();
+                    spin = 0;
+                }
+            }
         }
 
         T* next_next = next->mpsc_next.load(std::memory_order_relaxed);
         if (next_next == nullptr) {
             T* h = head_.load(std::memory_order_acquire);
             if (h != next) {
-                do {
+                for (int spin = 0;; ++spin) {
                     next_next = next->mpsc_next.load(std::memory_order_acquire);
-                } while (next_next == nullptr);
+                    if (next_next != nullptr)
+                        break;
+                    if (spin >= 1000) {
+                        std::this_thread::yield();
+                        spin = 0;
+                    }
+                }
             }
         }
 
@@ -90,9 +106,15 @@ template <typename T> class MPSCMailbox {
                 // head.  Without this spin, t->mpsc_next stays nullptr while
                 // head_ points past the stub, causing the next dequeue() to
                 // spin forever in the first wait loop (lines 65–67).
-                do {
+                for (int spin = 0;; ++spin) {
                     next_next = next->mpsc_next.load(std::memory_order_acquire);
-                } while (next_next == nullptr);
+                    if (next_next != nullptr)
+                        break;
+                    if (spin >= 1000) {
+                        std::this_thread::yield();
+                        spin = 0;
+                    }
+                }
                 t->mpsc_next.store(next_next, std::memory_order_release);
             }
         }
