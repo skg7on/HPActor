@@ -185,7 +185,7 @@ class WorkerThread {
     /// Current backoff counter.  Use \c diag_is_in_cv_model() to check
     /// whether the worker has escalated to CV-blocking idle.
     uint32_t diag_backoff_counter() const {
-        return backoff_counter_;
+        return backoff_counter_.load(std::memory_order_relaxed);
     }
 
   private:
@@ -193,7 +193,7 @@ class WorkerThread {
     void backoff();
 
     void reset_backoff() {
-        backoff_counter_ = 0;
+        backoff_counter_.store(0, std::memory_order_relaxed);
     }
 
     Config config_;
@@ -225,10 +225,13 @@ class WorkerThread {
     // Pluggable pause handler (set by scheduler for test harness)
     PauseHandler pause_handler_;
 
-    // Backoff counter for adaptive idle polling.
-    // Reset to 0 when work is found so the worker stays responsive;
-    // increments on each idle iteration to ramp sleep duration.
-    uint32_t backoff_counter_{0};
+    /// \brief Backoff counter for adaptive idle polling.
+    ///
+    /// Reset to 0 when work is found so the worker stays responsive;
+    /// increments on each idle iteration to ramp sleep duration.
+    /// Atomic so \c diag_is_in_cv_model() and \c diag_backoff_counter()
+    /// can safely read it from CLI / metrics threads.
+    std::atomic<uint32_t> backoff_counter_{0};
 
     // ── Diagnostic counters (exposed via WorkerSnapshot) ────────────
     std::atomic<uint64_t> diag_work_found_{0};
