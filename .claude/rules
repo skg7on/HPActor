@@ -1,124 +1,278 @@
 # HPActor Project Rules For Claude Code
 
-## Warmup
+This file is the **authoritative source** for agent behavioral rules.
+Reference material (build commands, component tables, architecture diagrams)
+lives in `CLAUDE.md`. Read both at the start of every task.
 
-- At the start of a substantive task, read `AGENTS.md`, `CLAUDE.md`, and
-  `CLAUDE_MEMORY.md`.
-- Treat `CLAUDE_MEMORY.md` as the high-level project memory source for this
-  checkout.
-- Treat `docs/architecture/production/` as the production reliability
-  requirement backlog unless code proves a behavior is implemented.
+**Orientation:**
+- `CLAUDE_MEMORY.md` is the high-level project memory source for this checkout.
+- `docs/architecture/production/` documents are the production reliability
+  requirement backlog. Never describe a backlog item as implemented behavior
+  unless the code proves it.
 
-## Worktree Isolation
+---
 
-- Every design or implementation job must happen in a linked git worktree under
-  `.worktrees/<short-task-name>`.
-- Read-only inspection may happen in the main checkout. Specs, plans, source,
-  docs, config, tests, builds, and generated artifacts for a task belong in the
-  task worktree.
-- Before writing, verify the current directory is the worktree path, not the
-  repository root. Prefer relative paths after entering the worktree.
-- Never target files by the main checkout absolute path
-  `/Users/skg7on/Workspace/Projects/HPActor/` when writing task changes.
-- Keep `.worktrees/` ignored. Do not create new task worktrees under the legacy
-  `.worktree/` path.
-- Use the worktree-local `build/` directory for configure, build, and test
-  output.
-- Before committing, verify the branch is the worktree branch. After writing,
-  run `git status` in the worktree and make sure no task files leaked to the
-  main checkout.
+## 1. Worktree Isolation
 
-## TDDFlow
+**Every design or implementation write MUST happen in an isolated git worktree.**
+The main checkout at the repository root is for read-only inspection only.
 
-- After an accepted design/spec and before implementing a feature, bug fix,
-  refactor, or behavior change, invoke `.claude/skills/tddflow-development`.
-- Follow RED, GREEN, REFACTOR for production code changes:
-  write one focused failing test, verify the expected failure, implement the
-  minimum passing code, verify green, then refactor while staying green.
-- Do not write production implementation before observing the failing test
-  unless the user explicitly approves an exception for generated code,
-  throwaway exploration, docs-only work, or configuration-only work.
-- Record RED and GREEN verification commands in the final response for feature
-  and bug-fix tasks.
+### Starting Work
 
-## Architecture
+When a task requires writing files (code, docs, config, tests, build artifacts):
 
-- HPActor is a C++20 event-based actor framework. Preserve actor boundaries and
-  avoid shared mutable state between actors.
-- Production-facing work must align with the reliability planes:
-  data plane (delivery, mailbox admission, DLQ, reliable messaging, tracing,
-  lifecycle), control plane (cluster failure model, node identity, sharding,
-  placement, rebalancing, shutdown, rolling upgrades), and operations plane
-  (health, admin, security, audit, config reload, incident timelines, chaos and
-  soak testing).
-- Start production-facing design from the relevant document in
-  `docs/architecture/production/`.
-- Capture runtime contracts, failure semantics, observability, operations
-  surface, and acceptance evidence before implementation.
-- Preserve source-compatible defaults for existing actor APIs. Production-grade
-  behavior should be opt-in or safely defaulted.
-- Do not describe backlog items as implemented runtime behavior until the code
-  proves it.
+1. If not already in a linked worktree, create one:
+   ```
+   git worktree add -b worktree/<short-task-name> .claude/worktrees/<short-task-name> main
+   ```
+2. Do all edits inside `.claude/worktrees/<short-task-name>/`.
+3. Use the worktree-local `build/` directory for configure, build, and test output.
+4. `.claude/worktrees/` is already gitignored — no additional ignore rule needed.
 
-## Implementation
+### Writing Files — Hard Rules
 
-- Use C++20 and the repository's LLVM-style conventions.
-- Do not introduce RTTI, `dynamic_cast`, `typeid`, exception-based control flow,
-  or public APIs that require RTTI or exceptions.
-- Keep exceptions limited to the existing toml++ translation units listed in
-  `CLAUDE.md`.
+- **Verify your directory** before every write: `pwd` must print
+  `.../HPActor/.claude/worktrees/<name>/`, never `.../HPActor/` (the main checkout).
+- **Prefer relative paths** — they resolve against the worktree root automatically.
+- **NEVER target the main checkout path.** The absolute path
+  `/Users/skg7on/Workspace/Projects/HPActor/` is the main checkout — files
+  written there land on `main`, not your worktree branch.
+- **Subagents inherit CWD.** If a subagent uses an absolute path, derive it from
+  `pwd` at runtime, never from a hardcoded string.
+
+### Branch Naming
+
+All worktree branches MUST follow a consistent `category/short-description` pattern
+using kebab-case. Use one of these prefixes:
+
+| Prefix | Use for |
+|--------|---------|
+| `worktree/` | General task work (edits, cleanups, reorgs) |
+| `feature/` | New features; include ticket ID when available (e.g., `feature/sys-284-daemon-service-design`) |
+| `fix/` | Bug fixes (e.g., `fix/rate-limiter-lost-wakeup-spin`) |
+| `docs/` | Documentation-only changes (e.g., `docs/dedup-claude-md-rules`) |
+| `refactor/` | Pure refactors with no behavior change |
+
+- Keep the description short and descriptive (3–6 words).
+- Use lowercase kebab-case (hyphens, no underscores).
+- Match the branch name to the worktree directory name:
+  `.claude/worktrees/<branch-name-without-prefix>/`.
+
+**Examples:**
+
+```
+git worktree add -b worktree/dedup-claude-md-rules .claude/worktrees/dedup-claude-md-rules main
+git worktree add -b feature/act-009-durable-outbox .claude/worktrees/act-009-durable-outbox main
+git worktree add -b fix/lost-wakeup-mailbox .claude/worktrees/lost-wakeup-mailbox main
+```
+
+### Before Committing
+
+- Confirm `git branch --show-current` shows the worktree branch, not `main`.
+- Run `git status` to verify all changes are in the worktree and no files
+  leaked to the main checkout.
+
+---
+
+## 2. TDDFlow
+
+**All production code changes MUST follow RED → GREEN → REFACTOR.**
+
+### When This Applies
+
+TDDFlow is mandatory for: features, bug fixes, refactors, and behavior changes.
+
+Exceptions (must be explicitly approved by the user): generated code, throwaway
+exploration, docs-only work, configuration-only work.
+
+### Workflow
+
+1. **RED** — Write one focused failing test that describes the next required
+   behavior. Run the narrowest relevant test command. Confirm it fails for the
+   expected reason.
+2. **GREEN** — Write the minimum implementation needed to pass that test. Run
+   the same focused command. Confirm it passes.
+3. **REFACTOR** — Clean up while keeping the same tests green. Do not add new
+   behavior during this step.
+4. Repeat for each behavior or edge case until the design is fully implemented.
+
+Never write production implementation before observing the failing test.
+Record the RED and GREEN verification commands in the final response for
+feature and bug-fix tasks.
+
+Invoke the `tddflow-development` skill (`.claude/skills/tddflow-development/`)
+for detailed guidance after design approval.
+
+---
+
+## 3. Architecture
+
+**HPActor is a C++20 event-based actor framework. Preserve actor boundaries;
+avoid shared mutable state between actors.**
+
+### Reliability Plane Alignment
+
+Production-facing features MUST align with three planes:
+
+| Plane | Concerns |
+|-------|----------|
+| **Data plane** | Delivery semantics, mailbox admission, DLQ, reliable messaging, tracing, actor lifecycle |
+| **Control plane** | Cluster failure model, node identity, sharding, placement, rebalancing, graceful shutdown, rolling upgrades |
+| **Operations plane** | Health endpoints, admin API, security, audit, config reload, incident timelines, chaos/soak testing |
+
+### Design Flow
+
+1. Start from the relevant document in `docs/architecture/production/`.
+2. Capture runtime contracts, failure semantics, observability, and operations
+   surface before writing implementation.
+3. Include the operations surface in every production-facing design: metrics,
+   CLI/admin visibility, health/readiness, audit/trace correlation, and
+   runbook impact.
+
+### API Compatibility
+
+- Preserve source-compatible defaults for existing actor APIs.
+- Production-grade behavior (delivery results, bounded mailboxes, reliable
+  messaging, tracing, security, durability) MUST be opt-in or safely defaulted.
+
+---
+
+## 4. Implementation
+
+### Language & Toolchain
+
+- Use C++20 with the repository's LLVM-style conventions.
+- NEVER introduce `dynamic_cast`, `typeid`, exception-based control flow, or
+  public APIs that require RTTI or exceptions.
+- Exceptions are permitted ONLY in `src/config/toml_parser.cpp`,
+  `src/config/toml_table_view.cpp`, and `tools/toml-compiler/compiler.cpp`
+  (toml++ requires them in including TUs).
+
+### Actor Contracts
+
+- Use protobuf `TypedMessage` type tags for dynamic messages.
+- Use typed actor signatures for static contracts.
+- When changing generated protobuf contracts, TypeTag assignments, wire formats,
+  binary topology, or persisted state: be explicit about compatibility and
+  document backward-compatibility impact.
+
+### Memory & Resources
+
+- Maintain allocator ownership, memory accounting, and poisoning/canary
+  assumptions when adding queues, envelopes, buffers, or actor state.
+- PREFER bounded capacity with explicit failure paths over unbounded growth.
+  Route pressure through typed results, backpressure signals, or DLQ policy.
 - Keep blocking I/O and long-running work out of event-loop and cooperative
-  scheduler paths. Use daemon, blocking, dense-compute, async, or transport
-  abstractions when work can block.
-- Maintain allocator ownership, memory accounting, poisoning/canary
-  assumptions, and actor ownership metadata when adding queues, envelopes,
-  buffers, or actor state.
-- Prefer bounded capacity and explicit failure paths over unbounded growth.
-  Route pressure through typed results, backpressure, or DLQ policy.
-- Keep actor contracts explicit: use protobuf `TypedMessage` type tags for
-  dynamic messages and typed actor signatures for static contracts.
-- Keep generated/protobuf contracts, TypeTags, wire formats, binary topology,
-  and persisted-state changes explicit and compatibility-aware.
+  scheduler paths. Use the appropriate abstraction:
+  - `DaemonActor` / `BlockingActor` — blocking work on dedicated threads
+  - `DenseComputingActor` — CPU-intensive work on dedicated pool
+  - Async/transport abstractions — I/O that may block
 
-## Configuration
+### Concurrency-Sensitive Code
 
-- Prefer subsystem-owned extension points over central switches.
-- New TOML subsystem config should use self-registering parsers in
-  `src/config/parsers/`.
-- Parser interfaces must use opaque `TomlTableView`; do not expose public
-  `toml++` headers.
-- Do not grow monolithic parser logic when a subsystem parser can own the
+When changing lock-free structures, scheduler logic, mailbox internals, timer
+wheels, or transport code:
+- State the concurrency contract explicitly in the design.
+- Add focused stress or race-oriented tests.
+- Consult `docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md`
+  for the normative rule set on MPSC mailbox correctness, actor state ownership,
+  ready-gate transitions, and concurrency test design.
+
+---
+
+## 5. Configuration
+
+**Prefer subsystem-owned extension points over central switches.**
+
+- New TOML subsystem config MUST use a self-registering parser in
+  `src/config/parsers/`. Create a single source file with a static
+  `TomlSystemParserRegistration<T>` or `TomlDocumentParserRegistration<T>`
+  — no edits to the monolithic parser are needed.
+- Parser interfaces MUST use opaque `TomlTableView`. Never expose `toml++`
+  headers in a public interface.
+- Never grow centralized parser logic when a subsystem parser can own the
   behavior.
 
-## Testing
+---
 
-- Tests must be deterministic across platforms, build configurations, and CI.
-- Avoid timing assumptions. Use condition-based polling with generous timeouts
-  for scheduler-dependent tests, or set `scheduler_threads = 0` when inspecting
-  mailbox or lifecycle state directly.
-- Do not assume thread execution order. If a test needs to observe intermediate
-  mailbox or state transitions, disable scheduler threads or inject messages
-  directly.
-- Guard platform-specific syscall behavior with preprocessor checks or assert
-  portable observable outcomes instead of exact errno or signal details.
-- Use non-blocking file descriptors in async epoll/kqueue tests.
-- Do not rely on `assert()` for the condition under test because it may compile
-  out under `NDEBUG`.
-- Use `mailbox->inject_for_test()` for mailbox/drain tests that must avoid
-  scheduler notification races.
-- Match test scope to risk: unit tests for local behavior, integration tests for
-  actor/config/network interactions, and sanitizer, stress, chaos, soak, or
-  compatibility coverage for reliability-plane changes.
+## 6. Testing
 
-## Build And Verification
+**All tests MUST be deterministic** across platforms, build configurations, and
+CI environments. The following rules prevent flaky tests.
 
-- Configure with Ninja using
-  `cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON`.
-- Build with `ninja -C build`.
-- Prefer the narrowest verification that covers the changed surface: a targeted
-  `ninja` target, one test binary, or `ctest -R <pattern> --output-on-failure`.
-- Run a full configure/build/test cycle only when the change affects build
-  configuration, generated files, broad public headers, cross-cutting runtime
-  behavior, or when the user explicitly asks for it.
-- Do not reconfigure CMake unless CMake files, options, generated protobuf
-  inputs, or toolchain assumptions changed.
+### Timing & Ordering
+
+- **Never assume timing.** Do not assume a timer fires within N ms, a thread
+  completes within a deadline, or a sleep is "long enough." Use condition-based
+  polling with generous timeouts (5s+) for scheduler-dependent tests.
+- **Never assume thread execution order.** If a test needs to observe
+  intermediate mailbox or lifecycle state, set `scheduler_threads = 0` or
+  inject messages directly via `mailbox->inject_for_test()`.
+
+### Platform Portability
+
+- Guard platform-specific syscall behavior (e.g., `sendto` on connected sockets,
+  `readv` with zero-length buffers, signal delivery in forked children, page
+  sizes) with `#ifdef`. Prefer testing the observable outcome rather than a
+  specific errno or signal number.
+- Use non-blocking file descriptors in async epoll/kqueue tests. Blocking fds
+  cause infinite hangs in the edge-triggered drain loop.
+
+### Test Infrastructure
+
+- Never rely on `assert()` for the condition under test — it compiles out under
+  `NDEBUG`. Tests must fail explicitly (return non-zero, print FAIL). Use
+  `assert` only for invariants that indicate test infrastructure bugs.
+- Use `mailbox->inject_for_test()` for mailbox/drain tests to avoid races where
+  the scheduler processes messages before the test can observe them.
+- Set CMake `TIMEOUT` properties for tests that legitimately need more than
+  the global ctest timeout.
+
+### Scope
+
+Match test scope to risk:
+- **Unit tests** — local behavior, single component
+- **Integration tests** — actor/config/network interactions
+- **Sanitizer, stress, chaos, soak, compatibility** — reliability-plane changes
+
+---
+
+## 7. Build & Verification
+
+### Configure & Build
+
+```
+cmake -S . -B build -GNinja -DCMAKE_EXPORT_COMPILE_COMMANDS=ON
+ninja -C build
+```
+
+Do not reconfigure CMake unless CMake files, options, generated protobuf
+inputs, or toolchain assumptions changed.
+
+### Verification Strategy
+
+**Prefer the narrowest verification that covers the changed surface:**
+
+1. A targeted `ninja` target that compiles only the changed TU.
+2. One test binary (`./build/tests/unit/core/test_unit_core`).
+3. A CTest pattern (`ctest -R <pattern> --output-on-failure`).
+
+**Only run a full configure/build/test cycle when** the change affects build
+configuration, generated files, broad public headers, cross-cutting runtime
+behavior, or when the user explicitly asks for it.
+
+### Common Test Commands
+
+```bash
+# List available GTest cases in a binary
+./build/tests/unit/core/test_unit_core --gtest_list_tests
+
+# Run a specific GTest case
+./build/tests/unit/core/test_unit_core --gtest_filter="*ActorId*"
+
+# Run via ctest with pattern matching
+ctest -R "ActorIdDefaultConstruction" --output-on-failure
+
+# Full parallel test suite
+ctest --output-on-failure --parallel 8
+```
