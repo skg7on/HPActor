@@ -40,6 +40,32 @@ When a task requires writing files (code, docs, config, tests, build artifacts):
 - **Subagents inherit CWD.** If a subagent uses an absolute path, derive it from
   `pwd` at runtime, never from a hardcoded string.
 
+### Branch Naming
+
+All worktree branches MUST follow a consistent `category/short-description` pattern
+using kebab-case. Use one of these prefixes:
+
+| Prefix | Use for |
+|--------|---------|
+| `worktree/` | General task work (edits, cleanups, reorgs) |
+| `feature/` | New features; include ticket ID when available (e.g., `feature/sys-284-daemon-service-design`) |
+| `fix/` | Bug fixes (e.g., `fix/rate-limiter-lost-wakeup-spin`) |
+| `docs/` | Documentation-only changes (e.g., `docs/dedup-claude-md-rules`) |
+| `refactor/` | Pure refactors with no behavior change |
+
+- Keep the description short and descriptive (3–6 words).
+- Use lowercase kebab-case (hyphens, no underscores).
+- Match the branch name to the worktree directory name:
+  `.claude/worktrees/<branch-name-without-prefix>/`.
+
+**Examples:**
+
+```
+git worktree add -b worktree/dedup-claude-md-rules .claude/worktrees/dedup-claude-md-rules main
+git worktree add -b feature/act-009-durable-outbox .claude/worktrees/act-009-durable-outbox main
+git worktree add -b fix/lost-wakeup-mailbox .claude/worktrees/lost-wakeup-mailbox main
+```
+
 ### Before Committing
 
 - Confirm `git branch --show-current` shows the worktree branch, not `main`.
