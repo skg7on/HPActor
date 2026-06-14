@@ -139,15 +139,23 @@ TEST(WorkerThreadTest, ThreadIdIsReasonable) {
     WorkerThread::Config cfg;
     WorkerThread worker(cfg);
 
-    // Before start, thread_id may return 0 or a hash of the default-constructed
-    // std::thread::id (which represents "not a thread").
+    // Before start, thread_id returns 0 (native_tid_ not yet captured).
     uint64_t tid_before = worker.thread_id();
 
     worker.start();
-    uint64_t tid_after = worker.thread_id();
-    worker.stop();
 
-    EXPECT_NE(tid_after, uint64_t(0));
+    // On Linux, the worker thread captures its TID via syscall(SYS_gettid)
+    // at the start of the thread lambda.  This may not have executed yet, so
+    // poll briefly until we get a real value.
+    uint64_t tid_after = 0;
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (tid_after == 0 && std::chrono::steady_clock::now() < deadline) {
+        tid_after = worker.thread_id();
+        if (tid_after == 0)
+            std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    ASSERT_NE(tid_after, uint64_t(0))
+        << "Worker thread did not capture its TID within 5 seconds";
     // A real platform thread ID should be well under 2^48.
     // The old std::hash<std::thread::id> approach on Linux produces values
     // in the 2^62–2^64 range (e.g., 13886910359752328644), which is a clear
@@ -155,11 +163,13 @@ TEST(WorkerThreadTest, ThreadIdIsReasonable) {
     EXPECT_LT(tid_after, uint64_t(1) << 48)
         << "Thread ID " << tid_after << " looks like a hashed/garbage value — "
         << "expected a real kernel thread ID, got a hash";
-    // After start, the thread ID should differ from the pre-start value (which
-    // represents "not a thread").
+    // After start, the thread ID should differ from the pre-start value
+    // (which is 0 before the thread has started).
     EXPECT_NE(tid_after, tid_before)
         << "Thread ID did not change after start() — still using the "
         << "default-constructed std::thread::id";
+
+    worker.stop();
 }
 
 TEST(WorkerThreadTest, WorkProcessor) {
