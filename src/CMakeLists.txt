@@ -130,12 +130,10 @@ add_library(hpactor_lib SHARED
     ../third_party/llhttp/llhttp.c
     ../third_party/llhttp/api.c
     ../third_party/llhttp/http.c
-    ai/accelerator_types.cpp
-    ai/ai_message_registry.cpp
-    process/process_manager.cpp
-    process/watchdog_actor.cpp
-    process/health_http_server.cpp
 )
+        process/process_manager.cpp
+        process/watchdog_actor.cpp
+        process/health_http_server.cpp
 
 target_include_directories(hpactor_lib
     PUBLIC
@@ -200,6 +198,15 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/log_commands.cpp
     cli/commands/scheduler_commands.cpp
 )
+
+# ---- AI accelerator subsystem (compile-time gate, runtime opt-in) -----------
+
+if(ENABLE_AI_ACCELERATORS)
+    target_sources(hpactor_lib PRIVATE
+        ai/accelerator_types.cpp
+        ai/ai_message_registry.cpp
+    )
+endif()
 
 # ---- tracing subsystem (runtime opt-in via tracing.enabled) ----------------
 
