@@ -33,27 +33,54 @@ namespace hpactor::sched {
 // Forward declaration
 class HybridScheduler;
 
-// -----------------------------------------------------------------------------
-// WorkerThread: per-thread worker for work-stealing scheduler
-// -----------------------------------------------------------------------------
-// Each worker has:
-// - A local MultiPriorityWorkQueue for actor messages
-// - Thread ID for identification
-// - State flags for scheduling decisions
-//
-// Work-stealing strategy: Adaptive Work Stealing (AWS)
-// - Each worker maintains a "donation" counter
-// - When donation threshold exceeded, worker becomes a thief
-// - Victims selected via per-worker round-robin pointer
-// -----------------------------------------------------------------------------
+/// \brief Per-thread worker for the work-stealing hybrid scheduler.
+///
+/// Each worker owns a dedicated OS thread that runs a work-processing loop.
+/// The loop drains a local `MultiPriorityWorkQueue`, attempts to steal work
+/// from sibling workers via the owner scheduler's A2WS victim selector, and
+/// escalates from lightweight polling through exponential backoff to
+/// condition-variable blocking when no work is available.
+///
+/// Workers integrate with the following scheduler subsystems:
+/// - **Local queue:** `push()` (owner), `pop()` (owner), `steal()` (thief).
+/// - **A2WS stealing:** `donation_count_` tracks steal attempts; when the
+///   count exceeds `Config::steal_threshold`, the worker actively steals
+///   via `try_steal()` using the scheduler's victim selector.
+/// - **Adaptive idle escalation:** `backoff()` ramps from `yield()` through
+///   exponential sleep (10 µs → 50 ms).  After `kPollThreshold` idle
+///   iterations, the worker enters CV-based blocking with an EDF-aware
+///   timeout so it wakes before the earliest deadline expires.
+/// - **CV wakeup:** External enqueue paths check `is_blocking_` on the
+///   placement-layer `WorkerState` and signal `sleep_cv_` to wake a
+///   blocked worker immediately.
+/// - **Coroutine frames:** Each worker owns a `CoroutineFramePool` for
+///   stackful-coroutine frame allocation.
+/// - **Per-thread allocation:** Optionally owns a `ThreadLocalAllocator`
+///   for slab-cache-backed memory allocation confined to this thread.
+///
+/// \note **Thread safety:** The worker's own thread is the *owner* and
+///       serializes all `push()`, `pop()`, and lifecycle operations.
+///       Sibling workers may call `steal()` or `try_steal()` concurrently.
+///       `start()`/`stop()` are externally synchronized by the scheduler.
 class WorkerThread {
   public:
+    /// \brief Per-worker configuration.
+    ///
+    /// Passed to the constructor; stored by value and immutable for the
+    /// lifetime of the worker.
     struct Config {
+        /// Index of this worker within the scheduler's worker array.
         uint32_t worker_index = 0;
+        /// Number of priority levels in the local `MultiPriorityWorkQueue`.
         uint32_t priority_levels = 4;
-        uint32_t steal_threshold = 10;  // attempts before becoming active thief
-        uint32_t victim_scan_limit = 4; // max victims to scan per steal attempt
-        bool enable_thread_allocator = true; // set false for scheduler workers
+        /// Steal-attempt threshold before the worker becomes an active thief.
+        uint32_t steal_threshold = 10;
+        /// Maximum victims to scan per steal attempt in A2WS.
+        uint32_t victim_scan_limit = 4;
+        /// When `true`, create a per-thread `ThreadLocalAllocator`.
+        /// Set `false` for scheduler-owned workers that share a global
+        /// allocator.
+        bool enable_thread_allocator = true;
     };
 
     /// \brief Whether the worker has escalated to the CV-blocking idle model.
@@ -63,7 +90,20 @@ class WorkerThread {
     /// Implemented in worker_thread.cpp to access the file-scoped constant.
     bool diag_is_in_cv_model() const;
 
+    /// \brief Construct a worker with the given configuration.
+    ///
+    /// Allocates the local priority queue and, if
+    /// `config.enable_thread_allocator` is true, a per-thread slab
+    /// allocator.  The OS thread is **not** started — call `start()` to
+    /// launch it.
+    ///
+    /// \param[in] config Immutable per-worker configuration.
     explicit WorkerThread(const Config& config);
+
+    /// \brief Destroy the worker.
+    ///
+    /// Calls `stop()` to join the OS thread (if running), then deletes
+    /// the per-thread allocator (if any).
     ~WorkerThread();
 
     WorkerThread(const WorkerThread&) = delete;
@@ -71,44 +111,102 @@ class WorkerThread {
     WorkerThread(WorkerThread&&) = delete;
     WorkerThread& operator=(WorkerThread&&) = delete;
 
-    // Start the worker thread
+    /// \brief Start the worker's OS thread.
+    ///
+    /// Idempotent — returns immediately if the worker is already running.
+    /// The thread installs the frame pool, per-thread allocator, and fault
+    /// controller (if configured) before entering `thread_loop()`.
+    ///
+    /// \note Must be called after `set_owner()`, `set_frame_pool()`, and
+    ///       `set_work_processor()` for correct scheduler integration.
     void start();
 
-    // Stop the worker thread
+    /// \brief Stop the worker's OS thread.
+    ///
+    /// Sets the stop-requested flag, wakes the worker if it is blocked on
+    /// its sleep CV, then joins the thread.  Safe to call from any thread;
+    /// the scheduler serializes stop across all workers during shutdown.
     void stop();
 
-    // Enqueue work to this worker (push_bottom - owner operation)
+    /// \brief Push a work item into the local queue (owner operation).
+    ///
+    /// Only the worker's own thread or the scheduler may call this.
+    ///
+    /// \param[in] priority Priority level (0 = highest).
+    /// \param[in] item Work item to enqueue.
     void push(uint8_t priority, WorkItem item);
 
-    // Try to pop from local queue (pop_bottom - owner operation)
+    /// \brief Pop a work item from the local queue (owner operation).
+    ///
+    /// Only the worker's own thread may call this.
+    ///
+    /// \param[out] out Set to the popped item on success.
+    /// \return `true` if an item was popped, `false` if the queue is empty.
     bool pop(WorkItem& out);
 
-    // Try to steal from this worker (steal_top - thief operation)
+    /// \brief Steal a work item from this worker's local queue (thief
+    ///        operation).
+    ///
+    /// Called by a sibling worker thread.  Steals from the highest-priority
+    /// queue first.
+    ///
+    /// \param[out] out Set to the stolen item on success.
+    /// \return `true` if an item was stolen, `false` if all queues are
+    ///         empty.
+    /// \note **Thread safety:** Lock-free and safe for concurrent thief
+    ///       threads.
     bool steal(WorkItem& out);
 
-    // Work processor callback — invoked for each work item.
-    // When set, thread_loop() calls this instead of processing locally.
+    /// \brief Callback invoked for each work item processed by the worker.
+    ///
+    /// When set, `thread_loop()` calls this instead of processing work
+    /// inline.  The scheduler installs this to route items through the
+    /// actor execution engine.
     using WorkProcessor = std::function<void(const WorkItem&)>;
+
+    /// \brief Install the work processor callback.
+    ///
+    /// Must be set before `start()` is called.
+    ///
+    /// \param[in] proc Callback invoked for each dequeued work item.
     void set_work_processor(WorkProcessor proc) {
         processor_ = std::move(proc);
     }
 
-    // Pause handler — blocks until the worker should proceed.
-    // Used by test harness to pause/resume workers deterministically.
+    /// \brief Callback invoked at the top of each loop iteration to pause
+    ///        the worker.
+    ///
+    /// Used by the test harness to deterministically pause and resume
+    /// workers for concurrency test scenarios.
     using PauseHandler = std::function<void()>;
+
+    /// \brief Install the pause handler.
+    ///
+    /// When set, `thread_loop()` calls this handler at the top of each
+    /// iteration.  The handler should block until the harness signals the
+    /// worker to proceed.
+    ///
+    /// \param[in] handler Callback that blocks until the worker may proceed.
     void set_pause_handler(PauseHandler handler) {
         pause_handler_ = std::move(handler);
     }
 
-    // Worker index
+    /// \brief Return this worker's index in the scheduler's worker array.
+    ///
+    /// \return The `worker_index` from the `Config` passed at construction.
     uint32_t index() const {
         return config_.worker_index;
     }
 
-    // Approximate queue depth
+    /// \brief Approximate number of items in the local queue.
+    ///
+    /// \return Snapshot of queue depth across all priority levels.
     size_t depth() const;
 
-    // Check if running
+    /// \brief Check whether the worker thread is running.
+    ///
+    /// \return `true` if `start()` has been called and `stop()` has not
+    ///         yet joined the thread.
     bool is_running() const {
         return running_.load(std::memory_order_acquire);
     }
@@ -118,6 +216,8 @@ class WorkerThread {
     /// On Apple platforms, uses \c pthread_threadid_np to obtain a compact
     /// 64-bit integral ID.  On other platforms, falls back to a hash of
     /// \c std::thread::id (which is already a small integer on Linux).
+    ///
+    /// \return A platform-stable 64-bit thread identifier.
     uint64_t thread_id() const {
 #ifdef __APPLE__
         uint64_t tid = 0;
@@ -130,55 +230,94 @@ class WorkerThread {
 #endif
     }
 
-    // For scheduling coordination: donation count for work-stealing decisions
+    /// \brief Current donation count for A2WS work-stealing decisions.
+    ///
+    /// Each idle loop iteration increments this counter.  When it exceeds
+    /// `Config::steal_threshold`, the scheduler promotes this worker to an
+    /// active thief.
+    ///
+    /// \return Snapshot of the donation counter.
     uint64_t donation_count() const {
         return donation_count_.load(std::memory_order_relaxed);
     }
+
+    /// \brief Increment the donation counter (called each idle iteration).
     void increment_donations() {
         donation_count_.fetch_add(1, std::memory_order_relaxed);
     }
 
-    // Coroutine frame pool integration
-    // Acquire a coroutine frame from the pool (for blocking operations)
+    /// \brief Acquire a coroutine frame from this worker's frame pool.
+    ///
+    /// \return A frame pointer, or `nullptr` if no frame pool is configured
+    ///         or the pool is exhausted.
+    /// \note Must be called from the worker's own thread.
     CoroutineFramePool::Frame* acquire_frame();
     void release_frame(CoroutineFramePool::Frame* frame);
 
-    // Set the frame pool (called by scheduler)
+    /// \brief Set the coroutine frame pool (called by the scheduler before
+    ///        `start()`).
+    ///
+    /// \param[in] pool Pointer to the frame pool, or `nullptr` to disable.
     void set_frame_pool(CoroutineFramePool* pool) {
         frame_pool_ = pool;
     }
 
-    // Set the owner scheduler (for A2WS-based stealing)
+    /// \brief Set the owner scheduler for A2WS-based stealing and CV
+    ///        wakeup.
+    ///
+    /// Must be set before `start()`.
+    ///
+    /// \param[in] owner Pointer to the owning `HybridScheduler`.
     void set_owner(HybridScheduler* owner) {
         owner_ = owner;
     }
 
-    // Set the fault controller for per-thread fault injection (may be nullptr)
+    /// \brief Set the fault controller for per-thread fault injection.
+    ///
+    /// May be `nullptr` to disable fault injection for this worker.
+    ///
+    /// \param[in] fc Opaque pointer to a `FaultController`, or `nullptr`.
     void set_fault_controller(void* fc) {
         fault_controller_ = fc;
     }
 
-    // Per-thread memory allocator accessor
+    /// \brief Access the per-thread memory allocator.
+    ///
+    /// \return Pointer to the `ThreadLocalAllocator`, or `nullptr` if
+    ///         `Config::enable_thread_allocator` was `false`.
     mem::ThreadLocalAllocator* allocator() {
         return allocator_;
     }
 
-    // Try to steal work using A2WS victim selection
+    /// \brief Try to steal work from a sibling worker using A2WS victim
+    ///        selection.
+    ///
+    /// Delegates to the owner scheduler's `try_steal()`, which uses the
+    /// A2WS victim selector to pick a target and attempt a `steal()`.
+    ///
+    /// \param[out] out Set to the stolen item on success.
+    /// \return `true` if work was stolen.
     bool try_steal(WorkItem& out);
 
     // ── Diagnostic accessors ────────────────────────────────────────
+
+    /// \brief Total work items found (local pop + steal) by this worker.
     uint64_t diag_work_found() const {
         return diag_work_found_.load(std::memory_order_relaxed);
     }
+    /// \brief Idle loop iterations (polling, before CV escalation).
     uint64_t diag_idle_iters() const {
         return diag_idle_iters_.load(std::memory_order_relaxed);
     }
+    /// \brief Number of times the worker escalated to CV blocking.
     uint64_t diag_cv_escalations() const {
         return diag_cv_escalations_.load(std::memory_order_relaxed);
     }
+    /// \brief CV wakeups triggered by enqueue-side notifications.
     uint64_t diag_cv_notify_wakes() const {
         return diag_cv_notify_wakes_.load(std::memory_order_relaxed);
     }
+    /// \brief CV wakeups triggered by EDF-aware timeout expiry.
     uint64_t diag_cv_timeout_wakes() const {
         return diag_cv_timeout_wakes_.load(std::memory_order_relaxed);
     }
@@ -189,42 +328,64 @@ class WorkerThread {
     }
 
   private:
+    /// \brief Main work-processing loop running on the worker's OS thread.
+    ///
+    /// Repeatedly: checks pause handler, pops local work, attempts steal,
+    /// runs the work processor, and escalates idle state through yield →
+    /// backoff → CV blocking.
     void thread_loop();
+
+    /// \brief Adaptive idle backoff: yield → exponential sleep up to 50 ms.
+    ///
+    /// First 4 idle iterations call `std::this_thread::yield()`.
+    /// Subsequent iterations sleep for `10 µs * 2^(c-4)`, capped at 50 ms.
+    /// After the backoff ramp, `thread_loop()` escalates to CV blocking.
     void backoff();
 
+    /// \brief Reset the backoff counter to zero.
+    ///
+    /// Called whenever work is found so the worker stays responsive after
+    /// an idle period.
     void reset_backoff() {
         backoff_counter_.store(0, std::memory_order_relaxed);
     }
 
-    Config config_;
-    std::thread thread_;
-    std::atomic<bool> running_{false};
-    std::atomic<bool> stop_requested_{false};
+    Config config_;                    ///< Immutable per-worker configuration.
+    std::thread thread_;               ///< OS thread handle.
+    std::atomic<bool> running_{false}; ///< True after `start()`, cleared by
+                                       ///< `stop()`.
+    std::atomic<bool> stop_requested_{false}; ///< Set by `stop()` to signal
+                                              ///< thread exit.
 
-    // Owner scheduler (for A2WS access)
+    /// Owner scheduler for A2WS victim selection and CV wakeup coordination.
     HybridScheduler* owner_{nullptr};
 
-    // Local priority queue for this worker
+    /// Local multi-priority work queue (Chase-Lev deque per priority lane).
     MultiPriorityWorkQueue local_queue_;
 
-    // Donation counter for adaptive stealing
+    /// Donation counter incremented each idle iteration; drives A2WS
+    /// active-thief promotion when it exceeds `Config::steal_threshold`.
     std::atomic<uint64_t> donation_count_{0};
 
-    // Per-thread memory allocator
+    /// Per-thread slab allocator (owned, may be nullptr).
     mem::ThreadLocalAllocator* allocator_{nullptr};
 
-    // Coroutine frame pool
+    /// Coroutine frame pool for stackful-coroutine frame allocation.
     CoroutineFramePool* frame_pool_{nullptr};
 
-    // Fault controller for per-thread fault injection (may be nullptr)
+    /// Opaque pointer to a `FaultController` for per-thread fault injection.
     void* fault_controller_{nullptr};
 
-    // Pluggable work processor (set by scheduler)
+    /// Pluggable work processor callback (set by scheduler before `start()`).
     WorkProcessor processor_;
 
-    // Pluggable pause handler (set by scheduler for test harness)
+    /// Pluggable pause handler for test harness (blocking callback).
     PauseHandler pause_handler_;
 
+    /// \brief Backoff counter for adaptive idle polling.
+    ///
+    /// Reset to 0 when work is found so the worker stays responsive;
+    /// increments on each idle iteration to ramp sleep duration.
     /// \brief Backoff counter for adaptive idle polling.
     ///
     /// Reset to 0 when work is found so the worker stays responsive;
