@@ -200,7 +200,7 @@ struct Config {
 #if HPACTOR_ENABLE_AI_ACCELERATORS
     /// \brief AI accelerator resource plane configuration.
     ///        Runtime-disabled by default; enable via [system.ai.accelerators].
-    ai::AcceleratorConfig ai_accelerators;
+    ai::AcceleratorConfig ai_accelerators{};
 #endif
 };
 
