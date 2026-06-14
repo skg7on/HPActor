@@ -10,32 +10,73 @@
 
 A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, multi-priority queues, and an application-defined two-tier slab memory allocator for deterministic response times without GC pauses.
 
-## Recent Work (June 1-7, 2026)
+## Recent Work (June 7–14, 2026)
 
-This week delivered four production reliability features (circuit breaker, rate limiting, ask/timeout, passivation), a sweeping architectural reorganization of the codebase, and comprehensive TLS/gossip test coverage — 28 PRs merged, 349 files changed (+40,495 −4,493).
+This week delivered the daemon service architecture for Linux systemd deployment, AI accelerator subsystem foundations, scheduler reliability hardening, mailbox thread-safety formal validation, reliable messaging primitives, and a performance benchmark app — ~236 commits across 274 files (+39,742 −2,558).
 
-### Production Reliability Features
-- **Actor passivation (ACT-008)**: `PassivationManager` orchestration with `IActorRoute` / `LocalActiveRoute` / `LocalPassivatedRoute` route abstraction, `InMemoryStateStore` and `FileStateStore` durable backends, `MemoryPressureMonitor` driving automatic passivation under memory pressure, `ActorContext::passivate()` API, new `kPassivating` and `kPassivated` lifecycle states, passivation fault domain + 7 fault points, self-registering TOML `[system.passivation]` parser, and capstone end-to-end passivation/reactivation protocol tests.
-- **Ask/timeout policy (ACT-007)**: `RequestHandle<T>` move-only shared-state future with `get()`/`ready()`/`cancel()`, `RequestTimeout` explicit timeout specification (Default/Infinite/Duration/Immediate), `AskManager` subsystem for in-flight request tracking with timer-based resolution and `MessageId` correlation, `ActorContext::ask()` / `ask_raw()` API, `RpcChannel` deadline enforcement across retries with `DeadLetterReason::AskTimeout`, remote spawn folded into `RpcChannel`, and self-registering TOML `[system.ask]` parser.
-- **Rate limiting & admission control (ACT-006)**: `ActorRateLimiter` with 5 `IAdmissionPolicy` implementations — `SizeLimitPolicy`, `TypeFilterPolicy`, `SenderFilterPolicy`, `PriorityThresholdPolicy`, and `PerSenderRatePolicy`. Admission gates wired into `MPSCActorMailbox` alongside overflow handlers. Rate/admission metric events, `/actor rate` and `/actor admission` CLI commands, lock-free shared-input stack replacing direct Chase-Lev push for scheduler dispatch.
-- **Circuit breaker (ACT-005)**: Per-actor `CircuitBreakerTracker` with Closed→Open→HalfOpen state machine, failure-rate EMA tracking, cooldown timing, probe admission, and escalation to quarantine. Three new test files including 637-line circuit breaker result validation.
-- **Deadline/TTL enforcement (MSG-003)**: Per-message TTL enforced at enqueue admission, handler receive pre-dispatch, and coroutine `MailboxAwaiter` resume. Expired messages recorded to DLQ. Configurable `default_message_ttl_ms` system config field with unit test coverage.
-- **Delivery result API & observability (MSG-002)**: `DeliveryResult` unified delivery outcome type for `try_send`, delivery metrics aggregated from `EnqueueResult` codes with `kDeliverySuccess`/`kDeliveryFailure` events, and remote delivery result integration tests.
+### Daemon Service & CLI Decoupling (sys-284)
+- **ProcessManager**: Singleton orchestrating daemonization (double-fork, setsid, umask, PID file), systemd `sd_notify` protocol (READY/STOPPING/STATUS/WATCHDOG), signal handling via signalfd (Linux) / self-pipe (macOS), and foreground/daemon mode dispatch. All thread creation happens after daemonization to preserve inherited file descriptors.
+- **CliServerActor**: Socket-based CLI server using `TcpAcceptor` + `UnixDomainAcceptor` + EventLoop for non-blocking I/O, replacing stdin-based CLI in daemon mode. Each connection spawns an independent `CliSession`.
+- **CliSession**: Transport-agnostic command processor extracted from `CliActor` — parses input, routes through the trie-based `CommandNode` tree, and writes formatted output. Shared between stdin-based `CliActor` and socket-based `CliServerActor`.
+- **hpactor-cli**: Standalone CLI client binary (`tools/hpactor-cli/`) connecting via UDS or TCP with readline-style line editing, ANSI color output, `/attach` and `/detach` session management.
+- **HealthHttpServer**: Non-blocking HTTP health endpoint reusing `HTTPConnection` and EventLoop, delegated to `HTTPGateway` for route registration. Returns 200/503 with JSON body.
+- **WatchdogActor**: Periodic `sd_notify("WATCHDOG=1")` heartbeats at half the systemd `WatchdogSec` interval. Detects scheduler stalls via `HealthHttpServer` response latency.
+- **SyslogSink**: POSIX `syslog(3)` log sink implementing `ILogSink`, with facility and level mapping. Wired into `LogManager` for daemon-mode logging.
+- **systemd unit**: `deploy/systemd/hpactor.service` — Type=notify, WatchdogSec=10s, security hardening (ProtectSystem=strict, NoNewPrivileges, etc.), and production `deploy/systemd/config.toml`.
+- **Self-registering TOML parser**: `[system.process]` with mode (foreground/daemon), PID file, UDS path, TCP port, watchdog interval, and health endpoint config.
+- **Test coverage**: 7 new test files — `test_process_manager` (18 tests), `test_cli_session` (4), `test_cli_server_actor` (2), `test_watchdog_actor` (1), `test_health_http` (2), `test_syslog_sink` (4), `test_daemon_integration` (4).
 
-### Architecture Reorganization
-- **Actor system decomposition** (PRs #223-#225): Monolithic `ActorSystem` refactored into `ActorDirectory` (actor lifecycle registry), `LocalDeliveryEngine` (try_deliver_local dispatch), `BackpressureCoordinator` (backpressure signal routing), and `ShutdownCoordinator` (phase-machine drain). Each component independently tested and documented.
-- **Msg subsystem extraction** (PR #235): 14 headers moved from `types/` to `msg/` — `TypeTag`, `MessageId`, `TypedMessage`, `DeliveryMode`, `FailureReason`, `FailureSource`, `FailureEnvelope`, `DeliveryResult`, `EnqueueResult`, `DeadLetterRecord`, `RequestHandle`, `RequestTimeout`, `Frame`, and `fwd.hpp` forward-declarations hub. Three-phase migration: header creation with compatibility shims → all-consumer-path updates → shim removal.
-- **Code organization reorg** (PRs #237-#238, #242): New `timer/`, `coroutine/`, and `actor/lifecycle/` header directories. Lifecycle headers centralized under `actor/lifecycle/`. `behavior.hpp` and `typed_behavior.hpp` moved to `include/hpactor/actor/`. `DedupCache` moved from `msg/` to `adt/`. Frame implementation moved from `src/net/` to `src/msg/`.
+### AI Accelerator Subsystem (AI-ACC-001A, AI-ACC-001B)
+- **Accelerator type system** (`include/hpactor/ai/`): `AcceleratorType` enum (CPU, GPU, NPU, FPGA, DSP, Custom), `AcceleratorCapability` bitmask, `AcceleratorConfig` with typed device descriptors (CUDA, ROCm, OneAPI, OpenCL, Apple Silicon, Qualcomm AI, ARM NN, custom), `NodeResourceSummary` for cluster-wide resource reporting, and `AiTypeTags` for protobuf message routing.
+- **Protobuf schema** (`protos/hpactor/ai_resource.proto`): `PbAcceleratorConfig`, `PbNodeResourceSummary`, `PbAcceleratorCapability` messages for wire-level resource negotiation.
+- **TOML config parser**: Self-registering `AiAcceleratorConfigParser` in `src/config/parsers/` — parses `[ai.accelerators]` array-of-tables with per-device type, device ID, memory budget, TTL, thread affinity, and mock device flag. 6 TOML fixture files for validation (valid CPU, disabled, duplicate ID, invalid enum, invalid TTL, mock).
+- **Build gate**: `ENABLE_AI_ACCELERATORS` CMake option — gates all AI headers, sources, protobuf codegen, and tests behind a single compile-time switch.
+- **Config → SystemDef wiring**: `AcceleratorConfig` flows from TOML parser through `TopologyModel::SystemDef` into `ActorSystem::Config` for runtime access.
+- **Test coverage**: `test_accelerator_types` (513 lines), `test_ai_accelerator_config` (134 lines).
 
-### Testing & Quality
-- **TLS test coverage** (PR #221): 8 new TLS test files covering error/edge cases, encrypted message exchange, client-server connect, lifecycle, record framing, handshake completion, and RSA key crypto. Shared `tls_test_helpers.hpp` certificate generation utility.
-- **Gossip protocol tests** (PRs #217, #222, #227): System-level gossip tests (join, failure detection, graceful leave), `RealUdpTransport` with poll()-based receive, `IUdpTransport` interface with `FakeUdpTransport` test double, expanded unit tests. Stability fixes for CI coverage timeouts, port availability, recursive `shared_mutex` deadlock, and `SyncRsp` dispatch.
-- **CLI interactive demo app** (PR #240): New comprehensive demo app (`apps/cli_demo/`) with 7 actor types (worker, aggregator, broadcast, clock, health_check, DLQ, system_monitor) exercising the full CLI command surface. Fixed `InspectStateReply` to populate `messages_processed`, `uptime_ms`, and `behavior_name`.
-- **Strict Doxygen**: `MPSCActorMailbox` public API, all mailbox public headers, `lifecycle_actor`, `rpc_channel`, `rpc_types`, `dedicated_thread_pool`, `typed_behavior`, and PR #224 actor system refactor headers.
+### Scheduler Reliability Hardening
+- **Lost-wakeup window closed on x86_64** (PR #289, #290): Replaced yield-based polling with adaptive condition-variable wait on Linux (`futex`), eliminating the lost-wakeup race where a CAS transition between gate checks left workers permanently idle. Platform-specific backoff: `futex(WAIT)` on Linux, `std::this_thread::yield()` on macOS (no futex).
+- **Rate-limiter spin loop capping** (PR #293): Capped lost-wakeup re-admissions to prevent infinite spin when the mailbox repeatedly drains and re-fills under high throughput, bounding CPU waste while preserving sub-µs wakeup latency.
+- **Adaptive worker idle model** (PR #291): Workers now track their idle mechanism (polling vs. CV wait) and expose it via `WorkerThread::idle_model()`. CLI `/scheduler workers` displays per-worker idle model for observability.
+- **Thread ID display fix** (PRs #297, #298): Replaced `std::hash<std::thread::id>` with `native_handle()` and `syscall(SYS_gettid)` on Linux to display real kernel TIDs in scheduler and actor diagnostics, matching `ps`/`htop` output.
+- **TimingWheel hardening**: Added missing edge cases for cascading timer wheel advancement, preventing timer drift under high-frequency short-interval schedules.
+- **Test coverage**: `test_lost_wakeup_rate_limit` (176 lines), expanded `test_worker_thread` and `test_timing_wheel`.
 
-### Documentation
-- **Actor concurrency rules** (PR #229): Normative architecture document (`docs/architecture/actor/actor-concurrency-and-lockfree-mailbox-rules.md`) covering MPSC mailbox correctness, actor state ownership, ready-gate transitions, implementation contracts, and concurrency test design.
-- **Project outline** (PR #226): `HPACTOR_PROJECT_OUTLINE.md` with architecture overview, component map, and production reliability roadmap. Claude project rules reorganized under `.claude/`.
+### Mailbox Thread Safety & Formal Validation
+- **Prearm race detection & fix** (PR #286): Identified and closed a prearm race in `MPSCActorMailbox` where an enqueue between the empty-check and the prearm CAS caused the mailbox to never transition to ready. Added `test_prearm_race` (378 lines) with adversarial interleaving.
+- **Formal validation test suite**: `test_mailbox_formal_validation` (366 lines) and `test_mailbox_stress_formal` (384 lines) — systematic interleaving coverage for MPSC correctness properties (no lost messages, no double-delivery, FIFO ordering within producer).
+- **MPSCMailbox ARM64 concurrency history**: Added detailed Doxygen documenting the ARM64 weak-memory-order revision, the CAS prearm protocol, and the ABA-safe incarnation counter.
+- **WorkerThread adaptive idle documentation**: Full Doxygen on `WorkerThread` with idle model semantics, futex polling path, and CV signaling contract.
+
+### Reliable Messaging Foundation (MSG-004)
+- **ACK/NACK frame types**: `PbAckFrame` and `PbNackFrame` protobuf messages in `frame.proto`, with TypeTag assignments and serialization dispatch in `ProtoTypeRegistry`.
+- **Retry policy**: `RetryPolicy` with exponential backoff, jitter, max retries, and deadline-based abandonment. Configurable per-message and per-actor defaults.
+- **Outbound delivery tracker**: `OutboundDeliveryTracker` — tracks in-flight messages by `MessageId`, correlates ACK/NACK responses, triggers retry on timeout or NACK, and emits `DeliveryReceipt` on terminal resolution (delivered, abandoned, expired).
+- **Delivery receipt**: `DeliveryReceipt` — terminal delivery proof with final status, attempt count, elapsed time, and failure reason. Routed back to sender actor via system message.
+- **Delivery pipeline**: `DeliveryPipeline` — composes serialization → admission → enqueue into a single coordinated path, replacing ad-hoc delivery logic in `try_deliver_local()`.
+- **Durable delivery store interface**: `IDurableDeliveryStore` abstract interface for outbox/inbox durability (implementation backlog).
+- **CLI commands**: `/reliable status [actor_id]`, `/reliable retry <msg_id>`, `/reliable abandon <msg_id>` registered in `src/cli/commands/reliable_commands.cpp`.
+- **Test coverage**: `test_ack_nack_frames`, `test_retry_policy`, `test_outbound_delivery_tracker`, `test_delivery_receipt`.
+
+### Performance Benchmark App
+- **`apps/bench_perf/`**: New benchmark application with 4 actor types — `BenchCoordinatorActor` (orchestrates benchmark runs), `BenchWorkerActor` (message echo/ping-pong throughput), `BenchCollectorActor` (latency histogram aggregation), `BenchHotActor` (sustained high-throughput spam). Configurable message size, actor count, and duration via CLI `/bench` commands.
+- **Integrated CLI**: `/bench run <scenario>`, `/bench stop`, `/bench results`, `/bench history` — on-demand benchmarks without restarting the actor system.
+- **Smoke test**: `test_bench_perf_smoke` validates benchmark app initialization, message flow, and result collection.
+
+### CLI Demo Enhancements
+- **New CLI commands**: `/scheduler workers` (per-worker idle model, thread ID, queue depth), `/tracing spans` (active span inspection), `/log level <actor_id> [level]` (dynamic log level), `/memory regions` (typed region pressure/limit stats).
+- **Memory commands**: `/memory actor <id>` — detailed per-actor allocation breakdown by region with pressure state and rejection counts.
+- **Command tree builder**: `CommandTreeBuilder` utility class in `include/hpactor/cli/command_tree_builder.hpp` — fluent API for registering multi-level commands with argument parsers and help text, reducing boilerplate in command registration.
+
+### Documentation & Process
+- **Branch naming convention** (PR #295): Standardized `category/short-description` kebab-case pattern (`worktree/`, `feature/`, `fix/`, `docs/`, `refactor/`) codified in `.claude/rules`.
+- **CLAUDE.md / rules deduplication** (PR #295): Removed redundant rules from `CLAUDE.md`, consolidated authoritative behavioral rules in `.claude/rules`, leaving `CLAUDE.md` as reference material.
+- **New skills**: `hpactor-deterministic-tests` (deterministic test patterns for schedulers, mailboxes, timers, coroutines) and `hpactor-scheduler-thread-safety` (concurrency review for scheduler, work stealing, mailbox, and ready-state changes).
+- **Strict Doxygen**: `MPSCMailbox` with ARM64 concurrency history, `WorkerThread` with adaptive idle + CV documentation, `TimingWheel` cascading algorithm, `CalendarQueue` bucket semantics.
+
+### Code Review & Quality
+- **15 review findings addressed** (PR #286): Daemon service post-merge review — `HealthHttpServer` refactored to reuse `HTTPConnection` + EventLoop (removed hand-rolled HTTP), `CliServerActor` switched to `TcpAcceptor`/`UnixDomainAcceptor`, `CliSession` extracted as transport-agnostic processor, `ProcessManager::send_notify()` made portable (removed Linux-only `#ifdef`), `HealthHttpServer` delegated to `HTTPGateway` for route registration.
+- **Daemon service review** (PR #290): 10 additional review issues fixed — process_manager error handling, CLI server connection lifecycle, health HTTP timeout wiring, syslog level mapping.
 
 ## Features
 
@@ -367,7 +408,8 @@ include/hpactor/
 │   └── lifecycle/  — LifecycleActor, circuit_breaker, drain_policy, passivation, quarantine, shutdown
 │   └── durable/    — DurableStateStore, InMemoryStateStore, FileStateStore
 ├── adt/            — Shared data structures (Id, NodeIdentity, MpscRingBuffer, StreamBuffer, DedupCache)
-├── cli/            — CLI subsystem (CliActor, CommandNode, Lexer, OutputFormatter, Pager, commands)
+├── ai/             — AI accelerator subsystem (AcceleratorConfig, AcceleratorType, NodeResourceSummary)
+├── cli/            — CLI subsystem (CliActor, CliSession, CliServerActor, CommandNode, Lexer, OutputFormatter, Pager, commands)
 ├── config/         — TOML config topology parser, binary format, actor factory registry
 ├── core/           — ActorSystem, registry
 ├── coroutine/      — CoroutineTask, CoroutineFramePool, MailboxAwaiter, TimerAwaiter
@@ -376,6 +418,7 @@ include/hpactor/
 ├── metrics/        — MpscRingBuffer, MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
 ├── msg/            — Messaging primitives (TypeTag, MessageId, TypedMessage, FailureReason, DeliveryResult, Frame, fwd.hpp)
 ├── net/            — EventLoop, TLS, connection pool, registrar, UDP, gossip, reactor/proactor
+├── process/        — Process daemonization (ProcessManager, WatchdogActor, HealthHttpServer, SyslogSink)
 ├── ref/            — Actor references (address, ref, proxy, cache)
 ├── rpc/            — Async RPC channel with retry, deadline, and timeout
 ├── sched/          — HybridScheduler, work queues, worker threads, work placement
@@ -391,16 +434,18 @@ src/
 │   ├── lifecycle/  — LifecycleActor, PassivationManager, ShutdownCoordinator, quarantine
 │   └── durable/    — FileStateStore, InMemoryStateStore implementations
 ├── adt/            — Shared runtime data-structure implementations (including DedupCache)
-├── cli/            — CliActor, lexer, command_node, formatters (pretty/json/tabular), pager, commands
-│   └── commands/   — actor_commands, ask_commands, dlq_commands, failure_commands, and more
+├── ai/             — Accelerator type registration, AI message registry
+├── cli/            — CliActor, CliSession, CliServerActor, lexer, command_node, formatters (pretty/json/tabular), pager, commands
+│   └── commands/   — actor_commands, ask_commands, dlq_commands, failure_commands, reliable_commands, scheduler_commands, and more
 ├── config/         — TOML parser, binary serializer/loader, factory registry, subsystem parsers
-│   └── parsers/    — ask, dead_letters, delivery, mailbox, passivation, rate_limiting, topology
-├── log/            — LogManager, LogDrain, sinks, formatters
+│   └── parsers/    — ai_accelerator, ask, dead_letters, delivery, mailbox, passivation, process, rate_limiting, topology
+├── log/            — LogManager, LogDrain, sinks (stderr, file, rotating, syslog), formatters
 ├── metrics/        — MetricRegistry, Aggregator, OpenMetricsFormatter, MetricsActor
 ├── tracing/        — TraceManager, exporters (memory, JSON, OTLP), sampler, context parser
-├── mailbox/        — LocalDeliveryEngine, BackpressureCoordinator, DeliveryResult, MemoryPressureMonitor, DeadLetterQueue
-├── msg/            — Frame protobuf, Frame implementation
+├── mailbox/        — LocalDeliveryEngine, BackpressureCoordinator, DeliveryPipeline, MemoryPressureMonitor, DeadLetterQueue
+├── msg/            — Frame protobuf, Frame implementation, DeliveryReceipt, OutboundDeliveryTracker
 ├── net/            — EventLoop, TcpTransport, TLS, connection pool, UDP transport
+├── process/        — ProcessManager, HealthHttpServer, WatchdogActor
 ├── ref/            — ActorRef, ActorProxy implementations
 ├── rpc/            — RpcChannel implementation
 ├── sched/          — HybridScheduler, work placement scheduler, actor execution engine
@@ -411,24 +456,28 @@ src/
 └── actor_type_registry.cpp — ActorTypeRegistry implementation
 
 protos/hpactor/
+├── ai_resource.proto — AI accelerator resource descriptors
 ├── cli_messages.proto — CLI inspect/kill/list/stats/memory messages
 ├── common.proto    — Shared endpoint types
-├── frame.proto     — WireFrame transport format
+├── frame.proto     — WireFrame transport format (includes ACK/NACK frame types)
 ├── gossip.proto    — GossipMembership protocol (SWIM messages, piggyback, SyncRsp)
 ├── messages.proto  — System message types
 └── registrar.proto — Registrar protocol messages
 
 tools/toml-compiler/ — AOT compiler: TOML topology → binary format
+tools/hpactor-cli/  — Standalone CLI client binary (UDS/TCP attach to daemon)
 docs/architecture/production/ — Production reliability roadmap, missing design docs, and refined requirement backlog
-tests/              — 33 GTest binaries across unit, integration, and system tiers; 251 test source files and 1742 source-level GTest cases
+tests/              — 39 GTest binaries across unit, integration, and system tiers; 271 test source files and 1,924 source-level GTest cases
 examples/           — 12 API usage examples, including the full order platform scenario
+apps/               — Complex demo apps: order_platform, edgeops_telemetry, cli_demo, bench_perf
 third_party/        — Vendored dependencies (llhttp, toml++)
 cmake/              — CMake modules (protobuf codegen, toml++ interface target)
+deploy/systemd/     — systemd unit file + production config.toml for daemon mode
 ```
 
 ## Status
 
-### Complete (33 GTest binaries configured)
+### Complete (39 GTest binaries, 1,924 test cases, 271 test source files)
 
 - **Actor Core**: spawn, send, reply, behaviors, typed actors, proto actors, stateful actors
 - **Unified Message Passing**: TypedMessage with sender address, reply routing, error replies
@@ -467,21 +516,27 @@ cmake/              — CMake modules (protobuf codegen, toml++ interface target
 - **Actor System Decomposition**: ActorDirectory, LocalDeliveryEngine, BackpressureCoordinator, ShutdownCoordinator extracted from monolithic ActorSystem
 - **Msg Subsystem**: 14 headers in `msg/` with fwd.hpp forward-declarations hub — TypeTag, MessageId, TypedMessage, FailureReason, DeliveryResult, Frame, and more
 - **Deterministic Test Support**: Scheduler worker pause/resume/step driver plus CI-oriented test design constraints for race-prone subsystems
-- **Google Test Harness**: Vendored Google Test, tiered test binaries (33 GTest binaries, 1742 test cases), discovered GTest cases, and system-level network/registrar coverage
+- **Google Test Harness**: Vendored Google Test, tiered test binaries (39 GTest binaries, 1,924 test cases), discovered GTest cases, and system-level network/registrar coverage
 - **CI and Coverage**: GitHub Actions CI, coverage workflow, README badges, and stabilized gcc-debug / clang-release test paths
-- **Complex Demo Apps**: Order Platform (multi-actor order pipeline with DLQ, tracing, HTTP gateway, remote spawn), EdgeOps Telemetry (IoT edge telemetry with alerts, backpressure, DLQ evidence), CLI Interactive Demo (7 actor types exercising full CLI command surface)
+- **Complex Demo Apps**: Order Platform (multi-actor order pipeline with DLQ, tracing, HTTP gateway, remote spawn), EdgeOps Telemetry (IoT edge telemetry with alerts, backpressure, DLQ evidence), CLI Interactive Demo (7 actor types exercising full CLI command surface), Bench Perf (coordinator/worker/collector/hot actor throughput and latency benchmarks)
+- **Daemon Service (sys-284)**: ProcessManager (double-fork + systemd notify), CliServerActor (UDS/TCP socket server), CliSession (transport-agnostic command processor), hpactor-cli standalone binary, HealthHttpServer, WatchdogActor, SyslogSink, systemd unit with security hardening, self-registering TOML `[system.process]` parser
+- **AI Accelerator Subsystem**: AcceleratorConfig with 7 device types (CPU/GPU/NPU/FPGA/DSP/Custom), NodeResourceSummary, ai_resource.proto wire format, self-registering TOML `[ai.accelerators]` parser, `ENABLE_AI_ACCELERATORS` build gate
+- **Scheduler Hardening**: Lost-wakeup window closed on x86_64 (futex-based CV wait), rate-limiter spin loop capping, adaptive worker idle model (polling vs CV), real kernel TID display, TimingWheel cascading edge case fixes
+- **Mailbox Thread Safety**: Prearm race detection and fix, formal validation test suite for MPSC correctness properties, ARM64 concurrency documentation
+- **Reliable Messaging Primitives (MSG-004)**: ACK/NACK frame types, RetryPolicy with exponential backoff + jitter, OutboundDeliveryTracker, DeliveryReceipt, DeliveryPipeline, IDurableDeliveryStore interface, `/reliable` CLI commands
 
 ### Designed / Backlogged
 
 - **Production Reliability Plane**: Data/control/operations plane roadmap for 24x7 operation
-- **Reliable Messaging Completion**: ACK/NACK, automatic retry, retry exhaustion policy, durable outbox/inbox recovery
+- **Reliable Messaging Completion**: Durable outbox/inbox recovery, retry exhaustion policy, persistent delivery tracker (ACK/NACK frame types, RetryPolicy, OutboundDeliveryTracker, DeliveryReceipt, and DeliveryPipeline implemented)
 - **Durable Actor State**: Snapshot, event sourcing, recovery (InMemoryStateStore and FileStateStore implemented for passivation; general-purpose durable actor state remains backlog)
 - **Cluster Control**: Node failure model, node quarantine/fencing, sharding, placement, handoff, and rolling upgrade design
-- **Production Operations**: Health endpoints, authenticated admin API, security/audit, config reload, chaos/soak/fuzz testing
+- **Production Operations**: Authenticated admin API, security/audit, config reload, chaos/soak/fuzz testing (health endpoint partially implemented via HealthHttpServer)
 
 ### Next Steps
 
-- Production reliability plane: health/readiness/liveness endpoints, reliable messaging completion (ACK/NACK, automatic retry, durable outbox/inbox), security (mTLS, auth, audit)
+- Production reliability plane: reliable messaging completion (durable outbox/inbox), security (mTLS, auth, audit), operations-plane admin API
+- AI accelerator subsystem: compute offload dispatch, accelerator-aware scheduler placement, resource-aware load balancing
 - Cluster control plane: node failure model (node quarantine/fencing), protocol/feature negotiation for rolling upgrades, sharding/placement/rebalance protocol
 - Production operations: authenticated admin API, dynamic config validation/diff/reload, chaos/soak/fuzz test lanes
 - Typed RPC API (`call<Request, Response>` with serialization)
