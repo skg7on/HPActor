@@ -18,17 +18,14 @@
 #include <hpactor/actor/daemon_actor.hpp>
 #include <memory>
 #include <string>
-#include <vector>
 
 namespace hpactor {
 
 class ActorSystem;
 
 namespace net {
-class EventLoop;
-class HTTPConnection;
-using HTTPConnectionPtr = std::shared_ptr<HTTPConnection>;
-} // namespace net
+class HTTPGateway;
+}
 
 namespace process {
 
@@ -39,9 +36,12 @@ struct HealthHttpConfig {
 
 /// \brief Minimal HTTP health-check endpoint server.
 ///
-/// Runs on its own daemon thread with a dedicated EventLoop and reuses
-/// the existing \c net::HTTPConnection for HTTP/1.1 protocol handling
-/// (llhttp-based parsing, proper response formatting, async send/recv).
+/// Runs on its own daemon thread and delegates all HTTP I/O and protocol
+/// handling to \c net::HTTPGateway, which provides:
+/// - \c TcpAcceptor for non-blocking listen/accept
+/// - \c HTTPConnection (llhttp parser, proper response formatting,
+///   async send/recv via the EventLoop backend)
+/// - \c run_once() poll loop matching the \c DaemonActor contract
 ///
 /// Responds to \c GET requests on \c /health/live, \c /health/ready,
 /// and \c /health/startup with \c 200\ OK.
@@ -52,7 +52,6 @@ class HealthHttpServer : public DaemonActor {
     HealthHttpServer(ActorContext* ctx, ActorSystem& system,
                      const HealthHttpConfig& config);
 
-    /// \brief Explicit destructor — defined in .cpp for incomplete types.
     ~HealthHttpServer() override;
 
     bool run_once() override;
@@ -63,24 +62,9 @@ class HealthHttpServer : public DaemonActor {
     }
 
   private:
-    /// Called by the EventLoop when the listen socket is readable.
-    void on_listen_readable(int listen_fd);
-
-    /// Build the health-check response body for \p path.
-    std::string health_body(const std::string& path) const;
-
-    /// Remove disconnected / completed connections from the pool.
-    void reap_connections();
-
     ActorSystem& system_;
     HealthHttpConfig config_;
-    std::unique_ptr<net::EventLoop> health_loop_;
-    int listen_fd_ = -1;
-    bool running_ = true;
-
-    /// Active HTTP connections (owned via shared_ptr, same pattern as
-    /// \c net::HTTPGateway::connections_).
-    std::vector<net::HTTPConnectionPtr> connections_;
+    std::unique_ptr<net::HTTPGateway> gateway_;
 };
 
 } // namespace process
