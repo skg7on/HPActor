@@ -1,0 +1,15 @@
+[system]
+scheduler_threads = 1
+
+[system.ai.accelerators]
+enabled = true
+
+[[system.ai.accelerators.mock_device]]
+id = "dup-gpu"
+kind = "gpu"
+memory_mb = 8192
+
+[[system.ai.accelerators.mock_device]]
+id = "dup-gpu"
+kind = "gpu"
+memory_mb = 16384

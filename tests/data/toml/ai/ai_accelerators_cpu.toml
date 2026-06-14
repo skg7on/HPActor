@@ -1,0 +1,14 @@
+[system]
+scheduler_threads = 1
+
+[system.ai.accelerators]
+enabled = true
+enable_cpu_probe = true
+allow_cpu_fallback = true
+probe_interval_ms = 2000
+lease_ttl_ms = 60000
+min_lease_ttl_ms = 5000
+max_lease_ttl_ms = 120000
+admission_policy = "first_fit"
+cpu_host_memory_mb = 16384
+cpu_compute_units = 16

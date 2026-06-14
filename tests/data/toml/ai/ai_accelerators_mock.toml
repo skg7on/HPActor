@@ -1,0 +1,29 @@
+[system]
+scheduler_threads = 1
+
+[system.ai.accelerators]
+enabled = true
+enable_cpu_probe = true
+admission_policy = "most_free_memory"
+lease_ttl_ms = 30000
+
+[[system.ai.accelerators.mock_device]]
+id = "mock-gpu-0"
+kind = "gpu"
+vendor = "mock"
+name = "Mock GPU 0"
+memory_mb = 24576
+compute_units = 100
+stream_slots = 32
+health = "healthy"
+labels = { backend = "mock", precision = "fp16,bf16" }
+
+[[system.ai.accelerators.mock_device]]
+id = "mock-gpu-1"
+kind = "gpu"
+vendor = "mock"
+name = "Mock GPU 1"
+memory_mb = 12288
+compute_units = 50
+stream_slots = 16
+health = "healthy"
