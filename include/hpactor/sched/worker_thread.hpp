@@ -214,8 +214,8 @@ class WorkerThread {
     /// \brief Native OS thread identifier for CLI introspection.
     ///
     /// On Apple platforms, uses \c pthread_threadid_np to obtain a compact
-    /// 64-bit integral ID.  On other platforms, falls back to a hash of
-    /// \c std::thread::id (which is already a small integer on Linux).
+    /// 64-bit integral ID.  On other platforms, returns the raw \c pthread_t
+    /// from \c native_handle() which on glibc Linux is the kernel TID.
     ///
     /// \return A platform-stable 64-bit thread identifier.
     uint64_t thread_id() const {
@@ -226,7 +226,11 @@ class WorkerThread {
         pthread_threadid_np(const_cast<std::thread&>(thread_).native_handle(), &tid);
         return tid;
 #else
-        return std::hash<std::thread::id>{}(thread_.get_id());
+        // native_handle() returns pthread_t, which on glibc Linux is the
+        // kernel TID (unsigned long).  Use uintptr_t for portability across
+        // libc implementations where pthread_t may be a struct pointer (musl).
+        return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(
+            const_cast<std::thread&>(thread_).native_handle()));
 #endif
     }
 
