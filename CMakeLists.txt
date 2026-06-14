@@ -92,6 +92,9 @@ add_subdirectory(src)
 # AOT compiler — depends on hpactor_lib, so must come after src/
 add_subdirectory(tools/toml-compiler)
 
+# Standalone CLI client — connects to hpactor daemon via UDS or TCP
+add_subdirectory(tools/hpactor-cli)
+
 if(ENABLE_TESTS)
     enable_testing()
     add_subdirectory(tests)
