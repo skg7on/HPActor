@@ -146,7 +146,7 @@ static void print_splash() {
         << "║    /failure reasons     — canonical failure reasons          ║\n"
         << "║    /system stats        — system-wide statistics             ║\n"
         << "║    /system uptime       — actor system uptime                ║\n"
-        << "║    /scheduler workers   — worker threads (with thread ID)    ║\n"
+        << "║    /scheduler workers   — threads & idle model (polling/CV)  ║\n"
         << "║    /quit                — graceful shutdown                  ║\n"
         << "║                                                              ║\n"
         << "╚══════════════════════════════════════════════════════════════╝\n"

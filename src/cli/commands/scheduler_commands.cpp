@@ -19,7 +19,7 @@ class SchedulerWorkersCommand final : public ICommand {
         return "scheduler/workers";
     }
     std::string_view help_text() const noexcept override {
-        return "Show per-worker thread statistics";
+        return "Show per-worker thread statistics and idle model (polling / CV)";
     }
     int order() const noexcept override {
         return 720;
@@ -47,9 +47,9 @@ class SchedulerWorkersCommand final : public ICommand {
             return result<void>::make();
         }
 
-        std::vector<std::string> cols = {"Worker",    "Thread ID", "Work",
-                                         "IdleIters", "CV→block",  "CV¬ify",
-                                         "CV⏰",      "Steals",    "Idle"};
+        std::vector<std::string> cols = {
+            "Worker", "Thread ID", "Work",  "IdleIters", "CV→block",
+            "CV¬ify", "CV⏰",      "Model", "Steals",    "Idle"};
         std::vector<std::vector<std::string>> rows;
         for (auto& ws : snaps) {
             char tid_buf[24];
@@ -63,6 +63,7 @@ class SchedulerWorkersCommand final : public ICommand {
                 std::to_string(ws.cv_escalations),
                 std::to_string(ws.cv_notify_wakes),
                 std::to_string(ws.cv_timeout_wakes),
+                ws.idle_model,
                 std::to_string(ws.steals_attempted),
                 ws.is_idle ? "yes" : "no",
             });
