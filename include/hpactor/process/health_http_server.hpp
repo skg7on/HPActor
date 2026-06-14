@@ -18,6 +18,7 @@
 #include <hpactor/actor/daemon_actor.hpp>
 #include <memory>
 #include <string>
+#include <vector>
 
 namespace hpactor {
 
@@ -25,7 +26,9 @@ class ActorSystem;
 
 namespace net {
 class EventLoop;
-}
+class HTTPConnection;
+using HTTPConnectionPtr = std::shared_ptr<HTTPConnection>;
+} // namespace net
 
 namespace process {
 
@@ -36,9 +39,12 @@ struct HealthHttpConfig {
 
 /// \brief Minimal HTTP health-check endpoint server.
 ///
-/// Runs on its own daemon thread and uses a dedicated EventLoop for
-/// non-blocking I/O.  Responds to \c GET requests on \c /health/live,
-/// \c /health/ready, and \c /health/startup with \c 200\ OK.
+/// Runs on its own daemon thread with a dedicated EventLoop and reuses
+/// the existing \c net::HTTPConnection for HTTP/1.1 protocol handling
+/// (llhttp-based parsing, proper response formatting, async send/recv).
+///
+/// Responds to \c GET requests on \c /health/live, \c /health/ready,
+/// and \c /health/startup with \c 200\ OK.
 class HealthHttpServer : public DaemonActor {
   public:
     static constexpr const char* kActorTypeName = "HealthHttpServer";
@@ -46,8 +52,7 @@ class HealthHttpServer : public DaemonActor {
     HealthHttpServer(ActorContext* ctx, ActorSystem& system,
                      const HealthHttpConfig& config);
 
-    /// \brief Explicit destructor — defined in .cpp so that
-    ///        \c unique_ptr<EventLoop> can own an incomplete type.
+    /// \brief Explicit destructor — defined in .cpp for incomplete types.
     ~HealthHttpServer() override;
 
     bool run_once() override;
@@ -58,20 +63,24 @@ class HealthHttpServer : public DaemonActor {
     }
 
   private:
-    /// Build the HTTP response for \p path.
-    std::string health_response(const std::string& path) const;
-
-    /// Handler invoked by the EventLoop when the listen socket is readable.
-    /// Accepts pending connections and processes each inline (the requests
-    /// and responses are tiny, so non-blocking read/write on a
-    /// freshly-accepted fd completes immediately under normal conditions).
+    /// Called by the EventLoop when the listen socket is readable.
     void on_listen_readable(int listen_fd);
+
+    /// Build the health-check response body for \p path.
+    std::string health_body(const std::string& path) const;
+
+    /// Remove disconnected / completed connections from the pool.
+    void reap_connections();
 
     ActorSystem& system_;
     HealthHttpConfig config_;
     std::unique_ptr<net::EventLoop> health_loop_;
     int listen_fd_ = -1;
     bool running_ = true;
+
+    /// Active HTTP connections (owned via shared_ptr, same pattern as
+    /// \c net::HTTPGateway::connections_).
+    std::vector<net::HTTPConnectionPtr> connections_;
 };
 
 } // namespace process
