@@ -29,6 +29,12 @@ thread_local CoroutineFramePool* tl_frame_pool = nullptr;
 // Thread-local worker ID (declared in scheduler.cpp, used by placement layer)
 extern thread_local uint32_t tl_current_worker_id;
 
+// Backoff yield-iteration threshold — shared between thread_loop() and
+// backoff().  With kYieldIters=0, workers start directly with escalating
+// nanosleeps instead of sched_yield(), avoiding the busy-poll trap on
+// Linux where yield merely rotates the run-queue without sleeping.
+static constexpr uint32_t kYieldIters = 0;
+
 WorkerThread::WorkerThread(const Config& config)
     : config_(config), local_queue_(config.priority_levels) {
     if (config_.enable_thread_allocator) {
@@ -165,10 +171,8 @@ void WorkerThread::thread_loop() {
         // Standalone workers (no owner_ scheduler) keep polling; CV blocking
         // requires access to the placement layer's per-worker state.
         //
-        // kPollThreshold = kYieldIters (4 yield iterations in backoff())
-        //                + kSleepIters (4 escalating µs sleeps before CV).
-        static constexpr uint32_t kYieldIters = 4;
-        static constexpr uint32_t kSleepIters = 4;
+        // kPollThreshold = kYieldIters + kSleepIters.
+        static constexpr uint32_t kSleepIters = 2;
         static constexpr uint32_t kPollThreshold = kYieldIters + kSleepIters;
         if (!owner_ || backoff_counter_ < kPollThreshold) {
             diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);
@@ -234,17 +238,17 @@ void WorkerThread::thread_loop() {
 void WorkerThread::backoff() {
     uint32_t c = backoff_counter_++;
 
-    if (c < 4) {
+    if (c < kYieldIters) {
         std::this_thread::yield();
         return;
     }
 
-    // Exponential backoff: 10us * 2^(c-4), capped at 50ms.
+    // Exponential backoff: 10us * 2^(c - kYieldIters), capped at 50ms.
     // Cap the shift at 28 to avoid unsigned overflow (10u << 31 wraps to 0
     // on 32-bit, producing sleep_for(0us) which spins the core at 100%).
     // The std::min at 50ms provides the effective backoff ceiling — the
     // shift ramps through it (10u << 13 = 81,920us → capped to 50,000).
-    uint32_t shift = (c - 4 > 28) ? 28u : (c - 4);
+    uint32_t shift = (c - kYieldIters > 28) ? 28u : (c - kYieldIters);
     uint32_t backoff_us = 10u << shift;
     backoff_us = std::min(backoff_us, 50000u);
     std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
