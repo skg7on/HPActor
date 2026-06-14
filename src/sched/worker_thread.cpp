@@ -258,6 +258,10 @@ void WorkerThread::thread_loop() {
     }
 }
 
+bool WorkerThread::diag_is_in_cv_model() const {
+    return backoff_counter_ >= kPollThreshold;
+}
+
 void WorkerThread::backoff() {
     // See kBackoffYieldIters at the top of this file for the per-platform
     // yield threshold (0 on Linux, 4 on macOS).

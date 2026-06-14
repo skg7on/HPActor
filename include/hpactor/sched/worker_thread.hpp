@@ -56,6 +56,13 @@ class WorkerThread {
         bool enable_thread_allocator = true; // set false for scheduler workers
     };
 
+    /// \brief Whether the worker has escalated to the CV-blocking idle model.
+    ///
+    /// Returns \c true when \c backoff_counter_ >= \c kPollThreshold
+    /// (platform-specific: 4 iters on Linux, 8 on macOS).
+    /// Implemented in worker_thread.cpp to access the file-scoped constant.
+    bool diag_is_in_cv_model() const;
+
     explicit WorkerThread(const Config& config);
     ~WorkerThread();
 
@@ -174,6 +181,11 @@ class WorkerThread {
     }
     uint64_t diag_cv_timeout_wakes() const {
         return diag_cv_timeout_wakes_.load(std::memory_order_relaxed);
+    }
+    /// Current backoff counter.  Use \c diag_is_in_cv_model() to check
+    /// whether the worker has escalated to CV-blocking idle.
+    uint32_t diag_backoff_counter() const {
+        return backoff_counter_;
     }
 
   private:
