@@ -213,10 +213,10 @@ jobs:
           DEPLOY_DIR=$(mktemp -d)
           cp coverage-badge.svg "$DEPLOY_DIR/"
           cp -r coverage-html "$DEPLOY_DIR/"
+          touch "$DEPLOY_DIR/.nojekyll"
 
           cd "$DEPLOY_DIR"
-          git init
-          git checkout -b gh-pages
+          git -c init.defaultBranch=gh-pages init
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add .
