@@ -36,6 +36,8 @@ class ActorSystem;
 
 namespace cli {
 
+class CliSession;
+
 // Forward-declare protobuf types (defined in cli_messages.pb.h)
 class InspectStateReply;
 class KillReply;
@@ -76,6 +78,10 @@ class CliActor : public DaemonActor {
     /// requests.
     /// \param[in] config CLI subsystem configuration.
     CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& config);
+
+    /// \brief Destructor (needed for unique_ptr<CliSession> with incomplete
+    ///        type at declaration point).
+    ~CliActor() override;
 
     // --- DaemonActor interface ---
 
@@ -232,7 +238,6 @@ class CliActor : public DaemonActor {
 
   private:
     void build_command_tree();
-    void execute_tokens(const std::vector<Token>& tokens);
     void print_greeting();
 
     /// \brief Poll mailbox for a message with the given TypeTag.
@@ -253,6 +258,7 @@ class CliActor : public DaemonActor {
     std::unique_ptr<CommandNode> command_tree_;
     std::unique_ptr<OutputFormatter> formatter_;
     std::unique_ptr<Pager> pager_;
+    std::unique_ptr<CliSession> session_;
     bool running_ = true;
 };
 

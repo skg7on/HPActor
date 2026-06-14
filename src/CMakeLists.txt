@@ -177,6 +177,7 @@ target_sources(hpactor_lib PRIVATE
     cli/tabular_formatter.cpp
     cli/pager.cpp
     cli/cli_actor.cpp
+    cli/cli_session.cpp
     cli/commands/help_command.cpp
     cli/commands/quit_command.cpp
     cli/commands/actor_commands.cpp
