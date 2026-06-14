@@ -7,6 +7,7 @@
 #include <hpactor/types/types.hpp>
 
 #include <string>
+#include <unordered_set>
 
 namespace hpactor::config {
 namespace {
@@ -94,6 +95,98 @@ class AiAcceleratorConfigParser final : public ITomlSystemConfigParser {
         }
         cfg.admission_policy = policy.value();
 
+        // ── Mock devices ───────────────────────────────────────────
+        std::unordered_set<std::string> seen_ids;
+        std::vector<std::string> invalid_fields;
+        std::vector<std::string> duplicate_ids;
+
+        accel.for_each_table_array("mock_device", [&](TomlTableView md) {
+            ai::MockDeviceConfig dev;
+
+            dev.id = md.read_string("id", "");
+            if (dev.id.empty())
+                return;
+
+            if (!seen_ids.insert(dev.id).second) {
+                duplicate_ids.push_back(dev.id);
+                return;
+            }
+
+            // Device kind
+            auto kind_str = md.read_string("kind", "mock");
+            auto kind = parse_device_kind(kind_str);
+            if (!kind.has_value()) {
+                invalid_fields.push_back("mock_device." + dev.id +
+                                         ": unknown kind '" + kind_str + "'");
+                return;
+            }
+            dev.kind = kind.value();
+
+            // Device vendor
+            auto vendor_str = md.read_string("vendor", "mock");
+            auto vendor = parse_device_vendor(vendor_str);
+            if (!vendor.has_value()) {
+                invalid_fields.push_back("mock_device." + dev.id +
+                                         ": unknown vendor '" + vendor_str + "'");
+                return;
+            }
+            dev.vendor = vendor.value();
+
+            dev.name = md.read_string("name", dev.id);
+
+            // Memory MB → bytes (no overflow possible for uint32_t)
+            constexpr uint64_t kMbToBytes = 1024ULL * 1024ULL;
+            uint32_t mem_mb = md.read_uint32("memory_mb", 0);
+            if (mem_mb > 0)
+                dev.device_memory_bytes = static_cast<uint64_t>(mem_mb) * kMbToBytes;
+
+            uint32_t host_mb = md.read_uint32("host_memory_mb", 0);
+            if (host_mb > 0)
+                dev.host_memory_bytes = static_cast<uint64_t>(host_mb) * kMbToBytes;
+
+            dev.compute_units = md.read_uint32("compute_units", 0);
+            dev.stream_slots = md.read_uint32("stream_slots", 0);
+            dev.exclusive_only = md.read_bool("exclusive_only", false);
+
+            // Health
+            auto health_str = md.read_string("health", "healthy");
+            auto health = parse_device_health(health_str);
+            if (!health.has_value()) {
+                invalid_fields.push_back("mock_device." + dev.id +
+                                         ": unknown health '" + health_str + "'");
+                return;
+            }
+            dev.health = health.value();
+
+            // Labels
+            auto labels_table = md.table("labels");
+            if (labels_table.valid()) {
+                labels_table.for_each_entry(
+                    [&](std::string_view key, TomlValueView val) {
+                        ai::DeviceLabel label;
+                        label.key = std::string(key);
+                        label.value = val.as_string("");
+                        dev.labels.push_back(std::move(label));
+                    });
+            }
+
+            cfg.mock_devices.push_back(std::move(dev));
+        });
+
+        // Check for accumulated errors
+        if (!duplicate_ids.empty()) {
+            std::string msg = "ai.accelerators.mock_device: duplicate id(s):";
+            for (auto& id : duplicate_ids)
+                msg += " " + id;
+            return result<void>::make(error(errors::invalid_argument, msg));
+        }
+        if (!invalid_fields.empty()) {
+            std::string msg = "ai.accelerators.mock_device: invalid fields:";
+            for (auto& f : invalid_fields)
+                msg += " [" + f + "]";
+            return result<void>::make(error(errors::invalid_argument, msg));
+        }
+
         return result<void>::make();
     }
 
@@ -113,6 +206,52 @@ class AiAcceleratorConfigParser final : public ITomlSystemConfigParser {
             return result<ai::AdmissionPolicyKind>::make(
                 ai::AdmissionPolicyKind::CpuFallback);
         return result<ai::AdmissionPolicyKind>::make(error(errors::invalid_argument));
+    }
+
+    static result<ai::DeviceKind> parse_device_kind(std::string_view s) noexcept {
+        if (s == "cpu")
+            return result<ai::DeviceKind>::make(ai::DeviceKind::Cpu);
+        if (s == "gpu")
+            return result<ai::DeviceKind>::make(ai::DeviceKind::Gpu);
+        if (s == "npu")
+            return result<ai::DeviceKind>::make(ai::DeviceKind::Npu);
+        if (s == "accelerator")
+            return result<ai::DeviceKind>::make(ai::DeviceKind::Accelerator);
+        if (s == "mock")
+            return result<ai::DeviceKind>::make(ai::DeviceKind::Mock);
+        return result<ai::DeviceKind>::make(error(errors::invalid_argument));
+    }
+
+    static result<ai::DeviceVendor>
+    parse_device_vendor(std::string_view s) noexcept {
+        if (s == "unknown")
+            return result<ai::DeviceVendor>::make(ai::DeviceVendor::Unknown);
+        if (s == "nvidia")
+            return result<ai::DeviceVendor>::make(ai::DeviceVendor::Nvidia);
+        if (s == "amd")
+            return result<ai::DeviceVendor>::make(ai::DeviceVendor::Amd);
+        if (s == "apple")
+            return result<ai::DeviceVendor>::make(ai::DeviceVendor::Apple);
+        if (s == "intel")
+            return result<ai::DeviceVendor>::make(ai::DeviceVendor::Intel);
+        if (s == "mock")
+            return result<ai::DeviceVendor>::make(ai::DeviceVendor::Mock);
+        return result<ai::DeviceVendor>::make(error(errors::invalid_argument));
+    }
+
+    static result<ai::DeviceHealth>
+    parse_device_health(std::string_view s) noexcept {
+        if (s == "unknown")
+            return result<ai::DeviceHealth>::make(ai::DeviceHealth::Unknown);
+        if (s == "healthy")
+            return result<ai::DeviceHealth>::make(ai::DeviceHealth::Healthy);
+        if (s == "degraded")
+            return result<ai::DeviceHealth>::make(ai::DeviceHealth::Degraded);
+        if (s == "unavailable")
+            return result<ai::DeviceHealth>::make(ai::DeviceHealth::Unavailable);
+        if (s == "lost")
+            return result<ai::DeviceHealth>::make(ai::DeviceHealth::Lost);
+        return result<ai::DeviceHealth>::make(error(errors::invalid_argument));
     }
 };
 
