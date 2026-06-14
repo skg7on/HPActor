@@ -213,11 +213,13 @@ class WorkerThread {
 
     /// \brief Native OS thread identifier for CLI introspection.
     ///
-    /// On Apple platforms, uses \c pthread_threadid_np to obtain a compact
-    /// 64-bit integral ID.  On other platforms, returns the raw \c pthread_t
-    /// from \c native_handle() which on glibc Linux is the kernel TID.
+    /// On Apple platforms, uses \c pthread_threadid_np.  On Linux, returns the
+    /// kernel TID captured via \c syscall(SYS_gettid) at thread start and
+    /// stored in \c native_tid_.  Falls back to a \c native_handle() cast on
+    /// other platforms.
     ///
-    /// \return A platform-stable 64-bit thread identifier.
+    /// \return A platform-stable 64-bit thread identifier (0 if the worker
+    ///         thread has not yet captured its TID).
     uint64_t thread_id() const {
 #ifdef __APPLE__
         uint64_t tid = 0;
@@ -225,10 +227,14 @@ class WorkerThread {
         // does not mark it so (known C++ standard library limitation).
         pthread_threadid_np(const_cast<std::thread&>(thread_).native_handle(), &tid);
         return tid;
+#elif defined(__linux__)
+        // glibc pthread_t from native_handle() is a struct pthread* cast to
+        // unsigned long, not the kernel TID.  Use the real TID captured by the
+        // worker thread at startup via syscall(SYS_gettid).
+        return native_tid_.load(std::memory_order_relaxed);
 #else
-        // native_handle() returns pthread_t, which on glibc Linux is the
-        // kernel TID (unsigned long).  Use uintptr_t for portability across
-        // libc implementations where pthread_t may be a struct pointer (musl).
+        // Fallback for other Unix-like platforms where pthread_t may be the
+        // native thread identifier.
         return static_cast<uint64_t>(reinterpret_cast<uintptr_t>(
             const_cast<std::thread&>(thread_).native_handle()));
 #endif
@@ -397,6 +403,12 @@ class WorkerThread {
     /// Atomic so \c diag_is_in_cv_model() and \c diag_backoff_counter()
     /// can safely read it from CLI / metrics threads.
     std::atomic<uint32_t> backoff_counter_{0};
+
+    /// \brief Native OS thread ID captured at worker start.
+    ///
+    /// On Linux, written once by the worker thread during \c start() via
+    /// \c syscall(SYS_gettid).  Read by \c thread_id() from any thread.
+    std::atomic<uint64_t> native_tid_{0};
 
     // ── Diagnostic counters (exposed via WorkerSnapshot) ────────────
     std::atomic<uint64_t> diag_work_found_{0};

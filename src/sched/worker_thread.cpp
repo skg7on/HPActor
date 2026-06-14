@@ -21,6 +21,11 @@
 #include <chrono>
 #include <thread>
 
+#ifdef __linux__
+#    include <sys/syscall.h>
+#    include <unistd.h>
+#endif
+
 namespace hpactor::sched {
 
 // Thread-local pointer to the current worker's frame pool
@@ -78,6 +83,10 @@ void WorkerThread::start() {
     running_.store(true, std::memory_order_release);
     stop_requested_.store(false, std::memory_order_release);
     thread_ = std::thread([this] {
+#ifdef __linux__
+        native_tid_.store(static_cast<uint64_t>(syscall(SYS_gettid)),
+                          std::memory_order_relaxed);
+#endif
         if (frame_pool_) {
             tl_frame_pool = frame_pool_;
         }
