@@ -51,6 +51,7 @@ add_library(hpactor_lib SHARED
     config/parsers/shutdown_config_parser.cpp
     config/parsers/delivery_config_parser.cpp
     config/parsers/quarantine_parser.cpp
+    config/parsers/process_config_parser.cpp
     config/binary_serializer.cpp
     config/binary_loader.cpp
     core/proto_type_registry.cpp
@@ -124,6 +125,7 @@ add_library(hpactor_lib SHARED
     log/stderr_sink.cpp
     log/file_sink.cpp
     log/rotating_file_sink.cpp
+    log/syslog_sink.cpp
     adt/stream_buffer.cpp
     ../third_party/llhttp/llhttp.c
     ../third_party/llhttp/api.c
@@ -131,6 +133,8 @@ add_library(hpactor_lib SHARED
     ai/accelerator_types.cpp
     ai/ai_message_registry.cpp
     process/process_manager.cpp
+    process/watchdog_actor.cpp
+    process/health_http_server.cpp
 )
 
 target_include_directories(hpactor_lib
