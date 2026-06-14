@@ -41,12 +41,24 @@ result<void> SyslogSink::write(std::string_view line) noexcept {
 
     // Map log level prefixes to syslog priorities
     if (line.size() >= 7) {
-        if (line.substr(0, 7) == "[ERROR]" || line.substr(0, 7) == "[ERROR]") {
+        if (line.substr(0, 7) == "[ERROR]") {
             priority = LOG_ERR;
-        } else if (line.substr(0, 6) == "[WARN]") {
-            priority = LOG_WARNING;
+        } else if (line.substr(0, 7) == "[FATAL]") {
+            priority = LOG_CRIT;
         } else if (line.substr(0, 7) == "[DEBUG]") {
             priority = LOG_DEBUG;
+        }
+    }
+    if (priority == LOG_INFO && line.size() >= 6) {
+        if (line.substr(0, 6) == "[WARN]") {
+            priority = LOG_WARNING;
+        } else if (line.substr(0, 6) == "[CRIT]") {
+            priority = LOG_CRIT;
+        }
+    }
+    if (priority == LOG_INFO && line.size() >= 10) {
+        if (line.substr(0, 10) == "[CRITICAL]") {
+            priority = LOG_CRIT;
         }
     }
 

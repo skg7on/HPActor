@@ -21,6 +21,8 @@
 #include <fstream>
 #include <string>
 
+#include <cerrno>
+
 #include <fcntl.h>
 #include <sys/stat.h>
 #include <unistd.h>
@@ -36,6 +38,8 @@ namespace hpactor::process {
 
 ProcessConfig ProcessManager::config_{};
 ProcessMode ProcessManager::mode_ = ProcessMode::Foreground;
+bool ProcessManager::daemonized_ = false;
+bool ProcessManager::pidfile_written_ = false;
 
 namespace {
 #ifdef __linux__
@@ -72,8 +76,17 @@ std::string ProcessManager::format_notify_message(const std::string& msg) {
 result<void> ProcessManager::init(const ProcessConfig& config) {
     config_ = config;
     mode_ = config.mode;
-    if (mode_ == ProcessMode::Daemon) {
+    if (mode_ == ProcessMode::Daemon && !daemonized_) {
+        daemonized_ = true;
         daemonize(); // does not return in parent
+    }
+    // write_pidfile() runs here (in the grandchild for daemon mode, or in the
+    // original process for foreground/systemd). This is safe because we are
+    // single-threaded: either the original process before any threads start,
+    // or the forked grandchild which inherits a single thread.
+    if (!pidfile_written_) {
+        pidfile_written_ = true;
+        write_pidfile();
     }
     return result<void>::make();
 }
@@ -163,8 +176,18 @@ void ProcessManager::daemonize() {
     }
 
     if (!config_.working_directory.empty()) {
-        chdir(config_.working_directory.c_str());
+        if (chdir(config_.working_directory.c_str()) < 0) {
+            // Non-fatal: the daemon will still run, but log the failure
+            // if possible. At this point stdio may already be redirected to
+            // /dev/null, so writing to stderr is best-effort.
+            const char* msg = "hpactor daemon: chdir() failed\n";
+            (void)!write(STDERR_FILENO, msg, strlen(msg));
+        }
     }
+    // umask(0) is intentional for daemon mode: it ensures files created by
+    // the daemon (pidfile, logs, sockets) are created with exactly the
+    // permissions specified by the creating call (e.g., open() with mode
+    // 0644), without interference from the inherited umask.
     umask(0);
 
     if (config_.redirect_stdio) {
@@ -179,7 +202,9 @@ void ProcessManager::daemonize() {
         }
     }
 
-    write_pidfile();
+    // write_pidfile() is called from init() after daemonize() returns, so it
+    // runs in the single-threaded grandchild context where std::ofstream and
+    // std::string are safe.
 }
 
 void ProcessManager::write_pidfile() {
@@ -200,7 +225,19 @@ void ProcessManager::write_pidfile() {
         }
         ofs << getpid() << "\n" << std::flush;
     }
-    rename(tmp.c_str(), config_.pidfile_path.c_str());
+    if (rename(tmp.c_str(), config_.pidfile_path.c_str()) != 0) {
+        // If tmp is on a different filesystem (EXDEV), atomic rename is
+        // impossible — fall back to writing the pidfile directly.
+        if (errno == EXDEV) {
+            std::ofstream ofs_direct(config_.pidfile_path);
+            if (ofs_direct) {
+                ofs_direct << getpid() << "\n" << std::flush;
+            }
+            unlink(tmp.c_str());
+        }
+        // On other errors (EACCES, EROFS, ENOSPC), the tmp file is left
+        // behind as a best-effort record of the PID.
+    }
 }
 
 void ProcessManager::remove_pidfile() {
@@ -263,7 +300,52 @@ int ProcessManager::wait_for_signal() {
     }
     return static_cast<int>(ssi.ssi_signo);
 #else
-    return -1;
+    // sigpending + sigwait fallback for macOS/BSD (no signalfd).
+    // Signals are blocked via pthread_sigmask in install_signal_handlers(),
+    // so they queue as pending rather than being delivered.
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGTERM);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGHUP);
+
+    // Non-blocking check: poll for pending signals via sigpending.
+    sigset_t pending;
+    sigemptyset(&pending);
+    if (sigpending(&pending) != 0) {
+        return -1;
+    }
+    // Return -1 (no signal) unless one of our watched signals is pending.
+    bool has_pending = (sigismember(&pending, SIGTERM) != 0) ||
+                       (sigismember(&pending, SIGINT) != 0) ||
+                       (sigismember(&pending, SIGHUP) != 0);
+    if (!has_pending) {
+        return -1;
+    }
+
+    // A watched signal is pending — consume it with sigwait.
+    // Since the signal is already pending and blocked, sigwait returns
+    // immediately without blocking.
+    int signo = 0;
+    if (sigwait(&mask, &signo) != 0) {
+        return -1;
+    }
+    switch (signo) {
+        case SIGTERM:
+        case SIGINT:
+            if (on_terminate_fn_) {
+                on_terminate_fn_();
+            }
+            break;
+        case SIGHUP:
+            if (on_reload_fn_) {
+                on_reload_fn_();
+            }
+            break;
+        default:
+            break;
+    }
+    return signo;
 #endif
 }
 

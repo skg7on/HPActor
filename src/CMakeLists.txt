@@ -175,6 +175,7 @@ target_sources(hpactor_lib PRIVATE
     cli/command_registry.cpp
     cli/lexer.cpp
     cli/command_node.cpp
+    cli/command_tree_builder.cpp
     cli/line_editor.cpp
     cli/pretty_formatter.cpp
     cli/json_formatter.cpp

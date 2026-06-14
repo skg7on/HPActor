@@ -36,8 +36,10 @@ void HealthHttpServer::on_daemon_start() {
         std::fprintf(stderr, "HealthHttpServer: failed to listen on %s:%u\n",
                      config_.bind_address.c_str(),
                      static_cast<unsigned>(config_.port));
+        listen_ok_ = false;
         return;
     }
+    listen_ok_ = true;
 
     // All paths return 200 OK.  HTTPConnection (via llhttp) has already
     // parsed the request, so req.path is exactly the URL path.
@@ -58,6 +60,11 @@ void HealthHttpServer::on_daemon_start() {
 }
 
 bool HealthHttpServer::run_once() {
+    // If the listen() call failed in on_daemon_start(), exit the daemon
+    // loop immediately rather than spinning forever.
+    if (!listen_ok_)
+        return false;
+
     // Delegate to HTTPGateway's event loop poll — same pattern as
     // HTTPGatewayActor: wait(100ms) + process_completions().
     gateway_->run_once();

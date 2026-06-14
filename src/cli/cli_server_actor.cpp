@@ -18,6 +18,7 @@
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/command_registry.hpp>
+#include <hpactor/cli/command_tree_builder.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
 
@@ -27,7 +28,9 @@
 #include <cstring>
 #include <ctime>
 #include <fcntl.h>
+#include <grp.h>
 #include <netinet/in.h>
+#include <pwd.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
@@ -50,12 +53,27 @@ int CliServerActor::make_nonblocking_socket(int domain, int type) {
         return -1;
 
     // Set close-on-exec
-    ::fcntl(fd, F_SETFD, FD_CLOEXEC);
+    if (::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
+        std::fprintf(stderr, "CliServerActor: fcntl F_SETFD failed: %s\n",
+                     std::strerror(errno));
+        ::close(fd);
+        return -1;
+    }
 
     // Set non-blocking
     int flags = ::fcntl(fd, F_GETFL);
-    if (flags >= 0)
-        ::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    if (flags < 0) {
+        std::fprintf(stderr, "CliServerActor: fcntl F_GETFL failed: %s\n",
+                     std::strerror(errno));
+        ::close(fd);
+        return -1;
+    }
+    if (::fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        std::fprintf(stderr, "CliServerActor: fcntl F_SETFL failed: %s\n",
+                     std::strerror(errno));
+        ::close(fd);
+        return -1;
+    }
 
     return fd;
 }
@@ -68,11 +86,39 @@ int CliServerActor::portable_accept(int listen_fd) {
     int fd = static_cast<int>(::accept(listen_fd, nullptr, nullptr));
     if (fd < 0)
         return -1;
-    ::fcntl(fd, F_SETFD, FD_CLOEXEC);
+    if (::fcntl(fd, F_SETFD, FD_CLOEXEC) < 0) {
+        std::fprintf(stderr, "CliServerActor: fcntl F_SETFD failed: %s\n",
+                     std::strerror(errno));
+        ::close(fd);
+        return -1;
+    }
     int flags = ::fcntl(fd, F_GETFL);
-    if (flags >= 0)
-        ::fcntl(fd, F_SETFL, flags | O_NONBLOCK);
+    if (flags < 0) {
+        std::fprintf(stderr, "CliServerActor: fcntl F_GETFL failed: %s\n",
+                     std::strerror(errno));
+        ::close(fd);
+        return -1;
+    }
+    if (::fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0) {
+        std::fprintf(stderr, "CliServerActor: fcntl F_SETFL failed: %s\n",
+                     std::strerror(errno));
+        ::close(fd);
+        return -1;
+    }
     return fd;
+#endif
+}
+
+/// \brief Write to a file descriptor avoiding SIGPIPE.
+///
+/// On platforms that define \c MSG_NOSIGNAL (Linux), uses \c send() with
+/// that flag.  Otherwise falls back to \c write(); on macOS the caller
+/// should set \c SO_NOSIGPIPE on the socket beforehand.
+static ssize_t safe_write(int fd, const void* buf, size_t len) {
+#ifdef MSG_NOSIGNAL
+    return ::send(fd, buf, len, MSG_NOSIGNAL);
+#else
+    return ::write(fd, buf, len);
 #endif
 }
 
@@ -121,6 +167,34 @@ result<void> CliServerActor::bind_listeners() {
         // Set permissions
         ::chmod(config_.uds_listen_path.c_str(),
                 static_cast<mode_t>(config_.uds_socket_mode));
+
+        // Set ownership if configured
+        if (!config_.uds_socket_owner.empty() || !config_.uds_socket_group.empty()) {
+            uid_t uid = static_cast<uid_t>(-1);
+            gid_t gid = static_cast<gid_t>(-1);
+            if (!config_.uds_socket_owner.empty()) {
+                struct passwd* pw = ::getpwnam(config_.uds_socket_owner.c_str());
+                if (pw != nullptr) {
+                    uid = pw->pw_uid;
+                } else {
+                    std::fprintf(stderr, "CliServerActor: unknown UDS owner '%s'\n",
+                                 config_.uds_socket_owner.c_str());
+                }
+            }
+            if (!config_.uds_socket_group.empty()) {
+                struct group* gr = ::getgrnam(config_.uds_socket_group.c_str());
+                if (gr != nullptr) {
+                    gid = gr->gr_gid;
+                } else {
+                    std::fprintf(stderr, "CliServerActor: unknown UDS group '%s'\n",
+                                 config_.uds_socket_group.c_str());
+                }
+            }
+            if (::chown(config_.uds_listen_path.c_str(), uid, gid) < 0) {
+                std::fprintf(stderr, "CliServerActor: chown UDS socket failed: %s\n",
+                             std::strerror(errno));
+            }
+        }
 
         if (::listen(uds_listen_fd_, 8) < 0) {
             ::close(uds_listen_fd_);
@@ -256,11 +330,18 @@ void CliServerActor::accept_connections() {
             return;
         }
 
+#ifdef __APPLE__
+        // macOS: suppress SIGPIPE on writes to a client that has closed.
+        int nosigpipe = 1;
+        ::setsockopt(client_fd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe,
+                     sizeof(nosigpipe));
+#endif
+
         // Check session limit
         if (sessions_.size() >= config_.max_sessions) {
             const char* msg =
                 "HPActor CLI -- Too many connections. Try again later.\n";
-            ::write(client_fd, msg, std::strlen(msg));
+            safe_write(client_fd, msg, std::strlen(msg));
             ::close(client_fd);
             return;
         }
@@ -273,19 +354,19 @@ void CliServerActor::accept_connections() {
         ss.session = std::make_unique<CliSession>(
             &system_, command_tree_.get(), std::move(formatter),
             [client_fd](const std::string& text) {
-                ::write(client_fd, text.data(), text.size());
+                safe_write(client_fd, text.data(), text.size());
                 // Write null sentinel so client knows response is complete
                 const char sentinel = '\0';
-                ::write(client_fd, &sentinel, 1);
+                safe_write(client_fd, &sentinel, 1);
             },
             config_.page_size);
 
         // Send greeting
         const char* greeting =
             "HPActor CLI -- Type /help for commands, /quit to exit.\n";
-        ::write(client_fd, greeting, std::strlen(greeting));
+        safe_write(client_fd, greeting, std::strlen(greeting));
         const char sentinel = '\0';
-        ::write(client_fd, &sentinel, 1);
+        safe_write(client_fd, &sentinel, 1);
 
         sessions_.push_back(std::move(ss));
     };
@@ -301,6 +382,7 @@ void CliServerActor::accept_connections() {
 void CliServerActor::service_sessions() {
     for (size_t i = 0; i < sessions_.size();) {
         auto& ss = sessions_[i];
+        bool should_close = false;
 
         char buf[4096];
         ssize_t n = ::read(ss.fd, buf, sizeof(buf));
@@ -335,26 +417,27 @@ void CliServerActor::service_sessions() {
                 ss.read_buffer.erase(0, skip);
 
                 if (!ss.session->process_line(line)) {
-                    // Session requested shutdown
-                    close_session(i);
-                    goto next_session;
+                    should_close = true;
+                    break;
                 }
             }
         } else if (n == 0) {
             // Client disconnected
-            close_session(i);
-            continue;
+            should_close = true;
         } else {
             // EAGAIN / EWOULDBLOCK means no data right now
             if (errno != EAGAIN && errno != EWOULDBLOCK) {
-                close_session(i);
-                continue;
+                should_close = true;
             }
         }
 
-        ++i;
-
-    next_session:;
+        if (should_close) {
+            close_session(i);
+            // Do not increment i — the element was erased, next one
+            // shifted into the same position.
+        } else {
+            ++i;
+        }
     }
 }
 
@@ -387,69 +470,9 @@ void CliServerActor::close_session(size_t index) {
 // Command tree
 // ---------------------------------------------------------------------------
 
-namespace {
-
-/// \brief Mount a single registered command into the tree, creating
-///        intermediate nodes as needed. Sets execute on the terminal node.
-void mount_command(CommandNode* root, const ICommand& cmd) {
-    auto segments = parse_command_path(cmd.path());
-    if (segments.empty())
-        return;
-
-    CommandNode* node = root;
-    for (size_t i = 0; i < segments.size(); ++i) {
-        auto& seg = segments[i];
-        bool is_param = is_param_segment(seg);
-        bool is_last = (i == segments.size() - 1);
-
-        // Find existing child or create one
-        CommandNode* child = nullptr;
-        for (auto& c : node->children) {
-            if (c->keyword == seg) {
-                child = c.get();
-                break;
-            }
-        }
-        if (!child) {
-            child = node->add_child(seg, "", is_param);
-        }
-
-        if (is_last) {
-            child->help_text = cmd.help_text();
-            child->execute = [&cmd](CommandContext& ctx) -> result<void> {
-                return cmd.execute(ctx);
-            };
-        }
-        node = child;
-    }
-}
-
-} // anonymous namespace
-
 void CliServerActor::build_command_tree() {
     auto root = std::make_unique<CommandNode>("/", "CLI root");
-
-    auto& cmds = CommandRegistry::instance().commands();
-    // Sort by order for deterministic tree assembly
-    std::vector<const ICommand*> sorted;
-    sorted.reserve(cmds.size());
-    for (auto& c : cmds)
-        sorted.push_back(c.get());
-    // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
-    std::stable_sort(sorted.begin(), sorted.end(),
-                     [](const ICommand* a, const ICommand* b) {
-                         if (a->order() != b->order())
-                             return a->order() < b->order();
-                         return a->path() < b->path();
-                     });
-
-    for (auto* cmd : sorted) {
-        mount_command(root.get(), *cmd);
-    }
-
-    // Register forward-looking ask commands.
-    cli::register_ask_commands(*root);
-
+    build_command_tree_from_registry(*root);
     command_tree_ = std::move(root);
 }
 

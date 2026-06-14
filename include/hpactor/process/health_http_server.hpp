@@ -65,6 +65,7 @@ class HealthHttpServer : public DaemonActor {
     ActorSystem& system_;
     HealthHttpConfig config_;
     std::unique_ptr<net::HTTPGateway> gateway_;
+    bool listen_ok_ = false;
 };
 
 } // namespace process

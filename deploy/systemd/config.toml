@@ -35,12 +35,11 @@ working_directory = "/"
 redirect_stdio = true
 
 # ---------------------------------------------------------------------------
-# Process watchdog
+# Process watchdog — sd_notify(WATCHDOG=1) ping interval in milliseconds.
+# Should be ≤ half of the systemd unit's WatchdogSec=10s.  0 disables the
+# watchdog actor.
 # ---------------------------------------------------------------------------
-[system.process.watchdog]
-# Interval for sd_notify(WATCHDOG=1) pings.  Should be ≤ half of
-# the systemd unit's WatchdogSec=10s.  0 disables the watchdog actor.
-interval_ms = 5000
+watchdog_interval_ms = 5000
 
 # ---------------------------------------------------------------------------
 # CLI — socket-based server for remote hpactor-cli attach

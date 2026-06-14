@@ -17,6 +17,7 @@
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/command_registry.hpp>
+#include <hpactor/cli/command_tree_builder.hpp>
 #include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
@@ -324,65 +325,9 @@ std::vector<ActorMeta> CliActor::enumerate_actors(const std::string& filter) {
 // Command tree — registered commands wired to real implementations.
 // ---------------------------------------------------------------------------
 
-// Mount a single registered command into the tree, creating intermediate
-// nodes as needed. Sets execute on the terminal node.
-void mount_command(CommandNode* root, const ICommand& cmd) {
-    auto segments = parse_command_path(cmd.path());
-    if (segments.empty())
-        return;
-
-    CommandNode* node = root;
-    for (size_t i = 0; i < segments.size(); ++i) {
-        auto& seg = segments[i];
-        bool is_param = is_param_segment(seg);
-        bool is_last = (i == segments.size() - 1);
-
-        // Find existing child or create one
-        CommandNode* child = nullptr;
-        for (auto& c : node->children) {
-            if (c->keyword == seg) {
-                child = c.get();
-                break;
-            }
-        }
-        if (!child) {
-            child = node->add_child(seg, "", is_param);
-        }
-
-        if (is_last) {
-            child->help_text = cmd.help_text();
-            child->execute = [&cmd](CommandContext& ctx) -> result<void> {
-                return cmd.execute(ctx);
-            };
-        }
-        node = child;
-    }
-}
-
 void CliActor::build_command_tree() {
     auto root = std::make_unique<CommandNode>("/", "CLI root");
-
-    auto& cmds = CommandRegistry::instance().commands();
-    // Sort by order for deterministic tree assembly
-    std::vector<const ICommand*> sorted;
-    sorted.reserve(cmds.size());
-    for (auto& c : cmds)
-        sorted.push_back(c.get());
-    // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
-    std::stable_sort(sorted.begin(), sorted.end(),
-                     [](const ICommand* a, const ICommand* b) {
-                         if (a->order() != b->order())
-                             return a->order() < b->order();
-                         return a->path() < b->path();
-                     });
-
-    for (auto* cmd : sorted) {
-        mount_command(root.get(), *cmd);
-    }
-
-    // Register forward-looking ask commands.
-    cli::register_ask_commands(*root);
-
+    build_command_tree_from_registry(*root);
     command_tree_ = std::move(root);
 }
 

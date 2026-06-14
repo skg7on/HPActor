@@ -45,6 +45,8 @@ class ProcessManager {
 
     static ProcessConfig config_;
     static ProcessMode mode_;
+    static bool daemonized_;
+    static bool pidfile_written_;
 };
 
 } // namespace hpactor::process

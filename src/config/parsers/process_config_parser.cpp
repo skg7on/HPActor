@@ -15,6 +15,8 @@
 #include <hpactor/config/toml_config_parser.hpp>
 #include <hpactor/config/toml_parser_registry.hpp>
 
+#include <chrono>
+
 namespace hpactor::config {
 namespace {
 
@@ -42,6 +44,8 @@ class ProcessConfigParser final : public ITomlSystemConfigParser {
         out.process.redirect_stdio = pt.read_bool("redirect_stdio");
         out.process.log_file = pt.read_string("log_file", "");
         out.process.working_directory = pt.read_string("working_directory", "/");
+        out.process.watchdog_interval = std::chrono::milliseconds(
+            static_cast<int64_t>(pt.read_uint32("watchdog_interval_ms", 0)));
 
         return result<void>::make();
     }

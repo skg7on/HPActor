@@ -16,9 +16,27 @@
 #include <hpactor/process/process_config.hpp>
 #include <hpactor/process/process_manager.hpp>
 
+#include <signal.h>
 #include <string>
 
 using namespace hpactor::process;
+
+/// RAII guard that saves the current thread's signal mask on construction
+/// and restores it on destruction.
+class SignalMaskGuard {
+  public:
+    SignalMaskGuard() {
+        pthread_sigmask(SIG_SETMASK, nullptr, &saved_mask_);
+    }
+    ~SignalMaskGuard() {
+        pthread_sigmask(SIG_SETMASK, &saved_mask_, nullptr);
+    }
+    SignalMaskGuard(const SignalMaskGuard&) = delete;
+    SignalMaskGuard& operator=(const SignalMaskGuard&) = delete;
+
+  private:
+    sigset_t saved_mask_{};
+};
 
 TEST(ProcessModeTest, ParseForeground) {
     EXPECT_EQ(ProcessConfig::parse_mode("foreground"), ProcessMode::Foreground);
@@ -113,6 +131,11 @@ TEST(SystemdNotifyTest, SendNotifyWritesToSocket) {
 }
 
 TEST(SignalHandlingTest, SignalMaskBlocksSignals) {
+    // Save the current signal mask and restore it after the test so that
+    // pthread_sigmask(SIG_BLOCK) inside install_signal_handlers does not
+    // leak blocked signals into subsequent tests (or the test runner itself).
+    SignalMaskGuard mask_guard;
+
     ProcessConfig cfg;
     cfg.mode = ProcessMode::Systemd;
     ProcessManager::init(cfg);
