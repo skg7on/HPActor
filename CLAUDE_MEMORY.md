@@ -22,6 +22,20 @@ This project has a persistent memory system in `.claude/projects/-Users-skg7on-W
 - Recommended production milestone: Production Reliability Plane foundation, starting with delivery semantics, bounded mailboxes/backpressure, DLQ, tracing, health, and graceful shutdown.
 - Status: roadmap and backlog remain authoritative. Runtime foundations now implemented include scheduled messages, delivery-mode configuration, receiver deduplication, structured failure envelopes, bounded mailboxes, DLQ, distributed tracing, HTTP gateway, graceful shutdown, actor lifecycle, and actor quarantine. Durable outbox/inbox, ACK/NACK retry, cluster control, security, and operations-plane admin APIs remain design/backlog.
 
+**Daemon Service & CLI Decoupling:** ✅ Design Complete (2026-06-14), Implementation Complete
+- Issue: #284 — Actor System as a background process or service on Linux.
+- Design spec: `docs/architecture/production/daemon-service-architecture-design.md` — systemd Type=notify, traditional daemon (double-fork), ProcessManager singleton, CliServerActor (UDS/TCP), standalone hpactor-cli binary, WatchdogActor, HealthHttpServer, SyslogSink.
+- Implementation plan: `docs/superpowers/plans/2026-06-14-daemon-service-design.md` — 13 TDD tasks across 8 phases.
+- New subsystem: `include/hpactor/process/` — ProcessManager, ProcessConfig, WatchdogActor, HealthHttpServer.
+- New CLI components: `include/hpactor/cli/cli_session.hpp` (transport-agnostic command processor), `include/hpactor/cli/cli_server_actor.hpp` (socket-based CLI server), `include/hpactor/cli/cli_server_config.hpp`.
+- New tools: `tools/hpactor-cli/` — standalone CLI client binary connecting via UDS/TCP.
+- New log sink: `include/hpactor/log/syslog_sink.hpp` — POSIX syslog(3) sink for daemon mode.
+- New config: `src/config/parsers/process_config_parser.cpp` — self-registering TOML parser for `[system.process]`.
+- New deploy: `deploy/systemd/hpactor.service` — systemd unit file with Type=notify, WatchdogSec=10s, security hardening.
+- New test files: test_process_manager (18 tests), test_cli_session (4 tests), test_cli_server_actor (2 tests), test_watchdog_actor (1 test), test_health_http (2 tests), test_syslog_sink (4 tests), test_daemon_integration (4 tests).
+- Key invariants: All thread creation happens AFTER daemonization (ProcessManager::init() before ActorSystem construction). Foreground mode behavior unchanged — all 1845 existing tests pass. CliActor refactored to delegate command processing to CliSession without breaking existing CLI test suite (267 tests).
+- Signals handled: SIGTERM/SIGINT → graceful shutdown, SIGHUP → config reload. signalfd on Linux, self-pipe fallback on other Unix.
+
 **Failure Semantics & Delivery Foundation:** ✅ Complete (2026-05-20 to 2026-05-24)
 - `FailureReason` enum (23 values in 10 semantic ranges) + `FailureSource` enum (12 subsystem origins) in `include/hpactor/types/failure_reason.hpp`.
 - `FailureEnvelope` struct with full correlation metadata (actor_id, sender, receiver, message_id, trace, retryable, timestamp, source, detail) in `include/hpactor/types/failure_envelope.hpp`.
