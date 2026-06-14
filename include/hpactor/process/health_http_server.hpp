@@ -16,11 +16,16 @@
 
 #include <cstdint>
 #include <hpactor/actor/daemon_actor.hpp>
+#include <memory>
 #include <string>
 
 namespace hpactor {
 
 class ActorSystem;
+
+namespace net {
+class EventLoop;
+}
 
 namespace process {
 
@@ -29,12 +34,21 @@ struct HealthHttpConfig {
     std::string bind_address = "127.0.0.1";
 };
 
+/// \brief Minimal HTTP health-check endpoint server.
+///
+/// Runs on its own daemon thread and uses a dedicated EventLoop for
+/// non-blocking I/O.  Responds to \c GET requests on \c /health/live,
+/// \c /health/ready, and \c /health/startup with \c 200\ OK.
 class HealthHttpServer : public DaemonActor {
   public:
     static constexpr const char* kActorTypeName = "HealthHttpServer";
 
     HealthHttpServer(ActorContext* ctx, ActorSystem& system,
                      const HealthHttpConfig& config);
+
+    /// \brief Explicit destructor — defined in .cpp so that
+    ///        \c unique_ptr<EventLoop> can own an incomplete type.
+    ~HealthHttpServer() override;
 
     bool run_once() override;
     void on_daemon_start() override;
@@ -44,12 +58,18 @@ class HealthHttpServer : public DaemonActor {
     }
 
   private:
-    void handle_request(int client_fd);
+    /// Build the HTTP response for \p path.
     std::string health_response(const std::string& path) const;
-    int portable_accept(int listen_fd);
+
+    /// Handler invoked by the EventLoop when the listen socket is readable.
+    /// Accepts pending connections and processes each inline (the requests
+    /// and responses are tiny, so non-blocking read/write on a
+    /// freshly-accepted fd completes immediately under normal conditions).
+    void on_listen_readable(int listen_fd);
 
     ActorSystem& system_;
     HealthHttpConfig config_;
+    std::unique_ptr<net::EventLoop> health_loop_;
     int listen_fd_ = -1;
     bool running_ = true;
 };
