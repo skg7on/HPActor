@@ -113,3 +113,18 @@ TEST(SystemdNotifyTest, SendNotifyWritesToSocket) {
     unlink(sock_path.c_str());
 }
 #endif
+
+TEST(SignalHandlingTest, SignalMaskBlocksSignals) {
+    ProcessConfig cfg;
+    cfg.mode = ProcessMode::Systemd;
+    ProcessManager::init(cfg);
+    int calls = 0;
+    auto result = ProcessManager::install_signal_handlers([&]() { calls++; },
+                                                          [&]() { calls++; });
+    EXPECT_TRUE(result.ok());
+}
+
+TEST(SignalHandlingTest, WaitForSignalReturnsMinusOneWhenNoSignal) {
+    int sig = ProcessManager::wait_for_signal();
+    EXPECT_EQ(sig, -1);
+}

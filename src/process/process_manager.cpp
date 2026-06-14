@@ -16,19 +16,33 @@
 #include <hpactor/process/process_manager.hpp>
 
 #include <cctype>
+#include <csignal>
 #include <cstring>
+#include <fstream>
 #include <string>
 
+#include <fcntl.h>
+#include <sys/stat.h>
+#include <unistd.h>
+
 #ifdef __linux__
+#    include <sys/signalfd.h>
 #    include <sys/socket.h>
 #    include <sys/un.h>
-#    include <unistd.h>
 #endif
 
 namespace hpactor::process {
 
 ProcessConfig ProcessManager::config_{};
 ProcessMode ProcessManager::mode_ = ProcessMode::Foreground;
+
+namespace {
+#ifdef __linux__
+int signal_fd_ = -1;
+#endif
+std::function<void()> on_terminate_fn_;
+std::function<void()> on_reload_fn_;
+} // anonymous namespace
 
 ProcessMode ProcessConfig::parse_mode(const std::string& s) {
     std::string lower;
@@ -57,6 +71,9 @@ std::string ProcessManager::format_notify_message(const std::string& msg) {
 result<void> ProcessManager::init(const ProcessConfig& config) {
     config_ = config;
     mode_ = config.mode;
+    if (mode_ == ProcessMode::Daemon) {
+        daemonize(); // does not return in parent
+    }
     return result<void>::make();
 }
 
@@ -107,16 +124,132 @@ void ProcessManager::send_notify(const std::string& msg) {
 #endif
 }
 
-// Stubs for later tasks:
-result<void> ProcessManager::install_signal_handlers(std::function<void()>,
-                                                     std::function<void()>) {
+// --- Daemonization ---
+
+void ProcessManager::daemonize() {
+    pid_t pid = fork();
+    if (pid < 0) {
+        _exit(1);
+    }
+    if (pid > 0) {
+        _exit(0);
+    }
+
+    if (setsid() < 0) {
+        _exit(1);
+    }
+
+    pid = fork();
+    if (pid < 0) {
+        _exit(1);
+    }
+    if (pid > 0) {
+        _exit(0);
+    }
+
+    if (!config_.working_directory.empty()) {
+        chdir(config_.working_directory.c_str());
+    }
+    umask(0);
+
+    if (config_.redirect_stdio) {
+        int devnull = open("/dev/null", O_RDWR);
+        if (devnull >= 0) {
+            dup2(devnull, STDIN_FILENO);
+            dup2(devnull, STDOUT_FILENO);
+            dup2(devnull, STDERR_FILENO);
+            if (devnull > STDERR_FILENO) {
+                close(devnull);
+            }
+        }
+    }
+
+    write_pidfile();
+}
+
+void ProcessManager::write_pidfile() {
+    if (config_.pidfile_path.empty()) {
+        return;
+    }
+    std::string dir;
+    auto slash = config_.pidfile_path.rfind('/');
+    if (slash != std::string::npos) {
+        dir = config_.pidfile_path.substr(0, slash);
+        mkdir(dir.c_str(), 0755);
+    }
+    std::string tmp = config_.pidfile_path + ".tmp";
+    {
+        std::ofstream ofs(tmp);
+        if (!ofs) {
+            return;
+        }
+        ofs << getpid() << "\n" << std::flush;
+    }
+    rename(tmp.c_str(), config_.pidfile_path.c_str());
+}
+
+void ProcessManager::remove_pidfile() {
+    if (!config_.pidfile_path.empty()) {
+        unlink(config_.pidfile_path.c_str());
+    }
+}
+
+// --- Signal Handling ---
+
+result<void>
+ProcessManager::install_signal_handlers(std::function<void()> on_terminate,
+                                        std::function<void()> on_reload) {
+    on_terminate_fn_ = std::move(on_terminate);
+    on_reload_fn_ = std::move(on_reload);
+
+    sigset_t mask;
+    sigemptyset(&mask);
+    sigaddset(&mask, SIGTERM);
+    sigaddset(&mask, SIGINT);
+    sigaddset(&mask, SIGHUP);
+
+    if (pthread_sigmask(SIG_BLOCK, &mask, nullptr) != 0) {
+        return result<void>::make(
+            error(errors::invalid_argument, "Failed to block signals"));
+    }
+
+#ifdef __linux__
+    signal_fd_ = signalfd(-1, &mask, SFD_NONBLOCK | SFD_CLOEXEC);
+    if (signal_fd_ < 0) {
+        return result<void>::make(
+            error(errors::invalid_argument, "Failed to create signalfd"));
+    }
+#endif
     return result<void>::make();
 }
+
 int ProcessManager::wait_for_signal() {
+#ifdef __linux__
+    if (signal_fd_ < 0) {
+        return -1;
+    }
+    struct signalfd_siginfo ssi{};
+    ssize_t n = read(signal_fd_, &ssi, sizeof(ssi));
+    if (n != static_cast<ssize_t>(sizeof(ssi))) {
+        return -1;
+    }
+    switch (ssi.ssi_signo) {
+        case SIGTERM:
+        case SIGINT:
+            if (on_terminate_fn_) {
+                on_terminate_fn_();
+            }
+            break;
+        case SIGHUP:
+            if (on_reload_fn_) {
+                on_reload_fn_();
+            }
+            break;
+    }
+    return static_cast<int>(ssi.ssi_signo);
+#else
     return -1;
+#endif
 }
-void ProcessManager::daemonize() {}
-void ProcessManager::write_pidfile() {}
-void ProcessManager::remove_pidfile() {}
 
 } // namespace hpactor::process
