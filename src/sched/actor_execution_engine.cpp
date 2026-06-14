@@ -110,16 +110,26 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
             actor.receive(msg);
         }
     } else {
-        // try_pop returned nullptr (MPSC chain in progress or genuinely
-        // empty).  Set the actor idle, then double-check: if the mailbox
-        // became non-empty in the window between the dequeue and kIdle
-        // (producer completed enqueue + notify_ready saw kRunning on
-        // x86_64 TSO), re-admit via try_mark_ready so the message is
-        // not orphaned.  count_.load(acquire) synchronises with
-        // count_.fetch_add(1, release), guaranteeing mpsc_next
-        // visibility when count_ > 0 on all architectures.
+        // try_pop returned nullptr (MPSC chain in progress, genuinely
+        // empty, or rate-limiter denial with the message re-enqueued).
+        // Set the actor idle, then double-check: if the mailbox became
+        // non-empty in the window between the dequeue and kIdle, re-admit
+        // via try_mark_ready so the message is not orphaned.
+        //
+        // Budget guard: kLostWakeupRequeueBudget caps consecutive
+        // re-admissions through this path.  A single re-dispatch is
+        // enough for the genuine lost-wakeup window (the mpsc_next
+        // store becomes visible before the next try_pop).  Rate-limited
+        // actors where dequeue() re-enqueues a message and returns
+        // nullptr would otherwise spin here — the actor keeps being
+        // re-admitted because the mailbox never empties, but the rate
+        // limiter never grants a token at microsecond intervals.  The
+        // budget prevents unbounded CPU consumption; the actor suspends
+        // and the next external wakeup (timer, cross-actor message)
+        // retries when tokens have refilled.
+        static constexpr uint64_t kLostWakeupRequeueBudget = 1;
         actor_state.set(ActorState::kIdle);
-        if (!mailbox->empty()) {
+        if (!mailbox->empty() && item.sequence < kLostWakeupRequeueBudget) {
             auto admission = ready_gate_.try_mark_ready(item.actor);
             if (admission.accepted() ||
                 admission.code == ReadyAdmissionCode::AlreadyReady) {

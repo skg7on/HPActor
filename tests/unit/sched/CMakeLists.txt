@@ -12,6 +12,7 @@ add_executable(test_unit_sched
     test_scheduler_control.cpp
     test_dispatch_policy.cpp
     test_hybrid_scheduler.cpp
+    test_lost_wakeup_rate_limit.cpp
 )
 target_link_libraries(test_unit_sched hpactor hpactor_test_support GTest::gtest_main pthread)
 gtest_discover_tests(test_unit_sched)

@@ -197,7 +197,8 @@ void WorkerThread::thread_loop() {
         //
         // kPollThreshold = kBackoffYieldIters + kBackoffSleepIters.
         // See platform-specific definitions at the top of this file.
-        if (!owner_ || backoff_counter_ < kPollThreshold) {
+        if (!owner_ ||
+            backoff_counter_.load(std::memory_order_relaxed) < kPollThreshold) {
             diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);
             increment_donations();
             backoff();
@@ -259,13 +260,13 @@ void WorkerThread::thread_loop() {
 }
 
 bool WorkerThread::diag_is_in_cv_model() const {
-    return backoff_counter_ >= kPollThreshold;
+    return backoff_counter_.load(std::memory_order_relaxed) >= kPollThreshold;
 }
 
 void WorkerThread::backoff() {
     // See kBackoffYieldIters at the top of this file for the per-platform
     // yield threshold (0 on Linux, 4 on macOS).
-    uint32_t c = backoff_counter_++;
+    uint32_t c = backoff_counter_.fetch_add(1, std::memory_order_relaxed);
 
     if (c < kBackoffYieldIters) {
         std::this_thread::yield();
@@ -278,8 +279,7 @@ void WorkerThread::backoff() {
     // at 100%).  The std::min at 50ms provides the effective backoff
     // ceiling — the shift ramps through it (10u << 13 = 81,920us → capped
     // to 50,000).
-    uint32_t shift = (c - kBackoffYieldIters > 28) ? 28u
-                                                    : (c - kBackoffYieldIters);
+    uint32_t shift = (c - kBackoffYieldIters > 28) ? 28u : (c - kBackoffYieldIters);
     uint32_t backoff_us = 10u << shift;
     backoff_us = std::min(backoff_us, 50000u);
     std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
