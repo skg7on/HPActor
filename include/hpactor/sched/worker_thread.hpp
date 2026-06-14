@@ -180,12 +180,6 @@ class WorkerThread {
     void thread_loop();
     void backoff();
 
-    /// Poll-backoff-then-CV-block when no work is available.
-    /// Returns true if work was found during the pre-block re-check
-    /// (caller should process \p item), false if the idle cycle
-    /// completed (backoff slept or CV wait finished).
-    bool idle(WorkItem& item);
-
     void reset_backoff() {
         backoff_counter_ = 0;
     }
