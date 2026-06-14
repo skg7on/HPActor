@@ -74,16 +74,15 @@ TEST(SystemdNotifyTest, RejectsNewlines) {
     EXPECT_EQ(msg.find('\n'), std::string::npos);
 }
 
-#ifdef __linux__
-#    include <sys/socket.h>
-#    include <sys/un.h>
-#    include <unistd.h>
+#include <sys/socket.h>
+#include <sys/un.h>
+#include <unistd.h>
 
 TEST(SystemdNotifyTest, SendNotifyWritesToSocket) {
     std::string sock_path = "/tmp/test_notify_" + std::to_string(getpid()) + ".sock";
     unlink(sock_path.c_str());
 
-    int recv_fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    int recv_fd = socket(AF_UNIX, SOCK_DGRAM, 0);
     ASSERT_GE(recv_fd, 0);
 
     struct sockaddr_un bind_addr{};
@@ -112,7 +111,6 @@ TEST(SystemdNotifyTest, SendNotifyWritesToSocket) {
     close(recv_fd);
     unlink(sock_path.c_str());
 }
-#endif
 
 TEST(SignalHandlingTest, SignalMaskBlocksSignals) {
     ProcessConfig cfg;

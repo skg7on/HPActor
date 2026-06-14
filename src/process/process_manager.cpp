@@ -25,10 +25,11 @@
 #include <sys/stat.h>
 #include <unistd.h>
 
+#include <sys/socket.h>
+#include <sys/un.h>
+
 #ifdef __linux__
 #    include <sys/signalfd.h>
-#    include <sys/socket.h>
-#    include <sys/un.h>
 #endif
 
 namespace hpactor::process {
@@ -109,19 +110,33 @@ void ProcessManager::send_notify(const std::string& msg) {
     if (clean.empty())
         return;
 
-#ifdef __linux__
-    int fd = socket(AF_UNIX, SOCK_DGRAM | SOCK_CLOEXEC, 0);
+    int fd = socket(AF_UNIX, SOCK_DGRAM, 0);
     if (fd < 0)
         return;
+
+    // Close-on-exec (portable — SOCK_CLOEXEC is Linux-only).
+    int fd_flags = fcntl(fd, F_GETFD, 0);
+    if (fd_flags >= 0)
+        fcntl(fd, F_SETFD, fd_flags | FD_CLOEXEC);
+
+#ifdef __APPLE__
+    // macOS: suppress SIGPIPE on sendto to a closed socket.
+    int nosigpipe = 1;
+    setsockopt(fd, SOL_SOCKET, SO_NOSIGPIPE, &nosigpipe, sizeof(nosigpipe));
+#endif
 
     struct sockaddr_un addr{};
     addr.sun_family = AF_UNIX;
     strncpy(addr.sun_path, socket_path, sizeof(addr.sun_path) - 1);
 
-    sendto(fd, clean.c_str(), clean.size(), MSG_NOSIGNAL,
+    sendto(fd, clean.c_str(), clean.size(),
+#ifdef MSG_NOSIGNAL
+           MSG_NOSIGNAL,
+#else
+           0,
+#endif
            reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
     close(fd);
-#endif
 }
 
 // --- Daemonization ---
