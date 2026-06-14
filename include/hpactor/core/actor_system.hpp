@@ -31,6 +31,9 @@
 #include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/hpactor_config.hpp>
+#if HPACTOR_ENABLE_AI_ACCELERATORS
+#    include <hpactor/ai/accelerator_config.hpp>
+#endif
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
@@ -194,6 +197,11 @@ struct Config {
 
     /// \brief Process-mode configuration (foreground, daemon, systemd).
     process::ProcessConfig process;
+#if HPACTOR_ENABLE_AI_ACCELERATORS
+    /// \brief AI accelerator resource plane configuration.
+    ///        Runtime-disabled by default; enable via [system.ai.accelerators].
+    ai::AcceleratorConfig ai_accelerators;
+#endif
 };
 
 /// \brief Registration entry for an actor type.
