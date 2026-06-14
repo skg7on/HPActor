@@ -340,16 +340,68 @@ class WorkerThread {
   private:
     /// \brief Main work-processing loop running on the worker's OS thread.
     ///
-    /// Repeatedly: checks pause handler, pops local work, attempts steal,
-    /// runs the work processor, and escalates idle state through yield →
-    /// backoff → CV blocking.
+    /// Orchestrates a three-phase escalation:
+    /// 1. Try to find and process work (local pop → steal).
+    /// 2. Polling idle model (yield → exponential backoff).
+    /// 3. CV blocking model (EDF-aware sleep with lost-wakeup protection).
     void thread_loop();
+
+    /// \brief Process a work item: bump diagnostic counter, reset backoff,
+    ///        and invoke the work processor.
+    ///
+    /// Extracted to eliminate duplication across the local-pop, steal, and
+    /// CV-double-check paths.
+    ///
+    /// \param[in] item The work item to process.
+    void process_work_item(const WorkItem& item);
+
+    /// \brief Try to find work from local queues or via work-stealing.
+    ///
+    /// Attempts local pop first (placement queues when attached to a
+    /// scheduler, local queue when standalone), then falls back to
+    /// work-stealing from sibling workers via A2WS.
+    ///
+    /// \return \c true if work was found and processed; \c false if no
+    ///         work is currently available.
+    /// \note When \c true is returned, the caller should \c continue the
+    ///       main loop immediately.
+    bool try_find_and_process_work();
+
+    /// \brief Execute one iteration of the polling idle model.
+    ///
+    /// Increments the backoff counter and invokes \c backoff() (yield or
+    /// exponential sleep).  Standalone workers (no owner scheduler) stay
+    /// in this model indefinitely.  Attached workers escalate to CV
+    /// blocking after \c kPollThreshold idle iterations.
+    ///
+    /// \return \c true if the worker should continue in the polling model
+    ///         (caller \c continue s the main loop).
+    /// \return \c false when the polling threshold is reached and the
+    ///         worker should escalate to CV blocking.
+    bool try_poll_idle();
+
+    /// \brief Enter the CV blocking model with EDF-aware timeout.
+    ///
+    /// Performs the lost-wakeup double-check protocol:
+    /// 1. Set \c is_blocking_ (seq_cst) to advertise blocking intent.
+    /// 2. Double-check local queues + steal — if work appears, clear the
+    ///    flag and return \c true (caller continues the main loop).
+    /// 3. Compute an EDF-aware CV timeout (capped at 100 ms) so the
+    ///    worker wakes before the earliest deadline expires.
+    /// 4. Block on \c sleep_cv_ until notified or timeout.
+    ///
+    /// \return \c true if work was found during the pre-sleep double-check
+    ///         (already processed; caller should \c continue the main loop).
+    /// \return \c false after the CV wait completes (caller should
+    ///         \c reset_backoff() and loop).
+    bool enter_cv_block();
 
     /// \brief Adaptive idle backoff: yield → exponential sleep up to 50 ms.
     ///
-    /// First 4 idle iterations call `std::this_thread::yield()`.
-    /// Subsequent iterations sleep for `10 µs * 2^(c-4)`, capped at 50 ms.
-    /// After the backoff ramp, `thread_loop()` escalates to CV blocking.
+    /// First \c kBackoffYieldIters idle iterations call
+    /// `std::this_thread::yield()`.  Subsequent iterations sleep for
+    /// `10 µs * 2^(c - kBackoffYieldIters)`, capped at 50 ms.
+    /// After the backoff ramp, the worker escalates to CV blocking.
     void backoff();
 
     /// \brief Reset the backoff counter to zero.

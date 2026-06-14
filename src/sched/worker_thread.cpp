@@ -160,6 +160,113 @@ bool WorkerThread::try_steal(WorkItem& out) {
     return false;
 }
 
+void WorkerThread::process_work_item(const WorkItem& item) {
+    diag_work_found_.fetch_add(1, std::memory_order_relaxed);
+    reset_backoff();
+    if (processor_) {
+        processor_(item);
+    }
+}
+
+bool WorkerThread::try_find_and_process_work() {
+    WorkItem item;
+    bool got_work = false;
+
+    // Local pop: use placement queues when attached to scheduler,
+    // local queue when standalone.
+    if (owner_) {
+        got_work = owner_->pop_local(item, config_.worker_index);
+    } else {
+        got_work = pop(item);
+    }
+
+    if (got_work) {
+        process_work_item(item);
+        return true;
+    }
+
+    // Local empty - try stealing from another worker via A2WS.
+    if (try_steal(item)) {
+        process_work_item(item);
+        return true;
+    }
+
+    return false;
+}
+
+bool WorkerThread::try_poll_idle() {
+    // Standalone workers (no owner_ scheduler) stay in polling indefinitely;
+    // attached workers escalate to CV blocking after kPollThreshold idle
+    // iterations.  See platform-specific constants at the top of this file.
+    if (!owner_ ||
+        backoff_counter_.load(std::memory_order_relaxed) < kPollThreshold) {
+        diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);
+        increment_donations();
+        backoff();
+        return true; // continue polling
+    }
+    return false; // escalate to CV blocking
+}
+
+bool WorkerThread::enter_cv_block() {
+    auto& ws = owner_->placement_workers()[config_.worker_index];
+
+    // Advertise blocking intent with seq_cst to prevent the enqueue path
+    // from reordering its is_blocking_ load before this store (lost-wakeup
+    // protocol).
+    ws.is_blocking_.store(true, std::memory_order_seq_cst);
+
+    // Double-check for work that may have arrived between our last poll and
+    // setting is_blocking_.  If work is found, clear the flag and return
+    // immediately.
+    {
+        WorkItem item;
+        if (owner_->pop_local(item, config_.worker_index) || try_steal(item)) {
+            diag_work_found_.fetch_add(1, std::memory_order_relaxed);
+            ws.is_blocking_.store(false, std::memory_order_release);
+            reset_backoff();
+            if (processor_)
+                processor_(item);
+            return true; // caller continues the main loop
+        }
+    }
+
+    diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
+
+    // Compute EDF-aware CV timeout.  Wake before the earliest deadline
+    // expires so another worker can steal deadline work.
+    auto now = std::chrono::steady_clock::now();
+    auto timeout = std::chrono::milliseconds(100);
+    int64_t edf_ns = owner_->edf_next_deadline();
+    if (edf_ns != INT64_MAX) {
+        int64_t now_ns = now.time_since_epoch().count();
+        int64_t delta_ns = edf_ns - now_ns;
+        if (delta_ns <= 0)
+            delta_ns = 1'000'000; // overdue: 1 ms floor
+        auto delta_ms = std::chrono::duration_cast<std::chrono::milliseconds>(
+            std::chrono::nanoseconds(delta_ns));
+        // Wake 1 ms before the deadline to leave steal + dispatch headroom.
+        auto margin = std::chrono::milliseconds(1);
+        timeout = (delta_ms > margin) ? (delta_ms - margin)
+                                      : std::chrono::milliseconds(1);
+        if (timeout > std::chrono::milliseconds(100))
+            timeout = std::chrono::milliseconds(100);
+    }
+
+    std::unique_lock<std::mutex> lk(ws.sleep_mutex_);
+    bool timed_out = !ws.sleep_cv_.wait_for(lk, timeout, [&] {
+        return !ws.is_blocking_.load(std::memory_order_relaxed) ||
+               stop_requested_.load(std::memory_order_relaxed) ||
+               !running_.load(std::memory_order_relaxed);
+    });
+    if (timed_out) {
+        diag_cv_timeout_wakes_.fetch_add(1, std::memory_order_relaxed);
+    } else {
+        diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
+    }
+    return false; // CV wait completed; caller resets backoff and loops
+}
+
 void WorkerThread::thread_loop() {
     tl_current_worker_id = config_.worker_index;
 
@@ -170,99 +277,22 @@ void WorkerThread::thread_loop() {
             pause_handler_();
         }
 
-        WorkItem item;
-        bool got_work = false;
-
-        // Local pop: use placement queues when attached to scheduler,
-        // local queue when standalone.
-        if (owner_) {
-            got_work = owner_->pop_local(item, config_.worker_index);
-        } else {
-            got_work = pop(item);
-        }
-
-        if (got_work) {
-            diag_work_found_.fetch_add(1, std::memory_order_relaxed);
-            reset_backoff();
-            if (processor_) {
-                processor_(item);
-            }
+        // Phase 1: Try to find and process work (local pop → steal).
+        if (try_find_and_process_work()) {
             continue;
         }
 
-        // Local empty - try stealing from another worker
-        if (try_steal(item)) {
-            diag_work_found_.fetch_add(1, std::memory_order_relaxed);
-            reset_backoff();
-            if (processor_) {
-                processor_(item);
-            }
+        // Phase 2: Polling idle model (yield → exponential backoff).
+        // Standalone workers stay here; attached workers escalate after
+        // kPollThreshold idle iterations.
+        if (try_poll_idle()) {
             continue;
         }
 
-        // No work available — poll briefly then escalate to CV blocking.
-        // Standalone workers (no owner_ scheduler) keep polling; CV blocking
-        // requires access to the placement layer's per-worker state.
-        //
-        // kPollThreshold = kBackoffYieldIters + kBackoffSleepIters.
-        // See platform-specific definitions at the top of this file.
-        if (!owner_ ||
-            backoff_counter_.load(std::memory_order_relaxed) < kPollThreshold) {
-            diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);
-            increment_donations();
-            backoff();
+        // Phase 3: CV blocking model with EDF-aware timeout and
+        // lost-wakeup double-check protocol.
+        if (enter_cv_block()) {
             continue;
-        }
-
-        // Escalate to CV-based blocking.
-        {
-            auto& ws = owner_->placement_workers()[config_.worker_index];
-            ws.is_blocking_.store(true, std::memory_order_seq_cst);
-
-            if (owner_->pop_local(item, config_.worker_index) || try_steal(item)) {
-                diag_work_found_.fetch_add(1, std::memory_order_relaxed);
-                ws.is_blocking_.store(false, std::memory_order_release);
-                reset_backoff();
-                if (processor_)
-                    processor_(item);
-                continue;
-            }
-
-            diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
-
-            // Compute EDF-aware CV timeout.  Wake before the earliest
-            // deadline expires so another worker can steal deadline work.
-            auto now = std::chrono::steady_clock::now();
-            auto timeout = std::chrono::milliseconds(100);
-            int64_t edf_ns = owner_->edf_next_deadline();
-            if (edf_ns != INT64_MAX) {
-                int64_t now_ns = now.time_since_epoch().count();
-                int64_t delta_ns = edf_ns - now_ns;
-                if (delta_ns <= 0)
-                    delta_ns = 1'000'000; // overdue: 1 ms floor
-                auto delta_ms =
-                    std::chrono::duration_cast<std::chrono::milliseconds>(
-                        std::chrono::nanoseconds(delta_ns));
-                // Wake 1 ms before the deadline to leave steal + dispatch
-                // headroom.
-                auto margin = std::chrono::milliseconds(1);
-                timeout = (delta_ms > margin) ? (delta_ms - margin)
-                                              : std::chrono::milliseconds(1);
-                if (timeout > std::chrono::milliseconds(100))
-                    timeout = std::chrono::milliseconds(100);
-            }
-
-            std::unique_lock<std::mutex> lk(ws.sleep_mutex_);
-            bool timed_out = !ws.sleep_cv_.wait_for(lk, timeout, [&] {
-                return !ws.is_blocking_.load(std::memory_order_relaxed) ||
-                       stop_requested_.load(std::memory_order_relaxed) ||
-                       !running_.load(std::memory_order_relaxed);
-            });
-            if (timed_out) {
-                diag_cv_timeout_wakes_.fetch_add(1, std::memory_order_relaxed);
-            } else {
-                diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
-            }
         }
         reset_backoff();
     }
