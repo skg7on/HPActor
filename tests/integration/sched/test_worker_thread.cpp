@@ -135,6 +135,33 @@ TEST(WorkerThreadTest, AcquireReleaseFrame) {
     worker.release_frame(nullptr); // safety: nullptr release is no-op
 }
 
+TEST(WorkerThreadTest, ThreadIdIsReasonable) {
+    WorkerThread::Config cfg;
+    WorkerThread worker(cfg);
+
+    // Before start, thread_id may return 0 or a hash of the default-constructed
+    // std::thread::id (which represents "not a thread").
+    uint64_t tid_before = worker.thread_id();
+
+    worker.start();
+    uint64_t tid_after = worker.thread_id();
+    worker.stop();
+
+    EXPECT_NE(tid_after, uint64_t(0));
+    // A real platform thread ID should be well under 2^48.
+    // The old std::hash<std::thread::id> approach on Linux produces values
+    // in the 2^62–2^64 range (e.g., 13886910359752328644), which is a clear
+    // indicator of a hashed/garbage value rather than a kernel TID.
+    EXPECT_LT(tid_after, uint64_t(1) << 48)
+        << "Thread ID " << tid_after << " looks like a hashed/garbage value — "
+        << "expected a real kernel thread ID, got a hash";
+    // After start, the thread ID should differ from the pre-start value (which
+    // represents "not a thread").
+    EXPECT_NE(tid_after, tid_before)
+        << "Thread ID did not change after start() — still using the "
+        << "default-constructed std::thread::id";
+}
+
 TEST(WorkerThreadTest, WorkProcessor) {
     WorkerThread::Config cfg;
     WorkerThread worker(cfg);
