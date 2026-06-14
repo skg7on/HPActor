@@ -110,11 +110,22 @@ BehaviorActorRunner::run(EventBasedActor& actor, const WorkItem& item,
             actor.receive(msg);
         }
     } else {
-        // try_pop returned nullptr.  On ARM64 the mpsc_next store may
-        // not be visible yet even though empty() reports false (count_
-        // is visible).  Go idle and let the producer's notify_ready
-        // (called after enqueue completion) re-admit the actor.
+        // try_pop returned nullptr (MPSC chain in progress or genuinely
+        // empty).  Set the actor idle, then double-check: if the mailbox
+        // became non-empty in the window between the dequeue and kIdle
+        // (producer completed enqueue + notify_ready saw kRunning on
+        // x86_64 TSO), re-admit via try_mark_ready so the message is
+        // not orphaned.  count_.load(acquire) synchronises with
+        // count_.fetch_add(1, release), guaranteeing mpsc_next
+        // visibility when count_ > 0 on all architectures.
         actor_state.set(ActorState::kIdle);
+        if (!mailbox->empty()) {
+            auto admission = ready_gate_.try_mark_ready(item.actor);
+            if (admission.accepted() ||
+                admission.code == ReadyAdmissionCode::AlreadyReady) {
+                return {ActorRunDisposition::RequeueReady, 0, INT64_MAX};
+            }
+        }
         return {ActorRunDisposition::SuspendedOrIdle, 0, INT64_MAX};
     }
 

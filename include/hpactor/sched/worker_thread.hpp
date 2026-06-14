@@ -179,6 +179,7 @@ class WorkerThread {
   private:
     void thread_loop();
     void backoff();
+
     void reset_backoff() {
         backoff_counter_ = 0;
     }

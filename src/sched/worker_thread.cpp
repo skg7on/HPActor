@@ -29,6 +29,36 @@ thread_local CoroutineFramePool* tl_frame_pool = nullptr;
 // Thread-local worker ID (declared in scheduler.cpp, used by placement layer)
 extern thread_local uint32_t tl_current_worker_id;
 
+// ── Platform-specific backoff constants ──────────────────────────────
+//
+// Shared between thread_loop() and backoff().
+//
+// Linux:   sched_yield rotates the CFS run-queue but doesn't sleep —
+//          the caller is immediately rescheduled if no other thread is
+//          waiting.  Use 0 yields — escalate through nanosleep directly.
+//
+// macOS:   sched_yield uses Mach thread_switch, which actually yields
+//          the CPU to other runnable threads.  Keep the original 4
+//          yields that tested at near-zero CPU on macOS ARM64.
+//
+// kBackoffSleepIters = 4 on both platforms: 10+20+50+100 = 180 µs of
+// nanosleep before CV entry — long enough for work to arrive naturally,
+// short enough to reach deep sleep between timer bursts.
+
+#if defined(__linux__)
+constexpr uint32_t kBackoffYieldIters = 0;
+constexpr uint32_t kBackoffSleepIters = 4;
+#elif defined(__APPLE__)
+constexpr uint32_t kBackoffYieldIters = 4;
+constexpr uint32_t kBackoffSleepIters = 4;
+#else
+constexpr uint32_t kBackoffYieldIters = 0;
+constexpr uint32_t kBackoffSleepIters = 4;
+#endif
+
+// kPollThreshold = total idle iterations before escalating to CV blocking.
+constexpr uint32_t kPollThreshold = kBackoffYieldIters + kBackoffSleepIters;
+
 WorkerThread::WorkerThread(const Config& config)
     : config_(config), local_queue_(config.priority_levels) {
     if (config_.enable_thread_allocator) {
@@ -165,11 +195,8 @@ void WorkerThread::thread_loop() {
         // Standalone workers (no owner_ scheduler) keep polling; CV blocking
         // requires access to the placement layer's per-worker state.
         //
-        // kPollThreshold = kYieldIters (4 yield iterations in backoff())
-        //                + kSleepIters (4 escalating µs sleeps before CV).
-        static constexpr uint32_t kYieldIters = 4;
-        static constexpr uint32_t kSleepIters = 4;
-        static constexpr uint32_t kPollThreshold = kYieldIters + kSleepIters;
+        // kPollThreshold = kBackoffYieldIters + kBackoffSleepIters.
+        // See platform-specific definitions at the top of this file.
         if (!owner_ || backoff_counter_ < kPollThreshold) {
             diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);
             increment_donations();
@@ -232,19 +259,23 @@ void WorkerThread::thread_loop() {
 }
 
 void WorkerThread::backoff() {
+    // See kBackoffYieldIters at the top of this file for the per-platform
+    // yield threshold (0 on Linux, 4 on macOS).
     uint32_t c = backoff_counter_++;
 
-    if (c < 4) {
+    if (c < kBackoffYieldIters) {
         std::this_thread::yield();
         return;
     }
 
-    // Exponential backoff: 10us * 2^(c-4), capped at 50ms.
-    // Cap the shift at 28 to avoid unsigned overflow (10u << 31 wraps to 0
-    // on 32-bit, producing sleep_for(0us) which spins the core at 100%).
-    // The std::min at 50ms provides the effective backoff ceiling — the
-    // shift ramps through it (10u << 13 = 81,920us → capped to 50,000).
-    uint32_t shift = (c - 4 > 28) ? 28u : (c - 4);
+    // Exponential backoff: 10us * 2^(c - kBackoffYieldIters), capped at
+    // 50ms.  Cap the shift at 28 to avoid unsigned overflow (10u << 31
+    // wraps to 0 on 32-bit, producing sleep_for(0us) which spins the core
+    // at 100%).  The std::min at 50ms provides the effective backoff
+    // ceiling — the shift ramps through it (10u << 13 = 81,920us → capped
+    // to 50,000).
+    uint32_t shift = (c - kBackoffYieldIters > 28) ? 28u
+                                                    : (c - kBackoffYieldIters);
     uint32_t backoff_us = 10u << shift;
     backoff_us = std::min(backoff_us, 50000u);
     std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
