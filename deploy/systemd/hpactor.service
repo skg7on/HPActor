@@ -1,0 +1,36 @@
+[Unit]
+Description=HPActor Actor System
+Documentation=https://github.com/hpactor/hpactor
+After=network-online.target
+Wants=network-online.target
+
+[Service]
+Type=notify
+NotifyAccess=main
+ExecStart=/usr/local/bin/hpactor --systemd --config /etc/hpactor/config.toml
+ExecReload=/bin/kill -HUP $MAINPID
+
+Restart=on-failure
+RestartSec=5s
+WatchdogSec=10s
+
+CPUAffinity=0-3
+LimitNOFILE=65536
+MemoryHigh=2G
+MemoryMax=3G
+
+User=hpactor
+Group=hpactor
+ProtectSystem=strict
+ProtectHome=yes
+NoNewPrivileges=yes
+PrivateTmp=yes
+
+RuntimeDirectory=hpactor
+RuntimeDirectoryMode=0750
+
+StandardOutput=journal
+StandardError=journal
+
+[Install]
+WantedBy=multi-user.target

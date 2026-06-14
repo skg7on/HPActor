@@ -22,6 +22,7 @@
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/net/endpoint_circuit_breaker.hpp>
 #include <hpactor/net/endpoint_outbound_queue.hpp>
+#include <hpactor/process/process_config.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 
 #include <cstdint>
@@ -189,6 +190,8 @@ struct SystemDef {
     hpactor::net::EndpointOutboundLimits transport_outbound_limits;
     /// \brief Endpoint circuit breaker config from [system.transport.outbound].
     hpactor::net::EndpointCircuitBreakerConfig transport_circuit_breaker;
+    /// \brief Process configuration (mode, pidfile, stdio, working directory).
+    process::ProcessConfig process;
 };
 
 /// \brief The complete, validated, topologically sorted topology model.

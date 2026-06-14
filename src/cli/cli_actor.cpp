@@ -14,9 +14,10 @@
 
 #include "commands/ask_commands.hpp"
 #include <hpactor/cli/cli_actor.hpp>
+#include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/lexer.hpp>
+#include <hpactor/cli/command_tree_builder.hpp>
 #include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
@@ -39,6 +40,8 @@ std::string CliActor::get_history_path(const CliConfig& config) {
     return std::string(home) + "/.hpactor_history";
 }
 
+CliActor::~CliActor() = default;
+
 CliActor::CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
       line_editor_(LineEditorConfig{get_history_path(config), config.history_max,
@@ -49,6 +52,13 @@ CliActor::CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& conf
     build_command_tree();
     line_editor_.set_root(command_tree_.get());
     line_editor_.load_history();
+
+    session_ = std::make_unique<CliSession>(
+        &system_, command_tree_.get(),
+        OutputFormatter::create(config_.default_format),
+        [](const std::string& text) { printf("%s", text.c_str()); },
+        config_.page_size);
+    session_->set_cli_actor(this);
 }
 
 void CliActor::on_daemon_start() {
@@ -315,170 +325,15 @@ std::vector<ActorMeta> CliActor::enumerate_actors(const std::string& filter) {
 // Command tree — registered commands wired to real implementations.
 // ---------------------------------------------------------------------------
 
-// Mount a single registered command into the tree, creating intermediate
-// nodes as needed. Sets execute on the terminal node.
-void mount_command(CommandNode* root, const ICommand& cmd) {
-    auto segments = parse_command_path(cmd.path());
-    if (segments.empty())
-        return;
-
-    CommandNode* node = root;
-    for (size_t i = 0; i < segments.size(); ++i) {
-        auto& seg = segments[i];
-        bool is_param = is_param_segment(seg);
-        bool is_last = (i == segments.size() - 1);
-
-        // Find existing child or create one
-        CommandNode* child = nullptr;
-        for (auto& c : node->children) {
-            if (c->keyword == seg) {
-                child = c.get();
-                break;
-            }
-        }
-        if (!child) {
-            child = node->add_child(seg, "", is_param);
-        }
-
-        if (is_last) {
-            child->help_text = cmd.help_text();
-            child->execute = [&cmd](CommandContext& ctx) -> result<void> {
-                return cmd.execute(ctx);
-            };
-        }
-        node = child;
-    }
-}
-
 void CliActor::build_command_tree() {
     auto root = std::make_unique<CommandNode>("/", "CLI root");
-
-    auto& cmds = CommandRegistry::instance().commands();
-    // Sort by order for deterministic tree assembly
-    std::vector<const ICommand*> sorted;
-    sorted.reserve(cmds.size());
-    for (auto& c : cmds)
-        sorted.push_back(c.get());
-    // NOLINTNEXTLINE(bugprone-nondeterministic-pointer-iteration-order)
-    std::stable_sort(sorted.begin(), sorted.end(),
-                     [](const ICommand* a, const ICommand* b) {
-                         if (a->order() != b->order())
-                             return a->order() < b->order();
-                         return a->path() < b->path();
-                     });
-
-    for (auto* cmd : sorted) {
-        mount_command(root.get(), *cmd);
-    }
-
-    // Register forward-looking ask commands.
-    cli::register_ask_commands(*root);
-
+    build_command_tree_from_registry(*root);
     command_tree_ = std::move(root);
 }
 
 // ---------------------------------------------------------------------------
 // Command execution
 // ---------------------------------------------------------------------------
-
-void CliActor::execute_tokens(const std::vector<Token>& tokens) {
-    FAULT_INJECT("hpactor.cli.execute_tokens.corrupt") {
-        return; // silently skip command execution
-    }
-    // Reopen formatter for each command
-    formatter_ = OutputFormatter::create(config_.default_format);
-
-    CommandContext ctx;
-    ctx.system = &system_;
-    ctx.cli_actor = this;
-    ctx.output = formatter_.get();
-    ctx.page_size = config_.page_size;
-
-    // Walk the command tree
-    CommandNode* node = command_tree_.get();
-
-    size_t i = 0;
-    // Skip leading "/" keyword
-    if (i < tokens.size() && tokens[i].value == "/") {
-        ++i;
-    }
-
-    for (; i < tokens.size(); ++i) {
-        auto& tok = tokens[i];
-
-        if (tok.type == TokenType::Eof) {
-            break;
-        }
-
-        if (tok.type == TokenType::Flag) {
-            ctx.params[tok.value] = "true";
-            continue;
-        }
-
-        if (tok.type == TokenType::FlagWithArg) {
-            ctx.params[tok.value] = tok.arg.value_or("true");
-            if (tok.value == "format") {
-                ctx.format = tok.arg.value_or("pretty");
-                formatter_ = OutputFormatter::create(ctx.format);
-                ctx.output = formatter_.get();
-            }
-            continue;
-        }
-
-        // Try to match as keyword or parameter
-        std::string param_value;
-        auto* child = node->find_child(tok.value, param_value);
-        if (!child) {
-            // If the current node can execute, treat remaining tokens as
-            // positional arguments instead of unknown sub-commands.
-            if (node->execute) {
-                // Collect this token and all remaining tokens as args
-                ctx.args.push_back(tok.value);
-                for (++i; i < tokens.size(); ++i) {
-                    if (tokens[i].type == TokenType::Eof)
-                        break;
-                    if (tokens[i].type == TokenType::Flag) {
-                        ctx.params[tokens[i].value] = "true";
-                        continue;
-                    }
-                    if (tokens[i].type == TokenType::FlagWithArg) {
-                        ctx.params[tokens[i].value] =
-                            tokens[i].arg.value_or("true");
-                        continue;
-                    }
-                    ctx.args.push_back(tokens[i].value);
-                }
-                break;
-            }
-            auto suggestion = node->suggest(tok.value);
-            std::string err = "Unknown command '" + tok.value + "'";
-            if (!suggestion.empty()) {
-                err += " — did you mean '" + suggestion + "'?";
-            }
-            formatter_->error(err);
-            printf("%s\n", formatter_->finalize().c_str());
-            return;
-        }
-
-        if (child->is_parameter) {
-            ctx.params[child->keyword] = param_value;
-        }
-        node = child;
-    }
-
-    // Execute leaf node
-    if (node->execute) {
-        node->execute(ctx);
-    } else {
-        // No execute — show help for this node
-        if (!node->children.empty()) {
-            formatter_->header("Available commands");
-            formatter_->raw(node->help());
-        }
-    }
-
-    printf("%s\n", formatter_->finalize().c_str());
-}
 
 bool CliActor::run_once() {
     FAULT_INJECT("hpactor.cli.actor.run_once.fail") {
@@ -500,9 +355,12 @@ bool CliActor::run_once() {
         return true; // no-op, keep running
     }
 
-    auto tokens = Lexer::tokenize(line);
-    execute_tokens(tokens);
+    bool keep_going = session_->process_line(line);
     line_editor_.add_history(line);
+    if (!keep_going) {
+        running_ = false;
+        return false;
+    }
     return true;
 }
 

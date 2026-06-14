@@ -49,6 +49,7 @@
 #include <hpactor/net/service_discovery.hpp>
 #include <hpactor/net/static_discovery.hpp>
 #include <hpactor/net/tcp_transport.hpp>
+#include <hpactor/process/process_config.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
@@ -190,6 +191,9 @@ struct Config {
 
     /// \brief Distributed tracing configuration.
     tracing::TraceConfig tracing;
+
+    /// \brief Process-mode configuration (foreground, daemon, systemd).
+    process::ProcessConfig process;
 };
 
 /// \brief Registration entry for an actor type.

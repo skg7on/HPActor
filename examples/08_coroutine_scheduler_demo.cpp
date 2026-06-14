@@ -118,7 +118,8 @@ void demo_single_actor() {
                            .cli = {},
                            .mailbox = {},
                            .dead_letters = {},
-                           .tracing = {}};
+                           .tracing = {},
+                           .process = {}};
     hpactor::ActorSystem system(config);
 
     std::cout << "Scheduler state:\n";
@@ -160,7 +161,8 @@ void demo_multi_actor() {
                            .cli = {},
                            .mailbox = {},
                            .dead_letters = {},
-                           .tracing = {}};
+                           .tracing = {},
+                           .process = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn actors

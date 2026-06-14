@@ -290,7 +290,8 @@ int main() {
                            .cli = {},
                            .mailbox = {},
                            .dead_letters = {},
-                           .tracing = {}};
+                           .tracing = {},
+                           .process = {}};
 
     hpactor::ActorSystem system(config);
 

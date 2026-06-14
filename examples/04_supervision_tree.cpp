@@ -234,7 +234,8 @@ int main() {
                            .cli = {},
                            .mailbox = {},
                            .dead_letters = {},
-                           .tracing = {}};
+                           .tracing = {},
+                           .process = {}};
     hpactor::ActorSystem system(config);
 
     // ---- Setup: OneForOne Supervisor with 3 workers ----

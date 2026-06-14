@@ -31,6 +31,7 @@
 #include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/mailbox/local_delivery_engine.hpp>
 #include <hpactor/msg/outbound_delivery_tracker.hpp>
+#include <hpactor/process/process_manager.hpp>
 
 #include <chrono>
 #include <mutex>
@@ -172,6 +173,11 @@ ActorSystem::ActorSystem(const Config& config)
     }
 
     fault_controller_.set_log_manager(log_manager_.get());
+
+    // Initialize process-mode subystem (daemonize, pidfile, signal handling).
+    // Must happen before scheduler_->start() so daemonization forks before
+    // any worker threads are created.
+    (void)process::ProcessManager::init(config_.process);
 
     scheduler_->start();
 
@@ -871,6 +877,11 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
         std::make_unique<mailbox::DeadLetterQueue>(config_.dead_letters);
 
     apply_tracing_config(model.system.tracing);
+
+    // Sync process config from TOML (pidfile, watchdog, working directory).
+    // Daemonization must have already occurred via the constructor path;
+    // this updates in-memory config for notification and signal handling.
+    config_.process = model.system.process;
 
     config_.pool.outbound_limits = model.system.transport_outbound_limits;
     config_.pool.circuit_breaker_cfg = model.system.transport_circuit_breaker;

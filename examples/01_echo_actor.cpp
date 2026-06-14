@@ -272,7 +272,8 @@ int main() {
                            .cli = {},
                            .mailbox = {},
                            .dead_letters = {},
-                           .tracing = {}};
+                           .tracing = {},
+                           .process = {}};
     // config.use_coroutines = true;  // uncomment to enable C++20 coroutine
     // dispatch
     hpactor::ActorSystem system(config);

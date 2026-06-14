@@ -51,6 +51,7 @@ add_library(hpactor_lib SHARED
     config/parsers/shutdown_config_parser.cpp
     config/parsers/delivery_config_parser.cpp
     config/parsers/quarantine_parser.cpp
+    config/parsers/process_config_parser.cpp
     config/binary_serializer.cpp
     config/binary_loader.cpp
     core/proto_type_registry.cpp
@@ -124,12 +125,16 @@ add_library(hpactor_lib SHARED
     log/stderr_sink.cpp
     log/file_sink.cpp
     log/rotating_file_sink.cpp
+    log/syslog_sink.cpp
     adt/stream_buffer.cpp
     ../third_party/llhttp/llhttp.c
     ../third_party/llhttp/api.c
     ../third_party/llhttp/http.c
     ai/accelerator_types.cpp
     ai/ai_message_registry.cpp
+    process/process_manager.cpp
+    process/watchdog_actor.cpp
+    process/health_http_server.cpp
 )
 
 target_include_directories(hpactor_lib
@@ -170,12 +175,15 @@ target_sources(hpactor_lib PRIVATE
     cli/command_registry.cpp
     cli/lexer.cpp
     cli/command_node.cpp
+    cli/command_tree_builder.cpp
     cli/line_editor.cpp
     cli/pretty_formatter.cpp
     cli/json_formatter.cpp
     cli/tabular_formatter.cpp
     cli/pager.cpp
     cli/cli_actor.cpp
+    cli/cli_session.cpp
+    cli/cli_server_actor.cpp
     cli/commands/help_command.cpp
     cli/commands/quit_command.cpp
     cli/commands/actor_commands.cpp
