@@ -22,7 +22,7 @@
 
 #include <chrono>
 #include <gtest/gtest.h>
-#include <thread>
+#include <scheduler_test_driver.hpp>
 
 using namespace hpactor;
 using namespace hpactor::mailbox;
@@ -60,6 +60,7 @@ class CircuitBreakerLifecycleTest : public ::testing::Test {
         Config cfg;
         cfg.endpoint = endpoint_ops::parse_endpoint("127.0.0.1:0");
         cfg.scheduler_threads = 1;
+        cfg.scheduler_start_paused = true;
         system_ = std::make_unique<ActorSystem>(cfg);
     }
     void TearDown() override {
@@ -70,18 +71,6 @@ class CircuitBreakerLifecycleTest : public ::testing::Test {
             opts.cluster_leave_timeout = std::chrono::milliseconds(100);
             system_->shutdown(opts);
         }
-    }
-
-    /// \brief Poll until \p pred returns true or timeout expires.
-    template <typename F>
-    bool wait_for(F&& pred, milliseconds timeout = milliseconds(5000)) {
-        auto deadline = steady_clock::now() + timeout;
-        while (steady_clock::now() < deadline) {
-            if (pred())
-                return true;
-            std::this_thread::sleep_for(milliseconds(5));
-        }
-        return pred();
     }
 
     std::unique_ptr<ActorSystem> system_;
@@ -101,6 +90,8 @@ TEST_F(CircuitBreakerLifecycleTest, HealthyActorNeverTrips) {
     ASSERT_NE(eba, nullptr);
     eba->configure_quarantine(policy);
 
+    hpactor::test::SchedulerTestDriver driver(*system_);
+
     // Send messages — all succeed
     for (int i = 0; i < 20; ++i) {
         TypedMessage msg(TypeTag::User, StreamBuffer{1});
@@ -108,10 +99,10 @@ TEST_F(CircuitBreakerLifecycleTest, HealthyActorNeverTrips) {
         system_->deliver_local(target.id(), std::move(msg));
     }
 
-    // Wait for processing
+    // Drain the scheduler until all messages are processed
     auto* lta =
         static_cast<LifecycleTestActor*>(system_->get_actor(target.id()).get());
-    bool all_received = wait_for([&] { return lta->received_ >= 20; });
+    bool all_received = driver.drain_until([&] { return lta->received_ >= 20; });
     EXPECT_TRUE(all_received);
     EXPECT_EQ(lta->received_, 20u);
 
@@ -211,6 +202,8 @@ TEST_F(CircuitBreakerLifecycleTest, ProbeSuccessClosesCircuitIntegration) {
     eba->circuit_breaker()->trip_count = 2;
     eba->circuit_breaker()->opened_at = steady_clock::now() - milliseconds(150);
 
+    hpactor::test::SchedulerTestDriver driver(*system_);
+
     // Send a probe message (admitted via cooldown → HalfOpen)
     {
         TypedMessage msg(TypeTag::User, StreamBuffer{1});
@@ -218,8 +211,8 @@ TEST_F(CircuitBreakerLifecycleTest, ProbeSuccessClosesCircuitIntegration) {
         system_->deliver_local(target.id(), std::move(msg));
     }
 
-    // Wait for processing: the probe succeeds → circuit closes
-    bool closed = wait_for([&] {
+    // Drain the scheduler: the probe succeeds → circuit closes
+    bool closed = driver.drain_until([&] {
         return eba->circuit_breaker()->state == CircuitBreakerState::kClosed;
     });
     EXPECT_TRUE(closed) << "Circuit should close after successful probe";
