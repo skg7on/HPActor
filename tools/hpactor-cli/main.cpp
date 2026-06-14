@@ -15,11 +15,16 @@
 /// \file main.cpp
 /// \brief Standalone CLI client for the hpactor daemon.
 ///
-/// Connects via Unix domain socket (default) or TCP, sends commands
-/// and receives NUL-terminated responses.  Supports single-command
-/// (--exec) and interactive (readline) modes.
+/// Connects via Unix domain socket (default) or TCP using the HPActor
+/// EventLoop for all network I/O: non-blocking connect with write-handler
+/// completion, async send/recv, and fd-readiness polling.
+///
+/// Wire protocol:
+///   Client -> Server:  <command-line>\n
+///   Server -> Client:  <response-text>\0
 
 #include <hpactor/cli/line_editor.hpp>
+#include <hpactor/net/event_loop.hpp>
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -35,15 +40,39 @@
 #include <unistd.h>
 
 // ---------------------------------------------------------------------------
-// Connection helpers
+// Connection helpers — create non-blocking socket, initiate async connect
 // ---------------------------------------------------------------------------
 
-/// Open a blocking Unix domain stream socket connected to \p path.
-static int connect_uds(const std::string& path) {
+/// Set O_NONBLOCK and FD_CLOEXEC on a socket fd.
+/// Portable alternative to Linux-only SOCK_NONBLOCK | SOCK_CLOEXEC.
+static bool make_nonblocking(int fd) {
+    int flags = ::fcntl(fd, F_GETFL, 0);
+    if (flags < 0)
+        return false;
+    if (::fcntl(fd, F_SETFL, flags | O_NONBLOCK) < 0)
+        return false;
+
+    flags = ::fcntl(fd, F_GETFD, 0);
+    if (flags < 0)
+        return false;
+    if (::fcntl(fd, F_SETFD, flags | FD_CLOEXEC) < 0)
+        return false;
+
+    return true;
+}
+
+/// Create a non-blocking Unix domain socket and initiate connection.
+/// Returns the fd on success, or -1 on error.
+static int connect_uds_nonblock(const std::string& path) {
     int fd = static_cast<int>(::socket(AF_UNIX, SOCK_STREAM, 0));
     if (fd < 0) {
         std::cerr << "Error: cannot create UDS socket: " << std::strerror(errno)
                   << "\n";
+        return -1;
+    }
+    if (!make_nonblocking(fd)) {
+        std::cerr << "Error: fcntl failed: " << std::strerror(errno) << "\n";
+        ::close(fd);
         return -1;
     }
 
@@ -52,7 +81,9 @@ static int connect_uds(const std::string& path) {
     addr.sun_family = AF_UNIX;
     std::strncpy(addr.sun_path, path.c_str(), sizeof(addr.sun_path) - 1);
 
-    if (::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+    int ret =
+        ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    if (ret < 0 && errno != EINPROGRESS) {
         std::cerr << "Error: cannot connect to " << path << ": "
                   << std::strerror(errno) << "\n";
         ::close(fd);
@@ -61,12 +92,18 @@ static int connect_uds(const std::string& path) {
     return fd;
 }
 
-/// Open a blocking TCP stream socket connected to \p host:\p port.
-static int connect_tcp(const std::string& host, uint16_t port) {
+/// Create a non-blocking TCP socket and initiate connection.
+/// Returns the fd on success, or -1 on error.
+static int connect_tcp_nonblock(const std::string& host, uint16_t port) {
     int fd = static_cast<int>(::socket(AF_INET, SOCK_STREAM, 0));
     if (fd < 0) {
         std::cerr << "Error: cannot create TCP socket: " << std::strerror(errno)
                   << "\n";
+        return -1;
+    }
+    if (!make_nonblocking(fd)) {
+        std::cerr << "Error: fcntl failed: " << std::strerror(errno) << "\n";
+        ::close(fd);
         return -1;
     }
 
@@ -80,7 +117,9 @@ static int connect_tcp(const std::string& host, uint16_t port) {
         return -1;
     }
 
-    if (::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr)) < 0) {
+    int ret =
+        ::connect(fd, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    if (ret < 0 && errno != EINPROGRESS) {
         std::cerr << "Error: cannot connect to " << host << ":" << port << ": "
                   << std::strerror(errno) << "\n";
         ::close(fd);
@@ -99,61 +138,129 @@ struct FdGuard {
 };
 
 // ---------------------------------------------------------------------------
-// Protocol helpers
-//
-// Wire format:
-//   Client -> Server:  <command-line>\n
-//   Server -> Client:  <response-text>\0
+// EventLoop-based async connect — waits for non-blocking connect to complete
 // ---------------------------------------------------------------------------
 
-/// Send a single command line to the server.
-static bool send_line(int fd, const std::string& line) {
-    std::string payload = line + "\n";
-    return ::write(fd, payload.data(), payload.size()) >= 0;
+/// Wait for a non-blocking connect to complete using the EventLoop's
+/// write-handler mechanism.  The write handler fires when the socket becomes
+/// writable, which signals connect completion.
+///
+/// \returns true on successful connect, false on failure (SO_ERROR != 0).
+static bool await_connect(hpactor::net::EventLoop& loop, int fd) {
+    bool connected = false;
+    int connect_error = 0;
+
+    loop.set_write_handler(fd, [&](int /*write_fd*/) {
+        socklen_t len = sizeof(connect_error);
+        if (::getsockopt(fd, SOL_SOCKET, SO_ERROR, &connect_error, &len) < 0) {
+            connect_error = errno;
+        }
+        connected = true;
+    });
+
+    // Poll until the write handler fires or we time out.
+    constexpr int kConnectTimeoutMs = 5000;
+    int elapsed = 0;
+    while (!connected && elapsed < kConnectTimeoutMs) {
+        loop.wait(50); // 50 ms polling interval
+        elapsed += 50;
+    }
+
+    loop.clear_write_handler(fd);
+
+    if (!connected) {
+        std::cerr << "Error: connect timed out after " << kConnectTimeoutMs
+                  << "ms\n";
+        return false;
+    }
+    if (connect_error != 0) {
+        std::cerr << "Error: connect failed: " << std::strerror(connect_error)
+                  << "\n";
+        return false;
+    }
+    return true;
 }
 
-/// Read one response from the server, delimited by a NUL byte.
+// ---------------------------------------------------------------------------
+// Protocol helpers
+// ---------------------------------------------------------------------------
+
+/// Send a single command line using async send via the event loop backend.
+static void
+send_line_async(hpactor::net::EventLoop& loop, int fd, const std::string& line) {
+    std::string payload = line + "\n";
+    struct iovec iov;
+    iov.iov_base = const_cast<char*>(payload.data());
+    iov.iov_len = payload.size();
+
+    // Use a dummy ActorId (0) — the CLI client is not an actor.
+    loop.backend()->async_send(fd, &iov, 1, hpactor::ActorId{}, 0);
+
+    // Give the backend a chance to process the send.
+    loop.wait(10);
+}
+
+/// Read response data into the persistent buffer, driven by the EventLoop's
+/// read handler.  Returns when a complete NUL-terminated response is received
+/// or the connection closes.
 ///
-/// Accumulates data across multiple reads to handle fragmentation.
-/// Strips the trailing NUL and returns the preceding text.
-///
-/// \param[in]  fd   Connected socket.
-/// \param[out] buf  Persistent buffer that stores partial reads between
-///                  calls.
-/// \return The response text without the terminating NUL, or empty on
-///         connection close / error.
-static std::string read_response(int fd, std::string& buf) {
-    // If a complete response is already buffered, extract it first.
+/// \param[in]  loop       EventLoop that monitors the fd.
+/// \param[in]  fd         Connected socket.
+/// \param[out] buf        Persistent buffer for partial reads.
+/// \param[out] response   Set to the complete response text (no NUL) on return.
+/// \param[out] eof        Set to true if the connection was closed.
+static void
+recv_response_async(hpactor::net::EventLoop& loop, int fd, std::string& buf,
+                    std::string& response, bool& eof) {
+    eof = false;
+    response.clear();
+
+    // Check if a complete response is already buffered.
     auto nul = buf.find('\0');
     if (nul != std::string::npos) {
-        std::string result = buf.substr(0, nul);
+        response = buf.substr(0, nul);
         buf.erase(0, nul + 1);
-        return result;
+        return;
     }
 
-    char read_buf[4096];
-    while (true) {
+    // Install a read handler that drains the socket into buf.
+    bool read_done = false;
+    loop.set_read_handler(fd, [&](int /*read_fd*/) {
+        char read_buf[4096];
         ssize_t n = ::read(fd, read_buf, sizeof(read_buf));
-        if (n <= 0)
-            break; // EOF or error
-
-        buf.append(read_buf, static_cast<size_t>(n));
-
-        nul = buf.find('\0');
-        if (nul != std::string::npos) {
-            std::string result = buf.substr(0, nul);
-            buf.erase(0, nul + 1);
-            return result;
+        if (n > 0) {
+            buf.append(read_buf, static_cast<size_t>(n));
+            if (buf.find('\0') != std::string::npos) {
+                read_done = true;
+            }
+        } else if (n == 0) {
+            // EOF — server closed connection.
+            eof = true;
+            read_done = true;
         }
+        // n < 0: EAGAIN on non-blocking socket, just try again next poll.
+    });
+
+    // Poll until we have a complete response, EOF, or timeout.
+    constexpr int kResponseTimeoutMs = 10000;
+    int elapsed = 0;
+    while (!read_done && elapsed < kResponseTimeoutMs) {
+        loop.wait(20);
+        elapsed += 20;
     }
 
-    // Connection closed — flush whatever remains in the buffer.
-    if (!buf.empty()) {
-        std::string result = std::move(buf);
+    loop.clear_read_handler(fd);
+
+    // Extract the completed response from the buffer.
+    nul = buf.find('\0');
+    if (nul != std::string::npos) {
+        response = buf.substr(0, nul);
+        buf.erase(0, nul + 1);
+    } else if (!buf.empty() && eof) {
+        // Connection closed mid-response — flush whatever we have.
+        response = std::move(buf);
         buf.clear();
-        return result;
     }
-    return {};
 }
 
 // ---------------------------------------------------------------------------
@@ -161,7 +268,6 @@ static std::string read_response(int fd, std::string& buf) {
 // ---------------------------------------------------------------------------
 
 static void print_usage(const char* prog) {
-    // NOTE: keep in sync with synopsis at the top of main().
     std::cerr
         << "Usage: " << prog << " [options]\n"
         << "Options:\n"
@@ -189,9 +295,6 @@ int main(int argc, char* argv[]) {
     std::string host;
     uint16_t port = 0;
     std::string exec_cmd;
-    // Format hint is parsed but not sent over the wire; the user can set
-    // format inside interactive mode or embed it in the exec command.
-    // std::string format = "pretty";
     bool use_uds = true;
     bool show_help = false;
 
@@ -229,8 +332,7 @@ int main(int argc, char* argv[]) {
                 std::cerr << "Error: --format requires a format argument\n";
                 return 1;
             }
-            // format = argv[++i]; -- stored but unused (see above).
-            ++i;
+            ++i; // stored but unused (sent as part of exec command).
         } else if (arg == "-h" || arg == "--help") {
             show_help = true;
         } else {
@@ -245,68 +347,81 @@ int main(int argc, char* argv[]) {
         return 0;
     }
 
-    // --- connect ---
-    int raw_fd;
+    // --- create EventLoop (owns the platform I/O backend) ---
+    hpactor::net::EventLoop loop;
+
+    // --- create non-blocking socket ---
+    int fd;
     if (!use_uds && !host.empty()) {
         if (port == 0) {
             std::cerr << "Error: TCP mode requires --port\n";
             return 1;
         }
-        raw_fd = connect_tcp(host, port);
+        fd = connect_tcp_nonblock(host, port);
     } else {
-        raw_fd = connect_uds(socket_path);
+        fd = connect_uds_nonblock(socket_path);
     }
-    if (raw_fd < 0)
+    if (fd < 0)
         return 1;
 
-    FdGuard guard{raw_fd};
-    int fd = guard.fd;
+    FdGuard guard{fd};
 
-    // ---- exec mode (single command, print response, exit) ----
+    // --- async connect via EventLoop write handler ---
+    if (!await_connect(loop, fd))
+        return 1;
+
+    // --- exec mode (single command, print response, exit) ---
     if (!exec_cmd.empty()) {
-        send_line(fd, exec_cmd);
+        send_line_async(loop, fd, exec_cmd);
+
         std::string buf;
-        auto response = read_response(fd, buf);
+        std::string response;
+        bool eof = false;
+        recv_response_async(loop, fd, buf, response, eof);
         std::cout << response;
         return 0;
     }
 
-    // ---- interactive mode (readline loop) ----
-    std::string buf;
-    auto greeting = read_response(fd, buf);
-    if (!greeting.empty())
-        std::cout << greeting << std::flush;
-    // else: empty greeting is not an error; the server may send nothing
-    // before the first command for non-standard configurations.
-
+    // --- interactive mode (readline + event loop for network) ---
     using namespace hpactor::cli;
     LineEditor editor(
         LineEditorConfig{default_history_path(), 1000, /*multiline=*/false},
         /*root=*/nullptr);
     editor.load_history();
 
+    // Read the server greeting (arrives on connect).
+    {
+        std::string buf;
+        std::string greeting;
+        bool eof = false;
+        recv_response_async(loop, fd, buf, greeting, eof);
+        if (!greeting.empty())
+            std::cout << greeting << std::flush;
+    }
+
+    std::string recv_buf; // persistent buffer across read_response calls
+
     while (true) {
         auto line = editor.readline("> ");
-        if (line.empty()) // EOF (Ctrl-D)
-            break;
+        if (line.empty())
+            break; // EOF (Ctrl-D)
 
         editor.add_history(line);
 
-        if (!send_line(fd, line)) {
-            std::cerr << "\n[Error: connection lost]\n";
-            break;
-        }
+        // Send the command line via async send.
+        send_line_async(loop, fd, line);
 
-        auto response = read_response(fd, buf);
+        // Receive the NUL-terminated response via event loop read handler.
+        bool eof = false;
+        std::string response;
+        recv_response_async(loop, fd, recv_buf, response, eof);
 
         if (line == "/quit") {
             std::cout << "Goodbye.\n";
             break;
         }
 
-        if (response.empty() && buf.empty()) {
-            // Both the response and the buffer are empty, which means
-            // the server closed the connection without sending a NUL.
+        if (response.empty() && eof) {
             std::cerr << "\n[Connection closed]\n";
             break;
         }
