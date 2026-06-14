@@ -1,0 +1,8 @@
+[system]
+scheduler_threads = 1
+
+[system.ai.accelerators]
+enabled = true
+lease_ttl_ms = 5000
+min_lease_ttl_ms = 10000
+max_lease_ttl_ms = 30000

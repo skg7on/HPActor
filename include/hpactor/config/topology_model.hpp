@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/lifecycle/quarantine_policy.hpp>
 #include <hpactor/cli/cli_config.hpp>
+#include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/msg/delivery_mode.hpp>
@@ -24,6 +25,10 @@
 #include <hpactor/net/endpoint_outbound_queue.hpp>
 #include <hpactor/process/process_config.hpp>
 #include <hpactor/tracing/trace_config.hpp>
+
+#if HPACTOR_ENABLE_AI_ACCELERATORS
+#    include <hpactor/ai/accelerator_config.hpp>
+#endif
 
 #include <cstdint>
 #include <string>
@@ -184,6 +189,11 @@ struct SystemDef {
     /// \brief System-level defaults for per-actor quarantine policies.
     ///        Individual actor definitions in TOML can override these values.
     hpactor::QuarantinePolicy quarantine_defaults;
+
+#if HPACTOR_ENABLE_AI_ACCELERATORS
+    /// \brief AI accelerator resource plane configuration.
+    hpactor::ai::AcceleratorConfig ai_accelerators;
+#endif
 
     /// \brief Per-endpoint outbound queue limits from
     /// [system.transport.outbound].

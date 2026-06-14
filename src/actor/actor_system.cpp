@@ -882,6 +882,9 @@ result<void> ActorSystem::load_topology(const std::string& toml_path) {
     // Daemonization must have already occurred via the constructor path;
     // this updates in-memory config for notification and signal handling.
     config_.process = model.system.process;
+#if HPACTOR_ENABLE_AI_ACCELERATORS
+    config_.ai_accelerators = model.system.ai_accelerators;
+#endif
 
     config_.pool.outbound_limits = model.system.transport_outbound_limits;
     config_.pool.circuit_breaker_cfg = model.system.transport_circuit_breaker;

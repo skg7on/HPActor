@@ -1,0 +1,6 @@
+[system]
+scheduler_threads = 1
+
+[system.ai.accelerators]
+enabled = true
+admission_policy = "round_robin"
