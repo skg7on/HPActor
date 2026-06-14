@@ -20,7 +20,9 @@
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/command_tree_builder.hpp>
 #include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <arpa/inet.h>
 #include <cerrno>
@@ -360,6 +362,7 @@ void CliServerActor::accept_connections() {
                 safe_write(client_fd, &sentinel, 1);
             },
             config_.page_size);
+        ss.session->set_cli_server_actor(this);
 
         // Send greeting
         const char* greeting =
@@ -486,6 +489,145 @@ cli::ActorMeta CliServerActor::to_metadata() const {
     m.actor_type = std::string(type_name());
     m.state = running_ ? "Running" : "Stopped";
     return m;
+}
+
+// ---------------------------------------------------------------------------
+// Request-Response Helpers (mirrors CliActor's methods)
+// ---------------------------------------------------------------------------
+
+namespace {
+
+std::optional<StreamBuffer>
+poll_for_response(mailbox::MPSCActorMailbox<TypedMessage>* mbox,
+                  TypeTag expected_tag, std::chrono::milliseconds timeout) {
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        TypedMessage msg;
+        if (mbox->try_pop(msg)) {
+            if (msg.type_id() == expected_tag)
+                return std::move(msg).payload();
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return std::nullopt;
+}
+
+} // anonymous namespace
+
+std::optional<InspectStateReply>
+CliServerActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
+                                      std::chrono::milliseconds timeout) {
+    if (target == id()) {
+        InspectStateReply reply;
+        auto* pb_meta = reply.mutable_metadata();
+        pb_meta->set_actor_id(id().value());
+        pb_meta->set_actor_type(std::string(type_name()));
+        pb_meta->set_state("Running");
+        return reply;
+    }
+    auto actor = system_.get_actor(target);
+    if (!actor)
+        return std::nullopt;
+
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+        TypedMessage msg(TypeTag::InspectStateRequestTag, req);
+        msg.set_sender_address(address());
+        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+        if (enqueue_result.accepted())
+            break;
+        if (std::chrono::steady_clock::now() >= deadline)
+            return std::nullopt;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    auto payload =
+        poll_for_response(mailbox(), TypeTag::InspectStateResponseTag, timeout);
+    if (!payload)
+        return std::nullopt;
+    InspectStateReply reply;
+    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
+        return std::nullopt;
+    std::string wire = reply.SerializeAsString();
+    InspectStateReply safe_reply;
+    if (!safe_reply.ParseFromString(wire))
+        return std::nullopt;
+    return safe_reply;
+}
+
+std::optional<KillReply>
+CliServerActor::send_and_wait_kill(ActorId target, const KillRequest& req,
+                                   std::chrono::milliseconds timeout) {
+    auto actor = system_.get_actor(target);
+    if (!actor)
+        return std::nullopt;
+    auto kill_deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+        TypedMessage msg(TypeTag::KillRequestTag, req);
+        msg.set_sender_address(address());
+        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+        if (enqueue_result.accepted())
+            break;
+        if (std::chrono::steady_clock::now() >= kill_deadline)
+            return std::nullopt;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    auto payload = poll_for_response(mailbox(), TypeTag::KillResponseTag, timeout);
+    if (!payload)
+        return std::nullopt;
+    KillReply reply;
+    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
+        return std::nullopt;
+    std::string wire = reply.SerializeAsString();
+    KillReply safe_reply;
+    if (!safe_reply.ParseFromString(wire))
+        return std::nullopt;
+    return safe_reply;
+}
+
+std::optional<QuarantineReply>
+CliServerActor::send_and_wait_quarantine(ActorId target,
+                                         const QuarantineRequest& req,
+                                         std::chrono::milliseconds timeout) {
+    auto actor = system_.get_actor(target);
+    if (!actor)
+        return std::nullopt;
+    auto q_deadline = std::chrono::steady_clock::now() + timeout;
+    for (;;) {
+        TypedMessage msg(TypeTag::QuarantineRequestTag, req);
+        msg.set_sender_address(address());
+        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+        if (enqueue_result.accepted())
+            break;
+        if (std::chrono::steady_clock::now() >= q_deadline)
+            return std::nullopt;
+        std::this_thread::sleep_for(std::chrono::milliseconds(5));
+    }
+    auto payload =
+        poll_for_response(mailbox(), TypeTag::QuarantineResponseTag, timeout);
+    if (!payload)
+        return std::nullopt;
+    QuarantineReply reply;
+    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
+        return std::nullopt;
+    std::string wire = reply.SerializeAsString();
+    QuarantineReply safe_reply;
+    if (!safe_reply.ParseFromString(wire))
+        return std::nullopt;
+    return safe_reply;
+}
+
+std::vector<ActorMeta> CliServerActor::enumerate_actors(const std::string& filter) {
+    std::vector<ActorMeta> result;
+    system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
+        if (!filter.empty()) {
+            std::string type_name(actor.type_name().data(),
+                                  actor.type_name().size());
+            if (type_name.find(filter) == std::string::npos)
+                return;
+        }
+        result.push_back(actor.to_metadata());
+    });
+    return result;
 }
 
 } // namespace cli

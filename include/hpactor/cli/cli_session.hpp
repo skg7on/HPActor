@@ -85,6 +85,16 @@ class CliSession {
         cli_actor_ = actor;
     }
 
+    /// \brief Set the owning CliServerActor, if any.
+    ///
+    /// Command handlers that require request-reply or enumeration
+    /// fall back to \c ctx.cli_server_actor when \c ctx.cli_actor is null.
+    ///
+    /// \param[in] server Pointer to the owning CliServerActor (may be null).
+    void set_cli_server_actor(class CliServerActor* server) {
+        cli_server_actor_ = server;
+    }
+
     /// \brief Access the pager for multi-page output.
     /// \return Non-owning pointer. Never null after construction.
     Pager* pager() {
@@ -109,6 +119,7 @@ class CliSession {
     bool keep_running_ = true;
     std::string current_format_ = "pretty";
     class CliActor* cli_actor_ = nullptr;
+    class CliServerActor* cli_server_actor_ = nullptr;
 };
 
 } // namespace cli

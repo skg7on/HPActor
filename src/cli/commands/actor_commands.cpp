@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/cli/cli_actor.hpp>
+#include <hpactor/cli/cli_server_actor.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/cli_messages.pb.h>
@@ -53,7 +54,8 @@ class ActorShowCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -64,7 +66,8 @@ class ActorShowCommand final : public ICommand {
         req.set_include_mailbox(true);
         req.set_include_children(true);
 
-        auto reply = cli->send_and_wait_inspect(target_id, req);
+        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+                         : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -132,7 +135,8 @@ class ActorKillCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -141,7 +145,8 @@ class ActorKillCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_force(false);
 
-        auto reply = cli->send_and_wait_kill(target_id, req);
+        auto reply = cli ? cli->send_and_wait_kill(target_id, req)
+                         : cli_srv->send_and_wait_kill(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -176,12 +181,14 @@ class ActorListCommand final : public ICommand {
             filter = *f;
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
 
-        auto actors = cli->enumerate_actors(filter);
+        auto actors = cli ? cli->enumerate_actors(filter)
+                          : cli_srv->enumerate_actors(filter);
 
         ctx.output->header("Actors (" + std::to_string(actors.size()) + " total)");
 
@@ -227,7 +234,8 @@ class ActorCircuitCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -237,7 +245,8 @@ class ActorCircuitCommand final : public ICommand {
         req.set_include_circuit_breaker(true);
         req.set_include_quarantine_info(true);
 
-        auto reply = cli->send_and_wait_inspect(target_id, req);
+        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+                         : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -299,7 +308,8 @@ class ActorQuarantineCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -311,7 +321,8 @@ class ActorQuarantineCommand final : public ICommand {
             req.set_reason(*reason);
         }
 
-        auto reply = cli->send_and_wait_quarantine(target_id, req);
+        auto reply = cli ? cli->send_and_wait_quarantine(target_id, req)
+                         : cli_srv->send_and_wait_quarantine(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -354,7 +365,8 @@ class ActorUnquarantineCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -363,7 +375,8 @@ class ActorUnquarantineCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_unquarantine(true);
 
-        auto reply = cli->send_and_wait_quarantine(target_id, req);
+        auto reply = cli ? cli->send_and_wait_quarantine(target_id, req)
+                         : cli_srv->send_and_wait_quarantine(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -405,7 +418,8 @@ class ActorRateCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -415,7 +429,8 @@ class ActorRateCommand final : public ICommand {
         req.set_include_mailbox(true);
         req.set_include_rate_limiter(true);
 
-        auto reply = cli->send_and_wait_inspect(target_id, req);
+        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+                         : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -467,7 +482,8 @@ class ActorAdmissionCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -477,7 +493,8 @@ class ActorAdmissionCommand final : public ICommand {
         req.set_include_mailbox(true);
         req.set_include_admission(true);
 
-        auto reply = cli->send_and_wait_inspect(target_id, req);
+        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+                         : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -521,7 +538,8 @@ class ActorDeliveryCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -530,7 +548,8 @@ class ActorDeliveryCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_include_mailbox(true);
 
-        auto reply = cli->send_and_wait_inspect(target_id, req);
+        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+                         : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -577,7 +596,8 @@ class ActorDeliveryStatsCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -586,7 +606,8 @@ class ActorDeliveryStatsCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_include_mailbox(true);
 
-        auto reply = cli->send_and_wait_inspect(target_id, req);
+        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+                         : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
                               " (timeout or not found)");
@@ -660,7 +681,8 @@ class ActorLinksCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -669,7 +691,8 @@ class ActorLinksCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_include_state(true);
 
-        auto reply = cli->send_and_wait_inspect(target_id, req);
+        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+                         : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str);
             return result<void>::make();
@@ -710,7 +733,8 @@ class ActorBackpressureCommand final : public ICommand {
         }
 
         auto* cli = ctx.cli_actor;
-        if (!cli) {
+        auto* cli_srv = ctx.cli_server_actor;
+        if (!cli && !cli_srv) {
             ctx.output->error("Internal error: no CLI actor");
             return result<void>::make();
         }
@@ -719,7 +743,8 @@ class ActorBackpressureCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_include_mailbox(true);
 
-        auto reply = cli->send_and_wait_inspect(target_id, req);
+        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+                         : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str);
             return result<void>::make();

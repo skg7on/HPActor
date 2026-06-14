@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/cli/cli_actor.hpp>
+#include <hpactor/cli/cli_server_actor.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 
@@ -36,6 +37,8 @@ class QuitCommand final : public ICommand {
         ctx.output->raw("Goodbye.");
         if (ctx.cli_actor) {
             ctx.cli_actor->request_shutdown();
+        } else if (ctx.cli_server_actor) {
+            ctx.cli_server_actor->request_shutdown();
         }
         return result<void>::make();
     }

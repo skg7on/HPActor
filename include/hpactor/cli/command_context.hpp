@@ -27,6 +27,7 @@ class ActorSystem;
 namespace cli {
 
 class CliActor;
+class CliServerActor;
 class CliSession;
 class OutputFormatter;
 
@@ -44,8 +45,11 @@ struct CommandContext {
     std::map<std::string, std::string> params;
     /// \brief The actor system, for sending inspect/kill/list requests.
     ActorSystem* system = nullptr;
-    /// \brief The CLI actor, for request-response helpers.
+    /// \brief The CLI actor (stdin-based), for request-response helpers.
     CliActor* cli_actor = nullptr;
+    /// \brief The CLI server actor (socket-based), for request-response
+    ///        helpers when \c cli_actor is null.
+    CliServerActor* cli_server_actor = nullptr;
     /// \brief The owning session, for shutdown requests.
     CliSession* cli_session = nullptr;
     /// \brief Output formatter for rendering results.

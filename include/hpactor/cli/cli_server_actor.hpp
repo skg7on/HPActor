@@ -85,6 +85,43 @@ class CliServerActor : public DaemonActor {
     /// \brief Return metadata for CLI introspection.
     cli::ActorMeta to_metadata() const override;
 
+    // --- Accessors for command handlers ---
+
+    /// \brief Reference to the actor system.
+    ActorSystem& system() {
+        return system_;
+    }
+
+    /// \brief Read-only access to the command tree.
+    const CommandNode* command_tree() const {
+        return command_tree_.get();
+    }
+
+    /// \brief Request the CLI server to shut down.
+    void request_shutdown() {
+        running_ = false;
+    }
+
+    // --- Request-Response Helpers ---
+
+    /// \brief Send an InspectStateRequest and block on the reply.
+    std::optional<class InspectStateReply> send_and_wait_inspect(
+        ActorId target, const class InspectStateRequest& req,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+
+    /// \brief Send a KillRequest and block on the reply.
+    std::optional<class KillReply> send_and_wait_kill(
+        ActorId target, const class KillRequest& req,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+
+    /// \brief Send a QuarantineRequest and block on the reply.
+    std::optional<class QuarantineReply> send_and_wait_quarantine(
+        ActorId target, const class QuarantineRequest& req,
+        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+
+    /// \brief Enumerate all known actors.
+    std::vector<ActorMeta> enumerate_actors(const std::string& filter = "");
+
   private:
     /// \brief Bind UDS and TCP listeners.
     ///

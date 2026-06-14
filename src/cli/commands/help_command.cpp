@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/cli/cli_actor.hpp>
+#include <hpactor/cli/cli_server_actor.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 
@@ -36,6 +37,8 @@ class HelpCommand final : public ICommand {
         ctx.output->header("Available Commands");
         if (ctx.cli_actor && ctx.cli_actor->command_tree()) {
             ctx.output->raw(ctx.cli_actor->command_tree()->help());
+        } else if (ctx.cli_server_actor && ctx.cli_server_actor->command_tree()) {
+            ctx.output->raw(ctx.cli_server_actor->command_tree()->help());
         }
         return result<void>::make();
     }

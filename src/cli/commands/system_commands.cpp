@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/cli/cli_actor.hpp>
+#include <hpactor/cli/cli_server_actor.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -320,8 +321,7 @@ class SystemStopCommand final : public ICommand {
         }
 
         auto* sys = ctx.system;
-        auto* cli = ctx.cli_actor;
-        if (!sys || !cli) {
+        if (!sys || (!ctx.cli_actor && !ctx.cli_server_actor)) {
             ctx.output->error("Internal error");
             return result<void>::make();
         }
@@ -336,7 +336,10 @@ class SystemStopCommand final : public ICommand {
             ctx.output->error("Actor not found: " + *id_str);
             return result<void>::make();
         }
-        cli->context()->stop(target_id);
+        if (ctx.cli_actor)
+            ctx.cli_actor->context()->stop(target_id);
+        else
+            ctx.cli_server_actor->context()->stop(target_id);
         ctx.output->raw("Drain initiated for actor " + *id_str);
         return result<void>::make();
     }
