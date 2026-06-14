@@ -195,7 +195,8 @@ int main() {
                            .cli = {},
                            .mailbox = {},
                            .dead_letters = {},
-                           .tracing = {}};
+                           .tracing = {},
+                           .process = {}};
     hpactor::ActorSystem system(config);
 
     // Spawn actors with initial state

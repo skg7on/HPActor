@@ -50,7 +50,8 @@ TEST(PrioritySchedulerTest, SchedulerCreation) {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
-                  .tracing = {}};
+                  .tracing = {},
+                  .process = {}};
     ActorSystem system(config);
     ASSERT_NE(system.scheduler(), nullptr);
     EXPECT_EQ(system.scheduler()->worker_count(), 4u);
@@ -63,7 +64,8 @@ TEST(PrioritySchedulerTest, NotifyReadyWithPriorities) {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
-                  .tracing = {}};
+                  .tracing = {},
+                  .process = {}};
     ActorSystem system(config);
 
     ActorId actors[] = {ActorId{1}, ActorId{2}, ActorId{3}, ActorId{4}};
@@ -83,7 +85,8 @@ TEST(PrioritySchedulerTest, NotifyReadyWithDeadlines) {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
-                  .tracing = {}};
+                  .tracing = {},
+                  .process = {}};
     ActorSystem system(config);
 
     ActorId actors[] = {ActorId{101}, ActorId{102}, ActorId{103}};
@@ -103,7 +106,8 @@ TEST(PrioritySchedulerTest, IsRunning) {
                   .cli = {},
                   .mailbox = {},
                   .dead_letters = {},
-                  .tracing = {}};
+                  .tracing = {},
+                  .process = {}};
     ActorSystem system(config);
     EXPECT_TRUE(system.is_running());
 }

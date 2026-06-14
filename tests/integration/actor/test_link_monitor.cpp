@@ -115,7 +115,8 @@ class LinkMonitorCoroutineTest : public ::testing::Test {
                       .mailbox = {},
                       .dead_letters = {},
                       .scheduler_start_paused = true,
-                      .tracing = {}};
+                      .tracing = {},
+                      .process = {}};
         system_ = std::make_unique<ActorSystem>(config);
         driver_ = std::make_unique<hpactor::test::SchedulerTestDriver>(*system_);
     }
@@ -237,7 +238,8 @@ class LinkMonitorNoCoroutineTest : public ::testing::Test {
                       .cli = {},
                       .mailbox = {},
                       .dead_letters = {},
-                      .tracing = {}};
+                      .tracing = {},
+                      .process = {}};
         system_ = std::make_unique<ActorSystem>(config);
     }
     void TearDown() override {
@@ -280,7 +282,8 @@ class LinkMonitorProtocolTest : public ::testing::Test {
                       .cli = {},
                       .mailbox = {},
                       .dead_letters = {},
-                      .tracing = {}};
+                      .tracing = {},
+                      .process = {}};
         system_ = std::make_unique<ActorSystem>(config);
     }
     void TearDown() override {
@@ -319,7 +322,8 @@ TEST_F(LinkMonitorProtocolTest, LinkToSendsLinkMsg) {
                   .mailbox = {},
                   .dead_letters = {},
                   .scheduler_start_paused = true,
-                  .tracing = {}};
+                  .tracing = {},
+                  .process = {}};
     ActorSystem system(config);
     hpactor::test::SchedulerTestDriver driver(system);
 
