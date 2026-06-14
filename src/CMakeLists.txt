@@ -205,6 +205,7 @@ if(ENABLE_AI_ACCELERATORS)
     target_sources(hpactor_lib PRIVATE
         ai/accelerator_types.cpp
         ai/ai_message_registry.cpp
+        config/parsers/ai_accelerator_config_parser.cpp
     )
 endif()
 
