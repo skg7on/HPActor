@@ -130,10 +130,10 @@ add_library(hpactor_lib SHARED
     ../third_party/llhttp/llhttp.c
     ../third_party/llhttp/api.c
     ../third_party/llhttp/http.c
-)
         process/process_manager.cpp
         process/watchdog_actor.cpp
         process/health_http_server.cpp
+)
 
 target_include_directories(hpactor_lib
     PUBLIC
