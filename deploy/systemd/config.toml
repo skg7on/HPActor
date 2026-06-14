@@ -1,0 +1,147 @@
+# HPActor Production Configuration
+#
+# Installed at /etc/hpactor/config.toml
+# Referenced by deploy/systemd/hpactor.service:
+#   ExecStart=/usr/local/bin/hpactor --systemd --config /etc/hpactor/config.toml
+#
+# See docs/architecture/production/daemon-service-architecture-design.md
+
+# ---------------------------------------------------------------------------
+# System core
+# ---------------------------------------------------------------------------
+[system]
+version = "1.0"
+scheduler_threads = 4
+default_mailbox_size = 1024
+enable_network = false
+enable_http_gateway = false
+
+# ---------------------------------------------------------------------------
+# Process / daemon mode
+# ---------------------------------------------------------------------------
+[system.process]
+# "foreground" | "systemd" | "daemon"
+# When launched via systemd with --systemd flag, the flag takes precedence over
+# this TOML setting.
+mode = "systemd"
+
+# PID file for daemon mode (systemd mode ignores this).
+pidfile = "/var/run/hpactor/hpactor.pid"
+
+# Working directory after daemonization.
+working_directory = "/"
+
+# Redirect stdin/stdout/stderr to /dev/null in daemon mode.
+redirect_stdio = true
+
+# ---------------------------------------------------------------------------
+# Process watchdog
+# ---------------------------------------------------------------------------
+[system.process.watchdog]
+# Interval for sd_notify(WATCHDOG=1) pings.  Should be ≤ half of
+# the systemd unit's WatchdogSec=10s.  0 disables the watchdog actor.
+interval_ms = 5000
+
+# ---------------------------------------------------------------------------
+# CLI — socket-based server for remote hpactor-cli attach
+# ---------------------------------------------------------------------------
+[system.cli]
+enabled = true
+
+# UNIX domain socket that hpactor-cli connects to.
+listen_path = "/var/run/hpactor/hpactor.sock"
+
+# UDS permissions: owner + group read/write only.
+uds_socket_mode = 0660
+uds_socket_owner = "hpactor"
+uds_socket_group = "hpactor"
+
+# TCP is disabled by default — bind to localhost only when needed.
+tcp_port = 0
+tcp_bind_address = "127.0.0.1"
+
+# Max concurrent CLI sessions (systemd RuntimeDirectory enforces access).
+max_sessions = 16
+
+# Idle session timeout (5 minutes).
+session_timeout_ms = 300000
+
+# Default output format for CLI commands.
+default_format = "pretty"
+page_size = 50
+history_max = 1000
+
+# ---------------------------------------------------------------------------
+# Metrics — Prometheus /metrics endpoint
+# ---------------------------------------------------------------------------
+[system.metrics]
+enabled = true
+ring_buffer_capacity = 65536
+metrics_path = "/metrics"
+
+# ---------------------------------------------------------------------------
+# Structured logging
+# ---------------------------------------------------------------------------
+[system.logging]
+enabled = true
+default_level = "info"
+format = "json"
+ring_buffer_capacity = 65536
+flush_on_level = "error"
+drop_policy = "drop_newest"
+
+# When running under systemd, stdout/stderr go to journald automatically.
+# For traditional daemon mode, uncomment the file_path below:
+# file_path = "/var/log/hpactor/hpactor.log"
+
+# ---------------------------------------------------------------------------
+# Distributed tracing
+# ---------------------------------------------------------------------------
+[system.tracing]
+enabled = true
+service_name = "hpactor"
+sampler = "parent_based_trace_id_ratio"
+exporter = "memory"
+ring_buffer_capacity = 65536
+
+# ---------------------------------------------------------------------------
+# Mailbox admission control
+# ---------------------------------------------------------------------------
+[system.mailbox]
+default_capacity = 1024
+default_policy = "reject_newest"
+high_watermark = 0.80
+low_watermark = 0.50
+critical_watermark = 1.00
+priority_aware = true
+priority_levels = 4
+protected_system_messages = 32
+
+# ---------------------------------------------------------------------------
+# Dead-letter queue
+# ---------------------------------------------------------------------------
+[system.dead_letters]
+enabled = true
+capacity = 4096
+max_payload_sample_bytes = 256
+store_payload = true
+
+# ---------------------------------------------------------------------------
+# Graceful shutdown
+# ---------------------------------------------------------------------------
+[system.shutdown]
+drain_policy = "Drain"
+drain_timeout_ms = 30000
+ingress_timeout_ms = 5000
+cluster_leave_timeout_ms = 10000
+force_after_timeout = true
+
+# ---------------------------------------------------------------------------
+# Actor topology — define statically-spawned actors here.
+# ---------------------------------------------------------------------------
+
+# Example: a single EchoActor for smoke-testing the running daemon.
+# [[actor]]
+# id = "echo"
+# behavior = "EchoActor"
+# mailbox_capacity = 4096
