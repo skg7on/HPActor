@@ -466,20 +466,23 @@ class WorkerThread {
     ///         \c reset_backoff() and loop).
     bool enter_cv_block();
 
-    /// \brief Adaptive idle backoff: yield → exponential sleep up to 50 ms.
+    /// \brief Adaptive idle backoff: yield -> proportional sleep -> capped
+    /// sleep.
     ///
-    /// First \c kBackoffYieldIters idle iterations call
-    /// `std::this_thread::yield()`.  Subsequent iterations sleep for
-    /// `10 µs * 2^(c - kBackoffYieldIters)`, capped at 50 ms.
-    /// After the backoff ramp, the worker escalates to CV blocking.
-    void backoff();
+    /// Stages are determined by wall-clock \p elapsed time since idle start:
+    /// - Stage 0 (< spin_threshold_ns): yield if effective, else no-op.
+    /// - Stage 1 (< 1 ms): sleep for elapsed/4, floored at
+    /// min_effective_sleep_ns.
+    /// - Stage 2 (>= 1 ms): sleep for 500 us (capped).
+    ///
+    /// \param[in] elapsed Wall-clock time since the worker first became idle.
+    void backoff(std::chrono::nanoseconds elapsed);
 
-    /// \brief Reset the backoff counter to zero.
+    /// \brief Reset idle tracking when work is found.
     ///
-    /// Called whenever work is found so the worker stays responsive after
-    /// an idle period.
+    /// Clears the idle-start timestamp so the next idle period starts fresh.
     void reset_backoff() {
-        backoff_counter_.store(0, std::memory_order_relaxed);
+        idle_since_ = std::chrono::steady_clock::time_point{};
     }
 
     Config config_;                    ///< Immutable per-worker configuration.

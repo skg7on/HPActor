@@ -98,35 +98,8 @@ thread_local CoroutineFramePool* tl_frame_pool = nullptr;
 // Thread-local worker ID (declared in scheduler.cpp, used by placement layer)
 extern thread_local uint32_t tl_current_worker_id;
 
-// ── Platform-specific backoff constants ──────────────────────────────
-//
-// Shared between thread_loop() and backoff().
-//
-// Linux:   sched_yield rotates the CFS run-queue but doesn't sleep —
-//          the caller is immediately rescheduled if no other thread is
-//          waiting.  Use 0 yields — escalate through nanosleep directly.
-//
-// macOS:   sched_yield uses Mach thread_switch, which actually yields
-//          the CPU to other runnable threads.  Keep the original 4
-//          yields that tested at near-zero CPU on macOS ARM64.
-//
-// kBackoffSleepIters = 4 on both platforms: 10+20+50+100 = 180 µs of
-// nanosleep before CV entry — long enough for work to arrive naturally,
-// short enough to reach deep sleep between timer bursts.
-
-#if defined(__linux__)
-constexpr uint32_t kBackoffYieldIters = 0;
-constexpr uint32_t kBackoffSleepIters = 4;
-#elif defined(__APPLE__)
-constexpr uint32_t kBackoffYieldIters = 4;
-constexpr uint32_t kBackoffSleepIters = 4;
-#else
-constexpr uint32_t kBackoffYieldIters = 0;
-constexpr uint32_t kBackoffSleepIters = 4;
-#endif
-
-// kPollThreshold = total idle iterations before escalating to CV blocking.
-constexpr uint32_t kPollThreshold = kBackoffYieldIters + kBackoffSleepIters;
+// ── Platform-specific backoff constants (removed; time-based backoff now
+//    uses BackoffCalibration values measured at startup.) ──────────────
 
 WorkerThread::WorkerThread(const Config& config)
     : config_(config), local_queue_(config.priority_levels) {
@@ -236,7 +209,10 @@ bool WorkerThread::try_steal(WorkItem& out) {
 
 void WorkerThread::process_work_item(const WorkItem& item) {
     diag_work_found_.fetch_add(1, std::memory_order_relaxed);
-    reset_backoff();
+    // Reset idle tracking — worker is active.
+    idle_since_ = std::chrono::steady_clock::time_point{};
+    consecutive_empty_wakes_.store(0, std::memory_order_relaxed);
+    in_cv_model_.store(false, std::memory_order_relaxed);
     if (processor_) {
         processor_(item);
     }
@@ -269,20 +245,50 @@ bool WorkerThread::try_find_and_process_work() {
 }
 
 bool WorkerThread::try_poll_idle() {
-    // Standalone workers (no owner_ scheduler) stay in polling indefinitely;
-    // attached workers escalate to CV blocking after kPollThreshold idle
-    // iterations.  See platform-specific constants at the top of this file.
-    if (!owner_ ||
-        backoff_counter_.load(std::memory_order_relaxed) < kPollThreshold) {
+    auto now = std::chrono::steady_clock::now();
+
+    // Record idle start on first idle iteration.
+    if (idle_since_ == std::chrono::steady_clock::time_point{}) {
+        idle_since_ = now;
+    }
+
+    auto elapsed_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(now - idle_since_).count();
+
+    if (static_cast<uint64_t>(elapsed_ns) < calibration_.polling_budget_ns) {
         diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);
         increment_donations();
-        backoff();
-        return true; // continue polling
+        backoff(std::chrono::nanoseconds(elapsed_ns));
+        return true;
     }
-    return false; // escalate to CV blocking
+    return false;
 }
 
 bool WorkerThread::enter_cv_block() {
+    // Standalone workers (no owner_ scheduler) use a simple timed sleep
+    // without the full lost-wakeup protocol.  Work pushed while sleeping is
+    // found on the next loop iteration via try_find_and_process_work().
+    if (!owner_) {
+        in_cv_model_.store(true, std::memory_order_relaxed);
+        diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
+        // Double-check for work that arrived before sleeping.
+        {
+            WorkItem item;
+            if (pop(item)) {
+                diag_work_found_.fetch_add(1, std::memory_order_relaxed);
+                // Reset idle tracking — worker found work.
+                idle_since_ = std::chrono::steady_clock::time_point{};
+                consecutive_empty_wakes_.store(0, std::memory_order_relaxed);
+                in_cv_model_.store(false, std::memory_order_relaxed);
+                if (processor_)
+                    processor_(item);
+                return true;
+            }
+        }
+        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        return false;
+    }
+
     auto& ws = owner_->placement_workers()[config_.worker_index];
 
     // Advertise blocking intent with seq_cst to prevent the enqueue path
@@ -306,6 +312,7 @@ bool WorkerThread::enter_cv_block() {
     }
 
     diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
+    in_cv_model_.store(true, std::memory_order_relaxed);
 
     // Compute EDF-aware CV timeout.  Wake before the earliest deadline
     // expires so another worker can steal deadline work.
@@ -356,46 +363,60 @@ void WorkerThread::thread_loop() {
             continue;
         }
 
-        // Phase 2: Polling idle model (yield → exponential backoff).
-        // Standalone workers stay here; attached workers escalate after
-        // kPollThreshold idle iterations.
+        // Phase 2: Polling idle model (yield -> proportional sleep -> capped
+        // sleep).
         if (try_poll_idle()) {
             continue;
         }
 
-        // Phase 3: CV blocking model with EDF-aware timeout and
-        // lost-wakeup double-check protocol.
+        // Phase 3: CV blocking model.
+        // enter_cv_block() returns true if work was found during the
+        // pre-sleep double-check (already processed, idle state reset).
+        // Returns false after CV wait completed without finding work.
+        // In the false case, DON'T reset idle_since_ — let it keep
+        // tracking from the original idle start so the next
+        // try_poll_idle() immediately re-enters CV.
         if (enter_cv_block()) {
             continue;
         }
-        reset_backoff();
+        // CV wait completed without finding work.
+        // idle_since_ retains its pre-CV value -> immediate re-entry to CV.
     }
 }
 
 bool WorkerThread::diag_is_in_cv_model() const {
-    return backoff_counter_.load(std::memory_order_relaxed) >= kPollThreshold;
+    return in_cv_model_.load(std::memory_order_relaxed);
 }
 
-void WorkerThread::backoff() {
-    // See kBackoffYieldIters at the top of this file for the per-platform
-    // yield threshold (0 on Linux, 4 on macOS).
-    uint32_t c = backoff_counter_.fetch_add(1, std::memory_order_relaxed);
+void WorkerThread::backoff(std::chrono::nanoseconds elapsed) {
+    uint64_t ns = static_cast<uint64_t>(elapsed.count());
 
-    if (c < kBackoffYieldIters) {
-        std::this_thread::yield();
+    // Stage 0: spin (yield) only when yield is effective and we're within
+    // the spin threshold.
+    if (ns < calibration_.spin_threshold_ns) {
+        if (calibration_.yield_is_effective) {
+            std::this_thread::yield();
+        }
+        // On platforms where yield is a no-op, don't busy-wait at all.
         return;
     }
 
-    // Exponential backoff: 10us * 2^(c - kBackoffYieldIters), capped at
-    // 50ms.  Cap the shift at 28 to avoid unsigned overflow (10u << 31
-    // wraps to 0 on 32-bit, producing sleep_for(0us) which spins the core
-    // at 100%).  The std::min at 50ms provides the effective backoff
-    // ceiling — the shift ramps through it (10u << 13 = 81,920us → capped
-    // to 50,000).
-    uint32_t shift = (c - kBackoffYieldIters > 28) ? 28u : (c - kBackoffYieldIters);
-    uint32_t backoff_us = 10u << shift;
-    backoff_us = std::min(backoff_us, 50000u);
-    std::this_thread::sleep_for(std::chrono::microseconds(backoff_us));
+    // Stage 1: proportional sleep for the first 1 ms of idle time.
+    // Sleep for elapsed/4 so backoff ramps up but polls frequently enough
+    // to catch bursty work.
+    if (ns < 1'000'000) {
+        uint64_t sleep_ns = ns / 4;
+        if (sleep_ns < calibration_.min_effective_sleep_ns) {
+            sleep_ns = calibration_.min_effective_sleep_ns;
+        }
+        std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_ns));
+        return;
+    }
+
+    // Stage 2: capped moderate sleep (500 us) for the remainder of the
+    // polling budget.  Polls often enough to be responsive but avoids
+    // burning CPU.
+    std::this_thread::sleep_for(std::chrono::nanoseconds(500'000));
 }
 
 } // namespace hpactor::sched

@@ -112,3 +112,80 @@ TEST(WorkerBackoffTest, CalibrationProbeYieldIsEffective) {
 
     worker.stop();
 }
+
+// ── Time-based backoff ────────────────────────────────────────────────
+
+TEST(WorkerBackoffTest, WorkerReachesCvModelWithInjectedCalibration) {
+    BackoffCalibration cal;
+    cal.yield_is_effective = false;
+    cal.min_effective_sleep_ns = 1'000; // 1us (fast)
+    cal.spin_threshold_ns = 0;          // no spin
+    cal.polling_budget_ns = 5'000'000;  // 5ms polling budget
+
+    WorkerThread::set_test_calibration(&cal);
+
+    WorkerThread::Config cfg;
+    cfg.worker_index = 0;
+    WorkerThread worker(cfg);
+    worker.start();
+
+    // Wait for the worker to escalate to CV model.
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!worker.diag_is_in_cv_model() &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+
+    EXPECT_TRUE(worker.diag_is_in_cv_model());
+    EXPECT_GT(worker.diag_cv_escalations(), 0u);
+    EXPECT_GT(worker.diag_idle_iters(), 0u);
+
+    worker.stop();
+    WorkerThread::set_test_calibration(nullptr);
+}
+
+TEST(WorkerBackoffTest, BackoffResetsWhenWorkFound) {
+    BackoffCalibration cal;
+    cal.yield_is_effective = false;
+    cal.min_effective_sleep_ns = 1'000;
+    cal.spin_threshold_ns = 0;
+    cal.polling_budget_ns = 10'000'000; // 10ms
+
+    WorkerThread::set_test_calibration(&cal);
+
+    WorkerThread::Config cfg;
+    cfg.worker_index = 0;
+    WorkerThread worker(cfg);
+
+    std::atomic<bool> work_processed{false};
+    worker.set_work_processor(
+        [&](const WorkItem&) { work_processed.store(true); });
+
+    worker.start();
+
+    // Let worker go idle and enter CV.
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!worker.diag_is_in_cv_model() &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    ASSERT_TRUE(worker.diag_is_in_cv_model());
+
+    // Push work.
+    WorkItem item;
+    item.actor = hpactor::ActorId{0};
+    worker.push(0, item);
+
+    // Wait for work to be processed.
+    auto deadline2 = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!work_processed.load() && std::chrono::steady_clock::now() < deadline2) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    ASSERT_TRUE(work_processed.load());
+
+    // After processing work, worker should be out of CV model.
+    EXPECT_FALSE(worker.diag_is_in_cv_model());
+
+    worker.stop();
+    WorkerThread::set_test_calibration(nullptr);
+}
