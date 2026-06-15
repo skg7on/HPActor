@@ -35,7 +35,9 @@ class QuitCommand final : public ICommand {
 
     result<void> execute(CommandContext& ctx) const override {
         ctx.output->raw("Goodbye.");
-        if (ctx.cli_actor) {
+        if (ctx.lifecycle_host) {
+            ctx.lifecycle_host->shutdown();
+        } else if (ctx.cli_actor) {
             ctx.cli_actor->request_shutdown();
         } else if (ctx.cli_server_actor) {
             ctx.cli_server_actor->request_shutdown();

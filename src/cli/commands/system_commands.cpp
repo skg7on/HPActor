@@ -45,6 +45,11 @@ class SystemStatsCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        if (ctx.system_host) {
+            ctx.system_host->render_system_stats(*ctx.output);
+            return result<void>::make();
+        }
+        // FALLBACK: existing inline logic (for tests without a host)
         ctx.output->header("System Statistics");
         auto* sys = ctx.system;
         auto* cli = ctx.cli_actor;
@@ -79,6 +84,11 @@ class SystemMemoryCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        if (ctx.system_host) {
+            ctx.system_host->render_memory_stats(*ctx.output);
+            return result<void>::make();
+        }
+        // FALLBACK: existing inline logic (for tests without a host)
         ctx.output->header("Memory Regions");
 
         auto& reg = mem::MemoryRegionRegistry::instance();

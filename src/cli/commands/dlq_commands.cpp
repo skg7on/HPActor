@@ -99,6 +99,11 @@ class DlqListCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        if (ctx.system_host) {
+            ctx.system_host->render_dlq_list(*ctx.output);
+            return result<void>::make();
+        }
+        // FALLBACK: existing inline logic (for tests without a host)
         auto* dlq = resolve_dlq(ctx);
         if (!dlq)
             return result<void>::make();
@@ -249,6 +254,41 @@ class DlqReplayCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        if (ctx.system_host) {
+            auto idx_str = ctx.get_param("index");
+            if (!idx_str) {
+                ctx.output->error("Usage: /dlq replay --index N");
+                return result<void>::make();
+            }
+            bool ok = false;
+            size_t index = parse_uint<size_t>(*idx_str, ok);
+            if (!ok) {
+                ctx.output->error("Invalid index: " + *idx_str);
+                return result<void>::make();
+            }
+            auto* dlq = resolve_dlq(ctx);
+            if (!dlq)
+                return result<void>::make();
+            mailbox::DeadLetterRecord r;
+            if (!dlq->try_pop_at(index, r)) {
+                ctx.output->error("Index " + std::to_string(index) + " out of range");
+                return result<void>::make();
+            }
+            if (r.payload_sample.empty()) {
+                ctx.output->error("Record has no payload - cannot replay");
+                return result<void>::make();
+            }
+            auto replay_result = ctx.system_host->dlq_replay(
+                static_cast<uint32_t>(index), r.target.id);
+            if (replay_result.has_value()) {
+                ctx.output->raw("Replayed record #" + std::to_string(index) +
+                                " to actor " + std::to_string(r.target.id.value()));
+            } else {
+                ctx.output->error("DLQ replay failed");
+            }
+            return result<void>::make();
+        }
+        // FALLBACK: existing inline logic (for tests without a host)
         auto* dlq = resolve_dlq(ctx);
         if (!dlq)
             return result<void>::make();
