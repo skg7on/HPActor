@@ -19,8 +19,10 @@
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <pthread.h>
 #include <thread>
 #include <vector>
@@ -32,6 +34,40 @@ namespace hpactor::sched {
 
 // Forward declaration
 class HybridScheduler;
+
+/// \brief OS scheduling characteristics measured at startup.
+///
+/// Populated once by a calibration probe that runs on the first worker
+/// thread.  Values are immutable after construction.  Tests may inject a
+/// fixed calibration via \c set_test_calibration() before \c start().
+struct BackoffCalibration {
+    /// \brief Whether \c sched_yield() actually yields the CPU.
+    ///
+    /// \c true on macOS/Mach where \c thread_switch() deschedules the
+    /// caller.  \c false on Linux/CFS where yield merely rotates the
+    /// run-queue and the caller is immediately rescheduled.
+    bool yield_is_effective = false;
+
+    /// \brief Minimum sleep duration the kernel can reliably honour.
+    ///
+    /// Derived from the knee in the actual-vs-requested sleep curve.
+    /// Typically 10-50 us on modern Linux with hrtimers; 1-4 ms on
+    /// older kernels or virtualized environments.
+    uint32_t min_effective_sleep_ns = 50'000;
+
+    /// \brief How long to spin (yield) before escalating to nanosleep.
+    ///
+    /// 0 when \c yield_is_effective is \c false (no point spinning on
+    /// Linux).  ~20 us when yield actually deschedules the caller.
+    uint32_t spin_threshold_ns = 0;
+
+    /// \brief Total wall-clock idle time before escalating from polling
+    ///        backoff to CV blocking.
+    ///
+    /// Default 10 ms.  Increased proportionally on systems with coarse
+    /// timer granularity.
+    uint32_t polling_budget_ns = 10'000'000;
+};
 
 /// \brief Per-thread worker for the work-stealing hybrid scheduler.
 ///
@@ -337,6 +373,40 @@ class WorkerThread {
         return backoff_counter_.load(std::memory_order_relaxed);
     }
 
+    // ── Calibration (test injection + runtime access) ───────────────
+
+    /// \brief Inject a fixed calibration for deterministic testing.
+    ///
+    /// When set (non-null), the startup probe is skipped and this
+    /// calibration is used instead.  Call with \c nullptr to restore
+    /// auto-calibration for subsequent workers.
+    ///
+    /// \note Not thread-safe — call before any worker \c start().
+    static void set_test_calibration(const BackoffCalibration* cal) {
+        test_calibration_override_ = cal;
+    }
+
+    /// \brief Read the calibration in effect for this worker.
+    ///
+    /// \return Immutable reference to the calibration used by this worker.
+    const BackoffCalibration& calibration() const {
+        return calibration_;
+    }
+
+    /// \brief Whether the OS yield operation actually deschedules the caller.
+    bool diag_yield_is_effective() const {
+        return calibration_.yield_is_effective;
+    }
+    /// \brief Measured kernel timer granularity in nanoseconds.
+    uint32_t diag_min_sleep_ns() const {
+        return calibration_.min_effective_sleep_ns;
+    }
+    /// \brief Consecutive CV wakeups that found no work (exponential
+    ///        timeout level).
+    uint32_t diag_consecutive_empty_wakes() const {
+        return consecutive_empty_wakes_.load(std::memory_order_relaxed);
+    }
+
   private:
     /// \brief Main work-processing loop running on the worker's OS thread.
     ///
@@ -461,6 +531,40 @@ class WorkerThread {
     /// On Linux, written once by the worker thread during \c start() via
     /// \c syscall(SYS_gettid).  Read by \c thread_id() from any thread.
     std::atomic<uint64_t> native_tid_{0};
+
+    // ── Adaptive backoff calibration ──────────────────────────────────
+
+    /// \brief Calibration values used by this worker (copied from shared probe
+    ///        or test override at startup).
+    BackoffCalibration calibration_;
+
+    /// \brief Wall-clock time when the worker first became idle.
+    ///
+    /// Default-constructed (epoch) means "not idle."  Set on the first idle
+    /// iteration and cleared when work is found.
+    std::chrono::steady_clock::time_point idle_since_{};
+
+    /// \brief Number of consecutive CV timeout wakeups that found no work.
+    ///
+    /// Drives exponential growth of the safety-net CV timeout.  Reset to 0
+    /// when work is found.  Atomic for snapshot reads from CLI/metrics threads.
+    std::atomic<uint32_t> consecutive_empty_wakes_{0};
+
+    /// \brief Whether the worker is currently inside the CV-blocking idle
+    /// model.
+    ///
+    /// Set \c true when the worker actually sleeps on \c sleep_cv_, cleared
+    /// when work is processed.  Used by \c diag_is_in_cv_model().
+    std::atomic<bool> in_cv_model_{false};
+
+    // ── Shared calibration state (one probe for all workers) ───────────
+
+    /// \brief Shared result of the one-time calibration probe.
+    static BackoffCalibration shared_calibration_;
+    /// \brief One-time flag guarding the calibration probe.
+    static std::once_flag calibration_once_;
+    /// \brief Test override — when non-null, skip the probe and use this.
+    static const BackoffCalibration* test_calibration_override_;
 
     // ── Diagnostic counters (exposed via WorkerSnapshot) ────────────
     std::atomic<uint64_t> diag_work_found_{0};

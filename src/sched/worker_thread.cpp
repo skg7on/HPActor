@@ -28,6 +28,16 @@
 
 namespace hpactor::sched {
 
+// Static member definitions for adaptive backoff calibration.
+//
+// `shared_calibration_` uses default-constructed BackoffCalibration until
+// the first worker runs the calibration probe.  `calibration_once_`
+// ensures the probe runs exactly once.  `test_calibration_override_`
+// defaults to nullptr (no override).
+BackoffCalibration WorkerThread::shared_calibration_;
+std::once_flag WorkerThread::calibration_once_;
+const BackoffCalibration* WorkerThread::test_calibration_override_ = nullptr;
+
 // Thread-local pointer to the current worker's frame pool
 thread_local CoroutineFramePool* tl_frame_pool = nullptr;
 
@@ -66,6 +76,15 @@ constexpr uint32_t kPollThreshold = kBackoffYieldIters + kBackoffSleepIters;
 
 WorkerThread::WorkerThread(const Config& config)
     : config_(config), local_queue_(config.priority_levels) {
+    // Initialize calibration: use test override, shared probe result, or
+    // defaults.  The calibration is copied so the override pointer can be
+    // cleared or reused for subsequent workers.
+    if (test_calibration_override_) {
+        calibration_ = *test_calibration_override_;
+    } else {
+        calibration_ = shared_calibration_;
+    }
+
     if (config_.enable_thread_allocator) {
         allocator_ = new mem::ThreadLocalAllocator();
     }
