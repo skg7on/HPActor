@@ -64,9 +64,9 @@ struct BackoffCalibration {
     /// \brief Total wall-clock idle time before escalating from polling
     ///        backoff to CV blocking.
     ///
-    /// Default 10 ms.  Increased proportionally on systems with coarse
-    /// timer granularity.
-    uint32_t polling_budget_ns = 10'000'000;
+    /// Default 1 ms (Linux-safe).  200 us on macOS where yield deschedules.
+    /// Scales with timer granularity on coarse-grained kernels.
+    uint32_t polling_budget_ns = 1'000'000;
 };
 
 /// \brief Per-thread worker for the work-stealing hybrid scheduler.

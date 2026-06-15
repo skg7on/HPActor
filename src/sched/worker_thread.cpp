@@ -85,7 +85,14 @@ BackoffCalibration run_calibration_probe() {
 
     // 3. Derived thresholds.
     cal.spin_threshold_ns = cal.yield_is_effective ? 20'000 : 0;
-    cal.polling_budget_ns = std::max(10'000'000u, cal.min_effective_sleep_ns * 100);
+    // Polling budget: platform-adaptive floor.  On macOS where yield
+    // actually deschedules, a short burst of yields is sufficient for
+    // burst absorption before CV entry.  On Linux where yield is a
+    // no-op, keep a longer budget to absorb bursts via nanosleep.
+    {
+        uint32_t floor_ns = cal.yield_is_effective ? 200'000u : 1'000'000u;
+        cal.polling_budget_ns = std::max(floor_ns, cal.min_effective_sleep_ns * 20);
+    }
 
     return cal;
 }

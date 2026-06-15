@@ -99,8 +99,12 @@ TEST(WorkerBackoffTest, CalibrationProbeYieldIsEffective) {
     EXPECT_GE(cal.min_effective_sleep_ns, 1'000u);
     EXPECT_LE(cal.min_effective_sleep_ns, 10'000'000u);
 
-    // Sanity: polling_budget_ns should be >= 10ms and <= 100ms.
-    EXPECT_GE(cal.polling_budget_ns, 10'000'000u);
+    // Sanity: polling_budget_ns floor is platform-dependent.
+    // 200 us on macOS (yield effective), 1 ms on Linux (yield no-op).
+    {
+        uint32_t min_expected = cal.yield_is_effective ? 200'000u : 1'000'000u;
+        EXPECT_GE(cal.polling_budget_ns, min_expected);
+    }
     EXPECT_LE(cal.polling_budget_ns, 100'000'000u);
 
     // spin_threshold_ns is 0 when yield is not effective, 20'000 otherwise.
