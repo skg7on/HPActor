@@ -356,10 +356,12 @@ bool WorkerThread::enter_cv_block() {
     } else {
         // No EDF deadlines: exponential safety-net timeout.
         // Doubles each empty wake, capped at 30 seconds.
-        constexpr uint32_t kBaseTimeoutMs = 100;
+        // 500 ms base (2 wakeups/s) is safe because real work arrival
+        // always uses the zero-latency notify path (wake_if_blocking).
+        constexpr uint32_t kBaseTimeoutMs = 500;
         constexpr uint32_t kMaxTimeoutMs = 30'000;
         uint32_t c = consecutive_empty_wakes_.load(std::memory_order_relaxed);
-        uint32_t shift = std::min(c, 9u); // 2^9 * 100ms = 51.2s > 30s cap
+        uint32_t shift = std::min(c, 9u); // 2^6 * 500ms = 32s > 30s cap
         uint32_t ms = kBaseTimeoutMs << shift;
         timeout = std::chrono::milliseconds(std::min(ms, kMaxTimeoutMs));
     }
@@ -440,9 +442,23 @@ void WorkerThread::backoff(std::chrono::nanoseconds elapsed) {
     // to catch bursty work.
     if (ns < 1'000'000) {
         uint64_t sleep_ns = ns / 4;
+#ifdef __linux__
+        // On Linux CFS, nanosleep() with durations below ~100 us often
+        // busy-waits instead of context-switching the thread (the kernel
+        // decides the overhead of descheduling exceeds the sleep duration).
+        // Use a 500 us floor — above the context-switch threshold on all
+        // modern kernels — so the thread actually deschedules during
+        // backoff.  This avoids burning CPU in the polling phase.
+        if (sleep_ns < 500'000) {
+            sleep_ns = 500'000;
+        }
+#else
+        // On macOS/Mach, thread_switch() deschedules the caller at any
+        // duration, so the probed min_effective_sleep_ns is sufficient.
         if (sleep_ns < calibration_.min_effective_sleep_ns) {
             sleep_ns = calibration_.min_effective_sleep_ns;
         }
+#endif
         std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_ns));
         return;
     }
