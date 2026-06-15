@@ -99,8 +99,8 @@ TEST(WorkerBackoffTest, CalibrationProbeYieldIsEffective) {
     EXPECT_GE(cal.min_effective_sleep_ns, 1'000u);
     EXPECT_LE(cal.min_effective_sleep_ns, 10'000'000u);
 
-    // Sanity: polling_budget_ns should be >= 1ms (floor) and <= 100ms.
-    EXPECT_GE(cal.polling_budget_ns, 1'000'000u);
+    // Sanity: polling_budget_ns should be >= 10ms and <= 100ms.
+    EXPECT_GE(cal.polling_budget_ns, 10'000'000u);
     EXPECT_LE(cal.polling_budget_ns, 100'000'000u);
 
     // spin_threshold_ns is 0 when yield is not effective, 20'000 otherwise.

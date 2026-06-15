@@ -85,10 +85,7 @@ BackoffCalibration run_calibration_probe() {
 
     // 3. Derived thresholds.
     cal.spin_threshold_ns = cal.yield_is_effective ? 20'000 : 0;
-    // Polling budget: at least 1 ms (floor), scales with timer granularity.
-    // Multiplier of 20 ensures ~20 backoff iterations on fine-grained timers
-    // before escalating to CV, keeping the "polling" window brief.
-    cal.polling_budget_ns = std::max(1'000'000u, cal.min_effective_sleep_ns * 20);
+    cal.polling_budget_ns = std::max(10'000'000u, cal.min_effective_sleep_ns * 100);
 
     return cal;
 }
