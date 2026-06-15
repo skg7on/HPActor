@@ -220,25 +220,20 @@ void WorkerThread::process_work_item(const WorkItem& item) {
 
 bool WorkerThread::try_find_and_process_work() {
     WorkItem item;
-    bool got_work = false;
 
-    // Local pop: use placement queues when attached to scheduler,
-    // local queue when standalone.
+    // Phase 1 (fast path): only check local queues.  Stealing is deferred
+    // to the CV double-check in enter_cv_block() to avoid expensive
+    // cross-core atomic scans on every backoff iteration during polling.
     if (owner_) {
-        got_work = owner_->pop_local(item, config_.worker_index);
+        if (owner_->pop_local(item, config_.worker_index)) {
+            process_work_item(item);
+            return true;
+        }
     } else {
-        got_work = pop(item);
-    }
-
-    if (got_work) {
-        process_work_item(item);
-        return true;
-    }
-
-    // Local empty - try stealing from another worker via A2WS.
-    if (try_steal(item)) {
-        process_work_item(item);
-        return true;
+        if (pop(item)) {
+            process_work_item(item);
+            return true;
+        }
     }
 
     return false;
