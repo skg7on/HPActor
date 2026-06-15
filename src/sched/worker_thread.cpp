@@ -253,6 +253,21 @@ bool WorkerThread::try_poll_idle() {
     if (static_cast<uint64_t>(elapsed_ns) < calibration_.polling_budget_ns) {
         diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);
         increment_donations();
+
+        // Periodic steal attempt during polling (every 64 iterations).
+        // Stealing on every backoff iteration burns CPU with cross-core
+        // atomic traffic (dominant on Linux x86_64); never stealing forces
+        // a full CV entry cycle just to discover cross-worker work (adds
+        // ~600us CV-entry overhead on macOS).  Every 64th balances both.
+        if ((diag_idle_iters_.load(std::memory_order_relaxed) & 0x3F) == 0) {
+            WorkItem stolen;
+            if (try_steal(stolen)) {
+                process_work_item(stolen);
+                return true; // work found — exit polling, reset via
+                             // process_work_item
+            }
+        }
+
         backoff(std::chrono::nanoseconds(elapsed_ns));
         return true;
     }
