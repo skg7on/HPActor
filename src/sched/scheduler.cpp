@@ -176,6 +176,26 @@ void HybridScheduler::notify_ready(ActorId actor, uint8_t priority,
     enqueue_admitted(item, priority);
 }
 
+void HybridScheduler::notify_ready_edf(ActorId actor, uint8_t priority,
+                                       int64_t deadline_ns) {
+    if (!running_.load(std::memory_order_acquire)) {
+        return;
+    }
+
+    FAULT_INJECT("hpactor.scheduler.notify_ready.drop") {
+        return;
+    }
+
+    WorkItem item{actor, deadline_ns, 0};
+    item.edf_scheduled = true;
+
+    if (!try_admit_ready(actor)) {
+        return;
+    }
+
+    enqueue_admitted(item, priority);
+}
+
 void HybridScheduler::notify_idle(ActorId actor) {
     // Remove actor from EDF tracking if it was scheduled there
     // For now, this is a stub - full implementation would need EDF cancellation
@@ -255,8 +275,9 @@ void HybridScheduler::execute_actor(const WorkItem& item) {
         uint64_t next_seq = item.sequence + 1;
         if (next_seq > 128)
             next_seq = 0;
-        enqueue_admitted(WorkItem{item.actor, result.deadline_ns, next_seq},
-                         result.priority);
+        WorkItem next{item.actor, result.deadline_ns, next_seq};
+        next.edf_scheduled = item.edf_scheduled;
+        enqueue_admitted(next, result.priority);
     }
 }
 
@@ -483,8 +504,7 @@ std::vector<WorkerSnapshot> HybridScheduler::worker_snapshots() const {
         // cv (escalated to CV-based blocking).  diag_is_in_cv_model()
         // uses the platform-specific kPollThreshold from worker_thread.cpp
         // (4 on Linux / 0-yield, 8 on macOS / 4-yield).
-        ws.idle_model = worker_threads_[i]->diag_is_in_cv_model() ? "cv"
-                                                                  : "polling";
+        ws.idle_model = worker_threads_[i]->diag_is_in_cv_model() ? "cv" : "polling";
 
         result.push_back(ws);
     }

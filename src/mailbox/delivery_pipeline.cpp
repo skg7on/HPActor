@@ -456,6 +456,7 @@ DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority
     if (options.no_drop) {
         meta.flags |= net::WireFrame::NoDrop;
     }
+    meta.schedule_edf = options.schedule_edf;
 
     const auto bp_mode = mailbox->config().backpressure_mode;
     const bool sender_is_remote = meta.sender.endpoint != config_.endpoint &&

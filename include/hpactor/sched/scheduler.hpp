@@ -270,6 +270,8 @@ class HybridScheduler : public IScheduler {
     void start() override;
     void stop() override;
     void notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) override;
+    void notify_ready_edf(ActorId actor, uint8_t priority,
+                          int64_t deadline_ns) override;
     void notify_idle(ActorId actor) override;
     void yield(ActorId actor, uint8_t priority) override;
     bool is_running() const override {

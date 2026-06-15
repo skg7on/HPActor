@@ -554,7 +554,13 @@ template <typename T> class MPSCActorMailbox {
                 if (continuation_callback_) {
                     continuation_callback_();
                 }
-                scheduler_->notify_ready(actor_id_, meta.priority, meta.deadline_ns);
+                if (meta.schedule_edf && meta.deadline_ns != INT64_MAX) {
+                    scheduler_->notify_ready_edf(actor_id_, meta.priority,
+                                                 meta.deadline_ns);
+                } else {
+                    scheduler_->notify_ready(actor_id_, meta.priority,
+                                             meta.deadline_ns);
+                }
             }
         }
     }
