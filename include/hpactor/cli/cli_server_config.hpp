@@ -47,6 +47,30 @@ struct CliServerConfig {
     /// \brief TCP bind address.
     std::string tcp_bind_address = "127.0.0.1";
 
+    /// \brief Unix domain socket path for protobuf binary CLI connections.
+    ///        Empty means no protobuf UDS listener.
+    std::string proto_uds_path;
+
+    /// \brief TCP listen port for protobuf binary CLI connections.
+    ///        0 means disabled.
+    uint16_t proto_tcp_port = 0;
+
+    /// \brief TCP listen port for HTTP JSON CLI connections.
+    ///        0 means disabled. Reuses the HTTPGateway infrastructure.
+    uint16_t http_port = 0;
+
+    /// \brief Bind address for the HTTP JSON listener.
+    std::string http_bind_address = "127.0.0.1";
+
+    /// \brief Permission mode for the protobuf UDS socket file.
+    uint32_t proto_uds_socket_mode = 0660;
+
+    /// \brief Owner user name for the protobuf UDS socket (optional).
+    std::string proto_uds_socket_owner;
+
+    /// \brief Owner group name for the protobuf UDS socket (optional).
+    std::string proto_uds_socket_group;
+
     /// \brief Maximum concurrent CLI sessions.
     uint32_t max_sessions = 16;
 
