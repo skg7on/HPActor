@@ -35,7 +35,7 @@ namespace {
 // =============================================================================
 
 static ActorId find_coordinator(CliActor* cli) {
-    auto actors = cli->enumerate_actors("BenchCoordinatorActor");
+    auto actors = cli->enumerate("BenchCoordinatorActor");
     if (actors.empty())
         return ActorId{0};
     return ActorId{actors[0].actor_id};
@@ -46,7 +46,7 @@ static ActorId find_coordinator(CliActor* cli) {
 // =============================================================================
 
 static ActorId find_collector(CliActor* cli) {
-    auto actors = cli->enumerate_actors("BenchCollectorActor");
+    auto actors = cli->enumerate("BenchCollectorActor");
     if (actors.empty())
         return ActorId{0};
     return ActorId{actors[0].actor_id};
@@ -110,7 +110,7 @@ class BenchStartCommand final : public ICommand {
             InspectStateRequest req;
             req.set_target_actor_id(coord_id.value());
             req.set_include_state(true);
-            auto reply = cli->send_and_wait_inspect(coord_id, req);
+            auto reply = cli->inspect(coord_id, req);
             if (reply && !reply->state_blob().empty()) {
                 std::string state_str(reply->state_blob().begin(),
                                       reply->state_blob().end());
@@ -212,7 +212,7 @@ class BenchStatusCommand final : public ICommand {
         req.set_target_actor_id(coord_id.value());
         req.set_include_state(true);
 
-        auto reply = cli->send_and_wait_inspect(coord_id, req);
+        auto reply = cli->inspect(coord_id, req);
         if (!reply || reply->state_blob().empty()) {
             ctx.output->error("No response from coordinator.");
             return result<void>::make();
@@ -283,7 +283,7 @@ class BenchReportCommand final : public ICommand {
         req.set_target_actor_id(coll_id.value());
         req.set_include_state(true);
 
-        auto reply = cli->send_and_wait_inspect(coll_id, req);
+        auto reply = cli->inspect(coll_id, req);
         if (!reply || reply->state_blob().empty()) {
             ctx.output->error("No response from collector.");
             return result<void>::make();
@@ -377,7 +377,7 @@ class BenchExportCommand final : public ICommand {
         req.set_target_actor_id(coll_id.value());
         req.set_include_state(true);
 
-        auto reply = cli->send_and_wait_inspect(coll_id, req);
+        auto reply = cli->inspect(coll_id, req);
         if (!reply || reply->state_blob().empty()) {
             ctx.output->error("No data.");
             return result<void>::make();
