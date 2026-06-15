@@ -61,6 +61,9 @@ void CliSession::execute_tokens(const std::vector<Token>& tokens) {
     ctx.cli_session = this;
     ctx.cli_actor = cli_actor_;
     ctx.cli_server_actor = cli_server_actor_;
+    ctx.command_host = command_host_;
+    ctx.system_host = system_host_;
+    ctx.lifecycle_host = lifecycle_host_;
     ctx.output = formatter_.get();
     ctx.page_size = page_size_;
 
