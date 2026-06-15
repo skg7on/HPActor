@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/cli/cli_command_host.hpp>
 #include <hpactor/types/types.hpp>
 #include <map>
 #include <optional>
@@ -43,6 +44,13 @@ struct CommandContext {
     /// \brief Captured parameter values (e.g. \c <id>) and flag values
     ///        (e.g. \c --format).
     std::map<std::string, std::string> params;
+    /// \brief Host interface pointers — the preferred way for commands to
+    /// access
+    ///        actor/system/lifecycle operations. Populated by CliSession from
+    ///        the owning actor (CliActor, CliServerActor, or CliClientActor).
+    ICliCommandHost* command_host = nullptr;
+    ISystemCliHost* system_host = nullptr;
+    ILifecycleCliHost* lifecycle_host = nullptr;
     /// \brief The actor system, for sending inspect/kill/list requests.
     ActorSystem* system = nullptr;
     /// \brief The CLI actor (stdin-based), for request-response helpers.
