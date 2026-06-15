@@ -328,16 +328,11 @@ bool WorkerThread::enter_cv_block() {
             timeout = std::chrono::milliseconds(100);
     } else {
         // No EDF deadlines: exponential safety-net timeout.
-        //
-        // The timeout is a lost-notify safety net — real wakeups come via
-        // wake_if_blocking() in the enqueue path.  Starting at 500 ms
-        // keeps the base wakeup rate at 2/s (vs 10/s at 100 ms), halving
-        // at each empty wake: 500ms -> 1s -> 2s -> 4s -> 8s -> 16s -> 30s.
-        // Reaches the 30 s cap after ~31 s of sustained idle (6 wakeups).
-        constexpr uint32_t kBaseTimeoutMs = 500;
+        // Doubles each empty wake, capped at 30 seconds.
+        constexpr uint32_t kBaseTimeoutMs = 100;
         constexpr uint32_t kMaxTimeoutMs = 30'000;
         uint32_t c = consecutive_empty_wakes_.load(std::memory_order_relaxed);
-        uint32_t shift = std::min(c, 6u); // 2^6 * 500ms = 32s > 30s cap
+        uint32_t shift = std::min(c, 9u); // 2^9 * 100ms = 51.2s > 30s cap
         uint32_t ms = kBaseTimeoutMs << shift;
         timeout = std::chrono::milliseconds(std::min(ms, kMaxTimeoutMs));
     }
