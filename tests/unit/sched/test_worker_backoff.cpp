@@ -84,3 +84,31 @@ TEST(WorkerBackoffTest, WorkerSnapshotHasNewFields) {
     EXPECT_EQ(ws.calibration_min_sleep_ns, 0u);
     EXPECT_EQ(ws.consecutive_empty_wakes, 0u);
 }
+
+// ── Calibration probe ─────────────────────────────────────────────────
+
+TEST(WorkerBackoffTest, CalibrationProbeYieldIsEffective) {
+    WorkerThread::set_test_calibration(nullptr);
+    WorkerThread::Config cfg;
+    cfg.worker_index = 0;
+    WorkerThread worker(cfg);
+    worker.start();
+
+    const auto& cal = worker.calibration();
+    // Sanity: min_effective_sleep_ns should be in [1us, 10ms].
+    EXPECT_GE(cal.min_effective_sleep_ns, 1'000u);
+    EXPECT_LE(cal.min_effective_sleep_ns, 10'000'000u);
+
+    // Sanity: polling_budget_ns should be >= 10ms and <= 100ms.
+    EXPECT_GE(cal.polling_budget_ns, 10'000'000u);
+    EXPECT_LE(cal.polling_budget_ns, 100'000'000u);
+
+    // spin_threshold_ns is 0 when yield is not effective, 20'000 otherwise.
+    if (!cal.yield_is_effective) {
+        EXPECT_EQ(cal.spin_threshold_ns, 0u);
+    } else {
+        EXPECT_EQ(cal.spin_threshold_ns, 20'000u);
+    }
+
+    worker.stop();
+}

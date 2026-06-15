@@ -19,6 +19,7 @@
 #include <hpactor/sched/worker_thread.hpp>
 
 #include <chrono>
+#include <mutex>
 #include <thread>
 
 #ifdef __linux__
@@ -37,6 +38,59 @@ namespace hpactor::sched {
 BackoffCalibration WorkerThread::shared_calibration_;
 std::once_flag WorkerThread::calibration_once_;
 const BackoffCalibration* WorkerThread::test_calibration_override_ = nullptr;
+
+namespace {
+
+BackoffCalibration run_calibration_probe() {
+    BackoffCalibration cal;
+
+    // 1. Yield effectiveness: time 1000 consecutive sched_yield() calls.
+    //    If yield actually deschedules, this takes microseconds per call.
+    //    If yield is a no-op (Linux CFS), this is near-CPU-spin speed.
+    {
+        auto t0 = std::chrono::steady_clock::now();
+        for (int i = 0; i < 1000; ++i) {
+            std::this_thread::yield();
+        }
+        auto t1 = std::chrono::steady_clock::now();
+        auto elapsed_ns =
+            std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+        // Pure spin: ~10-50 ns/iter -> ~10-50 us total for 1000 iters.
+        // Real yield: ~1-10 us/iter -> ~1-10 ms total for 1000 iters.
+        // Threshold at 500 us: below is spin, above is real yield.
+        cal.yield_is_effective = (elapsed_ns > 500'000);
+    }
+
+    // 2. Timer granularity: sleep at increasing durations and measure
+    //    actual elapsed time.  Find the first duration the kernel honours.
+    {
+        constexpr uint32_t kDurationsNs[] = {1'000,   10'000,  50'000,
+                                             100'000, 500'000, 1'000'000};
+        uint32_t best = 50'000; // fallback
+        for (uint32_t dur_ns : kDurationsNs) {
+            auto t0 = std::chrono::steady_clock::now();
+            std::this_thread::sleep_for(std::chrono::nanoseconds(dur_ns));
+            auto t1 = std::chrono::steady_clock::now();
+            auto actual_ns =
+                std::chrono::duration_cast<std::chrono::nanoseconds>(t1 - t0).count();
+            // If the kernel honoured this sleep within a factor of 4,
+            // this duration is "effective."
+            if (actual_ns > 0 && actual_ns <= static_cast<int64_t>(dur_ns) * 4) {
+                best = dur_ns;
+                break; // first effective duration is the granularity floor
+            }
+        }
+        cal.min_effective_sleep_ns = best;
+    }
+
+    // 3. Derived thresholds.
+    cal.spin_threshold_ns = cal.yield_is_effective ? 20'000 : 0;
+    cal.polling_budget_ns = std::max(10'000'000u, cal.min_effective_sleep_ns * 100);
+
+    return cal;
+}
+
+} // anonymous namespace
 
 // Thread-local pointer to the current worker's frame pool
 thread_local CoroutineFramePool* tl_frame_pool = nullptr;
@@ -76,15 +130,6 @@ constexpr uint32_t kPollThreshold = kBackoffYieldIters + kBackoffSleepIters;
 
 WorkerThread::WorkerThread(const Config& config)
     : config_(config), local_queue_(config.priority_levels) {
-    // Initialize calibration: use test override, shared probe result, or
-    // defaults.  The calibration is copied so the override pointer can be
-    // cleared or reused for subsequent workers.
-    if (test_calibration_override_) {
-        calibration_ = *test_calibration_override_;
-    } else {
-        calibration_ = shared_calibration_;
-    }
-
     if (config_.enable_thread_allocator) {
         allocator_ = new mem::ThreadLocalAllocator();
     }
@@ -101,6 +146,16 @@ void WorkerThread::start() {
     }
     running_.store(true, std::memory_order_release);
     stop_requested_.store(false, std::memory_order_release);
+
+    // Populate calibration: use test override if set, otherwise run probe once.
+    if (test_calibration_override_) {
+        calibration_ = *test_calibration_override_;
+    } else {
+        std::call_once(calibration_once_,
+                       [] { shared_calibration_ = run_calibration_probe(); });
+        calibration_ = shared_calibration_;
+    }
+
     thread_ = std::thread([this] {
 #ifdef __linux__
         native_tid_.store(static_cast<uint64_t>(syscall(SYS_gettid)),
