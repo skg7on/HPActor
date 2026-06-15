@@ -189,3 +189,77 @@ TEST(WorkerBackoffTest, BackoffResetsWhenWorkFound) {
     worker.stop();
     WorkerThread::set_test_calibration(nullptr);
 }
+
+// ── Exponential CV timeout ─────────────────────────────────────────────
+
+TEST(WorkerBackoffTest, ConsecutiveEmptyWakesIncrements) {
+    BackoffCalibration cal;
+    cal.yield_is_effective = false;
+    cal.min_effective_sleep_ns = 1'000;
+    cal.spin_threshold_ns = 0;
+    cal.polling_budget_ns = 1'000'000; // 1ms — reach CV very fast
+
+    WorkerThread::set_test_calibration(&cal);
+
+    WorkerThread::Config cfg;
+    cfg.worker_index = 0;
+    WorkerThread worker(cfg);
+    worker.start();
+
+    // Wait for CV escalation.
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!worker.diag_is_in_cv_model() &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    ASSERT_TRUE(worker.diag_is_in_cv_model());
+    EXPECT_GE(worker.diag_cv_escalations(), 1u);
+
+    worker.stop();
+    WorkerThread::set_test_calibration(nullptr);
+}
+
+TEST(WorkerBackoffTest, ConsecutiveEmptyWakesResetsWhenWorkFound) {
+    BackoffCalibration cal;
+    cal.yield_is_effective = false;
+    cal.min_effective_sleep_ns = 1'000;
+    cal.spin_threshold_ns = 0;
+    cal.polling_budget_ns = 1'000'000; // 1ms
+
+    WorkerThread::set_test_calibration(&cal);
+
+    WorkerThread::Config cfg;
+    cfg.worker_index = 0;
+    WorkerThread worker(cfg);
+
+    std::atomic<bool> work_done{false};
+    worker.set_work_processor([&](const WorkItem&) { work_done.store(true); });
+
+    worker.start();
+
+    // Let worker enter CV.
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!worker.diag_is_in_cv_model() &&
+           std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    ASSERT_TRUE(worker.diag_is_in_cv_model());
+
+    // Push work.
+    WorkItem item;
+    item.actor = hpactor::ActorId{0};
+    worker.push(0, item);
+
+    // Wait for processing.
+    auto deadline2 = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!work_done.load() && std::chrono::steady_clock::now() < deadline2) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    ASSERT_TRUE(work_done.load());
+
+    // After work is found, consecutive_empty_wakes should reset to 0.
+    EXPECT_EQ(worker.diag_consecutive_empty_wakes(), 0u);
+
+    worker.stop();
+    WorkerThread::set_test_calibration(nullptr);
+}

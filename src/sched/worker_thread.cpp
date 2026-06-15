@@ -275,13 +275,7 @@ bool WorkerThread::enter_cv_block() {
         {
             WorkItem item;
             if (pop(item)) {
-                diag_work_found_.fetch_add(1, std::memory_order_relaxed);
-                // Reset idle tracking — worker found work.
-                idle_since_ = std::chrono::steady_clock::time_point{};
-                consecutive_empty_wakes_.store(0, std::memory_order_relaxed);
-                in_cv_model_.store(false, std::memory_order_relaxed);
-                if (processor_)
-                    processor_(item);
+                process_work_item(item);
                 return true;
             }
         }
@@ -302,11 +296,8 @@ bool WorkerThread::enter_cv_block() {
     {
         WorkItem item;
         if (owner_->pop_local(item, config_.worker_index) || try_steal(item)) {
-            diag_work_found_.fetch_add(1, std::memory_order_relaxed);
             ws.is_blocking_.store(false, std::memory_order_release);
-            reset_backoff();
-            if (processor_)
-                processor_(item);
+            process_work_item(item);
             return true; // caller continues the main loop
         }
     }
@@ -332,6 +323,15 @@ bool WorkerThread::enter_cv_block() {
                                       : std::chrono::milliseconds(1);
         if (timeout > std::chrono::milliseconds(100))
             timeout = std::chrono::milliseconds(100);
+    } else {
+        // No EDF deadlines: exponential safety-net timeout.
+        // Doubles each empty wake, capped at 30 seconds.
+        constexpr uint32_t kBaseTimeoutMs = 100;
+        constexpr uint32_t kMaxTimeoutMs = 30'000;
+        uint32_t c = consecutive_empty_wakes_.load(std::memory_order_relaxed);
+        uint32_t shift = std::min(c, 9u); // 2^9 * 100ms = 51.2s > 30s cap
+        uint32_t ms = kBaseTimeoutMs << shift;
+        timeout = std::chrono::milliseconds(std::min(ms, kMaxTimeoutMs));
     }
 
     std::unique_lock<std::mutex> lk(ws.sleep_mutex_);
@@ -342,6 +342,7 @@ bool WorkerThread::enter_cv_block() {
     });
     if (timed_out) {
         diag_cv_timeout_wakes_.fetch_add(1, std::memory_order_relaxed);
+        consecutive_empty_wakes_.fetch_add(1, std::memory_order_relaxed);
     } else {
         diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
     }
