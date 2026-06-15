@@ -457,8 +457,9 @@ class WorkerThread {
     ///
     /// \return \c true if work was found during the pre-sleep double-check
     ///         (already processed; caller should \c continue the main loop).
-    /// \return \c false after the CV wait completes (caller should
-    ///         \c reset_backoff() and loop).
+    /// \return \c false after the CV wait completed without finding work.
+    ///         Caller should NOT reset \c idle_since_ — preserving it
+    ///         lets the next \c try_poll_idle() immediately re-enter CV.
     bool enter_cv_block();
 
     /// \brief Adaptive idle backoff: yield -> proportional sleep -> capped
@@ -472,13 +473,6 @@ class WorkerThread {
     ///
     /// \param[in] elapsed Wall-clock time since the worker first became idle.
     void backoff(std::chrono::nanoseconds elapsed);
-
-    /// \brief Reset idle tracking when work is found.
-    ///
-    /// Clears the idle-start timestamp so the next idle period starts fresh.
-    void reset_backoff() {
-        idle_since_ = std::chrono::steady_clock::time_point{};
-    }
 
     Config config_;                    ///< Immutable per-worker configuration.
     std::thread thread_;               ///< OS thread handle.

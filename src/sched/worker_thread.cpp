@@ -286,8 +286,6 @@ bool WorkerThread::enter_cv_block() {
     // without the full lost-wakeup protocol.  Work pushed while sleeping is
     // found on the next loop iteration via try_find_and_process_work().
     if (!owner_) {
-        in_cv_model_.store(true, std::memory_order_relaxed);
-        diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
         // Double-check for work that arrived before sleeping.
         {
             WorkItem item;
@@ -296,7 +294,22 @@ bool WorkerThread::enter_cv_block() {
                 return true;
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(100));
+        // Only count escalation and flag CV-model after the double-check
+        // confirms we are actually going to sleep.
+        diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);
+        in_cv_model_.store(true, std::memory_order_relaxed);
+        // Sleep in short intervals so stop() can interrupt without blocking
+        // thread_.join() for the full duration.
+        constexpr auto kStandaloneSlice = std::chrono::milliseconds(10);
+        auto deadline =
+            std::chrono::steady_clock::now() + std::chrono::milliseconds(100);
+        while (std::chrono::steady_clock::now() < deadline) {
+            if (stop_requested_.load(std::memory_order_acquire) ||
+                !running_.load(std::memory_order_acquire)) {
+                break;
+            }
+            std::this_thread::sleep_for(kStandaloneSlice);
+        }
         return false;
     }
 
