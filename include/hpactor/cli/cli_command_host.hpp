@@ -38,7 +38,6 @@ class KillReply;
 class KillRequest;
 class QuarantineReply;
 class QuarantineRequest;
-class DeadLetterRecord;
 
 /// \brief Core interface for actor-level CLI operations.
 ///
@@ -84,6 +83,13 @@ class ISystemCliHost {
     virtual void render_fault_status(OutputFormatter& output) = 0;
     virtual void
     render_dlq_list(OutputFormatter& output, std::string_view filter = "") = 0;
+
+    /// \brief Replay a dead-letter record to its original or an alternate
+    /// target.
+    /// \param[in] index 0-based index into the DLQ ring buffer.
+    /// \param[in] target Actor to receive the replayed message.
+    /// \return Success or an error code (e.g. \c kNotFound if DLQ is not
+    ///         configured, \c kInvalidArgument if the index is out of range).
     virtual result<void> dlq_replay(uint32_t index, ActorId target) = 0;
 };
 
@@ -92,7 +98,16 @@ class ILifecycleCliHost {
   public:
     virtual ~ILifecycleCliHost() = default;
 
+    /// \brief Drain in-flight messages without accepting new work.
+    ///
+    /// Actors stop accepting new messages but continue processing already
+    /// enqueued work. Typically Step 1 of graceful shutdown.
     virtual result<void> drain() = 0;
+
+    /// \brief Shut down the actor system.
+    ///
+    /// Initiates full shutdown: drain first, then stop all actors, then
+    /// tear down the scheduler and system resources. Irreversible.
     virtual result<void> shutdown() = 0;
 };
 
