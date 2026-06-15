@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "commands/ask_commands.hpp"
 #include <hpactor/cli/cli_server_actor.hpp>
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_context.hpp>
