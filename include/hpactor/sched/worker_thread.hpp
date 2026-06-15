@@ -82,10 +82,11 @@ struct BackoffCalibration {
 /// - **A2WS stealing:** `donation_count_` tracks steal attempts; when the
 ///   count exceeds `Config::steal_threshold`, the worker actively steals
 ///   via `try_steal()` using the scheduler's victim selector.
-/// - **Adaptive idle escalation:** `backoff()` ramps from `yield()` through
-///   exponential sleep (10 µs → 50 ms).  After `kPollThreshold` idle
-///   iterations, the worker enters CV-based blocking with an EDF-aware
-///   timeout so it wakes before the earliest deadline expires.
+/// - **Adaptive idle escalation:** `backoff()` uses wall-clock idle time
+///   with OS-calibrated sleep stages (yield → proportional sleep → capped
+///   sleep).  After `polling_budget_ns` of idle time the worker enters
+///   CV-based blocking with an EDF-aware timeout so it wakes before the
+///   earliest deadline expires.
 /// - **CV wakeup:** External enqueue paths check `is_blocking_` on the
 ///   placement-layer `WorkerState` and signal `sleep_cv_` to wake a
 ///   blocked worker immediately.
@@ -121,9 +122,9 @@ class WorkerThread {
 
     /// \brief Whether the worker has escalated to the CV-blocking idle model.
     ///
-    /// Returns \c true when \c backoff_counter_ >= \c kPollThreshold
-    /// (platform-specific: 4 iters on Linux, 8 on macOS).
-    /// Implemented in worker_thread.cpp to access the file-scoped constant.
+    /// Returns \c true when \c in_cv_model_ is set, which happens after the
+    /// worker enters the CV sleep phase in \c enter_cv_block() and is cleared
+    /// when work is found via \c process_work_item().
     bool diag_is_in_cv_model() const;
 
     /// \brief Construct a worker with the given configuration.
@@ -367,12 +368,6 @@ class WorkerThread {
     uint64_t diag_cv_timeout_wakes() const {
         return diag_cv_timeout_wakes_.load(std::memory_order_relaxed);
     }
-    /// Current backoff counter.  Use \c diag_is_in_cv_model() to check
-    /// whether the worker has escalated to CV-blocking idle.
-    uint32_t diag_backoff_counter() const {
-        return backoff_counter_.load(std::memory_order_relaxed);
-    }
-
     // ── Calibration (test injection + runtime access) ───────────────
 
     /// \brief Inject a fixed calibration for deterministic testing.
@@ -439,14 +434,14 @@ class WorkerThread {
 
     /// \brief Execute one iteration of the polling idle model.
     ///
-    /// Increments the backoff counter and invokes \c backoff() (yield or
-    /// exponential sleep).  Standalone workers (no owner scheduler) stay
-    /// in this model indefinitely.  Attached workers escalate to CV
-    /// blocking after \c kPollThreshold idle iterations.
+    /// Tracks \c idle_since_ wall-clock timestamp.  Invokes \c backoff(elapsed)
+    /// with OS-calibrated sleep stages.  Standalone workers (no owner
+    /// scheduler) stay in this model indefinitely.  Attached workers escalate
+    /// to CV blocking after \c polling_budget_ns of cumulative idle time.
     ///
     /// \return \c true if the worker should continue in the polling model
     ///         (caller \c continue s the main loop).
-    /// \return \c false when the polling threshold is reached and the
+    /// \return \c false when the polling budget is exhausted and the
     ///         worker should escalate to CV blocking.
     bool try_poll_idle();
 
@@ -516,18 +511,6 @@ class WorkerThread {
 
     /// Pluggable pause handler for test harness (blocking callback).
     PauseHandler pause_handler_;
-
-    /// \brief Backoff counter for adaptive idle polling.
-    ///
-    /// Reset to 0 when work is found so the worker stays responsive;
-    /// increments on each idle iteration to ramp sleep duration.
-    /// \brief Backoff counter for adaptive idle polling.
-    ///
-    /// Reset to 0 when work is found so the worker stays responsive;
-    /// increments on each idle iteration to ramp sleep duration.
-    /// Atomic so \c diag_is_in_cv_model() and \c diag_backoff_counter()
-    /// can safely read it from CLI / metrics threads.
-    std::atomic<uint32_t> backoff_counter_{0};
 
     /// \brief Native OS thread ID captured at worker start.
     ///
