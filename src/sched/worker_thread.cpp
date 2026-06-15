@@ -345,6 +345,9 @@ bool WorkerThread::enter_cv_block() {
         consecutive_empty_wakes_.fetch_add(1, std::memory_order_relaxed);
     } else {
         diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);
+        // A notify indicates the system is active — reset the empty-wake
+        // streak so the next CV entry doesn't use a stale inflated timeout.
+        consecutive_empty_wakes_.store(0, std::memory_order_relaxed);
     }
     return false; // CV wait completed; caller resets backoff and loops
 }
