@@ -8,7 +8,7 @@ and remote CLI client/server protocol.
 
 | Document | Description |
 |----------|-------------|
-| [2026-06-15-cli-architecture-design.md](2026-06-15-cli-architecture-design.md) | CLI architecture standardization: layered `ICliCommandHost`/`ISystemCliHost`/`ILifecycleCliHost` host interfaces, `CliClientActor` remote CLI client, protobuf `CliCommand`/`CliResponse` wire protocol with dual binary + HTTP JSON transport, `CliServerActor` multi-listener changes, three-port backward compatibility layout, and command handler migration path. |
+| [cli-architecture-detailed-design.md](cli-architecture-detailed-design.md) | CLI architecture standardization: layered `ICliCommandHost`/`ISystemCliHost`/`ILifecycleCliHost` host interfaces, `CliClientActor` remote CLI client, protobuf `CliCommand`/`CliResponse` wire protocol with dual binary + HTTP JSON transport, `CliServerActor` multi-listener changes, three-port backward compatibility layout, and command handler migration path. |
 
 ## Key Components
 
