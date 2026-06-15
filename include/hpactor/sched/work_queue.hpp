@@ -24,6 +24,9 @@ struct WorkItem {
     ActorId actor;
     int64_t deadline_ns;
     uint64_t sequence;
+    bool edf_scheduled = false; ///< True if this item was originally placed
+                                ///< via the EDF path. Preserved across
+                                ///< requeue cycles.
 };
 
 using adt::ChaselevDeque;

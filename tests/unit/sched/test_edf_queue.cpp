@@ -102,3 +102,14 @@ TEST(EDFQueueTest, PeekReturnsEarliestDeadline) {
     EXPECT_TRUE(q.peek(deadline_out));
     EXPECT_EQ(deadline_out, 300);
 }
+
+TEST(WorkItemTest, EdfScheduledDefaultIsFalse) {
+    hpactor::sched::WorkItem item{};
+    EXPECT_FALSE(item.edf_scheduled);
+}
+
+TEST(WorkItemTest, EdfScheduledExplicitSet) {
+    hpactor::sched::WorkItem item;
+    item.edf_scheduled = true;
+    EXPECT_TRUE(item.edf_scheduled);
+}

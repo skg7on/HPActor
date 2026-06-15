@@ -131,6 +131,11 @@ struct DeliveryOptions {
     ///< When absent, the system-default policy is used (max 5 attempts,
     ///< 5s timeout, exponential backoff 100ms–30s with jitter).
     std::optional<msg::RetryPolicy> retry_policy;
+
+    ///< If true, the work item is placed in the worker\'s EDFQueue instead
+    ///< of the priority ChaseLev deque. Requires deadline_ns != INT64_MAX.
+    ///< Opt-in, default off — ordinary messages stay on priority queues.
+    bool schedule_edf = false;
 };
 
 /// \brief Metadata attached to every message enqueued into a mailbox.
@@ -148,8 +153,11 @@ struct MailboxEnvelopeMeta {
     uint32_t flags = 0;              ///< Envelope-level flags.
     uint64_t estimated_bytes = 0; ///< Estimated byte footprint for reservation
                                   ///< accounting.
-    uint64_t sequence = 0; ///< Monotonically increasing sequence number for
-                           ///< ordering.
+    uint64_t sequence = 0;     ///< Monotonically increasing sequence number for
+                               ///< ordering.
+    bool schedule_edf = false; ///< If true, the scheduler places this work
+                               ///< item in the EDF queue instead of the
+                               ///< priority ChaseLev deque.
 };
 
 /// \brief Reason a backpressure signal was emitted.
