@@ -18,6 +18,7 @@ add_executable(test_unit_cli
     test_memory_commands.cpp
     test_cli_session.cpp
     test_cli_server_actor.cpp
+    test_cli_command_host.cpp
 )
 target_include_directories(test_unit_cli PRIVATE ${PROJECT_SOURCE_DIR}/src/cli/commands)
 target_link_libraries(test_unit_cli hpactor hpactor_test_support GTest::gtest_main)
