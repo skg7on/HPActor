@@ -408,21 +408,23 @@ void WorkerThread::backoff(std::chrono::nanoseconds elapsed) {
         return;
     }
 
-    // Stage 1: proportional sleep for the first 1 ms of idle time.
-    // Sleep for elapsed/4 so backoff ramps up but polls frequently enough
-    // to catch bursty work.
+    // Stage 1: proportional sleep, floored at 500 us.
+    //
+    // The floor MUST be long enough for the kernel to actually deschedule
+    // the thread rather than busy-wait.  min_effective_sleep_ns measures
+    // timing accuracy but NOT whether the kernel context-switches — on
+    // Linux with hrtimers, nanosleep(1-50 us) may busy-wait, consuming CPU.
+    // 500 us is above the context-switch threshold on all modern kernels.
     if (ns < 1'000'000) {
         uint64_t sleep_ns = ns / 4;
-        if (sleep_ns < calibration_.min_effective_sleep_ns) {
-            sleep_ns = calibration_.min_effective_sleep_ns;
+        if (sleep_ns < 500'000) {
+            sleep_ns = 500'000;
         }
         std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_ns));
         return;
     }
 
-    // Stage 2: capped moderate sleep (500 us) for the remainder of the
-    // polling budget.  Polls often enough to be responsive but avoids
-    // burning CPU.
+    // Stage 2: capped moderate sleep (500 us).
     std::this_thread::sleep_for(std::chrono::nanoseconds(500'000));
 }
 
