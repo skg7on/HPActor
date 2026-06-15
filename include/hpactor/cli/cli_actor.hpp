@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/daemon_actor.hpp>
+#include <hpactor/cli/cli_command_host.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/cli/command_node.hpp>
@@ -54,7 +55,10 @@ class MemoryStatsReply;
 ///
 /// \note Thread affinity: runs on a dedicated daemon thread. All public
 ///       methods are called from that thread unless noted otherwise.
-class CliActor : public DaemonActor {
+class CliActor : public DaemonActor,
+                 public ICliCommandHost,
+                 public ISystemCliHost,
+                 public ILifecycleCliHost {
   public:
     /// \brief Actor type name for CLI introspection and actor listing.
     static constexpr const char* kActorTypeName = "CliActor";
@@ -167,7 +171,7 @@ class CliActor : public DaemonActor {
         running_ = false;
     }
 
-    // --- Request-Response Helpers ---
+    // --- ICliCommandHost interface ---
 
     /// \brief Send an InspectStateRequest to a target actor and block on
     ///        the reply.
@@ -181,9 +185,9 @@ class CliActor : public DaemonActor {
     /// \param[in] timeout Maximum time to wait for a reply.
     /// \return The reply if received within the timeout, otherwise
     ///         \c std::nullopt.
-    std::optional<InspectStateReply> send_and_wait_inspect(
-        ActorId target, const class InspectStateRequest& req,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+    std::optional<InspectStateReply>
+    inspect(ActorId target, const InspectStateRequest& req,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
 
     /// \brief Send a KillRequest to a target actor and block on the reply.
     ///
@@ -192,28 +196,41 @@ class CliActor : public DaemonActor {
     /// \param[in] timeout Maximum time to wait for a reply.
     /// \return The reply if received within the timeout, otherwise
     ///         \c std::nullopt.
-    std::optional<KillReply> send_and_wait_kill(
-        ActorId target, const class KillRequest& req,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+    std::optional<KillReply>
+    kill(ActorId target, const KillRequest& req,
+         std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
 
-    /// \brief Send a QuarantineRequest to a target actor and block on the
-    /// reply.
+    /// \brief Quarantine or unquarantine an actor and block on the reply.
     ///
     /// \param[in] target Actor to quarantine/unquarantine.
     /// \param[in] req The quarantine request.
     /// \param[in] timeout Maximum time to wait for a reply.
     /// \return The reply if received within the timeout, otherwise
     ///         \c std::nullopt.
-    std::optional<class QuarantineReply> send_and_wait_quarantine(
-        ActorId target, const class QuarantineRequest& req,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
+    std::optional<QuarantineReply>
+    quarantine(ActorId target, const QuarantineRequest& req,
+               std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
 
     /// \brief Enumerate all known actors.
     ///
     /// \param[in] filter Optional substring filter on actor type or behavior
     ///                   name. Empty string matches all actors.
     /// \return Metadata for each matching actor.
-    std::vector<ActorMeta> enumerate_actors(const std::string& filter = "");
+    std::vector<ActorMeta> enumerate(std::string_view filter = "") override;
+
+    // --- ISystemCliHost interface ---
+
+    void render_system_stats(OutputFormatter& output) override;
+    void render_memory_stats(OutputFormatter& output) override;
+    void render_fault_status(OutputFormatter& output) override;
+    void render_dlq_list(OutputFormatter& output,
+                         std::string_view filter = "") override;
+    result<void> dlq_replay(uint32_t index, ActorId target) override;
+
+    // --- ILifecycleCliHost interface ---
+
+    result<void> drain() override;
+    result<void> shutdown() override;
 
     /// \brief Resolve the CLI history file path from config.
     ///
@@ -228,8 +245,8 @@ class CliActor : public DaemonActor {
     /// \brief Build an InspectStateReply for the CliActor itself without
     ///        going through the mailbox (avoids self-deadlock).
     ///
-    /// Called from \c send_and_wait_inspect() when the target is the
-    /// CliActor's own actor ID.
+    /// Called from \c inspect() when the target is the CliActor's own
+    /// actor ID.
     ///
     /// \param[in] req The inspect request (controls which sections to include).
     /// \return A fully populated \c InspectStateReply.

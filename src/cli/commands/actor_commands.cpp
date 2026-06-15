@@ -66,7 +66,7 @@ class ActorShowCommand final : public ICommand {
         req.set_include_mailbox(true);
         req.set_include_children(true);
 
-        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+        auto reply = cli ? cli->inspect(target_id, req)
                          : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -145,7 +145,7 @@ class ActorKillCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_force(false);
 
-        auto reply = cli ? cli->send_and_wait_kill(target_id, req)
+        auto reply = cli ? cli->kill(target_id, req)
                          : cli_srv->send_and_wait_kill(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -187,8 +187,8 @@ class ActorListCommand final : public ICommand {
             return result<void>::make();
         }
 
-        auto actors = cli ? cli->enumerate_actors(filter)
-                          : cli_srv->enumerate_actors(filter);
+        auto actors =
+            cli ? cli->enumerate(filter) : cli_srv->enumerate_actors(filter);
 
         ctx.output->header("Actors (" + std::to_string(actors.size()) + " total)");
 
@@ -245,7 +245,7 @@ class ActorCircuitCommand final : public ICommand {
         req.set_include_circuit_breaker(true);
         req.set_include_quarantine_info(true);
 
-        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+        auto reply = cli ? cli->inspect(target_id, req)
                          : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -321,7 +321,7 @@ class ActorQuarantineCommand final : public ICommand {
             req.set_reason(*reason);
         }
 
-        auto reply = cli ? cli->send_and_wait_quarantine(target_id, req)
+        auto reply = cli ? cli->quarantine(target_id, req)
                          : cli_srv->send_and_wait_quarantine(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -375,7 +375,7 @@ class ActorUnquarantineCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_unquarantine(true);
 
-        auto reply = cli ? cli->send_and_wait_quarantine(target_id, req)
+        auto reply = cli ? cli->quarantine(target_id, req)
                          : cli_srv->send_and_wait_quarantine(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -429,7 +429,7 @@ class ActorRateCommand final : public ICommand {
         req.set_include_mailbox(true);
         req.set_include_rate_limiter(true);
 
-        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+        auto reply = cli ? cli->inspect(target_id, req)
                          : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -493,7 +493,7 @@ class ActorAdmissionCommand final : public ICommand {
         req.set_include_mailbox(true);
         req.set_include_admission(true);
 
-        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+        auto reply = cli ? cli->inspect(target_id, req)
                          : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -548,7 +548,7 @@ class ActorDeliveryCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_include_mailbox(true);
 
-        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+        auto reply = cli ? cli->inspect(target_id, req)
                          : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -606,7 +606,7 @@ class ActorDeliveryStatsCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_include_mailbox(true);
 
-        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+        auto reply = cli ? cli->inspect(target_id, req)
                          : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str +
@@ -691,7 +691,7 @@ class ActorLinksCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_include_state(true);
 
-        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+        auto reply = cli ? cli->inspect(target_id, req)
                          : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str);
@@ -743,7 +743,7 @@ class ActorBackpressureCommand final : public ICommand {
         req.set_target_actor_id(target_id.value());
         req.set_include_mailbox(true);
 
-        auto reply = cli ? cli->send_and_wait_inspect(target_id, req)
+        auto reply = cli ? cli->inspect(target_id, req)
                          : cli_srv->send_and_wait_inspect(target_id, req);
         if (!reply) {
             ctx.output->error("No response from actor " + *id_str);

@@ -21,7 +21,11 @@
 #include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/fault/fault_macros.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/mem/memory_region.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
 
 #include <chrono>
 #include <cstdio>
@@ -59,6 +63,9 @@ CliActor::CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& conf
         [](const std::string& text) { printf("%s", text.c_str()); },
         config_.page_size);
     session_->set_cli_actor(this);
+    session_->set_command_host(this);
+    session_->set_system_host(this);
+    session_->set_lifecycle_host(this);
 }
 
 void CliActor::on_daemon_start() {
@@ -104,8 +111,8 @@ CliActor::poll_for_response(TypeTag expected_tag, std::chrono::milliseconds time
 // ---------------------------------------------------------------------------
 
 std::optional<InspectStateReply>
-CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
-                                std::chrono::milliseconds timeout) {
+CliActor::inspect(ActorId target, const InspectStateRequest& req,
+                  std::chrono::milliseconds timeout) {
     // Self-inspection: when the target is the CliActor itself, build the
     // reply inline instead of sending to our own mailbox and deadlocking
     // in poll_for_response() — the daemon thread is the only consumer of
@@ -154,9 +161,8 @@ CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
     return safe_reply;
 }
 
-std::optional<KillReply>
-CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
-                             std::chrono::milliseconds timeout) {
+std::optional<KillReply> CliActor::kill(ActorId target, const KillRequest& req,
+                                        std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -190,8 +196,8 @@ CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
 }
 
 std::optional<QuarantineReply>
-CliActor::send_and_wait_quarantine(ActorId target, const QuarantineRequest& req,
-                                   std::chrono::milliseconds timeout) {
+CliActor::quarantine(ActorId target, const QuarantineRequest& req,
+                     std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -306,7 +312,7 @@ CliActor::build_self_inspect_reply(const InspectStateRequest& req) {
 // Actor enumeration — iterates the system actor map under lock.
 // ---------------------------------------------------------------------------
 
-std::vector<ActorMeta> CliActor::enumerate_actors(const std::string& filter) {
+std::vector<ActorMeta> CliActor::enumerate(std::string_view filter) {
     std::vector<ActorMeta> result;
     system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
         if (!filter.empty()) {
@@ -362,6 +368,131 @@ bool CliActor::run_once() {
         return false;
     }
     return true;
+}
+
+// ---------------------------------------------------------------------------
+// ISystemCliHost interface
+// ---------------------------------------------------------------------------
+
+void CliActor::render_system_stats(OutputFormatter& output) {
+    output.header("System Statistics");
+    std::map<std::string, std::string> kv;
+    kv["Total actors"] = std::to_string(system_.actor_count());
+    if (auto* sched = system_.scheduler()) {
+        kv["Scheduler threads"] = std::to_string(sched->worker_count());
+    }
+    kv["CLI enabled"] = config_.enabled ? "yes" : "no";
+    kv["CLI format"] = config_.default_format;
+    output.key_value(kv);
+}
+
+void CliActor::render_memory_stats(OutputFormatter& output) {
+    output.header("Memory Regions");
+    auto& reg = mem::MemoryRegionRegistry::instance();
+    std::vector<std::string> cols = {"Region",     "Active", "Limit",
+                                     "Pressure",   "Allocs", "Frees",
+                                     "Corruptions"};
+    std::vector<std::vector<std::string>> rows;
+    static constexpr mem::RegionType kRegions[] = {
+        mem::RegionType::kActor,     mem::RegionType::kMessage,
+        mem::RegionType::kCoroutine, mem::RegionType::kNetwork,
+        mem::RegionType::kInternal,  mem::RegionType::kHibernate};
+    for (auto region : kRegions) {
+        auto snap = reg.snapshot(region);
+        rows.push_back({
+            mem::to_string(region),
+            std::to_string(snap.active_bytes),
+            std::to_string(snap.limit.hard_limit_bytes),
+            mem::to_string(snap.pressure),
+            std::to_string(snap.alloc_count),
+            std::to_string(snap.free_count),
+            std::to_string(snap.corruption_events),
+        });
+    }
+    output.table(cols, rows);
+}
+
+void CliActor::render_fault_status(OutputFormatter& output) {
+    output.header("Fault Injection Status");
+    auto& fc = system_.fault_controller();
+    if (!fc.is_enabled()) {
+        output.raw("Fault injection is disabled.\n");
+        return;
+    }
+    std::map<std::string, std::string> kv;
+    kv["Enabled"] = "yes";
+    kv["Seed"] = std::to_string(fc.replay_seed());
+    kv["Hooks triggered"] = std::to_string(fc.faults_fired());
+    output.key_value(kv);
+}
+
+void CliActor::render_dlq_list(OutputFormatter& output, std::string_view filter) {
+    output.header("Dead Letter Queue");
+    auto* dlq = system_.dead_letter_queue();
+    if (!dlq) {
+        output.raw("DLQ is not configured.\n");
+        return;
+    }
+    auto records = dlq->snapshot_records();
+    if (records.empty()) {
+        output.raw("DLQ is empty.\n");
+        return;
+    }
+    std::vector<std::string> cols = {"#", "Actor", "Reason", "Source", "Age"};
+    std::vector<std::vector<std::string>> rows;
+    for (size_t i = 0; i < records.size(); ++i) {
+        auto& r = records[i];
+        if (!filter.empty()) {
+            std::string aid = std::to_string(r.target.id.value());
+            if (aid.find(filter) == std::string::npos)
+                continue;
+        }
+        rows.push_back({
+            std::to_string(i),
+            std::to_string(r.target.id.value()),
+            mailbox::to_string(r.reason),
+            mailbox::to_string(r.source),
+            std::to_string(r.timestamp_ns / 1'000'000) + "ms",
+        });
+    }
+    output.table(cols, rows);
+}
+
+result<void> CliActor::dlq_replay(uint32_t index, ActorId target) {
+    auto* dlq = system_.dead_letter_queue();
+    if (!dlq)
+        return result<void>::make(
+            error(errors::actor_not_found, "DLQ not configured"));
+
+    mailbox::DeadLetterRecord record;
+    if (!dlq->try_pop_at(index, record))
+        return result<void>::make(
+            error(errors::invalid_argument, "DLQ index out of range"));
+
+    // Reconstruct and re-deliver the message from the dead-letter record.
+    TypedMessage msg(record.type_tag, std::move(record.payload_sample));
+    msg.set_sender_address(address());
+    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+    if (!enqueue_result.accepted())
+        return result<void>::make(
+            error(errors::mailbox_full, "replay delivery failed"));
+
+    return result<void>::make();
+}
+
+// ---------------------------------------------------------------------------
+// ILifecycleCliHost interface
+// ---------------------------------------------------------------------------
+
+result<void> CliActor::drain() {
+    // Initiate ingress drain: stop accepting new work while completing
+    // in-flight messages.  Delegates to shutdown() which drives the full
+    // phase machine through drain, cluster-leave, telemetry-flush, and stop.
+    return system_.shutdown();
+}
+
+result<void> CliActor::shutdown() {
+    return system_.shutdown();
 }
 
 } // namespace cli
