@@ -15,6 +15,7 @@
 #pragma once
 
 #include <cstddef>
+#include <cstdint>
 #include <string>
 #include <utility>
 #include <vector>
@@ -61,6 +62,95 @@ std::vector<std::string> parse_json_string_array(const std::string& arr);
 /// `{"k1":"v1","k2":"v2"}`.
 std::vector<std::pair<std::string, std::string>>
 parse_json_string_map(const std::string& obj);
+
+// ── Declarative JSON Builder ────────────────────────────────────────
+
+/// \brief Declarative, chainable JSON builder that produces valid JSON
+/// without manual string concatenation.
+///
+/// Start building with JsonBuilder::root_object(), then chain field(),
+/// object(), array(), element(), and null_field() calls. Close nested
+/// structures with end_object() / end_array(). Call build() to retrieve
+/// the final JSON string, or reset() to clear and reuse the builder.
+///
+/// String values are automatically escaped via json_escape().
+class JsonBuilder {
+  public:
+    /// \brief Create a builder starting at the root object `{`.
+    static JsonBuilder root_object();
+
+    // ── Structure open (keyed) ──────────────────────────────────────
+
+    /// \brief Open a nested object with the given key: `"key": {`.
+    JsonBuilder& object(const char* key);
+
+    /// \brief Open a nested array with the given key: `"key": [`.
+    JsonBuilder& array(const char* key);
+
+    // ── Structure open (unkeyed, for array elements) ─────────────────
+
+    /// \brief Open a nested object (no key): `{`.
+    JsonBuilder& object();
+
+    /// \brief Open a nested array (no key): `[`.
+    JsonBuilder& array();
+
+    // ── Structure close ──────────────────────────────────────────────
+
+    /// \brief Close the innermost object: `}`.
+    JsonBuilder& end_object();
+
+    /// \brief Close the innermost array: `]`.
+    JsonBuilder& end_array();
+
+    // ── Leaf fields (keyed) ──────────────────────────────────────────
+
+    JsonBuilder& field(const char* key, const std::string& v);
+    JsonBuilder& field(const char* key, uint64_t v);
+    JsonBuilder& field(const char* key, int64_t v);
+    JsonBuilder& field(const char* key, uint32_t v);
+    JsonBuilder& field(const char* key, int32_t v);
+    JsonBuilder& field(const char* key, double v);
+    JsonBuilder& field(const char* key, bool v);
+
+    /// \brief Emit `"key": null`.
+    JsonBuilder& null_field(const char* key);
+
+    // ── Array elements (unkeyed) ─────────────────────────────────────
+
+    JsonBuilder& element(const std::string& v);
+    JsonBuilder& element(uint64_t v);
+    JsonBuilder& element(double v);
+    JsonBuilder& element(bool v);
+
+    // ── Finalize ─────────────────────────────────────────────────────
+
+    /// \brief Return the built JSON string, auto-closing any open
+    /// structures.
+    std::string build();
+
+    /// \brief Reset the builder to its initial empty state.
+    void reset();
+
+  private:
+    struct StackFrame {
+        enum Kind { kObject, kArray };
+        Kind kind;
+        bool needs_comma = false;
+    };
+
+    std::string buf_;
+    std::vector<StackFrame> stack_;
+
+    /// \brief Insert a comma if the current frame already has a value.
+    void pre_value();
+
+    /// \brief Emit `"key":` into the buffer.
+    void emit_key(const char* key);
+
+    /// \brief Emit a JSON-escaped string value: `"<escaped>"`.
+    void emit_string(const std::string& v);
+};
 
 } // namespace adt
 } // namespace hpactor

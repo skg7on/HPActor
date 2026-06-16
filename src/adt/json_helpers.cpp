@@ -14,6 +14,7 @@
 
 #include <hpactor/adt/json_helpers.hpp>
 
+#include <sstream>
 #include <string>
 #include <utility>
 #include <vector>
@@ -262,6 +263,197 @@ parse_json_string_map(const std::string& obj) {
         ++pos;
     }
     return result;
+}
+
+// ---------------------------------------------------------------------------
+// Declarative JSON Builder
+// ---------------------------------------------------------------------------
+
+JsonBuilder JsonBuilder::root_object() {
+    JsonBuilder b;
+    b.buf_ += '{';
+    b.stack_.push_back({StackFrame::kObject, false});
+    return b;
+}
+
+JsonBuilder& JsonBuilder::object(const char* key) {
+    pre_value();
+    emit_key(key);
+    buf_ += '{';
+    stack_.push_back({StackFrame::kObject, false});
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::array(const char* key) {
+    pre_value();
+    emit_key(key);
+    buf_ += '[';
+    stack_.push_back({StackFrame::kArray, false});
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::object() {
+    pre_value();
+    buf_ += '{';
+    stack_.push_back({StackFrame::kObject, false});
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::array() {
+    pre_value();
+    buf_ += '[';
+    stack_.push_back({StackFrame::kArray, false});
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::end_object() {
+    buf_ += '}';
+    stack_.pop_back();
+    if (!stack_.empty()) {
+        stack_.back().needs_comma = true;
+    }
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::end_array() {
+    buf_ += ']';
+    stack_.pop_back();
+    if (!stack_.empty()) {
+        stack_.back().needs_comma = true;
+    }
+    return *this;
+}
+
+// ── Leaf fields (keyed) ──────────────────────────────────────────────
+
+JsonBuilder& JsonBuilder::field(const char* key, const std::string& v) {
+    pre_value();
+    emit_key(key);
+    emit_string(v);
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::field(const char* key, uint64_t v) {
+    pre_value();
+    emit_key(key);
+    buf_ += std::to_string(v);
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::field(const char* key, int64_t v) {
+    pre_value();
+    emit_key(key);
+    buf_ += std::to_string(v);
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::field(const char* key, uint32_t v) {
+    pre_value();
+    emit_key(key);
+    buf_ += std::to_string(v);
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::field(const char* key, int32_t v) {
+    pre_value();
+    emit_key(key);
+    buf_ += std::to_string(v);
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::field(const char* key, double v) {
+    pre_value();
+    emit_key(key);
+    std::ostringstream oss;
+    oss << v;
+    buf_ += oss.str();
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::field(const char* key, bool v) {
+    pre_value();
+    emit_key(key);
+    buf_ += v ? "true" : "false";
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::null_field(const char* key) {
+    pre_value();
+    emit_key(key);
+    buf_ += "null";
+    return *this;
+}
+
+// ── Array elements (unkeyed) ─────────────────────────────────────────
+
+JsonBuilder& JsonBuilder::element(const std::string& v) {
+    pre_value();
+    emit_string(v);
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::element(uint64_t v) {
+    pre_value();
+    buf_ += std::to_string(v);
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::element(double v) {
+    pre_value();
+    std::ostringstream oss;
+    oss << v;
+    buf_ += oss.str();
+    return *this;
+}
+
+JsonBuilder& JsonBuilder::element(bool v) {
+    pre_value();
+    buf_ += v ? "true" : "false";
+    return *this;
+}
+
+// ── Finalize ─────────────────────────────────────────────────────────
+
+std::string JsonBuilder::build() {
+    // Auto-close all remaining open structures.
+    while (!stack_.empty()) {
+        if (stack_.back().kind == StackFrame::kObject) {
+            buf_ += '}';
+        } else {
+            buf_ += ']';
+        }
+        stack_.pop_back();
+    }
+    return buf_;
+}
+
+void JsonBuilder::reset() {
+    buf_.clear();
+    stack_.clear();
+}
+
+// ── Private helpers ──────────────────────────────────────────────────
+
+void JsonBuilder::pre_value() {
+    if (!stack_.empty()) {
+        if (stack_.back().needs_comma) {
+            buf_ += ',';
+            stack_.back().needs_comma = false;
+        }
+        stack_.back().needs_comma = true;
+    }
+}
+
+void JsonBuilder::emit_key(const char* key) {
+    buf_ += '"';
+    buf_ += key;
+    buf_ += "\":";
+}
+
+void JsonBuilder::emit_string(const std::string& v) {
+    buf_ += '"';
+    buf_ += json_escape(v);
+    buf_ += '"';
 }
 
 } // namespace adt
