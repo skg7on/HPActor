@@ -32,6 +32,8 @@
 #include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_types.hpp>
 
+#include "handlers/cli_http_handler_helpers.hpp"
+
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -41,6 +43,16 @@
 
 namespace hpactor {
 namespace cli {
+
+// ── Forward declarations for handler functions ─────────────────────────
+// (defined in src/cli/handlers/*.cpp)
+namespace handlers {} // namespace handlers
+
+// ── Route table PIMPL ──────────────────────────────────────────────────
+
+struct CliHttpServerActor::RouteTable {
+    std::vector<RouteEntry> routes;
+};
 
 // ---------------------------------------------------------------------------
 // Minimal JSON helpers (no protobuf JSON util dependency)
@@ -194,6 +206,7 @@ CliHttpServerActor::~CliHttpServerActor() = default;
 
 void CliHttpServerActor::on_daemon_start() {
     build_command_tree();
+    init_routes();
 
     if (!gateway_->listen(config_.http_port, config_.http_bind_address)) {
         std::fprintf(stderr, "CliHttpServerActor: failed to listen on %s:%u\n",
@@ -206,7 +219,7 @@ void CliHttpServerActor::on_daemon_start() {
 
     gateway_->set_request_handler(
         [this](net::HTTPConnection* conn, net::HttpRequest&& req) {
-            on_http_request(conn, std::move(req));
+            dispatch_route(conn, std::move(req));
         });
 
     gateway_->set_max_connections(config_.max_connections);
@@ -239,105 +252,32 @@ void CliHttpServerActor::build_command_tree() {
 }
 
 // ---------------------------------------------------------------------------
-// HTTP request handler
+// HTTP route dispatch
 // ---------------------------------------------------------------------------
 
-void CliHttpServerActor::on_http_request(net::HTTPConnection* conn,
-                                         net::HttpRequest&& req) {
-    // Only handle POST /cli
-    if (req.method != net::HttpMethod::POST || req.path != "/cli") {
-        std::string msg = "Not Found";
-        StreamBuffer body_buf(
-            reinterpret_cast<const uint8_t*>(msg.data()),
-            reinterpret_cast<const uint8_t*>(msg.data() + msg.size()));
-        conn->send_response(net::HttpStatusCode::NotFound,
-                            {{"Content-Type", "text/plain"}}, body_buf);
-        return;
-    }
+void CliHttpServerActor::init_routes() {
+    route_table_ = std::make_unique<RouteTable>();
+    route_table_->routes = {
+        // Routes populated in subsequent tasks
+    };
+}
 
-    // Extract body text
-    std::string body_str(reinterpret_cast<const char*>(req.body.data()),
-                         req.body.size());
-
-    // Parse JSON body → CliCommand
-    hpactor::cli::CliCommand cmd;
-    if (!parse_cli_command_json(body_str, cmd)) {
-        hpactor::cli::CliResponse err_resp;
-        err_resp.set_content_type("text/plain");
-        err_resp.set_payload("Invalid JSON in request body");
-        err_resp.set_is_error(true);
-        err_resp.set_error_code(400);
-        err_resp.set_is_structured(false);
-        send_json_response(conn, net::HttpStatusCode::BadRequest, err_resp);
-        return;
-    }
-
-    // Reconstruct command line from CliCommand fields.
-    // Path uses "/" as separator: "actor/42/show" → tokens "actor 42 show".
-    std::string cmd_line = "/";
-    if (!cmd.path().empty()) {
-        for (char c : cmd.path()) {
-            if (c == '/')
-                cmd_line += ' ';
-            else
-                cmd_line += c;
+void CliHttpServerActor::dispatch_route(net::HTTPConnection* conn,
+                                        net::HttpRequest&& req) {
+    for (const auto& route : route_table_->routes) {
+        if (route.method != req.method)
+            continue;
+        req.path_params.clear();
+        if (match_route_pattern(route.pattern, req.path, req.path_params)) {
+            route.handler(this, conn, std::move(req));
+            return;
         }
     }
 
-    // Params: map of captured <param> values and --flags.
-    for (const auto& [key, value] : cmd.params()) {
-        if (value == "true") {
-            cmd_line += " --" + key;
-        } else {
-            cmd_line += " --" + key + " " + value;
-        }
-    }
-
-    // Format: explicit --format flag.
-    std::string format = cmd.format();
-    if (!format.empty()) {
-        cmd_line += " --format " + format;
-    }
-
-    // Positional args.
-    for (const auto& arg : cmd.args()) {
-        cmd_line += " " + arg;
-    }
-
-    // Determine content_type for the CliResponse payload.
-    std::string content_type = "text/plain";
-    if (format == "json") {
-        content_type = "application/json";
-    }
-
-    // Execute the command via CliSession.
-    std::string output;
-    {
-        auto session = std::make_unique<CliSession>(
-            &system_, command_tree_.get(),
-            OutputFormatter::create(config_.default_format),
-            [&output](const std::string& text) { output = text; },
-            config_.page_size);
-        session->set_system_host(this);
-        session->set_lifecycle_host(this);
-
-        session->process_line(cmd_line);
-    }
-
-    // Strip trailing newline appended by process_line.
-    if (!output.empty() && output.back() == '\n') {
-        output.pop_back();
-    }
-
-    // Build JSON CliResponse.
-    hpactor::cli::CliResponse resp;
-    resp.set_content_type(content_type);
-    resp.set_payload(output);
-    resp.set_is_error(false);
-    resp.set_error_code(0);
-    resp.set_is_structured(false);
-
-    send_json_response(conn, net::HttpStatusCode::OK, resp);
+    // No route matched
+    send_error(conn, net::HttpStatusCode::NotFound, "NOT_FOUND",
+               std::string(net::to_string(req.method)) + " " + req.path +
+                   " has no handler");
 }
 
 // ---------------------------------------------------------------------------

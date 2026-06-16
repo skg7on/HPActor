@@ -99,7 +99,13 @@ class CliHttpServerActor : public DaemonActor,
 
   private:
     void build_command_tree();
-    void on_http_request(net::HTTPConnection* conn, struct net::HttpRequest&& req);
+    void dispatch_route(net::HTTPConnection* conn, net::HttpRequest&& req);
+    void init_routes();
+
+    // PIMPL for route table storage (avoids exposing src/cli/handlers types
+    // in this public header).
+    struct RouteTable;
+    std::unique_ptr<RouteTable> route_table_;
 
     ActorSystem& system_;
     CliHttpServerConfig config_;
