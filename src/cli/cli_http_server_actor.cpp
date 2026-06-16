@@ -55,141 +55,6 @@ struct CliHttpServerActor::RouteTable {
 };
 
 // ---------------------------------------------------------------------------
-// Minimal JSON helpers (no protobuf JSON util dependency)
-// ---------------------------------------------------------------------------
-
-/// Alias ADT helpers into the anonymous namespace so the protobuf-aware
-/// parse/serialize functions below can call them without qualification.
-namespace {
-
-using adt::extract_json_array_raw;
-using adt::extract_json_object_raw;
-using adt::extract_json_string;
-using adt::json_escape;
-using adt::parse_json_string_array;
-using adt::parse_json_string_map;
-using adt::skip_json_ws;
-
-/// Parse a JSON object to populate a CliCommand's fields.
-/// Returns true on success, false on parse failure.
-bool parse_cli_command_json(const std::string& json, hpactor::cli::CliCommand& cmd) {
-    size_t pos = 0;
-    pos = skip_json_ws(json, pos);
-    if (pos >= json.size() || json[pos] != '{')
-        return false;
-    ++pos;
-
-    std::string current_key;
-    while (pos < json.size()) {
-        pos = skip_json_ws(json, pos);
-        if (pos >= json.size())
-            break;
-        if (json[pos] == '}') {
-            ++pos;
-            break;
-        }
-        if (json[pos] == ',') {
-            ++pos;
-            current_key.clear();
-            continue;
-        }
-        if (json[pos] == '"' && current_key.empty()) {
-            // Reading a key
-            current_key = extract_json_string(json, pos);
-            pos = skip_json_ws(json, pos);
-            if (pos < json.size() && json[pos] == ':')
-                ++pos;
-            pos = skip_json_ws(json, pos);
-            if (pos >= json.size())
-                break;
-
-            if (current_key == "path") {
-                if (json[pos] == '"') {
-                    cmd.set_path(extract_json_string(json, pos));
-                }
-                current_key.clear();
-            } else if (current_key == "format") {
-                if (json[pos] == '"') {
-                    cmd.set_format(extract_json_string(json, pos));
-                }
-                current_key.clear();
-            } else if (current_key == "params") {
-                if (json[pos] == '{') {
-                    auto obj_raw = extract_json_object_raw(json, pos);
-                    auto pairs = parse_json_string_map(obj_raw);
-                    auto* params_map = cmd.mutable_params();
-                    for (auto& [k, v] : pairs) {
-                        (*params_map)[k] = v;
-                    }
-                }
-                current_key.clear();
-            } else if (current_key == "args") {
-                if (json[pos] == '[') {
-                    auto arr_raw = extract_json_array_raw(json, pos);
-                    auto values = parse_json_string_array(arr_raw);
-                    for (auto& v : values) {
-                        cmd.add_args(std::move(v));
-                    }
-                }
-                current_key.clear();
-            } else {
-                // Skip unknown field
-                if (json[pos] == '"') {
-                    skip_json_ws(json, pos); // dummy — extract_json_string
-                                             // advances
-                    // Reset pos to where we were, then skip the value
-                }
-                // Skip the value (string, object, array, or literal)
-                if (pos < json.size() && json[pos] == '"') {
-                    extract_json_string(json, pos);
-                } else if (pos < json.size() && json[pos] == '{') {
-                    extract_json_object_raw(json, pos);
-                } else if (pos < json.size() && json[pos] == '[') {
-                    extract_json_array_raw(json, pos);
-                } else {
-                    // Skip literal (number, true, false, null)
-                    while (pos < json.size() && json[pos] != ',' &&
-                           json[pos] != '}') {
-                        ++pos;
-                    }
-                }
-                current_key.clear();
-            }
-        } else {
-            // Unexpected; skip one character
-            ++pos;
-        }
-    }
-    return true;
-}
-
-/// Serialize a CliResponse to a JSON string.
-std::string serialize_cli_response_json(const hpactor::cli::CliResponse& resp) {
-    std::string json;
-    json = "{";
-    json += "\"content_type\":\"" + json_escape(resp.content_type()) + "\",";
-    json += "\"payload\":\"" + json_escape(resp.payload()) + "\",";
-    json += "\"is_error\":" + std::string(resp.is_error() ? "true" : "false") + ",";
-    json += "\"error_code\":" + std::to_string(resp.error_code()) + ",";
-    json += "\"is_structured\":" +
-            std::string(resp.is_structured() ? "true" : "false");
-    json += "}";
-    return json;
-}
-
-/// Send a JSON CliResponse as an HTTP response.
-void send_json_response(net::HTTPConnection* conn, net::HttpStatusCode http_code,
-                        const hpactor::cli::CliResponse& resp) {
-    std::string json_out = serialize_cli_response_json(resp);
-    StreamBuffer body_buf(
-        reinterpret_cast<const uint8_t*>(json_out.data()),
-        reinterpret_cast<const uint8_t*>(json_out.data() + json_out.size()));
-    conn->send_response(http_code, {{"Content-Type", "application/json"}}, body_buf);
-}
-
-} // anonymous namespace
-
-// ---------------------------------------------------------------------------
 // Construction / destruction
 // ---------------------------------------------------------------------------
 
@@ -260,6 +125,12 @@ void CliHttpServerActor::init_routes() {
     route_table_->routes = {
         // Routes populated in subsequent tasks
     };
+
+    // Legacy backward compat (Phase 1 only)
+    if (config_.legacy_cli_endpoint) {
+        route_table_->routes.push_back(
+            {net::HttpMethod::POST, "/cli", handlers::handle_legacy_post_cli});
+    }
 }
 
 void CliHttpServerActor::dispatch_route(net::HTTPConnection* conn,

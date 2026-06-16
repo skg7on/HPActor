@@ -204,6 +204,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/log_commands.cpp
     cli/commands/scheduler_commands.cpp
     cli/handlers/cli_http_handler_helpers.cpp
+    cli/handlers/cli_http_legacy_handler.cpp
 )
 
 # ---- AI accelerator subsystem (compile-time gate, runtime opt-in) -----------
