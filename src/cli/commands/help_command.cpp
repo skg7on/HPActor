@@ -14,6 +14,7 @@
 
 #include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/cli_server_actor.hpp>
+#include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 

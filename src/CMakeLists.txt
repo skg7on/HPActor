@@ -179,6 +179,8 @@ target_sources(hpactor_lib PRIVATE
     cli/json_formatter.cpp
     cli/tabular_formatter.cpp
     cli/pager.cpp
+    cli/interactive_cli_actor.cpp
+    cli/cli_connector.cpp
     cli/cli_actor.cpp
     cli/cli_session.cpp
     cli/cli_server_actor.cpp

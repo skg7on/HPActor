@@ -14,24 +14,17 @@
 
 #include <hpactor/cli.pb.h>
 #include <hpactor/cli/cli_client_actor.hpp>
+#include <hpactor/cli/cli_connector.hpp>
 #include <hpactor/cli/cli_session.hpp>
-#include <hpactor/cli/command_node.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/command_tree_builder.hpp>
-#include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/types/types.hpp>
 
-#include <arpa/inet.h>
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
-#include <cstring>
-#include <netinet/in.h>
-#include <sys/socket.h>
-#include <sys/un.h>
 #include <thread>
 #include <unistd.h>
 
@@ -44,146 +37,97 @@ namespace cli {
 
 CliClientActor::CliClientActor(ActorContext* ctx, ActorSystem& system,
                                const CliClientConfig& config)
-    : DaemonActor(ctx, system), system_(system), config_(config) {}
+    : InteractiveCliActor(ctx, system), config_(config) {}
 
 CliClientActor::~CliClientActor() = default;
 
 // ---------------------------------------------------------------------------
-// DaemonActor
+// InteractiveCliActor virtual hooks
 // ---------------------------------------------------------------------------
 
-static std::string resolve_history_path(const CliClientConfig& config) {
-    if (!config.history_path.empty())
-        return config.history_path;
+void CliClientActor::print_greeting() {
+    printf("HPActor Remote CLI -- Connected.  Type /help for commands, /quit to "
+           "exit.\n\n");
+}
+
+void CliClientActor::print_farewell() {
+    printf("\n[Remote CLI session ended]\n");
+}
+
+std::string CliClientActor::get_history_path() {
+    if (!config_.history_path.empty())
+        return config_.history_path;
     const char* home = getenv("HOME");
     if (!home)
         home = "/tmp";
     return std::string(home) + "/.hpactor_cli_history";
 }
 
-void CliClientActor::on_daemon_start() {
-    // Build command tree from registry (same tree as server-side)
-    command_tree_ = std::make_unique<CommandNode>("/", "CLI root");
-    build_command_tree_from_registry(*command_tree_);
-
-    LineEditorConfig editor_cfg;
-    editor_cfg.history_path = resolve_history_path(config_);
-    editor_cfg.history_max = config_.history_max;
-    editor_cfg.multiline = false;
-    line_editor_ = std::make_unique<LineEditor>(editor_cfg, command_tree_.get());
-    line_editor_->load_history();
-
-    session_ = std::make_unique<CliSession>(
-        &system_, command_tree_.get(),
-        OutputFormatter::create(config_.default_format),
-        [](const std::string& text) { printf("%s", text.c_str()); }, 50);
-    session_->set_command_host(this);
-    session_->set_system_host(this);
-    session_->set_lifecycle_host(this);
-
-    printf("HPActor Remote CLI -- Connected.  Type /help for commands, /quit to exit.\n\n");
+uint32_t CliClientActor::get_history_max() {
+    return config_.history_max;
 }
 
-void CliClientActor::on_daemon_stop() {
-    disconnect();
-    if (line_editor_)
-        line_editor_->save_history();
-    printf("\n[Remote CLI session ended]\n");
+std::string CliClientActor::get_default_format() {
+    return config_.default_format;
 }
 
-bool CliClientActor::run_once() {
+uint32_t CliClientActor::get_page_size() {
+    return 50;
+}
+
+bool CliClientActor::pre_input_hook() {
     if (exec_mode_) {
         connect();
-        if (!conn_) {
+        if (conn_fd_ < 0) {
             printf("Error: could not connect to server\n");
             return false;
         }
         session_->process_line(exec_cmd_);
         disconnect();
-        return false;
+        return false; // exit after exec
     }
 
-    if (!conn_) {
+    if (conn_fd_ < 0) {
         connect();
-        if (!conn_) {
+        if (conn_fd_ < 0) {
             printf("Waiting for connection... (retrying in 1s)\n");
             std::this_thread::sleep_for(std::chrono::seconds(1));
-            return running_;
+            return running_; // keep retrying
         }
     }
+    return true;
+}
 
-    std::string line = line_editor_->readline("hpactor> ");
-    if (line.empty()) {
-        if (std::feof(stdin)) {
-            printf("\nGoodbye.\n");
-            running_ = false;
-            return false;
-        }
-        return true;
-    }
-
-    line_editor_->add_history(line);
-    if (!session_->process_line(line)) {
-        running_ = false;
-        return false;
-    }
-    return running_;
+void CliClientActor::pre_stop_hook() {
+    disconnect();
 }
 
 // ---------------------------------------------------------------------------
-// Connection management
+// Connection management — delegates to CliConnector for async connect
 // ---------------------------------------------------------------------------
 
 void CliClientActor::connect() {
+    if (conn_fd_ >= 0)
+        return; // already connected
+
     if (config_.transport == CliClientConfig::Transport::HttpJson) {
-        // HTTP JSON mode: single connection per request (stateless).
-        // For interactive, connect on each command.
-        return;
+        return; // HTTP JSON mode is deferred
     }
 
-    // Protobuf binary mode: use a raw TCP/UDS socket managed directly.
-    // ConnectionPool is designed for actor-to-actor messaging and expects
-    // Frame-encoded protobuf with target addressing.  The CLI client sends
-    // CliCommand protobuf directly with varint-length prefix framing.
-    int fd = -1;
     if (!config_.host.empty()) {
-        fd = socket(AF_INET, SOCK_STREAM, 0);
-        if (fd < 0)
-            return;
-        struct sockaddr_in addr{};
-        addr.sin_family = AF_INET;
-        addr.sin_port = htons(config_.port);
-        if (inet_pton(AF_INET, config_.host.c_str(), &addr.sin_addr) != 1) {
-            ::close(fd);
-            return;
-        }
-        if (::connect(fd, reinterpret_cast<struct sockaddr*>(&addr),
-                      sizeof(addr)) < 0) {
-            ::close(fd);
-            return;
-        }
+        conn_fd_ = CliConnector::connect_tcp(config_.host, config_.port,
+                                             config_.connect_timeout);
     } else {
-        fd = socket(AF_UNIX, SOCK_STREAM, 0);
-        if (fd < 0)
-            return;
-        struct sockaddr_un addr{};
-        addr.sun_family = AF_UNIX;
-        strncpy(addr.sun_path, config_.uds_path.c_str(), sizeof(addr.sun_path) - 1);
-        if (::connect(fd, reinterpret_cast<struct sockaddr*>(&addr),
-                      sizeof(addr)) < 0) {
-            ::close(fd);
-            return;
-        }
+        conn_fd_ =
+            CliConnector::connect_uds(config_.uds_path, config_.connect_timeout);
     }
-    conn_ = reinterpret_cast<net::Connection*>(static_cast<intptr_t>(fd));
 }
 
 void CliClientActor::disconnect() {
-    if (conn_) {
-        int fd = static_cast<int>(reinterpret_cast<intptr_t>(conn_));
-        ::shutdown(fd, SHUT_RDWR);
-        ::close(fd);
-        conn_ = nullptr;
+    if (conn_fd_ >= 0) {
+        ::shutdown(conn_fd_, SHUT_RDWR);
+        ::close(conn_fd_);
+        conn_fd_ = -1;
     }
 }
 
@@ -210,7 +154,7 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
     resp.set_is_error(true);
     resp.set_error_code(-1);
 
-    int fd = conn_ ? static_cast<int>(reinterpret_cast<intptr_t>(conn_)) : -1;
+    int fd = conn_fd_;
     if (fd < 0)
         return resp;
 
@@ -232,7 +176,6 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
             break; // error
         }
 
-        // Try to decode a frame from the accumulator
         if (accum.size() >= 1) {
             uint32_t msg_len = 0;
             unsigned shift = 0;
@@ -250,7 +193,6 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
                                         static_cast<int>(msg_len))) {
                     return resp;
                 }
-                // Parse failed — discard this frame and try again
                 accum.erase(0, pos + msg_len);
             }
         }
