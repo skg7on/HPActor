@@ -17,6 +17,7 @@
 #include <hpactor/adt/json_helpers.hpp>
 #include <hpactor/cli.pb.h>
 
+#include <hpactor/cli/cli_messages.pb.h>
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/command_tree_builder.hpp>
@@ -26,13 +27,16 @@
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_types.hpp>
 
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace hpactor {
@@ -454,6 +458,104 @@ result<void> CliHttpServerActor::drain() {
 
 result<void> CliHttpServerActor::shutdown() {
     return system_.shutdown();
+}
+
+// ---------------------------------------------------------------------------
+// ICliCommandHost interface
+// ---------------------------------------------------------------------------
+
+std::optional<InspectStateReply>
+CliHttpServerActor::inspect(ActorId target, const InspectStateRequest& req,
+                            std::chrono::milliseconds timeout) {
+    TypedMessage msg(TypeTag::InspectStateRequestTag, req);
+    msg.set_sender_address(address());
+
+    auto enq = system_.try_deliver_local(target, std::move(msg));
+    if (!enq.accepted())
+        return std::nullopt;
+
+    // Poll mailbox for reply with timeout
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        TypedMessage m;
+        if (mailbox()->try_pop(m)) {
+            if (m.type_id() == TypeTag::InspectStateResponseTag) {
+                auto reply = m.as<InspectStateReply>();
+                if (reply)
+                    return *reply;
+                return std::nullopt;
+            }
+            // Drop unrelated messages (e.g., scheduled timers)
+        }
+        std::this_thread::yield();
+    }
+    return std::nullopt;
+}
+
+std::optional<KillReply>
+CliHttpServerActor::kill(ActorId target, const KillRequest& req,
+                         std::chrono::milliseconds timeout) {
+    TypedMessage msg(TypeTag::KillRequestTag, req);
+    msg.set_sender_address(address());
+
+    auto enq = system_.try_deliver_local(target, std::move(msg));
+    if (!enq.accepted())
+        return std::nullopt;
+
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        TypedMessage m;
+        if (mailbox()->try_pop(m)) {
+            if (m.type_id() == TypeTag::KillResponseTag) {
+                auto reply = m.as<KillReply>();
+                if (reply)
+                    return *reply;
+                return std::nullopt;
+            }
+        }
+        std::this_thread::yield();
+    }
+    return std::nullopt;
+}
+
+std::optional<QuarantineReply>
+CliHttpServerActor::quarantine(ActorId target, const QuarantineRequest& req,
+                               std::chrono::milliseconds timeout) {
+    TypedMessage msg(TypeTag::QuarantineRequestTag, req);
+    msg.set_sender_address(address());
+
+    auto enq = system_.try_deliver_local(target, std::move(msg));
+    if (!enq.accepted())
+        return std::nullopt;
+
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        TypedMessage m;
+        if (mailbox()->try_pop(m)) {
+            if (m.type_id() == TypeTag::QuarantineResponseTag) {
+                auto reply = m.as<QuarantineReply>();
+                if (reply)
+                    return *reply;
+                return std::nullopt;
+            }
+        }
+        std::this_thread::yield();
+    }
+    return std::nullopt;
+}
+
+std::vector<ActorMeta> CliHttpServerActor::enumerate(std::string_view filter) {
+    std::vector<ActorMeta> result;
+    system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
+        auto meta = actor.to_metadata();
+        if (!filter.empty()) {
+            // Filter by type name substring match
+            if (meta.actor_type.find(filter) == std::string::npos)
+                return;
+        }
+        result.push_back(std::move(meta));
+    });
+    return result;
 }
 
 } // namespace cli

@@ -30,14 +30,15 @@ struct CommandNode;
 /// reconstructed command line through \c CliSession, and returns a
 /// JSON-encoded \c CliResponse.
 ///
-/// Implements \c ISystemCliHost and \c ILifecycleCliHost so that system-level
-/// commands (stats, memory, faults, DLQ, drain, shutdown) work over HTTP.
-/// Does \e not implement \c ICliCommandHost — HTTP clients use the command-tree
-/// path for all operations.
+/// Implements \c ICliCommandHost, \c ISystemCliHost, and \c ILifecycleCliHost
+/// so that actor-level operations (inspect, kill, quarantine, enumerate) and
+/// system-level commands (stats, memory, faults, DLQ, drain, shutdown) work
+/// over HTTP.
 ///
 /// \note Thread affinity: dedicated daemon thread via
 ///       \c DispatchPolicy::DedicatedThread.
 class CliHttpServerActor : public DaemonActor,
+                           public ICliCommandHost,
                            public ISystemCliHost,
                            public ILifecycleCliHost {
   public:
@@ -65,6 +66,32 @@ class CliHttpServerActor : public DaemonActor,
     // ILifecycleCliHost
     result<void> drain() override;
     result<void> shutdown() override;
+
+    // ICliCommandHost — synchronous request-response via mailbox polling
+    std::optional<InspectStateReply>
+    inspect(ActorId target, const InspectStateRequest& req,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
+
+    std::optional<KillReply>
+    kill(ActorId target, const KillRequest& req,
+         std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
+
+    std::optional<QuarantineReply>
+    quarantine(ActorId target, const QuarantineRequest& req,
+               std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
+
+    std::vector<ActorMeta> enumerate(std::string_view filter = "") override;
+
+    // Accessors for handlers
+    const CliHttpServerConfig& config() const {
+        return config_;
+    }
+    CommandNode* command_tree() {
+        return command_tree_.get();
+    }
+    ActorSystem& system() {
+        return system_;
+    }
 
     void request_shutdown() {
         running_ = false;
