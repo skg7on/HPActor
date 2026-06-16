@@ -500,10 +500,15 @@ std::vector<WorkerSnapshot> HybridScheduler::worker_snapshots() const {
         ws.cv_timeout_wakes = worker_threads_[i]->diag_cv_timeout_wakes();
         ws.thread_id = worker_threads_[i]->thread_id();
 
-        // Derive current idle model: polling (yield + short sleep) or
-        // cv (escalated to CV-based blocking).  diag_is_in_cv_model()
-        // uses the platform-specific kPollThreshold from worker_thread.cpp
-        // (4 on Linux / 0-yield, 8 on macOS / 4-yield).
+        // Adaptive backoff calibration diagnostics.
+        ws.calibration_yield_effective =
+            worker_threads_[i]->diag_yield_is_effective();
+        ws.calibration_min_sleep_ns = worker_threads_[i]->diag_min_sleep_ns();
+        ws.consecutive_empty_wakes =
+            worker_threads_[i]->diag_consecutive_empty_wakes();
+
+        // Derive current idle model from the in_cv_model_ flag,
+        // set by enter_cv_block() and cleared by process_work_item().
         ws.idle_model = worker_threads_[i]->diag_is_in_cv_model() ? "cv" : "polling";
 
         result.push_back(ws);

@@ -81,6 +81,11 @@ struct WorkerSnapshot {
     uint64_t cv_timeout_wakes{0};
     uint64_t thread_id{0};  ///< Hashed \c std::thread::id for display.
     std::string idle_model; ///< Current idle model: \c "polling" or \c "cv".
+
+    // Adaptive backoff calibration diagnostics
+    bool calibration_yield_effective{false};
+    uint32_t calibration_min_sleep_ns{0};
+    uint32_t consecutive_empty_wakes{0};
 };
 
 /// \brief Abstract interface for actor schedulers.
