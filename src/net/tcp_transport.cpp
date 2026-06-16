@@ -24,6 +24,7 @@
 #include <sys/socket.h>
 #include <sys/stat.h>
 #include <sys/un.h>
+#include <thread>
 #include <unistd.h>
 
 namespace hpactor {
@@ -448,6 +449,42 @@ std::string TcpTransport::derive_uds_path(const std::string& node_id) const {
             c = '_';
     }
     return "/tmp/hpactor/" + sanitized + ".sock";
+}
+
+// ---------------------------------------------------------------------------
+// Synchronous raw I/O helpers
+// ---------------------------------------------------------------------------
+
+bool TcpTransport::write_all(int fd, const void* data, size_t len) {
+    const auto* p = static_cast<const uint8_t*>(data);
+    size_t remaining = len;
+    while (remaining > 0) {
+        ssize_t n = ::write(fd, p, remaining);
+        if (n < 0) {
+            if (errno == EAGAIN || errno == EWOULDBLOCK)
+                continue;
+            return false;
+        }
+        remaining -= static_cast<size_t>(n);
+        p += n;
+    }
+    return true;
+}
+
+ssize_t TcpTransport::read_with_timeout(int fd, void* buf, size_t len,
+                                        std::chrono::milliseconds timeout) {
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        ssize_t n = ::read(fd, buf, len);
+        if (n > 0)
+            return n;
+        if (n == 0)
+            return 0; // EOF
+        if (errno != EAGAIN && errno != EWOULDBLOCK)
+            return -1;
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return -1; // timeout
 }
 
 } // namespace net

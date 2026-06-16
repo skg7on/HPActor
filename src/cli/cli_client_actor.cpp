@@ -21,12 +21,10 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/types/types.hpp>
 
-#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <thread>
-#include <unistd.h>
 
 namespace hpactor {
 namespace cli {
@@ -139,8 +137,8 @@ static void write_varint_prefixed(int fd, const std::string& data) {
         tmp >>= 7;
     }
     len_buf[len_bytes++] = static_cast<uint8_t>(tmp);
-    ::write(fd, len_buf, static_cast<size_t>(len_bytes));
-    ::write(fd, data.data(), data.size());
+    net::TcpTransport::write_all(fd, len_buf, static_cast<size_t>(len_bytes));
+    net::TcpTransport::write_all(fd, data.data(), data.size());
 }
 
 CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
@@ -156,18 +154,16 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
     std::string wire = cmd.SerializeAsString();
     write_varint_prefixed(fd, wire);
 
-    // Read: varint-length prefix + serialized CliResponse
+    // Read: varint-length prefix + serialized CliResponse via TcpTransport
     char read_buf[4096];
     std::string accum;
-    auto deadline = std::chrono::steady_clock::now() + config_.request_timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        ssize_t n = ::read(fd, read_buf, sizeof(read_buf));
+    while (true) {
+        ssize_t n = net::TcpTransport::read_with_timeout(
+            fd, read_buf, sizeof(read_buf), config_.request_timeout);
         if (n > 0) {
             accum.append(read_buf, static_cast<size_t>(n));
-        } else if (n == 0) {
-            break; // EOF
-        } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            break; // error
+        } else {
+            break; // EOF, error, or timeout
         }
 
         if (accum.size() >= 1) {
@@ -190,7 +186,6 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
                 accum.erase(0, pos + msg_len);
             }
         }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return resp;
 }
