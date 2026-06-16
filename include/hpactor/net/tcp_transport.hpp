@@ -25,6 +25,8 @@
 #include <hpactor/net/transport.hpp>
 #include <hpactor/net/wireframe_connection.hpp>
 
+#include <chrono>
+#include <string>
 #include <unordered_map>
 
 namespace hpactor {
@@ -90,6 +92,28 @@ class TcpTransport : public Transport {
     /// \param[in] buf Pointer to the system-wide metrics ring buffer.
     void
     set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf);
+
+    // ── Raw socket creation + async connect helpers ──────────────────
+    //
+    // Extracted so that non-Frame clients (e.g. CliConnector) can reuse
+    // the socket creation and non-blocking connect logic without the
+    // WireFrameConnection/TlsConnection/Pool wrapping that the full
+    // connect() methods apply.
+
+    /// \brief Create a TCP socket, set \c TCP_NODELAY and \c O_NONBLOCK,
+    ///        initiate \c ::connect(), and wait for the handshake to
+    ///        complete via the supplied \p loop.
+    ///
+    /// \return Connected fd (>= 0), or -1 on failure / timeout.
+    static int connect_raw_tcp(const std::string& host, uint16_t port,
+                               EventLoop& loop, std::chrono::milliseconds timeout);
+
+    /// \brief Create a Unix domain socket, set \c O_NONBLOCK, initiate
+    ///        \c ::connect(), and wait for completion via \p loop.
+    ///
+    /// \return Connected fd (>= 0), or -1 on failure / timeout.
+    static int connect_raw_uds(const std::string& path, EventLoop& loop,
+                               std::chrono::milliseconds timeout);
 
   private:
     void handle_accept(int client_fd, EndPoint remote_endpoint);
