@@ -48,6 +48,24 @@ class IActorReadyNotifier {
     ///                       \c INT64_MAX for no deadline.
     virtual void
     notify_ready(ActorId actor, uint8_t priority, int64_t deadline_ns) = 0;
+
+    /// \brief Notify that an actor has work and should be scheduled with EDF
+    ///        (Earliest Deadline First) semantics.
+    ///
+    /// The work item is placed in the worker's EDFQueue instead of the
+    /// priority ChaseLev deque.  Used for messages enqueued via
+    /// \c deliver_local_edf() or \c send_edf().
+    ///
+    /// \param[in] actor Actor ID.
+    /// \param[in] priority Priority level (used as a tiebreaker within the
+    ///                     same deadline bucket).
+    /// \param[in] deadline_ns Absolute deadline in nanoseconds. Must not
+    ///                       be \c INT64_MAX.
+    virtual void
+    notify_ready_edf(ActorId actor, uint8_t priority, int64_t deadline_ns) {
+        // Default: fall back to regular notify_ready (EDF-unaware schedulers).
+        notify_ready(actor, priority, deadline_ns);
+    }
 };
 
 /// \brief Narrow interface for timer scheduling and cancellation.

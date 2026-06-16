@@ -161,6 +161,20 @@ class ActorContext {
                            uint8_t priority, int64_t deadline_ns,
                            mailbox::DeliveryOptions options = {});
 
+    /// \brief Send a message with EDF scheduling semantics.
+    ///
+    /// The target actor's work item is placed in the scheduler's EDF queue
+    /// and dispatched in earliest-deadline-first order.  For local targets
+    /// delegates to \c ActorSystem::deliver_local_edf().
+    ///
+    /// \param[in] target Destination actor address.
+    /// \param[in] msg Message to send (moved).
+    /// \param[in] deadline Deadline relative to now (e.g., 5ms from now).
+    /// \param[in] priority Priority level 0–3 (0 = highest).  Used as a
+    ///                     tiebreaker within the same deadline bucket.
+    void send_edf(ActorAddress target, TypedMessage msg,
+                  std::chrono::nanoseconds deadline, uint8_t priority = 0);
+
     /// \brief Try-reply to the current sender, returning a \c DeliveryReceipt.
     ///
     /// \param[in] msg Message to send back.

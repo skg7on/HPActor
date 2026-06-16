@@ -646,6 +646,16 @@ void ActorSystem::deliver_local(ActorId target, TypedMessage msg,
                                           deadline_ns, {});
 }
 
+void ActorSystem::deliver_local_edf(ActorId target, TypedMessage msg,
+                                    int64_t deadline_ns, uint8_t priority) {
+    if (!delivery_pipeline_)
+        return;
+    mailbox::DeliveryOptions options;
+    options.schedule_edf = true;
+    (void)delivery_pipeline_->try_deliver(target, std::move(msg), priority,
+                                          deadline_ns, options);
+}
+
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
     // ── ACK/NACK control frame dispatch ────────────────────────────────
     constexpr uint32_t kControlAck = 1 << 5;

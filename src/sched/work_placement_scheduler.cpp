@@ -73,8 +73,22 @@ uint32_t WorkPlacementScheduler::choose_worker(ActorId actor, bool& is_pinned) {
 
 void WorkPlacementScheduler::enqueue_shared(const WorkItem& item,
                                             uint8_t priority, uint32_t worker_id) {
-    (void)priority; // priority is applied when the owner drains into its deque
     auto& worker = workers_[worker_id];
+
+    // EDF-scheduled items bypass the shared-input stack: push directly
+    // into the EDF min-heap so deadline ordering is preserved without
+    // an intermediate LIFO→FIFO reversal.
+    if (item.edf_scheduled) {
+        {
+            std::lock_guard<std::mutex> lock(worker.edf_push_mutex_);
+            worker.edf_queue.push(item.deadline_ns, item);
+        }
+        worker.wake_if_blocking();
+        return;
+    }
+
+    // Existing path: priority-only items go to shared-input stack.
+    (void)priority; // priority is applied when the owner drains into its deque
     auto* node = new SharedInputNode();
     node->item = item;
     node->priority = priority;

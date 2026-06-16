@@ -56,3 +56,14 @@ TEST(DeliveryModeTest, ExplicitDeliveryModeInOptions) {
     opts.delivery_mode = DeliveryMode::DurableAtLeastOnce;
     EXPECT_EQ(opts.delivery_mode, DeliveryMode::DurableAtLeastOnce);
 }
+
+TEST(DeliveryOptionsTest, ScheduleEdfDefaultIsFalse) {
+    DeliveryOptions opts{};
+    EXPECT_FALSE(opts.schedule_edf);
+}
+
+TEST(DeliveryOptionsTest, ScheduleEdfExplicitSet) {
+    DeliveryOptions opts;
+    opts.schedule_edf = true;
+    EXPECT_TRUE(opts.schedule_edf);
+}

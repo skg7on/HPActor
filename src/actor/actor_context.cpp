@@ -188,6 +188,23 @@ ActorContext::try_send_with_priority(const ActorAddress& target, TypedMessage ms
     return msg::DeliveryReceipt(ref.try_send(ref.address(), std::move(msg), options));
 }
 
+void ActorContext::send_edf(ActorAddress target, TypedMessage msg,
+                            std::chrono::nanoseconds deadline, uint8_t priority) {
+    auto* sys = system_;
+    if (!sys)
+        return;
+
+    int64_t now_ns = std::chrono::duration_cast<std::chrono::nanoseconds>(
+                         std::chrono::steady_clock::now().time_since_epoch())
+                         .count();
+    int64_t deadline_ns = now_ns + deadline.count();
+    if (deadline_ns < now_ns)
+        deadline_ns = now_ns + 1; // clamp overflow
+
+    msg.set_sender_address(owner_.address());
+    sys->deliver_local_edf(target.id, std::move(msg), deadline_ns, priority);
+}
+
 void ActorContext::reply(TypedMessage msg) {
     // If replying to a tracked ask, route through AskManager
     if (current_ask_message_id_ != 0 && system_ && system_->ask_manager()) {

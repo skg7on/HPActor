@@ -492,6 +492,21 @@ class ActorSystem {
     void deliver_local(ActorId target, TypedMessage msg, uint8_t priority,
                        int64_t deadline_ns);
 
+    /// \brief Deliver a message to a local actor with EDF scheduling.
+    ///
+    /// The target actor's work item is placed in the scheduler's EDF queue
+    /// and dispatched in earliest-deadline-first order relative to other
+    /// EDF-scheduled actors.  Ordinary priority-only messages are unaffected.
+    ///
+    /// \param[in] target Actor ID to deliver to.
+    /// \param[in] msg Message to deliver (moved into the pipeline).
+    /// \param[in] deadline_ns Absolute delivery deadline in nanoseconds.
+    ///                       Must not be \c INT64_MAX.
+    /// \param[in] priority Priority level 0–3 (0 = highest).  Used as a
+    ///                     tiebreaker within the same deadline bucket.
+    void deliver_local_edf(ActorId target, TypedMessage msg,
+                           int64_t deadline_ns, uint8_t priority = 0);
+
     /// \brief Bounded admission delivery — returns an \c EnqueueResult.
     ///
     /// \param[in] target Actor ID.

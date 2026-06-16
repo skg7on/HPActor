@@ -227,6 +227,11 @@ class WorkPlacementScheduler {
         /// Signalled by enqueue threads when \c is_blocking_ is true.
         std::condition_variable sleep_cv_;
 
+        /// Mutex serializing pushes into edf_queue from concurrent producer
+        /// threads.  EDF items are infrequent by design, so a mutex is
+        /// adequate — upgrade to lock-free if profiling shows contention.
+        mutable std::mutex edf_push_mutex_;
+
         /// Wake a worker blocked on \c sleep_cv_ (idempotent, safe from
         /// any thread).  If the worker is not blocking this is a no-op.
         void wake_if_blocking() {
