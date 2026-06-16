@@ -21,12 +21,14 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/types/types.hpp>
 
-#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
+#include <memory>
 #include <thread>
-#include <unistd.h>
+
+#include <hpactor/msg/frame.hpp>
+#include <hpactor/net/wireframe_connection.hpp>
 
 namespace hpactor {
 namespace cli {
@@ -126,72 +128,75 @@ void CliClientActor::disconnect() {
 }
 
 // ---------------------------------------------------------------------------
-// Wire protocol — varint-length-prefixed protobuf send / receive
+// Wire protocol — send via Connection::send() (same path as try_send),
+// receive via EventLoop read handler with HPAC Frame decoding.
 // ---------------------------------------------------------------------------
 
-static void write_varint_prefixed(int fd, const std::string& data) {
-    uint32_t len = static_cast<uint32_t>(data.size());
-    uint8_t len_buf[5];
-    int len_bytes = 0;
-    uint32_t tmp = len;
-    while (tmp > 0x7f) {
-        len_buf[len_bytes++] = static_cast<uint8_t>(tmp & 0x7f) | 0x80;
-        tmp >>= 7;
-    }
-    len_buf[len_bytes++] = static_cast<uint8_t>(tmp);
-    ::write(fd, len_buf, static_cast<size_t>(len_bytes));
-    ::write(fd, data.data(), data.size());
+namespace {
+
+/// Encode protobuf data as an HPAC WireFrame: magic + big-endian length + data.
+inline StreamBuffer encode_as_frame(const std::string& protobuf_data) {
+    StreamBuffer result;
+    const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'C'};
+    result.append(magic.data(), 4);
+    uint32_t payload_len = static_cast<uint32_t>(protobuf_data.size());
+    uint32_t net_len = htonl(payload_len);
+    result.append(reinterpret_cast<const uint8_t*>(&net_len), 4);
+    result.append(reinterpret_cast<const uint8_t*>(protobuf_data.data()),
+                  protobuf_data.size());
+    return result;
 }
+
+} // anonymous namespace
 
 CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
     CliResponse resp;
     resp.set_is_error(true);
     resp.set_error_code(-1);
 
-    int fd = connector_.fd();
-    if (fd < 0)
+    auto* transport = connector_.transport();
+    auto conn = connector_.connection();
+    if (!transport || !conn)
         return resp;
 
-    // Send: varint-length prefix + serialized CliCommand
-    std::string wire = cmd.SerializeAsString();
-    write_varint_prefixed(fd, wire);
+    // 1. Encode CliCommand as an HPAC Frame and send through
+    //    Connection::send() — the same method TcpTransport::try_send calls.
+    std::string cmd_bytes = cmd.SerializeAsString();
+    auto frame_data = encode_as_frame(cmd_bytes);
+    conn->send(frame_data);
 
-    // Read: varint-length prefix + serialized CliResponse
-    char read_buf[4096];
-    std::string accum;
+    // 2. Receive: poll the EventLoop, reading raw data from the fd
+    //    through the EventLoop's read path.  We temporarily set a
+    //    frame handler that captures the response body.
+    auto done = std::make_shared<bool>(false);
+    auto response_body = std::make_shared<std::string>();
+
+    // Store original handler to restore later.
+    // WireFrameConnection set_frame_handler replaces the handler.
+    static_cast<net::WireFrameConnection*>(conn.get())
+        ->set_frame_handler([done, response_body](hpactor::adt::StreamBuffer data) {
+            *response_body = std::string(
+                reinterpret_cast<const char*>(data.data()), data.size());
+            *done = true;
+        });
+
+    // Poll the EventLoop.  WireFrameConnection::handle_read() decodes
+    // incoming HPAC frames and delivers the body to the frame handler.
     auto deadline = std::chrono::steady_clock::now() + config_.request_timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        ssize_t n = ::read(fd, read_buf, sizeof(read_buf));
-        if (n > 0) {
-            accum.append(read_buf, static_cast<size_t>(n));
-        } else if (n == 0) {
-            break; // EOF
-        } else if (errno != EAGAIN && errno != EWOULDBLOCK) {
-            break; // error
-        }
-
-        if (accum.size() >= 1) {
-            uint32_t msg_len = 0;
-            unsigned shift = 0;
-            size_t pos = 0;
-            while (pos < accum.size() && pos < 5) {
-                uint8_t byte = static_cast<uint8_t>(accum[pos]);
-                msg_len |= static_cast<uint32_t>(byte & 0x7f) << shift;
-                pos++;
-                if (!(byte & 0x80))
-                    break;
-                shift += 7;
-            }
-            if (pos > 0 && pos <= 5 && accum.size() >= pos + msg_len) {
-                if (resp.ParseFromArray(accum.data() + pos,
-                                        static_cast<int>(msg_len))) {
-                    return resp;
-                }
-                accum.erase(0, pos + msg_len);
-            }
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    while (!*done && std::chrono::steady_clock::now() < deadline) {
+        transport->loop().wait(50);
     }
+
+    // Restore handler — the connection pool will re-register its own
+    // handler on next use.
+    static_cast<net::WireFrameConnection*>(conn.get())->set_frame_handler(nullptr);
+
+    // 3. Decode the response.
+    if (*done && !response_body->empty()) {
+        resp.ParseFromArray(response_body->data(),
+                            static_cast<int>(response_body->size()));
+    }
+
     return resp;
 }
 

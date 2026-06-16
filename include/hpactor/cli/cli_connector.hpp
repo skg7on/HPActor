@@ -61,6 +61,16 @@ class CliConnector {
         return fd_;
     }
 
+    /// \brief The underlying TcpTransport (for send/recv via try_send path).
+    net::TcpTransport* transport() {
+        return transport_.get();
+    }
+
+    /// \brief The WireFrameConnection for this connection.
+    net::ConnectionPtr connection() {
+        return conn_;
+    }
+
   private:
     std::unique_ptr<net::TcpTransport> transport_;
     net::ConnectionPtr conn_;

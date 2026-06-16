@@ -729,77 +729,53 @@ void CliServerActor::on_proto_client_readable(int client_fd) {
                     close_proto_session(client_fd);
                     return;
                 } else {
-                    // Varint-length-prefixed protobuf.
-                    // Read the varint length prefix.
-                    uint32_t msg_len = 0;
-                    int shift = 0;
-                    size_t consumed = 0;
-                    for (size_t i = 0; i < state.read_buffer.size(); ++i) {
-                        uint8_t byte = static_cast<uint8_t>(state.read_buffer[i]);
-                        msg_len |= static_cast<uint32_t>((byte & 0x7f) << shift);
-                        ++consumed;
-                        if (!(byte & 0x80))
-                            break;
-                        shift += 7;
-                        if (shift >= 35) {
-                            // Malformed varint — close.
-                            close_proto_session(client_fd);
-                            return;
-                        }
-                    }
-                    if (msg_len == 0 && consumed == state.read_buffer.size()) {
-                        // Varint not yet complete; wait for more data.
-                        break;
-                    }
+                    // HPAC Frame: 4-byte magic + 4-byte big-endian length +
+                    // body.
+                    static constexpr size_t kHpacHeaderSize = 8;
+                    const char kHpacMagic[4] = {'H', 'P', 'A', 'C'};
 
-                    if (state.read_buffer.size() < consumed + msg_len) {
-                        // Message body not yet complete; wait.
+                    if (state.read_buffer.size() < kHpacHeaderSize)
                         break;
-                    }
 
-                    // Parse the message body.
-                    CliCommand cmd;
-                    if (!cmd.ParseFromArray(state.read_buffer.data() + consumed,
-                                            static_cast<int>(msg_len))) {
-                        CliResponse resp;
-                        resp.set_content_type("application/x-protobuf");
-                        resp.set_is_error(true);
-                        resp.set_error_code(1);
-                        std::string wire = resp.SerializeAsString();
-                        uint32_t wire_len = static_cast<uint32_t>(wire.size());
-                        char len_buf[5];
-                        size_t len_bytes = 0;
-                        uint32_t remaining = wire_len;
-                        while (remaining > 0x7f) {
-                            len_buf[len_bytes++] =
-                                static_cast<char>((remaining & 0x7f) | 0x80);
-                            remaining >>= 7;
-                        }
-                        len_buf[len_bytes++] = static_cast<char>(remaining & 0x7f);
-                        ::write(client_fd, len_buf, len_bytes);
-                        ::write(client_fd, wire.data(), wire.size());
+                    if (std::memcmp(state.read_buffer.data(), kHpacMagic, 4) != 0) {
                         close_proto_session(client_fd);
                         return;
                     }
 
-                    // Execute the command and send response.
-                    CliResponse resp = execute_cli_command(cmd);
-                    std::string wire = resp.SerializeAsString();
-                    uint32_t wire_len = static_cast<uint32_t>(wire.size());
-                    char len_buf[5];
-                    size_t len_bytes = 0;
-                    uint32_t remaining = wire_len;
-                    while (remaining > 0x7f) {
-                        len_buf[len_bytes++] =
-                            static_cast<char>((remaining & 0x7f) | 0x80);
-                        remaining >>= 7;
-                    }
-                    len_buf[len_bytes++] = static_cast<char>(remaining & 0x7f);
-                    ::write(client_fd, len_buf, len_bytes);
-                    ::write(client_fd, wire.data(), wire.size());
+                    uint32_t msg_len;
+                    std::memcpy(&msg_len, state.read_buffer.data() + 4, 4);
+                    msg_len = ntohl(msg_len);
 
-                    // Consume the processed message from the buffer.
-                    state.read_buffer.erase(0, consumed + msg_len);
+                    if (state.read_buffer.size() < kHpacHeaderSize + msg_len)
+                        break;
+
+                    // Parse the message body.
+                    CliCommand cmd;
+                    bool parse_ok = cmd.ParseFromArray(
+                        state.read_buffer.data() + kHpacHeaderSize,
+                        static_cast<int>(msg_len));
+
+                    // Encode response as HPAC Frame.
+                    CliResponse resp;
+                    if (parse_ok) {
+                        resp = execute_cli_command(cmd);
+                    } else {
+                        resp.set_content_type("application/x-protobuf");
+                        resp.set_is_error(true);
+                        resp.set_error_code(1);
+                    }
+                    std::string wire = resp.SerializeAsString();
+                    uint32_t payload_len = static_cast<uint32_t>(wire.size());
+                    uint32_t net_len = htonl(payload_len);
+                    ::write(client_fd, kHpacMagic, 4);
+                    ::write(client_fd, &net_len, 4);
+                    ::write(client_fd, wire.data(), wire.size());
+                    state.read_buffer.erase(0, kHpacHeaderSize + msg_len);
+
+                    if (!parse_ok) {
+                        close_proto_session(client_fd);
+                        return;
+                    }
                 }
             }
         } else if (n == 0) {
