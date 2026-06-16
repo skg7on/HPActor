@@ -118,61 +118,7 @@ void CliServerActor::on_daemon_start() {
         }
     }
 
-    // --- Proto Unix domain socket ---
-    if (!config_.proto_uds_path.empty()) {
-        ::unlink(config_.proto_uds_path.c_str());
-
-        proto_uds_acceptor_ =
-            std::make_unique<net::UnixDomainAcceptor>(loop_.get());
-        proto_uds_acceptor_->set_accept_handler(
-            [this](int fd, EndPoint /*remote*/) { on_proto_client_accepted(fd); });
-
-        if (!proto_uds_acceptor_->listen(config_.proto_uds_path)) {
-            std::fprintf(stderr, "CliServerActor: proto UDS listen failed on %s\n",
-                         config_.proto_uds_path.c_str());
-            proto_uds_acceptor_.reset();
-        } else {
-            ::chmod(config_.proto_uds_path.c_str(),
-                    static_cast<mode_t>(config_.proto_uds_socket_mode));
-            if (!config_.proto_uds_socket_owner.empty() ||
-                !config_.proto_uds_socket_group.empty()) {
-                uid_t uid = static_cast<uid_t>(-1);
-                gid_t gid = static_cast<gid_t>(-1);
-                if (!config_.proto_uds_socket_owner.empty()) {
-                    struct passwd* pw =
-                        ::getpwnam(config_.proto_uds_socket_owner.c_str());
-                    if (pw)
-                        uid = pw->pw_uid;
-                }
-                if (!config_.proto_uds_socket_group.empty()) {
-                    struct group* gr =
-                        ::getgrnam(config_.proto_uds_socket_group.c_str());
-                    if (gr)
-                        gid = gr->gr_gid;
-                }
-                ::chown(config_.proto_uds_path.c_str(), uid, gid);
-            }
-        }
-    }
-
-    // --- Proto TCP socket ---
-    if (config_.proto_tcp_port > 0) {
-        proto_tcp_acceptor_ = std::make_unique<net::TcpAcceptor>(loop_.get());
-        proto_tcp_acceptor_->set_accept_handler(
-            [this](int fd, EndPoint /*remote*/) { on_proto_client_accepted(fd); });
-
-        if (!proto_tcp_acceptor_->listen(config_.proto_tcp_port, 0,
-                                         config_.tcp_bind_address)) {
-            std::fprintf(stderr,
-                         "CliServerActor: proto TCP listen failed on %s:%u\n",
-                         config_.tcp_bind_address.c_str(),
-                         static_cast<unsigned>(config_.proto_tcp_port));
-            proto_tcp_acceptor_.reset();
-        }
-    }
-
-    if (!uds_acceptor_ && !tcp_acceptor_ && !proto_uds_acceptor_ &&
-        !proto_tcp_acceptor_) {
+    if (!uds_acceptor_ && !tcp_acceptor_) {
         std::fprintf(stderr, "CliServerActor: no listeners configured\n");
         running_ = false;
     }
@@ -188,23 +134,12 @@ void CliServerActor::on_daemon_stop() {
     }
     sessions_.clear();
 
-    // Close all proto sessions.
-    for (auto& [fd, state] : proto_sessions_) {
-        loop_->clear_read_handler(fd);
-        ::close(fd);
-    }
-    proto_sessions_.clear();
-
     // Acceptors self-close on destruction.
     uds_acceptor_.reset();
     tcp_acceptor_.reset();
-    proto_uds_acceptor_.reset();
-    proto_tcp_acceptor_.reset();
 
     if (!config_.uds_listen_path.empty())
         ::unlink(config_.uds_listen_path.c_str());
-    if (!config_.proto_uds_path.empty())
-        ::unlink(config_.proto_uds_path.c_str());
 
     command_tree_.reset();
 }

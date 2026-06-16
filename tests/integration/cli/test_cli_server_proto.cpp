@@ -26,13 +26,18 @@
 #include <chrono>
 #include <thread>
 
+// REMOVED: Proto listener tests require proto_uds_path/proto_tcp_port fields
+// which have been extracted from CliServerConfig. These tests will be
+// re-enabled when CliProtoServerActor is implemented.
+// See issue #306.
+#if 0
 TEST(CliServerProto, ProtoListenerStartsWithoutError) {
     hpactor::Config sys_config;
     sys_config.scheduler_threads = 0;
     hpactor::ActorSystem system(sys_config);
 
     hpactor::cli::CliServerConfig cfg;
-    cfg.proto_tcp_port = 19091;
+    // cfg.proto_tcp_port = 19091;  // field removed from CliServerConfig
     cfg.tcp_bind_address = "127.0.0.1";
 
     auto server = system.spawn<hpactor::cli::CliServerActor>(cfg);
@@ -127,3 +132,4 @@ TEST(CliServerProto, DISABLED_CommandTreeDispatchReturnsFormattedText) {
     raw->request_shutdown();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
+#endif // 0 — removed proto fields from CliServerConfig
