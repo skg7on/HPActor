@@ -49,6 +49,67 @@ namespace cli {
 namespace handlers {
 void handle_legacy_post_cli(CliHttpServerActor* actor,
                             net::HTTPConnection* conn, net::HttpRequest&& req);
+
+// Actor handlers
+void handle_list_actors(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                        net::HttpRequest&& req);
+void handle_get_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                      net::HttpRequest&& req);
+void handle_kill_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+void handle_get_mailbox(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                        net::HttpRequest&& req);
+void handle_get_children(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                         net::HttpRequest&& req);
+void handle_get_circuit_breaker(CliHttpServerActor* actor,
+                                net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_reset_circuit_breaker(CliHttpServerActor* actor,
+                                  net::HTTPConnection* conn,
+                                  net::HttpRequest&& req);
+void handle_quarantine_actor(CliHttpServerActor* actor,
+                             net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_unquarantine_actor(CliHttpServerActor* actor,
+                               net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_get_actor_memory(CliHttpServerActor* actor,
+                             net::HTTPConnection* conn, net::HttpRequest&& req);
+
+// System handlers
+void handle_api_index(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                      net::HttpRequest&& req);
+void handle_get_system(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+void handle_get_system_stats(CliHttpServerActor* actor,
+                             net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_get_system_memory(CliHttpServerActor* actor,
+                              net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_drain(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                  net::HttpRequest&& req);
+void handle_shutdown(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                     net::HttpRequest&& req);
+
+// Fault handlers
+void handle_get_faults(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+void handle_clear_faults(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                         net::HttpRequest&& req);
+
+// DLQ handlers
+void handle_list_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                     net::HttpRequest&& req);
+void handle_get_dlq_record(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                           net::HttpRequest&& req);
+void handle_replay_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+void handle_export_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+
+// Ask handlers
+void handle_list_asks(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                      net::HttpRequest&& req);
+void handle_get_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                    net::HttpRequest&& req);
+void handle_cancel_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
 } // namespace handlers
 
 // ── Route table PIMPL ──────────────────────────────────────────────────
@@ -126,7 +187,51 @@ void CliHttpServerActor::build_command_tree() {
 void CliHttpServerActor::init_routes() {
     route_table_ = std::make_unique<RouteTable>();
     route_table_->routes = {
-        // Routes populated in subsequent tasks
+        // Actor handlers
+        {net::HttpMethod::GET, "/api/v1/actors", handlers::handle_list_actors},
+        {net::HttpMethod::GET, "/api/v1/actors/:id", handlers::handle_get_actor},
+        {net::HttpMethod::DELETE, "/api/v1/actors/:id", handlers::handle_kill_actor},
+        {net::HttpMethod::GET, "/api/v1/actors/:id/mailbox",
+         handlers::handle_get_mailbox},
+        {net::HttpMethod::GET, "/api/v1/actors/:id/children",
+         handlers::handle_get_children},
+        {net::HttpMethod::GET, "/api/v1/actors/:id/circuit-breaker",
+         handlers::handle_get_circuit_breaker},
+        {net::HttpMethod::POST, "/api/v1/actors/:id/circuit-breaker/reset",
+         handlers::handle_reset_circuit_breaker},
+        {net::HttpMethod::POST, "/api/v1/actors/:id/quarantine",
+         handlers::handle_quarantine_actor},
+        {net::HttpMethod::DELETE, "/api/v1/actors/:id/quarantine",
+         handlers::handle_unquarantine_actor},
+        {net::HttpMethod::GET, "/api/v1/actors/:id/memory",
+         handlers::handle_get_actor_memory},
+
+        // System handlers
+        {net::HttpMethod::GET, "/api/v1/", handlers::handle_api_index},
+        {net::HttpMethod::GET, "/api/v1/system", handlers::handle_get_system},
+        {net::HttpMethod::GET, "/api/v1/system/stats",
+         handlers::handle_get_system_stats},
+        {net::HttpMethod::GET, "/api/v1/system/memory",
+         handlers::handle_get_system_memory},
+        {net::HttpMethod::POST, "/api/v1/system/drain", handlers::handle_drain},
+        {net::HttpMethod::POST, "/api/v1/system/shutdown", handlers::handle_shutdown},
+
+        // Fault handlers
+        {net::HttpMethod::GET, "/api/v1/faults", handlers::handle_get_faults},
+        {net::HttpMethod::POST, "/api/v1/faults/clear", handlers::handle_clear_faults},
+
+        // DLQ handlers
+        {net::HttpMethod::GET, "/api/v1/dlq", handlers::handle_list_dlq},
+        {net::HttpMethod::GET, "/api/v1/dlq/export", handlers::handle_export_dlq},
+        {net::HttpMethod::GET, "/api/v1/dlq/:index", handlers::handle_get_dlq_record},
+        {net::HttpMethod::POST, "/api/v1/dlq/:index/replay",
+         handlers::handle_replay_dlq},
+
+        // Ask handlers
+        {net::HttpMethod::GET, "/api/v1/asks", handlers::handle_list_asks},
+        {net::HttpMethod::GET, "/api/v1/asks/:message_id", handlers::handle_get_ask},
+        {net::HttpMethod::DELETE, "/api/v1/asks/:message_id",
+         handlers::handle_cancel_ask},
     };
 
     // Legacy backward compat (Phase 1 only)
