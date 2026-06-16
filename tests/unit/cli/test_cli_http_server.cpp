@@ -59,11 +59,14 @@ TEST(CliHttpServer, ImplementsHostInterfaces) {
     ASSERT_TRUE(sys_host != nullptr);
     ASSERT_TRUE(life_host != nullptr);
 
-    // CliHttpServerActor does NOT implement ICliCommandHost.
-    // Verify at compile time (dynamic_cast unavailable with -fno-rtti).
+    // CliHttpServerActor implements ICliCommandHost for REST API actor
+    // operations. Verify at compile time (dynamic_cast unavailable with
+    // -fno-rtti).
+    auto* cmd_host = static_cast<hpactor::cli::ICliCommandHost*>(raw);
+    ASSERT_TRUE(cmd_host != nullptr);
     static_assert(
-        !std::is_base_of_v<hpactor::cli::ICliCommandHost, hpactor::cli::CliHttpServerActor>,
-        "CliHttpServerActor must not expose ICliCommandHost");
+        std::is_base_of_v<hpactor::cli::ICliCommandHost, hpactor::cli::CliHttpServerActor>,
+        "CliHttpServerActor must expose ICliCommandHost for REST API actor operations");
 
     raw->request_shutdown();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
