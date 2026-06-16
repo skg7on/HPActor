@@ -17,11 +17,11 @@
 #include <hpactor/adt/json_helpers.hpp>
 #include <hpactor/cli.pb.h>
 
-#include <hpactor/cli/cli_messages.pb.h>
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/command_tree_builder.hpp>
 #include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
@@ -46,7 +46,10 @@ namespace cli {
 
 // ── Forward declarations for handler functions ─────────────────────────
 // (defined in src/cli/handlers/*.cpp)
-namespace handlers {} // namespace handlers
+namespace handlers {
+void handle_legacy_post_cli(CliHttpServerActor* actor,
+                            net::HTTPConnection* conn, net::HttpRequest&& req);
+} // namespace handlers
 
 // ── Route table PIMPL ──────────────────────────────────────────────────
 
