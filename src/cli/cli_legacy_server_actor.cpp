@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cli/cli_server_actor.hpp>
+#include <hpactor/cli/cli_legacy_server_actor.hpp>
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/command_node.hpp>
@@ -50,18 +50,18 @@ namespace cli {
 // Construction / destruction
 // ---------------------------------------------------------------------------
 
-CliServerActor::CliServerActor(ActorContext* ctx, ActorSystem& system,
-                               const CliServerConfig& config)
+CliLegacyServerActor::CliLegacyServerActor(ActorContext* ctx, ActorSystem& system,
+                               const CliLegacyServerConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
       loop_(std::make_unique<net::EventLoop>()) {}
 
-CliServerActor::~CliServerActor() = default;
+CliLegacyServerActor::~CliLegacyServerActor() = default;
 
 // ---------------------------------------------------------------------------
 // DaemonActor interface
 // ---------------------------------------------------------------------------
 
-void CliServerActor::on_daemon_start() {
+void CliLegacyServerActor::on_daemon_start() {
     build_command_tree();
 
     // --- Unix domain socket ---
@@ -74,7 +74,7 @@ void CliServerActor::on_daemon_start() {
             [this](int fd, EndPoint /*remote*/) { on_client_accepted(fd); });
 
         if (!uds_acceptor_->listen(config_.uds_listen_path)) {
-            std::fprintf(stderr, "CliServerActor: UDS listen failed on %s\n",
+            std::fprintf(stderr, "CliLegacyServerActor: UDS listen failed on %s\n",
                          config_.uds_listen_path.c_str());
             uds_acceptor_.reset();
             running_ = false;
@@ -109,7 +109,7 @@ void CliServerActor::on_daemon_start() {
 
         if (!tcp_acceptor_->listen(config_.tcp_listen_port, 0,
                                    config_.tcp_bind_address)) {
-            std::fprintf(stderr, "CliServerActor: TCP listen failed on %s:%u\n",
+            std::fprintf(stderr, "CliLegacyServerActor: TCP listen failed on %s:%u\n",
                          config_.tcp_bind_address.c_str(),
                          static_cast<unsigned>(config_.tcp_listen_port));
             tcp_acceptor_.reset();
@@ -118,12 +118,12 @@ void CliServerActor::on_daemon_start() {
     }
 
     if (!uds_acceptor_ && !tcp_acceptor_) {
-        std::fprintf(stderr, "CliServerActor: no listeners configured\n");
+        std::fprintf(stderr, "CliLegacyServerActor: no listeners configured\n");
         running_ = false;
     }
 }
 
-void CliServerActor::on_daemon_stop() {
+void CliLegacyServerActor::on_daemon_stop() {
     running_ = false;
 
     // Close all client sessions (this also clears their read_handlers).
@@ -143,7 +143,7 @@ void CliServerActor::on_daemon_stop() {
     command_tree_.reset();
 }
 
-bool CliServerActor::run_once() {
+bool CliLegacyServerActor::run_once() {
     if (!running_)
         return false;
 
@@ -157,7 +157,7 @@ bool CliServerActor::run_once() {
 // Client connection management
 // ---------------------------------------------------------------------------
 
-void CliServerActor::on_client_accepted(int client_fd) {
+void CliLegacyServerActor::on_client_accepted(int client_fd) {
     if (sessions_.size() >= config_.max_sessions) {
         ::close(client_fd);
         return;
@@ -199,7 +199,7 @@ void CliServerActor::on_client_accepted(int client_fd) {
         fd, [this](int ready_fd) { on_client_readable(ready_fd); });
 }
 
-void CliServerActor::on_client_readable(int client_fd) {
+void CliLegacyServerActor::on_client_readable(int client_fd) {
     auto it = sessions_.find(client_fd);
     if (it == sessions_.end())
         return;
@@ -247,7 +247,7 @@ void CliServerActor::on_client_readable(int client_fd) {
     }
 }
 
-void CliServerActor::close_session(int client_fd) {
+void CliLegacyServerActor::close_session(int client_fd) {
     auto it = sessions_.find(client_fd);
     if (it == sessions_.end())
         return;
@@ -261,7 +261,7 @@ void CliServerActor::close_session(int client_fd) {
 // Metadata
 // ---------------------------------------------------------------------------
 
-cli::ActorMeta CliServerActor::to_metadata() const {
+cli::ActorMeta CliLegacyServerActor::to_metadata() const {
     cli::ActorMeta m;
     m.actor_id = id().value();
     m.actor_type = std::string(type_name());
@@ -273,7 +273,7 @@ cli::ActorMeta CliServerActor::to_metadata() const {
 // Command tree
 // ---------------------------------------------------------------------------
 
-void CliServerActor::build_command_tree() {
+void CliLegacyServerActor::build_command_tree() {
     auto root = std::make_unique<CommandNode>("/", "CLI root");
     build_command_tree_from_registry(*root);
     command_tree_ = std::move(root);
@@ -303,7 +303,7 @@ poll_for_response(mailbox::MPSCActorMailbox<TypedMessage>* mbox,
 } // anonymous namespace
 
 std::optional<InspectStateReply>
-CliServerActor::inspect(ActorId target, const InspectStateRequest& req,
+CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
                         std::chrono::milliseconds timeout) {
     if (target == id()) {
         InspectStateReply reply;
@@ -343,7 +343,7 @@ CliServerActor::inspect(ActorId target, const InspectStateRequest& req,
 }
 
 std::optional<KillReply>
-CliServerActor::kill(ActorId target, const KillRequest& req,
+CliLegacyServerActor::kill(ActorId target, const KillRequest& req,
                      std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
@@ -373,7 +373,7 @@ CliServerActor::kill(ActorId target, const KillRequest& req,
 }
 
 std::optional<QuarantineReply>
-CliServerActor::quarantine(ActorId target, const QuarantineRequest& req,
+CliLegacyServerActor::quarantine(ActorId target, const QuarantineRequest& req,
                            std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
@@ -403,7 +403,7 @@ CliServerActor::quarantine(ActorId target, const QuarantineRequest& req,
     return safe_reply;
 }
 
-std::vector<ActorMeta> CliServerActor::enumerate(std::string_view filter) {
+std::vector<ActorMeta> CliLegacyServerActor::enumerate(std::string_view filter) {
     std::vector<ActorMeta> result;
     system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
         if (!filter.empty()) {
@@ -420,7 +420,7 @@ std::vector<ActorMeta> CliServerActor::enumerate(std::string_view filter) {
 // ISystemCliHost interface
 // ---------------------------------------------------------------------------
 
-void CliServerActor::render_system_stats(OutputFormatter& output) {
+void CliLegacyServerActor::render_system_stats(OutputFormatter& output) {
     output.header("System Statistics");
     std::map<std::string, std::string> kv;
     kv["Total actors"] = std::to_string(system_.actor_count());
@@ -430,7 +430,7 @@ void CliServerActor::render_system_stats(OutputFormatter& output) {
     output.key_value(kv);
 }
 
-void CliServerActor::render_memory_stats(OutputFormatter& output) {
+void CliLegacyServerActor::render_memory_stats(OutputFormatter& output) {
     output.header("Memory Regions");
     auto& reg = mem::MemoryRegionRegistry::instance();
     std::vector<std::string> cols = {"Region",     "Active", "Limit",
@@ -456,7 +456,7 @@ void CliServerActor::render_memory_stats(OutputFormatter& output) {
     output.table(cols, rows);
 }
 
-void CliServerActor::render_fault_status(OutputFormatter& output) {
+void CliLegacyServerActor::render_fault_status(OutputFormatter& output) {
     output.header("Fault Injection Status");
     auto& fc = system_.fault_controller();
     if (!fc.is_enabled()) {
@@ -470,7 +470,7 @@ void CliServerActor::render_fault_status(OutputFormatter& output) {
     output.key_value(kv);
 }
 
-void CliServerActor::render_dlq_list(OutputFormatter& output,
+void CliLegacyServerActor::render_dlq_list(OutputFormatter& output,
                                      std::string_view filter) {
     output.header("Dead Letter Queue");
     auto* dlq = system_.dead_letter_queue();
@@ -503,7 +503,7 @@ void CliServerActor::render_dlq_list(OutputFormatter& output,
     output.table(cols, rows);
 }
 
-result<void> CliServerActor::dlq_replay(uint32_t index, ActorId target) {
+result<void> CliLegacyServerActor::dlq_replay(uint32_t index, ActorId target) {
     auto* dlq = system_.dead_letter_queue();
     if (!dlq)
         return result<void>::make(
@@ -529,11 +529,11 @@ result<void> CliServerActor::dlq_replay(uint32_t index, ActorId target) {
 // ILifecycleCliHost interface
 // ---------------------------------------------------------------------------
 
-result<void> CliServerActor::drain() {
+result<void> CliLegacyServerActor::drain() {
     return system_.shutdown();
 }
 
-result<void> CliServerActor::shutdown() {
+result<void> CliLegacyServerActor::shutdown() {
     return system_.shutdown();
 }
 

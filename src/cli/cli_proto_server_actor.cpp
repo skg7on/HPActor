@@ -430,7 +430,7 @@ void CliProtoServerActor::build_command_tree() {
 }
 
 // ---------------------------------------------------------------------------
-// ICliCommandHost interface (copied from CliServerActor)
+// ICliCommandHost interface (copied from CliLegacyServerActor)
 // ---------------------------------------------------------------------------
 
 std::optional<InspectStateReply>
@@ -548,7 +548,7 @@ std::vector<ActorMeta> CliProtoServerActor::enumerate(std::string_view filter) {
 }
 
 // ---------------------------------------------------------------------------
-// ISystemCliHost interface (copied from CliServerActor)
+// ISystemCliHost interface (copied from CliLegacyServerActor)
 // ---------------------------------------------------------------------------
 
 void CliProtoServerActor::render_system_stats(OutputFormatter& output) {
@@ -656,7 +656,7 @@ result<void> CliProtoServerActor::dlq_replay(uint32_t index, ActorId target) {
 }
 
 // ---------------------------------------------------------------------------
-// ILifecycleCliHost interface (copied from CliServerActor)
+// ILifecycleCliHost interface (copied from CliLegacyServerActor)
 // ---------------------------------------------------------------------------
 
 result<void> CliProtoServerActor::drain() {
@@ -668,7 +668,7 @@ result<void> CliProtoServerActor::shutdown() {
 }
 
 // ---------------------------------------------------------------------------
-// Structured RPC dispatch (copied from CliServerActor)
+// Structured RPC dispatch (copied from CliLegacyServerActor)
 // ---------------------------------------------------------------------------
 
 std::string CliProtoServerActor::dispatch_rpc(const std::string& rpc_method,

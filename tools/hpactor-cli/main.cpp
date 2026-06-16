@@ -5,7 +5,7 @@
 /// \brief Standalone CLI client for the hpactor daemon.
 ///
 /// Creates a minimal ActorSystem with a CliClientActor that connects
-/// to a remote CliServerActor via UDS or TCP using the protobuf
+/// to a remote CliProtoServerActor via UDS or TCP using the HPAC Frame
 /// CliCommand/CliResponse wire protocol.
 
 #include <hpactor/cli/cli_client_actor.hpp>

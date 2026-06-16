@@ -14,8 +14,8 @@
 
 #include <gtest/gtest.h>
 #include <hpactor/cli.pb.h>
-#include <hpactor/cli/cli_server_actor.hpp>
-#include <hpactor/cli/cli_server_config.hpp>
+#include <hpactor/cli/cli_legacy_server_actor.hpp>
+#include <hpactor/cli/cli_legacy_server_config.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 #include <arpa/inet.h>
@@ -27,7 +27,7 @@
 #include <thread>
 
 // REMOVED: Proto listener tests require proto_uds_path/proto_tcp_port fields
-// which have been extracted from CliServerConfig. These tests will be
+// which have been extracted from CliLegacyServerConfig. These tests will be
 // re-enabled when CliProtoServerActor is implemented.
 // See issue #306.
 #if 0
@@ -36,14 +36,14 @@ TEST(CliServerProto, ProtoListenerStartsWithoutError) {
     sys_config.scheduler_threads = 0;
     hpactor::ActorSystem system(sys_config);
 
-    hpactor::cli::CliServerConfig cfg;
-    // cfg.proto_tcp_port = 19091;  // field removed from CliServerConfig
+    hpactor::cli::CliLegacyServerConfig cfg;
+    // cfg.proto_tcp_port = 19091;  // field removed from CliLegacyServerConfig
     cfg.tcp_bind_address = "127.0.0.1";
 
-    auto server = system.spawn<hpactor::cli::CliServerActor>(cfg);
+    auto server = system.spawn<hpactor::cli::CliLegacyServerActor>(cfg);
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
 
-    auto* raw = static_cast<hpactor::cli::CliServerActor*>(
+    auto* raw = static_cast<hpactor::cli::CliLegacyServerActor*>(
         system.get_actor(server.id()).get());
     ASSERT_TRUE(raw != nullptr);
     ASSERT_TRUE(raw->is_system_actor());
@@ -62,11 +62,11 @@ TEST(CliServerProto, DISABLED_CommandTreeDispatchReturnsFormattedText) {
     sys_config.scheduler_threads = 0;
     hpactor::ActorSystem system(sys_config);
 
-    hpactor::cli::CliServerConfig cfg;
+    hpactor::cli::CliLegacyServerConfig cfg;
     cfg.proto_tcp_port = 19092;
     cfg.tcp_bind_address = "127.0.0.1";
 
-    auto server = system.spawn<hpactor::cli::CliServerActor>(cfg);
+    auto server = system.spawn<hpactor::cli::CliLegacyServerActor>(cfg);
     std::this_thread::sleep_for(std::chrono::milliseconds(300));
 
     // Connect and send a CliCommand
@@ -127,9 +127,9 @@ TEST(CliServerProto, DISABLED_CommandTreeDispatchReturnsFormattedText) {
     }
 
     close(fd);
-    auto* raw = static_cast<hpactor::cli::CliServerActor*>(
+    auto* raw = static_cast<hpactor::cli::CliLegacyServerActor*>(
         system.get_actor(server.id()).get());
     raw->request_shutdown();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
-#endif // 0 — removed proto fields from CliServerConfig
+#endif // 0 — removed proto fields from CliLegacyServerConfig

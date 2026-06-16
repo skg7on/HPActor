@@ -28,7 +28,7 @@ class ActorSystem;
 namespace cli {
 
 class CliActor;
-class CliServerActor;
+class CliLegacyServerActor;
 class CliSession;
 class OutputFormatter;
 
@@ -47,7 +47,8 @@ struct CommandContext {
     /// \brief Host interface pointers — the preferred way for commands to
     /// access
     ///        actor/system/lifecycle operations. Populated by CliSession from
-    ///        the owning actor (CliActor, CliServerActor, or CliClientActor).
+    ///        the owning actor (CliActor, CliLegacyServerActor, or
+    ///        CliClientActor).
     ICliCommandHost* command_host = nullptr;
     ISystemCliHost* system_host = nullptr;
     ILifecycleCliHost* lifecycle_host = nullptr;
@@ -57,7 +58,7 @@ struct CommandContext {
     CliActor* cli_actor = nullptr;
     /// \brief The CLI server actor (socket-based), for request-response
     ///        helpers when \c cli_actor is null.
-    CliServerActor* cli_server_actor = nullptr;
+    CliLegacyServerActor* cli_server_actor = nullptr;
     /// \brief The owning session, for shutdown requests.
     CliSession* cli_session = nullptr;
     /// \brief Output formatter for rendering results.

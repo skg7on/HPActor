@@ -17,7 +17,7 @@ add_executable(test_unit_cli
     test_fault_commands.cpp
     test_memory_commands.cpp
     test_cli_session.cpp
-    test_cli_server_actor.cpp
+    test_cli_legacy_server_actor.cpp
     test_cli_command_host.cpp
     test_cli_proto_server.cpp
     test_cli_http_server.cpp

@@ -71,8 +71,8 @@ class ICliCommandHost {
 /// \brief Interface for system-level CLI queries.
 ///
 /// Methods take an OutputFormatter& so the host can either render directly
-/// from local data (CliActor/CliServerActor) or forward the command over the
-/// wire and write the response payload (CliClientActor). Commands never
+/// from local data (CliActor/CliLegacyServerActor) or forward the command over
+/// the wire and write the response payload (CliClientActor). Commands never
 /// branch on local vs. remote.
 class ISystemCliHost {
   public:

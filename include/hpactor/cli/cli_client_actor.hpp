@@ -18,11 +18,11 @@ class ActorSystem;
 
 namespace cli {
 
-/// \brief Remote CLI client connecting to a CliServerActor via UDS or TCP.
+/// \brief Remote CLI client connecting to a CliProtoServerActor via UDS or TCP.
 ///
 /// Implements the three CLI host interfaces by serializing requests to
-/// \c CliCommand protobuf messages and sending them over the wire with
-/// varint-length-prefixed framing.  Connection establishment uses
+/// \c CliCommand protobuf messages as HPAC Frames and sending them
+/// through \c Connection::send().  Connection establishment uses
 /// \c CliConnector for non-blocking async connect via EventLoop.
 ///
 /// Supports two modes:

@@ -13,12 +13,12 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/cli/cli_server_config.hpp>
+#include <hpactor/cli/cli_legacy_server_config.hpp>
 
 using namespace hpactor::cli;
 
-TEST(CliServerConfigTest, Defaults) {
-    CliServerConfig cfg;
+TEST(CliLegacyServerConfigTest, Defaults) {
+    CliLegacyServerConfig cfg;
     EXPECT_TRUE(cfg.uds_listen_path.empty());
     EXPECT_EQ(cfg.tcp_listen_port, 0);
     EXPECT_EQ(cfg.max_sessions, 16u);
@@ -26,8 +26,8 @@ TEST(CliServerConfigTest, Defaults) {
     EXPECT_EQ(cfg.uds_socket_mode, 0660u);
 }
 
-TEST(CliServerConfigTest, TcpDefaultsToLocalhost) {
-    CliServerConfig cfg;
+TEST(CliLegacyServerConfigTest, TcpDefaultsToLocalhost) {
+    CliLegacyServerConfig cfg;
     EXPECT_EQ(cfg.tcp_bind_address, "127.0.0.1");
     EXPECT_EQ(cfg.default_format, "pretty");
     EXPECT_EQ(cfg.page_size, 50u);

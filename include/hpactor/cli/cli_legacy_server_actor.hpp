@@ -16,7 +16,7 @@
 
 #include <hpactor/actor/daemon_actor.hpp>
 #include <hpactor/cli/cli_command_host.hpp>
-#include <hpactor/cli/cli_server_config.hpp>
+#include <hpactor/cli/cli_legacy_server_config.hpp>
 #include <hpactor/cli/cli_types.hpp>
 
 #include <chrono>
@@ -54,17 +54,17 @@ struct CommandNode;
 /// and dispatch them through \c CliSession::process_line().
 ///
 /// Runs on a dedicated daemon thread via \c DispatchPolicy::DedicatedThread.
-class CliServerActor : public DaemonActor,
+class CliLegacyServerActor : public DaemonActor,
                        public ICliCommandHost,
                        public ISystemCliHost,
                        public ILifecycleCliHost {
   public:
-    static constexpr const char* kActorTypeName = "CliServerActor";
+    static constexpr const char* kActorTypeName = "CliLegacyServerActor";
 
-    CliServerActor(ActorContext* ctx, ActorSystem& system,
-                   const CliServerConfig& config);
+    CliLegacyServerActor(ActorContext* ctx, ActorSystem& system,
+                   const CliLegacyServerConfig& config);
 
-    ~CliServerActor() override;
+    ~CliLegacyServerActor() override;
 
     // --- DaemonActor interface ---
     bool run_once() override;
@@ -126,7 +126,7 @@ class CliServerActor : public DaemonActor,
     void build_command_tree();
 
     ActorSystem& system_;
-    CliServerConfig config_;
+    CliLegacyServerConfig config_;
 
     /// Dedicated EventLoop driving all I/O (acceptors + client fds).
     std::unique_ptr<net::EventLoop> loop_;

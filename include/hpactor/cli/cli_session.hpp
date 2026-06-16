@@ -36,7 +36,7 @@ struct Token;
 /// Walks a command tree, tokenizes input, dispatches to registered
 /// command handlers, and routes formatted output through a callback.
 /// Designed to be reused across stdin-based (CliActor) and
-/// socket-based (CliServerActor) transports.
+/// socket-based (CliLegacyServerActor) transports.
 ///
 /// \note Thread affinity: all methods are called from the owning
 ///       daemon/transport thread.
@@ -85,13 +85,14 @@ class CliSession {
         cli_actor_ = actor;
     }
 
-    /// \brief Set the owning CliServerActor, if any.
+    /// \brief Set the owning CliLegacyServerActor, if any.
     ///
     /// Command handlers that require request-reply or enumeration
     /// fall back to \c ctx.cli_server_actor when \c ctx.cli_actor is null.
     ///
-    /// \param[in] server Pointer to the owning CliServerActor (may be null).
-    void set_cli_server_actor(class CliServerActor* server) {
+    /// \param[in] server Pointer to the owning CliLegacyServerActor (may be
+    /// null).
+    void set_cli_server_actor(class CliLegacyServerActor* server) {
         cli_server_actor_ = server;
     }
 
@@ -134,7 +135,7 @@ class CliSession {
     bool keep_running_ = true;
     std::string current_format_ = "pretty";
     class CliActor* cli_actor_ = nullptr;
-    class CliServerActor* cli_server_actor_ = nullptr;
+    class CliLegacyServerActor* cli_server_actor_ = nullptr;
     class ICliCommandHost* command_host_ = nullptr;
     class ISystemCliHost* system_host_ = nullptr;
     class ILifecycleCliHost* lifecycle_host_ = nullptr;
