@@ -12,16 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "commands/ask_commands.hpp"
-#include <hpactor/cli/cli_actor.hpp>
+#include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/command_tree_builder.hpp>
-#include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/fault/fault_macros.hpp>
+#include <hpactor/fault/fault_controller.hpp>
+#include <hpactor/mailbox/dead_letter_queue.hpp>
+#include <hpactor/mem/memory_region.hpp>
+#include <hpactor/msg/dead_letter_record.hpp>
 
 #include <chrono>
 #include <cstdio>
@@ -30,6 +29,10 @@
 
 namespace hpactor {
 namespace cli {
+
+// ---------------------------------------------------------------------------
+// Construction / static
+// ---------------------------------------------------------------------------
 
 std::string CliActor::get_history_path(const CliConfig& config) {
     if (!config.history_path.empty())
@@ -40,39 +43,41 @@ std::string CliActor::get_history_path(const CliConfig& config) {
     return std::string(home) + "/.hpactor_history";
 }
 
-CliActor::~CliActor() = default;
-
 CliActor::CliActor(ActorContext* ctx, ActorSystem& system, const CliConfig& config)
-    : DaemonActor(ctx, system), system_(system), config_(config),
-      line_editor_(LineEditorConfig{get_history_path(config), config.history_max,
-                                    /*multiline=*/false},
-                   /*root=*/nullptr) {
+    : InteractiveCliActor(ctx, system), config_(config) {
     formatter_ = OutputFormatter::create(config.default_format);
     pager_ = std::make_unique<Pager>(config.page_size);
-    build_command_tree();
-    line_editor_.set_root(command_tree_.get());
-    line_editor_.load_history();
-
-    session_ = std::make_unique<CliSession>(
-        &system_, command_tree_.get(),
-        OutputFormatter::create(config_.default_format),
-        [](const std::string& text) { printf("%s", text.c_str()); },
-        config_.page_size);
-    session_->set_cli_actor(this);
 }
 
-void CliActor::on_daemon_start() {
-    print_greeting();
-}
+CliActor::~CliActor() = default;
 
-void CliActor::on_daemon_stop() {
-    line_editor_.save_history();
-    printf("\n[CLI session ended]\n");
-}
+// ---------------------------------------------------------------------------
+// InteractiveCliActor virtual hooks
+// ---------------------------------------------------------------------------
 
 void CliActor::print_greeting() {
     printf("HPActor CLI v1.0 — Type /help for available commands. /quit to "
            "exit.\n\n");
+}
+
+void CliActor::print_farewell() {
+    printf("\n[CLI session ended]\n");
+}
+
+std::string CliActor::get_history_path() {
+    return get_history_path(config_);
+}
+
+uint32_t CliActor::get_history_max() {
+    return config_.history_max;
+}
+
+std::string CliActor::get_default_format() {
+    return config_.default_format;
+}
+
+uint32_t CliActor::get_page_size() {
+    return config_.page_size;
 }
 
 // ---------------------------------------------------------------------------
@@ -90,9 +95,6 @@ CliActor::poll_for_response(TypeTag expected_tag, std::chrono::milliseconds time
             if (msg.type_id() == expected_tag) {
                 return std::move(msg).payload();
             }
-            // Discard unexpected messages. CliActor is a system actor —
-            // no other actor links to or monitors it, so the only expected
-            // traffic is replies to its own requests.
         }
         std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
@@ -100,17 +102,12 @@ CliActor::poll_for_response(TypeTag expected_tag, std::chrono::milliseconds time
 }
 
 // ---------------------------------------------------------------------------
-// send_and_wait helpers
+// ICliCommandHost — local dispatch via try_deliver_local + mailbox poll
 // ---------------------------------------------------------------------------
 
 std::optional<InspectStateReply>
-CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
-                                std::chrono::milliseconds timeout) {
-    // Self-inspection: when the target is the CliActor itself, build the
-    // reply inline instead of sending to our own mailbox and deadlocking
-    // in poll_for_response() — the daemon thread is the only consumer of
-    // this mailbox and it is busy waiting for a response that can never
-    // arrive.
+CliActor::inspect(ActorId target, const InspectStateRequest& req,
+                  std::chrono::milliseconds timeout) {
     if (target == id()) {
         return build_self_inspect_reply(req);
     }
@@ -119,8 +116,6 @@ CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
     if (!actor)
         return std::nullopt;
 
-    // Retry delivery within the timeout window: a transient mailbox-full
-    // condition (e.g. DlqDemoActor burst) must not permanently block CLI.
     auto deadline = std::chrono::steady_clock::now() + timeout;
     for (;;) {
         TypedMessage msg(TypeTag::InspectStateRequestTag, req);
@@ -141,11 +136,6 @@ CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
     if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size()))) {
         return std::nullopt;
     }
-    // Serialize and re-parse to guarantee the reply owns all string data
-    // independently of the ephemeral StreamBuffer payload.  Without this,
-    // some protobuf/allocator combinations may alias string fields back to
-    // the payload buffer, producing garbled values once payload goes out of
-    // scope.
     std::string wire = reply.SerializeAsString();
     InspectStateReply safe_reply;
     if (!safe_reply.ParseFromString(wire)) {
@@ -154,9 +144,8 @@ CliActor::send_and_wait_inspect(ActorId target, const InspectStateRequest& req,
     return safe_reply;
 }
 
-std::optional<KillReply>
-CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
-                             std::chrono::milliseconds timeout) {
+std::optional<KillReply> CliActor::kill(ActorId target, const KillRequest& req,
+                                        std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -190,8 +179,8 @@ CliActor::send_and_wait_kill(ActorId target, const KillRequest& req,
 }
 
 std::optional<QuarantineReply>
-CliActor::send_and_wait_quarantine(ActorId target, const QuarantineRequest& req,
-                                   std::chrono::milliseconds timeout) {
+CliActor::quarantine(ActorId target, const QuarantineRequest& req,
+                     std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -232,7 +221,6 @@ InspectStateReply
 CliActor::build_self_inspect_reply(const InspectStateRequest& req) {
     InspectStateReply reply;
 
-    // Metadata (same structure as EventBasedActor::dispatch_cli_message)
     auto meta = to_metadata();
     auto* pb_meta = reply.mutable_metadata();
     pb_meta->set_actor_id(meta.actor_id);
@@ -245,7 +233,6 @@ CliActor::build_self_inspect_reply(const InspectStateRequest& req) {
         pb_meta->set_behavior_name(meta.behavior_name);
     }
 
-    // Mailbox snapshot
     if (req.include_mailbox()) {
         auto ms = mailbox_snapshot();
         auto* pb_mbox = reply.mutable_mailbox();
@@ -281,7 +268,6 @@ CliActor::build_self_inspect_reply(const InspectStateRequest& req) {
         }
     }
 
-    // Quarantine info
     if (req.include_quarantine_info()) {
         reply.set_quarantine_enabled(quarantine_enabled());
         if (auto* lc = as_lifecycle()) {
@@ -292,7 +278,6 @@ CliActor::build_self_inspect_reply(const InspectStateRequest& req) {
         }
     }
 
-    // Serialized state
     if (req.include_state()) {
         auto blob = serialize_state();
         reply.set_state_blob(
@@ -306,7 +291,7 @@ CliActor::build_self_inspect_reply(const InspectStateRequest& req) {
 // Actor enumeration — iterates the system actor map under lock.
 // ---------------------------------------------------------------------------
 
-std::vector<ActorMeta> CliActor::enumerate_actors(const std::string& filter) {
+std::vector<ActorMeta> CliActor::enumerate(std::string_view filter) {
     std::vector<ActorMeta> result;
     system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
         if (!filter.empty()) {
@@ -322,46 +307,124 @@ std::vector<ActorMeta> CliActor::enumerate_actors(const std::string& filter) {
 }
 
 // ---------------------------------------------------------------------------
-// Command tree — registered commands wired to real implementations.
+// ISystemCliHost interface
 // ---------------------------------------------------------------------------
 
-void CliActor::build_command_tree() {
-    auto root = std::make_unique<CommandNode>("/", "CLI root");
-    build_command_tree_from_registry(*root);
-    command_tree_ = std::move(root);
+void CliActor::render_system_stats(OutputFormatter& output) {
+    output.header("System Statistics");
+    std::map<std::string, std::string> kv;
+    kv["Total actors"] = std::to_string(system_.actor_count());
+    if (auto* sched = system_.scheduler()) {
+        kv["Scheduler threads"] = std::to_string(sched->worker_count());
+    }
+    kv["CLI enabled"] = config_.enabled ? "yes" : "no";
+    kv["CLI format"] = config_.default_format;
+    output.key_value(kv);
+}
+
+void CliActor::render_memory_stats(OutputFormatter& output) {
+    output.header("Memory Regions");
+    auto& reg = mem::MemoryRegionRegistry::instance();
+    std::vector<std::string> cols = {"Region",     "Active", "Limit",
+                                     "Pressure",   "Allocs", "Frees",
+                                     "Corruptions"};
+    std::vector<std::vector<std::string>> rows;
+    static constexpr mem::RegionType kRegions[] = {
+        mem::RegionType::kActor,     mem::RegionType::kMessage,
+        mem::RegionType::kCoroutine, mem::RegionType::kNetwork,
+        mem::RegionType::kInternal,  mem::RegionType::kHibernate};
+    for (auto region : kRegions) {
+        auto snap = reg.snapshot(region);
+        rows.push_back({
+            mem::to_string(region),
+            std::to_string(snap.active_bytes),
+            std::to_string(snap.limit.hard_limit_bytes),
+            mem::to_string(snap.pressure),
+            std::to_string(snap.alloc_count),
+            std::to_string(snap.free_count),
+            std::to_string(snap.corruption_events),
+        });
+    }
+    output.table(cols, rows);
+}
+
+void CliActor::render_fault_status(OutputFormatter& output) {
+    output.header("Fault Injection Status");
+    auto& fc = system_.fault_controller();
+    if (!fc.is_enabled()) {
+        output.raw("Fault injection is disabled.\n");
+        return;
+    }
+    std::map<std::string, std::string> kv;
+    kv["Enabled"] = "yes";
+    kv["Seed"] = std::to_string(fc.replay_seed());
+    kv["Hooks triggered"] = std::to_string(fc.faults_fired());
+    output.key_value(kv);
+}
+
+void CliActor::render_dlq_list(OutputFormatter& output, std::string_view filter) {
+    output.header("Dead Letter Queue");
+    auto* dlq = system_.dead_letter_queue();
+    if (!dlq) {
+        output.raw("DLQ is not configured.\n");
+        return;
+    }
+    auto records = dlq->snapshot_records();
+    if (records.empty()) {
+        output.raw("DLQ is empty.\n");
+        return;
+    }
+    std::vector<std::string> cols = {"#", "Actor", "Reason", "Source", "Age"};
+    std::vector<std::vector<std::string>> rows;
+    for (size_t i = 0; i < records.size(); ++i) {
+        auto& r = records[i];
+        if (!filter.empty()) {
+            std::string aid = std::to_string(r.target.id.value());
+            if (aid.find(filter) == std::string::npos)
+                continue;
+        }
+        rows.push_back({
+            std::to_string(i),
+            std::to_string(r.target.id.value()),
+            mailbox::to_string(r.reason),
+            mailbox::to_string(r.source),
+            std::to_string(r.timestamp_ns / 1'000'000) + "ms",
+        });
+    }
+    output.table(cols, rows);
+}
+
+result<void> CliActor::dlq_replay(uint32_t index, ActorId target) {
+    auto* dlq = system_.dead_letter_queue();
+    if (!dlq)
+        return result<void>::make(
+            error(errors::actor_not_found, "DLQ not configured"));
+
+    mailbox::DeadLetterRecord record;
+    if (!dlq->try_pop_at(index, record))
+        return result<void>::make(
+            error(errors::invalid_argument, "DLQ index out of range"));
+
+    TypedMessage msg(record.type_tag, std::move(record.payload_sample));
+    msg.set_sender_address(address());
+    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
+    if (!enqueue_result.accepted())
+        return result<void>::make(
+            error(errors::mailbox_full, "replay delivery failed"));
+
+    return result<void>::make();
 }
 
 // ---------------------------------------------------------------------------
-// Command execution
+// ILifecycleCliHost interface
 // ---------------------------------------------------------------------------
 
-bool CliActor::run_once() {
-    FAULT_INJECT("hpactor.cli.actor.run_once.fail") {
-        return false; // daemon exits
-    }
-    if (!running_) {
-        return false;
-    }
+result<void> CliActor::drain() {
+    return system_.shutdown();
+}
 
-    std::string line = line_editor_.readline("hpactor> ");
-    if (line.empty()) {
-        // Empty input from user (just ENTER) is a no-op.
-        // EOF on stdin also returns empty — distinguish by checking feof.
-        if (std::feof(stdin)) {
-            printf("\nGoodbye.\n");
-            running_ = false;
-            return false;
-        }
-        return true; // no-op, keep running
-    }
-
-    bool keep_going = session_->process_line(line);
-    line_editor_.add_history(line);
-    if (!keep_going) {
-        running_ = false;
-        return false;
-    }
-    return true;
+result<void> CliActor::shutdown() {
+    return system_.shutdown();
 }
 
 } // namespace cli

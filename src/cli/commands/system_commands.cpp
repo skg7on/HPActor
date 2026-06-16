@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cli/cli_actor.hpp>
-#include <hpactor/cli/cli_server_actor.hpp>
+#include <hpactor/cli/cli_legacy_server_actor.hpp>
+#include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -45,6 +45,11 @@ class SystemStatsCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        if (ctx.system_host) {
+            ctx.system_host->render_system_stats(*ctx.output);
+            return result<void>::make();
+        }
+        // FALLBACK: existing inline logic (for tests without a host)
         ctx.output->header("System Statistics");
         auto* sys = ctx.system;
         auto* cli = ctx.cli_actor;
@@ -79,6 +84,11 @@ class SystemMemoryCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        if (ctx.system_host) {
+            ctx.system_host->render_memory_stats(*ctx.output);
+            return result<void>::make();
+        }
+        // FALLBACK: existing inline logic (for tests without a host)
         ctx.output->header("Memory Regions");
 
         auto& reg = mem::MemoryRegionRegistry::instance();

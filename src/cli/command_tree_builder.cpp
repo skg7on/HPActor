@@ -12,7 +12,6 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include "commands/ask_commands.hpp"
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/command_tree_builder.hpp>
@@ -74,9 +73,6 @@ void build_command_tree_from_registry(CommandNode& root) {
     for (auto* cmd : sorted) {
         mount_command(&root, *cmd);
     }
-
-    // Register forward-looking ask commands.
-    cli::register_ask_commands(root);
 }
 
 } // namespace cli

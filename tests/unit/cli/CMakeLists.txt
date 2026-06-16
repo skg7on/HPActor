@@ -17,8 +17,17 @@ add_executable(test_unit_cli
     test_fault_commands.cpp
     test_memory_commands.cpp
     test_cli_session.cpp
-    test_cli_server_actor.cpp
+    test_cli_legacy_server_actor.cpp
+    test_cli_command_host.cpp
+    test_cli_proto_server.cpp
+    test_cli_http_server.cpp
 )
 target_include_directories(test_unit_cli PRIVATE ${PROJECT_SOURCE_DIR}/src/cli/commands)
 target_link_libraries(test_unit_cli hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_cli)
+
+add_executable(test_unit_cli_wire_protocol
+    test_cli_wire_protocol.cpp
+)
+target_link_libraries(test_unit_cli_wire_protocol hpactor GTest::gtest_main)
+gtest_discover_tests(test_unit_cli_wire_protocol)

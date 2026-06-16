@@ -33,6 +33,7 @@ add_library(hpactor_lib SHARED
     mailbox/dead_letter_queue.cpp
     mailbox/delivery_result.cpp
     adt/dedup_cache.cpp
+    adt/json_helpers.cpp
     mailbox/backpressure_signal_serialization.cpp
     config/actor_factory_registry.cpp
     config/toml_parser.cpp
@@ -179,9 +180,14 @@ target_sources(hpactor_lib PRIVATE
     cli/json_formatter.cpp
     cli/tabular_formatter.cpp
     cli/pager.cpp
-    cli/cli_actor.cpp
+    cli/interactive_cli_actor.cpp
+    cli/cli_connector.cpp
+    cli/cli_local_actor.cpp
     cli/cli_session.cpp
-    cli/cli_server_actor.cpp
+    cli/cli_legacy_server_actor.cpp
+    cli/cli_http_server_actor.cpp
+    cli/cli_client_actor.cpp
+    cli/cli_proto_server_actor.cpp
     cli/commands/help_command.cpp
     cli/commands/quit_command.cpp
     cli/commands/actor_commands.cpp

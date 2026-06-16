@@ -21,13 +21,13 @@
 namespace hpactor {
 namespace cli {
 
-/// \brief Configuration for the socket-based CLI server (CliServerActor).
+/// \brief Configuration for the socket-based CLI server (CliLegacyServerActor).
 ///
 /// Controls UDS and TCP listener setup, session limits, timeouts, and
 /// default output formatting. Designed for daemon-mode operation where
 /// CLI input arrives over Unix domain sockets or TCP connections rather
 /// than stdin/stdout.
-struct CliServerConfig {
+struct CliLegacyServerConfig {
     /// \brief Unix domain socket path for CLI connections.
     ///        Empty means no UDS listener.
     std::string uds_listen_path;

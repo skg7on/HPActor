@@ -87,8 +87,8 @@
 #include "actors/worker_actor.hpp"
 #include "messages.hpp"
 
-#include <hpactor/cli/cli_actor.hpp>
 #include <hpactor/cli/cli_config.hpp>
+#include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/core/actor_system.hpp>
 
 #include <chrono>

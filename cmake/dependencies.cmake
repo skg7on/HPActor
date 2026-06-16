@@ -37,6 +37,7 @@ PROTOBUF_GENERATE_CPP(PROTO_SRCS PROTO_HDRS
     ${CMAKE_SOURCE_DIR}/protos/hpactor/registrar.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/gossip.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/cli_messages.proto
+    ${CMAKE_SOURCE_DIR}/protos/hpactor/cli.proto
     ${CMAKE_SOURCE_DIR}/protos/hpactor/ai_resource.proto
 )
 

@@ -33,9 +33,16 @@ class FaultStatusCommand final : public ICommand {
     std::string_view help_text() const noexcept override {
         return "Show fault injection status";
     }
-    int order() const noexcept override { return 90; }
+    int order() const noexcept override {
+        return 90;
+    }
 
     result<void> execute(CommandContext& ctx) const override {
+        if (ctx.system_host) {
+            ctx.system_host->render_fault_status(*ctx.output);
+            return result<void>::make();
+        }
+        // FALLBACK: existing inline logic (for tests without a host)
         auto* system = ctx.system;
         if (!system) {
             ctx.output->error("No actor system available");
@@ -66,7 +73,9 @@ class FaultListCommand final : public ICommand {
     std::string_view help_text() const noexcept override {
         return "List all registered fault injection points";
     }
-    int order() const noexcept override { return 90; }
+    int order() const noexcept override {
+        return 90;
+    }
 
     result<void> execute(CommandContext& ctx) const override {
         auto& reg = fault::FaultPointRegistry::instance();
@@ -74,8 +83,8 @@ class FaultListCommand final : public ICommand {
         ctx.output->header("Registered Fault Points");
         for (const auto& pt : reg.points()) {
             ctx.output->raw(pt.path + "  [" +
-                            std::string(fault::to_string(pt.domain)) +
-                            "]  " + pt.description);
+                            std::string(fault::to_string(pt.domain)) + "]  " +
+                            pt.description);
         }
         return result<void>::make();
     }
@@ -89,7 +98,9 @@ class FaultClearCommand final : public ICommand {
     std::string_view help_text() const noexcept override {
         return "Clear fault schedule and disable injection";
     }
-    int order() const noexcept override { return 90; }
+    int order() const noexcept override {
+        return 90;
+    }
 
     result<void> execute(CommandContext& ctx) const override {
         auto* system = ctx.system;
@@ -106,8 +117,8 @@ class FaultClearCommand final : public ICommand {
 };
 
 const CommandRegistration<FaultStatusCommand> kRegisterFaultStatus;
-const CommandRegistration<FaultListCommand>   kRegisterFaultList;
-const CommandRegistration<FaultClearCommand>  kRegisterFaultClear;
+const CommandRegistration<FaultListCommand> kRegisterFaultList;
+const CommandRegistration<FaultClearCommand> kRegisterFaultClear;
 
 } // anonymous namespace
 } // namespace cli

@@ -15,12 +15,14 @@
 #pragma once
 
 #include <hpactor/actor/daemon_actor.hpp>
-#include <hpactor/cli/cli_server_config.hpp>
+#include <hpactor/cli/cli_command_host.hpp>
+#include <hpactor/cli/cli_legacy_server_config.hpp>
 #include <hpactor/cli/cli_types.hpp>
 
 #include <chrono>
 #include <memory>
 #include <string>
+#include <unordered_map>
 #include <vector>
 
 namespace hpactor {
@@ -52,14 +54,17 @@ struct CommandNode;
 /// and dispatch them through \c CliSession::process_line().
 ///
 /// Runs on a dedicated daemon thread via \c DispatchPolicy::DedicatedThread.
-class CliServerActor : public DaemonActor {
+class CliLegacyServerActor : public DaemonActor,
+                       public ICliCommandHost,
+                       public ISystemCliHost,
+                       public ILifecycleCliHost {
   public:
-    static constexpr const char* kActorTypeName = "CliServerActor";
+    static constexpr const char* kActorTypeName = "CliLegacyServerActor";
 
-    CliServerActor(ActorContext* ctx, ActorSystem& system,
-                   const CliServerConfig& config);
+    CliLegacyServerActor(ActorContext* ctx, ActorSystem& system,
+                   const CliLegacyServerConfig& config);
 
-    ~CliServerActor() override;
+    ~CliLegacyServerActor() override;
 
     // --- DaemonActor interface ---
     bool run_once() override;
@@ -83,17 +88,29 @@ class CliServerActor : public DaemonActor {
         running_ = false;
     }
 
-    // --- Request-Response Helpers ---
-    std::optional<class InspectStateReply> send_and_wait_inspect(
-        ActorId target, const class InspectStateRequest& req,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
-    std::optional<class KillReply> send_and_wait_kill(
-        ActorId target, const class KillRequest& req,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
-    std::optional<class QuarantineReply> send_and_wait_quarantine(
-        ActorId target, const class QuarantineRequest& req,
-        std::chrono::milliseconds timeout = std::chrono::milliseconds(2000));
-    std::vector<ActorMeta> enumerate_actors(const std::string& filter = "");
+    // --- ICliCommandHost interface ---
+    std::optional<class InspectStateReply>
+    inspect(ActorId target, const class InspectStateRequest& req,
+            std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
+    std::optional<class KillReply>
+    kill(ActorId target, const class KillRequest& req,
+         std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
+    std::optional<class QuarantineReply>
+    quarantine(ActorId target, const class QuarantineRequest& req,
+               std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;
+    std::vector<ActorMeta> enumerate(std::string_view filter = "") override;
+
+    // --- ISystemCliHost interface ---
+    void render_system_stats(OutputFormatter& output) override;
+    void render_memory_stats(OutputFormatter& output) override;
+    void render_fault_status(OutputFormatter& output) override;
+    void render_dlq_list(OutputFormatter& output,
+                         std::string_view filter = "") override;
+    result<void> dlq_replay(uint32_t index, ActorId target) override;
+
+    // --- ILifecycleCliHost interface ---
+    result<void> drain() override;
+    result<void> shutdown() override;
 
   private:
     /// Called by acceptors when a new client connects.
@@ -109,7 +126,7 @@ class CliServerActor : public DaemonActor {
     void build_command_tree();
 
     ActorSystem& system_;
-    CliServerConfig config_;
+    CliLegacyServerConfig config_;
 
     /// Dedicated EventLoop driving all I/O (acceptors + client fds).
     std::unique_ptr<net::EventLoop> loop_;

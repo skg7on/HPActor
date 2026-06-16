@@ -91,6 +91,11 @@ class TcpTransport : public Transport {
     void
     set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf);
 
+    /// \brief Access the underlying EventLoop for synchronous I/O polling.
+    EventLoop& loop() {
+        return loop_;
+    }
+
   private:
     void handle_accept(int client_fd, EndPoint remote_endpoint);
 
