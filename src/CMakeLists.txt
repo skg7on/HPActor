@@ -33,6 +33,7 @@ add_library(hpactor_lib SHARED
     mailbox/dead_letter_queue.cpp
     mailbox/delivery_result.cpp
     adt/dedup_cache.cpp
+    adt/json_helpers.cpp
     mailbox/backpressure_signal_serialization.cpp
     config/actor_factory_registry.cpp
     config/toml_parser.cpp
