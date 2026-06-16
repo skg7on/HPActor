@@ -19,8 +19,10 @@
 #include <hpactor/sched/work_queue.hpp>
 
 #include <atomic>
+#include <chrono>
 #include <cstdint>
 #include <functional>
+#include <mutex>
 #include <pthread.h>
 #include <thread>
 #include <vector>
@@ -32,6 +34,40 @@ namespace hpactor::sched {
 
 // Forward declaration
 class HybridScheduler;
+
+/// \brief OS scheduling characteristics measured at startup.
+///
+/// Populated once by a calibration probe that runs on the first worker
+/// thread.  Values are immutable after construction.  Tests may inject a
+/// fixed calibration via \c set_test_calibration() before \c start().
+struct BackoffCalibration {
+    /// \brief Whether \c sched_yield() actually yields the CPU.
+    ///
+    /// \c true on macOS/Mach where \c thread_switch() deschedules the
+    /// caller.  \c false on Linux/CFS where yield merely rotates the
+    /// run-queue and the caller is immediately rescheduled.
+    bool yield_is_effective = false;
+
+    /// \brief Minimum sleep duration the kernel can reliably honour.
+    ///
+    /// Derived from the knee in the actual-vs-requested sleep curve.
+    /// Typically 10-50 us on modern Linux with hrtimers; 1-4 ms on
+    /// older kernels or virtualized environments.
+    uint32_t min_effective_sleep_ns = 50'000;
+
+    /// \brief How long to spin (yield) before escalating to nanosleep.
+    ///
+    /// 0 when \c yield_is_effective is \c false (no point spinning on
+    /// Linux).  ~20 us when yield actually deschedules the caller.
+    uint32_t spin_threshold_ns = 0;
+
+    /// \brief Total wall-clock idle time before escalating from polling
+    ///        backoff to CV blocking.
+    ///
+    /// Default 1 ms (Linux-safe).  200 us on macOS where yield deschedules.
+    /// Scales with timer granularity on coarse-grained kernels.
+    uint32_t polling_budget_ns = 1'000'000;
+};
 
 /// \brief Per-thread worker for the work-stealing hybrid scheduler.
 ///
@@ -46,10 +82,11 @@ class HybridScheduler;
 /// - **A2WS stealing:** `donation_count_` tracks steal attempts; when the
 ///   count exceeds `Config::steal_threshold`, the worker actively steals
 ///   via `try_steal()` using the scheduler's victim selector.
-/// - **Adaptive idle escalation:** `backoff()` ramps from `yield()` through
-///   exponential sleep (10 µs → 50 ms).  After `kPollThreshold` idle
-///   iterations, the worker enters CV-based blocking with an EDF-aware
-///   timeout so it wakes before the earliest deadline expires.
+/// - **Adaptive idle escalation:** `backoff()` uses wall-clock idle time
+///   with OS-calibrated sleep stages (yield → proportional sleep → capped
+///   sleep).  After `polling_budget_ns` of idle time the worker enters
+///   CV-based blocking with an EDF-aware timeout so it wakes before the
+///   earliest deadline expires.
 /// - **CV wakeup:** External enqueue paths check `is_blocking_` on the
 ///   placement-layer `WorkerState` and signal `sleep_cv_` to wake a
 ///   blocked worker immediately.
@@ -85,9 +122,9 @@ class WorkerThread {
 
     /// \brief Whether the worker has escalated to the CV-blocking idle model.
     ///
-    /// Returns \c true when \c backoff_counter_ >= \c kPollThreshold
-    /// (platform-specific: 4 iters on Linux, 8 on macOS).
-    /// Implemented in worker_thread.cpp to access the file-scoped constant.
+    /// Returns \c true when \c in_cv_model_ is set, which happens after the
+    /// worker enters the CV sleep phase in \c enter_cv_block() and is cleared
+    /// when work is found via \c process_work_item().
     bool diag_is_in_cv_model() const;
 
     /// \brief Construct a worker with the given configuration.
@@ -331,10 +368,38 @@ class WorkerThread {
     uint64_t diag_cv_timeout_wakes() const {
         return diag_cv_timeout_wakes_.load(std::memory_order_relaxed);
     }
-    /// Current backoff counter.  Use \c diag_is_in_cv_model() to check
-    /// whether the worker has escalated to CV-blocking idle.
-    uint32_t diag_backoff_counter() const {
-        return backoff_counter_.load(std::memory_order_relaxed);
+    // ── Calibration (test injection + runtime access) ───────────────
+
+    /// \brief Inject a fixed calibration for deterministic testing.
+    ///
+    /// When set (non-null), the startup probe is skipped and this
+    /// calibration is used instead.  Call with \c nullptr to restore
+    /// auto-calibration for subsequent workers.
+    ///
+    /// \note Not thread-safe — call before any worker \c start().
+    static void set_test_calibration(const BackoffCalibration* cal) {
+        test_calibration_override_ = cal;
+    }
+
+    /// \brief Read the calibration in effect for this worker.
+    ///
+    /// \return Immutable reference to the calibration used by this worker.
+    const BackoffCalibration& calibration() const {
+        return calibration_;
+    }
+
+    /// \brief Whether the OS yield operation actually deschedules the caller.
+    bool diag_yield_is_effective() const {
+        return calibration_.yield_is_effective;
+    }
+    /// \brief Measured kernel timer granularity in nanoseconds.
+    uint32_t diag_min_sleep_ns() const {
+        return calibration_.min_effective_sleep_ns;
+    }
+    /// \brief Consecutive CV wakeups that found no work (exponential
+    ///        timeout level).
+    uint32_t diag_consecutive_empty_wakes() const {
+        return consecutive_empty_wakes_.load(std::memory_order_relaxed);
     }
 
   private:
@@ -369,14 +434,14 @@ class WorkerThread {
 
     /// \brief Execute one iteration of the polling idle model.
     ///
-    /// Increments the backoff counter and invokes \c backoff() (yield or
-    /// exponential sleep).  Standalone workers (no owner scheduler) stay
-    /// in this model indefinitely.  Attached workers escalate to CV
-    /// blocking after \c kPollThreshold idle iterations.
+    /// Tracks \c idle_since_ wall-clock timestamp.  Invokes \c backoff(elapsed)
+    /// with OS-calibrated sleep stages.  Standalone workers (no owner
+    /// scheduler) stay in this model indefinitely.  Attached workers escalate
+    /// to CV blocking after \c polling_budget_ns of cumulative idle time.
     ///
     /// \return \c true if the worker should continue in the polling model
     ///         (caller \c continue s the main loop).
-    /// \return \c false when the polling threshold is reached and the
+    /// \return \c false when the polling budget is exhausted and the
     ///         worker should escalate to CV blocking.
     bool try_poll_idle();
 
@@ -392,25 +457,22 @@ class WorkerThread {
     ///
     /// \return \c true if work was found during the pre-sleep double-check
     ///         (already processed; caller should \c continue the main loop).
-    /// \return \c false after the CV wait completes (caller should
-    ///         \c reset_backoff() and loop).
+    /// \return \c false after the CV wait completed without finding work.
+    ///         Caller should NOT reset \c idle_since_ — preserving it
+    ///         lets the next \c try_poll_idle() immediately re-enter CV.
     bool enter_cv_block();
 
-    /// \brief Adaptive idle backoff: yield → exponential sleep up to 50 ms.
+    /// \brief Adaptive idle backoff: yield -> proportional sleep -> capped
+    /// sleep.
     ///
-    /// First \c kBackoffYieldIters idle iterations call
-    /// `std::this_thread::yield()`.  Subsequent iterations sleep for
-    /// `10 µs * 2^(c - kBackoffYieldIters)`, capped at 50 ms.
-    /// After the backoff ramp, the worker escalates to CV blocking.
-    void backoff();
-
-    /// \brief Reset the backoff counter to zero.
+    /// Stages are determined by wall-clock \p elapsed time since idle start:
+    /// - Stage 0 (< spin_threshold_ns): yield if effective, else no-op.
+    /// - Stage 1 (< 1 ms): sleep for elapsed/4, floored at
+    /// min_effective_sleep_ns.
+    /// - Stage 2 (>= 1 ms): sleep for 500 us (capped).
     ///
-    /// Called whenever work is found so the worker stays responsive after
-    /// an idle period.
-    void reset_backoff() {
-        backoff_counter_.store(0, std::memory_order_relaxed);
-    }
+    /// \param[in] elapsed Wall-clock time since the worker first became idle.
+    void backoff(std::chrono::nanoseconds elapsed);
 
     Config config_;                    ///< Immutable per-worker configuration.
     std::thread thread_;               ///< OS thread handle.
@@ -444,23 +506,45 @@ class WorkerThread {
     /// Pluggable pause handler for test harness (blocking callback).
     PauseHandler pause_handler_;
 
-    /// \brief Backoff counter for adaptive idle polling.
-    ///
-    /// Reset to 0 when work is found so the worker stays responsive;
-    /// increments on each idle iteration to ramp sleep duration.
-    /// \brief Backoff counter for adaptive idle polling.
-    ///
-    /// Reset to 0 when work is found so the worker stays responsive;
-    /// increments on each idle iteration to ramp sleep duration.
-    /// Atomic so \c diag_is_in_cv_model() and \c diag_backoff_counter()
-    /// can safely read it from CLI / metrics threads.
-    std::atomic<uint32_t> backoff_counter_{0};
-
     /// \brief Native OS thread ID captured at worker start.
     ///
     /// On Linux, written once by the worker thread during \c start() via
     /// \c syscall(SYS_gettid).  Read by \c thread_id() from any thread.
     std::atomic<uint64_t> native_tid_{0};
+
+    // ── Adaptive backoff calibration ──────────────────────────────────
+
+    /// \brief Calibration values used by this worker (copied from shared probe
+    ///        or test override at startup).
+    BackoffCalibration calibration_;
+
+    /// \brief Wall-clock time when the worker first became idle.
+    ///
+    /// Default-constructed (epoch) means "not idle."  Set on the first idle
+    /// iteration and cleared when work is found.
+    std::chrono::steady_clock::time_point idle_since_{};
+
+    /// \brief Number of consecutive CV timeout wakeups that found no work.
+    ///
+    /// Drives exponential growth of the safety-net CV timeout.  Reset to 0
+    /// when work is found.  Atomic for snapshot reads from CLI/metrics threads.
+    std::atomic<uint32_t> consecutive_empty_wakes_{0};
+
+    /// \brief Whether the worker is currently inside the CV-blocking idle
+    /// model.
+    ///
+    /// Set \c true when the worker actually sleeps on \c sleep_cv_, cleared
+    /// when work is processed.  Used by \c diag_is_in_cv_model().
+    std::atomic<bool> in_cv_model_{false};
+
+    // ── Shared calibration state (one probe for all workers) ───────────
+
+    /// \brief Shared result of the one-time calibration probe.
+    static BackoffCalibration shared_calibration_;
+    /// \brief One-time flag guarding the calibration probe.
+    static std::once_flag calibration_once_;
+    /// \brief Test override — when non-null, skip the probe and use this.
+    static const BackoffCalibration* test_calibration_override_;
 
     // ── Diagnostic counters (exposed via WorkerSnapshot) ────────────
     std::atomic<uint64_t> diag_work_found_{0};
