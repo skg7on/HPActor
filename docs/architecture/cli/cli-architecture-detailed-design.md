@@ -350,72 +350,106 @@ struct CliClientConfig {
 };
 ```
 
-### 4. CliServerActor Changes
+### 4. Server-Side Actor Decomposition
 
-Add protobuf binary and HTTP JSON listeners alongside the existing legacy raw
-text listener. The server implements all three host interfaces by querying the
-local `ActorSystem`.
+The monolithic `CliServerActor` is split into three focused actors, each
+handling one wire protocol. All three share one `CliSession` + `CommandNode`
+tree via the host interfaces.
 
-**Updated CliServerConfig** (`include/hpactor/cli/cli_server_config.hpp`):
+#### 4a. CliServerActor — Legacy Raw Text (Unchanged, Deprecated)
+
+Keeps the existing `UDS`/`TCP` acceptor with raw `::read()`/`::write()`.
+Protocol: newline-delimited commands, NUL-terminated responses. No new
+features — this is preserved for backward compatibility only.
+
+**CliServerConfig** (stripped of proto/HTTP fields):
 
 ```cpp
 struct CliServerConfig {
-  // Legacy raw-text listener (unchanged)
   std::string uds_listen_path;
   uint16_t    tcp_listen_port   = 0;
   std::string tcp_bind_address  = "127.0.0.1";
-
-  // NEW: protobuf binary listener
-  std::string proto_uds_path;           // e.g. "/var/run/hpactor/hpactor-cli.sock"
-  uint16_t    proto_tcp_port    = 0;    // e.g. 9091
-
-  // NEW: HTTP JSON listener (reuses HTTPGateway)
-  uint16_t    http_port         = 0;    // e.g. 9090 — 0 = disabled
-  std::string http_bind_address = "127.0.0.1";
-
-  // Unchanged
-  uint32_t max_sessions         = 16;
+  uint32_t    max_sessions      = 16;
   std::chrono::milliseconds session_timeout{300000};
   std::string default_format    = "pretty";
-  uint32_t page_size            = 50;
-
-  // Socket permissions for proto UDS path
-  uint32_t proto_uds_socket_mode  = 0660;
-  std::string proto_uds_socket_owner;
-  std::string proto_uds_socket_group;
+  uint32_t    page_size         = 50;
+  uint32_t    uds_socket_mode   = 0660;
+  std::string uds_socket_owner;
+  std::string uds_socket_group;
 };
 ```
 
-**Protocol detection on the new port:** The new port accepts both protobuf
-binary and HTTP. Detection is by first-byte peek: if the buffer starts with
-`GET ` or `POST `, route to the HTTP handler. Otherwise, treat as
-varint-length-prefixed protobuf frames.
+#### 4b. CliProtoServerActor — Protobuf CLI Server (NEW)
 
-The server reconstructs a command line from `CliCommand` fields
-(`"/" + path + " " + args + " --" + params`) and feeds it to
-`CliSession::process_line()`, reusing the existing parse-dispatch-render
-pipeline unchanged. When `rpc_method` is set, the server dispatches to the
-host interface's structured method instead.
+Reuses `TcpTransport::listen()` for both UDS and TCP. Accepted connections
+are automatically wrapped in `WireFrameConnection` instances, which handle
+HPAC Frame decode/encode transparently. No manual frame parsing.
+
+**New header:** `include/hpactor/cli/cli_proto_server_actor.hpp`
 
 ```
-on_proto_client_readable(fd):
-  drain into read_buffer
-  if read_buffer starts with "GET " or "POST ":
-    route to HTTPGateway handler
-  else:
-    while complete varint-prefixed frame in buffer:
-      decode CliCommand
-      if cmd.rpc_method is set:
-        // Structured RPC — bypass command tree, call host interface directly
-        reply_bytes = dispatch_rpc(cmd.rpc_method, cmd.rpc_request)
-        send CliResponse{payload=reply_bytes, is_structured=true,
-                         content_type="application/x-protobuf"}
-      else:
-        // Command-tree dispatch — reconstruct line, route through CliSession
-        reconstruct command line from path + args + params + format
-        response_text = session->process_line(command_line)
-        send CliResponse{payload=response_text}
+class CliProtoServerActor : public DaemonActor,
+                            public ICliCommandHost,
+                            public ISystemCliHost,
+                            public ILifecycleCliHost {
 ```
+
+Key design:
+- Owns an `EventLoop` + `TcpTransport` for listening
+- Each accepted connection gets a `CliSession` with `output_fn` that
+  encodes response via HPAC Frame and calls `conn->send()`
+- `WireFrameConnection::handle_read()` auto-decodes HPAC frames
+- `frame_handler` receives decoded `CliCommand` protobuf → dispatches
+  via `CliSession::process_line()`
+- Structured RPC (`rpc_method` set) bypasses command tree, calls host
+  interface directly
+
+**Wire protocol:**
+```
+Client:  HPAC Frame (magic "HPAC" + big-endian len + CliCommand proto)
+Server:  HPAC Frame (magic "HPAC" + big-endian len + CliResponse proto)
+```
+
+**CliProtoServerConfig:**
+
+```cpp
+struct CliProtoServerConfig {
+  std::string uds_listen_path;           // e.g. "/var/run/hpactor/hpactor-cli.sock"
+  uint16_t    tcp_listen_port   = 0;     // e.g. 9091
+  std::string tcp_bind_address  = "127.0.0.1";
+  uint32_t    max_sessions      = 16;
+  std::chrono::milliseconds session_timeout{300000};
+  std::string default_format    = "pretty";
+  uint32_t    page_size         = 50;
+  uint32_t    uds_socket_mode   = 0660;
+  std::string uds_socket_owner;
+  std::string uds_socket_group;
+};
+```
+
+#### 4c. CliHttpServerActor — HTTP JSON CLI Server (NEW)
+
+Reuses the existing `HTTPGateway` infrastructure (same pattern as
+`HealthHttpServer` and `HTTPGatewayActor`). Accepts `POST /cli` with
+JSON body, routes to `CliSession`, returns JSON response.
+
+**New header:** `include/hpactor/cli/cli_http_server_actor.hpp`
+
+```
+class CliHttpServerActor : public DaemonActor,
+                           public ISystemCliHost,
+                           public ILifecycleCliHost {
+```
+
+Key design:
+- Extends `DaemonActor` — runs on dedicated thread
+- Owns an `HTTPGateway` for listen/accept/HTTP parsing/response formatting
+- Routes `POST /cli` → JSON-decode `CliCommand` → `CliSession::process_line()`
+  → encode `CliResponse` as JSON → HTTP 200 response
+- `ICliCommandHost` is NOT implemented (no structured RPC over HTTP —
+  command-tree dispatch only via `path` + `params` + `args`)
+- Enables any HTTP client (curl, Python, browser) to interact with the CLI
+  with zero HPActor dependency
 
 **HTTP endpoint:**
 
@@ -423,52 +457,73 @@ on_proto_client_readable(fd):
 POST /cli HTTP/1.1
 Content-Type: application/json
 
-Request:  JSON-encoded CliCommand
-Response: JSON-encoded CliResponse (200 OK or 400 for malformed request)
+{"path": "system/stats", "params": {"format": "json"}}
+
+→ 200 OK
+{"content_type": "text/plain", "payload": "Total actors: 10...", "is_error": false}
 ```
 
-The HTTP listener reuses the existing `HTTPGateway` infrastructure (same pattern
-as `HealthHttpServer` and `HTTPGatewayActor`).
+**CliHttpServerConfig:**
+
+```cpp
+struct CliHttpServerConfig {
+  uint16_t    http_port         = 9090;
+  std::string http_bind_address = "127.0.0.1";
+  uint32_t    max_connections   = 100;
+  std::string default_format    = "pretty";
+  uint32_t    page_size         = 50;
+};
+```
 
 ### 5. Port Layout & Backward Compatibility
 
-Three separate listeners on three separate ports:
+Three server actors, three independent port namespaces:
 
 ```
-┌──────────────────────────────────────────────────────┐
-│                  CliServerActor                       │
-│                                                       │
-│  Legacy Port      Proto Port         HTTP Port        │
-│  ───────────      ──────────         ─────────        │
-│  UDS: /var/run/   UDS: /var/run/    TCP: 127.0.0.1   │
-│    hpactor/         hpactor/          :9090           │
-│    hpactor.sock     hpactor-cli.sock                  │
-│                                                       │
-│  TCP: 0 (off)     TCP: 9091                           │
-│                                                       │
-│  Protocol:        Protocol:         Protocol:         │
-│  raw text         protobuf binary   HTTP JSON         │
-│  (\n / \0)        (varint frames)   (POST /cli)       │
-└──────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────────────┐
+│                      Server Side                                 │
+│                                                                  │
+│  ┌──────────────────┐  ┌────────────────┐  ┌──────────────────┐ │
+│  │ CliServerActor   │  │CliProtoServer  │  │CliHttpServer     │ │
+│  │ (legacy)         │  │Actor           │  │Actor             │ │
+│  │                  │  │                │  │                  │ │
+│  │ UDS: /var/run/   │  │ UDS: /var/run/ │  │ TCP: 127.0.0.1   │ │
+│  │   hpactor/       │  │   hpactor/     │  │   :9090          │ │
+│  │   hpactor.sock   │  │   hpactor-cli. │  │                  │ │
+│  │                  │  │   sock         │  │ Protocol:        │ │
+│  │ TCP: 0 (off)     │  │                │  │ HTTP JSON        │ │
+│  │                  │  │ TCP: 9091      │  │ (POST /cli)      │ │
+│  │ Protocol:        │  │                │  │                  │ │
+│  │ raw text         │  │ Protocol:      │  │ Reuses:          │ │
+│  │ (\n / \0)        │  │ HPAC Frame +   │  │ HTTPGateway      │ │
+│  │                  │  │ protobuf       │  │                  │ │
+│  │ Transport:       │  │                │  │                  │ │
+│  │ raw ::read/      │  │ Transport:     │  │                  │ │
+│  │ ::write          │  │ TcpTransport/  │  │                  │ │
+│  │                  │  │ WireFrameConn  │  │                  │ │
+│  └──────────────────┘  └────────────────┘  └──────────────────┘ │
+│                                                                  │
+│  All three share one CliSession + CommandNode tree               │
+│  via ICliCommandHost / ISystemCliHost / ILifecycleCliHost        │
+└─────────────────────────────────────────────────────────────────┘
 ```
 
 **Client connection matrix:**
 
-| Client | Legacy Port | Proto Port | HTTP Port |
-|--------|:---:|:---:|:---:|
-| Legacy `hpactor-cli` (current binary) | ✓ | — | — |
-| New `CliClientActor` (binary transport) | — | ✓ | — |
-| New `CliClientActor` (`--transport http`) | — | — | ✓ |
-| `curl` / any HTTP client | — | — | ✓ |
+| Client | Server | Transport | Wire Format |
+|--------|--------|-----------|-------------|
+| `CliLocalActor` (stdin) | (same process) | `deliver_local()` | Raw text via `TypedMessage` |
+| `CliClientActor` (TCP, UDS) | `CliProtoServerActor` | `TcpTransport` / `WireFrameConnection` | HPAC Frame + protobuf |
+| `curl` / any HTTP client | `CliHttpServerActor` | `HTTPGateway` | JSON |
+| Legacy `hpactor-cli` binary | `CliServerActor` | Raw `::read()`/`::write()` | `\n` / `\0` text |
 
 **Deprecation path:**
 
-- **Phase 1 (this change):** Legacy, proto, and HTTP ports all active. Legacy
-  port logs a deprecation notice on each client accept.
-- **Phase 2 (next release):** Legacy port disabled by default (`uds_listen_path`
-  defaults to `""`). Users opt in via explicit TOML config.
-- **Phase 3 (future):** Remove legacy raw text handler entirely. ~150 lines
-  removed from `src/cli/cli_server_actor.cpp`.
+- **Phase 1 (this change):** Legacy `CliServerActor` active (deprecated).
+  `CliProtoServerActor` + `CliHttpServerActor` active (new).
+- **Phase 2 (next release):** Legacy `CliServerActor` disabled by default.
+  Users opt in via explicit TOML config.
+- **Phase 3 (future):** Remove legacy `CliServerActor` entirely.
 
 ### 6. Command Handler Migration
 
@@ -539,11 +594,17 @@ during migration. No existing test behavior changes.
 | **NEW** | `src/cli/cli_client_actor.cpp` | Implementation |
 | **NEW** | `proto/hpactor/cli.proto` | `CliCommand`, `CliResponse` messages |
 | **MODIFY** | `include/hpactor/cli/command_context.hpp` | Add `command_host`/`system_host`/`lifecycle_host`; keep legacy pointers |
-| **MODIFY** | `include/hpactor/cli/cli_actor.hpp` | Implement three host interfaces |
-| **MODIFY** | `include/hpactor/cli/cli_server_actor.hpp` | Implement three host interfaces; add proto/HTTP acceptors |
-| **MODIFY** | `include/hpactor/cli/cli_server_config.hpp` | Add `proto_uds_path`, `proto_tcp_port`, `http_port`, associated fields |
-| **MODIFY** | `src/cli/cli_actor.cpp` | Wire host interfaces into CliSession; `build_command_tree` from registry |
-| **MODIFY** | `src/cli/cli_server_actor.cpp` | Add protobuf/HTTP acceptors; implement host interfaces; protocol detection |
+| **MODIFY** | `include/hpactor/cli/cli_local_actor.hpp` | Implement three host interfaces |
+| **MODIFY** | `include/hpactor/cli/cli_server_actor.hpp` | Remove proto/HTTP listener code; keep legacy raw text only |
+| **MODIFY** | `include/hpactor/cli/cli_server_config.hpp` | Remove `proto_uds_path`, `proto_tcp_port`, `http_port` fields |
+| **NEW** | `include/hpactor/cli/cli_proto_server_actor.hpp` | `CliProtoServerActor` — `TcpTransport::listen()`, `WireFrameConnection` |
+| **NEW** | `include/hpactor/cli/cli_proto_server_config.hpp` | `CliProtoServerConfig` struct |
+| **NEW** | `include/hpactor/cli/cli_http_server_actor.hpp` | `CliHttpServerActor` — `HTTPGateway::route(POST /cli)` |
+| **NEW** | `include/hpactor/cli/cli_http_server_config.hpp` | `CliHttpServerConfig` struct |
+| **NEW** | `src/cli/cli_proto_server_actor.cpp` | Implementation |
+| **NEW** | `src/cli/cli_http_server_actor.cpp` | Implementation |
+| **MODIFY** | `src/cli/cli_local_actor.cpp` | Wire host interfaces into CliSession |
+| **MODIFY** | `src/cli/cli_server_actor.cpp` | Remove `on_proto_client_*`, HPAC frame handling, HTTP endpoint |
 | **MODIFY** | `src/cli/cli_session.cpp` | Populate new `CommandContext` fields from session host pointers |
 | **MODIFY** | `src/cli/cli_session.hpp` | Add `set_command_host()`/`set_system_host()`/`set_lifecycle_host()` methods |
 | **MODIFY** | `src/cli/commands/*.cpp` (18 files) | Commands use interface pointers instead of `cli_actor`/`cli_server_actor` |
