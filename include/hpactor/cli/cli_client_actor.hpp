@@ -3,6 +3,7 @@
 #pragma once
 
 #include <hpactor/cli/cli_client_config.hpp>
+#include <hpactor/cli/cli_connector.hpp>
 #include <hpactor/cli/interactive_cli_actor.hpp>
 
 #include <chrono>
@@ -82,7 +83,7 @@ class CliClientActor : public InteractiveCliActor {
     class CliResponse send_and_wait(const class CliCommand& cmd);
 
     CliClientConfig config_;
-    int conn_fd_ = -1;
+    class CliConnector connector_;
     bool exec_mode_ = false;
     std::string exec_cmd_;
 };

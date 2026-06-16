@@ -13,24 +13,90 @@
 // limitations under the License.
 
 #include <hpactor/cli/cli_connector.hpp>
-#include <hpactor/net/event_loop.hpp>
+#include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/tcp_transport.hpp>
+#include <hpactor/net/tls_context.hpp>
+#include <hpactor/net/transport.hpp>
+
+#include <arpa/inet.h>
 
 namespace hpactor {
 namespace cli {
 
-int CliConnector::connect_tcp(const std::string& host, uint16_t port,
-                              std::chrono::milliseconds timeout) {
-    net::EventLoop loop;
-    loop.run();
-    return net::TcpTransport::connect_raw_tcp(host, port, loop, timeout);
+// ---------------------------------------------------------------------------
+// Construction / destruction
+// ---------------------------------------------------------------------------
+
+CliConnector::CliConnector() = default;
+
+CliConnector::~CliConnector() {
+    disconnect();
 }
 
+// ---------------------------------------------------------------------------
+// connect_tcp
+// ---------------------------------------------------------------------------
+
+int CliConnector::connect_tcp(const std::string& host, uint16_t port,
+                              std::chrono::milliseconds /*timeout*/) {
+    disconnect();
+
+    // Resolve host to IP for the EndPoint key
+    struct in_addr ip_addr{};
+    if (::inet_pton(AF_INET, host.c_str(), &ip_addr) != 1)
+        return -1;
+
+    Ipv4Endpoint local_ep{0, 0}; // any address, any port
+    Ipv4Endpoint remote_ep{ip_addr.s_addr, 0};
+
+    net::TlsConfig tls_cfg{};
+    net::PoolConfig pool_cfg{};
+    pool_cfg.min_connections = 1;
+    pool_cfg.max_connections = 1;
+
+    transport_ = std::make_unique<net::TcpTransport>(local_ep, tls_cfg, pool_cfg);
+    conn_ = transport_->connect(remote_ep, host, port);
+    if (!conn_)
+        return -1;
+
+    fd_ = conn_->fd();
+    return fd_;
+}
+
+// ---------------------------------------------------------------------------
+// connect_uds
+// ---------------------------------------------------------------------------
+
 int CliConnector::connect_uds(const std::string& path,
-                              std::chrono::milliseconds timeout) {
-    net::EventLoop loop;
-    loop.run();
-    return net::TcpTransport::connect_raw_uds(path, loop, timeout);
+                              std::chrono::milliseconds /*timeout*/) {
+    disconnect();
+
+    Ipv4Endpoint local_ep{0, 0}; // any address, any port
+    // Use a synthetic endpoint for the pool key
+    Ipv4Endpoint remote_ep{0x7F000001, 0};
+
+    net::TlsConfig tls_cfg{};
+    net::PoolConfig pool_cfg{};
+    pool_cfg.min_connections = 1;
+    pool_cfg.max_connections = 1;
+
+    transport_ = std::make_unique<net::TcpTransport>(local_ep, tls_cfg, pool_cfg);
+    conn_ = transport_->connect_unix_domain(remote_ep, path);
+    if (!conn_)
+        return -1;
+
+    fd_ = conn_->fd();
+    return fd_;
+}
+
+// ---------------------------------------------------------------------------
+// disconnect
+// ---------------------------------------------------------------------------
+
+void CliConnector::disconnect() {
+    fd_ = -1;
+    conn_.reset();
+    transport_.reset();
 }
 
 } // namespace cli

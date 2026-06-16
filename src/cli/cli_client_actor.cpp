@@ -78,7 +78,7 @@ uint32_t CliClientActor::get_page_size() {
 bool CliClientActor::pre_input_hook() {
     if (exec_mode_) {
         connect();
-        if (conn_fd_ < 0) {
+        if (connector_.fd() < 0) {
             printf("Error: could not connect to server\n");
             return false;
         }
@@ -87,9 +87,9 @@ bool CliClientActor::pre_input_hook() {
         return false; // exit after exec
     }
 
-    if (conn_fd_ < 0) {
+    if (connector_.fd() < 0) {
         connect();
-        if (conn_fd_ < 0) {
+        if (connector_.fd() < 0) {
             printf("Waiting for connection... (retrying in 1s)\n");
             std::this_thread::sleep_for(std::chrono::seconds(1));
             return running_; // keep retrying
@@ -107,7 +107,7 @@ void CliClientActor::pre_stop_hook() {
 // ---------------------------------------------------------------------------
 
 void CliClientActor::connect() {
-    if (conn_fd_ >= 0)
+    if (connector_.fd() >= 0)
         return; // already connected
 
     if (config_.transport == CliClientConfig::Transport::HttpJson) {
@@ -115,20 +115,14 @@ void CliClientActor::connect() {
     }
 
     if (!config_.host.empty()) {
-        conn_fd_ = CliConnector::connect_tcp(config_.host, config_.port,
-                                             config_.connect_timeout);
+        connector_.connect_tcp(config_.host, config_.port, config_.connect_timeout);
     } else {
-        conn_fd_ =
-            CliConnector::connect_uds(config_.uds_path, config_.connect_timeout);
+        connector_.connect_uds(config_.uds_path, config_.connect_timeout);
     }
 }
 
 void CliClientActor::disconnect() {
-    if (conn_fd_ >= 0) {
-        ::shutdown(conn_fd_, SHUT_RDWR);
-        ::close(conn_fd_);
-        conn_fd_ = -1;
-    }
+    connector_.disconnect();
 }
 
 // ---------------------------------------------------------------------------
@@ -154,7 +148,7 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
     resp.set_is_error(true);
     resp.set_error_code(-1);
 
-    int fd = conn_fd_;
+    int fd = connector_.fd();
     if (fd < 0)
         return resp;
 

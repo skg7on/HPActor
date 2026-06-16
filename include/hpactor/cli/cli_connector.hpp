@@ -16,49 +16,55 @@
 
 #include <chrono>
 #include <cstdint>
+#include <memory>
 #include <string>
 
 namespace hpactor {
+
+namespace net {
+class Connection;
+using ConnectionPtr = std::shared_ptr<Connection>;
+class TcpTransport;
+} // namespace net
+
 namespace cli {
 
-/// \brief Non-blocking TCP/UDS socket factory with async connect via EventLoop.
+/// \brief Lightweight wrapper around \c net::TcpTransport for CLI connections.
 ///
-/// Extracts socket-creation and async-connect logic from
-/// \c TcpTransport::connect() and \c TcpTransport::complete_connect() to
-/// provide reusable async-connect helpers for CLI clients that use
-/// varint-length-prefixed protobuf framing (unlike TcpTransport which uses
-/// WireFrameConnection with HPAC magic + big-endian length framing).
-///
-/// Internally creates a temporary \c net::EventLoop to perform the
-/// non-blocking connect with write_handler + SO_ERROR completion detection
-/// and a configurable timeout.
+/// Uses \c TcpTransport::connect() and \c TcpTransport::connect_unix_domain()
+/// for async socket creation and non-blocking connect completion, then
+/// exposes the connected file descriptor for direct varint-prefixed
+/// protobuf I/O (bypassing the WireFrameConnection layer).
 class CliConnector {
   public:
-    CliConnector() = delete;
+    CliConnector();
+    ~CliConnector();
 
-    /// \brief Create a non-blocking TCP socket and connect to host:port.
-    ///
-    /// Sets \c TCP_NODELAY and \c O_NONBLOCK, initiates \c ::connect(),
-    /// and waits for the TCP handshake to complete via EventLoop
-    /// write_handler + \c SO_ERROR.
-    ///
-    /// \param[in] host    Target hostname or IPv4 address.
-    /// \param[in] port    Target TCP port.
-    /// \param[in] timeout Maximum time to wait for connect completion.
-    /// \return Connected fd (>= 0), or -1 on failure / timeout.
-    static int connect_tcp(const std::string& host, uint16_t port,
-                           std::chrono::milliseconds timeout);
+    CliConnector(const CliConnector&) = delete;
+    CliConnector& operator=(const CliConnector&) = delete;
 
-    /// \brief Create a non-blocking Unix domain socket and connect to path.
-    ///
-    /// Sets \c O_NONBLOCK, initiates \c ::connect(), and waits for
-    /// completion via EventLoop write_handler + \c SO_ERROR.
-    ///
-    /// \param[in] path    Unix domain socket path.
-    /// \param[in] timeout Maximum time to wait for connect completion.
+    /// \brief Connect to host:port via TcpTransport::connect().
     /// \return Connected fd (>= 0), or -1 on failure / timeout.
-    static int
-    connect_uds(const std::string& path, std::chrono::milliseconds timeout);
+    int connect_tcp(const std::string& host, uint16_t port,
+                    std::chrono::milliseconds timeout);
+
+    /// \brief Connect to a Unix domain socket via
+    ///        TcpTransport::connect_unix_domain().
+    /// \return Connected fd (>= 0), or -1 on failure / timeout.
+    int connect_uds(const std::string& path, std::chrono::milliseconds timeout);
+
+    /// \brief Close the connection and release transport resources.
+    void disconnect();
+
+    /// \brief The connected fd, or -1 if not connected.
+    int fd() const {
+        return fd_;
+    }
+
+  private:
+    std::unique_ptr<net::TcpTransport> transport_;
+    net::ConnectionPtr conn_;
+    int fd_ = -1;
 };
 
 } // namespace cli
