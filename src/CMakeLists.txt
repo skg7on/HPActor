@@ -181,7 +181,7 @@ target_sources(hpactor_lib PRIVATE
     cli/pager.cpp
     cli/interactive_cli_actor.cpp
     cli/cli_connector.cpp
-    cli/cli_actor.cpp
+    cli/cli_local_actor.cpp
     cli/cli_session.cpp
     cli/cli_server_actor.cpp
     cli/cli_client_actor.cpp

@@ -38,7 +38,7 @@
 #include <thread>
 
 #include <hpactor/actor/spawn.hpp>
-#include <hpactor/cli/cli_actor.hpp>
+#include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/log/log_manager.hpp>
 #include <hpactor/log/logger.hpp>
