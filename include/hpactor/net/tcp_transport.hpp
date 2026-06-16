@@ -25,7 +25,6 @@
 #include <hpactor/net/transport.hpp>
 #include <hpactor/net/wireframe_connection.hpp>
 
-#include <chrono>
 #include <unordered_map>
 
 namespace hpactor {
@@ -91,23 +90,6 @@ class TcpTransport : public Transport {
     /// \param[in] buf Pointer to the system-wide metrics ring buffer.
     void
     set_metrics_ring_buffer(metrics::MpscRingBuffer<metrics::MetricEvent>* buf);
-
-    // ── Synchronous raw I/O helpers ──────────────────────────────────
-    //
-    // For non-Frame clients that need blocking write/read on a connected
-    // fd (e.g. CliClientActor sending varint-prefixed protobuf).  These
-    // bypass the WireFrameConnection event-driven path.
-
-    /// \brief Blocking write of @p len bytes to @p fd.
-    ///        Handles partial writes internally.
-    /// \return true on success, false on error.
-    static bool write_all(int fd, const void* data, size_t len);
-
-    /// \brief Blocking read of up to @p len bytes from @p fd with timeout.
-    ///        Returns when at least 1 byte arrives, EOF, or timeout.
-    /// \return Number of bytes read, 0 on EOF, -1 on error/timeout.
-    static ssize_t read_with_timeout(int fd, void* buf, size_t len,
-                                     std::chrono::milliseconds timeout);
 
   private:
     void handle_accept(int client_fd, EndPoint remote_endpoint);
