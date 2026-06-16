@@ -15,7 +15,6 @@
 #pragma once
 
 #include <hpactor/actor/daemon_actor.hpp>
-#include <hpactor/cli.pb.h>
 #include <hpactor/cli/cli_command_host.hpp>
 #include <hpactor/cli/cli_server_config.hpp>
 #include <hpactor/cli/cli_types.hpp>
@@ -126,19 +125,6 @@ class CliServerActor : public DaemonActor,
     /// Build the command tree from the CommandRegistry.
     void build_command_tree();
 
-    // --- Proto client session management ---
-    void on_proto_client_accepted(int client_fd);
-    void on_proto_client_readable(int client_fd);
-    void close_proto_session(int client_fd);
-
-    /// Execute a protobuf CliCommand and return the response.
-    class CliResponse execute_cli_command(const class CliCommand& cmd);
-
-    /// Dispatch to a structured RPC method (inspect, kill, enumerate,
-    /// quarantine).
-    std::string
-    dispatch_rpc(const std::string& rpc_method, const std::string& rpc_request);
-
     ActorSystem& system_;
     CliServerConfig config_;
 
@@ -149,10 +135,6 @@ class CliServerActor : public DaemonActor,
     /// disabled in config).
     std::unique_ptr<net::TcpAcceptor> tcp_acceptor_;
     std::unique_ptr<net::UnixDomainAcceptor> uds_acceptor_;
-
-    /// Proto acceptors for protobuf binary CLI connections.
-    std::unique_ptr<net::TcpAcceptor> proto_tcp_acceptor_;
-    std::unique_ptr<net::UnixDomainAcceptor> proto_uds_acceptor_;
 
     std::unique_ptr<CommandNode> command_tree_;
     bool running_ = true;
@@ -166,14 +148,6 @@ class CliServerActor : public DaemonActor,
     /// Map from client fd → SessionState.  Used by the read_handler
     /// callback to locate the owning session.
     std::unordered_map<int, SessionState> sessions_;
-
-    /// Per-proto-session state, keyed by client fd.
-    struct ProtoSessionState {
-        std::unique_ptr<CliSession> session;
-        std::chrono::steady_clock::time_point last_activity;
-        std::string read_buffer;
-    };
-    std::unordered_map<int, ProtoSessionState> proto_sessions_;
 };
 
 } // namespace cli
