@@ -153,7 +153,7 @@ class SaturateReceiverActor : public EventBasedActor {
 
     void send_drop_report() {
         DropReportPayload report;
-        report.receiver_id = static_cast<uint32_t>(id().value());
+        report.receiver_id = id().value();
         report.total_received = received_count_.load();
         report.total_dropped = dropped_count_.load();
         context()->send(collector_addr_, make_msg(DropReportTag, report.encode()));

@@ -289,34 +289,34 @@ struct LatencySamplePayload {
 // =============================================================================
 
 struct DropReportPayload {
-    uint32_t receiver_id = 0;
+    uint64_t receiver_id = 0;
     uint64_t total_received = 0;
-    uint32_t total_dropped = 0;
+    uint64_t total_dropped = 0;
 
     StreamBuffer encode() const {
-        uint8_t buf[16];
+        uint8_t buf[24];
         size_t off = 0;
-        std::memcpy(buf + off, &receiver_id, 4);
-        off += 4;
+        std::memcpy(buf + off, &receiver_id, 8);
+        off += 8;
         std::memcpy(buf + off, &total_received, 8);
         off += 8;
-        std::memcpy(buf + off, &total_dropped, 4);
-        off += 4;
+        std::memcpy(buf + off, &total_dropped, 8);
+        off += 8;
         return StreamBuffer(buf, buf + sizeof(buf));
     }
 
     static DropReportPayload decode(const StreamBuffer& buf) {
         DropReportPayload p;
-        if (buf.size() < 16)
+        if (buf.size() < 24)
             return p;
         const uint8_t* d = buf.data();
         size_t off = 0;
-        std::memcpy(&p.receiver_id, d + off, 4);
-        off += 4;
+        std::memcpy(&p.receiver_id, d + off, 8);
+        off += 8;
         std::memcpy(&p.total_received, d + off, 8);
         off += 8;
-        std::memcpy(&p.total_dropped, d + off, 4);
-        off += 4;
+        std::memcpy(&p.total_dropped, d + off, 8);
+        off += 8;
         return p;
     }
 };

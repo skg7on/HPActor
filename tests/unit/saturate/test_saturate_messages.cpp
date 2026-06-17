@@ -156,6 +156,7 @@ TEST(SaturateMessagesTest, DropReportPayloadRoundtrip) {
     orig.total_dropped = 500;
 
     auto buf = orig.encode();
+    EXPECT_EQ(buf.size(), 24u);
     auto decoded = DropReportPayload::decode(buf);
 
     EXPECT_EQ(decoded.receiver_id, 3);

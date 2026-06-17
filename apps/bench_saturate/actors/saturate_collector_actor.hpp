@@ -155,7 +155,7 @@ class SaturateCollectorActor : public EventBasedActor {
 
     void handle_drop_report(TypedMessage& msg) {
         const auto& p = msg.payload();
-        if (p.size() < 16)
+        if (p.size() < 24)
             return;
         DropReportPayload report = DropReportPayload::decode(p);
 

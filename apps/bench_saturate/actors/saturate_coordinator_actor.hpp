@@ -21,6 +21,7 @@
 
 #include "../messages.hpp"
 
+#include <algorithm>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -289,14 +290,16 @@ class SaturateCoordinatorActor : public EventBasedActor {
 
         switch (phase_) {
             case RampPhase::Probing: {
-                if (current_drop_rate_pct_ > 1.0f) {
+                if (current_drop_rate_pct_ > 1.0f ||
+                    current_rate_msgps_ >= kMaxRateMsgps) {
                     first_bad_rate_ = current_rate_msgps_;
                     last_good_rate_ = current_rate_msgps_ / 2;
                     phase_ = RampPhase::Refining;
                     refine_iteration_ = 0;
                 } else {
                     last_good_rate_ = current_rate_msgps_;
-                    current_rate_msgps_ *= 2;
+                    current_rate_msgps_ =
+                        std::min(current_rate_msgps_ * 2, kMaxRateMsgps);
                     broadcast_rate();
                 }
                 break;
@@ -399,6 +402,8 @@ class SaturateCoordinatorActor : public EventBasedActor {
     ActorAddress collector_addr_;
     std::string active_preset_;
     std::string last_error_;
+    static constexpr uint32_t kMaxRateMsgps = 100'000'000; // 100M msg/s cap
+
     RampPhase phase_ = RampPhase::Idle;
     uint32_t current_rate_msgps_ = 100;
     uint32_t saturation_ceiling_ = 0;
