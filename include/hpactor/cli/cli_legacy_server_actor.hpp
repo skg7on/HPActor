@@ -55,14 +55,14 @@ struct CommandNode;
 ///
 /// Runs on a dedicated daemon thread via \c DispatchPolicy::DedicatedThread.
 class CliLegacyServerActor : public DaemonActor,
-                       public ICliCommandHost,
-                       public ISystemCliHost,
-                       public ILifecycleCliHost {
+                             public ICliCommandHost,
+                             public ISystemCliHost,
+                             public ILifecycleCliHost {
   public:
     static constexpr const char* kActorTypeName = "CliLegacyServerActor";
 
     CliLegacyServerActor(ActorContext* ctx, ActorSystem& system,
-                   const CliLegacyServerConfig& config);
+                         const CliLegacyServerConfig& config);
 
     ~CliLegacyServerActor() override;
 
@@ -104,6 +104,7 @@ class CliLegacyServerActor : public DaemonActor,
     void render_system_stats(OutputFormatter& output) override;
     void render_memory_stats(OutputFormatter& output) override;
     void render_fault_status(OutputFormatter& output) override;
+    void render_scheduler_workers(OutputFormatter& output) override;
     void render_dlq_list(OutputFormatter& output,
                          std::string_view filter = "") override;
     result<void> dlq_replay(uint32_t index, ActorId target) override;

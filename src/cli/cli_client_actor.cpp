@@ -321,6 +321,16 @@ void CliClientActor::render_fault_status(OutputFormatter& output) {
         output.error("Failed to fetch fault status from server");
 }
 
+void CliClientActor::render_scheduler_workers(OutputFormatter& output) {
+    CliCommand cmd;
+    cmd.set_path("scheduler/workers");
+    auto resp = send_and_wait(cmd);
+    if (!resp.is_error())
+        output.raw(resp.payload());
+    else
+        output.error("Failed to fetch scheduler workers from server");
+}
+
 void CliClientActor::render_dlq_list(OutputFormatter& output,
                                      std::string_view filter) {
     CliCommand cmd;

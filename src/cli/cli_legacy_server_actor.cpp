@@ -51,7 +51,7 @@ namespace cli {
 // ---------------------------------------------------------------------------
 
 CliLegacyServerActor::CliLegacyServerActor(ActorContext* ctx, ActorSystem& system,
-                               const CliLegacyServerConfig& config)
+                                           const CliLegacyServerConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
       loop_(std::make_unique<net::EventLoop>()) {}
 
@@ -109,7 +109,8 @@ void CliLegacyServerActor::on_daemon_start() {
 
         if (!tcp_acceptor_->listen(config_.tcp_listen_port, 0,
                                    config_.tcp_bind_address)) {
-            std::fprintf(stderr, "CliLegacyServerActor: TCP listen failed on %s:%u\n",
+            std::fprintf(stderr,
+                         "CliLegacyServerActor: TCP listen failed on %s:%u\n",
                          config_.tcp_bind_address.c_str(),
                          static_cast<unsigned>(config_.tcp_listen_port));
             tcp_acceptor_.reset();
@@ -304,7 +305,7 @@ poll_for_response(mailbox::MPSCActorMailbox<TypedMessage>* mbox,
 
 std::optional<InspectStateReply>
 CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
-                        std::chrono::milliseconds timeout) {
+                              std::chrono::milliseconds timeout) {
     if (target == id()) {
         InspectStateReply reply;
         auto* pb_meta = reply.mutable_metadata();
@@ -344,7 +345,7 @@ CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
 
 std::optional<KillReply>
 CliLegacyServerActor::kill(ActorId target, const KillRequest& req,
-                     std::chrono::milliseconds timeout) {
+                           std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -374,7 +375,7 @@ CliLegacyServerActor::kill(ActorId target, const KillRequest& req,
 
 std::optional<QuarantineReply>
 CliLegacyServerActor::quarantine(ActorId target, const QuarantineRequest& req,
-                           std::chrono::milliseconds timeout) {
+                                 std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -470,8 +471,45 @@ void CliLegacyServerActor::render_fault_status(OutputFormatter& output) {
     output.key_value(kv);
 }
 
+void CliLegacyServerActor::render_scheduler_workers(OutputFormatter& output) {
+    auto* sched = system_.scheduler();
+    if (!sched) {
+        output.raw("Scheduler is not running.");
+        return;
+    }
+    auto snaps = sched->worker_snapshots();
+    output.header("Scheduler Workers (" +
+                  std::to_string(sched->worker_count()) + " threads, A2WS)");
+    if (snaps.empty()) {
+        output.raw("Per-worker statistics not available.");
+        return;
+    }
+    std::vector<std::string> cols = {
+        "Worker", "Thread ID", "Work",  "IdleIters", "CV→block",
+        "CV¬ify", "CV⏰",      "Model", "Steals",    "Idle"};
+    std::vector<std::vector<std::string>> rows;
+    for (auto& ws : snaps) {
+        char tid_buf[24];
+        snprintf(tid_buf, sizeof(tid_buf), "%llu",
+                 static_cast<unsigned long long>(ws.thread_id));
+        rows.push_back({
+            std::to_string(ws.worker_index),
+            tid_buf,
+            std::to_string(ws.work_found),
+            std::to_string(ws.idle_iters),
+            std::to_string(ws.cv_escalations),
+            std::to_string(ws.cv_notify_wakes),
+            std::to_string(ws.cv_timeout_wakes),
+            ws.idle_model,
+            std::to_string(ws.steals_attempted),
+            ws.is_idle ? "yes" : "no",
+        });
+    }
+    output.table(cols, rows);
+}
+
 void CliLegacyServerActor::render_dlq_list(OutputFormatter& output,
-                                     std::string_view filter) {
+                                           std::string_view filter) {
     output.header("Dead Letter Queue");
     auto* dlq = system_.dead_letter_queue();
     if (!dlq) {

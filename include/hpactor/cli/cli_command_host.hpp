@@ -81,6 +81,7 @@ class ISystemCliHost {
     virtual void render_system_stats(OutputFormatter& output) = 0;
     virtual void render_memory_stats(OutputFormatter& output) = 0;
     virtual void render_fault_status(OutputFormatter& output) = 0;
+    virtual void render_scheduler_workers(OutputFormatter& output) = 0;
     virtual void
     render_dlq_list(OutputFormatter& output, std::string_view filter = "") = 0;
 

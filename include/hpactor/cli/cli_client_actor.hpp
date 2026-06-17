@@ -52,6 +52,7 @@ class CliClientActor : public InteractiveCliActor {
     void render_system_stats(OutputFormatter& output) override;
     void render_memory_stats(OutputFormatter& output) override;
     void render_fault_status(OutputFormatter& output) override;
+    void render_scheduler_workers(OutputFormatter& output) override;
     void render_dlq_list(OutputFormatter& output,
                          std::string_view filter = "") override;
     result<void> dlq_replay(uint32_t index, ActorId target) override;
