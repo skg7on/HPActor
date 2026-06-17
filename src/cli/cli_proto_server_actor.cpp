@@ -100,6 +100,19 @@ CliProtoServerActor::~CliProtoServerActor() = default;
 void CliProtoServerActor::on_daemon_start() {
     build_command_tree();
 
+    // Register a send-completion callback so WireFrameConnection writes
+    // through this EventLoop correctly clear is_sending_ after each send.
+    // Without this, handle_send_completion is never called and subsequent
+    // sends silently queue without flushing → client timeouts.
+    loop_->set_completion_callback([this](net::OpCompletion c) {
+        if (c.type == net::OpType::Send) {
+            auto it = sessions_.find(c.fd);
+            if (it != sessions_.end() && it->second.conn) {
+                it->second.conn->handle_send_completion(c.result);
+            }
+        }
+    });
+
     // --- Unix domain socket ---
     if (!config_.uds_listen_path.empty()) {
         ::unlink(config_.uds_listen_path.c_str());
@@ -195,6 +208,8 @@ bool CliProtoServerActor::run_once() {
         close_proto_session(fd);
     }
 
+    // Process any pending send completions before blocking in wait().
+    loop_->process_completions();
     loop_->wait(100);
 
     return running_;
