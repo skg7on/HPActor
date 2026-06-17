@@ -105,6 +105,11 @@ class CliSession {
         cli_server_actor_ = server;
     }
 
+    /// \brief Set the owning CliProtoServerActor, if any.
+    void set_proto_server(class CliProtoServerActor* server) {
+        proto_server_ = server;
+    }
+
     /// \brief Set the command host for actor operations.
     void set_command_host(class ICliCommandHost* host) {
         command_host_ = host;
@@ -145,6 +150,7 @@ class CliSession {
     std::string current_format_ = "pretty";
     class CliActor* cli_actor_ = nullptr;
     class CliLegacyServerActor* cli_server_actor_ = nullptr;
+    class CliProtoServerActor* proto_server_ = nullptr;
     class ICliCommandHost* command_host_ = nullptr;
     class ISystemCliHost* system_host_ = nullptr;
     class ILifecycleCliHost* lifecycle_host_ = nullptr;

@@ -29,6 +29,7 @@ namespace cli {
 
 class CliActor;
 class CliLegacyServerActor;
+class CliProtoServerActor;
 class CliSession;
 class OutputFormatter;
 
@@ -59,6 +60,8 @@ struct CommandContext {
     /// \brief The CLI server actor (socket-based), for request-response
     ///        helpers when \c cli_actor is null.
     CliLegacyServerActor* cli_server_actor = nullptr;
+    /// \brief The protobuf CLI server, for client-management commands.
+    CliProtoServerActor* cli_proto_server = nullptr;
     /// \brief The owning session, for shutdown requests.
     CliSession* cli_session = nullptr;
     /// \brief Output formatter for rendering results.

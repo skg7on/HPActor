@@ -252,11 +252,24 @@ void CliProtoServerActor::on_tcp_accepted(int client_fd, EndPoint remote_ep) {
     session->set_command_host(this);
     session->set_system_host(this);
     session->set_lifecycle_host(this);
+    session->set_proto_server(this);
 
     SessionState state;
     state.conn = conn;
     state.session = std::move(session);
     state.last_activity = std::chrono::steady_clock::now();
+    state.seqno = next_seqno_++;
+    // Build "IP:port" string for TCP clients.
+    // Ipv4Endpoint stores addr/port in network byte order (big-endian).
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&remote_ep)) {
+        char buf[32];
+        uint32_t a = ipv4->addr;
+        snprintf(buf, sizeof(buf), "%u.%u.%u.%u:%u", (a >> 24) & 0xFF,
+                 (a >> 16) & 0xFF, (a >> 8) & 0xFF, a & 0xFF, ipv4->port());
+        state.remote_addr = buf;
+    } else {
+        state.remote_addr = "tcp";
+    }
     sessions_.emplace(client_fd, std::move(state));
 
     // Set up frame handler — WireFrameConnection auto-decodes HPAC frames.
@@ -299,11 +312,14 @@ void CliProtoServerActor::on_uds_accepted(int client_fd) {
     session->set_command_host(this);
     session->set_system_host(this);
     session->set_lifecycle_host(this);
+    session->set_proto_server(this);
 
     SessionState state;
     state.conn = conn;
     state.session = std::move(session);
     state.last_activity = std::chrono::steady_clock::now();
+    state.seqno = next_seqno_++;
+    state.remote_addr = "uds";
     sessions_.emplace(client_fd, std::move(state));
 
     conn->set_frame_handler([this, client_fd](adt::StreamBuffer data) {
@@ -328,13 +344,22 @@ void CliProtoServerActor::on_frame_received(int client_fd, adt::StreamBuffer dat
     // length already stripped).  The body is the serialized CliCommand.
     CliCommand cmd;
     if (!cmd.ParseFromArray(data.data(), static_cast<int>(data.size()))) {
-        // Invalid protobuf — send error response.
+        if (state.command_history.size() < 10000)
+            state.command_history.emplace_back("(invalid)");
         CliResponse resp;
         resp.set_content_type("application/x-protobuf");
         resp.set_is_error(true);
         resp.set_error_code(1);
         send_hpac_frame(client_fd, resp.SerializeAsString());
         return;
+    }
+
+    // Record command in session history.
+    if (state.command_history.size() < 10000) {
+        if (!cmd.rpc_method().empty())
+            state.command_history.emplace_back(cmd.rpc_method());
+        else if (!cmd.path().empty())
+            state.command_history.emplace_back(cmd.path());
     }
 
     // Dual dispatch: rpc_method takes priority over path.
@@ -430,6 +455,53 @@ void CliProtoServerActor::close_proto_session(int client_fd) {
         it->second.conn->close();
     }
     sessions_.erase(it);
+}
+
+// ---------------------------------------------------------------------------
+// Client management (for /client commands)
+// ---------------------------------------------------------------------------
+
+std::string CliProtoServerActor::list_clients() const {
+    std::string result;
+    if (sessions_.empty())
+        return "No connected clients.\n";
+    result += "Seqno  Remote\n";
+    result += "-----  ------\n";
+    for (const auto& [fd, state] : sessions_) {
+        char buf[80];
+        snprintf(buf, sizeof(buf), "%-6u %s\n", state.seqno,
+                 state.remote_addr.c_str());
+        result += buf;
+    }
+    return result;
+}
+
+bool CliProtoServerActor::close_client(uint32_t seqno) {
+    for (auto& [fd, state] : sessions_) {
+        if (state.seqno == seqno) {
+            close_proto_session(fd);
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string CliProtoServerActor::client_history(uint32_t seqno) const {
+    for (const auto& [fd, state] : sessions_) {
+        if (state.seqno == seqno) {
+            if (state.command_history.empty())
+                return "(no commands recorded)\n";
+            std::string result =
+                "Command history for client " + std::to_string(seqno) + " (" +
+                std::to_string(state.command_history.size()) + " entries):\n";
+            for (size_t i = 0; i < state.command_history.size(); ++i) {
+                result += std::to_string(i + 1) + ". " +
+                          state.command_history[i] + "\n";
+            }
+            return result;
+        }
+    }
+    return "Client " + std::to_string(seqno) + " not found.\n";
 }
 
 // ---------------------------------------------------------------------------
