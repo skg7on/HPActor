@@ -80,6 +80,10 @@ class MockSystemHost : public hpactor::cli::ISystemCliHost {
         output.header("Faults");
         last_output = "faults_rendered";
     }
+    void render_scheduler_workers(hpactor::cli::OutputFormatter& output) override {
+        output.header("Workers");
+        last_output = "workers_rendered";
+    }
     void render_dlq_list(hpactor::cli::OutputFormatter& output,
                          std::string_view filter) override {
         output.header("DLQ");
