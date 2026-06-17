@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">48.5&nbsp;%</td>
-            <td class="headerCovTableEntry">163</td>
-            <td class="headerCovTableEntry">79</td>
+            <td class="headerCovTableEntryLo">46.5&nbsp;%</td>
+            <td class="headerCovTableEntry">172</td>
+            <td class="headerCovTableEntry">80</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td class="headerValue">2026-06-17 23:42:31</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">65.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">28.2&nbsp;%</td>
-            <td class="headerCovTableEntry">110</td>
-            <td class="headerCovTableEntry">31</td>
+            <td class="headerCovTableEntryLo">27.1&nbsp;%</td>
+            <td class="headerCovTableEntry">118</td>
+            <td class="headerCovTableEntry">32</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -256,129 +256,148 @@
 <span id="L177"><span class="lineNum">     177</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :         if (n &gt; 0) {</span></span>
 <span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">           1 :             read_buffer_.commit_tail(static_cast&lt;size_t&gt;(n));</span></span>
 <span id="L179"><span class="lineNum">     179</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :         } else if (n == 0) {</span></span>
-<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           1 :             read_buffer_.clear(); // EOF — discard incomplete header</span></span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           1 :             return;</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :             :         } else {</span>
-<span id="L183"><span class="lineNum">     183</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             if (errno == EAGAIN || errno == EWOULDBLOCK)</span></span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaUNC">           0 :                 return;</span></span>
-<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaUNC">           0 :             read_buffer_.clear(); // Error — discard partial data</span></span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :         }</span>
-<span id="L188"><span class="lineNum">     188</span>                 :             :     }</span>
-<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
-<span id="L190"><span class="lineNum">     190</span>                 :             :     // Validate magic &quot;HPAC&quot;</span>
-<span id="L191"><span class="lineNum">     191</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (read_buffer_[0] != 'H' || read_buffer_[1] != 'P' ||</span></span>
-<span id="L192"><span class="lineNum">     192</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :         read_buffer_[2] != 'A' || read_buffer_[3] != 'C') {</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :             // EOF — remote end closed connection.</span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           1 :             read_buffer_.clear();</span></span>
+<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :             if (error_handler_) {</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 error_handler_(nullptr, error(errors::unknown, &quot;EOF on read&quot;));</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :             :             }</span>
+<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC tlaBgGNC">           1 :             return;</span></span>
+<span id="L186"><span class="lineNum">     186</span>                 :             :         } else {</span>
+<span id="L187"><span class="lineNum">     187</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             if (errno == EAGAIN || errno == EWOULDBLOCK)</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaUNC">           0 :                 return;</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :             :             // Hard read error.</span>
+<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaUNC">           0 :             read_buffer_.clear();</span></span>
+<span id="L191"><span class="lineNum">     191</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (error_handler_) {</span></span>
+<span id="L192"><span class="lineNum">     192</span>                 :<span class="tlaUNC">           0 :                 error_handler_(nullptr, error(errors::unknown, &quot;read error&quot;));</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :             :             }</span>
+<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
+<span id="L195"><span class="lineNum">     195</span>                 :             :         }</span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :     }</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             : </span>
+<span id="L198"><span class="lineNum">     198</span>                 :             :     // Validate magic &quot;HPAC&quot;</span>
+<span id="L199"><span class="lineNum">     199</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (read_buffer_[0] != 'H' || read_buffer_[1] != 'P' ||</span></span>
+<span id="L200"><span class="lineNum">     200</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :         read_buffer_[2] != 'A' || read_buffer_[3] != 'C') {</span></span>
 <span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span><span class="tlaUNC" title="Branch 6 was not executed"> # </span><span class="tlaUNC" title="Branch 7 was not executed"> # </span>]
-<span id="L193"><span class="lineNum">     193</span>                 :             :         // Invalid magic — skip one byte and retry (re-sync stream)</span>
-<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaUNC">           0 :         read_buffer_.consume(1);</span></span>
-<span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaUNC">           0 :         handle_read(); // Recurse to re-enter header-read phase</span></span>
-<span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L197"><span class="lineNum">     197</span>                 :             :     }</span>
-<span id="L198"><span class="lineNum">     198</span>                 :             : </span>
-<span id="L199"><span class="lineNum">     199</span>                 :             :     // Parse remaining length (big-endian uint32_t from bytes 4-7)</span>
-<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaUNC">           0 :     size_t payload_len = (static_cast&lt;size_t&gt;(read_buffer_[4]) &lt;&lt; 24) |</span></span>
-<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaUNC">           0 :                          (static_cast&lt;size_t&gt;(read_buffer_[5]) &lt;&lt; 16) |</span></span>
-<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaUNC">           0 :                          (static_cast&lt;size_t&gt;(read_buffer_[6]) &lt;&lt; 8) |</span></span>
-<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaUNC">           0 :                          static_cast&lt;size_t&gt;(read_buffer_[7]);</span></span>
-<span id="L204"><span class="lineNum">     204</span>                 :             : </span>
-<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaUNC">           0 :     size_t total_frame_size = WireFrame::HeaderSize + payload_len;</span></span>
+<span id="L201"><span class="lineNum">     201</span>                 :             :         // Invalid magic — skip one byte and retry (re-sync stream)</span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaUNC">           0 :         read_buffer_.consume(1);</span></span>
+<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaUNC">           0 :         handle_read(); // Recurse to re-enter header-read phase</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :             :     }</span>
 <span id="L206"><span class="lineNum">     206</span>                 :             : </span>
-<span id="L207"><span class="lineNum">     207</span>                 :             :     // Phase 2 — accumulate exactly payload_len bytes.</span>
-<span id="L208"><span class="lineNum">     208</span>                 :             :     // Reserve only the remaining bytes needed, not a fixed chunk.</span>
-<span id="L209"><span class="lineNum">     209</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     while (read_buffer_.size() &lt; total_frame_size) {</span></span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaUNC">           0 :         size_t remaining = total_frame_size - read_buffer_.size();</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaUNC">           0 :         uint8_t* area = read_buffer_.reserve_tail(remaining);</span></span>
-<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaUNC">           0 :         ssize_t n = ::read(fd_, area, remaining);</span></span>
-<span id="L213"><span class="lineNum">     213</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (n &gt; 0) {</span></span>
-<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaUNC">           0 :             read_buffer_.commit_tail(static_cast&lt;size_t&gt;(n));</span></span>
-<span id="L215"><span class="lineNum">     215</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         } else if (n == 0) {</span></span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaUNC">           0 :             read_buffer_.clear(); // EOF mid-frame — discard incomplete frame</span></span>
-<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
-<span id="L218"><span class="lineNum">     218</span>                 :             :         } else {</span>
-<span id="L219"><span class="lineNum">     219</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (errno == EAGAIN || errno == EWOULDBLOCK)</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaUNC">           0 :                 return;</span></span>
-<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaUNC">           0 :             read_buffer_.clear(); // Error — discard partial data</span></span>
-<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
-<span id="L223"><span class="lineNum">     223</span>                 :             :         }</span>
-<span id="L224"><span class="lineNum">     224</span>                 :             :     }</span>
-<span id="L225"><span class="lineNum">     225</span>                 :             : </span>
-<span id="L226"><span class="lineNum">     226</span>                 :             :     // Complete frame received — extract into StreamBuffer.</span>
-<span id="L227"><span class="lineNum">     227</span>                 :             :     StreamBuffer frame_data(read_buffer_.begin(),</span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaUNC">           0 :                             read_buffer_.begin() + total_frame_size);</span></span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaUNC">           0 :     read_buffer_.consume(total_frame_size);</span></span>
-<span id="L230"><span class="lineNum">     230</span>                 :             : </span>
-<span id="L231"><span class="lineNum">     231</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (frame_handler_) {</span></span>
-<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaUNC">           0 :         frame_handler_(std::move(frame_data));</span></span>
-<span id="L233"><span class="lineNum">     233</span>                 :             :     }</span>
-<span id="L234"><span class="lineNum">     234</span>                 :             : </span>
-<span id="L235"><span class="lineNum">     235</span>                 :             :     // Process any additional frames already in the buffer.</span>
-<span id="L236"><span class="lineNum">     236</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (read_buffer_.size() &gt;= WireFrame::HeaderSize) {</span></span>
-<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaUNC">           0 :         handle_read();</span></span>
-<span id="L238"><span class="lineNum">     238</span>                 :             :     }</span>
-<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L240"><span class="lineNum">     240</span>                 :             : </span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC tlaBgGNC">          11 : void WireFrameConnection::send_raw(const StreamBuffer&amp; data) {</span></span>
-<span id="L242"><span class="lineNum">     242</span>   [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 11 times"> + </span>]:<span class="tlaGNC">          11 :     if (fd_ &lt; 0 || !loop_)</span></span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L244"><span class="lineNum">     244</span>                 :             : </span>
-<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC tlaBgGNC">          11 :     write_buffer_.append(data.data(), data.size());</span></span>
-<span id="L246"><span class="lineNum">     246</span>                 :             : </span>
-<span id="L247"><span class="lineNum">     247</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">          11 :     if (is_sending_)</span></span>
-<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">           9 :         return;</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :             :     // Parse remaining length (big-endian uint32_t from bytes 4-7)</span>
+<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaUNC">           0 :     size_t payload_len = (static_cast&lt;size_t&gt;(read_buffer_[4]) &lt;&lt; 24) |</span></span>
+<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaUNC">           0 :                          (static_cast&lt;size_t&gt;(read_buffer_[5]) &lt;&lt; 16) |</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaUNC">           0 :                          (static_cast&lt;size_t&gt;(read_buffer_[6]) &lt;&lt; 8) |</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaUNC">           0 :                          static_cast&lt;size_t&gt;(read_buffer_[7]);</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :             : </span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaUNC">           0 :     size_t total_frame_size = WireFrame::HeaderSize + payload_len;</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :             : </span>
+<span id="L215"><span class="lineNum">     215</span>                 :             :     // Phase 2 — accumulate exactly payload_len bytes.</span>
+<span id="L216"><span class="lineNum">     216</span>                 :             :     // Reserve only the remaining bytes needed, not a fixed chunk.</span>
+<span id="L217"><span class="lineNum">     217</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     while (read_buffer_.size() &lt; total_frame_size) {</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaUNC">           0 :         size_t remaining = total_frame_size - read_buffer_.size();</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaUNC">           0 :         uint8_t* area = read_buffer_.reserve_tail(remaining);</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaUNC">           0 :         ssize_t n = ::read(fd_, area, remaining);</span></span>
+<span id="L221"><span class="lineNum">     221</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (n &gt; 0) {</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaUNC">           0 :             read_buffer_.commit_tail(static_cast&lt;size_t&gt;(n));</span></span>
+<span id="L223"><span class="lineNum">     223</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         } else if (n == 0) {</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :             :             // EOF mid-frame — remote end closed connection.</span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaUNC">           0 :             read_buffer_.clear();</span></span>
+<span id="L226"><span class="lineNum">     226</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (error_handler_) {</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaUNC">           0 :                 error_handler_(nullptr, error(errors::unknown, &quot;EOF mid-frame&quot;));</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :             :             }</span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :             :         } else {</span>
+<span id="L231"><span class="lineNum">     231</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (errno == EAGAIN || errno == EWOULDBLOCK)</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaUNC">           0 :                 return;</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :             :             // Hard read error.</span>
+<span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaUNC">           0 :             read_buffer_.clear();</span></span>
+<span id="L235"><span class="lineNum">     235</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (error_handler_) {</span></span>
+<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaUNC">           0 :                 error_handler_(nullptr, error(errors::unknown, &quot;read error&quot;));</span></span>
+<span id="L237"><span class="lineNum">     237</span>                 :             :             }</span>
+<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
+<span id="L239"><span class="lineNum">     239</span>                 :             :         }</span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :     }</span>
+<span id="L241"><span class="lineNum">     241</span>                 :             : </span>
+<span id="L242"><span class="lineNum">     242</span>                 :             :     // Complete frame received — extract payload (strip 8-byte HPAC header).</span>
+<span id="L243"><span class="lineNum">     243</span>                 :             :     // Header: 4-byte magic &quot;HPAC&quot; + 4-byte big-endian payload length.</span>
+<span id="L244"><span class="lineNum">     244</span>                 :             :     // The frame handler receives only the payload so it can be parsed</span>
+<span id="L245"><span class="lineNum">     245</span>                 :             :     // directly as protobuf (e.g., CliCommand / CliResponse).</span>
+<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaUNC">           0 :     StreamBuffer frame_data(read_buffer_.begin() + WireFrame::HeaderSize,</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaUNC">           0 :                             read_buffer_.begin() + total_frame_size);</span></span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaUNC">           0 :     read_buffer_.consume(total_frame_size);</span></span>
 <span id="L249"><span class="lineNum">     249</span>                 :             : </span>
-<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">           2 :     flush_write_buffer();</span></span>
-<span id="L251"><span class="lineNum">     251</span>                 :             : }</span>
-<span id="L252"><span class="lineNum">     252</span>                 :             : </span>
-<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::flush_write_buffer() {</span></span>
-<span id="L254"><span class="lineNum">     254</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           2 :     FAULT_INJECT(&quot;hpactor.wireframe.flush_write_buffer.drop&quot;) {</span></span>
+<span id="L250"><span class="lineNum">     250</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (frame_handler_) {</span></span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaUNC">           0 :         frame_handler_(std::move(frame_data));</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :             :     }</span>
+<span id="L253"><span class="lineNum">     253</span>                 :             : </span>
+<span id="L254"><span class="lineNum">     254</span>                 :             :     // Process any additional frames already in the buffer.</span>
+<span id="L255"><span class="lineNum">     255</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (read_buffer_.size() &gt;= WireFrame::HeaderSize) {</span></span>
+<span id="L256"><span class="lineNum">     256</span>                 :<span class="tlaUNC">           0 :         handle_read();</span></span>
+<span id="L257"><span class="lineNum">     257</span>                 :             :     }</span>
+<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :             : </span>
+<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC tlaBgGNC">          11 : void WireFrameConnection::send_raw(const StreamBuffer&amp; data) {</span></span>
+<span id="L261"><span class="lineNum">     261</span>   [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 11 times"> + </span>]:<span class="tlaGNC">          11 :     if (fd_ &lt; 0 || !loop_)</span></span>
+<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :             : </span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC tlaBgGNC">          11 :     write_buffer_.append(data.data(), data.size());</span></span>
+<span id="L265"><span class="lineNum">     265</span>                 :             : </span>
+<span id="L266"><span class="lineNum">     266</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">          11 :     if (is_sending_)</span></span>
+<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaGNC">           9 :         return;</span></span>
+<span id="L268"><span class="lineNum">     268</span>                 :             : </span>
+<span id="L269"><span class="lineNum">     269</span>                 :<span class="tlaGNC">           2 :     flush_write_buffer();</span></span>
+<span id="L270"><span class="lineNum">     270</span>                 :             : }</span>
+<span id="L271"><span class="lineNum">     271</span>                 :             : </span>
+<span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::flush_write_buffer() {</span></span>
+<span id="L273"><span class="lineNum">     273</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           2 :     FAULT_INJECT(&quot;hpactor.wireframe.flush_write_buffer.drop&quot;) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span>]
-<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L256"><span class="lineNum">     256</span>                 :             :     }</span>
-<span id="L257"><span class="lineNum">     257</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC tlaBgGNC">           2 :     if (fd_ &lt; 0 || loop_ == nullptr || write_buffer_.empty()) {</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :             :     }</span>
+<span id="L276"><span class="lineNum">     276</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC tlaBgGNC">           2 :     if (fd_ &lt; 0 || loop_ == nullptr || write_buffer_.empty()) {</span></span>
 <span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span><span class="tlaGBC" title="Branch 7 was taken 2 times"> + </span>]
-<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L259"><span class="lineNum">     259</span>                 :             :     }</span>
-<span id="L260"><span class="lineNum">     260</span>                 :             : </span>
-<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC tlaBgGNC">           2 :     is_sending_ = true;</span></span>
-<span id="L262"><span class="lineNum">     262</span>                 :             : </span>
-<span id="L263"><span class="lineNum">     263</span>                 :             :     struct iovec iov;</span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">           2 :     iov.iov_base = write_buffer_.data();</span></span>
-<span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaGNC">           2 :     iov.iov_len = write_buffer_.size();</span></span>
-<span id="L266"><span class="lineNum">     266</span>                 :             : </span>
-<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaGNC">           2 :     loop_-&gt;backend()-&gt;async_send(fd_, &amp;iov, 1, ActorId(0),</span></span>
-<span id="L268"><span class="lineNum">     268</span>                 :             :                                  static_cast&lt;uint32_t&gt;(OpType::Send));</span>
-<span id="L269"><span class="lineNum">     269</span>                 :             : }</span>
-<span id="L270"><span class="lineNum">     270</span>                 :             : </span>
-<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void WireFrameConnection::handle_send_completion(int result) {</span></span>
-<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (send_completion_handler_) {</span></span>
-<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaUNC">           0 :         send_completion_handler_(result);</span></span>
-<span id="L274"><span class="lineNum">     274</span>                 :             :     }</span>
-<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaUNC">           0 :     is_sending_ = false;</span></span>
-<span id="L276"><span class="lineNum">     276</span>                 :             : </span>
-<span id="L277"><span class="lineNum">     277</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (result &lt; 0) {</span></span>
-<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaUNC">           0 :         set_state(ConnectionState::Error);</span></span>
-<span id="L279"><span class="lineNum">     279</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (error_handler_) {</span></span>
-<span id="L280"><span class="lineNum">     280</span>                 :<span class="tlaUNC">           0 :             error_handler_(</span></span>
-<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaUNC">           0 :                 std::enable_shared_from_this&lt;WireFrameConnection&gt;::shared_from_this(),</span></span>
-<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaUNC">           0 :                 error{});</span></span>
-<span id="L283"><span class="lineNum">     283</span>                 :             :         }</span>
-<span id="L284"><span class="lineNum">     284</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L285"><span class="lineNum">     285</span>                 :             :     }</span>
-<span id="L286"><span class="lineNum">     286</span>                 :             : </span>
-<span id="L287"><span class="lineNum">     287</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (static_cast&lt;size_t&gt;(result) &gt;= write_buffer_.size()) {</span></span>
-<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaUNC">           0 :         write_buffer_.clear();</span></span>
-<span id="L289"><span class="lineNum">     289</span>                 :             :     } else {</span>
-<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaUNC">           0 :         write_buffer_.consume(static_cast&lt;size_t&gt;(result));</span></span>
-<span id="L291"><span class="lineNum">     291</span>                 :             :     }</span>
-<span id="L292"><span class="lineNum">     292</span>                 :             : </span>
-<span id="L293"><span class="lineNum">     293</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!write_buffer_.empty()) {</span></span>
-<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaUNC">           0 :         flush_write_buffer();</span></span>
-<span id="L295"><span class="lineNum">     295</span>                 :             :     }</span>
-<span id="L296"><span class="lineNum">     296</span>                 :             : }</span>
-<span id="L297"><span class="lineNum">     297</span>                 :             : </span>
-<span id="L298"><span class="lineNum">     298</span>                 :             : } // namespace net</span>
-<span id="L299"><span class="lineNum">     299</span>                 :             : } // namespace hpactor</span>
+<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
+<span id="L278"><span class="lineNum">     278</span>                 :             :     }</span>
+<span id="L279"><span class="lineNum">     279</span>                 :             : </span>
+<span id="L280"><span class="lineNum">     280</span>                 :<span class="tlaGNC tlaBgGNC">           2 :     is_sending_ = true;</span></span>
+<span id="L281"><span class="lineNum">     281</span>                 :             : </span>
+<span id="L282"><span class="lineNum">     282</span>                 :             :     struct iovec iov;</span>
+<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">           2 :     iov.iov_base = write_buffer_.data();</span></span>
+<span id="L284"><span class="lineNum">     284</span>                 :<span class="tlaGNC">           2 :     iov.iov_len = write_buffer_.size();</span></span>
+<span id="L285"><span class="lineNum">     285</span>                 :             : </span>
+<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">           2 :     loop_-&gt;backend()-&gt;async_send(fd_, &amp;iov, 1, ActorId(0),</span></span>
+<span id="L287"><span class="lineNum">     287</span>                 :             :                                  static_cast&lt;uint32_t&gt;(OpType::Send));</span>
+<span id="L288"><span class="lineNum">     288</span>                 :             : }</span>
+<span id="L289"><span class="lineNum">     289</span>                 :             : </span>
+<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void WireFrameConnection::handle_send_completion(int result) {</span></span>
+<span id="L291"><span class="lineNum">     291</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (send_completion_handler_) {</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaUNC">           0 :         send_completion_handler_(result);</span></span>
+<span id="L293"><span class="lineNum">     293</span>                 :             :     }</span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaUNC">           0 :     is_sending_ = false;</span></span>
+<span id="L295"><span class="lineNum">     295</span>                 :             : </span>
+<span id="L296"><span class="lineNum">     296</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (result &lt; 0) {</span></span>
+<span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaUNC">           0 :         set_state(ConnectionState::Error);</span></span>
+<span id="L298"><span class="lineNum">     298</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (error_handler_) {</span></span>
+<span id="L299"><span class="lineNum">     299</span>                 :<span class="tlaUNC">           0 :             error_handler_(</span></span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaUNC">           0 :                 std::enable_shared_from_this&lt;WireFrameConnection&gt;::shared_from_this(),</span></span>
+<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaUNC">           0 :                 error{});</span></span>
+<span id="L302"><span class="lineNum">     302</span>                 :             :         }</span>
+<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
+<span id="L304"><span class="lineNum">     304</span>                 :             :     }</span>
+<span id="L305"><span class="lineNum">     305</span>                 :             : </span>
+<span id="L306"><span class="lineNum">     306</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (static_cast&lt;size_t&gt;(result) &gt;= write_buffer_.size()) {</span></span>
+<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaUNC">           0 :         write_buffer_.clear();</span></span>
+<span id="L308"><span class="lineNum">     308</span>                 :             :     } else {</span>
+<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaUNC">           0 :         write_buffer_.consume(static_cast&lt;size_t&gt;(result));</span></span>
+<span id="L310"><span class="lineNum">     310</span>                 :             :     }</span>
+<span id="L311"><span class="lineNum">     311</span>                 :             : </span>
+<span id="L312"><span class="lineNum">     312</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!write_buffer_.empty()) {</span></span>
+<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaUNC">           0 :         flush_write_buffer();</span></span>
+<span id="L314"><span class="lineNum">     314</span>                 :             :     }</span>
+<span id="L315"><span class="lineNum">     315</span>                 :             : }</span>
+<span id="L316"><span class="lineNum">     316</span>                 :             : </span>
+<span id="L317"><span class="lineNum">     317</span>                 :             : } // namespace net</span>
+<span id="L318"><span class="lineNum">     318</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

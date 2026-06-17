@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td class="headerValue">2026-06-17 23:42:31</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -345,13 +345,13 @@
 <span id="L267"><span class="lineNum">     267</span>                 :             : </span>
 <span id="L268"><span class="lineNum">     268</span>                 :             :     /// \brief Addresses of linked actors (bidirectional death sharing).</span>
 <span id="L269"><span class="lineNum">     269</span>                 :             :     std::vector&lt;ActorAddress&gt; linked_actors() const;</span>
-<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">          14 :     void add_linked(const ActorAddress&amp; addr) {</span></span>
-<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">          14 :         linked_.push_back(addr);</span></span>
-<span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaGNC">          14 :     }</span></span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">          13 :     void add_linked(const ActorAddress&amp; addr) {</span></span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">          13 :         linked_.push_back(addr);</span></span>
+<span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaGNC">          13 :     }</span></span>
 <span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">          13 :     void remove_linked(const ActorAddress&amp; addr) {</span></span>
 <span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">          13 :         auto it = std::find(linked_.begin(), linked_.end(), addr);</span></span>
-<span id="L275"><span class="lineNum">     275</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          13 :         if (it != linked_.end())</span></span>
-<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">           9 :             linked_.erase(it);</span></span>
+<span id="L275"><span class="lineNum">     275</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">          13 :         if (it != linked_.end())</span></span>
+<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">           8 :             linked_.erase(it);</span></span>
 <span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">          13 :     }</span></span>
 <span id="L278"><span class="lineNum">     278</span>                 :             : </span>
 <span id="L279"><span class="lineNum">     279</span>                 :             :     // ── Monitoring ────────────────────────────────────────────────────────</span>
@@ -371,8 +371,8 @@
 <span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">           2 :             monitored_.erase(it);</span></span>
 <span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">           9 :     }</span></span>
 <span id="L295"><span class="lineNum">     295</span>                 :             :     /// \brief List of currently monitored actor addresses.</span>
-<span id="L296"><span class="lineNum">     296</span>                 :<span class="tlaGNC">         469 :     const std::vector&lt;ActorAddress&gt;&amp; monitored_actors() const {</span></span>
-<span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaGNC">         469 :         return monitored_;</span></span>
+<span id="L296"><span class="lineNum">     296</span>                 :<span class="tlaGNC">         467 :     const std::vector&lt;ActorAddress&gt;&amp; monitored_actors() const {</span></span>
+<span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaGNC">         467 :         return monitored_;</span></span>
 <span id="L298"><span class="lineNum">     298</span>                 :             :     }</span>
 <span id="L299"><span class="lineNum">     299</span>                 :             : </span>
 <span id="L300"><span class="lineNum">     300</span>                 :             :     // ── Actor resolution ──────────────────────────────────────────────────</span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td class="headerValue">2026-06-17 23:42:31</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">78.3&nbsp;%</td>
@@ -100,8 +100,8 @@
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : // ---- Constructors ----</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">         554 : StreamBuffer::StreamBuffer(size_t count)</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        1108 :     : buf_(count, uint8_t{0}), read_pos_(0) {}</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">         552 : StreamBuffer::StreamBuffer(size_t count)</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        1104 :     : buf_(count, uint8_t{0}), read_pos_(0) {}</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : </span>
 <span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">     1222747 : StreamBuffer::StreamBuffer(std::initializer_list&lt;uint8_t&gt; ilist)</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">     2445494 :     : buf_(ilist), read_pos_(0) {}</span></span>
@@ -253,9 +253,9 @@
 <span id="L175"><span class="lineNum">     175</span>                 :             : </span>
 <span id="L176"><span class="lineNum">     176</span>                 :             : // ---- Private ----</span>
 <span id="L177"><span class="lineNum">     177</span>                 :             : </span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">        3432 : void StreamBuffer::maybe_compact() {</span></span>
-<span id="L179"><span class="lineNum">     179</span>         [<span class="tlaGBC" title="Branch 0 was taken 3383 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 49 times"> + </span>]:<span class="tlaGNC">        3432 :     if (read_pos_ == 0)</span></span>
-<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">        3383 :         return;</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">        3430 : void StreamBuffer::maybe_compact() {</span></span>
+<span id="L179"><span class="lineNum">     179</span>         [<span class="tlaGBC" title="Branch 0 was taken 3381 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 49 times"> + </span>]:<span class="tlaGNC">        3430 :     if (read_pos_ == 0)</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">        3381 :         return;</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">          49 :     size_t readable = buf_.size() - read_pos_;</span></span>
 <span id="L182"><span class="lineNum">     182</span>   [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 32 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 17 times"> + </span>]:<span class="tlaGNC">          49 :     if (read_pos_ &gt; readable || read_pos_ &gt; kCompactThreshold) {</span></span>
 <span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">          32 :         compact();</span></span>

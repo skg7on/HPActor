@@ -31,17 +31,17 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">10.3&nbsp;%</td>
-            <td class="headerCovTableEntry">253</td>
+            <td class="headerCovTableEntryLo">13.1&nbsp;%</td>
+            <td class="headerCovTableEntry">198</td>
             <td class="headerCovTableEntry">26</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td class="headerValue">2026-06-17 23:42:31</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">37.5&nbsp;%</td>
-            <td class="headerCovTableEntry">24</td>
+            <td class="headerCovTableEntryLo">45.0&nbsp;%</td>
+            <td class="headerCovTableEntry">20</td>
             <td class="headerCovTableEntry">9</td>
           </tr>
           <tr>
@@ -56,8 +56,8 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">2.7&nbsp;%</td>
-            <td class="headerCovTableEntry">113</td>
+            <td class="headerCovTableEntryLo">3.4&nbsp;%</td>
+            <td class="headerCovTableEntry">87</td>
             <td class="headerCovTableEntry">3</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
@@ -384,129 +384,44 @@
 <span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaUNC">           0 :     return result;</span></span>
 <span id="L307"><span class="lineNum">     307</span>                 :             : }</span>
 <span id="L308"><span class="lineNum">     308</span>                 :             : </span>
-<span id="L309"><span class="lineNum">     309</span>                 :             : // ---------------------------------------------------------------------------</span>
-<span id="L310"><span class="lineNum">     310</span>                 :             : // ISystemCliHost interface</span>
-<span id="L311"><span class="lineNum">     311</span>                 :             : // ---------------------------------------------------------------------------</span>
-<span id="L312"><span class="lineNum">     312</span>                 :             : </span>
-<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaUNC">           0 : void CliActor::render_system_stats(OutputFormatter&amp; output) {</span></span>
-<span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaUNC">           0 :     output.header(&quot;System Statistics&quot;);</span></span>
-<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaUNC">           0 :     std::map&lt;std::string, std::string&gt; kv;</span></span>
-<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaUNC">           0 :     kv[&quot;Total actors&quot;] = std::to_string(system_.actor_count());</span></span>
-<span id="L317"><span class="lineNum">     317</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (auto* sched = system_.scheduler()) {</span></span>
-<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaUNC">           0 :         kv[&quot;Scheduler threads&quot;] = std::to_string(sched-&gt;worker_count());</span></span>
-<span id="L319"><span class="lineNum">     319</span>                 :             :     }</span>
-<span id="L320"><span class="lineNum">     320</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     kv[&quot;CLI enabled&quot;] = config_.enabled ? &quot;yes&quot; : &quot;no&quot;;</span></span>
-<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaUNC">           0 :     kv[&quot;CLI format&quot;] = config_.default_format;</span></span>
-<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaUNC">           0 :     output.key_value(kv);</span></span>
-<span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L324"><span class="lineNum">     324</span>                 :             : </span>
-<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaUNC">           0 : void CliActor::render_memory_stats(OutputFormatter&amp; output) {</span></span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaUNC">           0 :     output.header(&quot;Memory Regions&quot;);</span></span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaUNC">           0 :     auto&amp; reg = mem::MemoryRegionRegistry::instance();</span></span>
-<span id="L328"><span class="lineNum">     328</span>                 :             :     std::vector&lt;std::string&gt; cols = {&quot;Region&quot;,     &quot;Active&quot;, &quot;Limit&quot;,</span>
-<span id="L329"><span class="lineNum">     329</span>                 :             :                                      &quot;Pressure&quot;,   &quot;Allocs&quot;, &quot;Frees&quot;,</span>
-<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaUNC">           0 :                                      &quot;Corruptions&quot;};</span></span>
-<span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaUNC">           0 :     std::vector&lt;std::vector&lt;std::string&gt;&gt; rows;</span></span>
-<span id="L332"><span class="lineNum">     332</span>                 :             :     static constexpr mem::RegionType kRegions[] = {</span>
-<span id="L333"><span class="lineNum">     333</span>                 :             :         mem::RegionType::kActor,     mem::RegionType::kMessage,</span>
-<span id="L334"><span class="lineNum">     334</span>                 :             :         mem::RegionType::kCoroutine, mem::RegionType::kNetwork,</span>
-<span id="L335"><span class="lineNum">     335</span>                 :             :         mem::RegionType::kInternal,  mem::RegionType::kHibernate};</span>
-<span id="L336"><span class="lineNum">     336</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     for (auto region : kRegions) {</span></span>
-<span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaUNC">           0 :         auto snap = reg.snapshot(region);</span></span>
-<span id="L338"><span class="lineNum">     338</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         rows.push_back({</span></span>
-<span id="L339"><span class="lineNum">     339</span>                 :             :             mem::to_string(region),</span>
-<span id="L340"><span class="lineNum">     340</span>                 :             :             std::to_string(snap.active_bytes),</span>
-<span id="L341"><span class="lineNum">     341</span>                 :             :             std::to_string(snap.limit.hard_limit_bytes),</span>
-<span id="L342"><span class="lineNum">     342</span>                 :             :             mem::to_string(snap.pressure),</span>
-<span id="L343"><span class="lineNum">     343</span>                 :             :             std::to_string(snap.alloc_count),</span>
-<span id="L344"><span class="lineNum">     344</span>                 :             :             std::to_string(snap.free_count),</span>
-<span id="L345"><span class="lineNum">     345</span>                 :             :             std::to_string(snap.corruption_events),</span>
-<span id="L346"><span class="lineNum">     346</span>                 :             :         });</span>
-<span id="L347"><span class="lineNum">     347</span>                 :             :     }</span>
-<span id="L348"><span class="lineNum">     348</span>                 :<span class="tlaUNC">           0 :     output.table(cols, rows);</span></span>
-<span id="L349"><span class="lineNum">     349</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L350"><span class="lineNum">     350</span>                 :             : </span>
-<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaUNC">           0 : void CliActor::render_fault_status(OutputFormatter&amp; output) {</span></span>
-<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaUNC">           0 :     output.header(&quot;Fault Injection Status&quot;);</span></span>
-<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaUNC">           0 :     auto&amp; fc = system_.fault_controller();</span></span>
-<span id="L354"><span class="lineNum">     354</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!fc.is_enabled()) {</span></span>
-<span id="L355"><span class="lineNum">     355</span>                 :<span class="tlaUNC">           0 :         output.raw(&quot;Fault injection is disabled.\n&quot;);</span></span>
-<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L357"><span class="lineNum">     357</span>                 :             :     }</span>
-<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaUNC">           0 :     std::map&lt;std::string, std::string&gt; kv;</span></span>
-<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaUNC">           0 :     kv[&quot;Enabled&quot;] = &quot;yes&quot;;</span></span>
-<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaUNC">           0 :     kv[&quot;Seed&quot;] = std::to_string(fc.replay_seed());</span></span>
-<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaUNC">           0 :     kv[&quot;Hooks triggered&quot;] = std::to_string(fc.faults_fired());</span></span>
-<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaUNC">           0 :     output.key_value(kv);</span></span>
-<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L364"><span class="lineNum">     364</span>                 :             : </span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaUNC">           0 : void CliActor::render_dlq_list(OutputFormatter&amp; output, std::string_view filter) {</span></span>
-<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaUNC">           0 :     output.header(&quot;Dead Letter Queue&quot;);</span></span>
-<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaUNC">           0 :     auto* dlq = system_.dead_letter_queue();</span></span>
-<span id="L368"><span class="lineNum">     368</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!dlq) {</span></span>
-<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaUNC">           0 :         output.raw(&quot;DLQ is not configured.\n&quot;);</span></span>
-<span id="L370"><span class="lineNum">     370</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L371"><span class="lineNum">     371</span>                 :             :     }</span>
-<span id="L372"><span class="lineNum">     372</span>                 :<span class="tlaUNC">           0 :     auto records = dlq-&gt;snapshot_records();</span></span>
-<span id="L373"><span class="lineNum">     373</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (records.empty()) {</span></span>
-<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaUNC">           0 :         output.raw(&quot;DLQ is empty.\n&quot;);</span></span>
-<span id="L375"><span class="lineNum">     375</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L376"><span class="lineNum">     376</span>                 :             :     }</span>
-<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaUNC">           0 :     std::vector&lt;std::string&gt; cols = {&quot;#&quot;, &quot;Actor&quot;, &quot;Reason&quot;, &quot;Source&quot;, &quot;Age&quot;};</span></span>
-<span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaUNC">           0 :     std::vector&lt;std::vector&lt;std::string&gt;&gt; rows;</span></span>
-<span id="L379"><span class="lineNum">     379</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     for (size_t i = 0; i &lt; records.size(); ++i) {</span></span>
-<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaUNC">           0 :         auto&amp; r = records[i];</span></span>
-<span id="L381"><span class="lineNum">     381</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!filter.empty()) {</span></span>
-<span id="L382"><span class="lineNum">     382</span>                 :<span class="tlaUNC">           0 :             std::string aid = std::to_string(r.target.id.value());</span></span>
-<span id="L383"><span class="lineNum">     383</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (aid.find(filter) == std::string::npos)</span></span>
-<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaUNC">           0 :                 continue;</span></span>
-<span id="L385"><span class="lineNum">     385</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         }</span></span>
-<span id="L386"><span class="lineNum">     386</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         rows.push_back({</span></span>
-<span id="L387"><span class="lineNum">     387</span>                 :             :             std::to_string(i),</span>
-<span id="L388"><span class="lineNum">     388</span>                 :             :             std::to_string(r.target.id.value()),</span>
-<span id="L389"><span class="lineNum">     389</span>                 :             :             mailbox::to_string(r.reason),</span>
-<span id="L390"><span class="lineNum">     390</span>                 :             :             mailbox::to_string(r.source),</span>
-<span id="L391"><span class="lineNum">     391</span>                 :<span class="tlaUNC">           0 :             std::to_string(r.timestamp_ns / 1'000'000) + &quot;ms&quot;,</span></span>
-<span id="L392"><span class="lineNum">     392</span>                 :             :         });</span>
-<span id="L393"><span class="lineNum">     393</span>                 :             :     }</span>
-<span id="L394"><span class="lineNum">     394</span>                 :<span class="tlaUNC">           0 :     output.table(cols, rows);</span></span>
-<span id="L395"><span class="lineNum">     395</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 : }</span></span>
-<span id="L396"><span class="lineNum">     396</span>                 :             : </span>
-<span id="L397"><span class="lineNum">     397</span>                 :<span class="tlaUNC">           0 : result&lt;void&gt; CliActor::dlq_replay(uint32_t index, ActorId target) {</span></span>
-<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaUNC">           0 :     auto* dlq = system_.dead_letter_queue();</span></span>
-<span id="L399"><span class="lineNum">     399</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!dlq)</span></span>
-<span id="L400"><span class="lineNum">     400</span>                 :             :         return result&lt;void&gt;::make(</span>
-<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaUNC">           0 :             error(errors::actor_not_found, &quot;DLQ not configured&quot;));</span></span>
-<span id="L402"><span class="lineNum">     402</span>                 :             : </span>
-<span id="L403"><span class="lineNum">     403</span>                 :<span class="tlaUNC">           0 :     mailbox::DeadLetterRecord record;</span></span>
-<span id="L404"><span class="lineNum">     404</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!dlq-&gt;try_pop_at(index, record))</span></span>
-<span id="L405"><span class="lineNum">     405</span>                 :             :         return result&lt;void&gt;::make(</span>
-<span id="L406"><span class="lineNum">     406</span>                 :<span class="tlaUNC">           0 :             error(errors::invalid_argument, &quot;DLQ index out of range&quot;));</span></span>
-<span id="L407"><span class="lineNum">     407</span>                 :             : </span>
-<span id="L408"><span class="lineNum">     408</span>                 :<span class="tlaUNC">           0 :     TypedMessage msg(record.type_tag, std::move(record.payload_sample));</span></span>
-<span id="L409"><span class="lineNum">     409</span>                 :<span class="tlaUNC">           0 :     msg.set_sender_address(address());</span></span>
-<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaUNC">           0 :     auto enqueue_result = system_.try_deliver_local(target, std::move(msg));</span></span>
-<span id="L411"><span class="lineNum">     411</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!enqueue_result.accepted())</span></span>
-<span id="L412"><span class="lineNum">     412</span>                 :             :         return result&lt;void&gt;::make(</span>
-<span id="L413"><span class="lineNum">     413</span>                 :<span class="tlaUNC">           0 :             error(errors::mailbox_full, &quot;replay delivery failed&quot;));</span></span>
-<span id="L414"><span class="lineNum">     414</span>                 :             : </span>
-<span id="L415"><span class="lineNum">     415</span>                 :<span class="tlaUNC">           0 :     return result&lt;void&gt;::make();</span></span>
-<span id="L416"><span class="lineNum">     416</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L417"><span class="lineNum">     417</span>                 :             : </span>
-<span id="L418"><span class="lineNum">     418</span>                 :             : // ---------------------------------------------------------------------------</span>
-<span id="L419"><span class="lineNum">     419</span>                 :             : // ILifecycleCliHost interface</span>
-<span id="L420"><span class="lineNum">     420</span>                 :             : // ---------------------------------------------------------------------------</span>
-<span id="L421"><span class="lineNum">     421</span>                 :             : </span>
-<span id="L422"><span class="lineNum">     422</span>                 :<span class="tlaUNC">           0 : result&lt;void&gt; CliActor::drain() {</span></span>
-<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaUNC">           0 :     return system_.shutdown();</span></span>
-<span id="L424"><span class="lineNum">     424</span>                 :             : }</span>
-<span id="L425"><span class="lineNum">     425</span>                 :             : </span>
-<span id="L426"><span class="lineNum">     426</span>                 :<span class="tlaUNC">           0 : result&lt;void&gt; CliActor::shutdown() {</span></span>
-<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaUNC">           0 :     return system_.shutdown();</span></span>
-<span id="L428"><span class="lineNum">     428</span>                 :             : }</span>
-<span id="L429"><span class="lineNum">     429</span>                 :             : </span>
-<span id="L430"><span class="lineNum">     430</span>                 :             : } // namespace cli</span>
-<span id="L431"><span class="lineNum">     431</span>                 :             : } // namespace hpactor</span>
+<span id="L309"><span class="lineNum">     309</span>                 :             : // execute_path is inline in header (returns false — local host).</span>
+<span id="L310"><span class="lineNum">     310</span>                 :             : // dlq_replay is the only remaining ISystemCliHost method with a body.</span>
+<span id="L311"><span class="lineNum">     311</span>                 :             : </span>
+<span id="L312"><span class="lineNum">     312</span>                 :<span class="tlaUNC">           0 : result&lt;void&gt; CliActor::dlq_replay(uint32_t index, ActorId target) {</span></span>
+<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaUNC">           0 :     auto* dlq = system_.dead_letter_queue();</span></span>
+<span id="L314"><span class="lineNum">     314</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!dlq)</span></span>
+<span id="L315"><span class="lineNum">     315</span>                 :             :         return result&lt;void&gt;::make(</span>
+<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaUNC">           0 :             error(errors::actor_not_found, &quot;DLQ not configured&quot;));</span></span>
+<span id="L317"><span class="lineNum">     317</span>                 :             : </span>
+<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaUNC">           0 :     mailbox::DeadLetterRecord record;</span></span>
+<span id="L319"><span class="lineNum">     319</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!dlq-&gt;try_pop_at(index, record))</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :             :         return result&lt;void&gt;::make(</span>
+<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaUNC">           0 :             error(errors::invalid_argument, &quot;DLQ index out of range&quot;));</span></span>
+<span id="L322"><span class="lineNum">     322</span>                 :             : </span>
+<span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaUNC">           0 :     TypedMessage msg(record.type_tag, std::move(record.payload_sample));</span></span>
+<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaUNC">           0 :     msg.set_sender_address(address());</span></span>
+<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaUNC">           0 :     auto enqueue_result = system_.try_deliver_local(target, std::move(msg));</span></span>
+<span id="L326"><span class="lineNum">     326</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!enqueue_result.accepted())</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :             :         return result&lt;void&gt;::make(</span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaUNC">           0 :             error(errors::mailbox_full, &quot;replay delivery failed&quot;));</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :             : </span>
+<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaUNC">           0 :     return result&lt;void&gt;::make();</span></span>
+<span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L332"><span class="lineNum">     332</span>                 :             : </span>
+<span id="L333"><span class="lineNum">     333</span>                 :             : // ---------------------------------------------------------------------------</span>
+<span id="L334"><span class="lineNum">     334</span>                 :             : // ILifecycleCliHost interface</span>
+<span id="L335"><span class="lineNum">     335</span>                 :             : // ---------------------------------------------------------------------------</span>
+<span id="L336"><span class="lineNum">     336</span>                 :             : </span>
+<span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaUNC">           0 : result&lt;void&gt; CliActor::drain() {</span></span>
+<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaUNC">           0 :     return system_.shutdown();</span></span>
+<span id="L339"><span class="lineNum">     339</span>                 :             : }</span>
+<span id="L340"><span class="lineNum">     340</span>                 :             : </span>
+<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaUNC">           0 : result&lt;void&gt; CliActor::shutdown() {</span></span>
+<span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaUNC">           0 :     return system_.shutdown();</span></span>
+<span id="L343"><span class="lineNum">     343</span>                 :             : }</span>
+<span id="L344"><span class="lineNum">     344</span>                 :             : </span>
+<span id="L345"><span class="lineNum">     345</span>                 :             : } // namespace cli</span>
+<span id="L346"><span class="lineNum">     346</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

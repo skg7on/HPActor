@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td class="headerValue">2026-06-17 23:42:31</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -97,15 +97,15 @@
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : namespace cli {</span>
 <span id="L21"><span class="lineNum">      21</span>                 :             : </span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">         730 : CommandNode* CommandNode::add_child(std::string kw, std::string help, bool is_param) {</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">         730 :     auto node = std::make_unique&lt;CommandNode&gt;();</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">         730 :     node-&gt;keyword = std::move(kw);</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">         730 :     node-&gt;help_text = std::move(help);</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         730 :     node-&gt;is_parameter = is_param;</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         730 :     CommandNode* ptr = node.get();</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">         730 :     children.push_back(std::move(node));</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">        1460 :     return ptr;</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         730 : }</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC tlaBgGNC">         760 : CommandNode* CommandNode::add_child(std::string kw, std::string help, bool is_param) {</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">         760 :     auto node = std::make_unique&lt;CommandNode&gt;();</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">         760 :     node-&gt;keyword = std::move(kw);</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">         760 :     node-&gt;help_text = std::move(help);</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         760 :     node-&gt;is_parameter = is_param;</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         760 :     CommandNode* ptr = node.get();</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">         760 :     children.push_back(std::move(node));</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">        1520 :     return ptr;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         760 : }</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          36 : CommandNode* CommandNode::find_child(const std::string&amp; token,</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :                                       std::string&amp; param_value) const {</span>

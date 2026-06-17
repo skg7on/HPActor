@@ -31,17 +31,17 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
-            <td class="headerCovTableEntry">10</td>
+            <td class="headerCovTableEntryLo">41.7&nbsp;%</td>
+            <td class="headerCovTableEntry">12</td>
             <td class="headerCovTableEntry">5</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td class="headerValue">2026-06-17 23:42:31</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
-            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
+            <td class="headerCovTableEntry">4</td>
             <td class="headerCovTableEntry">2</td>
           </tr>
           <tr>
@@ -133,14 +133,14 @@
 <span id="L55"><span class="lineNum">      55</span>                 :             : ///</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : /// Runs on a dedicated daemon thread via \c DispatchPolicy::DedicatedThread.</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : class CliLegacyServerActor : public DaemonActor,</span>
-<span id="L58"><span class="lineNum">      58</span>                 :             :                        public ICliCommandHost,</span>
-<span id="L59"><span class="lineNum">      59</span>                 :             :                        public ISystemCliHost,</span>
-<span id="L60"><span class="lineNum">      60</span>                 :             :                        public ILifecycleCliHost {</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             :                              public ICliCommandHost,</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :                              public ISystemCliHost,</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :                              public ILifecycleCliHost {</span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :   public:</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :     static constexpr const char* kActorTypeName = &quot;CliLegacyServerActor&quot;;</span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : </span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     CliLegacyServerActor(ActorContext* ctx, ActorSystem&amp; system,</span>
-<span id="L65"><span class="lineNum">      65</span>                 :             :                    const CliLegacyServerConfig&amp; config);</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :                          const CliLegacyServerConfig&amp; config);</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     ~CliLegacyServerActor() override;</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
@@ -179,57 +179,58 @@
 <span id="L101"><span class="lineNum">     101</span>                 :             :     std::vector&lt;ActorMeta&gt; enumerate(std::string_view filter = &quot;&quot;) override;</span>
 <span id="L102"><span class="lineNum">     102</span>                 :             : </span>
 <span id="L103"><span class="lineNum">     103</span>                 :             :     // --- ISystemCliHost interface ---</span>
-<span id="L104"><span class="lineNum">     104</span>                 :             :     void render_system_stats(OutputFormatter&amp; output) override;</span>
-<span id="L105"><span class="lineNum">     105</span>                 :             :     void render_memory_stats(OutputFormatter&amp; output) override;</span>
-<span id="L106"><span class="lineNum">     106</span>                 :             :     void render_fault_status(OutputFormatter&amp; output) override;</span>
-<span id="L107"><span class="lineNum">     107</span>                 :             :     void render_dlq_list(OutputFormatter&amp; output,</span>
-<span id="L108"><span class="lineNum">     108</span>                 :             :                          std::string_view filter = &quot;&quot;) override;</span>
-<span id="L109"><span class="lineNum">     109</span>                 :             :     result&lt;void&gt; dlq_replay(uint32_t index, ActorId target) override;</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             : </span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :     // --- ILifecycleCliHost interface ---</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             :     result&lt;void&gt; drain() override;</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             :     result&lt;void&gt; shutdown() override;</span>
-<span id="L114"><span class="lineNum">     114</span>                 :             : </span>
-<span id="L115"><span class="lineNum">     115</span>                 :             :   private:</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             :     /// Called by acceptors when a new client connects.</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :     void on_client_accepted(int client_fd);</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             : </span>
-<span id="L119"><span class="lineNum">     119</span>                 :             :     /// Called by the EventLoop when a client fd is readable.</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             :     void on_client_readable(int client_fd);</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             : </span>
-<span id="L122"><span class="lineNum">     122</span>                 :             :     /// Close a session and remove it from the session table.</span>
-<span id="L123"><span class="lineNum">     123</span>                 :             :     void close_session(int client_fd);</span>
-<span id="L124"><span class="lineNum">     124</span>                 :             : </span>
-<span id="L125"><span class="lineNum">     125</span>                 :             :     /// Build the command tree from the CommandRegistry.</span>
-<span id="L126"><span class="lineNum">     126</span>                 :             :     void build_command_tree();</span>
-<span id="L127"><span class="lineNum">     127</span>                 :             : </span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :     ActorSystem&amp; system_;</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             :     CliLegacyServerConfig config_;</span>
-<span id="L130"><span class="lineNum">     130</span>                 :             : </span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :     /// Dedicated EventLoop driving all I/O (acceptors + client fds).</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             :     std::unique_ptr&lt;net::EventLoop&gt; loop_;</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             : </span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :     /// Acceptors (owned; may be null if the corresponding transport is</span>
-<span id="L135"><span class="lineNum">     135</span>                 :             :     /// disabled in config).</span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :     std::unique_ptr&lt;net::TcpAcceptor&gt; tcp_acceptor_;</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :     std::unique_ptr&lt;net::UnixDomainAcceptor&gt; uds_acceptor_;</span>
-<span id="L138"><span class="lineNum">     138</span>                 :             : </span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :     std::unique_ptr&lt;CommandNode&gt; command_tree_;</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :     bool running_ = true;</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             : </span>
-<span id="L142"><span class="lineNum">     142</span>                 :             :     /// Per-session state, keyed by client fd.</span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :     struct SessionState {</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             :         std::unique_ptr&lt;CliSession&gt; session;</span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :         std::chrono::steady_clock::time_point last_activity;</span>
-<span id="L146"><span class="lineNum">     146</span>                 :             :         std::string read_buffer;</span>
-<span id="L147"><span class="lineNum">     147</span>                 :             :     };</span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :     /// Map from client fd → SessionState.  Used by the read_handler</span>
-<span id="L149"><span class="lineNum">     149</span>                 :             :     /// callback to locate the owning session.</span>
-<span id="L150"><span class="lineNum">     150</span>                 :             :     std::unordered_map&lt;int, SessionState&gt; sessions_;</span>
-<span id="L151"><span class="lineNum">     151</span>                 :             : };</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             : </span>
-<span id="L153"><span class="lineNum">     153</span>                 :             : } // namespace cli</span>
-<span id="L154"><span class="lineNum">     154</span>                 :             : } // namespace hpactor</span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaUNC">           0 :     bool execute_path(std::string_view /*path*/,</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :             :                       const std::map&lt;std::string, std::string&gt;&amp; /*params*/,</span>
+<span id="L106"><span class="lineNum">     106</span>                 :             :                       const std::vector&lt;std::string&gt;&amp; /*args*/,</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             :                       OutputFormatter&amp; /*output*/) override {</span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaUNC">           0 :         return false;</span></span>
+<span id="L109"><span class="lineNum">     109</span>                 :             :     }</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     result&lt;void&gt; dlq_replay(uint32_t index, ActorId target) override;</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             : </span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :     // --- ILifecycleCliHost interface ---</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :     result&lt;void&gt; drain() override;</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :     result&lt;void&gt; shutdown() override;</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             : </span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :   private:</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :     /// Called by acceptors when a new client connects.</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :     void on_client_accepted(int client_fd);</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             : </span>
+<span id="L120"><span class="lineNum">     120</span>                 :             :     /// Called by the EventLoop when a client fd is readable.</span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :     void on_client_readable(int client_fd);</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             : </span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :     /// Close a session and remove it from the session table.</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     void close_session(int client_fd);</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             : </span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :     /// Build the command tree from the CommandRegistry.</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             :     void build_command_tree();</span>
+<span id="L128"><span class="lineNum">     128</span>                 :             : </span>
+<span id="L129"><span class="lineNum">     129</span>                 :             :     ActorSystem&amp; system_;</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             :     CliLegacyServerConfig config_;</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             : </span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     /// Dedicated EventLoop driving all I/O (acceptors + client fds).</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :     std::unique_ptr&lt;net::EventLoop&gt; loop_;</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             : </span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :     /// Acceptors (owned; may be null if the corresponding transport is</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :     /// disabled in config).</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     std::unique_ptr&lt;net::TcpAcceptor&gt; tcp_acceptor_;</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :     std::unique_ptr&lt;net::UnixDomainAcceptor&gt; uds_acceptor_;</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             : </span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     std::unique_ptr&lt;CommandNode&gt; command_tree_;</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :     bool running_ = true;</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             : </span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :     /// Per-session state, keyed by client fd.</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :     struct SessionState {</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :         std::unique_ptr&lt;CliSession&gt; session;</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :         std::chrono::steady_clock::time_point last_activity;</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :         std::string read_buffer;</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :     };</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             :     /// Map from client fd → SessionState.  Used by the read_handler</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     /// callback to locate the owning session.</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     std::unordered_map&lt;int, SessionState&gt; sessions_;</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             : };</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             : </span>
+<span id="L154"><span class="lineNum">     154</span>                 :             : } // namespace cli</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

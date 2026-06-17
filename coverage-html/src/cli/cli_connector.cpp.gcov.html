@@ -32,16 +32,16 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
-            <td class="headerCovTableEntry">42</td>
+            <td class="headerCovTableEntry">44</td>
             <td class="headerCovTableEntry">0</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td class="headerValue">2026-06-17 23:42:31</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
-            <td class="headerCovTableEntry">5</td>
+            <td class="headerCovTableEntry">6</td>
             <td class="headerCovTableEntry">0</td>
           </tr>
           <tr>
@@ -57,7 +57,7 @@
             <td></td>
             <td class="headerItem">Branches:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
-            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">10</td>
             <td class="headerCovTableEntry">0</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
@@ -177,8 +177,12 @@
 <span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaUNC">           0 :     transport_.reset();</span></span>
 <span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L101"><span class="lineNum">     101</span>                 :             : </span>
-<span id="L102"><span class="lineNum">     102</span>                 :             : } // namespace cli</span>
-<span id="L103"><span class="lineNum">     103</span>                 :             : } // namespace hpactor</span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaUNC">           0 : bool CliConnector::is_connected() const {</span></span>
+<span id="L103"><span class="lineNum">     103</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     return conn_ &amp;&amp; conn_-&gt;state() == net::ConnectionState::Connected;</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :             : }</span>
+<span id="L105"><span class="lineNum">     105</span>                 :             : </span>
+<span id="L106"><span class="lineNum">     106</span>                 :             : } // namespace cli</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
