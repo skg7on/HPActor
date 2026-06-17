@@ -91,6 +91,13 @@ bool CliClientActor::pre_input_hook() {
     }
 
     if (!connector_.is_connected()) {
+        // Previously connected and now disconnected — the remote side
+        // closed the connection (server shutdown, network drop, etc.).
+        if (was_ever_connected_) {
+            printf("\n[Server disconnected — reconnecting]\n\n");
+            was_ever_connected_ = false;
+        }
+
         connect();
         if (!connector_.is_connected()) {
             if (!was_ever_connected_) {
