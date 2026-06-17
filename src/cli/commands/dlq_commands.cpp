@@ -99,10 +99,9 @@ class DlqListCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        if (ctx.system_host) {
-            ctx.system_host->execute_path("dlq/list", {}, {}, *ctx.output);
+        if (ctx.system_host &&
+            ctx.system_host->execute_path("dlq/list", {}, {}, *ctx.output))
             return result<void>::make();
-        }
         // FALLBACK: existing inline logic (for tests without a host)
         auto* dlq = resolve_dlq(ctx);
         if (!dlq)

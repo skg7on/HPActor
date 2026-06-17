@@ -38,10 +38,9 @@ class FaultStatusCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        if (ctx.system_host) {
-            ctx.system_host->execute_path("fault/status", {}, {}, *ctx.output);
+        if (ctx.system_host &&
+            ctx.system_host->execute_path("fault/status", {}, {}, *ctx.output))
             return result<void>::make();
-        }
         // FALLBACK: existing inline logic (for tests without a host)
         auto* system = ctx.system;
         if (!system) {

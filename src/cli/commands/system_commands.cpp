@@ -83,10 +83,9 @@ class SystemMemoryCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        if (ctx.system_host) {
-            ctx.system_host->execute_path("system/memory", {}, {}, *ctx.output);
+        if (ctx.system_host &&
+            ctx.system_host->execute_path("system/memory", {}, {}, *ctx.output))
             return result<void>::make();
-        }
         // FALLBACK: existing inline logic (for tests without a host)
         ctx.output->header("Memory Regions");
 
