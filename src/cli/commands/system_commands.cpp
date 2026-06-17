@@ -45,10 +45,9 @@ class SystemStatsCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        if (ctx.system_host) {
-            ctx.system_host->render_system_stats(*ctx.output);
+        if (ctx.system_host &&
+            ctx.system_host->execute_path("system/stats", {}, {}, *ctx.output))
             return result<void>::make();
-        }
         // FALLBACK: existing inline logic (for tests without a host)
         ctx.output->header("System Statistics");
         auto* sys = ctx.system;
@@ -85,7 +84,7 @@ class SystemMemoryCommand final : public ICommand {
 
     result<void> execute(CommandContext& ctx) const override {
         if (ctx.system_host) {
-            ctx.system_host->render_memory_stats(*ctx.output);
+            ctx.system_host->execute_path("system/memory", {}, {}, *ctx.output);
             return result<void>::make();
         }
         // FALLBACK: existing inline logic (for tests without a host)

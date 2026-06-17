@@ -28,10 +28,9 @@ class SchedulerWorkersCommand final : public ICommand {
 
     result<void> execute(CommandContext& ctx) const override {
         // Remote CLI: delegate to system_host which sends to the server.
-        if (ctx.system_host) {
-            ctx.system_host->render_scheduler_workers(*ctx.output);
+        if (ctx.system_host && ctx.system_host->execute_path("scheduler/workers",
+                                                             {}, {}, *ctx.output))
             return result<void>::make();
-        }
         // Local CLI: render from the local ActorSystem.
         auto* sys = ctx.system;
         if (!sys) {

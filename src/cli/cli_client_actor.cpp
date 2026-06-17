@@ -291,67 +291,23 @@ std::vector<ActorMeta> CliClientActor::enumerate(std::string_view filter) {
 // ISystemCliHost — command-tree dispatch (path + args)
 // ---------------------------------------------------------------------------
 
-void CliClientActor::render_system_stats(OutputFormatter& output) {
+bool CliClientActor::execute_path(std::string_view path,
+                                  const std::map<std::string, std::string>& params,
+                                  const std::vector<std::string>& args,
+                                  OutputFormatter& output) {
     CliCommand cmd;
-    cmd.set_path("system/stats");
+    cmd.set_path(std::string(path));
+    for (const auto& [key, value] : params)
+        (*cmd.mutable_params())[key] = value;
+    for (const auto& arg : args)
+        cmd.add_args(arg);
     auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
+    if (!resp.is_error()) {
         output.raw(resp.payload());
-    else
-        output.error("Failed to fetch system stats from server");
-}
-
-void CliClientActor::render_memory_stats(OutputFormatter& output) {
-    CliCommand cmd;
-    cmd.set_path("system/memory");
-    auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
-        output.raw(resp.payload());
-    else
-        output.error("Failed to fetch memory stats from server");
-}
-
-void CliClientActor::render_fault_status(OutputFormatter& output) {
-    CliCommand cmd;
-    cmd.set_path("fault/status");
-    auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
-        output.raw(resp.payload());
-    else
-        output.error("Failed to fetch fault status from server");
-}
-
-void CliClientActor::render_scheduler_workers(OutputFormatter& output) {
-    CliCommand cmd;
-    cmd.set_path("scheduler/workers");
-    auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
-        output.raw(resp.payload());
-    else
-        output.error("Failed to fetch scheduler workers from server");
-}
-
-void CliClientActor::render_metrics_show(OutputFormatter& output) {
-    CliCommand cmd;
-    cmd.set_path("metrics/show");
-    auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
-        output.raw(resp.payload());
-    else
-        output.error("Failed to fetch metrics from server");
-}
-
-void CliClientActor::render_dlq_list(OutputFormatter& output,
-                                     std::string_view filter) {
-    CliCommand cmd;
-    cmd.set_path("dlq/list");
-    if (!filter.empty())
-        cmd.add_args(std::string(filter));
-    auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
-        output.raw(resp.payload());
-    else
-        output.error("Failed to fetch DLQ list from server");
+        return true;
+    }
+    output.error("Failed to fetch data from server");
+    return true;
 }
 
 result<void> CliClientActor::dlq_replay(uint32_t index, ActorId target) {

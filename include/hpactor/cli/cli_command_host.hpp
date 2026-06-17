@@ -19,7 +19,9 @@
 
 #include <chrono>
 #include <cstdint>
+#include <map>
 #include <optional>
+#include <string>
 #include <string_view>
 #include <vector>
 
@@ -78,13 +80,19 @@ class ISystemCliHost {
   public:
     virtual ~ISystemCliHost() = default;
 
-    virtual void render_system_stats(OutputFormatter& output) = 0;
-    virtual void render_memory_stats(OutputFormatter& output) = 0;
-    virtual void render_fault_status(OutputFormatter& output) = 0;
-    virtual void render_scheduler_workers(OutputFormatter& output) = 0;
-    virtual void render_metrics_show(OutputFormatter& output) = 0;
-    virtual void
-    render_dlq_list(OutputFormatter& output, std::string_view filter = "") = 0;
+    /// \brief Execute a path-based command on the host.
+    ///
+    /// Remote hosts (CliClientActor) send \p path + \p params + \p args to
+    /// the server and render the response payload into \p output.  Local
+    /// hosts return \c false so the command handler falls through to its
+    /// inline logic running against the local ActorSystem.
+    ///
+    /// \return \c true if the host handled the command (output was written),
+    ///         \c false to fall through to the command handler's local path.
+    virtual bool execute_path(std::string_view path,
+                              const std::map<std::string, std::string>& params,
+                              const std::vector<std::string>& args,
+                              OutputFormatter& output) = 0;
 
     /// \brief Replay a dead-letter record to its original or an alternate
     /// target.
