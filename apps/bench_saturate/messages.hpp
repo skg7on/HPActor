@@ -354,7 +354,7 @@ inline void burn_cpu_us(uint64_t us) {
 inline size_t
 random_payload_size(uint16_t min_size, uint16_t max_size, uint64_t& seed) {
     seed = seed * 6364136223846793005ULL + 1442695040888963407ULL;
-    uint16_t range = max_size - min_size + 1;
+    uint16_t range = static_cast<uint16_t>(max_size - min_size + 1);
     return min_size + static_cast<size_t>((seed >> 32) % range);
 }
 
