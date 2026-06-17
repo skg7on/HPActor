@@ -27,6 +27,7 @@
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/message_id.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_gateway.hpp>
@@ -372,6 +373,9 @@ result<void> CliHttpServerActor::dlq_replay(uint32_t index, ActorId target) {
 // ---------------------------------------------------------------------------
 
 result<void> CliHttpServerActor::drain() {
+    // TODO: Implement soft drain (stop accepting new work, process in-flight).
+    // Currently delegates to full shutdown — pending proper drain support in
+    // ActorSystem.
     return system_.shutdown();
 }
 
@@ -386,27 +390,40 @@ result<void> CliHttpServerActor::shutdown() {
 std::optional<InspectStateReply>
 CliHttpServerActor::inspect(ActorId target, const InspectStateRequest& req,
                             std::chrono::milliseconds timeout) {
+    MessageId correlation_id = generate_message_id();
+    uint64_t corr_value = correlation_id.value();
+
     TypedMessage msg(TypeTag::InspectStateRequestTag, req);
     msg.set_sender_address(address());
+    msg.set_ask_message_id(corr_value);
 
-    auto enq = system_.try_deliver_local(target, std::move(msg));
-    if (!enq.accepted())
-        return std::nullopt;
+    ActorAddress target_addr;
+    target_addr.id = target;
+    context()->send(target_addr, std::move(msg));
 
     // Poll mailbox for reply with timeout
     auto deadline = std::chrono::steady_clock::now() + timeout;
     while (std::chrono::steady_clock::now() < deadline) {
         TypedMessage m;
         if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::InspectStateResponseTag) {
+            if (m.type_id() == TypeTag::InspectStateResponseTag &&
+                m.ask_message_id() == corr_value) {
                 auto reply = m.as<InspectStateReply>();
                 if (reply)
                     return *reply;
                 return std::nullopt;
             }
-            // Drop unrelated messages (e.g., scheduled timers)
+            // Message not for us (likely for a concurrent request),
+            // continue polling.
+            std::fprintf(stderr,
+                         "CliHttpServerActor::inspect: non-matching message "
+                         "(type=%u ask_id=%llu expected=%llu), polling\n",
+                         static_cast<unsigned>(m.type_id()),
+                         static_cast<unsigned long long>(m.ask_message_id()),
+                         static_cast<unsigned long long>(corr_value));
         }
-        std::this_thread::yield();
+        // Small sleep to avoid busy-spinning the daemon thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return std::nullopt;
 }
@@ -414,25 +431,39 @@ CliHttpServerActor::inspect(ActorId target, const InspectStateRequest& req,
 std::optional<KillReply>
 CliHttpServerActor::kill(ActorId target, const KillRequest& req,
                          std::chrono::milliseconds timeout) {
+    MessageId correlation_id = generate_message_id();
+    uint64_t corr_value = correlation_id.value();
+
     TypedMessage msg(TypeTag::KillRequestTag, req);
     msg.set_sender_address(address());
+    msg.set_ask_message_id(corr_value);
 
-    auto enq = system_.try_deliver_local(target, std::move(msg));
-    if (!enq.accepted())
-        return std::nullopt;
+    ActorAddress target_addr;
+    target_addr.id = target;
+    context()->send(target_addr, std::move(msg));
 
     auto deadline = std::chrono::steady_clock::now() + timeout;
     while (std::chrono::steady_clock::now() < deadline) {
         TypedMessage m;
         if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::KillResponseTag) {
+            if (m.type_id() == TypeTag::KillResponseTag &&
+                m.ask_message_id() == corr_value) {
                 auto reply = m.as<KillReply>();
                 if (reply)
                     return *reply;
                 return std::nullopt;
             }
+            // Message not for us (likely for a concurrent request),
+            // continue polling.
+            std::fprintf(stderr,
+                         "CliHttpServerActor::kill: non-matching message "
+                         "(type=%u ask_id=%llu expected=%llu), polling\n",
+                         static_cast<unsigned>(m.type_id()),
+                         static_cast<unsigned long long>(m.ask_message_id()),
+                         static_cast<unsigned long long>(corr_value));
         }
-        std::this_thread::yield();
+        // Small sleep to avoid busy-spinning the daemon thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return std::nullopt;
 }
@@ -440,25 +471,39 @@ CliHttpServerActor::kill(ActorId target, const KillRequest& req,
 std::optional<QuarantineReply>
 CliHttpServerActor::quarantine(ActorId target, const QuarantineRequest& req,
                                std::chrono::milliseconds timeout) {
+    MessageId correlation_id = generate_message_id();
+    uint64_t corr_value = correlation_id.value();
+
     TypedMessage msg(TypeTag::QuarantineRequestTag, req);
     msg.set_sender_address(address());
+    msg.set_ask_message_id(corr_value);
 
-    auto enq = system_.try_deliver_local(target, std::move(msg));
-    if (!enq.accepted())
-        return std::nullopt;
+    ActorAddress target_addr;
+    target_addr.id = target;
+    context()->send(target_addr, std::move(msg));
 
     auto deadline = std::chrono::steady_clock::now() + timeout;
     while (std::chrono::steady_clock::now() < deadline) {
         TypedMessage m;
         if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::QuarantineResponseTag) {
+            if (m.type_id() == TypeTag::QuarantineResponseTag &&
+                m.ask_message_id() == corr_value) {
                 auto reply = m.as<QuarantineReply>();
                 if (reply)
                     return *reply;
                 return std::nullopt;
             }
+            // Message not for us (likely for a concurrent request),
+            // continue polling.
+            std::fprintf(stderr,
+                         "CliHttpServerActor::quarantine: non-matching message "
+                         "(type=%u ask_id=%llu expected=%llu), polling\n",
+                         static_cast<unsigned>(m.type_id()),
+                         static_cast<unsigned long long>(m.ask_message_id()),
+                         static_cast<unsigned long long>(corr_value));
         }
-        std::this_thread::yield();
+        // Small sleep to avoid busy-spinning the daemon thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
     }
     return std::nullopt;
 }
