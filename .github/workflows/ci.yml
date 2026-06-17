@@ -207,19 +207,21 @@ jobs:
           </svg>
           BADGE
 
-      - name: Deploy to gh-pages
+      - name: Stage coverage files for deploy
         if: github.ref == 'refs/heads/main'
         run: |
-          DEPLOY_DIR=$(mktemp -d)
-          cp coverage-badge.svg "$DEPLOY_DIR/"
-          cp -r coverage-html "$DEPLOY_DIR/"
-          touch "$DEPLOY_DIR/.nojekyll"
+          STAGE_DIR="${{ runner.temp }}/coverage-pages"
+          rm -rf "$STAGE_DIR"
+          mkdir -p "$STAGE_DIR"
+          cp coverage-badge.svg "$STAGE_DIR/"
+          cp -r coverage-html "$STAGE_DIR/"
+          touch "$STAGE_DIR/.nojekyll"
 
-          cd "$DEPLOY_DIR"
-          git -c init.defaultBranch=gh-pages init
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add .
-          git commit -m "Update coverage report [skip ci]"
-          git remote add origin "https://x-access-token:${{ secrets.GITHUB_TOKEN }}@github.com/${{ github.repository }}.git"
-          git push -f origin gh-pages
+      - name: Deploy to gh-pages
+        if: github.ref == 'refs/heads/main'
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: ${{ runner.temp }}/coverage-pages
+          keep_files: true
+          commit_message: "Update coverage report [skip ci]"

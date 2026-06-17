@@ -1,0 +1,49 @@
+name: Deploy Docs Manual
+
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - "docs/manual/**"
+  workflow_dispatch:
+
+concurrency:
+  group: pages-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: write
+
+jobs:
+  deploy:
+    name: Build & deploy developer manual
+    runs-on: ubuntu-24.04
+    timeout-minutes: 5
+
+    defaults:
+      run:
+        working-directory: docs/manual
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.12"
+
+      - name: Install dependencies
+        run: pip install sphinx sphinx-rtd-theme
+
+      - name: Build HTML
+        run: sphinx-build -b html . _build/html
+
+      - name: Deploy to gh-pages
+        uses: peaceiris/actions-gh-pages@v4
+        with:
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          publish_dir: docs/manual/_build/html
+          keep_files: true
+          commit_message: "Deploy developer manual [skip ci]"
