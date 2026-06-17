@@ -1,0 +1,299 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - HPActor Coverage - include/hpactor/adt/chaselev_deque.hpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../../../index.html">top level</a> - <a href="index.html">include/hpactor/adt</a> - chaselev_deque.hpp<span style="font-size: 80%;"> (source / <a href="chaselev_deque.hpp.func-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">HPActor Coverage</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryHi">95.3&nbsp;%</td>
+            <td class="headerCovTableEntry">64</td>
+            <td class="headerCovTableEntry">61</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryHi">93.1&nbsp;%</td>
+            <td class="headerCovTableEntry">29</td>
+            <td class="headerCovTableEntry">27</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+            | Branches:
+            <span class="coverLegendCov">+</span> taken
+            <span class="coverLegendNoCov">-</span> not taken
+            <span class="coverLegendNoCov">#</span> not executed
+</td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntryMed">79.2&nbsp;%</td>
+            <td class="headerCovTableEntry">24</td>
+            <td class="headerCovTableEntry">19</td>
+          </tr>
+                  <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : // Copyright 2026 HPActor Contributors</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             : //</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             : // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : // you may not use this file except in compliance with the License.</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : // You may obtain a copy of the License at</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : //</span>
+<span id="L7"><span class="lineNum">       7</span>                 :             : //     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             : //</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : // Unless required by applicable law or agreed to in writing, software</span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : // distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             : // See the License for the specific language governing permissions and</span>
+<span id="L13"><span class="lineNum">      13</span>                 :             : // limitations under the License.</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             : </span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : #pragma once</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : </span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;atomic&gt;</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;cstddef&gt;</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : #include &lt;cstdint&gt;</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;vector&gt;</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : </span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : namespace hpactor::adt {</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : </span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : /// \brief Lock-free work-stealing deque (Chase-Lev).</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : ///</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : /// The owning thread pushes and pops from the bottom (LIFO), while thief</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : /// threads steal from the top (FIFO). ABA protection comes from using 64-bit</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : /// indices for top and bottom, which are practically immune to wrap-around.</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : ///</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : /// \tparam T Element type. Must be default-constructible and move-assignable.</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : ///</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             : /// \note Concurrency: push_bottom() and pop_bottom() are single-owner — only</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : ///       one thread may call them. steal_top() is safe for concurrent calls</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : ///       from multiple thief threads. The deque is lock-free on all paths.</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             : template &lt;typename T&gt; class ChaselevDeque {</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             :   public:</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             :     /// \brief Construct a deque with the given initial capacity.</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :     ///</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             :     /// \param[in] initial_capacity Starting capacity of the circular array.</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             :     ///            Rounded up to the next power of two internally.</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :     explicit ChaselevDeque(size_t initial_capacity = 256);</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : </span>
+<span id="L43"><span class="lineNum">      43</span>                 :             :     /// \brief Destroys the deque and all internal circular arrays.</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             :     ~ChaselevDeque();</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : </span>
+<span id="L46"><span class="lineNum">      46</span>                 :             :     ChaselevDeque(const ChaselevDeque&amp;) = delete;</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             :     ChaselevDeque&amp; operator=(const ChaselevDeque&amp;) = delete;</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             :     ChaselevDeque(ChaselevDeque&amp;&amp;) = delete;</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :     ChaselevDeque&amp; operator=(ChaselevDeque&amp;&amp;) = delete;</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : </span>
+<span id="L51"><span class="lineNum">      51</span>                 :             :     /// \brief Push an item onto the bottom of the deque.</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             :     ///</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             :     /// Grows the circular array if the deque is full.</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :     /// \param[in] item Element to push.</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             :     void push_bottom(T item);</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : </span>
+<span id="L57"><span class="lineNum">      57</span>                 :             :     /// \brief Pop an item from the bottom of the deque (owner LIFO).</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             :     ///</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :     /// \param[out] out Set to the popped element on success.</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     /// \retval true An element was popped into \p out.</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :     /// \retval false The deque was empty.</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :     bool pop_bottom(T&amp; out);</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             : </span>
+<span id="L64"><span class="lineNum">      64</span>                 :             :     /// \brief Steal an item from the top of the deque (thief FIFO).</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :     ///</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :     /// \param[out] out Set to the stolen element on success.</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :     /// \retval true An element was stolen into \p out.</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             :     /// \retval false The deque was empty or the steal lost a race.</span>
+<span id="L69"><span class="lineNum">      69</span>                 :             :     bool steal_top(T&amp; out);</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             : </span>
+<span id="L71"><span class="lineNum">      71</span>                 :             :     /// \brief Approximate number of elements in the deque.</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :     ///</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             :     /// This is a relaxed snapshot and may be stale by the time it is observed.</span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :     /// \return An approximate element count.</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             :     size_t size_approx() const;</span>
+<span id="L76"><span class="lineNum">      76</span>                 :             : </span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :   private:</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     /// \brief Growable circular array backing the deque.</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             :     struct CircularArray {</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             :         std::vector&lt;std::atomic&lt;T&gt;&gt; buf;</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             :         size_t mask;</span>
+<span id="L82"><span class="lineNum">      82</span>                 :             : </span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :         /// \brief Construct a circular array of the given capacity.</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :         ///</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :         /// \pre \p cap must be a power of two.</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             :         explicit CircularArray(size_t cap);</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             : </span>
+<span id="L88"><span class="lineNum">      88</span>                 :             :         /// \brief Load the element at logical index \p i.</span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC tlaBgGNC">        3059 :         T get(int64_t i) const {</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">        3059 :             return buf[static_cast&lt;size_t&gt;(i) &amp; mask].load(std::memory_order_relaxed);</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :             :         }</span>
+<span id="L92"><span class="lineNum">      92</span>                 :             : </span>
+<span id="L93"><span class="lineNum">      93</span>                 :             :         /// \brief Store \p v at logical index \p i.</span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">        3061 :         void put(int64_t i, T v) {</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">        3061 :             buf[static_cast&lt;size_t&gt;(i) &amp; mask].store(v, std::memory_order_relaxed);</span></span>
+<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC">        3061 :         }</span></span>
+<span id="L97"><span class="lineNum">      97</span>                 :             : </span>
+<span id="L98"><span class="lineNum">      98</span>                 :             :         /// \brief Grow the array to double its current capacity.</span>
+<span id="L99"><span class="lineNum">      99</span>                 :             :         ///</span>
+<span id="L100"><span class="lineNum">     100</span>                 :             :         /// Copies elements in the range [top, bottom) into the new array.</span>
+<span id="L101"><span class="lineNum">     101</span>                 :             :         /// \return The newly allocated, doubled-capacity array.</span>
+<span id="L102"><span class="lineNum">     102</span>                 :             :         CircularArray* grow(int64_t bottom, int64_t top) const;</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             :     };</span>
+<span id="L104"><span class="lineNum">     104</span>                 :             : </span>
+<span id="L105"><span class="lineNum">     105</span>                 :             :     std::atomic&lt;int64_t&gt; top_{0};</span>
+<span id="L106"><span class="lineNum">     106</span>                 :             :     std::atomic&lt;int64_t&gt; bottom_{0};</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             :     std::atomic&lt;CircularArray*&gt; array_;</span>
+<span id="L108"><span class="lineNum">     108</span>                 :             :     std::vector&lt;CircularArray*&gt; garbage_;</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             : };</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             : </span>
+<span id="L111"><span class="lineNum">     111</span>                 :             : template &lt;typename T&gt;</span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">        1767 : ChaselevDeque&lt;T&gt;::CircularArray::CircularArray(size_t cap)</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        3534 :     : buf(cap), mask(cap - 1) {</span></span>
+<span id="L114"><span class="lineNum">     114</span>         [<span class="tlaGBC" title="Branch 0 was taken 452092 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1767 times"> + </span>]:<span class="tlaGNC">      453859 :     for (auto&amp; slot : buf) {</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">      452092 :         slot.store(T{}, std::memory_order_relaxed);</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :     }</span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">        1767 : }</span></span>
+<span id="L118"><span class="lineNum">     118</span>                 :             : </span>
+<span id="L119"><span class="lineNum">     119</span>                 :             : template &lt;typename T&gt;</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             : typename ChaselevDeque&lt;T&gt;::CircularArray*</span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">           7 : ChaselevDeque&lt;T&gt;::CircularArray::grow(int64_t bottom, int64_t top) const {</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           7 :     size_t new_cap = buf.size() * 2;</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           7 :     auto* new_arr = new CircularArray(new_cap);</span></span>
+<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaGBC" title="Branch 0 was taken 892 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">         899 :     for (int64_t i = top; i &lt; bottom; ++i) {</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         892 :         new_arr-&gt;put(i, get(i));</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :     }</span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           7 :     return new_arr;</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :             : }</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             : </span>
+<span id="L130"><span class="lineNum">     130</span>                 :             : template &lt;typename T&gt;</span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">        1760 : ChaselevDeque&lt;T&gt;::ChaselevDeque(size_t initial_capacity)</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">        1760 :     : array_(new CircularArray(initial_capacity)) {}</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :             : </span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">        1760 : template &lt;typename T&gt; ChaselevDeque&lt;T&gt;::~ChaselevDeque() {</span></span>
+<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaGBC" title="Branch 0 was taken 1760 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1760 :     delete array_.load(std::memory_order_acquire);</span></span>
+<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1760 times"> + </span>]:<span class="tlaGNC">        1767 :     for (auto* arr : garbage_) {</span></span>
+<span id="L137"><span class="lineNum">     137</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           7 :         delete arr;</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :     }</span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        1760 : }</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :             : </span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">        2169 : template &lt;typename T&gt; void ChaselevDeque&lt;T&gt;::push_bottom(T item) {</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">        2169 :     int64_t b = bottom_.load(std::memory_order_relaxed);</span></span>
+<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">        2169 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">        2169 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :             : </span>
+<span id="L146"><span class="lineNum">     146</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2162 times"> + </span>]:<span class="tlaGNC">        2169 :     if (b - t &gt; static_cast&lt;int64_t&gt;(arr-&gt;mask)) {</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">           7 :         auto* new_arr = arr-&gt;grow(b, t);</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">           7 :         garbage_.push_back(arr);</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           7 :         array_.store(new_arr, std::memory_order_release);</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           7 :         arr = new_arr;</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     }</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             : </span>
+<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">        2169 :     arr-&gt;put(b, std::move(item));</span></span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">        2169 :     bottom_.store(b + 1, std::memory_order_release);</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">        2169 : }</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :             : </span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">       10824 : template &lt;typename T&gt; bool ChaselevDeque&lt;T&gt;::pop_bottom(T&amp; out) {</span></span>
+<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">       10824 :     int64_t b = bottom_.fetch_sub(1, std::memory_order_acq_rel) - 1;</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">       10824 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :             : </span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">       10824 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
+<span id="L162"><span class="lineNum">     162</span>         [<span class="tlaGBC" title="Branch 0 was taken 10467 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 357 times"> + </span>]:<span class="tlaGNC">       10824 :     if (b - t &lt; 0) {</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">       10467 :         bottom_.store(b + 1, std::memory_order_release);</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">       10467 :         return false;</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :             :     }</span>
+<span id="L166"><span class="lineNum">     166</span>                 :             : </span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">         357 :     out = arr-&gt;get(b);</span></span>
+<span id="L168"><span class="lineNum">     168</span>                 :             : </span>
+<span id="L169"><span class="lineNum">     169</span>         [<span class="tlaGBC" title="Branch 0 was taken 88 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 269 times"> + </span>]:<span class="tlaGNC">         357 :     if (b == t) {</span></span>
+<span id="L170"><span class="lineNum">     170</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 88 times"> + </span>]:<span class="tlaGNC">         176 :         if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_acq_rel,</span></span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :                                           std::memory_order_acquire)) {</span>
+<span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             bottom_.store(b + 1, std::memory_order_release);</span></span>
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaUNC">           0 :             return false;</span></span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :         }</span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC tlaBgGNC">          88 :         bottom_.store(b + 1, std::memory_order_release);</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">          88 :         return true;</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :     }</span>
+<span id="L178"><span class="lineNum">     178</span>                 :             : </span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">         269 :     return true;</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :             : }</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             : </span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">        5091 : template &lt;typename T&gt; bool ChaselevDeque&lt;T&gt;::steal_top(T&amp; out) {</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">        5091 :     int64_t t = top_.load(std::memory_order_acquire);</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">        5091 :     int64_t b = bottom_.load(std::memory_order_acquire);</span></span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : </span>
+<span id="L186"><span class="lineNum">     186</span>         [<span class="tlaGBC" title="Branch 0 was taken 3281 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1810 times"> + </span>]:<span class="tlaGNC">        5091 :     if (b - t &lt;= 0) {</span></span>
+<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC">        3281 :         return false;</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :             :     }</span>
+<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
+<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">        1810 :     auto* arr = array_.load(std::memory_order_acquire);</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">        1810 :     out = arr-&gt;get(t);</span></span>
+<span id="L192"><span class="lineNum">     192</span>                 :             : </span>
+<span id="L193"><span class="lineNum">     193</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1810 times"> + </span>]:<span class="tlaGNC">        3620 :     if (!top_.compare_exchange_strong(t, t + 1, std::memory_order_acq_rel,</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :             :                                       std::memory_order_acquire)) {</span>
+<span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :     }</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             : </span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC tlaBgGNC">        1810 :     return true;</span></span>
+<span id="L199"><span class="lineNum">     199</span>                 :             : }</span>
+<span id="L200"><span class="lineNum">     200</span>                 :             : </span>
+<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">          17 : template &lt;typename T&gt; size_t ChaselevDeque&lt;T&gt;::size_approx() const {</span></span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">          17 :     int64_t b = bottom_.load(std::memory_order_relaxed);</span></span>
+<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">          17 :     int64_t t = top_.load(std::memory_order_relaxed);</span></span>
+<span id="L204"><span class="lineNum">     204</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          17 :     return static_cast&lt;size_t&gt;(b &gt;= t ? b - t : 0);</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :             : }</span>
+<span id="L206"><span class="lineNum">     206</span>                 :             : </span>
+<span id="L207"><span class="lineNum">     207</span>                 :             : } // namespace hpactor::adt</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>

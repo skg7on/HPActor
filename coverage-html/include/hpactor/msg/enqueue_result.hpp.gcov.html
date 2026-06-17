@@ -1,0 +1,485 @@
+<!DOCTYPE HTML PUBLIC "-//W3C//DTD HTML 4.01 Transitional//EN">
+
+<html lang="en">
+
+<head>
+  <meta http-equiv="Content-Type" content="text/html; charset=UTF-8">
+  <title>LCOV - HPActor Coverage - include/hpactor/msg/enqueue_result.hpp</title>
+  <link rel="stylesheet" type="text/css" href="../../../gcov.css">
+</head>
+
+<body>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="title">LCOV - code coverage report</td></tr>
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+
+            <tr>
+              <td width="100%">
+                <table cellpadding=1 border=0 width="100%">
+          <tr>
+            <td width="10%" class="headerItem">Current view:</td>
+            <td width="10%" class="headerValue"><a href="../../../index.html">top level</a> - <a href="index.html">include/hpactor/msg</a> - enqueue_result.hpp<span style="font-size: 80%;"> (source / <a href="enqueue_result.hpp.func-c.html">functions</a>)</span></td>
+            <td width="5%"></td>
+            <td width="5%"></td>
+            <td width="5%" class="headerCovTableHead">Coverage</td>
+            <td width="5%" class="headerCovTableHead" title="Covered + Uncovered code">Total</td>
+            <td width="5%" class="headerCovTableHead" title="Exercised code only">Hit</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test:</td>
+            <td class="headerValue">HPActor Coverage</td>
+            <td></td>
+            <td class="headerItem">Lines:</td>
+            <td class="headerCovTableEntryMed">85.1&nbsp;%</td>
+            <td class="headerCovTableEntry">74</td>
+            <td class="headerCovTableEntry">63</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Test Date:</td>
+            <td class="headerValue">2026-06-17 04:10:24</td>
+            <td></td>
+            <td class="headerItem">Functions:</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">9</td>
+            <td class="headerCovTableEntry">9</td>
+          </tr>
+          <tr>
+            <td class="headerItem">Legend:</td>
+            <td class="headerValueLeg">            Lines:
+            <span class="coverLegendCov">hit</span>
+            <span class="coverLegendNoCov">not hit</span>
+            | Branches:
+            <span class="coverLegendCov">+</span> taken
+            <span class="coverLegendNoCov">-</span> not taken
+            <span class="coverLegendNoCov">#</span> not executed
+</td>
+            <td></td>
+            <td class="headerItem">Branches:</td>
+            <td class="headerCovTableEntryMed">78.4&nbsp;%</td>
+            <td class="headerCovTableEntry">51</td>
+            <td class="headerCovTableEntry">40</td>
+          </tr>
+                  <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+                </table>
+              </td>
+            </tr>
+
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+          </table>
+
+          <table cellpadding=0 cellspacing=0 border=0>
+            <tr>
+              <td><br></td>
+            </tr>
+            <tr>
+              <td>
+<pre class="sourceHeading">             Branch data     Line data    Source code</pre>
+<pre class="source">
+<span id="L1"><span class="lineNum">       1</span>                 :             : // Copyright 2026 HPActor Contributors</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             : //</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             : // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : // you may not use this file except in compliance with the License.</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : // You may obtain a copy of the License at</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : //</span>
+<span id="L7"><span class="lineNum">       7</span>                 :             : //     http://www.apache.org/licenses/LICENSE-2.0</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             : //</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : // Unless required by applicable law or agreed to in writing, software</span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : // distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             : // See the License for the specific language governing permissions and</span>
+<span id="L13"><span class="lineNum">      13</span>                 :             : // limitations under the License.</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             : </span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : #pragma once</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : </span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/msg/delivery_mode.hpp&gt;</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;hpactor/msg/failure_reason.hpp&gt;</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : #include &lt;hpactor/msg/retry_policy.hpp&gt;</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/msg/typed_message.hpp&gt;</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : #include &lt;hpactor/ref/actor_address.hpp&gt;</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/types/types.hpp&gt;</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : </span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;chrono&gt;</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : #include &lt;cstdint&gt;</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : #include &lt;optional&gt;</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : </span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : namespace hpactor::mailbox {</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : </span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : // Forward declaration — defined in delivery_result.hpp.</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : // Cannot include that header here because delivery_result.hpp</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             : // already includes this file.</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : struct DeliveryResult;</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : </span>
+<span id="L35"><span class="lineNum">      35</span>                 :             : /// \brief Capacity limits for a bounded mailbox.</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             : struct MailboxCapacity {</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             :     uint32_t max_messages = 1024; ///&lt; Hard limit on user-message count (0 =</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :                                   ///&lt; unbounded, clamped to 1024).</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             :     uint64_t max_bytes = 0; ///&lt; Hard limit on total user-message bytes (0 =</span>
+<span id="L40"><span class="lineNum">      40</span>                 :             :                             ///&lt; unbounded).</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             : };</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : </span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : /// \brief Policy for handling messages when the mailbox is at capacity.</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : enum class OverflowPolicy : uint8_t {</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             :     RejectNewest, ///&lt; Reject the incoming message with backpressure.</span>
+<span id="L46"><span class="lineNum">      46</span>                 :             :     DropNewest,   ///&lt; Silently drop the incoming message.</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             :     DropOldest,   ///&lt; Evict the oldest message to make room for the new one.</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             :     DropLowestPriority, ///&lt; Evict the lowest-priority message to make room.</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :     DeadLetter, ///&lt; Route the incoming message to the dead-letter queue.</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             :     SpillToOverflowQueue, ///&lt; Spill to the overflow queue; drain back on</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             :                           ///&lt; dequeue.</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             :     SignalOnly, ///&lt; Emit a backpressure signal without dropping or enqueuing.</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             :     BlockWhenAllowed, ///&lt; Block the producer (only valid for blocking-actor</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :                       ///&lt; paths).</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             : };</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : </span>
+<span id="L57"><span class="lineNum">      57</span>                 :             : /// \brief Backpressure signal emission mode.</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             : enum class BackpressureMode : uint8_t {</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :     Disabled,     ///&lt; No backpressure signals are emitted.</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     LocalSignal,  ///&lt; Emit backpressure signals to local producers only.</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :     RemoteSignal, ///&lt; Emit backpressure signals to remote producers only.</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :     LocalAndRemoteSignal, ///&lt; Emit backpressure signals to both local and</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             :                           ///&lt; remote producers.</span>
+<span id="L64"><span class="lineNum">      64</span>                 :             : };</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             : </span>
+<span id="L66"><span class="lineNum">      66</span>                 :             : /// \brief Mailbox pressure state with hysteresis for backpressure control.</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             : ///</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             : /// Transitions are governed by \c PressureStateMachine using high/low/critical</span>
+<span id="L69"><span class="lineNum">      69</span>                 :             : /// watermark thresholds to prevent oscillation.</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             : enum class MailboxPressureState : uint8_t {</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             :     Normal,       ///&lt; Depth is below the low watermark.</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :     SoftPressure, ///&lt; Depth is at or above the high watermark.</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             :     HardPressure, ///&lt; Depth is at or above the critical watermark, or a hard</span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :                   ///&lt; failure occurred.</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             :     Recovering,   ///&lt; Pressure is declining but still above the low watermark.</span>
+<span id="L76"><span class="lineNum">      76</span>                 :             : };</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             : </span>
+<span id="L78"><span class="lineNum">      78</span>                 :             : /// \brief Full mailbox configuration.</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             : ///</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             : /// Controls capacity, watermarks, overflow behavior, backpressure signaling,</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             : /// priority-aware routing, and system-message protection.</span>
+<span id="L82"><span class="lineNum">      82</span>                 :             : struct MailboxConfig {</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :     MailboxCapacity capacity;    ///&lt; Hard limits on message count and bytes.</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :     uint8_t priority_levels = 4; ///&lt; Number of user priority lanes (1–8).</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :     OverflowPolicy overflow_policy = OverflowPolicy::RejectNewest; ///&lt; Policy</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             :                                                                    ///&lt; for</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             :                                                                    ///&lt; at-capacity</span>
+<span id="L88"><span class="lineNum">      88</span>                 :             :                                                                    ///&lt; messages.</span>
+<span id="L89"><span class="lineNum">      89</span>                 :             :     BackpressureMode backpressure_mode =</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             :         BackpressureMode::LocalAndRemoteSignal; ///&lt; Backpressure signal</span>
+<span id="L91"><span class="lineNum">      91</span>                 :             :                                                 ///&lt; emission mode.</span>
+<span id="L92"><span class="lineNum">      92</span>                 :             :     double high_watermark = 0.80;     ///&lt; Ratio above which \c SoftPressure is</span>
+<span id="L93"><span class="lineNum">      93</span>                 :             :                                       ///&lt; entered.</span>
+<span id="L94"><span class="lineNum">      94</span>                 :             :     double low_watermark = 0.50;      ///&lt; Ratio below which pressure is cleared</span>
+<span id="L95"><span class="lineNum">      95</span>                 :             :                                       ///&lt; (hysteresis).</span>
+<span id="L96"><span class="lineNum">      96</span>                 :             :     double critical_watermark = 1.00; ///&lt; Ratio at or above which \c</span>
+<span id="L97"><span class="lineNum">      97</span>                 :             :                                       ///&lt; HardPressure is entered.</span>
+<span id="L98"><span class="lineNum">      98</span>                 :             :     uint32_t protected_system_messages = 32; ///&lt; Max system-lane depth before</span>
+<span id="L99"><span class="lineNum">      99</span>                 :             :                                              ///&lt; rejection.</span>
+<span id="L100"><span class="lineNum">     100</span>                 :             :     uint32_t max_overflow_depth = 0;       ///&lt; Overflow queue depth limit (0 =</span>
+<span id="L101"><span class="lineNum">     101</span>                 :             :                                            ///&lt; unlimited).</span>
+<span id="L102"><span class="lineNum">     102</span>                 :             :     uint32_t signal_min_interval_ms = 100; ///&lt; Minimum interval between</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             :                                            ///&lt; backpressure signals.</span>
+<span id="L104"><span class="lineNum">     104</span>                 :             :     bool priority_aware = false; ///&lt; Route user messages to per-priority lanes.</span>
+<span id="L105"><span class="lineNum">     105</span>                 :             : };</span>
+<span id="L106"><span class="lineNum">     106</span>                 :             : </span>
+<span id="L107"><span class="lineNum">     107</span>                 :             : /// \brief Message priority level for lane routing.</span>
+<span id="L108"><span class="lineNum">     108</span>                 :             : ///</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             : /// Lower values indicate higher priority. Priority 0 messages are routed to</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             : /// the highest-priority user lane.</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             : struct MessagePriority {</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :     uint8_t value = 0; ///&lt; Priority level (0 = highest, up to \c</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :                        ///&lt; priority_levels - 1).</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             : };</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             : </span>
+<span id="L116"><span class="lineNum">     116</span>                 :             : /// \brief Per-message delivery options set by the sender.</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             : struct DeliveryOptions {</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :     bool no_drop = false;        ///&lt; If true, the message must not be silently</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             :                                  ///&lt; dropped.</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             :     bool allow_blocking = false; ///&lt; If true, the producer may block when the</span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :                                  ///&lt; mailbox is full.</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :     bool emit_backpressure = true; ///&lt; If true, backpressure signals are</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :                                    ///&lt; emitted on rejection.</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     DeliveryMode delivery_mode = DeliveryMode::BestEffort; ///&lt; Delivery</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             :                                                            ///&lt; guarantee level.</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :     uint64_t message_id = 0; ///&lt; Sender-assigned message identifier for</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             :                              ///&lt; dedup/correlation.</span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :     uint32_t flags = 0;      ///&lt; Per-message flags (reserved for future use).</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             : </span>
+<span id="L130"><span class="lineNum">     130</span>                 :             :     ///&lt; Retry policy for \c AtLeastOnce and \c DurableAtLeastOnce modes.</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             :     ///&lt; When absent, the system-default policy is used (max 5 attempts,</span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     ///&lt; 5s timeout, exponential backoff 100ms–30s with jitter).</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :     std::optional&lt;msg::RetryPolicy&gt; retry_policy;</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             : </span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :     ///&lt; If true, the work item is placed in the worker\'s EDFQueue instead</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :     ///&lt; of the priority ChaseLev deque. Requires deadline_ns != INT64_MAX.</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     ///&lt; Opt-in, default off — ordinary messages stay on priority queues.</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :     bool schedule_edf = false;</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             : };</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             : </span>
+<span id="L141"><span class="lineNum">     141</span>                 :             : /// \brief Metadata attached to every message enqueued into a mailbox.</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             : ///</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             : /// Populated by the producer path before \c try_push(). Used by the mailbox</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             : /// for lane routing, byte accounting, deadline enforcement, and metrics.</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             : struct MailboxEnvelopeMeta {</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     ActorAddress sender;                 ///&lt; Address of the sending actor.</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :     TypeTag type_tag = TypeTag::Invalid; ///&lt; Message type tag for system/user</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :                                          ///&lt; classification.</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             :     uint64_t message_id = 0; ///&lt; Message identifier for dedup and correlation.</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     uint8_t priority = 0;    ///&lt; User priority level (0 = highest).</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     int64_t deadline_ns = INT64_MAX; ///&lt; Absolute delivery deadline (INT64_MAX</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :                                      ///&lt; = none).</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     uint32_t flags = 0;              ///&lt; Envelope-level flags.</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             :     uint64_t estimated_bytes = 0; ///&lt; Estimated byte footprint for reservation</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :                                   ///&lt; accounting.</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :     uint64_t sequence = 0;     ///&lt; Monotonically increasing sequence number for</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             :                                ///&lt; ordering.</span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :     bool schedule_edf = false; ///&lt; If true, the scheduler places this work</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :                                ///&lt; item in the EDF queue instead of the</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :                                ///&lt; priority ChaseLev deque.</span>
+<span id="L161"><span class="lineNum">     161</span>                 :             : };</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             : </span>
+<span id="L163"><span class="lineNum">     163</span>                 :             : /// \brief Reason a backpressure signal was emitted.</span>
+<span id="L164"><span class="lineNum">     164</span>                 :             : enum class BackpressureReason : uint8_t {</span>
+<span id="L165"><span class="lineNum">     165</span>                 :             :     HighWatermark,      ///&lt; Mailbox depth crossed the high watermark.</span>
+<span id="L166"><span class="lineNum">     166</span>                 :             :     HardCapacity,       ///&lt; Mailbox is at hard message-count capacity.</span>
+<span id="L167"><span class="lineNum">     167</span>                 :             :     ByteCapacity,       ///&lt; Mailbox is at hard byte capacity.</span>
+<span id="L168"><span class="lineNum">     168</span>                 :             :     OverflowPolicy,     ///&lt; Overflow policy rejected or dropped the message.</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             :     NodeMemoryPressure, ///&lt; Node-level memory pressure triggered backpressure.</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             : };</span>
+<span id="L171"><span class="lineNum">     171</span>                 :             : </span>
+<span id="L172"><span class="lineNum">     172</span>                 :             : /// \brief Result code for a mailbox \c try_push() admission attempt.</span>
+<span id="L173"><span class="lineNum">     173</span>                 :             : enum class EnqueueResultCode : uint8_t {</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :     Accepted,                 ///&lt; Message was enqueued under normal pressure.</span>
+<span id="L175"><span class="lineNum">     175</span>                 :             :     AcceptedWithSoftPressure, ///&lt; Message was enqueued but the mailbox is under</span>
+<span id="L176"><span class="lineNum">     176</span>                 :             :                               ///&lt; pressure.</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :     Rejected, ///&lt; Message was rejected (policy, capacity, or admission gate).</span>
+<span id="L178"><span class="lineNum">     178</span>                 :             :     DroppedNewest,   ///&lt; Incoming message was dropped by \c DropNewest policy.</span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :     DroppedExisting, ///&lt; An older message was evicted to make room.</span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :     ReroutedToDeadLetter, ///&lt; Message was sent to the dead-letter queue.</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     ReroutedToOverflow,   ///&lt; Message was spilled to the overflow queue.</span>
+<span id="L182"><span class="lineNum">     182</span>                 :             :     MailboxClosed,        ///&lt; Mailbox is closed (actor is draining or stopped).</span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :     ActorNotFound,        ///&lt; Target actor was not found.</span>
+<span id="L184"><span class="lineNum">     184</span>                 :             :     EndpointBackpressure, ///&lt; Data lane at capacity for the remote endpoint.</span>
+<span id="L185"><span class="lineNum">     185</span>                 :             :     EndpointCircuitOpen,  ///&lt; Circuit breaker open for the remote endpoint.</span>
+<span id="L186"><span class="lineNum">     186</span>                 :             :     CircuitOpen,          ///&lt; Actor-level circuit breaker is open.</span>
+<span id="L187"><span class="lineNum">     187</span>                 :             : };</span>
+<span id="L188"><span class="lineNum">     188</span>                 :             : </span>
+<span id="L189"><span class="lineNum">     189</span>                 :             : /// \brief Map an EnqueueResultCode to the canonical FailureReason.</span>
+<span id="L190"><span class="lineNum">     190</span>                 :             : ///</span>
+<span id="L191"><span class="lineNum">     191</span>                 :             : /// \param[in] code The mailbox admission result code.</span>
+<span id="L192"><span class="lineNum">     192</span>                 :             : /// \return The corresponding FailureReason. Returns</span>
+<span id="L193"><span class="lineNum">     193</span>                 :             : ///         \c FailureReason::Unknown for \c Accepted and</span>
+<span id="L194"><span class="lineNum">     194</span>                 :             : ///         \c AcceptedWithSoftPressure — callers should guard with</span>
+<span id="L195"><span class="lineNum">     195</span>                 :             : ///         \c !result.accepted() before calling.</span>
+<span id="L196"><span class="lineNum">     196</span>                 :             : /// \note Thread safety: constexpr and lock-free — safe to call from any</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             : ///       thread without synchronization.</span>
+<span id="L198"><span class="lineNum">     198</span>                 :             : [[nodiscard]] constexpr FailureReason</span>
+<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC tlaBgGNC">          39 : failure_reason(EnqueueResultCode code) noexcept {</span></span>
+<span id="L200"><span class="lineNum">     200</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          39 :     switch (code) {</span></span>
+<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span><span class="tlaUNC" title="Branch 8 was not taken"> - </span> 
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 9 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 10 was not taken"> - </span>]
+<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">           5 :         case EnqueueResultCode::Rejected:</span></span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">           5 :             return FailureReason::RejectedByPolicy;</span></span>
+<span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">           2 :         case EnqueueResultCode::DroppedNewest:</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :             :         case EnqueueResultCode::DroppedExisting:</span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">           2 :             return FailureReason::Dropped;</span></span>
+<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">          25 :         case EnqueueResultCode::ReroutedToDeadLetter:</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">          25 :             return FailureReason::RejectedByPolicy;</span></span>
+<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">           1 :         case EnqueueResultCode::ReroutedToOverflow:</span></span>
+<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">           1 :             return FailureReason::RejectedByPolicy;</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">           1 :         case EnqueueResultCode::MailboxClosed:</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">           1 :             return FailureReason::MailboxClosed;</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">           2 :         case EnqueueResultCode::ActorNotFound:</span></span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">           2 :             return FailureReason::NoRoute;</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case EnqueueResultCode::EndpointBackpressure:</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaUNC">           0 :             return FailureReason::ResourceExhausted;</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaUNC">           0 :         case EnqueueResultCode::EndpointCircuitOpen:</span></span>
+<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaUNC">           0 :             return FailureReason::RemoteUnavailable;</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaUNC">           0 :         case EnqueueResultCode::CircuitOpen:</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaUNC">           0 :             return FailureReason::CircuitOpen;</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC tlaBgGNC">           3 :         case EnqueueResultCode::Accepted:</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :             :         case EnqueueResultCode::AcceptedWithSoftPressure:</span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">           3 :             return FailureReason::Unknown; // Not a failure</span></span>
+<span id="L223"><span class="lineNum">     223</span>                 :             :     }</span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return FailureReason::Unknown;</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :             : }</span>
+<span id="L226"><span class="lineNum">     226</span>                 :             : </span>
+<span id="L227"><span class="lineNum">     227</span>                 :             : /// \brief Result of a mailbox \c try_push() admission attempt.</span>
+<span id="L228"><span class="lineNum">     228</span>                 :             : ///</span>
+<span id="L229"><span class="lineNum">     229</span>                 :             : /// Carries the admission decision plus detailed mailbox state for the caller</span>
+<span id="L230"><span class="lineNum">     230</span>                 :             : /// to decide whether to retry, back off, or fail. Returned by value — no</span>
+<span id="L231"><span class="lineNum">     231</span>                 :             : /// heap allocation or ownership transfer.</span>
+<span id="L232"><span class="lineNum">     232</span>                 :             : struct EnqueueResult {</span>
+<span id="L233"><span class="lineNum">     233</span>                 :             :     EnqueueResultCode code = EnqueueResultCode::Accepted; ///&lt; Admission result</span>
+<span id="L234"><span class="lineNum">     234</span>                 :             :                                                           ///&lt; code.</span>
+<span id="L235"><span class="lineNum">     235</span>                 :             :     ActorId target;        ///&lt; Target actor identifier.</span>
+<span id="L236"><span class="lineNum">     236</span>                 :             :     uint32_t depth = 0;    ///&lt; Current total mailbox depth after the attempt.</span>
+<span id="L237"><span class="lineNum">     237</span>                 :             :     uint32_t capacity = 0; ///&lt; Configured message-count capacity.</span>
+<span id="L238"><span class="lineNum">     238</span>                 :             :     uint64_t bytes = 0;    ///&lt; Current queued byte count.</span>
+<span id="L239"><span class="lineNum">     239</span>                 :             :     uint64_t byte_capacity = 0; ///&lt; Configured byte capacity (0 = unbounded).</span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :     BackpressureReason pressure_reason =</span>
+<span id="L241"><span class="lineNum">     241</span>                 :             :         BackpressureReason::HighWatermark; ///&lt; Why backpressure was triggered.</span>
+<span id="L242"><span class="lineNum">     242</span>                 :             :     MailboxPressureState pressure_state =</span>
+<span id="L243"><span class="lineNum">     243</span>                 :             :         MailboxPressureState::Normal; ///&lt; Current</span>
+<span id="L244"><span class="lineNum">     244</span>                 :             :                                       ///&lt; pressure</span>
+<span id="L245"><span class="lineNum">     245</span>                 :             :                                       ///&lt; state.</span>
+<span id="L246"><span class="lineNum">     246</span>                 :             :     double pressure_ratio = 0.0;      ///&lt; Current pressure ratio in [0, ∞).</span>
+<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC tlaBgGNC">          13 :     std::chrono::milliseconds retry_after{0}; ///&lt; Suggested backoff before</span></span>
+<span id="L248"><span class="lineNum">     248</span>                 :             :                                               ///&lt; retry (0 = retry</span>
+<span id="L249"><span class="lineNum">     249</span>                 :             :                                               ///&lt; immediately).</span>
+<span id="L250"><span class="lineNum">     250</span>                 :             :     TypeTag affected_type = TypeTag::Invalid; ///&lt; Type tag of the affected</span>
+<span id="L251"><span class="lineNum">     251</span>                 :             :                                               ///&lt; message (for</span>
+<span id="L252"><span class="lineNum">     252</span>                 :             :                                               ///&lt; DroppedExisting).</span>
+<span id="L253"><span class="lineNum">     253</span>                 :             :     uint64_t affected_message_id = 0; ///&lt; Message ID of the affected message</span>
+<span id="L254"><span class="lineNum">     254</span>                 :             :                                       ///&lt; (for DroppedExisting).</span>
+<span id="L255"><span class="lineNum">     255</span>                 :             : </span>
+<span id="L256"><span class="lineNum">     256</span>                 :             :     [[nodiscard]] EnqueueResultCode status() const noexcept {</span>
+<span id="L257"><span class="lineNum">     257</span>                 :             :         return code;</span>
+<span id="L258"><span class="lineNum">     258</span>                 :             :     }</span>
+<span id="L259"><span class="lineNum">     259</span>                 :             :     [[nodiscard]] bool ok() const noexcept {</span>
+<span id="L260"><span class="lineNum">     260</span>                 :             :         return accepted();</span>
+<span id="L261"><span class="lineNum">     261</span>                 :             :     }</span>
+<span id="L262"><span class="lineNum">     262</span>                 :             : </span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">      122542 :     [[nodiscard]] bool accepted() const noexcept {</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">      242164 :         return code == EnqueueResultCode::Accepted ||</span></span>
+<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 119622 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2920 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 119341 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 281 times"> + </span>]:<span class="tlaGNC">      241883 :                code == EnqueueResultCode::AcceptedWithSoftPressure ||</span></span>
+<span id="L266"><span class="lineNum">     266</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 119341 times"> + </span>]:<span class="tlaGNC">      241883 :                code == EnqueueResultCode::ReroutedToOverflow;</span></span>
+<span id="L267"><span class="lineNum">     267</span>                 :             :     }</span>
+<span id="L268"><span class="lineNum">     268</span>                 :             : </span>
+<span id="L269"><span class="lineNum">     269</span>                 :<span class="tlaGNC">          32 :     [[nodiscard]] bool retryable() const noexcept {</span></span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">          58 :         return code == EnqueueResultCode::Rejected ||</span></span>
+<span id="L271"><span class="lineNum">     271</span>         [<span class="tlaGBC" title="Branch 0 was taken 26 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          26 :                code == EnqueueResultCode::MailboxClosed ||</span></span>
+<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          26 :                code == EnqueueResultCode::ReroutedToOverflow ||</span></span>
+<span id="L273"><span class="lineNum">     273</span>   [<span class="tlaGBC" title="Branch 0 was taken 26 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 25 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          83 :                code == EnqueueResultCode::EndpointBackpressure ||</span></span>
+<span id="L274"><span class="lineNum">     274</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span>]:<span class="tlaGNC">          57 :                code == EnqueueResultCode::CircuitOpen;</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :             :     }</span>
+<span id="L276"><span class="lineNum">     276</span>                 :             : </span>
+<span id="L277"><span class="lineNum">     277</span>                 :             :     /// \brief Canonical failure reason for this admission result.</span>
+<span id="L278"><span class="lineNum">     278</span>                 :             :     ///</span>
+<span id="L279"><span class="lineNum">     279</span>                 :             :     /// \return The FailureReason corresponding to the \c code field.</span>
+<span id="L280"><span class="lineNum">     280</span>                 :             :     ///         Returns \c FailureReason::Unknown when the enqueue was</span>
+<span id="L281"><span class="lineNum">     281</span>                 :             :     ///         accepted.</span>
+<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaGNC">          30 :     [[nodiscard]] FailureReason failure_reason() const noexcept {</span></span>
+<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">          30 :         return mailbox::failure_reason(code);</span></span>
+<span id="L284"><span class="lineNum">     284</span>                 :             :     }</span>
+<span id="L285"><span class="lineNum">     285</span>                 :             : </span>
+<span id="L286"><span class="lineNum">     286</span>                 :             :     /// \brief Convert to the user-facing DeliveryResult type.</span>
+<span id="L287"><span class="lineNum">     287</span>                 :             :     ///</span>
+<span id="L288"><span class="lineNum">     288</span>                 :             :     /// \param[in] target_addr Target actor address for the result.</span>
+<span id="L289"><span class="lineNum">     289</span>                 :             :     /// \param[in] msg_id Optional message id for correlation.</span>
+<span id="L290"><span class="lineNum">     290</span>                 :             :     /// \return DeliveryResult with status mapped from this code.</span>
+<span id="L291"><span class="lineNum">     291</span>                 :             :     /// \note The caller must include \c delivery_result.hpp for</span>
+<span id="L292"><span class="lineNum">     292</span>                 :             :     ///       the return type to be complete.</span>
+<span id="L293"><span class="lineNum">     293</span>                 :             :     DeliveryResult to_delivery_result(const ActorAddress&amp; target_addr,</span>
+<span id="L294"><span class="lineNum">     294</span>                 :             :                                       MessageId msg_id = {}) const;</span>
+<span id="L295"><span class="lineNum">     295</span>                 :             : };</span>
+<span id="L296"><span class="lineNum">     296</span>                 :             : </span>
+<span id="L297"><span class="lineNum">     297</span>                 :             : /// \brief Backpressure signal emitted when a mailbox is under pressure.</span>
+<span id="L298"><span class="lineNum">     298</span>                 :             : ///</span>
+<span id="L299"><span class="lineNum">     299</span>                 :             : /// Serialized to remote producers via \c serialize_backpressure_signal() so</span>
+<span id="L300"><span class="lineNum">     300</span>                 :             : /// they can throttle or redirect sends. Carries depth, capacity, pressure</span>
+<span id="L301"><span class="lineNum">     301</span>                 :             : /// ratio, and a suggested retry interval.</span>
+<span id="L302"><span class="lineNum">     302</span>                 :             : struct BackpressureSignal {</span>
+<span id="L303"><span class="lineNum">     303</span>                 :             :     ActorAddress target; ///&lt; Address of the actor whose mailbox is under</span>
+<span id="L304"><span class="lineNum">     304</span>                 :             :                          ///&lt; pressure.</span>
+<span id="L305"><span class="lineNum">     305</span>                 :             :     ActorAddress sender; ///&lt; Address of the actor that triggered the signal.</span>
+<span id="L306"><span class="lineNum">     306</span>                 :             :     BackpressureReason reason = BackpressureReason::HighWatermark; ///&lt; Why the</span>
+<span id="L307"><span class="lineNum">     307</span>                 :             :                                                                    ///&lt; signal</span>
+<span id="L308"><span class="lineNum">     308</span>                 :             :                                                                    ///&lt; was</span>
+<span id="L309"><span class="lineNum">     309</span>                 :             :                                                                    ///&lt; emitted.</span>
+<span id="L310"><span class="lineNum">     310</span>                 :             :     uint32_t depth = 0;          ///&lt; Mailbox depth at signal time.</span>
+<span id="L311"><span class="lineNum">     311</span>                 :             :     uint32_t capacity = 0;       ///&lt; Mailbox capacity at signal time.</span>
+<span id="L312"><span class="lineNum">     312</span>                 :             :     uint64_t bytes = 0;          ///&lt; Queued byte count at signal time.</span>
+<span id="L313"><span class="lineNum">     313</span>                 :             :     uint64_t byte_capacity = 0;  ///&lt; Byte capacity at signal time.</span>
+<span id="L314"><span class="lineNum">     314</span>                 :             :     double pressure_ratio = 0.0; ///&lt; Pressure ratio at signal time.</span>
+<span id="L315"><span class="lineNum">     315</span>                 :             :     std::chrono::milliseconds retry_after{0}; ///&lt; Suggested retry interval for</span>
+<span id="L316"><span class="lineNum">     316</span>                 :             :                                               ///&lt; producers.</span>
+<span id="L317"><span class="lineNum">     317</span>                 :             :     uint64_t sequence = 0; ///&lt; Monotonically increasing signal sequence number.</span>
+<span id="L318"><span class="lineNum">     318</span>                 :             : };</span>
+<span id="L319"><span class="lineNum">     319</span>                 :             : </span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">      224692 : [[nodiscard]] constexpr bool is_system_message(TypeTag tag) noexcept {</span></span>
+<span id="L321"><span class="lineNum">     321</span>   [<span class="tlaGBC" title="Branch 0 was taken 3626 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 221066 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 172 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3454 times"> + </span>]:<span class="tlaGNC">      224692 :     return static_cast&lt;uint32_t&gt;(tag) &gt; 0 &amp;&amp;</span></span>
+<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">      224692 :            static_cast&lt;uint32_t&gt;(tag) &lt; static_cast&lt;uint32_t&gt;(TypeTag::User);</span></span>
+<span id="L323"><span class="lineNum">     323</span>                 :             : }</span>
+<span id="L324"><span class="lineNum">     324</span>                 :             : </span>
+<span id="L325"><span class="lineNum">     325</span>                 :             : [[nodiscard]] inline uint64_t</span>
+<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">      298311 : estimate_message_bytes(const TypedMessage&amp; msg) noexcept {</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">      298311 :     return sizeof(TypedMessage) + msg.payload().size();</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :             : }</span>
+<span id="L329"><span class="lineNum">     329</span>                 :             : </span>
+<span id="L330"><span class="lineNum">     330</span>                 :             : /// \brief Human-readable snake_case string for an \c OverflowPolicy.</span>
+<span id="L331"><span class="lineNum">     331</span>                 :             : ///</span>
+<span id="L332"><span class="lineNum">     332</span>                 :             : /// \param[in] policy The overflow policy value.</span>
+<span id="L333"><span class="lineNum">     333</span>                 :             : /// \return A null-terminated string literal. Never returns \c nullptr.</span>
+<span id="L334"><span class="lineNum">     334</span>                 :<span class="tlaGNC">          65 : inline const char* to_string(OverflowPolicy policy) noexcept {</span></span>
+<span id="L335"><span class="lineNum">     335</span>   [<span class="tlaGBC" title="Branch 0 was taken 47 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          65 :     switch (policy) {</span></span>
+<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span> 
+<span class="lineNum">        </span>             <span class="tlaUNC" title="Branch 8 was not taken"> - </span>]
+<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">          47 :         case OverflowPolicy::RejectNewest:</span></span>
+<span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaGNC">          47 :             return &quot;reject_newest&quot;;</span></span>
+<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">           3 :         case OverflowPolicy::DropNewest:</span></span>
+<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">           3 :             return &quot;drop_newest&quot;;</span></span>
+<span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">           4 :         case OverflowPolicy::DropOldest:</span></span>
+<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">           4 :             return &quot;drop_oldest&quot;;</span></span>
+<span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaGNC">           1 :         case OverflowPolicy::DropLowestPriority:</span></span>
+<span id="L343"><span class="lineNum">     343</span>                 :<span class="tlaGNC">           1 :             return &quot;drop_lowest_priority&quot;;</span></span>
+<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaGNC">           1 :         case OverflowPolicy::DeadLetter:</span></span>
+<span id="L345"><span class="lineNum">     345</span>                 :<span class="tlaGNC">           1 :             return &quot;dead_letter&quot;;</span></span>
+<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">           7 :         case OverflowPolicy::SpillToOverflowQueue:</span></span>
+<span id="L347"><span class="lineNum">     347</span>                 :<span class="tlaGNC">           7 :             return &quot;spill_to_overflow_queue&quot;;</span></span>
+<span id="L348"><span class="lineNum">     348</span>                 :<span class="tlaGNC">           2 :         case OverflowPolicy::SignalOnly:</span></span>
+<span id="L349"><span class="lineNum">     349</span>                 :<span class="tlaGNC">           2 :             return &quot;signal_only&quot;;</span></span>
+<span id="L350"><span class="lineNum">     350</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case OverflowPolicy::BlockWhenAllowed:</span></span>
+<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaUNC">           0 :             return &quot;block_when_allowed&quot;;</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :             :     }</span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaUNC">           0 :     return &quot;reject_newest&quot;;</span></span>
+<span id="L354"><span class="lineNum">     354</span>                 :             : }</span>
+<span id="L355"><span class="lineNum">     355</span>                 :             : </span>
+<span id="L356"><span class="lineNum">     356</span>                 :             : /// \brief Check whether a message deadline has expired.</span>
+<span id="L357"><span class="lineNum">     357</span>                 :             : ///</span>
+<span id="L358"><span class="lineNum">     358</span>                 :             : /// \param[in] deadline_ns Absolute deadline in nanoseconds (monotonic clock).</span>
+<span id="L359"><span class="lineNum">     359</span>                 :             : ///                        Use INT64_MAX for no deadline.</span>
+<span id="L360"><span class="lineNum">     360</span>                 :             : /// \param[in] now_ns Current monotonic timestamp in nanoseconds.</span>
+<span id="L361"><span class="lineNum">     361</span>                 :             : /// \return true if the deadline has passed and the message should be dropped.</span>
+<span id="L362"><span class="lineNum">     362</span>                 :             : /// \note Thread safety: constexpr and lock-free — safe to call from any</span>
+<span id="L363"><span class="lineNum">     363</span>                 :             : ///       thread without synchronization.</span>
+<span id="L364"><span class="lineNum">     364</span>                 :             : [[nodiscard]] constexpr bool</span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC tlaBgGNC">        1863 : is_expired(int64_t deadline_ns, uint64_t now_ns) noexcept {</span></span>
+<span id="L366"><span class="lineNum">     366</span>   [<span class="tlaGBC" title="Branch 0 was taken 1860 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 16 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1844 times"> + </span>]:<span class="tlaGNC">        1879 :     return deadline_ns &gt;= 0 &amp;&amp; deadline_ns != INT64_MAX &amp;&amp;</span></span>
+<span id="L367"><span class="lineNum">     367</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">        1879 :            static_cast&lt;uint64_t&gt;(deadline_ns) &lt; now_ns;</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :             : }</span>
+<span id="L369"><span class="lineNum">     369</span>                 :             : </span>
+<span id="L370"><span class="lineNum">     370</span>                 :             : /// \brief Human-readable snake_case string for a \c MailboxPressureState.</span>
+<span id="L371"><span class="lineNum">     371</span>                 :             : ///</span>
+<span id="L372"><span class="lineNum">     372</span>                 :             : /// \param[in] state The pressure state value.</span>
+<span id="L373"><span class="lineNum">     373</span>                 :             : /// \return A null-terminated string literal. Never returns \c nullptr.</span>
+<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">          65 : inline const char* to_string(MailboxPressureState state) noexcept {</span></span>
+<span id="L375"><span class="lineNum">     375</span>   [<span class="tlaGBC" title="Branch 0 was taken 44 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">          65 :     switch (state) {</span></span>
+<span class="lineNum">        </span>             <span class="tlaUNC" title="Branch 4 was not taken"> - </span>]
+<span id="L376"><span class="lineNum">     376</span>                 :<span class="tlaGNC">          44 :         case MailboxPressureState::Normal:</span></span>
+<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">          44 :             return &quot;normal&quot;;</span></span>
+<span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaGNC">           1 :         case MailboxPressureState::SoftPressure:</span></span>
+<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">           1 :             return &quot;soft_pressure&quot;;</span></span>
+<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaGNC">          18 :         case MailboxPressureState::HardPressure:</span></span>
+<span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">          18 :             return &quot;hard_pressure&quot;;</span></span>
+<span id="L382"><span class="lineNum">     382</span>                 :<span class="tlaGNC">           2 :         case MailboxPressureState::Recovering:</span></span>
+<span id="L383"><span class="lineNum">     383</span>                 :<span class="tlaGNC">           2 :             return &quot;recovering&quot;;</span></span>
+<span id="L384"><span class="lineNum">     384</span>                 :             :     }</span>
+<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return &quot;normal&quot;;</span></span>
+<span id="L386"><span class="lineNum">     386</span>                 :             : }</span>
+<span id="L387"><span class="lineNum">     387</span>                 :             : </span>
+<span id="L388"><span class="lineNum">     388</span>                 :             : } // namespace hpactor::mailbox</span>
+        </pre>
+              </td>
+            </tr>
+          </table>
+          <br>
+
+          <table width="100%" border=0 cellspacing=0 cellpadding=0>
+            <tr><td class="ruler"><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
+            <tr><td class="versionInfo">Generated by: <a href="https://github.com//linux-test-project/lcov" target="_parent">LCOV version 2.0-1</a></td></tr>
+          </table>
+          <br>
+
+</body>
+</html>
