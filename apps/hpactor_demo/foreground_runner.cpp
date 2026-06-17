@@ -36,6 +36,7 @@ int run_foreground(ActorSystem& system, const ForegroundConfig& cfg) {
     // platform-aware default); no fallback needed here.
     cli::CliProtoServerConfig server_cfg;
     server_cfg.uds_listen_path = cfg.uds_path;
+    server_cfg.tcp_listen_port = cfg.tcp_port;
     server_cfg.max_sessions = 16;
     server_cfg.default_format = "pretty";
     server_cfg.page_size = 20;

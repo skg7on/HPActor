@@ -223,10 +223,14 @@ int main(int argc, char* argv[]) {
         // Print status lines while stdout is still in cooked mode.
         // These used to appear interleaved with the linenoise prompt
         // because run_foreground() ran after ActorSystem construction.
-        std::cout << "\n[hpactor_demo foreground mode — type /help for commands, "
-                     "/quit to exit]\n"
-                  << "[CliProtoServerActor listening on " << uds_path << "]\n"
-                  << std::endl;
+        std::cout
+            << "\n[hpactor_demo foreground mode — type /help for commands, "
+               "/quit to exit]\n"
+            << "[CliProtoServerActor listening on UDS: " << uds_path << "]\n";
+        if (opts.tcp_port > 0)
+            std::cout << "[CliProtoServerActor listening on TCP: 0.0.0.0:"
+                      << opts.tcp_port << "]\n";
+        std::cout << std::endl;
     }
 
     // Build config and construct ActorSystem
@@ -246,6 +250,7 @@ int main(int argc, char* argv[]) {
     if (opts.mode == process::ProcessMode::Foreground) {
         hpactor_demo::ForegroundConfig fg_cfg;
         fg_cfg.uds_path = uds_path;
+        fg_cfg.tcp_port = opts.tcp_port;
         return hpactor_demo::run_foreground(system, fg_cfg);
     }
 
