@@ -20,10 +20,10 @@
 #include "apps/hpactor_demo/cli_demo_actor_factory.hpp"
 
 #if HPACTOR_ENABLE_CLI
-#    include <hpactor/cli/cli_actor.hpp>
 #    include <hpactor/cli/cli_config.hpp>
-#    include <hpactor/cli/cli_server_actor.hpp>
-#    include <hpactor/cli/cli_server_config.hpp>
+#    include <hpactor/cli/cli_legacy_server_actor.hpp>
+#    include <hpactor/cli/cli_legacy_server_config.hpp>
+#    include <hpactor/cli/cli_local_actor.hpp>
 #endif
 
 #include <chrono>
@@ -81,11 +81,11 @@ TEST(HpactorDemoForegroundTest, DualCliSpawning) {
     // immediately. The banner printed above confirms it started.
     ASSERT_NE(system.cli_actor(), nullptr);
 
-    // Spawn CliServerActor alongside
-    cli::CliServerConfig server_cfg;
+    // Spawn CliLegacyServerActor alongside
+    cli::CliLegacyServerConfig server_cfg;
     server_cfg.uds_listen_path = "/tmp/hpactor_test.sock";
     server_cfg.max_sessions = 4;
-    auto cli_server = system.spawn<cli::CliServerActor>(server_cfg);
+    auto cli_server = system.spawn<cli::CliLegacyServerActor>(server_cfg);
     EXPECT_NE(cli_server.id().value(), 0u);
 
     // Brief spin to let daemon threads start
@@ -95,9 +95,8 @@ TEST(HpactorDemoForegroundTest, DualCliSpawning) {
     system.cli_actor()->request_shutdown();
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 
-    // Shutdown CliServerActor before system shutdown to avoid
-    // use-after-free on the event loop during drain
-    auto* server_raw = std::static_pointer_cast<cli::CliServerActor>(
+    // Shutdown CliLegacyServerActor before system shutdown
+    auto* server_raw = std::static_pointer_cast<cli::CliLegacyServerActor>(
                            system.get_actor(cli_server.id()))
                            .get();
     if (server_raw) {

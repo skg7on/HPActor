@@ -14,8 +14,8 @@
 
 #include "daemon_runner.hpp"
 
-#include <hpactor/cli/cli_server_actor.hpp>
-#include <hpactor/cli/cli_server_config.hpp>
+#include <hpactor/cli/cli_legacy_server_actor.hpp>
+#include <hpactor/cli/cli_legacy_server_config.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/process/health_http_server.hpp>
 #include <hpactor/process/process_manager.hpp>
@@ -34,13 +34,13 @@ int run_daemon(ActorSystem& system, const DaemonConfig& cfg) {
     return 1;
 #else
     // Spawn CliServerActor (sole CLI access path)
-    cli::CliServerConfig server_cfg;
+    cli::CliLegacyServerConfig server_cfg;
     server_cfg.uds_listen_path = cfg.uds_path;
     server_cfg.tcp_listen_port = cfg.tcp_port;
     server_cfg.max_sessions = 16;
     server_cfg.default_format = "pretty";
     server_cfg.page_size = 50;
-    system.spawn<cli::CliServerActor>(server_cfg);
+    system.spawn<cli::CliLegacyServerActor>(server_cfg);
 
     // Spawn WatchdogActor if configured
     if (cfg.watchdog_interval.count() > 0) {
