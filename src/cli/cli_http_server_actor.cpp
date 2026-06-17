@@ -33,6 +33,8 @@
 #include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_types.hpp>
 
+#include <hpactor/metrics/metrics_actor.hpp>
+
 #include "handlers/cli_http_handler_helpers.hpp"
 
 #include "commands/command_utils.hpp"
@@ -333,6 +335,16 @@ void CliHttpServerActor::render_fault_status(OutputFormatter& output) {
 
 void CliHttpServerActor::render_scheduler_workers(OutputFormatter& output) {
     hpactor::cli::render_scheduler_workers(system_, output);
+}
+
+void CliHttpServerActor::render_metrics_show(OutputFormatter& output) {
+    output.header("Metrics");
+    auto* ma = system_.metrics_actor();
+    if (!ma) {
+        output.raw("Metrics subsystem is not enabled.");
+        return;
+    }
+    output.raw(ma->format_snapshot());
 }
 
 void CliHttpServerActor::render_dlq_list(OutputFormatter& output,

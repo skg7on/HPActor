@@ -38,6 +38,12 @@ class MetricsShowCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        // Remote CLI: delegate to system_host which sends to the server.
+        if (ctx.system_host) {
+            ctx.system_host->render_metrics_show(*ctx.output);
+            return result<void>::make();
+        }
+        // Local CLI: access metrics_actor directly.
         ctx.output->header("Metrics");
         auto* sys = ctx.system;
         if (!sys) {

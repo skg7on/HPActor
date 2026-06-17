@@ -25,6 +25,7 @@
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>
+#include <hpactor/metrics/metrics_actor.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
@@ -475,6 +476,16 @@ void CliLegacyServerActor::render_fault_status(OutputFormatter& output) {
 
 void CliLegacyServerActor::render_scheduler_workers(OutputFormatter& output) {
     hpactor::cli::render_scheduler_workers(system_, output);
+}
+
+void CliLegacyServerActor::render_metrics_show(OutputFormatter& output) {
+    output.header("Metrics");
+    auto* ma = system_.metrics_actor();
+    if (!ma) {
+        output.raw("Metrics subsystem is not enabled.");
+        return;
+    }
+    output.raw(ma->format_snapshot());
 }
 
 void CliLegacyServerActor::render_dlq_list(OutputFormatter& output,

@@ -20,6 +20,7 @@
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>
+#include <hpactor/metrics/metrics_actor.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 
 #include "commands/command_utils.hpp"
@@ -366,6 +367,16 @@ void CliActor::render_fault_status(OutputFormatter& output) {
 
 void CliActor::render_scheduler_workers(OutputFormatter& output) {
     hpactor::cli::render_scheduler_workers(system_, output);
+}
+
+void CliActor::render_metrics_show(OutputFormatter& output) {
+    output.header("Metrics");
+    auto* ma = system_.metrics_actor();
+    if (!ma) {
+        output.raw("Metrics subsystem is not enabled.");
+        return;
+    }
+    output.raw(ma->format_snapshot());
 }
 
 void CliActor::render_dlq_list(OutputFormatter& output, std::string_view filter) {
