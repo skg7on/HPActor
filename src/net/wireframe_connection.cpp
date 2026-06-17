@@ -283,8 +283,21 @@ void WireFrameConnection::flush_write_buffer() {
     iov.iov_base = write_buffer_.data();
     iov.iov_len = write_buffer_.size();
 
-    loop_->backend()->async_send(fd_, &iov, 1, ActorId(0),
-                                 static_cast<uint32_t>(OpType::Send));
+    // Try a synchronous write first.  For UDS and local sockets this
+    // completes immediately, which guarantees handle_send_completion
+    // is called (clearing is_sending_) even when the EventLoop has no
+    // completion callback registered (e.g., CliProtoServerActor).
+    ssize_t n = ::writev(fd_, &iov, 1);
+    if (n >= 0) {
+        handle_send_completion(static_cast<int>(n));
+    } else if (errno == EAGAIN || errno == EWOULDBLOCK) {
+        // Send buffer full — fall back to async via the backend.
+        loop_->backend()->async_send(fd_, &iov, 1, ActorId(0),
+                                     static_cast<uint32_t>(OpType::Send));
+    } else {
+        // Hard error.
+        handle_send_completion(-1);
+    }
 }
 
 void WireFrameConnection::handle_send_completion(int result) {
