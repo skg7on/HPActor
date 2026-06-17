@@ -1,0 +1,1372 @@
+openapi: 3.0.3
+info:
+  title: HPActor Actor System — REST Admin API
+  description: |
+    RESTful HTTP API for inspecting and managing an HPActor actor system at
+    runtime.  Provides actor lifecycle operations, system statistics, fault
+    injection control, dead-letter queue management, and ask (request-response)
+    tracking.
+
+    ## Conventions
+
+    - **Base URL:** `http://{host}:{port}/api/v1`
+    - **Content-Type:** All request bodies must be `application/json`.
+    - **Response envelope:** Every success response wraps data in `{"data": …}`;
+      collections add `"pagination"`.  Errors use `{"error": {"code": "…",
+      "message": "…"}}`.
+    - **Pagination:** Offset-based via `?offset=` (default 0) and `?limit=`
+      (default 50, max 200).
+    - **Field selection:** `GET /actors/{actor_id}?fields=metadata,mailbox`
+      limits returned top-level keys.
+    - **Timestamps:** Millisecond integers (monotonic for durations,
+      system-clock for absolute times).
+
+    ## Authentication
+
+    Version 1 binds to `127.0.0.1` by default and does not require
+    authentication.  Future versions will add mTLS / bearer-token support for
+    remote access.
+
+    ## Rate Limiting
+
+    Not enforced at the HTTP layer in v1.  The actor system's mailbox admission
+    and backpressure provide natural throttling.
+
+    ## Health Endpoints
+
+    Liveness (`/health/live`) and readiness (`/health/ready`) are served by
+    `HealthHttpServer` on a separate port (8089) and are not part of this API.
+  version: 1.0.0
+  contact:
+    name: HPActor Contributors
+    url: https://github.com/skg7on/HPActor
+  license:
+    name: Apache 2.0
+    url: https://www.apache.org/licenses/LICENSE-2.0
+
+servers:
+  - url: http://127.0.0.1:9090/api/v1
+    description: Default local development server
+
+tags:
+  - name: Actors
+    description: Actor lifecycle inspection and management
+  - name: System
+    description: System-wide status, statistics, and lifecycle control
+  - name: Faults
+    description: Deterministic fault injection status and control
+  - name: Dead Letter Queue
+    description: Undeliverable message inspection, replay, and export
+  - name: Asks
+    description: Pending ask (request-response) operation tracking
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Paths
+# ═══════════════════════════════════════════════════════════════════════════════
+paths:
+
+  # ── API Index ──────────────────────────────────────────────────────────────
+
+  /:
+    get:
+      tags: [System]
+      summary: API index
+      description: Returns a map of all available endpoints for discoverability.
+      operationId: getApiIndex
+      responses:
+        '200':
+          description: Endpoint map
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ApiIndex'
+
+  # ── Actors ─────────────────────────────────────────────────────────────────
+
+  /actors:
+    get:
+      tags: [Actors]
+      summary: List actors
+      description: |
+        Returns a paginated list of actors, optionally filtered by type or
+        lifecycle state.
+      operationId: listActors
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - name: actor_type
+          in: query
+          description: Filter by actor type (substring match).
+          schema: { type: string }
+        - name: state
+          in: query
+          description: >
+            Filter by lifecycle state (`running`, `idle`, `stopping`, `stopped`,
+            `failed`, `terminated`).
+          schema:
+            type: string
+            enum: [running, idle, stopping, stopped, failed, terminated]
+      responses:
+        '200':
+          description: Paginated actor list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorList'
+
+  /actors/{actor_id}:
+    get:
+      tags: [Actors]
+      summary: Get actor detail
+      description: |
+        Returns detailed information about an actor.  Use `?fields=` to select
+        specific sections (reduces response size for monitoring).
+      operationId: getActor
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+        - name: fields
+          in: query
+          description: >
+            Comma-separated sections to include (`metadata`, `mailbox`,
+            `children`, `circuit_breaker`, `quarantine`, `rate_limiter`,
+            `admission`).  Omit for all sections.
+          schema: { type: string }
+      responses:
+        '200':
+          description: Actor detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorDetail'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ActorNotFound'
+    delete:
+      tags: [Actors]
+      summary: Kill an actor
+      description: |
+        Terminate an actor.  By default performs a force-kill; pass
+        `?force=false` for graceful stop (not supported by all actor types).
+        Idempotent — killing an already-terminated actor returns 200.
+      operationId: killActor
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+        - name: force
+          in: query
+          description: 'If `false`, request graceful stop.  Default: `true`.'
+          schema:
+            type: boolean
+            default: true
+      responses:
+        '200':
+          description: Actor killed
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActionSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/ActorNotFound'
+        '409':
+          $ref: '#/components/responses/ActorNotStoppable'
+
+  /actors/{actor_id}/mailbox:
+    get:
+      tags: [Actors]
+      summary: Get actor mailbox snapshot
+      description: Returns a detailed snapshot of an actor's mailbox state.
+      operationId: getActorMailbox
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+      responses:
+        '200':
+          description: Mailbox snapshot
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/MailboxSnapshotResponse'
+        '404':
+          $ref: '#/components/responses/ActorNotFound'
+
+  /actors/{actor_id}/children:
+    get:
+      tags: [Actors]
+      summary: List child actors
+      description: Returns the child actors of a parent actor.
+      operationId: getActorChildren
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+      responses:
+        '200':
+          description: Child actor list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ChildList'
+        '404':
+          $ref: '#/components/responses/ActorNotFound'
+
+  /actors/{actor_id}/circuit-breaker:
+    get:
+      tags: [Actors]
+      summary: Get circuit breaker state
+      description: |
+        Returns the circuit breaker state for an actor (closed, open,
+        half_open), trip count, and failure-rate EMA.
+      operationId: getCircuitBreaker
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+      responses:
+        '200':
+          description: Circuit breaker state
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/CircuitBreakerResponse'
+        '404':
+          $ref: '#/components/responses/CircuitBreakerNotConfigured'
+
+  /actors/{actor_id}/circuit-breaker/reset:
+    post:
+      tags: [Actors]
+      summary: Reset circuit breaker
+      description: |
+        Attempt to reset the circuit breaker from `open`/`half_open` to
+        `closed`.  Returns `501 Not Implemented` in the current release —
+        circuit breaker reset is not yet available.
+      operationId: resetCircuitBreaker
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+      responses:
+        '200':
+          $ref: '#/components/responses/ActionSuccess'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /actors/{actor_id}/quarantine:
+    post:
+      tags: [Actors]
+      summary: Quarantine an actor
+      description: |
+        Isolate an actor so it stops processing messages.  The `reason` is
+        recorded for audit and debugging.  Idempotent — quarantining an
+        already-quarantined actor succeeds.
+      operationId: quarantineActor
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              required: [reason]
+              properties:
+                reason:
+                  type: string
+                  description: Operator-provided reason for audit trail.
+                  example: Suspected memory corruption in MetricsActor
+      responses:
+        '200':
+          $ref: '#/components/responses/ActionSuccess'
+        '400':
+          $ref: '#/components/responses/QuarantineNotEnabled'
+        '404':
+          $ref: '#/components/responses/ActorNotFound'
+    delete:
+      tags: [Actors]
+      summary: Release from quarantine
+      description: |
+        Release an actor from quarantine.  Idempotent — releasing a
+        non-quarantined actor succeeds.
+      operationId: unquarantineActor
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+      responses:
+        '200':
+          $ref: '#/components/responses/ActionSuccess'
+        '404':
+          $ref: '#/components/responses/ActorNotFound'
+
+  /actors/{actor_id}/memory:
+    get:
+      tags: [Actors]
+      summary: Get per-actor memory statistics
+      description: |
+        Returns memory statistics for an actor.
+        **Note:** Returns `501 Not Implemented` in the current release —
+        per-actor memory tracking is not yet available.  Use
+        `GET /system/memory?actor_id={id}` for system-wide memory.
+      operationId: getActorMemory
+      parameters:
+        - $ref: '#/components/parameters/ActorId'
+      responses:
+        '200':
+          description: Actor memory statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/ActorMemoryResponse'
+        '404':
+          $ref: '#/components/responses/ActorNotFound'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  # ── System ─────────────────────────────────────────────────────────────────
+
+  /system:
+    get:
+      tags: [System]
+      summary: System overview
+      description: Returns a high-level system overview.
+      operationId: getSystemOverview
+      responses:
+        '200':
+          description: System overview
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemOverview'
+
+  /system/stats:
+    get:
+      tags: [System]
+      summary: System statistics
+      description: |
+        Returns detailed system statistics.  Currently returns the same data as
+        `GET /system`; richer per-worker stats are planned.
+      operationId: getSystemStats
+      responses:
+        '200':
+          description: System statistics
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/SystemOverview'
+
+  /system/memory:
+    get:
+      tags: [System]
+      summary: System memory statistics
+      description: |
+        Returns memory region statistics for the entire system.
+        Pass `?actor_id={id}` to scope to a specific actor (uses the global
+        `kActor` region snapshot).
+      operationId: getSystemMemory
+      parameters:
+        - name: actor_id
+          in: query
+          description: Scope to a specific actor's region (optional).
+          schema: { type: integer, format: uint64, minimum: 1 }
+      responses:
+        '200':
+          description: Memory statistics
+          content:
+            application/json:
+              schema:
+                oneOf:
+                  - $ref: '#/components/schemas/SystemMemoryResponse'
+                  - $ref: '#/components/schemas/ActorMemoryResponse'
+
+  /system/drain:
+    post:
+      tags: [System]
+      summary: Initiate system drain
+      description: |
+        Start graceful drain — actors stop accepting new messages but continue
+        processing in-flight work.  Returns `202 Accepted`; drain runs
+        asynchronously.  Monitor `GET /system` to observe progress.
+
+        **Note:** Drain currently delegates to full shutdown due to a
+        limitation in `ActorSystem`.  This will be addressed in a future
+        release.
+      operationId: drainSystem
+      responses:
+        '202':
+          description: Drain initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Accepted'
+
+  /system/shutdown:
+    post:
+      tags: [System]
+      summary: Initiate system shutdown
+      description: |
+        Irreversibly shut down the actor system — drains first, then stops all
+        actors, tears down scheduler and network resources.  Returns
+        `202 Accepted`.
+      operationId: shutdownSystem
+      responses:
+        '202':
+          description: Shutdown initiated
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/Accepted'
+
+  # ── Fault Injection ────────────────────────────────────────────────────────
+
+  /faults:
+    get:
+      tags: [Faults]
+      summary: Fault injection status
+      description: |
+        Returns the current state of the deterministic fault injection
+        subsystem: whether it is enabled, the replay seed, and how many fault
+        hooks have been triggered.
+      operationId: getFaultStatus
+      responses:
+        '200':
+          description: Fault injection status
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/FaultStatus'
+
+  /faults/clear:
+    post:
+      tags: [Faults]
+      summary: Clear fault injection state
+      description: Reset all fault counters and clear pending fault points.
+      operationId: clearFaults
+      responses:
+        '200':
+          $ref: '#/components/responses/ActionSuccess'
+
+  # ── Dead Letter Queue ──────────────────────────────────────────────────────
+
+  /dead-letter-queue:
+    get:
+      tags: [Dead Letter Queue]
+      summary: List DLQ records
+      description: |
+        Returns a paginated list of dead-letter queue records, optionally
+        filtered by target actor ID.
+      operationId: listDLQ
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+        - name: actor_id
+          in: query
+          description: Filter by target actor ID.
+          schema: { type: integer, format: uint64 }
+      responses:
+        '200':
+          description: Paginated DLQ record list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQList'
+
+  /dead-letter-queue/{index}:
+    get:
+      tags: [Dead Letter Queue]
+      summary: Get a DLQ record
+      description: Returns a single dead-letter queue record by its 0-based index.
+      operationId: getDLQRecord
+      parameters:
+        - name: index
+          in: path
+          required: true
+          description: 0-based index in the DLQ ring buffer.
+          schema: { type: integer, format: uint32, minimum: 0 }
+      responses:
+        '200':
+          description: DLQ record detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/DLQRecordResponse'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/DLQIndexOutOfRange'
+
+  /dead-letter-queue/{index}/replay:
+    post:
+      tags: [Dead Letter Queue]
+      summary: Replay a DLQ record
+      description: |
+        Replay a dead-lettered message to a target actor.  If
+        `target_actor_id` is omitted, the message is replayed to its original
+        target.
+      operationId: replayDLQ
+      parameters:
+        - name: index
+          in: path
+          required: true
+          description: 0-based index in the DLQ ring buffer.
+          schema: { type: integer, format: uint32, minimum: 0 }
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                target_actor_id:
+                  type: integer
+                  format: uint64
+                  description: >
+                    Destination actor.  Omit to replay to the original target.
+                  example: 99
+      responses:
+        '200':
+          $ref: '#/components/responses/ActionSuccess'
+        '400':
+          $ref: '#/components/responses/BadRequest'
+        '404':
+          $ref: '#/components/responses/DLQIndexOutOfRange'
+        '409':
+          $ref: '#/components/responses/ReplayDeliveryFailed'
+
+  /dead-letter-queue/export:
+    get:
+      tags: [Dead Letter Queue]
+      summary: Export all DLQ records
+      description: |
+        Returns all dead-letter queue records without pagination.  Use
+        `?actor_id=` to filter.
+      operationId: exportDLQ
+      parameters:
+        - name: actor_id
+          in: query
+          description: Filter by target actor ID.
+          schema: { type: integer, format: uint64 }
+      responses:
+        '200':
+          description: Full DLQ export
+          content:
+            application/json:
+              schema:
+                type: object
+                required: [data]
+                properties:
+                  data:
+                    type: array
+                    items:
+                      $ref: '#/components/schemas/DLQRecord'
+
+  # ── Asks ───────────────────────────────────────────────────────────────────
+
+  /asks:
+    get:
+      tags: [Asks]
+      summary: List pending asks
+      description: |
+        Returns pending ask (request-response) operations.
+        **Note:** Returns `501 Not Implemented` in the current release —
+        `AskManager` enumeration is not yet exposed.
+      operationId: listAsks
+      parameters:
+        - $ref: '#/components/parameters/Offset'
+        - $ref: '#/components/parameters/Limit'
+      responses:
+        '200':
+          description: Pending asks list
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/AskList'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+  /asks/{message_id}:
+    get:
+      tags: [Asks]
+      summary: Get ask detail
+      description: |
+        Returns detail for a specific pending ask by message ID.
+        **Note:** Returns `501 Not Implemented` in the current release.
+      operationId: getAsk
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          description: Correlation message ID of the ask.
+          schema: { type: integer, format: uint64 }
+      responses:
+        '200':
+          description: Ask detail
+          content:
+            application/json:
+              schema:
+                $ref: '#/components/schemas/PendingAskResponse'
+        '404':
+          $ref: '#/components/responses/AskNotFound'
+
+  /asks/{message_id}/cancel:
+    post:
+      tags: [Asks]
+      summary: Cancel a pending ask
+      description: |
+        Cancel a pending ask by message ID.  The requesting actor receives a
+        timeout error for the cancelled ask.
+        **Note:** Returns `501 Not Implemented` in the current release.
+      operationId: cancelAsk
+      parameters:
+        - name: message_id
+          in: path
+          required: true
+          description: Correlation message ID of the ask.
+          schema: { type: integer, format: uint64 }
+      responses:
+        '200':
+          $ref: '#/components/responses/ActionSuccess'
+        '501':
+          $ref: '#/components/responses/NotImplemented'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Component Schemas
+# ═══════════════════════════════════════════════════════════════════════════════
+components:
+
+  # ── Common parameters ──────────────────────────────────────────────────────
+
+  parameters:
+    ActorId:
+      name: actor_id
+      in: path
+      required: true
+      description: Numeric actor identifier.
+      schema: { type: integer, format: uint64, minimum: 1 }
+    Offset:
+      name: offset
+      in: query
+      description: Number of items to skip (default 0).
+      schema: { type: integer, minimum: 0, default: 0 }
+    Limit:
+      name: limit
+      in: query
+      description: Max items to return (1–200, default 50).
+      schema: { type: integer, minimum: 1, maximum: 200, default: 50 }
+
+  # ── Common responses ───────────────────────────────────────────────────────
+
+  responses:
+    BadRequest:
+      description: Invalid request
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: INVALID_FIELD
+              message: actor_id must be a positive integer
+    ActorNotFound:
+      description: Actor does not exist
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: ACTOR_NOT_FOUND
+              message: Actor 42 not found or not responding
+    ActorNotStoppable:
+      description: Actor cannot be stopped
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: ACTOR_NOT_STOPPABLE
+              message: Actor 0 is a system actor and cannot be killed
+    CircuitBreakerNotConfigured:
+      description: Circuit breaker not configured for this actor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: CIRCUIT_BREAKER_NOT_CONFIGURED
+              message: Actor 42 does not have a circuit breaker configured
+    QuarantineNotEnabled:
+      description: Quarantine not enabled for this actor
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: QUARANTINE_NOT_ENABLED
+              message: Actor 42 does not have quarantine enabled
+    DLQIndexOutOfRange:
+      description: DLQ index out of range
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: DLQ_INDEX_OUT_OF_RANGE
+              message: DLQ index 99 is out of range (5 records available)
+    ReplayDeliveryFailed:
+      description: Replayed message could not be delivered
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: REPLAY_DELIVERY_FAILED
+              message: Delivery to actor 99 failed: mailbox full
+    AskNotFound:
+      description: Ask not found
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: ASK_NOT_FOUND
+              message: No pending ask with message_id 12345
+    NotImplemented:
+      description: Feature not yet implemented
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/Error'
+          example:
+            error:
+              code: NOT_IMPLEMENTED
+              message: This feature is not yet available
+    ActionSuccess:
+      description: Action completed successfully
+      content:
+        application/json:
+          schema:
+            $ref: '#/components/schemas/ActionSuccess'
+
+  # ── Schemas ────────────────────────────────────────────────────────────────
+
+  schemas:
+
+    # ── Envelope types ───────────────────────────────────────────────────
+
+    Error:
+      type: object
+      required: [error]
+      properties:
+        error:
+          type: object
+          required: [code, message]
+          properties:
+            code:
+              type: string
+              description: Machine-readable error code.
+              example: ACTOR_NOT_FOUND
+            message:
+              type: string
+              description: Human-readable error description.
+              example: Actor 42 not found or not responding
+
+    ActionSuccess:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [success]
+          properties:
+            success:
+              type: boolean
+              description: Always `true`.
+              example: true
+
+    Accepted:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [success, message]
+          properties:
+            success:
+              type: boolean
+              example: true
+            message:
+              type: string
+              example: System drain initiated
+
+    Pagination:
+      type: object
+      required: [offset, limit, total]
+      properties:
+        offset:
+          type: integer
+          description: Requested offset.
+          example: 0
+        limit:
+          type: integer
+          description: Requested limit (clamped to 1–200).
+          example: 50
+        total:
+          type: integer
+          description: Total items matching the query.
+          example: 142
+
+    # ── API Index ────────────────────────────────────────────────────────
+
+    ApiIndex:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [version, endpoints]
+          properties:
+            version:
+              type: string
+              example: v1
+            endpoints:
+              type: object
+              description: Map of endpoint names to URL paths.
+              additionalProperties:
+                type: string
+              example:
+                actors: /api/v1/actors
+                system: /api/v1/system
+                faults: /api/v1/faults
+                dead_letter_queue: /api/v1/dead-letter-queue
+                asks: /api/v1/asks
+
+    # ── Actors ───────────────────────────────────────────────────────────
+
+    ActorSummary:
+      type: object
+      required:
+        - actor_id
+        - actor_type
+        - state
+        - incarnation
+        - messages_processed
+        - uptime_ms
+        - behavior_name
+      properties:
+        actor_id:
+          type: integer
+          format: uint64
+          description: Unique actor identifier.
+          example: 42
+        actor_type:
+          type: string
+          description: Actor class name.
+          example: MetricsActor
+        state:
+          type: string
+          description: Lifecycle state.
+          enum:
+            - created
+            - starting
+            - running
+            - idle
+            - stopping
+            - stopped
+            - failed
+            - terminated
+          example: running
+        incarnation:
+          type: integer
+          format: uint64
+          description: Monotonically increasing restart counter.
+          example: 1
+        messages_processed:
+          type: integer
+          format: uint64
+          description: Total messages processed since creation.
+          example: 15003
+        uptime_ms:
+          type: integer
+          format: uint64
+          description: Milliseconds since actor creation (monotonic).
+          example: 3600000
+        behavior_name:
+          type: string
+          description: Current behavior name.
+          example: metrics_behavior
+
+    ActorList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ActorSummary'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    ChildInfo:
+      type: object
+      required: [actor_id, actor_type, state]
+      properties:
+        actor_id:
+          type: integer
+          format: uint64
+          example: 43
+        actor_type:
+          type: string
+          example: HttpConnection
+        state:
+          type: string
+          example: running
+
+    ChildList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/ChildInfo'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    RateLimiterInfo:
+      type: object
+      properties:
+        enabled:
+          type: boolean
+        rate:
+          type: number
+          format: double
+          description: Token refill rate per second.
+        burst:
+          type: integer
+          format: uint32
+          description: Maximum token bucket size.
+        current_tokens:
+          type: number
+          format: double
+        blocked_total:
+          type: integer
+          format: uint64
+          description: Messages blocked by rate limiter.
+
+    AdmissionInfo:
+      type: object
+      properties:
+        policy_count:
+          type: integer
+          format: uint32
+        rejected_total:
+          type: integer
+          format: uint64
+        dlq_routed_total:
+          type: integer
+          format: uint64
+
+    DeliveryInfo:
+      type: object
+      properties:
+        accepted_total:
+          type: integer
+          format: uint64
+        rejected_total:
+          type: integer
+          format: uint64
+        failed_total:
+          type: integer
+          format: uint64
+        retryable_total:
+          type: integer
+          format: uint64
+
+    MailboxSnapshot:
+      type: object
+      properties:
+        depth:
+          type: integer
+          format: uint32
+          description: Current message count.
+          example: 3
+        capacity:
+          type: integer
+          format: uint32
+          description: Max messages (0 = unbounded).
+          example: 1024
+        high_priority_depth:
+          type: integer
+          format: uint32
+          description: System-lane message count.
+        pressure_state:
+          type: string
+          enum: [low, high, critical]
+          example: low
+        pressure_ratio_ppm:
+          type: integer
+          format: uint32
+          description: Depth/capacity ratio in parts-per-million.
+        total_enqueued:
+          type: integer
+          format: uint64
+        total_dequeued:
+          type: integer
+          format: uint64
+        max_depth:
+          type: integer
+          format: uint64
+        total_rejected:
+          type: integer
+          format: uint64
+        total_dropped:
+          type: integer
+          format: uint64
+        total_dead_letters:
+          type: integer
+          format: uint64
+        overflow_policy:
+          type: string
+          example: dead_letter_queue
+        queued_bytes:
+          type: integer
+          format: uint64
+        byte_capacity:
+          type: integer
+          format: uint64
+        rate_limiter:
+          $ref: '#/components/schemas/RateLimiterInfo'
+        admission:
+          $ref: '#/components/schemas/AdmissionInfo'
+        delivery:
+          $ref: '#/components/schemas/DeliveryInfo'
+
+    MailboxSnapshotResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/MailboxSnapshot'
+
+    CircuitBreakerInfo:
+      type: object
+      required: [state, trip_count, failure_ema, opened_at_ms]
+      properties:
+        state:
+          type: string
+          enum: [closed, open, half_open]
+          description: Current circuit breaker state.
+          example: half_open
+        trip_count:
+          type: integer
+          format: uint32
+          description: Number of times the circuit has tripped.
+          example: 3
+        failure_ema:
+          type: number
+          format: double
+          description: Exponential moving average of failure rate.
+          example: 0.45
+        opened_at_ms:
+          type: integer
+          format: uint64
+          description: Monotonic timestamp when circuit opened (0 if closed).
+          example: 0
+
+    CircuitBreakerResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/CircuitBreakerInfo'
+
+    QuarantineInfo:
+      type: object
+      required: [enabled, quarantined, reason]
+      properties:
+        enabled:
+          type: boolean
+          description: Whether quarantine is configured for this actor.
+        quarantined:
+          type: boolean
+          description: Whether the actor is currently quarantined.
+        reason:
+          type: string
+          description: Quarantine reason (empty if not quarantined).
+
+    ActorDetail:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          properties:
+            metadata:
+              $ref: '#/components/schemas/ActorSummary'
+            mailbox:
+              $ref: '#/components/schemas/MailboxSnapshot'
+            children:
+              type: array
+              items:
+                $ref: '#/components/schemas/ChildInfo'
+            circuit_breaker:
+              $ref: '#/components/schemas/CircuitBreakerInfo'
+            quarantine:
+              $ref: '#/components/schemas/QuarantineInfo'
+
+    ActorMemoryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          properties:
+            actor_id:
+              type: integer
+              format: uint64
+            active_bytes:
+              type: integer
+              format: uint64
+            peak_bytes:
+              type: integer
+              format: uint64
+            segment_count:
+              type: integer
+              format: uint32
+            slab_hit_rate:
+              type: number
+              format: double
+
+    # ── System ───────────────────────────────────────────────────────────
+
+    SystemOverview:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [total_actors, worker_count, uptime_ms]
+          properties:
+            total_actors:
+              type: integer
+              format: uint64
+              example: 142
+            worker_count:
+              type: integer
+              format: uint32
+              example: 8
+            uptime_ms:
+              type: integer
+              format: uint64
+              description: System uptime in milliseconds (0 = not tracked).
+              example: 0
+
+    RegionSnapshot:
+      type: object
+      required:
+        - name
+        - active_bytes
+        - peak_bytes
+        - alloc_count
+        - free_count
+        - corruption_events
+        - pressure
+        - hard_limit_bytes
+      properties:
+        name:
+          type: string
+          description: Region name (`actor`, `message`, `coroutine`, …).
+          example: actor
+        active_bytes:
+          type: integer
+          format: uint64
+        peak_bytes:
+          type: integer
+          format: uint64
+        alloc_count:
+          type: integer
+          format: uint64
+        free_count:
+          type: integer
+          format: uint64
+        corruption_events:
+          type: integer
+          format: uint64
+        rejected_alloc_count:
+          type: integer
+          format: uint64
+        pressure:
+          type: string
+          enum: [low, normal, high, critical]
+        hard_limit_bytes:
+          type: integer
+          format: uint64
+
+    SystemMemoryResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [regions]
+          properties:
+            regions:
+              type: array
+              items:
+                $ref: '#/components/schemas/RegionSnapshot'
+
+    # ── Faults ───────────────────────────────────────────────────────────
+
+    FaultStatus:
+      type: object
+      required: [data]
+      properties:
+        data:
+          type: object
+          required: [enabled]
+          properties:
+            enabled:
+              type: boolean
+              description: Whether fault injection is active.
+              example: true
+            seed:
+              type: integer
+              format: uint64
+              description: Replay seed (0 when disabled).
+              example: 12345
+            hooks_triggered:
+              type: integer
+              format: uint64
+              description: Total fault hooks that have fired.
+              example: 42
+
+    # ── Dead Letter Queue ────────────────────────────────────────────────
+
+    DLQRecord:
+      type: object
+      required:
+        - index
+        - target_actor_id
+        - reason
+        - source
+        - type_tag
+        - timestamp_ms
+        - payload_size_bytes
+      properties:
+        index:
+          type: integer
+          format: uint32
+          description: 0-based index in the DLQ ring buffer.
+          example: 0
+        target_actor_id:
+          type: integer
+          format: uint64
+          description: Intended recipient actor.
+          example: 42
+        reason:
+          type: string
+          description: Failure reason code.
+          example: mailbox_full
+        source:
+          type: string
+          description: Failure source subsystem.
+          example: overflow_handler
+        type_tag:
+          type: integer
+          format: uint32
+          description: Protobuf type tag of the dead-lettered message.
+          example: 7
+        timestamp_ms:
+          type: integer
+          format: uint64
+          description: System-clock timestamp in milliseconds.
+          example: 1700000000000
+        payload_size_bytes:
+          type: integer
+          format: uint64
+          description: Size of the stored payload sample.
+          example: 256
+
+    DLQRecordResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/DLQRecord'
+
+    DLQList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/DLQRecord'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+    # ── Asks ─────────────────────────────────────────────────────────────
+
+    PendingAsk:
+      type: object
+      required:
+        - message_id
+        - source_actor_id
+        - target_actor_id
+        - deadline_ms
+        - retries_remaining
+      properties:
+        message_id:
+          type: integer
+          format: uint64
+          description: Correlation message ID.
+          example: 12345
+        source_actor_id:
+          type: integer
+          format: uint64
+          description: Actor that issued the ask.
+          example: 10
+        target_actor_id:
+          type: integer
+          format: uint64
+          description: Actor expected to respond.
+          example: 42
+        deadline_ms:
+          type: integer
+          format: uint64
+          description: Absolute system-clock deadline in ms.
+          example: 1700000005000
+        retries_remaining:
+          type: integer
+          format: uint32
+          description: Remaining retry attempts.
+          example: 2
+
+    PendingAskResponse:
+      type: object
+      required: [data]
+      properties:
+        data:
+          $ref: '#/components/schemas/PendingAsk'
+
+    AskList:
+      type: object
+      required: [data, pagination]
+      properties:
+        data:
+          type: array
+          items:
+            $ref: '#/components/schemas/PendingAsk'
+        pagination:
+          $ref: '#/components/schemas/Pagination'
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# Security
+# ═══════════════════════════════════════════════════════════════════════════════
+security: []
+# Future:
+# security:
+#   - bearerAuth: []
+# components:
+#   securitySchemes:
+#     bearerAuth:
+#       type: http
+#       scheme: bearer

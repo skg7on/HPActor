@@ -31,3 +31,14 @@ add_executable(test_unit_cli_wire_protocol
 )
 target_link_libraries(test_unit_cli_wire_protocol hpactor GTest::gtest_main)
 gtest_discover_tests(test_unit_cli_wire_protocol)
+
+add_executable(test_cli_json_builder
+    test_cli_json_builder.cpp
+    ${CMAKE_SOURCE_DIR}/src/adt/json_helpers.cpp
+)
+target_include_directories(test_cli_json_builder PRIVATE
+    ${CMAKE_SOURCE_DIR}/include
+    ${CMAKE_SOURCE_DIR}/third_party/googletest/googletest/include
+)
+target_link_libraries(test_cli_json_builder PRIVATE GTest::gtest_main)
+gtest_discover_tests(test_cli_json_builder)

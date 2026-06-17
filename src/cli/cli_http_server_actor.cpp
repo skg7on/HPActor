@@ -21,157 +21,103 @@
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/command_tree_builder.hpp>
 #include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
+#include <hpactor/msg/message_id.hpp>
+#include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_types.hpp>
 
+#include "handlers/cli_http_handler_helpers.hpp"
+
+#include <chrono>
 #include <cstdio>
 #include <cstring>
 #include <string>
+#include <thread>
 #include <vector>
 
 namespace hpactor {
 namespace cli {
 
-// ---------------------------------------------------------------------------
-// Minimal JSON helpers (no protobuf JSON util dependency)
-// ---------------------------------------------------------------------------
+// ── Forward declarations for handler functions ─────────────────────────
+// (defined in src/cli/handlers/*.cpp)
+namespace handlers {
+void handle_legacy_post_cli(CliHttpServerActor* actor,
+                            net::HTTPConnection* conn, net::HttpRequest&& req);
 
-/// Alias ADT helpers into the anonymous namespace so the protobuf-aware
-/// parse/serialize functions below can call them without qualification.
-namespace {
+// Actor handlers
+void handle_list_actors(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                        net::HttpRequest&& req);
+void handle_get_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                      net::HttpRequest&& req);
+void handle_kill_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+void handle_get_mailbox(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                        net::HttpRequest&& req);
+void handle_get_children(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                         net::HttpRequest&& req);
+void handle_get_circuit_breaker(CliHttpServerActor* actor,
+                                net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_reset_circuit_breaker(CliHttpServerActor* actor,
+                                  net::HTTPConnection* conn,
+                                  net::HttpRequest&& req);
+void handle_quarantine_actor(CliHttpServerActor* actor,
+                             net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_unquarantine_actor(CliHttpServerActor* actor,
+                               net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_get_actor_memory(CliHttpServerActor* actor,
+                             net::HTTPConnection* conn, net::HttpRequest&& req);
 
-using adt::extract_json_array_raw;
-using adt::extract_json_object_raw;
-using adt::extract_json_string;
-using adt::json_escape;
-using adt::parse_json_string_array;
-using adt::parse_json_string_map;
-using adt::skip_json_ws;
+// System handlers
+void handle_api_index(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                      net::HttpRequest&& req);
+void handle_get_system(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+void handle_get_system_stats(CliHttpServerActor* actor,
+                             net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_get_system_memory(CliHttpServerActor* actor,
+                              net::HTTPConnection* conn, net::HttpRequest&& req);
+void handle_drain(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                  net::HttpRequest&& req);
+void handle_shutdown(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                     net::HttpRequest&& req);
 
-/// Parse a JSON object to populate a CliCommand's fields.
-/// Returns true on success, false on parse failure.
-bool parse_cli_command_json(const std::string& json, hpactor::cli::CliCommand& cmd) {
-    size_t pos = 0;
-    pos = skip_json_ws(json, pos);
-    if (pos >= json.size() || json[pos] != '{')
-        return false;
-    ++pos;
+// Fault handlers
+void handle_get_faults(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+void handle_clear_faults(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                         net::HttpRequest&& req);
 
-    std::string current_key;
-    while (pos < json.size()) {
-        pos = skip_json_ws(json, pos);
-        if (pos >= json.size())
-            break;
-        if (json[pos] == '}') {
-            ++pos;
-            break;
-        }
-        if (json[pos] == ',') {
-            ++pos;
-            current_key.clear();
-            continue;
-        }
-        if (json[pos] == '"' && current_key.empty()) {
-            // Reading a key
-            current_key = extract_json_string(json, pos);
-            pos = skip_json_ws(json, pos);
-            if (pos < json.size() && json[pos] == ':')
-                ++pos;
-            pos = skip_json_ws(json, pos);
-            if (pos >= json.size())
-                break;
+// DLQ handlers
+void handle_list_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                     net::HttpRequest&& req);
+void handle_get_dlq_record(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                           net::HttpRequest&& req);
+void handle_replay_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+void handle_export_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
 
-            if (current_key == "path") {
-                if (json[pos] == '"') {
-                    cmd.set_path(extract_json_string(json, pos));
-                }
-                current_key.clear();
-            } else if (current_key == "format") {
-                if (json[pos] == '"') {
-                    cmd.set_format(extract_json_string(json, pos));
-                }
-                current_key.clear();
-            } else if (current_key == "params") {
-                if (json[pos] == '{') {
-                    auto obj_raw = extract_json_object_raw(json, pos);
-                    auto pairs = parse_json_string_map(obj_raw);
-                    auto* params_map = cmd.mutable_params();
-                    for (auto& [k, v] : pairs) {
-                        (*params_map)[k] = v;
-                    }
-                }
-                current_key.clear();
-            } else if (current_key == "args") {
-                if (json[pos] == '[') {
-                    auto arr_raw = extract_json_array_raw(json, pos);
-                    auto values = parse_json_string_array(arr_raw);
-                    for (auto& v : values) {
-                        cmd.add_args(std::move(v));
-                    }
-                }
-                current_key.clear();
-            } else {
-                // Skip unknown field
-                if (json[pos] == '"') {
-                    skip_json_ws(json, pos); // dummy — extract_json_string
-                                             // advances
-                    // Reset pos to where we were, then skip the value
-                }
-                // Skip the value (string, object, array, or literal)
-                if (pos < json.size() && json[pos] == '"') {
-                    extract_json_string(json, pos);
-                } else if (pos < json.size() && json[pos] == '{') {
-                    extract_json_object_raw(json, pos);
-                } else if (pos < json.size() && json[pos] == '[') {
-                    extract_json_array_raw(json, pos);
-                } else {
-                    // Skip literal (number, true, false, null)
-                    while (pos < json.size() && json[pos] != ',' &&
-                           json[pos] != '}') {
-                        ++pos;
-                    }
-                }
-                current_key.clear();
-            }
-        } else {
-            // Unexpected; skip one character
-            ++pos;
-        }
-    }
-    return true;
-}
+// Ask handlers
+void handle_list_asks(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                      net::HttpRequest&& req);
+void handle_get_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                    net::HttpRequest&& req);
+void handle_cancel_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
+                       net::HttpRequest&& req);
+} // namespace handlers
 
-/// Serialize a CliResponse to a JSON string.
-std::string serialize_cli_response_json(const hpactor::cli::CliResponse& resp) {
-    std::string json;
-    json = "{";
-    json += "\"content_type\":\"" + json_escape(resp.content_type()) + "\",";
-    json += "\"payload\":\"" + json_escape(resp.payload()) + "\",";
-    json += "\"is_error\":" + std::string(resp.is_error() ? "true" : "false") + ",";
-    json += "\"error_code\":" + std::to_string(resp.error_code()) + ",";
-    json += "\"is_structured\":" +
-            std::string(resp.is_structured() ? "true" : "false");
-    json += "}";
-    return json;
-}
+// ── Route table PIMPL ──────────────────────────────────────────────────
 
-/// Send a JSON CliResponse as an HTTP response.
-void send_json_response(net::HTTPConnection* conn, net::HttpStatusCode http_code,
-                        const hpactor::cli::CliResponse& resp) {
-    std::string json_out = serialize_cli_response_json(resp);
-    StreamBuffer body_buf(
-        reinterpret_cast<const uint8_t*>(json_out.data()),
-        reinterpret_cast<const uint8_t*>(json_out.data() + json_out.size()));
-    conn->send_response(http_code, {{"Content-Type", "application/json"}}, body_buf);
-}
-
-} // anonymous namespace
+struct CliHttpServerActor::RouteTable {
+    std::vector<RouteEntry> routes;
+};
 
 // ---------------------------------------------------------------------------
 // Construction / destruction
@@ -190,6 +136,7 @@ CliHttpServerActor::~CliHttpServerActor() = default;
 
 void CliHttpServerActor::on_daemon_start() {
     build_command_tree();
+    init_routes();
 
     if (!gateway_->listen(config_.http_port, config_.http_bind_address)) {
         std::fprintf(stderr, "CliHttpServerActor: failed to listen on %s:%u\n",
@@ -202,7 +149,7 @@ void CliHttpServerActor::on_daemon_start() {
 
     gateway_->set_request_handler(
         [this](net::HTTPConnection* conn, net::HttpRequest&& req) {
-            on_http_request(conn, std::move(req));
+            dispatch_route(conn, std::move(req));
         });
 
     gateway_->set_max_connections(config_.max_connections);
@@ -235,105 +182,97 @@ void CliHttpServerActor::build_command_tree() {
 }
 
 // ---------------------------------------------------------------------------
-// HTTP request handler
+// HTTP route dispatch
 // ---------------------------------------------------------------------------
 
-void CliHttpServerActor::on_http_request(net::HTTPConnection* conn,
-                                         net::HttpRequest&& req) {
-    // Only handle POST /cli
-    if (req.method != net::HttpMethod::POST || req.path != "/cli") {
-        std::string msg = "Not Found";
-        StreamBuffer body_buf(
-            reinterpret_cast<const uint8_t*>(msg.data()),
-            reinterpret_cast<const uint8_t*>(msg.data() + msg.size()));
-        conn->send_response(net::HttpStatusCode::NotFound,
-                            {{"Content-Type", "text/plain"}}, body_buf);
-        return;
+void CliHttpServerActor::init_routes() {
+    route_table_ = std::make_unique<RouteTable>();
+    static constexpr std::string_view kApiV1 = "/api/v1";
+    route_table_->routes = {
+        // Actor handlers
+        {net::HttpMethod::GET, std::string(kApiV1) + "/actors",
+         handlers::handle_list_actors},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id",
+         handlers::handle_get_actor},
+        {net::HttpMethod::DELETE, std::string(kApiV1) + "/actors/:id",
+         handlers::handle_kill_actor},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id/mailbox",
+         handlers::handle_get_mailbox},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id/children",
+         handlers::handle_get_children},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id/circuit-breaker",
+         handlers::handle_get_circuit_breaker},
+        {net::HttpMethod::POST,
+         std::string(kApiV1) + "/actors/:id/circuit-breaker/reset",
+         handlers::handle_reset_circuit_breaker},
+        {net::HttpMethod::POST, std::string(kApiV1) + "/actors/:id/quarantine",
+         handlers::handle_quarantine_actor},
+        {net::HttpMethod::DELETE, std::string(kApiV1) + "/actors/:id/quarantine",
+         handlers::handle_unquarantine_actor},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id/memory",
+         handlers::handle_get_actor_memory},
+
+        // System handlers
+        {net::HttpMethod::GET, std::string(kApiV1), handlers::handle_api_index},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/system",
+         handlers::handle_get_system},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/system/stats",
+         handlers::handle_get_system_stats},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/system/memory",
+         handlers::handle_get_system_memory},
+        {net::HttpMethod::POST, std::string(kApiV1) + "/system/drain",
+         handlers::handle_drain},
+        {net::HttpMethod::POST, std::string(kApiV1) + "/system/shutdown",
+         handlers::handle_shutdown},
+
+        // Fault handlers
+        {net::HttpMethod::GET, std::string(kApiV1) + "/faults",
+         handlers::handle_get_faults},
+        {net::HttpMethod::POST, std::string(kApiV1) + "/faults/clear",
+         handlers::handle_clear_faults},
+
+        // DLQ handlers
+        {net::HttpMethod::GET, std::string(kApiV1) + "/dlq",
+         handlers::handle_list_dlq},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/dlq/export",
+         handlers::handle_export_dlq},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/dlq/:index",
+         handlers::handle_get_dlq_record},
+        {net::HttpMethod::POST, std::string(kApiV1) + "/dlq/:index/replay",
+         handlers::handle_replay_dlq},
+
+        // Ask handlers
+        {net::HttpMethod::GET, std::string(kApiV1) + "/asks",
+         handlers::handle_list_asks},
+        {net::HttpMethod::GET, std::string(kApiV1) + "/asks/:message_id",
+         handlers::handle_get_ask},
+        {net::HttpMethod::DELETE, std::string(kApiV1) + "/asks/:message_id",
+         handlers::handle_cancel_ask},
+    };
+
+    // Legacy backward compat (Phase 1 only)
+    if (config_.legacy_cli_endpoint) {
+        route_table_->routes.push_back(
+            {net::HttpMethod::POST, "/cli", handlers::handle_legacy_post_cli});
     }
+}
 
-    // Extract body text
-    std::string body_str(reinterpret_cast<const char*>(req.body.data()),
-                         req.body.size());
-
-    // Parse JSON body → CliCommand
-    hpactor::cli::CliCommand cmd;
-    if (!parse_cli_command_json(body_str, cmd)) {
-        hpactor::cli::CliResponse err_resp;
-        err_resp.set_content_type("text/plain");
-        err_resp.set_payload("Invalid JSON in request body");
-        err_resp.set_is_error(true);
-        err_resp.set_error_code(400);
-        err_resp.set_is_structured(false);
-        send_json_response(conn, net::HttpStatusCode::BadRequest, err_resp);
-        return;
-    }
-
-    // Reconstruct command line from CliCommand fields.
-    // Path uses "/" as separator: "actor/42/show" → tokens "actor 42 show".
-    std::string cmd_line = "/";
-    if (!cmd.path().empty()) {
-        for (char c : cmd.path()) {
-            if (c == '/')
-                cmd_line += ' ';
-            else
-                cmd_line += c;
+void CliHttpServerActor::dispatch_route(net::HTTPConnection* conn,
+                                        net::HttpRequest&& req) {
+    for (const auto& route : route_table_->routes) {
+        if (route.method != req.method)
+            continue;
+        req.path_params.clear();
+        if (match_route_pattern(route.pattern, req.path, req.path_params)) {
+            route.handler(this, conn, std::move(req));
+            return;
         }
     }
 
-    // Params: map of captured <param> values and --flags.
-    for (const auto& [key, value] : cmd.params()) {
-        if (value == "true") {
-            cmd_line += " --" + key;
-        } else {
-            cmd_line += " --" + key + " " + value;
-        }
-    }
-
-    // Format: explicit --format flag.
-    std::string format = cmd.format();
-    if (!format.empty()) {
-        cmd_line += " --format " + format;
-    }
-
-    // Positional args.
-    for (const auto& arg : cmd.args()) {
-        cmd_line += " " + arg;
-    }
-
-    // Determine content_type for the CliResponse payload.
-    std::string content_type = "text/plain";
-    if (format == "json") {
-        content_type = "application/json";
-    }
-
-    // Execute the command via CliSession.
-    std::string output;
-    {
-        auto session = std::make_unique<CliSession>(
-            &system_, command_tree_.get(),
-            OutputFormatter::create(config_.default_format),
-            [&output](const std::string& text) { output = text; },
-            config_.page_size);
-        session->set_system_host(this);
-        session->set_lifecycle_host(this);
-
-        session->process_line(cmd_line);
-    }
-
-    // Strip trailing newline appended by process_line.
-    if (!output.empty() && output.back() == '\n') {
-        output.pop_back();
-    }
-
-    // Build JSON CliResponse.
-    hpactor::cli::CliResponse resp;
-    resp.set_content_type(content_type);
-    resp.set_payload(output);
-    resp.set_is_error(false);
-    resp.set_error_code(0);
-    resp.set_is_structured(false);
-
-    send_json_response(conn, net::HttpStatusCode::OK, resp);
+    // No route matched
+    send_error(conn, net::HttpStatusCode::NotFound, "NOT_FOUND",
+               std::string(net::to_string(req.method)) + " " + req.path +
+                   " has no handler");
 }
 
 // ---------------------------------------------------------------------------
@@ -449,11 +388,153 @@ result<void> CliHttpServerActor::dlq_replay(uint32_t index, ActorId target) {
 // ---------------------------------------------------------------------------
 
 result<void> CliHttpServerActor::drain() {
+    // TODO: Implement soft drain (stop accepting new work, process in-flight).
+    // Currently delegates to full shutdown — pending proper drain support in
+    // ActorSystem.
     return system_.shutdown();
 }
 
 result<void> CliHttpServerActor::shutdown() {
     return system_.shutdown();
+}
+
+// ---------------------------------------------------------------------------
+// ICliCommandHost interface
+// ---------------------------------------------------------------------------
+
+std::optional<InspectStateReply>
+CliHttpServerActor::inspect(ActorId target, const InspectStateRequest& req,
+                            std::chrono::milliseconds timeout) {
+    MessageId correlation_id = generate_message_id();
+    uint64_t corr_value = correlation_id.value();
+
+    TypedMessage msg(TypeTag::InspectStateRequestTag, req);
+    msg.set_sender_address(address());
+    msg.set_ask_message_id(corr_value);
+
+    ActorAddress target_addr;
+    target_addr.id = target;
+    context()->send(target_addr, std::move(msg));
+
+    // Poll mailbox for reply with timeout
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        TypedMessage m;
+        if (mailbox()->try_pop(m)) {
+            if (m.type_id() == TypeTag::InspectStateResponseTag &&
+                m.ask_message_id() == corr_value) {
+                auto reply = m.as<InspectStateReply>();
+                if (reply)
+                    return *reply;
+                return std::nullopt;
+            }
+            // Message not for us (likely for a concurrent request),
+            // continue polling.
+            std::fprintf(stderr,
+                         "CliHttpServerActor::inspect: non-matching message "
+                         "(type=%u ask_id=%llu expected=%llu), polling\n",
+                         static_cast<unsigned>(m.type_id()),
+                         static_cast<unsigned long long>(m.ask_message_id()),
+                         static_cast<unsigned long long>(corr_value));
+        }
+        // Small sleep to avoid busy-spinning the daemon thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return std::nullopt;
+}
+
+std::optional<KillReply>
+CliHttpServerActor::kill(ActorId target, const KillRequest& req,
+                         std::chrono::milliseconds timeout) {
+    MessageId correlation_id = generate_message_id();
+    uint64_t corr_value = correlation_id.value();
+
+    TypedMessage msg(TypeTag::KillRequestTag, req);
+    msg.set_sender_address(address());
+    msg.set_ask_message_id(corr_value);
+
+    ActorAddress target_addr;
+    target_addr.id = target;
+    context()->send(target_addr, std::move(msg));
+
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        TypedMessage m;
+        if (mailbox()->try_pop(m)) {
+            if (m.type_id() == TypeTag::KillResponseTag &&
+                m.ask_message_id() == corr_value) {
+                auto reply = m.as<KillReply>();
+                if (reply)
+                    return *reply;
+                return std::nullopt;
+            }
+            // Message not for us (likely for a concurrent request),
+            // continue polling.
+            std::fprintf(stderr,
+                         "CliHttpServerActor::kill: non-matching message "
+                         "(type=%u ask_id=%llu expected=%llu), polling\n",
+                         static_cast<unsigned>(m.type_id()),
+                         static_cast<unsigned long long>(m.ask_message_id()),
+                         static_cast<unsigned long long>(corr_value));
+        }
+        // Small sleep to avoid busy-spinning the daemon thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return std::nullopt;
+}
+
+std::optional<QuarantineReply>
+CliHttpServerActor::quarantine(ActorId target, const QuarantineRequest& req,
+                               std::chrono::milliseconds timeout) {
+    MessageId correlation_id = generate_message_id();
+    uint64_t corr_value = correlation_id.value();
+
+    TypedMessage msg(TypeTag::QuarantineRequestTag, req);
+    msg.set_sender_address(address());
+    msg.set_ask_message_id(corr_value);
+
+    ActorAddress target_addr;
+    target_addr.id = target;
+    context()->send(target_addr, std::move(msg));
+
+    auto deadline = std::chrono::steady_clock::now() + timeout;
+    while (std::chrono::steady_clock::now() < deadline) {
+        TypedMessage m;
+        if (mailbox()->try_pop(m)) {
+            if (m.type_id() == TypeTag::QuarantineResponseTag &&
+                m.ask_message_id() == corr_value) {
+                auto reply = m.as<QuarantineReply>();
+                if (reply)
+                    return *reply;
+                return std::nullopt;
+            }
+            // Message not for us (likely for a concurrent request),
+            // continue polling.
+            std::fprintf(stderr,
+                         "CliHttpServerActor::quarantine: non-matching message "
+                         "(type=%u ask_id=%llu expected=%llu), polling\n",
+                         static_cast<unsigned>(m.type_id()),
+                         static_cast<unsigned long long>(m.ask_message_id()),
+                         static_cast<unsigned long long>(corr_value));
+        }
+        // Small sleep to avoid busy-spinning the daemon thread
+        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+    }
+    return std::nullopt;
+}
+
+std::vector<ActorMeta> CliHttpServerActor::enumerate(std::string_view filter) {
+    std::vector<ActorMeta> result;
+    system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
+        auto meta = actor.to_metadata();
+        if (!filter.empty()) {
+            // Filter by type name substring match
+            if (meta.actor_type.find(filter) == std::string::npos)
+                return;
+        }
+        result.push_back(std::move(meta));
+    });
+    return result;
 }
 
 } // namespace cli

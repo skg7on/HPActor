@@ -30,6 +30,10 @@ struct CliHttpServerConfig {
 
     /// \brief Number of items per page for paged output.
     uint32_t page_size = 50;
+
+    /// \brief Enable the legacy POST /cli endpoint for backward compatibility.
+    /// Set to false once all clients have migrated to the REST API.
+    bool legacy_cli_endpoint = true;
 };
 
 } // namespace cli
