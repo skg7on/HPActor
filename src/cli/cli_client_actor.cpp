@@ -48,7 +48,9 @@ CliClientActor::~CliClientActor() = default;
 // ---------------------------------------------------------------------------
 
 void CliClientActor::print_greeting() {
-    printf("HPActor Remote CLI -- Connected.  Type /help for commands, /quit to "
+    // Don't claim "Connected" here — the connection hasn't been attempted yet.
+    // pre_input_hook() retries until the transport is up.
+    printf("HPActor Remote CLI — connecting...  Type /help for commands, /quit to "
            "exit.\n\n");
 }
 
@@ -92,9 +94,24 @@ bool CliClientActor::pre_input_hook() {
     if (connector_.fd() < 0) {
         connect();
         if (connector_.fd() < 0) {
-            printf("Waiting for connection... (retrying in 1s)\n");
+            if (!was_ever_connected_) {
+                // Show target on first failure so the user knows what we're
+                // trying to reach — avoids the "Connected" lie when the
+                // address is wrong.
+                if (!config_.host.empty())
+                    printf("Connecting to %s:%u... (retrying every 1s)\n",
+                           config_.host.c_str(),
+                           static_cast<unsigned>(config_.port));
+                else
+                    printf("Connecting to %s... (retrying every 1s)\n",
+                           config_.uds_path.c_str());
+            }
             std::this_thread::sleep_for(std::chrono::seconds(1));
             return running_; // keep retrying
+        }
+        if (!was_ever_connected_) {
+            printf("Connected.\n");
+            was_ever_connected_ = true;
         }
     }
     return true;

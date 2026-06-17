@@ -84,6 +84,7 @@ class CliClientActor : public InteractiveCliActor {
     CliClientConfig config_;
     class CliConnector connector_;
     bool exec_mode_ = false;
+    bool was_ever_connected_ = false;
     std::string exec_cmd_;
 };
 
