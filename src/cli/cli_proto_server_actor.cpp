@@ -631,13 +631,7 @@ void CliProtoServerActor::render_scheduler_workers(OutputFormatter& output) {
 }
 
 void CliProtoServerActor::render_metrics_show(OutputFormatter& output) {
-    output.header("Metrics");
-    auto* ma = system_.metrics_actor();
-    if (!ma) {
-        output.raw("Metrics subsystem is not enabled.");
-        return;
-    }
-    output.raw(ma->format_snapshot());
+    hpactor::cli::render_metrics_show(system_, output);
 }
 
 void CliProtoServerActor::render_dlq_list(OutputFormatter& output,

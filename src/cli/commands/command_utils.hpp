@@ -37,6 +37,12 @@ std::string format_bytes(uint64_t bytes);
 /// CV-timeout, Model, Steals, Idle.
 void render_scheduler_workers(ActorSystem& sys, OutputFormatter& output);
 
+/// \brief Render the current metrics snapshot from \p sys to \p output.
+///
+/// Fetches the MetricsActor from the system and calls format_snapshot().
+/// If the metrics subsystem is not enabled, prints a short message.
+void render_metrics_show(ActorSystem& sys, OutputFormatter& output);
+
 inline ActorId parse_actor_id(const std::string& s) {
     uint64_t raw = 0;
     int base = 10;

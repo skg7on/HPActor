@@ -5,6 +5,7 @@
 
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
+#include <hpactor/metrics/metrics_actor.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <cstdio>
@@ -64,6 +65,16 @@ void render_scheduler_workers(ActorSystem& sys, OutputFormatter& output) {
         });
     }
     output.table(cols, rows);
+}
+
+void render_metrics_show(ActorSystem& sys, OutputFormatter& output) {
+    output.header("Metrics");
+    auto* ma = sys.metrics_actor();
+    if (!ma) {
+        output.raw("Metrics subsystem is not enabled.");
+        return;
+    }
+    output.raw(ma->format_snapshot());
 }
 
 } // namespace hpactor::cli
