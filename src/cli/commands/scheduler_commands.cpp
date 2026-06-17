@@ -4,7 +4,8 @@
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/sched/scheduler.hpp>
+
+#include "command_utils.hpp"
 
 #include <string>
 #include <vector>
@@ -26,49 +27,17 @@ class SchedulerWorkersCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        // Remote CLI: delegate to system_host which sends to the server.
+        if (ctx.system_host && ctx.system_host->execute_path("scheduler/workers",
+                                                             {}, {}, *ctx.output))
+            return result<void>::make();
+        // Local CLI: render from the local ActorSystem.
         auto* sys = ctx.system;
         if (!sys) {
             ctx.output->error("Internal error: no actor system");
             return result<void>::make();
         }
-        auto* sched = sys->scheduler();
-        if (!sched) {
-            ctx.output->raw("Scheduler is not running.");
-            return result<void>::make();
-        }
-
-        auto snaps = sched->worker_snapshots();
-        ctx.output->header("Scheduler Workers (" +
-                           std::to_string(sched->worker_count()) +
-                           " threads, A2WS)");
-
-        if (snaps.empty()) {
-            ctx.output->raw("Per-worker statistics not available.");
-            return result<void>::make();
-        }
-
-        std::vector<std::string> cols = {
-            "Worker", "Thread ID", "Work",  "IdleIters", "CV→block",
-            "CV¬ify", "CV⏰",      "Model", "Steals",    "Idle"};
-        std::vector<std::vector<std::string>> rows;
-        for (auto& ws : snaps) {
-            char tid_buf[24];
-            snprintf(tid_buf, sizeof(tid_buf), "%llu",
-                     static_cast<unsigned long long>(ws.thread_id));
-            rows.push_back({
-                std::to_string(ws.worker_index),
-                tid_buf,
-                std::to_string(ws.work_found),
-                std::to_string(ws.idle_iters),
-                std::to_string(ws.cv_escalations),
-                std::to_string(ws.cv_notify_wakes),
-                std::to_string(ws.cv_timeout_wakes),
-                ws.idle_model,
-                std::to_string(ws.steals_attempted),
-                ws.is_idle ? "yes" : "no",
-            });
-        }
-        ctx.output->table(cols, rows);
+        render_scheduler_workers(*sys, *ctx.output);
         return result<void>::make();
     }
 };

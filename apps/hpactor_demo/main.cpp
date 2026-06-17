@@ -64,11 +64,8 @@ void print_usage(const char* prog) {
 }
 
 std::string default_uds_path() {
-#ifdef __APPLE__
+    // /tmp is user-writable on all platforms; /var/run requires root on Linux.
     return "/tmp/hpactor/hpactor.sock";
-#else
-    return "/var/run/hpactor/hpactor.sock";
-#endif
 }
 
 /// Parse a port number from a CLI argument. Prints error and exits on invalid
@@ -192,7 +189,11 @@ int main(int argc, char* argv[]) {
     auto uds_path =
         opts.uds_path.empty() ? default_uds_path() : std::move(opts.uds_path);
 
-    // Splash for foreground mode
+    // Splash and status messages for foreground mode.
+    // MUST be printed BEFORE ActorSystem construction because the ActorSystem
+    // constructor spawns the CliActor daemon thread, which immediately puts
+    // the terminal in raw mode via linenoise().  Any stdout writes after that
+    // point race with the prompt and produce garbled output.
     if (opts.mode == process::ProcessMode::Foreground) {
         std::cout
             << "\n"
@@ -218,6 +219,18 @@ int main(int argc, char* argv[]) {
             << "║                                                              ║\n"
             << "╚══════════════════════════════════════════════════════════════╝\n"
             << std::endl;
+
+        // Print status lines while stdout is still in cooked mode.
+        // These used to appear interleaved with the linenoise prompt
+        // because run_foreground() ran after ActorSystem construction.
+        std::cout
+            << "\n[hpactor_demo foreground mode — type /help for commands, "
+               "/quit to exit]\n"
+            << "[CliProtoServerActor listening on UDS: " << uds_path << "]\n";
+        if (opts.tcp_port > 0)
+            std::cout << "[CliProtoServerActor listening on TCP: 0.0.0.0:"
+                      << opts.tcp_port << "]\n";
+        std::cout << std::endl;
     }
 
     // Build config and construct ActorSystem
@@ -237,6 +250,7 @@ int main(int argc, char* argv[]) {
     if (opts.mode == process::ProcessMode::Foreground) {
         hpactor_demo::ForegroundConfig fg_cfg;
         fg_cfg.uds_path = uds_path;
+        fg_cfg.tcp_port = opts.tcp_port;
         return hpactor_demo::run_foreground(system, fg_cfg);
     }
 

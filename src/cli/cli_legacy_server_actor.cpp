@@ -25,10 +25,13 @@
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>
+#include <hpactor/metrics/metrics_actor.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/types/types.hpp>
+
+#include "commands/command_utils.hpp"
 
 #include <cerrno>
 #include <cstdio>
@@ -51,7 +54,7 @@ namespace cli {
 // ---------------------------------------------------------------------------
 
 CliLegacyServerActor::CliLegacyServerActor(ActorContext* ctx, ActorSystem& system,
-                               const CliLegacyServerConfig& config)
+                                           const CliLegacyServerConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
       loop_(std::make_unique<net::EventLoop>()) {}
 
@@ -109,7 +112,8 @@ void CliLegacyServerActor::on_daemon_start() {
 
         if (!tcp_acceptor_->listen(config_.tcp_listen_port, 0,
                                    config_.tcp_bind_address)) {
-            std::fprintf(stderr, "CliLegacyServerActor: TCP listen failed on %s:%u\n",
+            std::fprintf(stderr,
+                         "CliLegacyServerActor: TCP listen failed on %s:%u\n",
                          config_.tcp_bind_address.c_str(),
                          static_cast<unsigned>(config_.tcp_listen_port));
             tcp_acceptor_.reset();
@@ -304,7 +308,7 @@ poll_for_response(mailbox::MPSCActorMailbox<TypedMessage>* mbox,
 
 std::optional<InspectStateReply>
 CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
-                        std::chrono::milliseconds timeout) {
+                              std::chrono::milliseconds timeout) {
     if (target == id()) {
         InspectStateReply reply;
         auto* pb_meta = reply.mutable_metadata();
@@ -344,7 +348,7 @@ CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
 
 std::optional<KillReply>
 CliLegacyServerActor::kill(ActorId target, const KillRequest& req,
-                     std::chrono::milliseconds timeout) {
+                           std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -374,7 +378,7 @@ CliLegacyServerActor::kill(ActorId target, const KillRequest& req,
 
 std::optional<QuarantineReply>
 CliLegacyServerActor::quarantine(ActorId target, const QuarantineRequest& req,
-                           std::chrono::milliseconds timeout) {
+                                 std::chrono::milliseconds timeout) {
     auto actor = system_.get_actor(target);
     if (!actor)
         return std::nullopt;
@@ -416,92 +420,7 @@ std::vector<ActorMeta> CliLegacyServerActor::enumerate(std::string_view filter) 
     return result;
 }
 
-// ---------------------------------------------------------------------------
-// ISystemCliHost interface
-// ---------------------------------------------------------------------------
-
-void CliLegacyServerActor::render_system_stats(OutputFormatter& output) {
-    output.header("System Statistics");
-    std::map<std::string, std::string> kv;
-    kv["Total actors"] = std::to_string(system_.actor_count());
-    if (auto* sched = system_.scheduler()) {
-        kv["Scheduler threads"] = std::to_string(sched->worker_count());
-    }
-    output.key_value(kv);
-}
-
-void CliLegacyServerActor::render_memory_stats(OutputFormatter& output) {
-    output.header("Memory Regions");
-    auto& reg = mem::MemoryRegionRegistry::instance();
-    std::vector<std::string> cols = {"Region",     "Active", "Limit",
-                                     "Pressure",   "Allocs", "Frees",
-                                     "Corruptions"};
-    std::vector<std::vector<std::string>> rows;
-    static constexpr mem::RegionType kRegions[] = {
-        mem::RegionType::kActor,     mem::RegionType::kMessage,
-        mem::RegionType::kCoroutine, mem::RegionType::kNetwork,
-        mem::RegionType::kInternal,  mem::RegionType::kHibernate};
-    for (auto region : kRegions) {
-        auto snap = reg.snapshot(region);
-        rows.push_back({
-            mem::to_string(region),
-            std::to_string(snap.active_bytes),
-            std::to_string(snap.limit.hard_limit_bytes),
-            mem::to_string(snap.pressure),
-            std::to_string(snap.alloc_count),
-            std::to_string(snap.free_count),
-            std::to_string(snap.corruption_events),
-        });
-    }
-    output.table(cols, rows);
-}
-
-void CliLegacyServerActor::render_fault_status(OutputFormatter& output) {
-    output.header("Fault Injection Status");
-    auto& fc = system_.fault_controller();
-    if (!fc.is_enabled()) {
-        output.raw("Fault injection is disabled.\n");
-        return;
-    }
-    std::map<std::string, std::string> kv;
-    kv["Enabled"] = "yes";
-    kv["Seed"] = std::to_string(fc.replay_seed());
-    kv["Hooks triggered"] = std::to_string(fc.faults_fired());
-    output.key_value(kv);
-}
-
-void CliLegacyServerActor::render_dlq_list(OutputFormatter& output,
-                                     std::string_view filter) {
-    output.header("Dead Letter Queue");
-    auto* dlq = system_.dead_letter_queue();
-    if (!dlq) {
-        output.raw("DLQ is not configured.\n");
-        return;
-    }
-    auto records = dlq->snapshot_records();
-    if (records.empty()) {
-        output.raw("DLQ is empty.\n");
-        return;
-    }
-    std::vector<std::string> cols = {"#", "Actor", "Reason", "Source", "Age"};
-    std::vector<std::vector<std::string>> rows;
-    for (size_t i = 0; i < records.size(); ++i) {
-        auto& r = records[i];
-        if (!filter.empty()) {
-            std::string aid = std::to_string(r.target.id.value());
-            if (aid.find(filter) == std::string::npos)
-                continue;
-        }
-        rows.push_back({
-            std::to_string(i),
-            std::to_string(r.target.id.value()),
-            mailbox::to_string(r.reason),
-            mailbox::to_string(r.source),
-            std::to_string(r.timestamp_ns / 1'000'000) + "ms",
-        });
-    }
-    output.table(cols, rows);
-}
+// execute_path is inline in header (returns false — local host).
 
 result<void> CliLegacyServerActor::dlq_replay(uint32_t index, ActorId target) {
     auto* dlq = system_.dead_letter_queue();

@@ -18,12 +18,18 @@
 #include <string>
 #include <thread>
 
+/// Default UDS path, matching the daemon's default.
+/// /tmp is user-writable on all platforms; /var/run requires root on Linux.
+static std::string default_uds_path() {
+    return "/tmp/hpactor/hpactor.sock";
+}
+
 static void print_usage(const char* prog) {
     std::cerr
         << "Usage: " << prog << " [options]\n"
         << "Options:\n"
         << "  -s, --socket PATH   Unix domain socket path\n"
-        << "                      (default: /var/run/hpactor/hpactor-cli.sock)\n"
+        << "                      (default: " << default_uds_path() << ")\n"
         << "  -H, --host HOST     TCP host address (disables UDS)\n"
         << "  -p, --port PORT     TCP port (required with --host)\n"
         << "  --http-port PORT    HTTP JSON transport port (enables HTTP mode)\n"
@@ -34,6 +40,9 @@ static void print_usage(const char* prog) {
 
 int main(int argc, char* argv[]) {
     hpactor::cli::CliClientConfig config;
+    // Apply platform-aware default before parsing CLI args.
+    // The header default is Linux-oriented; macOS overrides here.
+    config.uds_path = default_uds_path();
     std::string exec_cmd;
     bool show_help = false;
 

@@ -67,23 +67,18 @@ class MockCommandHost : public hpactor::cli::ICliCommandHost {
 class MockSystemHost : public hpactor::cli::ISystemCliHost {
   public:
     std::string last_output;
+    std::string last_path;
+    int execute_path_calls = 0;
 
-    void render_system_stats(hpactor::cli::OutputFormatter& output) override {
-        output.header("Stats");
-        last_output = "stats_rendered";
-    }
-    void render_memory_stats(hpactor::cli::OutputFormatter& output) override {
-        output.header("Memory");
-        last_output = "memory_rendered";
-    }
-    void render_fault_status(hpactor::cli::OutputFormatter& output) override {
-        output.header("Faults");
-        last_output = "faults_rendered";
-    }
-    void render_dlq_list(hpactor::cli::OutputFormatter& output,
-                         std::string_view filter) override {
-        output.header("DLQ");
-        last_output = filter.empty() ? "dlq_all" : std::string(filter);
+    bool execute_path(std::string_view path,
+                      const std::map<std::string, std::string>& /*params*/,
+                      const std::vector<std::string>& /*args*/,
+                      hpactor::cli::OutputFormatter& output) override {
+        last_path = path;
+        execute_path_calls++;
+        output.header("Mock");
+        last_output = "path_dispatched";
+        return true;
     }
     hpactor::result<void> dlq_replay(uint32_t, hpactor::ActorId) override {
         last_output = "dlq_replayed";
@@ -137,11 +132,13 @@ TEST(CliCommandHost, EnumerateDelegatesToMock) {
     EXPECT_EQ(host.enumerate_calls, 1);
 }
 
-TEST(CliSystemHost, RenderSystemStatsDelegatesToMock) {
+TEST(CliSystemHost, ExecutePathDelegatesToMock) {
     MockSystemHost host;
     hpactor::cli::PrettyFormatter fmt;
-    host.render_system_stats(fmt);
-    EXPECT_EQ(host.last_output, "stats_rendered");
+    EXPECT_TRUE(host.execute_path("system/stats", {}, {}, fmt));
+    EXPECT_EQ(host.last_output, "path_dispatched");
+    EXPECT_EQ(host.last_path, "system/stats");
+    EXPECT_EQ(host.execute_path_calls, 1);
 }
 
 TEST(CliSystemHost, DlqReplayDelegatesToMock) {

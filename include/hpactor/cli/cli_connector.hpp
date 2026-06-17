@@ -61,6 +61,13 @@ class CliConnector {
         return fd_;
     }
 
+    /// \brief True when the underlying connection has reached Connected state.
+    ///
+    /// fd() may be non-negative even before the TCP handshake completes
+    /// (EINPROGRESS).  Use is_connected() to guard operations that require a
+    /// fully-established transport.
+    bool is_connected() const;
+
     /// \brief The underlying TcpTransport (for send/recv via try_send path).
     net::TcpTransport* transport() {
         return transport_.get();

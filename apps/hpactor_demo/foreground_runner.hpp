@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <cstdint>
 #include <string>
 
 namespace hpactor {
@@ -24,6 +25,7 @@ namespace apps::hpactor_demo {
 
 struct ForegroundConfig {
     std::string uds_path;
+    uint16_t tcp_port = 0;
 };
 
 /// Run the actor system in foreground mode with dual CLI access.

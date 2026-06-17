@@ -74,6 +74,15 @@ class CliSession {
     /// Causes the next \c process_line() call to return false.
     void request_shutdown();
 
+    /// \brief Return the command tree used by this session.
+    ///
+    /// Allows commands (like /help) to render the full command tree
+    /// even when neither cli_actor nor cli_server_actor is set (e.g.,
+    /// in CliClientActor's local session).
+    const struct CommandNode* get_command_tree() const {
+        return command_tree_;
+    }
+
     /// \brief Set the owning CliActor, if any.
     ///
     /// Command handlers that require the CliActor interface
@@ -94,6 +103,11 @@ class CliSession {
     /// null).
     void set_cli_server_actor(class CliLegacyServerActor* server) {
         cli_server_actor_ = server;
+    }
+
+    /// \brief Set the owning CliProtoServerActor, if any.
+    void set_proto_server(class CliProtoServerActor* server) {
+        proto_server_ = server;
     }
 
     /// \brief Set the command host for actor operations.
@@ -136,6 +150,7 @@ class CliSession {
     std::string current_format_ = "pretty";
     class CliActor* cli_actor_ = nullptr;
     class CliLegacyServerActor* cli_server_actor_ = nullptr;
+    class CliProtoServerActor* proto_server_ = nullptr;
     class ICliCommandHost* command_host_ = nullptr;
     class ISystemCliHost* system_host_ = nullptr;
     class ILifecycleCliHost* lifecycle_host_ = nullptr;

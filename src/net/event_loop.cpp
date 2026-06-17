@@ -66,6 +66,7 @@ EventLoop::EventLoop()
     auto iouring_backend = std::make_unique<IoUringBackend>();
     if (iouring_backend->start()) {
         backend_name_ = "iouring";
+        static_cast<IoUringBackend*>(iouring_backend.get())->set_loop(this);
         backend_ = std::move(iouring_backend);
     } else {
         // Fall back to epoll

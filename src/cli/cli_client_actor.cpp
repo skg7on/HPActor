@@ -48,8 +48,9 @@ CliClientActor::~CliClientActor() = default;
 // ---------------------------------------------------------------------------
 
 void CliClientActor::print_greeting() {
-    printf("HPActor Remote CLI -- Connected.  Type /help for commands, /quit to "
-           "exit.\n\n");
+    // Defer the real greeting to pre_input_hook() — the connection hasn't been
+    // attempted yet at this point.  Don't claim "Connected" or suggest typing
+    // commands until the transport is actually up.
 }
 
 void CliClientActor::print_farewell() {
@@ -89,12 +90,32 @@ bool CliClientActor::pre_input_hook() {
         return false; // exit after exec
     }
 
-    if (connector_.fd() < 0) {
+    if (!connector_.is_connected()) {
+        // Previously connected and now disconnected — the remote side
+        // closed the connection (server shutdown, network drop, etc.).
+        if (was_ever_connected_) {
+            printf("\n[Server disconnected — reconnecting]\n\n");
+            was_ever_connected_ = false;
+        }
+
         connect();
-        if (connector_.fd() < 0) {
-            printf("Waiting for connection... (retrying in 1s)\n");
+        if (!connector_.is_connected()) {
+            if (!was_ever_connected_) {
+                if (!config_.host.empty())
+                    printf("Connecting to %s:%u... (retrying every 1s)\n",
+                           config_.host.c_str(),
+                           static_cast<unsigned>(config_.port));
+                else
+                    printf("Connecting to %s... (retrying every 1s)\n",
+                           config_.uds_path.c_str());
+            }
             std::this_thread::sleep_for(std::chrono::seconds(1));
             return running_; // keep retrying
+        }
+        if (!was_ever_connected_) {
+            printf("HPActor Remote CLI — Connected.  Type /help for commands, "
+                   "/quit to exit.\n\n");
+            was_ever_connected_ = true;
         }
     }
     return true;
@@ -109,8 +130,8 @@ void CliClientActor::pre_stop_hook() {
 // ---------------------------------------------------------------------------
 
 void CliClientActor::connect() {
-    if (connector_.fd() >= 0)
-        return; // already connected
+    if (connector_.is_connected())
+        return;
 
     if (config_.transport == CliClientConfig::Transport::HttpJson) {
         return; // HTTP JSON mode is deferred
@@ -156,7 +177,7 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
 
     auto* transport = connector_.transport();
     auto conn = connector_.connection();
-    if (!transport || !conn)
+    if (!transport || !conn || !connector_.is_connected())
         return resp;
 
     // 1. Encode CliCommand as an HPAC Frame and send through
@@ -182,8 +203,15 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
 
     // Poll the EventLoop.  WireFrameConnection::handle_read() decodes
     // incoming HPAC frames and delivers the body to the frame handler.
+    //
+    // Must call process_completions() before wait() so that the send
+    // completion from conn->send() above drains is_sending_.  On epoll
+    // the async_send pushes completions to a pending queue that is only
+    // drained by process_events(); without this, is_sending_ stays true
+    // and the next send_and_wait silently queues without flushing.
     auto deadline = std::chrono::steady_clock::now() + config_.request_timeout;
     while (!*done && std::chrono::steady_clock::now() < deadline) {
+        transport->loop().process_completions();
         transport->loop().wait(50);
     }
 
@@ -284,47 +312,23 @@ std::vector<ActorMeta> CliClientActor::enumerate(std::string_view filter) {
 // ISystemCliHost — command-tree dispatch (path + args)
 // ---------------------------------------------------------------------------
 
-void CliClientActor::render_system_stats(OutputFormatter& output) {
+bool CliClientActor::execute_path(std::string_view path,
+                                  const std::map<std::string, std::string>& params,
+                                  const std::vector<std::string>& args,
+                                  OutputFormatter& output) {
     CliCommand cmd;
-    cmd.set_path("system/stats");
+    cmd.set_path(std::string(path));
+    for (const auto& [key, value] : params)
+        (*cmd.mutable_params())[key] = value;
+    for (const auto& arg : args)
+        cmd.add_args(arg);
     auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
+    if (!resp.is_error()) {
         output.raw(resp.payload());
-    else
-        output.error("Failed to fetch system stats from server");
-}
-
-void CliClientActor::render_memory_stats(OutputFormatter& output) {
-    CliCommand cmd;
-    cmd.set_path("system/memory");
-    auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
-        output.raw(resp.payload());
-    else
-        output.error("Failed to fetch memory stats from server");
-}
-
-void CliClientActor::render_fault_status(OutputFormatter& output) {
-    CliCommand cmd;
-    cmd.set_path("fault/status");
-    auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
-        output.raw(resp.payload());
-    else
-        output.error("Failed to fetch fault status from server");
-}
-
-void CliClientActor::render_dlq_list(OutputFormatter& output,
-                                     std::string_view filter) {
-    CliCommand cmd;
-    cmd.set_path("dlq/list");
-    if (!filter.empty())
-        cmd.add_args(std::string(filter));
-    auto resp = send_and_wait(cmd);
-    if (!resp.is_error())
-        output.raw(resp.payload());
-    else
-        output.error("Failed to fetch DLQ list from server");
+        return true;
+    }
+    output.error("Failed to fetch data from server");
+    return true;
 }
 
 result<void> CliClientActor::dlq_replay(uint32_t index, ActorId target) {

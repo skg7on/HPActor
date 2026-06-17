@@ -71,6 +71,11 @@ class CliProtoServerActor : public DaemonActor,
         running_ = false;
     }
 
+    // --- Client management (for /client commands) ---
+    std::string list_clients() const;
+    bool close_client(uint32_t seqno);
+    std::string client_history(uint32_t seqno) const;
+
     // --- ICliCommandHost interface ---
     std::optional<class InspectStateReply>
     inspect(ActorId target, const class InspectStateRequest& req,
@@ -84,11 +89,12 @@ class CliProtoServerActor : public DaemonActor,
     std::vector<ActorMeta> enumerate(std::string_view filter = "") override;
 
     // --- ISystemCliHost interface ---
-    void render_system_stats(OutputFormatter& output) override;
-    void render_memory_stats(OutputFormatter& output) override;
-    void render_fault_status(OutputFormatter& output) override;
-    void render_dlq_list(OutputFormatter& output,
-                         std::string_view filter = "") override;
+    bool execute_path(std::string_view /*path*/,
+                      const std::map<std::string, std::string>& /*params*/,
+                      const std::vector<std::string>& /*args*/,
+                      OutputFormatter& /*output*/) override {
+        return false;
+    }
     result<void> dlq_replay(uint32_t index, ActorId target) override;
 
     // --- ILifecycleCliHost interface ---
@@ -123,11 +129,15 @@ class CliProtoServerActor : public DaemonActor,
     std::unique_ptr<net::UnixDomainAcceptor> uds_acceptor_;
     std::unique_ptr<CommandNode> command_tree_;
     bool running_ = true;
+    uint32_t next_seqno_ = 1;
 
     struct SessionState {
         net::WireFrameConnectionPtr conn;
         std::unique_ptr<CliSession> session;
         std::chrono::steady_clock::time_point last_activity;
+        uint32_t seqno = 0;
+        std::string remote_addr;
+        std::vector<std::string> command_history;
     };
     std::unordered_map<int, SessionState> sessions_;
 };

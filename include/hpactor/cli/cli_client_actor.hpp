@@ -49,11 +49,10 @@ class CliClientActor : public InteractiveCliActor {
     std::vector<ActorMeta> enumerate(std::string_view filter = "") override;
 
     // ISystemCliHost — command-tree dispatch (path + args)
-    void render_system_stats(OutputFormatter& output) override;
-    void render_memory_stats(OutputFormatter& output) override;
-    void render_fault_status(OutputFormatter& output) override;
-    void render_dlq_list(OutputFormatter& output,
-                         std::string_view filter = "") override;
+    bool execute_path(std::string_view path,
+                      const std::map<std::string, std::string>& params,
+                      const std::vector<std::string>& args,
+                      OutputFormatter& output) override;
     result<void> dlq_replay(uint32_t index, ActorId target) override;
 
     // ILifecycleCliHost
@@ -85,6 +84,7 @@ class CliClientActor : public InteractiveCliActor {
     CliClientConfig config_;
     class CliConnector connector_;
     bool exec_mode_ = false;
+    bool was_ever_connected_ = false;
     std::string exec_cmd_;
 };
 

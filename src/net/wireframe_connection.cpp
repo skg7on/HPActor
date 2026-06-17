@@ -177,12 +177,20 @@ void WireFrameConnection::handle_read() {
         if (n > 0) {
             read_buffer_.commit_tail(static_cast<size_t>(n));
         } else if (n == 0) {
-            read_buffer_.clear(); // EOF — discard incomplete header
+            // EOF — remote end closed connection.
+            read_buffer_.clear();
+            if (error_handler_) {
+                error_handler_(nullptr, error(errors::unknown, "EOF on read"));
+            }
             return;
         } else {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return;
-            read_buffer_.clear(); // Error — discard partial data
+            // Hard read error.
+            read_buffer_.clear();
+            if (error_handler_) {
+                error_handler_(nullptr, error(errors::unknown, "read error"));
+            }
             return;
         }
     }
@@ -213,18 +221,29 @@ void WireFrameConnection::handle_read() {
         if (n > 0) {
             read_buffer_.commit_tail(static_cast<size_t>(n));
         } else if (n == 0) {
-            read_buffer_.clear(); // EOF mid-frame — discard incomplete frame
+            // EOF mid-frame — remote end closed connection.
+            read_buffer_.clear();
+            if (error_handler_) {
+                error_handler_(nullptr, error(errors::unknown, "EOF mid-frame"));
+            }
             return;
         } else {
             if (errno == EAGAIN || errno == EWOULDBLOCK)
                 return;
-            read_buffer_.clear(); // Error — discard partial data
+            // Hard read error.
+            read_buffer_.clear();
+            if (error_handler_) {
+                error_handler_(nullptr, error(errors::unknown, "read error"));
+            }
             return;
         }
     }
 
-    // Complete frame received — extract into StreamBuffer.
-    StreamBuffer frame_data(read_buffer_.begin(),
+    // Complete frame received — extract payload (strip 8-byte HPAC header).
+    // Header: 4-byte magic "HPAC" + 4-byte big-endian payload length.
+    // The frame handler receives only the payload so it can be parsed
+    // directly as protobuf (e.g., CliCommand / CliResponse).
+    StreamBuffer frame_data(read_buffer_.begin() + WireFrame::HeaderSize,
                             read_buffer_.begin() + total_frame_size);
     read_buffer_.consume(total_frame_size);
 

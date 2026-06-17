@@ -74,9 +74,9 @@ class IoUringBackend : public IReactorBackend {
     void async_accept(int fd, ActorId actor) override;
     void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
                        ActorId actor) override;
-    void async_sendto(int fd, const iovec* bufs, int buf_count,
-                       const sockaddr* addr, socklen_t addrlen, ActorId actor,
-                       uint32_t op_type) override;
+    void
+    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
+                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
     void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
                         uint32_t op_type) override;
 
@@ -89,7 +89,9 @@ class IoUringBackend : public IReactorBackend {
         (void)fd;
     }
 
-    bool supports_read_handler() const override { return false; }
+    bool supports_read_handler() const override {
+        return false;
+    }
 
     // Write handler management - no-op (proactor uses async_connect)
     void set_write_handler(int fd, write_callback handler) override {
@@ -100,10 +102,17 @@ class IoUringBackend : public IReactorBackend {
         (void)fd;
     }
 
-    bool supports_write_handler() const override { return false; }
+    bool supports_write_handler() const override {
+        return false;
+    }
 
     // Called by completions to deliver to actor
     void deliver_completion(OpCompletion completion);
+
+    /// Set the owning EventLoop (required for deliver_completion).
+    void set_loop(class EventLoop* loop) {
+        loop_ = loop;
+    }
 
     // --- Extended proactor methods (not in IReactorBackend) ---
     void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,
@@ -134,6 +143,8 @@ class IoUringBackend : public IReactorBackend {
 
     // Ops pending submission (not yet submitted to kernel)
     std::vector<struct io_uring_sqe*> pending_sqes_;
+
+    class EventLoop* loop_ = nullptr;
 
     bool running_ = false;
 

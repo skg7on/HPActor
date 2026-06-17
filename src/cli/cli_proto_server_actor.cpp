@@ -15,12 +15,15 @@
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>
+#include <hpactor/metrics/metrics_actor.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/wireframe_connection.hpp>
 #include <hpactor/types/types.hpp>
+
+#include "commands/command_utils.hpp"
 
 #include <cerrno>
 #include <cstdio>
@@ -99,6 +102,19 @@ CliProtoServerActor::~CliProtoServerActor() = default;
 
 void CliProtoServerActor::on_daemon_start() {
     build_command_tree();
+
+    // Register a send-completion callback so WireFrameConnection writes
+    // through this EventLoop correctly clear is_sending_ after each send.
+    // Without this, handle_send_completion is never called and subsequent
+    // sends silently queue without flushing → client timeouts.
+    loop_->set_completion_callback([this](net::OpCompletion c) {
+        if (c.type == net::OpType::Send) {
+            auto it = sessions_.find(c.fd);
+            if (it != sessions_.end() && it->second.conn) {
+                it->second.conn->handle_send_completion(c.result);
+            }
+        }
+    });
 
     // --- Unix domain socket ---
     if (!config_.uds_listen_path.empty()) {
@@ -195,6 +211,8 @@ bool CliProtoServerActor::run_once() {
         close_proto_session(fd);
     }
 
+    // Process any pending send completions before blocking in wait().
+    loop_->process_completions();
     loop_->wait(100);
 
     return running_;
@@ -234,11 +252,24 @@ void CliProtoServerActor::on_tcp_accepted(int client_fd, EndPoint remote_ep) {
     session->set_command_host(this);
     session->set_system_host(this);
     session->set_lifecycle_host(this);
+    session->set_proto_server(this);
 
     SessionState state;
     state.conn = conn;
     state.session = std::move(session);
     state.last_activity = std::chrono::steady_clock::now();
+    state.seqno = next_seqno_++;
+    // Build "IP:port" string for TCP clients.
+    // Ipv4Endpoint stores addr/port in network byte order (big-endian).
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&remote_ep)) {
+        char buf[32];
+        uint32_t a = ipv4->addr;
+        snprintf(buf, sizeof(buf), "%u.%u.%u.%u:%u", (a >> 24) & 0xFF,
+                 (a >> 16) & 0xFF, (a >> 8) & 0xFF, a & 0xFF, ipv4->port());
+        state.remote_addr = buf;
+    } else {
+        state.remote_addr = "tcp";
+    }
     sessions_.emplace(client_fd, std::move(state));
 
     // Set up frame handler — WireFrameConnection auto-decodes HPAC frames.
@@ -281,11 +312,14 @@ void CliProtoServerActor::on_uds_accepted(int client_fd) {
     session->set_command_host(this);
     session->set_system_host(this);
     session->set_lifecycle_host(this);
+    session->set_proto_server(this);
 
     SessionState state;
     state.conn = conn;
     state.session = std::move(session);
     state.last_activity = std::chrono::steady_clock::now();
+    state.seqno = next_seqno_++;
+    state.remote_addr = "uds";
     sessions_.emplace(client_fd, std::move(state));
 
     conn->set_frame_handler([this, client_fd](adt::StreamBuffer data) {
@@ -310,13 +344,22 @@ void CliProtoServerActor::on_frame_received(int client_fd, adt::StreamBuffer dat
     // length already stripped).  The body is the serialized CliCommand.
     CliCommand cmd;
     if (!cmd.ParseFromArray(data.data(), static_cast<int>(data.size()))) {
-        // Invalid protobuf — send error response.
+        if (state.command_history.size() < 10000)
+            state.command_history.emplace_back("(invalid)");
         CliResponse resp;
         resp.set_content_type("application/x-protobuf");
         resp.set_is_error(true);
         resp.set_error_code(1);
         send_hpac_frame(client_fd, resp.SerializeAsString());
         return;
+    }
+
+    // Record command in session history.
+    if (state.command_history.size() < 10000) {
+        if (!cmd.rpc_method().empty())
+            state.command_history.emplace_back(cmd.rpc_method());
+        else if (!cmd.path().empty())
+            state.command_history.emplace_back(cmd.path());
     }
 
     // Dual dispatch: rpc_method takes priority over path.
@@ -346,7 +389,14 @@ void CliProtoServerActor::on_frame_received(int client_fd, adt::StreamBuffer dat
     }
 
     // Build a command-line string from the path + params + args.
+    // Convert slash-separated path (e.g., "system/memory") to
+    // space-separated command-line tokens ("system memory") expected
+    // by CliSession::process_line / execute_tokens.
     std::string command_line = cmd.path();
+    for (char& c : command_line) {
+        if (c == '/')
+            c = ' ';
+    }
     for (const auto& [key, value] : cmd.params()) {
         command_line += " --" + key;
         if (!value.empty()) {
@@ -405,6 +455,53 @@ void CliProtoServerActor::close_proto_session(int client_fd) {
         it->second.conn->close();
     }
     sessions_.erase(it);
+}
+
+// ---------------------------------------------------------------------------
+// Client management (for /client commands)
+// ---------------------------------------------------------------------------
+
+std::string CliProtoServerActor::list_clients() const {
+    std::string result;
+    if (sessions_.empty())
+        return "No connected clients.\n";
+    result += "Seqno  Remote\n";
+    result += "-----  ------\n";
+    for (const auto& [fd, state] : sessions_) {
+        char buf[80];
+        snprintf(buf, sizeof(buf), "%-6u %s\n", state.seqno,
+                 state.remote_addr.c_str());
+        result += buf;
+    }
+    return result;
+}
+
+bool CliProtoServerActor::close_client(uint32_t seqno) {
+    for (auto& [fd, state] : sessions_) {
+        if (state.seqno == seqno) {
+            close_proto_session(fd);
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string CliProtoServerActor::client_history(uint32_t seqno) const {
+    for (const auto& [fd, state] : sessions_) {
+        if (state.seqno == seqno) {
+            if (state.command_history.empty())
+                return "(no commands recorded)\n";
+            std::string result =
+                "Command history for client " + std::to_string(seqno) + " (" +
+                std::to_string(state.command_history.size()) + " entries):\n";
+            for (size_t i = 0; i < state.command_history.size(); ++i) {
+                result += std::to_string(i + 1) + ". " +
+                          state.command_history[i] + "\n";
+            }
+            return result;
+        }
+    }
+    return "Client " + std::to_string(seqno) + " not found.\n";
 }
 
 // ---------------------------------------------------------------------------
@@ -547,92 +644,7 @@ std::vector<ActorMeta> CliProtoServerActor::enumerate(std::string_view filter) {
     return result;
 }
 
-// ---------------------------------------------------------------------------
-// ISystemCliHost interface (copied from CliLegacyServerActor)
-// ---------------------------------------------------------------------------
-
-void CliProtoServerActor::render_system_stats(OutputFormatter& output) {
-    output.header("System Statistics");
-    std::map<std::string, std::string> kv;
-    kv["Total actors"] = std::to_string(system_.actor_count());
-    if (auto* sched = system_.scheduler()) {
-        kv["Scheduler threads"] = std::to_string(sched->worker_count());
-    }
-    output.key_value(kv);
-}
-
-void CliProtoServerActor::render_memory_stats(OutputFormatter& output) {
-    output.header("Memory Regions");
-    auto& reg = mem::MemoryRegionRegistry::instance();
-    std::vector<std::string> cols = {"Region",     "Active", "Limit",
-                                     "Pressure",   "Allocs", "Frees",
-                                     "Corruptions"};
-    std::vector<std::vector<std::string>> rows;
-    static constexpr mem::RegionType kRegions[] = {
-        mem::RegionType::kActor,     mem::RegionType::kMessage,
-        mem::RegionType::kCoroutine, mem::RegionType::kNetwork,
-        mem::RegionType::kInternal,  mem::RegionType::kHibernate};
-    for (auto region : kRegions) {
-        auto snap = reg.snapshot(region);
-        rows.push_back({
-            mem::to_string(region),
-            std::to_string(snap.active_bytes),
-            std::to_string(snap.limit.hard_limit_bytes),
-            mem::to_string(snap.pressure),
-            std::to_string(snap.alloc_count),
-            std::to_string(snap.free_count),
-            std::to_string(snap.corruption_events),
-        });
-    }
-    output.table(cols, rows);
-}
-
-void CliProtoServerActor::render_fault_status(OutputFormatter& output) {
-    output.header("Fault Injection Status");
-    auto& fc = system_.fault_controller();
-    if (!fc.is_enabled()) {
-        output.raw("Fault injection is disabled.\n");
-        return;
-    }
-    std::map<std::string, std::string> kv;
-    kv["Enabled"] = "yes";
-    kv["Seed"] = std::to_string(fc.replay_seed());
-    kv["Hooks triggered"] = std::to_string(fc.faults_fired());
-    output.key_value(kv);
-}
-
-void CliProtoServerActor::render_dlq_list(OutputFormatter& output,
-                                          std::string_view filter) {
-    output.header("Dead Letter Queue");
-    auto* dlq = system_.dead_letter_queue();
-    if (!dlq) {
-        output.raw("DLQ is not configured.\n");
-        return;
-    }
-    auto records = dlq->snapshot_records();
-    if (records.empty()) {
-        output.raw("DLQ is empty.\n");
-        return;
-    }
-    std::vector<std::string> cols = {"#", "Actor", "Reason", "Source", "Age"};
-    std::vector<std::vector<std::string>> rows;
-    for (size_t i = 0; i < records.size(); ++i) {
-        auto& r = records[i];
-        if (!filter.empty()) {
-            std::string aid = std::to_string(r.target.id.value());
-            if (aid.find(filter) == std::string::npos)
-                continue;
-        }
-        rows.push_back({
-            std::to_string(i),
-            std::to_string(r.target.id.value()),
-            mailbox::to_string(r.reason),
-            mailbox::to_string(r.source),
-            std::to_string(r.timestamp_ns / 1'000'000) + "ms",
-        });
-    }
-    output.table(cols, rows);
-}
+// execute_path is inline in header (returns false — local host).
 
 result<void> CliProtoServerActor::dlq_replay(uint32_t index, ActorId target) {
     auto* dlq = system_.dead_letter_queue();
@@ -730,8 +742,6 @@ std::string CliProtoServerActor::dispatch_rpc(const std::string& rpc_method,
     }
 
     if (rpc_method == "system_stats") {
-        auto fmt = OutputFormatter::create(config_.default_format);
-        render_system_stats(*fmt);
         SystemStatsReply reply;
         reply.set_total_actors(system_.actor_count());
         if (auto* sched = system_.scheduler()) {

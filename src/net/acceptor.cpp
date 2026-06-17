@@ -14,13 +14,14 @@
 
 #include <hpactor/net/acceptor.hpp>
 
-#include <hpactor/fault/fault_macros.hpp>
 #include <arpa/inet.h>
 #include <cstring>
 #include <fcntl.h>
+#include <hpactor/fault/fault_macros.hpp>
 #include <netinet/in.h>
 #include <netinet/tcp.h>
 #include <sys/socket.h>
+#include <sys/stat.h>
 #include <sys/un.h>
 #include <unistd.h>
 
@@ -169,6 +170,17 @@ bool UnixDomainAcceptor::listen(const std::string& path) {
     FAULT_INJECT("hpactor.acceptor.listen.fail") {
         return false;
     }
+    // Create parent directory if it doesn't exist (e.g., /var/run/hpactor/).
+    // bind() fails with ENOENT if the directory is missing.
+    {
+        size_t slash = path.rfind('/');
+        if (slash != std::string::npos && slash > 0) {
+            std::string parent = path.substr(0, slash);
+            ::mkdir(parent.c_str(), 0755);
+            // Ignore error — it's fine if the directory already exists.
+        }
+    }
+
     // Remove stale socket file if it exists
     ::unlink(path.c_str());
 

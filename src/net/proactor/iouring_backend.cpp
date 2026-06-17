@@ -258,8 +258,9 @@ void IoUringBackend::process_events() {
 }
 
 void IoUringBackend::deliver_completion(OpCompletion completion) {
-    // Stub for now — actor system wiring is Phase 5.5
-    (void)completion;
+    if (loop_) {
+        loop_->enqueue_completion(completion);
+    }
 }
 
 void IoUringBackend::set_read_handler(int fd, read_callback handler) {

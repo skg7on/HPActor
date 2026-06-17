@@ -99,5 +99,9 @@ void CliConnector::disconnect() {
     transport_.reset();
 }
 
+bool CliConnector::is_connected() const {
+    return conn_ && conn_->state() == net::ConnectionState::Connected;
+}
+
 } // namespace cli
 } // namespace hpactor

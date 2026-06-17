@@ -82,11 +82,12 @@ class CliActor : public InteractiveCliActor {
     std::vector<ActorMeta> enumerate(std::string_view filter = "") override;
 
     // ISystemCliHost — render from local ActorSystem data
-    void render_system_stats(OutputFormatter& output) override;
-    void render_memory_stats(OutputFormatter& output) override;
-    void render_fault_status(OutputFormatter& output) override;
-    void render_dlq_list(OutputFormatter& output,
-                         std::string_view filter = "") override;
+    bool execute_path(std::string_view /*path*/,
+                      const std::map<std::string, std::string>& /*params*/,
+                      const std::vector<std::string>& /*args*/,
+                      OutputFormatter& /*output*/) override {
+        return false; // never remote — command handler fallback runs locally
+    }
     result<void> dlq_replay(uint32_t index, ActorId target) override;
 
     // ILifecycleCliHost
