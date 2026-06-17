@@ -64,11 +64,8 @@ void print_usage(const char* prog) {
 }
 
 std::string default_uds_path() {
-#ifdef __APPLE__
+    // /tmp is user-writable on all platforms; /var/run requires root on Linux.
     return "/tmp/hpactor/hpactor.sock";
-#else
-    return "/var/run/hpactor/hpactor.sock";
-#endif
 }
 
 /// Parse a port number from a CLI argument. Prints error and exits on invalid

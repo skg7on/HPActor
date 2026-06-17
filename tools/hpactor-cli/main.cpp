@@ -18,13 +18,10 @@
 #include <string>
 #include <thread>
 
-/// Platform-aware default UDS path, matching the daemon's default.
+/// Default UDS path, matching the daemon's default.
+/// /tmp is user-writable on all platforms; /var/run requires root on Linux.
 static std::string default_uds_path() {
-#ifdef __APPLE__
     return "/tmp/hpactor/hpactor.sock";
-#else
-    return "/var/run/hpactor/hpactor.sock";
-#endif
 }
 
 static void print_usage(const char* prog) {
