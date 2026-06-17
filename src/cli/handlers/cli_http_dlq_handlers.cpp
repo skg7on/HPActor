@@ -90,11 +90,13 @@ void handle_list_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
         jb.object()
             .field("index", static_cast<uint64_t>(idx))
-            .field("target_actor_id", record.target.id.value())
+            .field("target_actor_id",
+                   static_cast<uint64_t>(record.target.id.value()))
             .field("reason", std::string(mailbox::to_string(record.reason)))
             .field("source", std::string(mailbox::to_string(record.source)))
             .field("type_tag", static_cast<uint32_t>(record.type_tag))
-            .field("timestamp_ms", record.timestamp_ns / 1'000'000ULL)
+            .field("timestamp_ms",
+                   static_cast<uint64_t>(record.timestamp_ns / 1'000'000ULL))
             .field("payload_size_bytes", static_cast<uint64_t>(record.payload_size))
             .end_object();
     }
@@ -144,11 +146,13 @@ void handle_get_dlq_record(CliHttpServerActor* actor, net::HTTPConnection* conn,
         JsonBuilder::root_object()
             .object("data")
             .field("index", static_cast<uint64_t>(*index_val))
-            .field("target_actor_id", record.target.id.value())
+            .field("target_actor_id",
+                   static_cast<uint64_t>(record.target.id.value()))
             .field("reason", std::string(mailbox::to_string(record.reason)))
             .field("source", std::string(mailbox::to_string(record.source)))
             .field("type_tag", static_cast<uint32_t>(record.type_tag))
-            .field("timestamp_ms", record.timestamp_ns / 1'000'000ULL)
+            .field("timestamp_ms",
+                   static_cast<uint64_t>(record.timestamp_ns / 1'000'000ULL))
             .field("payload_size_bytes", static_cast<uint64_t>(record.payload_size))
             .end_object()
             .end_object()
@@ -240,11 +244,13 @@ void handle_export_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
             const auto& record = records[i];
             jb.object()
                 .field("index", static_cast<uint64_t>(i))
-                .field("target_actor_id", record.target.id.value())
+                .field("target_actor_id",
+                       static_cast<uint64_t>(record.target.id.value()))
                 .field("reason", std::string(mailbox::to_string(record.reason)))
                 .field("source", std::string(mailbox::to_string(record.source)))
                 .field("type_tag", static_cast<uint32_t>(record.type_tag))
-                .field("timestamp_ms", record.timestamp_ns / 1'000'000ULL)
+                .field("timestamp_ms",
+                       static_cast<uint64_t>(record.timestamp_ns / 1'000'000ULL))
                 .field("payload_size_bytes",
                        static_cast<uint64_t>(record.payload_size))
                 .end_object();

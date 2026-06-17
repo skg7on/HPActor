@@ -17,6 +17,7 @@
 #include <cstddef>
 #include <cstdint>
 #include <string>
+#include <type_traits>
 #include <utility>
 #include <vector>
 
@@ -106,12 +107,24 @@ class JsonBuilder {
     // ── Leaf fields (keyed) ──────────────────────────────────────────
 
     JsonBuilder& field(const char* key, const std::string& v);
-    JsonBuilder& field(const char* key, uint64_t v);
-    JsonBuilder& field(const char* key, int64_t v);
-    JsonBuilder& field(const char* key, uint32_t v);
-    JsonBuilder& field(const char* key, int32_t v);
     JsonBuilder& field(const char* key, double v);
     JsonBuilder& field(const char* key, bool v);
+
+    /// \brief Emit any integral type as a JSON number.
+    /// Accepts uint64_t, int64_t, uint32_t, int32_t, unsigned long,
+    /// unsigned long long, long, long long, etc. without ambiguity.
+    template <typename T>
+    std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, JsonBuilder&>
+    field(const char* key, T v) {
+        pre_value();
+        emit_key(key);
+        if constexpr (std::is_signed_v<T>) {
+            buf_ += std::to_string(static_cast<int64_t>(v));
+        } else {
+            buf_ += std::to_string(static_cast<uint64_t>(v));
+        }
+        return *this;
+    }
 
     /// \brief Emit `"key": null`.
     JsonBuilder& null_field(const char* key);
@@ -119,9 +132,21 @@ class JsonBuilder {
     // ── Array elements (unkeyed) ─────────────────────────────────────
 
     JsonBuilder& element(const std::string& v);
-    JsonBuilder& element(uint64_t v);
     JsonBuilder& element(double v);
     JsonBuilder& element(bool v);
+
+    /// \brief Emit any integral type as a JSON number (array element).
+    template <typename T>
+    std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, JsonBuilder&>
+    element(T v) {
+        pre_value();
+        if constexpr (std::is_signed_v<T>) {
+            buf_ += std::to_string(static_cast<int64_t>(v));
+        } else {
+            buf_ += std::to_string(static_cast<uint64_t>(v));
+        }
+        return *this;
+    }
 
     // ── Finalize ─────────────────────────────────────────────────────
 

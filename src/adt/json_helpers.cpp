@@ -333,34 +333,6 @@ JsonBuilder& JsonBuilder::field(const char* key, const std::string& v) {
     return *this;
 }
 
-JsonBuilder& JsonBuilder::field(const char* key, uint64_t v) {
-    pre_value();
-    emit_key(key);
-    buf_ += std::to_string(v);
-    return *this;
-}
-
-JsonBuilder& JsonBuilder::field(const char* key, int64_t v) {
-    pre_value();
-    emit_key(key);
-    buf_ += std::to_string(v);
-    return *this;
-}
-
-JsonBuilder& JsonBuilder::field(const char* key, uint32_t v) {
-    pre_value();
-    emit_key(key);
-    buf_ += std::to_string(v);
-    return *this;
-}
-
-JsonBuilder& JsonBuilder::field(const char* key, int32_t v) {
-    pre_value();
-    emit_key(key);
-    buf_ += std::to_string(v);
-    return *this;
-}
-
 JsonBuilder& JsonBuilder::field(const char* key, double v) {
     pre_value();
     emit_key(key);
@@ -389,12 +361,6 @@ JsonBuilder& JsonBuilder::null_field(const char* key) {
 JsonBuilder& JsonBuilder::element(const std::string& v) {
     pre_value();
     emit_string(v);
-    return *this;
-}
-
-JsonBuilder& JsonBuilder::element(uint64_t v) {
-    pre_value();
-    buf_ += std::to_string(v);
     return *this;
 }
 
