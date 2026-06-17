@@ -165,6 +165,9 @@ void handle_get_dlq_record(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_replay_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
                        net::HttpRequest&& req) {
+    if (!validate_json_content_type(conn, req))
+        return;
+
     auto index_val = parse_path_uint64(req.path_params, "index");
     if (!index_val) {
         send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
@@ -204,8 +207,10 @@ void handle_replay_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
         }
     }
 
-    // If no target specified in body, use the original target from the record
-    if (target_id.value() == 0) {
+    // If no target specified in body, use the original target from the record.
+    // Note: target_actor_id of 0 is a valid actor — no sentinel behavior.
+    if (target_id.value() == 0 &&
+        body_str.find("\"target_actor_id\"") == std::string::npos) {
         auto* dlq = actor->system().dead_letter_queue();
         if (dlq) {
             auto records = dlq->snapshot_records();

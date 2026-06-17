@@ -184,7 +184,8 @@ void handle_get_system_memory(CliHttpServerActor* actor,
 
 void handle_drain(CliHttpServerActor* actor, net::HTTPConnection* conn,
                   net::HttpRequest&& req) {
-    (void)req;
+    if (!validate_json_content_type(conn, req))
+        return;
     actor->drain();
     send_accepted(conn, "System drain initiated");
 }
@@ -195,7 +196,8 @@ void handle_drain(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_shutdown(CliHttpServerActor* actor, net::HTTPConnection* conn,
                      net::HttpRequest&& req) {
-    (void)req;
+    if (!validate_json_content_type(conn, req))
+        return;
     actor->shutdown();
     send_accepted(conn, "System shutdown initiated");
 }

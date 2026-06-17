@@ -57,7 +57,8 @@ void handle_get_faults(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_clear_faults(CliHttpServerActor* actor, net::HTTPConnection* conn,
                          net::HttpRequest&& req) {
-    (void)req;
+    if (!validate_json_content_type(conn, req))
+        return;
 
     auto& fc = actor->system().fault_controller();
     fc.clear();

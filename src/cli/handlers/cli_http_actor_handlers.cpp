@@ -188,7 +188,7 @@ std::string extract_json_body_str(const std::string& body, const std::string& ke
     }
 
     if (end <= body.size())
-        return body.substr(pos, end - pos);
+        return adt::json_unescape(body.substr(pos, end - pos));
     return {};
 }
 
@@ -279,6 +279,8 @@ void handle_get_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
                 insp_req.set_include_rate_limiter(true);
             } else if (f == "admission") {
                 insp_req.set_include_admission(true);
+            } else if (f == "metadata") {
+                /* metadata is always included */
             }
         }
     }
@@ -286,7 +288,8 @@ void handle_get_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
     auto reply = actor->inspect(ActorId{*id_val}, insp_req);
     if (!reply) {
         send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) + " not found");
+                   "Actor " + std::to_string(*id_val) +
+                       " not found or not responding");
         return;
     }
 
@@ -318,7 +321,8 @@ void handle_kill_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
     auto reply = actor->kill(ActorId{*id_val}, kill_req);
     if (!reply) {
         send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) + " not found");
+                   "Actor " + std::to_string(*id_val) +
+                       " not found or not responding");
         return;
     }
 
@@ -352,7 +356,8 @@ void handle_get_mailbox(CliHttpServerActor* actor, net::HTTPConnection* conn,
     auto reply = actor->inspect(ActorId{*id_val}, insp_req);
     if (!reply || !reply->has_mailbox()) {
         send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) + " not found");
+                   "Actor " + std::to_string(*id_val) +
+                       " not found or not responding");
         return;
     }
 
@@ -422,7 +427,8 @@ void handle_get_children(CliHttpServerActor* actor, net::HTTPConnection* conn,
     auto reply = actor->inspect(ActorId{*id_val}, insp_req);
     if (!reply) {
         send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) + " not found");
+                   "Actor " + std::to_string(*id_val) +
+                       " not found or not responding");
         return;
     }
 
@@ -461,7 +467,8 @@ void handle_get_circuit_breaker(CliHttpServerActor* actor,
     auto reply = actor->inspect(ActorId{*id_val}, insp_req);
     if (!reply || !reply->has_circuit_breaker()) {
         send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) + " not found");
+                   "Actor " + std::to_string(*id_val) +
+                       " not found or not responding");
         return;
     }
 
@@ -488,6 +495,9 @@ void handle_get_circuit_breaker(CliHttpServerActor* actor,
 void handle_reset_circuit_breaker(CliHttpServerActor* actor,
                                   net::HTTPConnection* conn,
                                   net::HttpRequest&& req) {
+    if (!validate_json_content_type(conn, req))
+        return;
+
     auto id_val = parse_path_uint64(req.path_params, "id");
     if (!id_val || *id_val == 0) {
         send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
@@ -502,7 +512,8 @@ void handle_reset_circuit_breaker(CliHttpServerActor* actor,
     auto reply = actor->inspect(ActorId{*id_val}, insp_req);
     if (!reply) {
         send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) + " not found");
+                   "Actor " + std::to_string(*id_val) +
+                       " not found or not responding");
         return;
     }
 
@@ -515,6 +526,9 @@ void handle_reset_circuit_breaker(CliHttpServerActor* actor,
 
 void handle_quarantine_actor(CliHttpServerActor* actor,
                              net::HTTPConnection* conn, net::HttpRequest&& req) {
+    if (!validate_json_content_type(conn, req))
+        return;
+
     auto id_val = parse_path_uint64(req.path_params, "id");
     if (!id_val || *id_val == 0) {
         send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
@@ -537,7 +551,8 @@ void handle_quarantine_actor(CliHttpServerActor* actor,
     auto reply = actor->quarantine(ActorId{*id_val}, q_req);
     if (!reply) {
         send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) + " not found");
+                   "Actor " + std::to_string(*id_val) +
+                       " not found or not responding");
         return;
     }
 
@@ -567,9 +582,13 @@ void handle_unquarantine_actor(CliHttpServerActor* actor,
     q_req.set_unquarantine(true);
 
     auto reply = actor->quarantine(ActorId{*id_val}, q_req);
-    // Idempotent: nullopt means already unquarantined, treat as success
+    // nullopt means the actor is not reachable — treat as error, not
+    // idempotent success. Only the actor itself can confirm it is
+    // unquarantined.
     if (!reply) {
-        send_success(conn);
+        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
+                   "Actor " + std::to_string(*id_val) +
+                       " not found or not responding");
         return;
     }
 

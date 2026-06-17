@@ -35,24 +35,10 @@ using adt::JsonBuilder;
 
 void handle_list_asks(CliHttpServerActor* actor, net::HTTPConnection* conn,
                       net::HttpRequest&& req) {
-    uint32_t offset = parse_offset(req);
-    uint32_t limit = parse_limit(req);
-
-    // TODO: implement when AskManager exposes enumeration API
     (void)actor;
-
-    std::string json = JsonBuilder::root_object()
-                           .array("data")
-                           .end_array()
-                           .object("pagination")
-                           .field("offset", offset)
-                           .field("limit", limit)
-                           .field("total", static_cast<uint64_t>(0))
-                           .end_object()
-                           .end_object()
-                           .build();
-
-    send_json_ok(conn, json);
+    (void)req;
+    send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
+               "Ask enumeration not yet available");
 }
 
 // ====================================================================
@@ -75,11 +61,13 @@ void handle_get_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_cancel_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
                        net::HttpRequest&& req) {
+    if (!validate_json_content_type(conn, req))
+        return;
+
     // TODO: implement when AskManager exposes cancel by message_id
     (void)actor;
-    (void)req;
-
-    send_success(conn);
+    send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
+               "Ask cancellation not yet available");
 }
 
 } // namespace handlers
