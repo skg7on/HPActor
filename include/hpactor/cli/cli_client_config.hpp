@@ -27,7 +27,7 @@ struct CliClientConfig {
     enum class Transport { Protobuf, HttpJson };
 
     // Transport
-    std::string uds_path = "/var/run/hpactor/hpactor-cli.sock";
+    std::string uds_path = "/var/run/hpactor/hpactor.sock";
     std::string host;       // empty = use UDS
     uint16_t port = 0;      // required with host
     uint16_t http_port = 0; // optional HTTP JSON transport
