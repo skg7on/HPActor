@@ -15,9 +15,9 @@
 #include "foreground_runner.hpp"
 
 #include <hpactor/cli/cli_config.hpp>
-#include <hpactor/cli/cli_legacy_server_actor.hpp>
-#include <hpactor/cli/cli_legacy_server_config.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
+#include <hpactor/cli/cli_proto_server_actor.hpp>
+#include <hpactor/cli/cli_proto_server_config.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/process/process_manager.hpp>
 
@@ -28,26 +28,25 @@
 namespace hpactor::apps::hpactor_demo {
 
 int run_foreground(ActorSystem& system, const ForegroundConfig& cfg) {
-    // Spawn CliLegacyServerActor for remote hpactor-cli access.
+    // Spawn CliProtoServerActor for remote hpactor-cli access.
+    // CliProtoServerActor speaks the HPAC Frame protobuf wire protocol used by
+    // CliClientActor (hpactor-cli tool).  CliLegacyServerActor used a raw text
+    // protocol which was wire-incompatible with hpactor-cli.
     // uds_path is always populated by main.cpp (either user-provided or
     // platform-aware default); no fallback needed here.
-    cli::CliLegacyServerConfig server_cfg;
+    cli::CliProtoServerConfig server_cfg;
     server_cfg.uds_listen_path = cfg.uds_path;
     server_cfg.max_sessions = 16;
     server_cfg.default_format = "pretty";
     server_cfg.page_size = 20;
 
-    auto cli_server = system.spawn<cli::CliLegacyServerActor>(server_cfg);
+    auto cli_server = system.spawn<cli::CliProtoServerActor>(server_cfg);
 
     // Notify ready (no-op in foreground mode, kept for consistency)
     process::ProcessManager::notify_ready();
 
-    // Print banner (CliActor owns stdout but banner printed before CLI loop)
-    std::cout << "\n[hpactor_demo foreground mode — type /help for commands, "
-                 "/quit to exit]\n"
-              << "[CliLegacyServerActor listening on "
-              << server_cfg.uds_listen_path << "]\n"
-              << std::endl;
+    // Status messages are printed in main.cpp before ActorSystem construction
+    // to avoid racing with the CliActor daemon thread's linenoise raw terminal.
 
     // Block until CliActor exits (/quit or EOF).
     //
@@ -63,7 +62,7 @@ int run_foreground(ActorSystem& system, const ForegroundConfig& cfg) {
     // daemon thread's event loop is stopped before ActorSystem drains
     // resources the event loop may still reference.
     auto server =
-        std::static_pointer_cast<cli::CliLegacyServerActor>(cli_server.get());
+        std::static_pointer_cast<cli::CliProtoServerActor>(cli_server.get());
     if (server) {
         server->request_shutdown();
     }

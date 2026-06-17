@@ -192,7 +192,11 @@ int main(int argc, char* argv[]) {
     auto uds_path =
         opts.uds_path.empty() ? default_uds_path() : std::move(opts.uds_path);
 
-    // Splash for foreground mode
+    // Splash and status messages for foreground mode.
+    // MUST be printed BEFORE ActorSystem construction because the ActorSystem
+    // constructor spawns the CliActor daemon thread, which immediately puts
+    // the terminal in raw mode via linenoise().  Any stdout writes after that
+    // point race with the prompt and produce garbled output.
     if (opts.mode == process::ProcessMode::Foreground) {
         std::cout
             << "\n"
@@ -218,6 +222,14 @@ int main(int argc, char* argv[]) {
             << "║                                                              ║\n"
             << "╚══════════════════════════════════════════════════════════════╝\n"
             << std::endl;
+
+        // Print status lines while stdout is still in cooked mode.
+        // These used to appear interleaved with the linenoise prompt
+        // because run_foreground() ran after ActorSystem construction.
+        std::cout << "\n[hpactor_demo foreground mode — type /help for commands, "
+                     "/quit to exit]\n"
+                  << "[CliProtoServerActor listening on " << uds_path << "]\n"
+                  << std::endl;
     }
 
     // Build config and construct ActorSystem

@@ -14,8 +14,8 @@
 
 #include "daemon_runner.hpp"
 
-#include <hpactor/cli/cli_legacy_server_actor.hpp>
-#include <hpactor/cli/cli_legacy_server_config.hpp>
+#include <hpactor/cli/cli_proto_server_actor.hpp>
+#include <hpactor/cli/cli_proto_server_config.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/process/health_http_server.hpp>
 #include <hpactor/process/process_manager.hpp>
@@ -35,14 +35,16 @@ int run_daemon(ActorSystem& system, const DaemonConfig& cfg) {
               << "Use --foreground mode instead.\n";
     return 1;
 #else
-    // Spawn CliServerActor (sole CLI access path)
-    cli::CliLegacyServerConfig server_cfg;
+    // Spawn CliProtoServerActor (sole CLI access path).
+    // CliProtoServerActor speaks the HPAC Frame protobuf wire protocol used by
+    // CliClientActor (hpactor-cli tool).
+    cli::CliProtoServerConfig server_cfg;
     server_cfg.uds_listen_path = cfg.uds_path;
     server_cfg.tcp_listen_port = cfg.tcp_port;
     server_cfg.max_sessions = 16;
     server_cfg.default_format = "pretty";
     server_cfg.page_size = 50;
-    system.spawn<cli::CliLegacyServerActor>(server_cfg);
+    system.spawn<cli::CliProtoServerActor>(server_cfg);
 
     // Spawn WatchdogActor if configured
     if (cfg.watchdog_interval.count() > 0) {
