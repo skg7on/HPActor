@@ -74,6 +74,15 @@ class CliSession {
     /// Causes the next \c process_line() call to return false.
     void request_shutdown();
 
+    /// \brief Return the command tree used by this session.
+    ///
+    /// Allows commands (like /help) to render the full command tree
+    /// even when neither cli_actor nor cli_server_actor is set (e.g.,
+    /// in CliClientActor's local session).
+    const struct CommandNode* get_command_tree() const {
+        return command_tree_;
+    }
+
     /// \brief Set the owning CliActor, if any.
     ///
     /// Command handlers that require the CliActor interface
