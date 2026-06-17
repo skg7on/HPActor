@@ -49,11 +49,7 @@ void handle_list_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
     if (!dlq) {
         jb.array("data");
         jb.end_array();
-        jb.object("pagination");
-        jb.field("offset", offset);
-        jb.field("limit", limit);
-        jb.field("total", static_cast<uint64_t>(0));
-        jb.end_object();
+        add_pagination(jb, offset, limit, static_cast<uint32_t>(0));
         send_json_ok(conn, jb.end_object().build());
         return;
     }
@@ -100,11 +96,7 @@ void handle_list_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
     }
     jb.end_array();
 
-    jb.object("pagination");
-    jb.field("offset", offset);
-    jb.field("limit", limit);
-    jb.field("total", total);
-    jb.end_object();
+    add_pagination(jb, offset, limit, total);
 
     send_json_ok(conn, jb.end_object().build());
 }

@@ -157,8 +157,9 @@ void handle_get_system_memory(CliHttpServerActor* actor,
             mem::RegionType::kCoroutine, mem::RegionType::kNetwork,
             mem::RegionType::kInternal,  mem::RegionType::kHibernate};
 
+        auto& reg = mem::MemoryRegionRegistry::instance();
         for (auto region : kRegions) {
-            auto snap = mem::MemoryRegionRegistry::instance().snapshot(region);
+            auto snap = reg.snapshot(region);
             jb.object();
             jb.field("name", std::string(mem::to_string(region)));
             jb.field("active_bytes", snap.active_bytes);

@@ -9,7 +9,6 @@
 #include <cstdint>
 #include <optional>
 #include <string>
-#include <string_view>
 #include <unordered_map>
 #include <vector>
 
@@ -101,7 +100,7 @@ parse_actor_id_or_error(const std::unordered_map<std::string, std::string>& path
 inline bool validate_json_content_type(net::HTTPConnection* conn,
                                        const net::HttpRequest& req) {
     auto ct = req.content_type();
-    if (ct.has_value() && ct->find("application/json") == std::string::npos) {
+    if (ct.has_value() && !ct->starts_with("application/json")) {
         send_error(conn, net::HttpStatusCode::UnsupportedMedia,
                    "UNSUPPORTED_MEDIA_TYPE",
                    "Content-Type must be application/json");

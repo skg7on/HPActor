@@ -14,14 +14,9 @@
 
 #include "cli_http_handler_helpers.hpp"
 
-#include <hpactor/actor/ask_manager.hpp>
-#include <hpactor/adt/json_helpers.hpp>
 #include <hpactor/cli/cli_http_server_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_types.hpp>
-
-#include <string>
 
 namespace hpactor {
 namespace cli {

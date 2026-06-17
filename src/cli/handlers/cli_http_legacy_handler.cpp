@@ -12,6 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include "cli_http_handler_helpers.hpp"
+
 #include <hpactor/cli/cli_http_server_actor.hpp>
 
 #include <hpactor/adt/json_helpers.hpp>
@@ -175,21 +177,8 @@ void handle_legacy_post_cli(CliHttpServerActor* actor,
     std::string body_str(reinterpret_cast<const char*>(req.body.data()),
                          req.body.size());
 
-    // Validate JSON Content-Type
-    {
-        auto ct = req.content_type();
-        if (ct.has_value() && ct->find("application/json") == std::string::npos) {
-            hpactor::cli::CliResponse err_resp;
-            err_resp.set_content_type("text/plain");
-            err_resp.set_payload("Content-Type must be application/json");
-            err_resp.set_is_error(true);
-            err_resp.set_error_code(415);
-            err_resp.set_is_structured(false);
-            send_json_response(conn, net::HttpStatusCode::UnsupportedMedia,
-                               err_resp);
-            return;
-        }
-    }
+    if (!validate_json_content_type(conn, req))
+        return;
 
     // Parse JSON body -> CliCommand
     hpactor::cli::CliCommand cmd;

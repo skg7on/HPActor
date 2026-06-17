@@ -19,7 +19,6 @@
 #include <hpactor/cli/cli_http_server_actor.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
-#include <hpactor/mem/memory_region.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_types.hpp>
 
@@ -228,11 +227,7 @@ void handle_list_actors(CliHttpServerActor* actor, net::HTTPConnection* conn,
     }
     jb.end_array();
 
-    jb.object("pagination");
-    jb.field("offset", offset);
-    jb.field("limit", limit);
-    jb.field("total", total);
-    jb.end_object();
+    add_pagination(jb, offset, limit, total);
 
     send_json_ok(conn, jb.end_object().build());
 }
@@ -243,12 +238,9 @@ void handle_list_actors(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_get_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
                       net::HttpRequest&& req) {
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     auto fields = parse_fields(req);
 
@@ -303,12 +295,9 @@ void handle_get_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_kill_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
                        net::HttpRequest&& req) {
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     auto force_str =
         parse_query_string(req, "force").value_or(std::string("true"));
@@ -340,12 +329,9 @@ void handle_kill_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_get_mailbox(CliHttpServerActor* actor, net::HTTPConnection* conn,
                         net::HttpRequest&& req) {
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     InspectStateRequest insp_req;
     insp_req.set_target_actor_id(*id_val);
@@ -413,12 +399,9 @@ void handle_get_mailbox(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_get_children(CliHttpServerActor* actor, net::HTTPConnection* conn,
                          net::HttpRequest&& req) {
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     InspectStateRequest insp_req;
     insp_req.set_target_actor_id(*id_val);
@@ -453,12 +436,9 @@ void handle_get_children(CliHttpServerActor* actor, net::HTTPConnection* conn,
 
 void handle_get_circuit_breaker(CliHttpServerActor* actor,
                                 net::HTTPConnection* conn, net::HttpRequest&& req) {
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     InspectStateRequest insp_req;
     insp_req.set_target_actor_id(*id_val);
@@ -498,12 +478,9 @@ void handle_reset_circuit_breaker(CliHttpServerActor* /*actor*/,
     if (!validate_json_content_type(conn, req))
         return;
 
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     // TODO: implement circuit breaker reset via InspectStateRequest extension
     send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
@@ -519,12 +496,9 @@ void handle_quarantine_actor(CliHttpServerActor* actor,
     if (!validate_json_content_type(conn, req))
         return;
 
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     // Extract reason from JSON body
     std::string body_str(reinterpret_cast<const char*>(req.body.data()),
@@ -560,12 +534,9 @@ void handle_quarantine_actor(CliHttpServerActor* actor,
 
 void handle_unquarantine_actor(CliHttpServerActor* actor,
                                net::HTTPConnection* conn, net::HttpRequest&& req) {
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     QuarantineRequest q_req;
     q_req.set_target_actor_id(*id_val);
@@ -596,12 +567,9 @@ void handle_unquarantine_actor(CliHttpServerActor* actor,
 
 void handle_get_actor_memory(CliHttpServerActor* /*actor*/,
                              net::HTTPConnection* conn, net::HttpRequest&& req) {
-    auto id_val = parse_path_uint64(req.path_params, "id");
-    if (!id_val || *id_val == 0) {
-        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
-                   "actor_id must be a positive integer");
+    auto id_val = parse_actor_id_or_error(req.path_params, conn);
+    if (!id_val)
         return;
-    }
 
     send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
                "Per-actor memory stats not yet available. "
