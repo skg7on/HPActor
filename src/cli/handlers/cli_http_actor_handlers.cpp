@@ -492,7 +492,7 @@ void handle_get_circuit_breaker(CliHttpServerActor* actor,
 // Task 9: handle_reset_circuit_breaker
 // ====================================================================
 
-void handle_reset_circuit_breaker(CliHttpServerActor* actor,
+void handle_reset_circuit_breaker(CliHttpServerActor* /*actor*/,
                                   net::HTTPConnection* conn,
                                   net::HttpRequest&& req) {
     if (!validate_json_content_type(conn, req))
@@ -505,19 +505,9 @@ void handle_reset_circuit_breaker(CliHttpServerActor* actor,
         return;
     }
 
-    // Verify actor exists via lightweight inspect
-    InspectStateRequest insp_req;
-    insp_req.set_target_actor_id(*id_val);
-
-    auto reply = actor->inspect(ActorId{*id_val}, insp_req);
-    if (!reply) {
-        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) +
-                       " not found or not responding");
-        return;
-    }
-
-    send_success(conn);
+    // TODO: implement circuit breaker reset via InspectStateRequest extension
+    send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
+               "Circuit breaker reset not yet implemented");
 }
 
 // ====================================================================
@@ -613,21 +603,9 @@ void handle_get_actor_memory(CliHttpServerActor* /*actor*/,
         return;
     }
 
-    auto snap =
-        mem::MemoryRegionRegistry::instance().snapshot(mem::RegionType::kActor);
-
-    std::string json = JsonBuilder::root_object()
-                           .object("data")
-                           .field("actor_id", *id_val)
-                           .field("active_bytes", snap.active_bytes)
-                           .field("peak_bytes", snap.high_water_mark)
-                           .field("segment_count", static_cast<uint64_t>(0))
-                           .field("slab_hit_rate", 0.0)
-                           .end_object()
-                           .end_object()
-                           .build();
-
-    send_json_ok(conn, json);
+    send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
+               "Per-actor memory stats not yet available. "
+               "Use GET /api/v1/system/memory?actor_id=N for system-wide memory.");
 }
 
 } // namespace handlers
