@@ -14,6 +14,7 @@
 
 #include <hpactor/cli/cli_legacy_server_actor.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
+#include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 
@@ -35,12 +36,20 @@ class QuitCommand final : public ICommand {
 
     result<void> execute(CommandContext& ctx) const override {
         ctx.output->raw("Goodbye.");
-        if (ctx.lifecycle_host) {
-            ctx.lifecycle_host->shutdown();
+        // Prefer session/actor-level shutdown: /quit exits the CLI loop
+        // without shutting down the entire actor system (that is the job
+        // of /system drain and /system stop).  Calling lifecycle_host->
+        // shutdown() from the daemon thread deadlocks because the system
+        // shutdown tries to drain the CliActor that is executing this
+        // command.
+        if (ctx.cli_session) {
+            ctx.cli_session->request_shutdown();
         } else if (ctx.cli_actor) {
             ctx.cli_actor->request_shutdown();
         } else if (ctx.cli_server_actor) {
             ctx.cli_server_actor->request_shutdown();
+        } else if (ctx.lifecycle_host) {
+            ctx.lifecycle_host->shutdown();
         }
         return result<void>::make();
     }
