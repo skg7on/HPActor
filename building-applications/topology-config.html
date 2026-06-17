@@ -1,0 +1,389 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Topology Configuration &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Remote Actors &amp; Service Discovery" href="remote-actors.html" />
+    <link rel="prev" title="Actor Lifecycle &amp; Supervision" href="lifecycle.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Topology Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#pipeline-overview">Pipeline Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#basic-topology">Basic Topology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#actor-definition-fields">Actor Definition Fields</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#registering-actors">Registering Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#template-inheritance">Template Inheritance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#imports">Imports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#bootstrap-in-code">Bootstrap in Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#aot-compilation-production">AOT Compilation (Production)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#extending-with-subsystem-parsers">Extending with Subsystem Parsers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Topology Configuration</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/building-applications/topology-config.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="topology-configuration">
+<span id="building-applications-topology-config"></span><h1>Topology Configuration<a class="headerlink" href="#topology-configuration" title="Link to this heading"></a></h1>
+<p>HPActor can bootstrap an entire actor tree from a declarative TOML
+configuration file — no imperative spawn code required. This chapter
+covers writing and deploying topology configs.</p>
+<section id="pipeline-overview">
+<h2>Pipeline Overview<a class="headerlink" href="#pipeline-overview" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>TOML file(s) ──► TomlParser ──► TopologyModel ──► BootstrapEngine
+                                                      │
+                                                 Spawned Actors
+</pre></div>
+</div>
+<ol class="arabic simple">
+<li><p><strong>Parse</strong> — <code class="docutils literal notranslate"><span class="pre">TomlParser::parse()</span></code> reads the TOML, resolves imports
+(glob patterns), and applies template inheritance (deep merge).</p></li>
+<li><p><strong>Validate</strong> — Topological sort (Kahn’s algorithm) ensures DAG-correct
+spawn order.</p></li>
+<li><p><strong>Bootstrap</strong> — <code class="docutils literal notranslate"><span class="pre">BootstrapEngine</span></code> creates dispatchers and spawns
+actors in dependency order.</p></li>
+<li><p><strong>Notify</strong> — <code class="docutils literal notranslate"><span class="pre">SystemInitTag</span></code> is broadcast after the full topology
+is live, gating external traffic.</p></li>
+</ol>
+</section>
+<section id="basic-topology">
+<h2>Basic Topology<a class="headerlink" href="#basic-topology" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># topology.toml</span>
+
+<span class="k">[system]</span>
+<span class="n">scheduler_threads</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span>
+<span class="n">node_name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;prod-node-01&quot;</span>
+
+<span class="k">[system.metrics]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">metrics_path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/metrics&quot;</span>
+
+<span class="k">[system.log]</span>
+<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;info&quot;</span>
+<span class="n">sinks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;stderr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rotating_file&quot;</span><span class="p">]</span>
+
+<span class="k">[[actors]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;worker-pool&quot;</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;worker&quot;</span>
+<span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
+<span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">queue_capacity</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="p">}</span>
+
+<span class="k">[[actors]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;coordinator&quot;</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;coordinator&quot;</span>
+<span class="n">depends_on</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;worker-pool&quot;</span><span class="p">]</span>
+
+<span class="k">[[actors]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http-gateway&quot;</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;http_gateway&quot;</span>
+<span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">listen_port</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">8080</span><span class="w"> </span><span class="p">}</span>
+
+<span class="k">[[dispatchers]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;cpu-dispatcher&quot;</span>
+<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dense_compute&quot;</span>
+<span class="n">thread_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
+</pre></div>
+</div>
+</section>
+<section id="actor-definition-fields">
+<h2>Actor Definition Fields<a class="headerlink" href="#actor-definition-fields" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Field</p></th>
+<th class="head"><p>Type</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">name</span></code></p></td>
+<td><p>string</p></td>
+<td><p>Unique actor instance name (required)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">behavior</span></code></p></td>
+<td><p>string</p></td>
+<td><p>Registered actor type name (required)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">count</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>Number of instances to spawn (default: 1)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">args</span></code></p></td>
+<td><p>table</p></td>
+<td><p>Key-value pairs passed to <code class="docutils literal notranslate"><span class="pre">configure_from_args()</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">depends_on</span></code></p></td>
+<td><p>array</p></td>
+<td><p>Actor names that must spawn first</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">dispatcher</span></code></p></td>
+<td><p>string</p></td>
+<td><p>Dispatcher to assign this actor to</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">mailbox_capacity</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>Bounded mailbox capacity (0 = unbounded)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">mailbox_overflow</span></code></p></td>
+<td><p>string</p></td>
+<td><p>Overflow policy: <code class="docutils literal notranslate"><span class="pre">block</span></code>, <code class="docutils literal notranslate"><span class="pre">drop_head</span></code>, <code class="docutils literal notranslate"><span class="pre">drop_tail</span></code>, <code class="docutils literal notranslate"><span class="pre">dlq</span></code></p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">drain_policy</span></code></p></td>
+<td><p>string</p></td>
+<td><p>Shutdown drain: <code class="docutils literal notranslate"><span class="pre">complete</span></code>, <code class="docutils literal notranslate"><span class="pre">drop</span></code>, <code class="docutils literal notranslate"><span class="pre">timeout</span></code></p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">drain_timeout_ms</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>Drain deadline in milliseconds</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">priority_level</span></code></p></td>
+<td><p>integer</p></td>
+<td><p>Mailbox priority lane (0 = highest)</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="registering-actors">
+<h2>Registering Actors<a class="headerlink" href="#registering-actors" title="Link to this heading"></a></h2>
+<p>Actors must be registered with the factory before topology bootstrapping:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;hpactor/config/actor_factory_registry.hpp&gt;</span>
+
+<span class="c1">// Static registration — runs before main()</span>
+<span class="n">HPACTOR_REGISTER_ACTOR</span><span class="p">(</span><span class="n">WorkerActor</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;worker&quot;</span><span class="p">);</span>
+<span class="n">HPACTOR_REGISTER_ACTOR</span><span class="p">(</span><span class="n">CoordinatorActor</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;coordinator&quot;</span><span class="p">);</span>
+<span class="n">HPACTOR_REGISTER_ACTOR</span><span class="p">(</span><span class="n">HttpGatewayActor</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;http_gateway&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">HPACTOR_REGISTER_ACTOR</span></code> macro:
+- Maps the behavior name string to a factory function.
+- Runs at static initialization time (no manual registry calls).
+- Supports passing <code class="docutils literal notranslate"><span class="pre">args</span></code> to <code class="docutils literal notranslate"><span class="pre">configure_from_args()</span></code>.</p>
+</section>
+<section id="template-inheritance">
+<h2>Template Inheritance<a class="headerlink" href="#template-inheritance" title="Link to this heading"></a></h2>
+<p>Reduce repetition with a base template:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># base.toml</span>
+<span class="k">[template.default_worker]</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;worker&quot;</span>
+<span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
+<span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">queue_capacity</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">1024</span><span class="w"> </span><span class="p">}</span>
+<span class="n">mailbox_capacity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10000</span>
+<span class="n">mailbox_overflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dlq&quot;</span>
+</pre></div>
+</div>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="c1"># prod.toml</span>
+<span class="k">[[imports]]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;base.toml&quot;</span>
+
+<span class="k">[[actors]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;critical-worker-pool&quot;</span>
+<span class="n">inherit</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;default_worker&quot;</span>
+<span class="n">count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="w">  </span><span class="c1"># overrides base count</span>
+<span class="n">args</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">{</span><span class="w"> </span><span class="n">queue_capacity</span><span class="w"> </span><span class="p">=</span><span class="w"> </span><span class="mi">4096</span><span class="w"> </span><span class="p">}</span><span class="w">  </span><span class="c1"># deep-merged, not replaced</span>
+</pre></div>
+</div>
+</section>
+<section id="imports">
+<h2>Imports<a class="headerlink" href="#imports" title="Link to this heading"></a></h2>
+<p>Include other TOML files with glob support:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[[imports]]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;actors/*.toml&quot;</span>
+
+<span class="k">[[imports]]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;environments/production.toml&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="bootstrap-in-code">
+<h2>Bootstrap in Code<a class="headerlink" href="#bootstrap-in-code" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;hpactor/core/actor_system.hpp&gt;</span>
+
+<span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ActorSystem</span><span class="w"> </span><span class="n">system</span><span class="p">;</span>
+
+<span class="w">    </span><span class="c1">// Load and bootstrap the topology</span>
+<span class="w">    </span><span class="n">system</span><span class="p">.</span><span class="n">load_topology</span><span class="p">(</span><span class="s">&quot;config/topology.toml&quot;</span><span class="p">);</span>
+
+<span class="w">    </span><span class="c1">// System is running. Block until shutdown.</span>
+<span class="w">    </span><span class="n">system</span><span class="p">.</span><span class="n">await_shutdown</span><span class="p">();</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="aot-compilation-production">
+<h2>AOT Compilation (Production)<a class="headerlink" href="#aot-compilation-production" title="Link to this heading"></a></h2>
+<p>For production deployments, pre-compile TOML to a compact binary format
+with zero-parse mmap bootstrap:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>./build/tools/toml-compiler/hpactor_toml_compiler<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--input<span class="w"> </span>config/topology.toml<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>--output<span class="w"> </span>config/topology.bin
+
+<span class="c1"># Then load the binary:</span>
+system.load_topology<span class="o">(</span><span class="s2">&quot;config/topology.bin&quot;</span><span class="o">)</span><span class="p">;</span><span class="w">  </span>//<span class="w"> </span>detects<span class="w"> </span>binary<span class="w"> </span>format<span class="w"> </span>automatically
+</pre></div>
+</div>
+</section>
+<section id="extending-with-subsystem-parsers">
+<h2>Extending with Subsystem Parsers<a class="headerlink" href="#extending-with-subsystem-parsers" title="Link to this heading"></a></h2>
+<p>Add new TOML config sections without modifying the core parser. Create a
+source file in <code class="docutils literal notranslate"><span class="pre">src/config/parsers/</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// src/config/parsers/my_subsystem_parser.cpp</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;hpactor/config/toml_parser_registry.hpp&gt;</span>
+<span class="cp">#include</span><span class="w"> </span><span class="cpf">&lt;hpactor/config/toml_table_view.hpp&gt;</span>
+
+<span class="k">namespace</span><span class="w"> </span><span class="p">{</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">MySubsystemParser</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">TomlSystemParser</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">parse</span><span class="p">(</span><span class="n">TomlTableView</span><span class="w"> </span><span class="n">table</span><span class="p">,</span><span class="w"> </span><span class="n">TopologyModel</span><span class="o">&amp;</span><span class="w"> </span><span class="n">model</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Parse your subsystem config from the table</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+
+<span class="c1">// Self-registers — no edits to parse_file_data needed</span>
+<span class="n">TomlSystemParserRegistration</span><span class="o">&lt;</span><span class="n">MySubsystemParser</span><span class="o">&gt;</span><span class="w"> </span><span class="n">registration</span><span class="p">;</span>
+
+<span class="p">}</span><span class="w">  </span><span class="c1">// anonymous namespace</span>
+</pre></div>
+</div>
+<p>For more on writing parsers, see the C++ API in
+<code class="docutils literal notranslate"><span class="pre">include/hpactor/config/toml_parser_registry.hpp</span></code>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="lifecycle.html" class="btn btn-neutral float-left" title="Actor Lifecycle &amp; Supervision" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="remote-actors.html" class="btn btn-neutral float-right" title="Remote Actors &amp; Service Discovery" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

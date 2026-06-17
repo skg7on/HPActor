@@ -1,0 +1,348 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Actor Lifecycle &amp; Supervision &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Topology Configuration" href="topology-config.html" />
+    <link rel="prev" title="Message Passing" href="message-passing.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="message-passing.html">Message Passing</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Actor Lifecycle &amp; Supervision</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#actor-lifecycle-states">Actor Lifecycle States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#spawning-actors">Spawning Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#linking-and-monitoring">Linking and Monitoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#supervision">Supervision</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#oneforone">OneForOne</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#allforone">AllForOne</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#selfsupervisingactor">SelfSupervisingActor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#escalation-to-quarantine">Escalation to Quarantine</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#graceful-shutdown">Graceful Shutdown</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Actor Lifecycle &amp; Supervision</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/building-applications/lifecycle.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="actor-lifecycle-supervision">
+<span id="building-applications-lifecycle"></span><h1>Actor Lifecycle &amp; Supervision<a class="headerlink" href="#actor-lifecycle-supervision" title="Link to this heading"></a></h1>
+<p>Actors in HPActor have a well-defined lifecycle and form hierarchical
+supervision trees. This chapter covers spawning, linking, supervising,
+and shutting down actors.</p>
+<section id="actor-lifecycle-states">
+<h2>Actor Lifecycle States<a class="headerlink" href="#actor-lifecycle-states" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Created ──► Starting ──► Running ──► Stopping ──► Stopped
+                ▲             │
+                │             │ (failure)
+                │             ▼
+                └────────── Failed ──► Terminated
+</pre></div>
+</div>
+<p>The <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">LifecycleActor</span></code> mixin adds a lifecycle state machine to
+any actor:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyManagedActor</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">StatefulActor</span><span class="o">&lt;</span><span class="n">MyState</span><span class="o">&gt;</span><span class="p">,</span>
+<span class="w">                       </span><span class="k">public</span><span class="w"> </span><span class="n">LifecycleActor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Lifecycle transitions are compile-time verified via</span>
+<span class="w">    </span><span class="c1">// constexpr StateDef tables.</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+<p>Key states:</p>
+<ul class="simple">
+<li><p><strong>Created</strong> — actor constructed, not yet receiving messages.</p></li>
+<li><p><strong>Starting</strong> — transition from Created; initialization in progress.</p></li>
+<li><p><strong>Running</strong> — actively processing messages.</p></li>
+<li><p><strong>Stopping</strong> — drain in progress; no new messages accepted.</p></li>
+<li><p><strong>Stopped</strong> — drain complete; actor exits.</p></li>
+<li><p><strong>Failed</strong> — unrecoverable error; supervision may restart.</p></li>
+<li><p><strong>Terminated</strong> — final state; actor removed from registry.</p></li>
+</ul>
+<p>The <strong>message gate</strong> rejects incoming messages during non-Active states
+(Created, Starting, Stopping, Stopped, Failed).</p>
+</section>
+<section id="spawning-actors">
+<h2>Spawning Actors<a class="headerlink" href="#spawning-actors" title="Link to this heading"></a></h2>
+<p>Actors are always spawned by a parent — either the <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ActorSystem</span></code>
+or another actor:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From ActorSystem (top-level actors)</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">system</span><span class="p">.</span><span class="n">spawn</span><span class="o">&lt;</span><span class="n">WorkerActor</span><span class="o">&gt;</span><span class="p">();</span>
+
+<span class="c1">// From within an actor (child actors — supervision tree)</span>
+<span class="k">class</span><span class="w"> </span><span class="nc">SupervisorActor</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">EventBasedActor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="nf">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">StartWorkers</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">StartWorkers</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="w"> </span><span class="o">&lt;</span><span class="w"> </span><span class="mi">4</span><span class="p">;</span><span class="w"> </span><span class="n">i</span><span class="o">++</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="k">auto</span><span class="w"> </span><span class="n">child</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">spawn</span><span class="o">&lt;</span><span class="n">WorkerActor</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">                    </span><span class="n">children_</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">child</span><span class="p">);</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="linking-and-monitoring">
+<h2>Linking and Monitoring<a class="headerlink" href="#linking-and-monitoring" title="Link to this heading"></a></h2>
+<p>Actors can establish death-awareness relationships:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Bidirectional: if either dies, the other is notified</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">link_to</span><span class="p">(</span><span class="n">other_actor</span><span class="p">);</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">unlink_from</span><span class="p">(</span><span class="n">other_actor</span><span class="p">);</span>
+
+<span class="c1">// Unidirectional: monitor another actor&#39;s lifecycle</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">monitor</span><span class="p">(</span><span class="n">other_actor</span><span class="p">);</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">demonitor</span><span class="p">(</span><span class="n">other_actor</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>When a linked or monitored actor exits, the watching actor receives a
+<code class="docutils literal notranslate"><span class="pre">DownMsg</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="p">.</span><span class="n">on_system</span><span class="o">&lt;</span><span class="n">DownMsg</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">DownMsg</span><span class="o">&amp;</span><span class="w"> </span><span class="n">msg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">cout</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot;Actor &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="n">actor_id</span>
+<span class="w">              </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="s">&quot; terminated: &quot;</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="n">reason</span><span class="w"> </span><span class="o">&lt;&lt;</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">endl</span><span class="p">;</span>
+<span class="w">    </span><span class="c1">// Remove from children, clean up, etc.</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+</section>
+<section id="supervision">
+<h2>Supervision<a class="headerlink" href="#supervision" title="Link to this heading"></a></h2>
+<p>HPActor provides three supervision strategies:</p>
+<section id="oneforone">
+<h3>OneForOne<a class="headerlink" href="#oneforone" title="Link to this heading"></a></h3>
+<p>Only the failed child is restarted:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MySupervisor</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">EventBasedActor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">OneForOneSupervisor</span><span class="w"> </span><span class="n">supervisor_</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="nf">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">supervisor_</span><span class="p">.</span><span class="n">set_policy</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w">       </span><span class="c1">// max restarts</span>
+<span class="w">                               </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">seconds</span><span class="p">(</span><span class="mi">10</span><span class="p">));</span><span class="w">  </span><span class="c1">// time window</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">ChildFailed</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">ChildFailed</span><span class="o">&amp;</span><span class="w"> </span><span class="n">msg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">supervisor_</span><span class="p">.</span><span class="n">on_child_failure</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">actor_id</span><span class="p">,</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="n">error</span><span class="p">);</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="allforone">
+<h3>AllForOne<a class="headerlink" href="#allforone" title="Link to this heading"></a></h3>
+<p>All children restart if any fails — useful when children share state
+or depend on each other:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">AllForOneSupervisor</span><span class="w"> </span><span class="n">supervisor_</span><span class="p">;</span>
+<span class="n">supervisor_</span><span class="p">.</span><span class="n">set_policy</span><span class="p">(</span><span class="mi">5</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">seconds</span><span class="p">(</span><span class="mi">30</span><span class="p">));</span>
+</pre></div>
+</div>
+</section>
+<section id="selfsupervisingactor">
+<h3>SelfSupervisingActor<a class="headerlink" href="#selfsupervisingactor" title="Link to this heading"></a></h3>
+<p>An actor that manages its own children with a built-in supervisor:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">SelfManagedCoordinator</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">SelfSupervisingActor</span><span class="w"> </span><span class="p">{</span>
+<span class="k">protected</span><span class="o">:</span>
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="n">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">set_supervision_policy</span><span class="p">(</span><span class="mi">3</span><span class="p">,</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">seconds</span><span class="p">(</span><span class="mi">10</span><span class="p">));</span>
+<span class="w">        </span><span class="c1">// Spawn children; failures are handled automatically.</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="escalation-to-quarantine">
+<h3>Escalation to Quarantine<a class="headerlink" href="#escalation-to-quarantine" title="Link to this heading"></a></h3>
+<p>If a child repeatedly fails, the supervisor can escalate to quarantine
+instead of restarting in a loop:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">QuarantinePolicy</span><span class="w"> </span><span class="n">policy</span><span class="p">;</span>
+<span class="n">policy</span><span class="p">.</span><span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="n">policy</span><span class="p">.</span><span class="n">max_restarts</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="p">;</span>
+<span class="n">policy</span><span class="p">.</span><span class="n">trip_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="p">;</span><span class="w">  </span><span class="c1">// consecutive failures to trip</span>
+
+<span class="n">supervisor_</span><span class="p">.</span><span class="n">set_quarantine_policy</span><span class="p">(</span><span class="n">policy</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="graceful-shutdown">
+<h2>Graceful Shutdown<a class="headerlink" href="#graceful-shutdown" title="Link to this heading"></a></h2>
+<p>HPActor supports orderly shutdown with drain policies:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Policy</p></th>
+<th class="head"><p>Behavior</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Complete</span></code></p></td>
+<td><p>Process all in-flight messages before stopping.</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">Drop</span></code></p></td>
+<td><p>Discard all pending messages immediately.</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">Timeout</span></code></p></td>
+<td><p>Drain for a deadline; drop remaining messages after.</p></td>
+</tr>
+</tbody>
+</table>
+<p>Configure drain per-actor or system-wide via TOML:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.shutdown]</span>
+<span class="n">drain_timeout_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5000</span>
+<span class="n">stop_timeout_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10000</span>
+
+<span class="k">[[actors]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;critical-worker&quot;</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;worker&quot;</span>
+<span class="n">drain_policy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;complete&quot;</span>
+<span class="n">drain_timeout_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10000</span>
+</pre></div>
+</div>
+<p>Trigger shutdown programmatically:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">system</span><span class="p">.</span><span class="n">shutdown</span><span class="p">();</span><span class="w">        </span><span class="c1">// Phase-machine: user actors, then system actors</span>
+<span class="n">system</span><span class="p">.</span><span class="n">await_shutdown</span><span class="p">();</span><span class="w">  </span><span class="c1">// Block until all actors have stopped</span>
+</pre></div>
+</div>
+<p>CLI-initiated shutdown:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>/system drain          # Begin draining all actors
+/system stop           # Finalize shutdown
+</pre></div>
+</div>
+<p>For detailed shutdown semantics, see <a class="reference internal" href="../best-practices/deployment.html"><span class="doc">Production Deployment</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="message-passing.html" class="btn btn-neutral float-left" title="Message Passing" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="topology-config.html" class="btn btn-neutral float-right" title="Topology Configuration" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

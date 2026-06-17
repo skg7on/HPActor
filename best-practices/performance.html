@@ -1,0 +1,310 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Performance Tuning &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Testing Strategies" href="testing.html" />
+    <link rel="prev" title="Error Handling" href="error-handling.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="error-handling.html">Error Handling</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Performance Tuning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#scheduler-configuration">Scheduler Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#worker-affinity">Worker Affinity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#mailbox-tuning">Mailbox Tuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#memory-allocator">Memory Allocator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#coroutine-tuning">Coroutine Tuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#message-batching">Message Batching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#measuring-performance">Measuring Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#performance-checklist">Performance Checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Performance Tuning</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/best-practices/performance.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="performance-tuning">
+<span id="best-practices-performance"></span><h1>Performance Tuning<a class="headerlink" href="#performance-tuning" title="Link to this heading"></a></h1>
+<p>This chapter covers tuning HPActor for throughput and latency, from
+scheduler configuration to memory allocator settings.</p>
+<section id="scheduler-configuration">
+<h2>Scheduler Configuration<a class="headerlink" href="#scheduler-configuration" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system]</span>
+<span class="n">scheduler_threads</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8</span><span class="w">              </span><span class="c1"># Number of worker threads</span>
+<span class="n">scheduler_policy</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;work_stealing&quot;</span><span class="w"> </span><span class="c1"># Work-stealing algorithm</span>
+</pre></div>
+</div>
+<p>Guidelines for <code class="docutils literal notranslate"><span class="pre">scheduler_threads</span></code>:
+- <strong>I/O-bound workloads</strong>: 1–2× CPU cores.
+- <strong>CPU-bound workloads</strong>: 1× CPU cores (dedicated threads for compute).
+- <strong>Mixed</strong>: Start at CPU cores and profile.</p>
+<p>The <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">HybridScheduler</span></code> uses A2WS (Adaptive Two-Level Work
+Stealing) — workers prefer their local queue and steal from others only
+when idle.</p>
+</section>
+<section id="worker-affinity">
+<h2>Worker Affinity<a class="headerlink" href="#worker-affinity" title="Link to this heading"></a></h2>
+<p>Pin workers to specific CPUs for cache locality:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[[dispatchers]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;cpu-dispatcher&quot;</span>
+<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dense_compute&quot;</span>
+<span class="n">thread_count</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span>
+<span class="n">cpu_affinity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="mi">0</span><span class="p">,</span><span class="w"> </span><span class="mi">1</span><span class="p">,</span><span class="w"> </span><span class="mi">2</span><span class="p">,</span><span class="w"> </span><span class="mi">3</span><span class="p">]</span><span class="w">      </span><span class="c1"># Pin to cores 0-3</span>
+</pre></div>
+</div>
+</section>
+<section id="mailbox-tuning">
+<h2>Mailbox Tuning<a class="headerlink" href="#mailbox-tuning" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.mailbox]</span>
+<span class="n">priority_aware</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">priority_levels</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4</span><span class="w">               </span><span class="c1"># 0 = highest, 3 = lowest</span>
+</pre></div>
+</div>
+<p>Per-actor mailbox configuration:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[[actors]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;high-throughput-worker&quot;</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;worker&quot;</span>
+<span class="n">mailbox_capacity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">65536</span>
+<span class="n">mailbox_overflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;drop_oldest&quot;</span><span class="w">  </span><span class="c1"># Shed load when full</span>
+<span class="n">priority_level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1</span>
+</pre></div>
+</div>
+<p>Tuning guidelines:
+- <strong>Capacity</strong>: Start at 1024, raise if <code class="docutils literal notranslate"><span class="pre">hpactor_mailbox_depth</span></code> stays near capacity.
+- <strong>Overflow policy</strong>: <code class="docutils literal notranslate"><span class="pre">drop_oldest</span></code> for real-time systems, <code class="docutils literal notranslate"><span class="pre">dlq</span></code> for no-loss.
+- <strong>Priority lanes</strong>: Reserve lane 0 for system/control, lane 3 for best-effort.</p>
+</section>
+<section id="memory-allocator">
+<h2>Memory Allocator<a class="headerlink" href="#memory-allocator" title="Link to this heading"></a></h2>
+<p>HPActor’s two-tier slab allocator is tuned by default. Adjust for
+workload-specific patterns:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.memory]</span>
+<span class="n">segment_size_mb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">2</span><span class="w">               </span><span class="c1"># Size of each mmap segment</span>
+<span class="n">max_regions</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">16</span><span class="w">                  </span><span class="c1"># Max memory regions</span>
+
+<span class="k">[system.memory.regions.actor]</span>
+<span class="n">hard_limit_mb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">512</span><span class="w">               </span><span class="c1"># Cap actor memory at 512MB</span>
+
+<span class="k">[system.memory.regions.message]</span>
+<span class="n">hard_limit_mb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">256</span><span class="w">               </span><span class="c1"># Cap message memory at 256MB</span>
+</pre></div>
+</div>
+<p>When <code class="docutils literal notranslate"><span class="pre">ENABLE_MEMORY_DEBUG=ON</span></code>:
+- Memory poisoning detects use-after-free.
+- Canary verification detects buffer overflows.
+- Guard pages catch out-of-bounds access on hibernated actors.</p>
+<div class="admonition note">
+<p class="admonition-title">Note</p>
+<p>Memory debugging has ~10-20% overhead. Enable it in CI and staging
+but disable in production unless investigating a memory issue.</p>
+</div>
+</section>
+<section id="coroutine-tuning">
+<h2>Coroutine Tuning<a class="headerlink" href="#coroutine-tuning" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.coroutine]</span>
+<span class="n">frame_pool_size</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">4096</span><span class="w">            </span><span class="c1"># Pre-allocated coroutine frames</span>
+</pre></div>
+</div>
+<p>The coroutine frame pool eliminates per-suspension allocations. Tune
+<code class="docutils literal notranslate"><span class="pre">frame_pool_size</span></code> based on peak concurrency — each in-flight actor
+suspension uses one frame.</p>
+</section>
+<section id="message-batching">
+<h2>Message Batching<a class="headerlink" href="#message-batching" title="Link to this heading"></a></h2>
+<p>For high-throughput scenarios, batch messages to reduce per-message
+overhead:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Instead of sending 1000 individual messages:</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">item</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">items</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span><span class="w"> </span><span class="n">ProcessItem</span><span class="p">{</span><span class="n">item</span><span class="p">});</span><span class="w">  </span><span class="c1">// 1000 sends</span>
+<span class="p">}</span>
+
+<span class="c1">// Batch them:</span>
+<span class="n">BatchRequest</span><span class="w"> </span><span class="n">batch</span><span class="p">;</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">item</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">items</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="o">*</span><span class="n">batch</span><span class="p">.</span><span class="n">add_items</span><span class="p">()</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">item</span><span class="p">;</span>
+<span class="p">}</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">worker</span><span class="p">,</span><span class="w"> </span><span class="n">batch</span><span class="p">);</span><span class="w">  </span><span class="c1">// 1 send</span>
+</pre></div>
+</div>
+<p>Each message incurs:
+- Enqueue (CAS on ring buffer).
+- Dequeue (load-acquire).
+- Dispatch (scheduler queue operations).
+- Deserialization (for protobuf messages).</p>
+<p>Batching amortizes this overhead across many items.</p>
+</section>
+<section id="measuring-performance">
+<h2>Measuring Performance<a class="headerlink" href="#measuring-performance" title="Link to this heading"></a></h2>
+<p><strong>Throughput</strong> — messages processed per second:</p>
+<div class="highlight-promql notranslate"><div class="highlight"><pre><span></span><span class="kr">rate</span><span class="o">(</span><span class="nv">hpactor_messages_dequeued_total</span><span class="p">[</span><span class="s">1m</span><span class="p">]</span><span class="o">)</span>
+</pre></div>
+</div>
+<p><strong>Latency</strong> — p50/p95/p99 processing time:</p>
+<div class="highlight-promql notranslate"><div class="highlight"><pre><span></span><span class="kr">histogram_quantile</span><span class="o">(</span><span class="mf">0.99</span><span class="p">,</span><span class="w"> </span><span class="kr">rate</span><span class="o">(</span><span class="nv">hpactor_processing_latency_seconds_bucket</span><span class="p">[</span><span class="s">5m</span><span class="p">]</span><span class="o">))</span>
+</pre></div>
+</div>
+<p><strong>Scheduler balance</strong> — work distribution across workers:</p>
+<div class="highlight-promql notranslate"><div class="highlight"><pre><span></span><span class="kr">rate</span><span class="o">(</span><span class="nv">hpactor_scheduler_dispatches_total</span><span class="p">[</span><span class="s">1m</span><span class="p">]</span><span class="o">)</span>
+
+<span class="c1"># Check for imbalance:</span>
+<span class="k">stddev</span><span class="o">(</span><span class="kr">rate</span><span class="o">(</span><span class="nv">hpactor_scheduler_dispatches_total</span><span class="p">[</span><span class="s">5m</span><span class="p">]</span><span class="o">))</span>
+</pre></div>
+</div>
+<p><strong>Mailbox pressure</strong> — percentage of capacity:</p>
+<div class="highlight-promql notranslate"><div class="highlight"><pre><span></span><span class="nv">hpactor_mailbox_depth</span><span class="w"> </span><span class="o">/</span><span class="w"> </span><span class="nv">hpactor_mailbox_capacity</span>
+</pre></div>
+</div>
+</section>
+<section id="performance-checklist">
+<h2>Performance Checklist<a class="headerlink" href="#performance-checklist" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>[ ] Scheduler threads match CPU topology (1-2× cores for I/O, 1× for CPU).</p></li>
+<li><p>[ ] Mailbox capacity tuned per actor (not one-size-fits-all).</p></li>
+<li><p>[ ] Overflow policy matches message importance.</p></li>
+<li><p>[ ] Priority lanes separate control from data messages.</p></li>
+<li><p>[ ] Hot-path messages batched where possible.</p></li>
+<li><p>[ ] Memory limits set per region.</p></li>
+<li><p>[ ] Coroutine frame pool sized for peak concurrency.</p></li>
+<li><p>[ ] Profiling confirms no blocking calls on cooperative scheduler.</p></li>
+<li><p>[ ] <code class="docutils literal notranslate"><span class="pre">hpactor_processing_latency_seconds</span></code> p99 &lt; target SLA.</p></li>
+<li><p>[ ] DLQ growth is monitored and bounded.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="error-handling.html" class="btn btn-neutral float-left" title="Error Handling" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="testing.html" class="btn btn-neutral float-right" title="Testing Strategies" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

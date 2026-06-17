@@ -1,0 +1,358 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Actor Types &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Message Passing" href="message-passing.html" />
+    <link rel="prev" title="Project Structure" href="../getting-started/project-structure.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Actor Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#actor-type-hierarchy">Actor Type Hierarchy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#eventbasedactor">EventBasedActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#statefulactor-t">StatefulActor&lt;T&gt;</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#typedeventbasedactor-signatures">TypedEventBasedActor&lt;Signatures…&gt;</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#blockingactor">BlockingActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scopedactor">ScopedActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#daemonactor">DaemonActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#densecomputingactor">DenseComputingActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#decision-guide">Decision Guide</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Actor Types</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/building-applications/actor-types.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="actor-types">
+<span id="building-applications-actor-types"></span><h1>Actor Types<a class="headerlink" href="#actor-types" title="Link to this heading"></a></h1>
+<p>HPActor provides several actor base classes, each suited to different
+concurrency and programming models. Choosing the right one is the first
+design decision when building an HPActor application.</p>
+<section id="actor-type-hierarchy">
+<h2>Actor Type Hierarchy<a class="headerlink" href="#actor-type-hierarchy" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>AbstractActor (interface base)
+    └── LocalActor (has ActorContext access)
+            ├── EventBasedActor (cooperative, behavior-based)
+            │       ├── StatefulActor&lt;T&gt; (explicit typed state)
+            │       ├── ProtoStatefulActor&lt;T&gt; (protobuf-native + state)
+            │       ├── SpawnReceiver (system actor)
+            │       └── DenseComputingActor (dedicated pool dispatch)
+            ├── TypedEventBasedActor&lt;Signatures...&gt; (statically typed)
+            ├── BlockingActor (dedicated thread, blocking receive)
+            │       └── ScopedActor (for main/non-actor contexts)
+            └── DaemonActor (dedicated thread, run_once() loop)
+                    ├── PollingActor (CPU affinity, poll budget)
+                    ├── ExternalMsgGatewayActor (named routes)
+                    │       └── net::HTTPGatewayActor (HTTP ingress)
+                    └── cli::CliActor (stdin/socket I/O, command tree)
+</pre></div>
+</div>
+</section>
+<section id="eventbasedactor">
+<h2>EventBasedActor<a class="headerlink" href="#eventbasedactor" title="Link to this heading"></a></h2>
+<p>The <strong>workhorse</strong> of HPActor. Each instance runs cooperatively on the
+shared scheduler — lightweight, fast, and the right default.</p>
+<p><strong>When to use:</strong>
+- Most application actors (workers, coordinators, routers).
+- Message-driven logic with protobuf handlers.
+- Actors that spend most time waiting for messages.</p>
+<p><strong>When NOT to use:</strong>
+- CPU-intensive work (use <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">DenseComputingActor</span></code>).
+- Blocking I/O (use <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">BlockingActor</span></code> or async transport).</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyWorker</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">EventBasedActor</span><span class="w"> </span><span class="p">{</span>
+<span class="k">protected</span><span class="o">:</span>
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="n">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">ProcessRequest</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">ProcessRequest</span><span class="o">&amp;</span><span class="w"> </span><span class="n">req</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">do_work</span><span class="p">(</span><span class="n">req</span><span class="p">);</span>
+<span class="w">                </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply</span><span class="p">(</span><span class="n">ProcessResponse</span><span class="p">{</span><span class="n">result</span><span class="p">});</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="statefulactor-t">
+<h2>StatefulActor&lt;T&gt;<a class="headerlink" href="#statefulactor-t" title="Link to this heading"></a></h2>
+<p>An <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">EventBasedActor</span></code> with explicitly typed, encapsulated state.
+The state is accessible via <code class="docutils literal notranslate"><span class="pre">state()</span></code> and is single-threaded by
+construction (no locks needed).</p>
+<p><strong>When to use:</strong>
+- Actors that accumulate or transform state over time.
+- Cache actors, aggregators, session actors.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">CounterState</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">int64_t</span><span class="w"> </span><span class="n">value</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">int64_t</span><span class="w"> </span><span class="n">last_reset_at</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">};</span>
+
+<span class="k">class</span><span class="w"> </span><span class="nc">CounterActor</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">StatefulActor</span><span class="o">&lt;</span><span class="n">CounterState</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="k">protected</span><span class="o">:</span>
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="n">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">Increment</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">Increment</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">state</span><span class="p">().</span><span class="n">value</span><span class="w"> </span><span class="o">+=</span><span class="w"> </span><span class="mi">1</span><span class="p">;</span>
+<span class="w">            </span><span class="p">})</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on_request</span><span class="o">&lt;</span><span class="n">GetCount</span><span class="p">,</span><span class="w"> </span><span class="n">CountResponse</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">GetCount</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">CountResponse</span><span class="w"> </span><span class="n">resp</span><span class="p">;</span>
+<span class="w">                </span><span class="n">resp</span><span class="p">.</span><span class="n">set_value</span><span class="p">(</span><span class="n">state</span><span class="p">().</span><span class="n">value</span><span class="p">);</span>
+<span class="w">                </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply</span><span class="p">(</span><span class="n">resp</span><span class="p">);</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="typedeventbasedactor-signatures">
+<h2>TypedEventBasedActor&lt;Signatures…&gt;<a class="headerlink" href="#typedeventbasedactor-signatures" title="Link to this heading"></a></h2>
+<p>Statically typed actor using C++ template signatures. The compiler
+verifies that all handled message types are covered.</p>
+<p><strong>When to use:</strong>
+- Subsystem boundaries where compile-time type safety is valuable.
+- Internal APIs with well-defined message contracts.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">using</span><span class="w"> </span><span class="n">CalculatorActor</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">TypedEventBasedActor</span><span class="o">&lt;</span>
+<span class="w">    </span><span class="n">AddRequest</span><span class="p">,</span><span class="w"> </span><span class="n">SubRequest</span><span class="p">,</span><span class="w"> </span><span class="n">MulRequest</span>
+<span class="o">&gt;</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+<section id="blockingactor">
+<h2>BlockingActor<a class="headerlink" href="#blockingactor" title="Link to this heading"></a></h2>
+<p>Runs on its own dedicated thread with a blocking receive loop. Each
+instance corresponds to one OS thread.</p>
+<p><strong>When to use:</strong>
+- Actors that perform blocking I/O (file reads, synchronous DB calls).
+- Legacy code integration that can’t be made async.</p>
+<p><strong>When NOT to use:</strong>
+- High-concurrency workloads (use EventBasedActor instead).
+- Scenarios where you’d spawn hundreds of these (threads are expensive).</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">FileWriter</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">BlockingActor</span><span class="w"> </span><span class="p">{</span>
+<span class="k">protected</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">run</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">while</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">shutdown_requested</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="k">auto</span><span class="w"> </span><span class="n">msg</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">receive</span><span class="p">();</span><span class="w">  </span><span class="c1">// blocks until message arrives</span>
+<span class="w">            </span><span class="c1">// ... blocking file write ...</span>
+<span class="w">        </span><span class="p">}</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="scopedactor">
+<h2>ScopedActor<a class="headerlink" href="#scopedactor" title="Link to this heading"></a></h2>
+<p>A convenience subclass of <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">BlockingActor</span></code> designed for the
+main thread or other non-actor contexts. Use it to send messages to
+actors from <code class="docutils literal notranslate"><span class="pre">main()</span></code> or from external libraries.</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">()</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ActorSystem</span><span class="w"> </span><span class="n">system</span><span class="p">;</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">system</span><span class="p">.</span><span class="n">spawn</span><span class="o">&lt;</span><span class="n">MyActor</span><span class="o">&gt;</span><span class="p">();</span>
+
+<span class="w">    </span><span class="n">ScopedActor</span><span class="w"> </span><span class="n">client</span><span class="p">(</span><span class="n">system</span><span class="p">);</span>
+<span class="w">    </span><span class="n">client</span><span class="p">.</span><span class="n">send</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span><span class="w"> </span><span class="n">SomeMessage</span><span class="p">{...});</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">reply</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="n">receive</span><span class="o">&lt;</span><span class="n">SomeResponse</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="daemonactor">
+<h2>DaemonActor<a class="headerlink" href="#daemonactor" title="Link to this heading"></a></h2>
+<p>A dedicated-thread actor with a <code class="docutils literal notranslate"><span class="pre">run_once()</span></code> loop — the actor calls
+<code class="docutils literal notranslate"><span class="pre">run_once()</span></code> in a tight loop, performing work and polling for messages.</p>
+<p><strong>When to use:</strong>
+- Polling-based I/O, hardware interfaces, or custom event loops.
+- Actors that need CPU affinity or poll budgets.</p>
+<p><strong>Subtypes:</strong>
+- <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">PollingActor</span></code> — adds CPU pinning and poll budget.
+- <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ExternalMsgGatewayActor</span></code> — named route table, transforms.
+- <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">CliActor</span></code> — stdin/socket I/O, interactive command tree.</p>
+</section>
+<section id="densecomputingactor">
+<h2>DenseComputingActor<a class="headerlink" href="#densecomputingactor" title="Link to this heading"></a></h2>
+<p>Dispatched to a dedicated thread pool for CPU-bound work. Unlike
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">EventBasedActor</span></code>, these do not run on the cooperative
+scheduler — they get their own threads to avoid starving message
+processing.</p>
+<p><strong>When to use:</strong>
+- Heavy computation: image processing, ML inference, compression.
+- Work that would block the cooperative scheduler for &gt; 1 ms.</p>
+</section>
+<section id="decision-guide">
+<h2>Decision Guide<a class="headerlink" href="#decision-guide" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Scenario</p></th>
+<th class="head"><p>Recommended Actor Type</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Message-driven, I/O-bound, most common case</p></td>
+<td><p>EventBasedActor / StatefulActor&lt;T&gt;</p></td>
+</tr>
+<tr class="row-odd"><td><p>Compile-time type safety at subsystem boundary</p></td>
+<td><p>TypedEventBasedActor&lt;Signatures…&gt;</p></td>
+</tr>
+<tr class="row-even"><td><p>Accumulating state (counters, caches, aggregators)</p></td>
+<td><p>StatefulActor&lt;T&gt;</p></td>
+</tr>
+<tr class="row-odd"><td><p>Protobuf-native with typed state</p></td>
+<td><p>ProtoStatefulActor&lt;T&gt;</p></td>
+</tr>
+<tr class="row-even"><td><p>Blocking I/O (files, sync DB)</p></td>
+<td><p>BlockingActor</p></td>
+</tr>
+<tr class="row-odd"><td><p>Non-actor context (main thread, external lib)</p></td>
+<td><p>ScopedActor</p></td>
+</tr>
+<tr class="row-even"><td><p>Polling loop, hardware interface, custom event loop</p></td>
+<td><p>DaemonActor / PollingActor</p></td>
+</tr>
+<tr class="row-odd"><td><p>CPU-intensive computation</p></td>
+<td><p>DenseComputingActor</p></td>
+</tr>
+<tr class="row-even"><td><p>HTTP ingress gateway</p></td>
+<td><p>HTTPGatewayActor</p></td>
+</tr>
+<tr class="row-odd"><td><p>Interactive CLI</p></td>
+<td><p>CliActor</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../getting-started/project-structure.html" class="btn btn-neutral float-left" title="Project Structure" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="message-passing.html" class="btn btn-neutral float-right" title="Message Passing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

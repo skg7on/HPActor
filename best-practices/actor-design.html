@@ -1,0 +1,343 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Actor Design Patterns &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Error Handling" href="error-handling.html" />
+    <link rel="prev" title="Chaos Engineering" href="../sre-integration/chaos-engineering.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Actor Design Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#principles">Principles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#patterns">Patterns</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#root-actor-coordinator">Root Actor / Coordinator</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#worker-pool">Worker Pool</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cache-actor">Cache Actor</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#actor-per-entity">Actor-Per-Entity</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#fsm-with-become">FSM with become()</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#anti-patterns">Anti-Patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sizing-guidelines">Sizing Guidelines</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Actor Design Patterns</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/best-practices/actor-design.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="actor-design-patterns">
+<span id="best-practices-actor-design"></span><h1>Actor Design Patterns<a class="headerlink" href="#actor-design-patterns" title="Link to this heading"></a></h1>
+<p>Good actor design leads to systems that are easy to reason about, test,
+and scale. Poor design leads to tangled message flows, hidden coupling,
+and hard-to-debug failures.</p>
+<section id="principles">
+<h2>Principles<a class="headerlink" href="#principles" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p><strong>Single responsibility.</strong> Each actor should do one thing well.
+If an actor handles orders, billing, and notifications, split it into
+three.</p></li>
+<li><p><strong>Prefer fire-and-forget over request-response.</strong> For throughput-critical
+paths, send a message and move on. Reserve ask/RPC for when you truly
+need a response.</p></li>
+<li><p><strong>State is private.</strong> Never share mutable state between actors. If two
+actors need the same data, either:
+- Route all writes through a single owner actor.
+- Use a cache actor with invalidation messages.
+- Use copy-on-write snapshots.</p></li>
+<li><p><strong>Keep handler logic fast.</strong> A message handler runs on the cooperative
+scheduler. If it takes longer than ~1ms, consider:
+- Offloading CPU work to a <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">DenseComputingActor</span></code>.
+- Batching work and processing in chunks.
+- Moving blocking I/O to a <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">BlockingActor</span></code>.</p></li>
+<li><p><strong>Make supervision explicit.</strong> Every actor should have a supervisor.
+Top-level actors are supervised by the <code class="docutils literal notranslate"><span class="pre">ActorSystem</span></code>.</p></li>
+</ol>
+</section>
+<section id="patterns">
+<h2>Patterns<a class="headerlink" href="#patterns" title="Link to this heading"></a></h2>
+<section id="root-actor-coordinator">
+<h3>Root Actor / Coordinator<a class="headerlink" href="#root-actor-coordinator" title="Link to this heading"></a></h3>
+<p>A single coordinator actor owns the top-level logic and delegates to
+specialized children:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">OrderCoordinator</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">SelfSupervisingActor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ActorRef</span><span class="w"> </span><span class="n">inventory_</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ActorRef</span><span class="w"> </span><span class="n">payment_</span><span class="p">;</span>
+<span class="w">    </span><span class="n">ActorRef</span><span class="w"> </span><span class="n">shipping_</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="nf">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">PlaceOrder</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">PlaceOrder</span><span class="o">&amp;</span><span class="w"> </span><span class="n">order</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="c1">// Delegate to children — coordinator doesn&#39;t do the work</span>
+<span class="w">                </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">inventory_</span><span class="p">,</span><span class="w"> </span><span class="n">ReserveRequest</span><span class="p">{</span><span class="n">order</span><span class="p">});</span>
+<span class="w">                </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">payment_</span><span class="p">,</span><span class="w"> </span><span class="n">ChargeRequest</span><span class="p">{</span><span class="n">order</span><span class="p">});</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="worker-pool">
+<h3>Worker Pool<a class="headerlink" href="#worker-pool" title="Link to this heading"></a></h3>
+<p>Spawn multiple identical workers and route to them:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">WorkerPool</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">EventBasedActor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">ActorRef</span><span class="o">&gt;</span><span class="w"> </span><span class="n">workers_</span><span class="p">;</span>
+<span class="w">    </span><span class="kt">size_t</span><span class="w"> </span><span class="n">next_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="nf">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">WorkItem</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">WorkItem</span><span class="o">&amp;</span><span class="w"> </span><span class="n">item</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">target</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">workers_</span><span class="p">[</span><span class="n">next_</span><span class="o">++</span><span class="w"> </span><span class="o">%</span><span class="w"> </span><span class="n">workers_</span><span class="p">.</span><span class="n">size</span><span class="p">()];</span>
+<span class="w">                </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">item</span><span class="p">);</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="cache-actor">
+<h3>Cache Actor<a class="headerlink" href="#cache-actor" title="Link to this heading"></a></h3>
+<p>Maintain a local cache with TTL and invalidation:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">CacheActor</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">StatefulActor</span><span class="o">&lt;</span><span class="n">CacheState</span><span class="o">&gt;</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="nf">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on_request</span><span class="o">&lt;</span><span class="n">Lookup</span><span class="p">,</span><span class="w"> </span><span class="n">LookupResponse</span><span class="o">&gt;</span><span class="p">(</span>
+<span class="w">                </span><span class="p">[</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">Lookup</span><span class="o">&amp;</span><span class="w"> </span><span class="n">req</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="k">auto</span><span class="w"> </span><span class="n">it</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">state</span><span class="p">().</span><span class="n">entries</span><span class="p">.</span><span class="n">find</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">key</span><span class="p">());</span>
+<span class="w">                    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">it</span><span class="w"> </span><span class="o">!=</span><span class="w"> </span><span class="n">state</span><span class="p">().</span><span class="n">entries</span><span class="p">.</span><span class="n">end</span><span class="p">()</span><span class="w"> </span><span class="o">&amp;&amp;</span><span class="w"> </span><span class="o">!</span><span class="n">it</span><span class="o">-&gt;</span><span class="n">second</span><span class="p">.</span><span class="n">expired</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply</span><span class="p">(</span><span class="n">it</span><span class="o">-&gt;</span><span class="n">second</span><span class="p">.</span><span class="n">value</span><span class="p">);</span>
+<span class="w">                    </span><span class="p">}</span><span class="w"> </span><span class="k">else</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                        </span><span class="c1">// Fetch from source and populate cache</span>
+<span class="w">                    </span><span class="p">}</span>
+<span class="w">                </span><span class="p">})</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">Invalidate</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">Invalidate</span><span class="o">&amp;</span><span class="w"> </span><span class="n">inv</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">state</span><span class="p">().</span><span class="n">entries</span><span class="p">.</span><span class="n">erase</span><span class="p">(</span><span class="n">inv</span><span class="p">.</span><span class="n">key</span><span class="p">());</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="actor-per-entity">
+<h3>Actor-Per-Entity<a class="headerlink" href="#actor-per-entity" title="Link to this heading"></a></h3>
+<p>Spawn one actor per domain entity (user, session, order):</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">UserManager</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">EventBasedActor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">unordered_map</span><span class="o">&lt;</span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="p">,</span><span class="w"> </span><span class="n">ActorRef</span><span class="o">&gt;</span><span class="w"> </span><span class="n">user_actors_</span><span class="p">;</span>
+
+<span class="w">    </span><span class="n">Behavior</span><span class="w"> </span><span class="nf">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">            </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">RouteToUser</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">RouteToUser</span><span class="o">&amp;</span><span class="w"> </span><span class="n">msg</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">user_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">user_actors_</span><span class="p">[</span><span class="n">msg</span><span class="p">.</span><span class="n">user_id</span><span class="p">];</span>
+<span class="w">                </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">user_ref</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                    </span><span class="n">user_ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">spawn</span><span class="o">&lt;</span><span class="n">UserActor</span><span class="o">&gt;</span><span class="p">(</span><span class="n">msg</span><span class="p">.</span><span class="n">user_id</span><span class="p">);</span>
+<span class="w">                </span><span class="p">}</span>
+<span class="w">                </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">user_ref</span><span class="p">,</span><span class="w"> </span><span class="n">msg</span><span class="p">.</span><span class="n">payload</span><span class="p">);</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="fsm-with-become">
+<h3>FSM with become()<a class="headerlink" href="#fsm-with-become" title="Link to this heading"></a></h3>
+<p>Model explicit states using <code class="docutils literal notranslate"><span class="pre">become()</span></code> instead of flag variables:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// GOOD: explicit states</span>
+<span class="n">become</span><span class="p">(</span><span class="n">payment_pending_behavior</span><span class="p">(</span><span class="n">order</span><span class="p">));</span>
+
+<span class="c1">// BAD: implicit state via booleans</span>
+<span class="n">is_payment_pending_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">true</span><span class="p">;</span>
+<span class="n">is_shipping_ready_</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="nb">false</span><span class="p">;</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="anti-patterns">
+<h2>Anti-Patterns<a class="headerlink" href="#anti-patterns" title="Link to this heading"></a></h2>
+<dl class="simple">
+<dt><strong>God Actor</strong></dt><dd><p>One actor that does everything — becomes a bottleneck and single point
+of failure. Split into focused actors.</p>
+</dd>
+<dt><strong>Chatty Actors</strong></dt><dd><p>Actors that send many small messages instead of batching. Each message
+has overhead (enqueue, dequeue, dispatch). Batch related data.</p>
+</dd>
+<dt><strong>Circular Dependencies</strong></dt><dd><p>Actor A sends to B, B sends to C, C sends to A. Creates coupling and
+makes shutdown ordering fragile. Prefer tree-structured message flow.</p>
+</dd>
+<dt><strong>Shared Mutable State</strong></dt><dd><p>Two actors reading/writing the same <code class="docutils literal notranslate"><span class="pre">std::map</span></code>. This breaks actor
+isolation and introduces data races. All state should be private.</p>
+</dd>
+<dt><strong>Blocking in Event Handler</strong></dt><dd><p>Calling a blocking API inside <code class="docutils literal notranslate"><span class="pre">.on&lt;Message&gt;(handler)</span></code>. This starves
+other actors on the same scheduler thread. Use <code class="docutils literal notranslate"><span class="pre">BlockingActor</span></code> or
+async patterns instead.</p>
+</dd>
+<dt><strong>Ask for Everything</strong></dt><dd><p>Using <code class="docutils literal notranslate"><span class="pre">context()-&gt;ask()</span></code> for every interaction. This creates
+synchronous coupling and limits throughput. Use fire-and-forget for
+notifications, events, and status updates.</p>
+</dd>
+</dl>
+</section>
+<section id="sizing-guidelines">
+<h2>Sizing Guidelines<a class="headerlink" href="#sizing-guidelines" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Concern</p></th>
+<th class="head"><p>Guideline</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Actors per scheduler thread</p></td>
+<td><p>100–10,000 (lightweight; context switch is cooperative)</p></td>
+</tr>
+<tr class="row-odd"><td><p>Messages per second per actor</p></td>
+<td><p>1,000–100,000 (depends on handler complexity)</p></td>
+</tr>
+<tr class="row-even"><td><p>Mailbox capacity</p></td>
+<td><p>Start at 1,024; monitor and tune</p></td>
+</tr>
+<tr class="row-odd"><td><p>Worker pool size</p></td>
+<td><p>1–2× CPU cores for CPU-bound; 10–100× for I/O-bound</p></td>
+</tr>
+<tr class="row-even"><td><p>Actor state size</p></td>
+<td><p>Keep under 1MB per actor; use hibernation for cold actors</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../sre-integration/chaos-engineering.html" class="btn btn-neutral float-left" title="Chaos Engineering" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="error-handling.html" class="btn btn-neutral float-right" title="Error Handling" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

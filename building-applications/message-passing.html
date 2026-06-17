@@ -1,0 +1,347 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Message Passing &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Actor Lifecycle &amp; Supervision" href="lifecycle.html" />
+    <link rel="prev" title="Actor Types" href="actor-types.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="actor-types.html">Actor Types</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Message Passing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#message-model">Message Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#fire-and-forget-handlers">Fire-and-Forget Handlers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#request-response-handlers">Request-Response Handlers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sending-messages">Sending Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#the-ask-pattern-request-future">The Ask Pattern (Request-Future)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#delivery-modes">Delivery Modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scheduled-delivery">Scheduled Delivery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#error-propagation">Error Propagation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#message-serialization">Message Serialization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Message Passing</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/building-applications/message-passing.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="message-passing">
+<span id="building-applications-message-passing"></span><h1>Message Passing<a class="headerlink" href="#message-passing" title="Link to this heading"></a></h1>
+<p>Communication in HPActor is exclusively through messages. This chapter
+covers the message types, handlers, and patterns used to build actor
+interactions.</p>
+<section id="message-model">
+<h2>Message Model<a class="headerlink" href="#message-model" title="Link to this heading"></a></h2>
+<p>HPActor uses Protocol Buffers for wire-compatible messages, wrapped in a
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TypedMessage</span></code> that carries metadata:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">template</span><span class="w"> </span><span class="o">&lt;</span><span class="k">typename</span><span class="w"> </span><span class="nc">T</span><span class="o">&gt;</span>
+<span class="k">struct</span><span class="w"> </span><span class="nc">TypedMessage</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">TypeTag</span><span class="w"> </span><span class="n">tag</span><span class="p">;</span><span class="w">         </span><span class="c1">// Identifies the message type for dispatch</span>
+<span class="w">    </span><span class="n">T</span><span class="w"> </span><span class="n">payload</span><span class="p">;</span><span class="w">           </span><span class="c1">// The protobuf message</span>
+<span class="w">    </span><span class="n">ActorId</span><span class="w"> </span><span class="n">sender</span><span class="p">;</span><span class="w">      </span><span class="c1">// Who sent it (for reply routing)</span>
+<span class="w">    </span><span class="n">MessageId</span><span class="w"> </span><span class="n">message_id</span><span class="p">;</span><span class="w"> </span><span class="c1">// Unique message identifier</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="fire-and-forget-handlers">
+<h2>Fire-and-Forget Handlers<a class="headerlink" href="#fire-and-forget-handlers" title="Link to this heading"></a></h2>
+<p>Register a handler that processes a message without sending a response:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">Behavior</span><span class="w"> </span><span class="nf">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">        </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">LogEntry</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">LogEntry</span><span class="o">&amp;</span><span class="w"> </span><span class="n">entry</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">buffer_</span><span class="p">.</span><span class="n">push_back</span><span class="p">(</span><span class="n">entry</span><span class="p">);</span>
+<span class="w">        </span><span class="p">})</span>
+<span class="w">        </span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">Flush</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">Flush</span><span class="o">&amp;</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">            </span><span class="n">write_buffer_to_disk</span><span class="p">();</span>
+<span class="w">            </span><span class="n">buffer_</span><span class="p">.</span><span class="n">clear</span><span class="p">();</span>
+<span class="w">        </span><span class="p">});</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The <code class="docutils literal notranslate"><span class="pre">on&lt;T&gt;(handler)</span></code> registration:
+- Takes a callable with signature <code class="docutils literal notranslate"><span class="pre">void(const</span> <span class="pre">T&amp;)</span></code>.
+- The actor does not send a reply to the sender.
+- Automatically deserializes the protobuf payload.</p>
+</section>
+<section id="request-response-handlers">
+<h2>Request-Response Handlers<a class="headerlink" href="#request-response-handlers" title="Link to this heading"></a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">on_request&lt;ReqT,</span> <span class="pre">ResT&gt;(handler)</span></code> when the actor should reply:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">Behavior</span><span class="w"> </span><span class="nf">make_behavior</span><span class="p">()</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="n">Behavior</span><span class="o">::</span><span class="n">make</span><span class="p">()</span>
+<span class="w">        </span><span class="p">.</span><span class="n">on_request</span><span class="o">&lt;</span><span class="n">QueryRequest</span><span class="p">,</span><span class="w"> </span><span class="n">QueryResponse</span><span class="o">&gt;</span><span class="p">(</span>
+<span class="w">            </span><span class="p">[</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">QueryRequest</span><span class="o">&amp;</span><span class="w"> </span><span class="n">req</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="n">QueryResponse</span><span class="w"> </span><span class="n">resp</span><span class="p">;</span>
+<span class="w">                </span><span class="n">resp</span><span class="p">.</span><span class="n">set_result</span><span class="p">(</span><span class="n">lookup</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">key</span><span class="p">()));</span>
+<span class="w">                </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply</span><span class="p">(</span><span class="n">resp</span><span class="p">);</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The framework:
+- Deserializes the <code class="docutils literal notranslate"><span class="pre">QueryRequest</span></code> from the incoming message.
+- Calls the handler.
+- Routes the reply back to the original sender when <code class="docutils literal notranslate"><span class="pre">context()-&gt;reply()</span></code> is used.</p>
+</section>
+<section id="sending-messages">
+<h2>Sending Messages<a class="headerlink" href="#sending-messages" title="Link to this heading"></a></h2>
+<p>From within an actor (via <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ActorContext</span></code>):</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Send to a known ActorRef</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">target_ref</span><span class="p">,</span><span class="w"> </span><span class="n">message</span><span class="p">);</span>
+
+<span class="c1">// Reply to the current sender (set per-message by the framework)</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply</span><span class="p">(</span><span class="n">response</span><span class="p">);</span>
+
+<span class="c1">// Reply with an error code</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply_with_error</span><span class="p">(</span><span class="n">error</span><span class="o">::</span><span class="n">timeout</span><span class="p">);</span>
+
+<span class="c1">// Send to a raw ActorId</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">target_id</span><span class="p">,</span><span class="w"> </span><span class="n">message</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>From outside the actor system (via <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ScopedActor</span></code>):</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">ScopedActor</span><span class="w"> </span><span class="nf">client</span><span class="p">(</span><span class="n">system</span><span class="p">);</span>
+<span class="n">client</span><span class="p">.</span><span class="n">send</span><span class="p">(</span><span class="n">actor_ref</span><span class="p">,</span><span class="w"> </span><span class="n">message</span><span class="p">);</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">response</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">client</span><span class="p">.</span><span class="n">receive</span><span class="o">&lt;</span><span class="n">ResponseType</span><span class="o">&gt;</span><span class="p">();</span>
+</pre></div>
+</div>
+</section>
+<section id="the-ask-pattern-request-future">
+<h2>The Ask Pattern (Request-Future)<a class="headerlink" href="#the-ask-pattern-request-future" title="Link to this heading"></a></h2>
+<p>For request-response from non-actor contexts or across subsystems, use
+the ask pattern via <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">AskManager</span></code>:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// From within an actor:</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">handle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">ask</span><span class="o">&lt;</span><span class="n">QueryResponse</span><span class="o">&gt;</span><span class="p">(</span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">QueryRequest</span><span class="p">{...});</span>
+<span class="c1">// ... do other work ...</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">handle</span><span class="p">.</span><span class="n">ready</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">handle</span><span class="p">.</span><span class="n">get</span><span class="p">();</span><span class="w">  </span><span class="c1">// blocks until response or timeout</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>The ask subsystem:
+- Generates a unique <code class="docutils literal notranslate"><span class="pre">MessageId</span></code> for correlation.
+- Schedules a timeout timer (configurable via <code class="docutils literal notranslate"><span class="pre">[system.ask]</span></code> in TOML).
+- Resolves the handle when the response arrives or the deadline expires.
+- On timeout, emits a <code class="xref cpp cpp-enum docutils literal notranslate"><span class="pre">DeadLetterReason::AskTimeout</span></code> record.</p>
+</section>
+<section id="delivery-modes">
+<h2>Delivery Modes<a class="headerlink" href="#delivery-modes" title="Link to this heading"></a></h2>
+<p>HPActor supports configurable delivery semantics per send:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Mode</p></th>
+<th class="head"><p>Guarantee</p></th>
+<th class="head"><p>Use Case</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">BestEffort</span></code></p></td>
+<td><p>Fire and forget; may be silently dropped</p></td>
+<td><p>Metrics, logs, non-critical events</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ObservableBestEffort</span></code></p></td>
+<td><p>Best-effort with delivery-result notification</p></td>
+<td><p>Monitoring when drops should be visible</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">AtLeastOnce</span></code></p></td>
+<td><p>Retry until acknowledged or deadline expires</p></td>
+<td><p>Commands, state changes</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">DurableAtLeastOnce</span></code></p></td>
+<td><p>At-least-once with durable outbox (design/backlog)</p></td>
+<td><p>Financial transactions, critical workflows</p></td>
+</tr>
+</tbody>
+</table>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">DeliveryOptions</span><span class="w"> </span><span class="n">opts</span><span class="p">;</span>
+<span class="n">opts</span><span class="p">.</span><span class="n">mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DeliveryMode</span><span class="o">::</span><span class="n">AtLeastOnce</span><span class="p">;</span>
+<span class="n">opts</span><span class="p">.</span><span class="n">deadline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Clock</span><span class="o">::</span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">seconds</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span>
+<span class="n">opts</span><span class="p">.</span><span class="n">max_retries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send_with_options</span><span class="p">(</span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">message</span><span class="p">,</span><span class="w"> </span><span class="n">opts</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="scheduled-delivery">
+<h2>Scheduled Delivery<a class="headerlink" href="#scheduled-delivery" title="Link to this heading"></a></h2>
+<p>Delay message delivery within an actor:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Schedule self-delivery after 500ms</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">handle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">schedule</span><span class="p">(</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">milliseconds</span><span class="p">(</span><span class="mi">500</span><span class="p">),</span>
+<span class="w">    </span><span class="n">ReminderMessage</span><span class="p">{...}</span>
+<span class="p">);</span>
+
+<span class="c1">// Cancel a pending scheduled message</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">cancel_schedule</span><span class="p">(</span><span class="n">handle</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Scheduled messages use the scheduler’s <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TimingWheel</span></code> for O(1)
+insert and cancel.</p>
+</section>
+<section id="error-propagation">
+<h2>Error Propagation<a class="headerlink" href="#error-propagation" title="Link to this heading"></a></h2>
+<p>Use <code class="docutils literal notranslate"><span class="pre">context()-&gt;reply_with_error()</span></code> to signal failures:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="p">.</span><span class="n">on_request</span><span class="o">&lt;</span><span class="n">DangerousOp</span><span class="p">,</span><span class="w"> </span><span class="n">OpResult</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">DangerousOp</span><span class="o">&amp;</span><span class="w"> </span><span class="n">op</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">validate</span><span class="p">(</span><span class="n">op</span><span class="p">))</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply_with_error</span><span class="p">(</span><span class="n">error</span><span class="o">::</span><span class="n">invalid_argument</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// ... proceed with valid input</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+<p>The error code is encoded in an <code class="docutils literal notranslate"><span class="pre">ErrorMsg</span></code> envelope and delivered to
+the sender’s error handler.</p>
+</section>
+<section id="message-serialization">
+<h2>Message Serialization<a class="headerlink" href="#message-serialization" title="Link to this heading"></a></h2>
+<p>For remote delivery, messages pass through <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">DefaultSerializer</span></code>:</p>
+<ol class="arabic simple">
+<li><p><strong>Encode</strong>: Protobuf message → wire bytes (4-byte BE TypeTag prefix +
+serialized protobuf payload).</p></li>
+<li><p><strong>Frame</strong>: Wrapped in a <code class="docutils literal notranslate"><span class="pre">Frame</span></code> with source/destination metadata and
+optional trace context.</p></li>
+<li><p><strong>Transport</strong>: Sent over TCP via <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TcpTransport</span></code>.</p></li>
+</ol>
+<p>For local delivery, messages use in-memory protobuf objects — no
+serialization overhead.</p>
+<p>For more on delivery guarantees and failure handling, see
+<a class="reference internal" href="../best-practices/error-handling.html"><span class="doc">Error Handling</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="actor-types.html" class="btn btn-neutral float-left" title="Actor Types" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="lifecycle.html" class="btn btn-neutral float-right" title="Actor Lifecycle &amp; Supervision" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

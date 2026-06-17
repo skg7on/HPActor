@@ -1,0 +1,314 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Structured Logging &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Distributed Tracing" href="tracing.html" />
+    <link rel="prev" title="Metrics" href="metrics.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="metrics.html">Metrics</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Structured Logging</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#log-levels">Log Levels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#log-categories">Log Categories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#output-formats">Output Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#compile-time-disable">Compile-Time Disable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sink-selection-guide">Sink Selection Guide</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Structured Logging</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/monitoring/logging.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="structured-logging">
+<span id="monitoring-logging"></span><h1>Structured Logging<a class="headerlink" href="#structured-logging" title="Link to this heading"></a></h1>
+<p>HPActor includes a structured logging subsystem with a lock-free ring
+buffer, pluggable sinks, and multiple output formats.</p>
+<section id="architecture">
+<h2>Architecture<a class="headerlink" href="#architecture" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Actor/Component ──► LogRingBuffer ──► LogDrain ──► ILogSink
+                  (lock-free MPSC)  (consumer)    ├── StderrSink
+                                                  ├── FileSink
+                                                  ├── RotatingFileSink
+                                                  ├── SyslogSink
+                                                  └── MemorySink
+</pre></div>
+</div>
+<p>The pipeline:
+1. Producers write log entries to the MPSC ring buffer (non-blocking).
+2. A drain thread bathes entries and writes to configured sinks.
+3. Sinks are pluggable — implement <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ILogSink</span></code> for custom destinations.</p>
+</section>
+<section id="log-levels">
+<h2>Log Levels<a class="headerlink" href="#log-levels" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Level</p></th>
+<th class="head"><p>Description</p></th>
+<th class="head"><p>When to Use</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">trace</span></code></p></td>
+<td><p>Detailed diagnostic traces</p></td>
+<td><p>Debugging message routing, scheduler decisions</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">debug</span></code></p></td>
+<td><p>Developer debugging info</p></td>
+<td><p>Actor state transitions, timing data</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">info</span></code></p></td>
+<td><p>Normal operational events</p></td>
+<td><p>Actor spawn/stop, configuration loaded</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">warn</span></code></p></td>
+<td><p>Potentially problematic</p></td>
+<td><p>Mailbox approaching capacity, retry attempts</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">error</span></code></p></td>
+<td><p>Error conditions</p></td>
+<td><p>Delivery failures, supervision restarts</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">fatal</span></code></p></td>
+<td><p>Unrecoverable errors</p></td>
+<td><p>Corrupt state, system shutdown</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="log-categories">
+<h2>Log Categories<a class="headerlink" href="#log-categories" title="Link to this heading"></a></h2>
+<p>Categories enable filtering and routing:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="n">LOG_INFO</span><span class="p">(</span><span class="s">&quot;actor.lifecycle&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Actor {} spawned&quot;</span><span class="p">,</span><span class="w"> </span><span class="n">actor_id</span><span class="p">);</span>
+<span class="n">LOG_WARN</span><span class="p">(</span><span class="s">&quot;mailbox.pressure&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Mailbox {} at {}% capacity&quot;</span><span class="p">,</span>
+<span class="w">         </span><span class="n">actor_id</span><span class="p">,</span><span class="w"> </span><span class="n">pressure_pct</span><span class="p">);</span>
+<span class="n">LOG_ERROR</span><span class="p">(</span><span class="s">&quot;delivery.failure&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Delivery to {} failed: {}&quot;</span><span class="p">,</span>
+<span class="w">          </span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">failure_reason</span><span class="p">);</span>
+</pre></div>
+</div>
+<p>Built-in categories:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">actor.lifecycle</span></code> — spawn, stop, restart events.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">mailbox.pressure</span></code> — capacity warnings, overflow decisions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">delivery.failure</span></code> — send errors, DLQ routing.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">scheduler.dispatch</span></code> — dispatch decisions, work stealing.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">network.connection</span></code> — connect, disconnect, TLS handshake.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">supervision.restart</span></code> — child failure and restart decisions.</p></li>
+<li><p><code class="docutils literal notranslate"><span class="pre">config.reload</span></code> — configuration changes (future).</p></li>
+</ul>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.log]</span>
+<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="w">                    </span><span class="c1"># Minimum level to emit</span>
+<span class="n">sinks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;stderr&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rotating_file&quot;</span><span class="p">]</span>
+
+<span class="k">[system.log.rotating_file]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/var/log/hpactor/hpactor.log&quot;</span>
+<span class="n">max_size_mb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
+<span class="n">max_files</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span>
+
+<span class="k">[system.log.syslog]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">false</span><span class="w">                   </span><span class="c1"># Only for daemon mode</span>
+<span class="n">facility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;local0&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="output-formats">
+<h2>Output Formats<a class="headerlink" href="#output-formats" title="Link to this heading"></a></h2>
+<p>Two built-in formatters:</p>
+<p><strong>TextFormatter</strong> (human-readable):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>2026-06-17T10:15:30.123Z [info] actor.lifecycle Actor worker-1 spawned
+2026-06-17T10:15:30.456Z [warn] mailbox.pressure Mailbox worker-1 at 85% capacity
+</pre></div>
+</div>
+<p><strong>JsonFormatter</strong> (machine-parsable):</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-06-17T10:15:30.123Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;category&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actor.lifecycle&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Actor worker-1 spawned&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;trace_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0a1b2c3d4e5f6789abcdef0123456789&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;span_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1234567890abcdef&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>For JSON logs, each entry includes the W3C trace context when tracing is
+enabled — enabling log-to-trace correlation in Loki, ELK, or similar tools.</p>
+</section>
+<section id="compile-time-disable">
+<h2>Compile-Time Disable<a class="headerlink" href="#compile-time-disable" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-DENABLE_ACTOR_LOGGING<span class="o">=</span>OFF<span class="w"> </span>..
+</pre></div>
+</div>
+<p>When disabled, all logging macros become no-ops with zero runtime overhead.</p>
+</section>
+<section id="sink-selection-guide">
+<h2>Sink Selection Guide<a class="headerlink" href="#sink-selection-guide" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Sink</p></th>
+<th class="head"><p>Use Case</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">StderrSink</span></code></p></td>
+<td><p>Development, debugging, container stdout</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">FileSink</span></code></p></td>
+<td><p>Simple file output for small deployments</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">RotatingFileSink</span></code></p></td>
+<td><p>Production file logging with size-based rotation</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SyslogSink</span></code></p></td>
+<td><p>Daemon mode, systemd-journald integration</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">MemorySink</span></code></p></td>
+<td><p>Testing, inspection via CLI <code class="docutils literal notranslate"><span class="pre">/log</span> <span class="pre">show</span></code></p></td>
+</tr>
+</tbody>
+</table>
+<p>For integration with log aggregation systems, see
+<a class="reference internal" href="../sre-integration/logging-loki.html"><span class="doc">Log Aggregation with Loki</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="metrics.html" class="btn btn-neutral float-left" title="Metrics" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tracing.html" class="btn btn-neutral float-right" title="Distributed Tracing" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

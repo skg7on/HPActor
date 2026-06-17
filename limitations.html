@@ -1,0 +1,405 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Limitations &amp; Known Gaps &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="prev" title="Production Deployment" href="best-practices/deployment.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Limitations &amp; Known Gaps</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#production-reliability-gaps">Production Reliability Gaps</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#durable-outbox-inbox-not-implemented">Durable Outbox/Inbox (Not Implemented)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#ack-nack-retry-protocol-not-implemented">ACK/NACK Retry Protocol (Not Implemented)</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#cluster-control-plane-partial">Cluster Control Plane (Partial)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#security-not-implemented">Security (Not Implemented)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#operations-plane-partial">Operations Plane (Partial)</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#proactor-backend-not-production-hardened">Proactor Backend (Not Production-Hardened)</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#platform-support">Platform Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#scalability-limits">Scalability Limits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#wire-protocol">Wire Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#language-bindings">Language Bindings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#coroutine-limitations">Coroutine Limitations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#test-coverage">Test Coverage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#roadmap">Roadmap</a></li>
+</ul>
+</li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Limitations &amp; Known Gaps</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/limitations.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="limitations-known-gaps">
+<span id="limitations"></span><h1>Limitations &amp; Known Gaps<a class="headerlink" href="#limitations-known-gaps" title="Link to this heading"></a></h1>
+<p>This chapter honestly documents the current limitations of HPActor.
+These are not bugs — they are design decisions, items on the roadmap,
+or trade-offs that users should understand before adopting HPActor for
+a specific use case.</p>
+<section id="production-reliability-gaps">
+<h2>Production Reliability Gaps<a class="headerlink" href="#production-reliability-gaps" title="Link to this heading"></a></h2>
+<section id="durable-outbox-inbox-not-implemented">
+<h3>Durable Outbox/Inbox (Not Implemented)<a class="headerlink" href="#durable-outbox-inbox-not-implemented" title="Link to this heading"></a></h3>
+<p><strong>Status:</strong> Design exists (<code class="docutils literal notranslate"><span class="pre">docs/architecture/production/reliable-messaging-design.md</span></code>).
+Not implemented.</p>
+<p><strong>Impact:</strong> At-least-once delivery relies on in-memory state. If an actor
+crashes or a node fails before a message is processed, the message may be
+lost. There is no persistent outbox that survives restarts.</p>
+<p><strong>Workaround:</strong> Use the DLQ as a safety net — messages that fail delivery
+are captured. For critical workflows, implement application-level
+acknowledgment and retry.</p>
+</section>
+<section id="ack-nack-retry-protocol-not-implemented">
+<h3>ACK/NACK Retry Protocol (Not Implemented)<a class="headerlink" href="#ack-nack-retry-protocol-not-implemented" title="Link to this heading"></a></h3>
+<p><strong>Status:</strong> Design exists. Not implemented.</p>
+<p><strong>Impact:</strong> The RPC channel has built-in retry, but general actor-to-actor
+messaging has no automatic ACK/NACK protocol. Senders are not
+automatically notified of delivery success or failure.</p>
+<p><strong>Workaround:</strong> Use the ask pattern (<code class="docutils literal notranslate"><span class="pre">context()-&gt;ask()</span></code>) for
+request-response with timeout, or manually implement acknowledgment
+messages.</p>
+</section>
+<section id="cluster-control-plane-partial">
+<h3>Cluster Control Plane (Partial)<a class="headerlink" href="#cluster-control-plane-partial" title="Link to this heading"></a></h3>
+<p><strong>Status:</strong> Graceful shutdown and actor lifecycle are implemented. The
+following are design/backlog only:</p>
+<ul class="simple">
+<li><p><strong>Node fencing</strong> — no mechanism to prevent split-brain nodes from
+acting after partition.</p></li>
+<li><p><strong>Sharding</strong> — no dynamic shard placement, rebalancing, or handoff.</p></li>
+<li><p><strong>Placement</strong> — actors are spawned on a specific node; no scheduler-
+driven placement across a cluster.</p></li>
+<li><p><strong>Rolling upgrades</strong> — no protocol negotiation or version compatibility
+checks.</p></li>
+</ul>
+<p><strong>Impact:</strong> HPActor works well for single-node and statically-configured
+multi-node deployments. It is not yet suitable for fully dynamic clusters
+with automatic rebalancing.</p>
+</section>
+</section>
+<section id="security-not-implemented">
+<h2>Security (Not Implemented)<a class="headerlink" href="#security-not-implemented" title="Link to this heading"></a></h2>
+<p><strong>Status:</strong> Design exists (<code class="docutils literal notranslate"><span class="pre">docs/architecture/production/security-architecture-design.md</span></code>).
+Not implemented.</p>
+<ul class="simple">
+<li><p><strong>mTLS</strong>: Inter-node communication is plain TCP by default. TLS is
+available at the connection level but mTLS with certificate-based
+identity is not wired into the actor system.</p></li>
+<li><p><strong>Authorization</strong>: No role-based or attribute-based access control for
+actor operations.</p></li>
+<li><p><strong>Audit logging</strong>: Structured logging captures events but does not
+produce a dedicated tamper-resistant audit trail.</p></li>
+</ul>
+<p><strong>Workaround:</strong> Deploy behind a service mesh (Istio, Linkerd) for mTLS.
+Use network policies to restrict inter-node communication to trusted
+networks.</p>
+</section>
+<section id="operations-plane-partial">
+<h2>Operations Plane (Partial)<a class="headerlink" href="#operations-plane-partial" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Feature</p></th>
+<th class="head"><p>Status</p></th>
+<th class="head"><p>Workaround</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Health/readiness endpoints</p></td>
+<td><p>✅ Implemented</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">/healthz</span></code>, <code class="docutils literal notranslate"><span class="pre">/readyz</span></code> via HealthHttpServer</p></td>
+</tr>
+<tr class="row-odd"><td><p>Metrics (Prometheus)</p></td>
+<td><p>✅ Implemented</p></td>
+<td><p>OpenMetrics endpoint via HTTP gateway</p></td>
+</tr>
+<tr class="row-even"><td><p>Admin API</p></td>
+<td><p>❌ Not implemented</p></td>
+<td><p>Use CLI over UDS/TCP for administration</p></td>
+</tr>
+<tr class="row-odd"><td><p>Dynamic config reload</p></td>
+<td><p>❌ Not implemented</p></td>
+<td><p>Restart process with new config</p></td>
+</tr>
+<tr class="row-even"><td><p>Config validation/diff</p></td>
+<td><p>❌ Not implemented</p></td>
+<td><p>Validate TOML syntax externally; no semantic diff</p></td>
+</tr>
+<tr class="row-odd"><td><p>Incident timeline</p></td>
+<td><p>❌ Not implemented</p></td>
+<td><p>Correlate logs, metrics, and traces manually</p></td>
+</tr>
+</tbody>
+</table>
+<section id="proactor-backend-not-production-hardened">
+<h3>Proactor Backend (Not Production-Hardened)<a class="headerlink" href="#proactor-backend-not-production-hardened" title="Link to this heading"></a></h3>
+<p><strong>Status:</strong> The <code class="docutils literal notranslate"><span class="pre">IoUringBackend</span></code> and <code class="docutils literal notranslate"><span class="pre">GcdBackend</span></code> exist but need
+production hardening. The default <code class="docutils literal notranslate"><span class="pre">EpollBackend</span></code> (Linux) and
+<code class="docutils literal notranslate"><span class="pre">KqueueBackend</span></code> (macOS) are stable.</p>
+</section>
+</section>
+<section id="platform-support">
+<h2>Platform Support<a class="headerlink" href="#platform-support" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Platform</p></th>
+<th class="head"><p>Status</p></th>
+<th class="head"><p>Notes</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Linux (x86_64)</p></td>
+<td><p>✅ Full support</p></td>
+<td><p>Primary development platform</p></td>
+</tr>
+<tr class="row-odd"><td><p>Linux (ARM64)</p></td>
+<td><p>✅ Supported</p></td>
+<td><p>CI-tested</p></td>
+</tr>
+<tr class="row-even"><td><p>macOS (ARM64)</p></td>
+<td><p>✅ Supported</p></td>
+<td><p>kqueue backend</p></td>
+</tr>
+<tr class="row-odd"><td><p>macOS (x86_64)</p></td>
+<td><p>✅ Supported</p></td>
+<td><p>kqueue backend</p></td>
+</tr>
+<tr class="row-even"><td><p>Windows</p></td>
+<td><p>❌ Not supported</p></td>
+<td><p>No WSL or native support</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="scalability-limits">
+<h2>Scalability Limits<a class="headerlink" href="#scalability-limits" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Dimension</p></th>
+<th class="head"><p>Practical Limit</p></th>
+<th class="head"><p>Bottleneck</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Actors per node</p></td>
+<td><p>~100,000</p></td>
+<td><p>Memory, scheduler overhead</p></td>
+</tr>
+<tr class="row-odd"><td><p>Messages per second (single actor)</p></td>
+<td><p>~100,000</p></td>
+<td><p>Handler complexity</p></td>
+</tr>
+<tr class="row-even"><td><p>Messages per second (node total)</p></td>
+<td><p>~1,000,000</p></td>
+<td><p>Scheduler threads, memory bandwidth</p></td>
+</tr>
+<tr class="row-odd"><td><p>Nodes in gossip cluster</p></td>
+<td><p>~100</p></td>
+<td><p>SWIM protocol fanout, suspicion timeout</p></td>
+</tr>
+<tr class="row-even"><td><p>Concurrent connections (TCP transport)</p></td>
+<td><p>~10,000</p></td>
+<td><p>File descriptors, event loop throughput</p></td>
+</tr>
+</tbody>
+</table>
+<p>These are practical estimates, not hard limits. Actual performance
+depends on hardware, message size, and handler logic.</p>
+</section>
+<section id="wire-protocol">
+<h2>Wire Protocol<a class="headerlink" href="#wire-protocol" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Protobuf-only</strong>: The wire format requires Protocol Buffers. There is
+no pluggable serialization for non-protobuf message types.</p></li>
+<li><p><strong>No schema evolution</strong>: TypeTag and protobuf schema changes must be
+manually managed. Adding a field is safe (protobuf compatibility);
+removing or renumbering a TypeTag is a breaking change.</p></li>
+<li><p><strong>No version negotiation</strong>: All nodes must use the same protobuf schema
+version. There is no protocol negotiation during connection handshake.</p></li>
+</ul>
+</section>
+<section id="language-bindings">
+<h2>Language Bindings<a class="headerlink" href="#language-bindings" title="Link to this heading"></a></h2>
+<p>HPActor is C++20 only. There are no official bindings for Python, Java,
+Go, Rust, or other languages. Non-C++ services must interact via the
+HTTP gateway or CLI, not as native actors.</p>
+</section>
+<section id="coroutine-limitations">
+<h2>Coroutine Limitations<a class="headerlink" href="#coroutine-limitations" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>HPActor uses C++20 coroutines internally for actor suspension. Custom
+coroutine usage (user-defined <code class="docutils literal notranslate"><span class="pre">co_await</span></code> patterns, generator actors)
+is possible but not yet documented or supported through a public API.</p></li>
+<li><p>The coroutine frame pool is sized at startup. If all frames are in use,
+new coroutine suspensions will fail (not grow dynamically).</p></li>
+</ul>
+</section>
+<section id="test-coverage">
+<h2>Test Coverage<a class="headerlink" href="#test-coverage" title="Link to this heading"></a></h2>
+<p>While the core framework, networking, memory, and production subsystems
+are well-tested (~2,200 GTest cases across 219 files), coverage is not
+uniform:</p>
+<ul class="simple">
+<li><p><strong>High coverage</strong>: Actor core, mailbox, memory, scheduler, metrics,
+logging, tracing, CLI.</p></li>
+<li><p><strong>Moderate coverage</strong>: Network transport, service discovery, RPC,
+fault injection.</p></li>
+<li><p><strong>Lower coverage</strong>: Proactor backend, HTTP gateway edge cases,
+multi-node gossip scenarios.</p></li>
+</ul>
+</section>
+<section id="roadmap">
+<h2>Roadmap<a class="headerlink" href="#roadmap" title="Link to this heading"></a></h2>
+<p>These limitations are tracked on the project roadmap. The canonical
+backlog is in <code class="docutils literal notranslate"><span class="pre">docs/architecture/production/feature-gap-refined-requirement-backlog.md</span></code>.</p>
+<p>Near-term priorities (from the production reliability plane):</p>
+<ol class="arabic simple">
+<li><p>Reliable messaging (ACK/NACK, retry, durable outbox/inbox).</p></li>
+<li><p>Durable actor state (snapshot, event sourcing, recovery).</p></li>
+<li><p>Health/readiness/liveness endpoint completion.</p></li>
+<li><p>Security architecture implementation (mTLS, authorization, audit).</p></li>
+<li><p>Dynamic config validation, diff, and reload.</p></li>
+<li><p>Cluster sharding, placement, and rebalancing.</p></li>
+<li><p>Proactor backend production hardening.</p></li>
+<li><p>Chaos, soak, fuzz, and compatibility test lanes.</p></li>
+</ol>
+<p>For the most up-to-date status, see the GitHub issues and project board.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="best-practices/deployment.html" class="btn btn-neutral float-left" title="Production Deployment" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

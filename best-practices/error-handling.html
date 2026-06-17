@@ -1,0 +1,364 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Error Handling &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Performance Tuning" href="performance.html" />
+    <link rel="prev" title="Actor Design Patterns" href="actor-design.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Error Handling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#failure-envelope">Failure Envelope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#failurereason-taxonomy">FailureReason Taxonomy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#delivery-modes-choosing-the-right-guarantee">Delivery Modes: Choosing the Right Guarantee</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#handling-errors-in-actors">Handling Errors in Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#dead-letter-queue-dlq">Dead-Letter Queue (DLQ)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#circuit-breaker">Circuit Breaker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#error-handling-checklist">Error Handling Checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Error Handling</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/best-practices/error-handling.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="error-handling">
+<span id="best-practices-error-handling"></span><h1>Error Handling<a class="headerlink" href="#error-handling" title="Link to this heading"></a></h1>
+<p>HPActor provides structured error handling through failure envelopes,
+delivery modes, and dead-letter queues. This chapter covers patterns for
+building resilient error handling into your actors.</p>
+<section id="failure-envelope">
+<h2>Failure Envelope<a class="headerlink" href="#failure-envelope" title="Link to this heading"></a></h2>
+<p>When message delivery fails, HPActor generates a <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">FailureEnvelope</span></code>
+with full context:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">struct</span><span class="w"> </span><span class="nc">FailureEnvelope</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ActorId</span><span class="w"> </span><span class="n">actor_id</span><span class="p">;</span><span class="w">         </span><span class="c1">// The actor that experienced the failure</span>
+<span class="w">    </span><span class="n">ActorId</span><span class="w"> </span><span class="n">sender</span><span class="p">;</span><span class="w">           </span><span class="c1">// Original message sender (for notification)</span>
+<span class="w">    </span><span class="n">ActorId</span><span class="w"> </span><span class="n">receiver</span><span class="p">;</span><span class="w">         </span><span class="c1">// Intended recipient</span>
+<span class="w">    </span><span class="n">MessageId</span><span class="w"> </span><span class="n">message_id</span><span class="p">;</span><span class="w">     </span><span class="c1">// Correlated message</span>
+<span class="w">    </span><span class="n">TraceContext</span><span class="w"> </span><span class="n">trace</span><span class="p">;</span><span class="w">       </span><span class="c1">// W3C trace context</span>
+<span class="w">    </span><span class="n">FailureReason</span><span class="w"> </span><span class="n">reason</span><span class="p">;</span><span class="w">     </span><span class="c1">// Why it failed</span>
+<span class="w">    </span><span class="n">FailureSource</span><span class="w"> </span><span class="n">source</span><span class="p">;</span><span class="w">     </span><span class="c1">// Which subsystem (mailbox, transport, etc.)</span>
+<span class="w">    </span><span class="kt">bool</span><span class="w"> </span><span class="n">retryable</span><span class="p">;</span><span class="w">           </span><span class="c1">// Can the operation be retried?</span>
+<span class="w">    </span><span class="n">Clock</span><span class="o">::</span><span class="n">time_point</span><span class="w"> </span><span class="n">timestamp</span><span class="p">;</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">string</span><span class="w"> </span><span class="n">detail</span><span class="p">;</span><span class="w">       </span><span class="c1">// Human-readable detail</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+<section id="failurereason-taxonomy">
+<h2>FailureReason Taxonomy<a class="headerlink" href="#failurereason-taxonomy" title="Link to this heading"></a></h2>
+<p>23 failure reasons in 10 semantic ranges:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Range</p></th>
+<th class="head"><p>Examples</p></th>
+<th class="head"><p>Retryable?</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p>Delivery (1-9)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Timeout</span></code>, <code class="docutils literal notranslate"><span class="pre">NoRoute</span></code>, <code class="docutils literal notranslate"><span class="pre">Dropped</span></code></p></td>
+<td><p>Sometimes</p></td>
+</tr>
+<tr class="row-odd"><td><p>Mailbox (10-19)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">MailboxFull</span></code>, <code class="docutils literal notranslate"><span class="pre">Overflow</span></code>, <code class="docutils literal notranslate"><span class="pre">Rejected</span></code></p></td>
+<td><p>Sometimes</p></td>
+</tr>
+<tr class="row-even"><td><p>Lifecycle (20-29)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ActorNotRunning</span></code>, <code class="docutils literal notranslate"><span class="pre">Quarantined</span></code>, <code class="docutils literal notranslate"><span class="pre">CircuitOpen</span></code></p></td>
+<td><p>Usually no</p></td>
+</tr>
+<tr class="row-odd"><td><p>Resource (30-39)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">OutOfMemory</span></code>, <code class="docutils literal notranslate"><span class="pre">TooManyActors</span></code></p></td>
+<td><p>Usually no</p></td>
+</tr>
+<tr class="row-even"><td><p>Serialization (40-49)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">EncodeError</span></code>, <code class="docutils literal notranslate"><span class="pre">DecodeError</span></code></p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p>Network (50-59)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">ConnectionLost</span></code>, <code class="docutils literal notranslate"><span class="pre">Timeout</span></code></p></td>
+<td><p>Sometimes</p></td>
+</tr>
+<tr class="row-even"><td><p>Validation (60-69)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">InvalidMessage</span></code>, <code class="docutils literal notranslate"><span class="pre">TypeMismatch</span></code></p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p>Supervision (70-79)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">RestartLimitExceeded</span></code>, <code class="docutils literal notranslate"><span class="pre">Escalated</span></code></p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-even"><td><p>Shutdown (80-89)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">SystemShuttingDown</span></code>, <code class="docutils literal notranslate"><span class="pre">DrainTimeout</span></code></p></td>
+<td><p>No</p></td>
+</tr>
+<tr class="row-odd"><td><p>Unknown (90-99)</p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">Unknown</span></code></p></td>
+<td><p>No</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="delivery-modes-choosing-the-right-guarantee">
+<h2>Delivery Modes: Choosing the Right Guarantee<a class="headerlink" href="#delivery-modes-choosing-the-right-guarantee" title="Link to this heading"></a></h2>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Best-effort: fire and forget — no delivery confirmation</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">metrics_event</span><span class="p">);</span>
+
+<span class="c1">// Observable best-effort: same, but get a notification if it fails</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send_observable</span><span class="p">(</span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">important_event</span><span class="p">);</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">result</span><span class="p">.</span><span class="n">ok</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">LOG_WARN</span><span class="p">(</span><span class="s">&quot;delivery.failure&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Failed to deliver: {}&quot;</span><span class="p">,</span>
+<span class="w">             </span><span class="n">result</span><span class="p">.</span><span class="n">failure_reason</span><span class="p">());</span>
+<span class="p">}</span>
+
+<span class="c1">// At-least-once: retry with deadline</span>
+<span class="n">DeliveryOptions</span><span class="w"> </span><span class="n">opts</span><span class="p">;</span>
+<span class="n">opts</span><span class="p">.</span><span class="n">mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">DeliveryMode</span><span class="o">::</span><span class="n">AtLeastOnce</span><span class="p">;</span>
+<span class="n">opts</span><span class="p">.</span><span class="n">deadline</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">Clock</span><span class="o">::</span><span class="n">now</span><span class="p">()</span><span class="w"> </span><span class="o">+</span><span class="w"> </span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">seconds</span><span class="p">(</span><span class="mi">5</span><span class="p">);</span>
+<span class="n">opts</span><span class="p">.</span><span class="n">max_retries</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="p">;</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send_with_options</span><span class="p">(</span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">critical_cmd</span><span class="p">,</span><span class="w"> </span><span class="n">opts</span><span class="p">);</span>
+
+<span class="c1">// Durable at-least-once: survives actor restart (design/backlog)</span>
+</pre></div>
+</div>
+</section>
+<section id="handling-errors-in-actors">
+<h2>Handling Errors in Actors<a class="headerlink" href="#handling-errors-in-actors" title="Link to this heading"></a></h2>
+<p><strong>Validate early, reply with errors:</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="p">.</span><span class="n">on_request</span><span class="o">&lt;</span><span class="n">Transfer</span><span class="p">,</span><span class="w"> </span><span class="n">TransferResult</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">Transfer</span><span class="o">&amp;</span><span class="w"> </span><span class="n">req</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">amount</span><span class="p">()</span><span class="w"> </span><span class="o">&lt;=</span><span class="w"> </span><span class="mi">0</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply_with_error</span><span class="p">(</span><span class="n">error</span><span class="o">::</span><span class="n">invalid_argument</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">from</span><span class="p">()</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">req</span><span class="p">.</span><span class="n">to</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply_with_error</span><span class="p">(</span><span class="n">error</span><span class="o">::</span><span class="n">invalid_argument</span><span class="p">);</span>
+<span class="w">        </span><span class="k">return</span><span class="p">;</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="w">    </span><span class="c1">// ... proceed with valid transfer</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+<p><strong>Receive failure notifications:</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="p">.</span><span class="n">on</span><span class="o">&lt;</span><span class="n">FailureEnvelope</span><span class="o">&gt;</span><span class="p">([</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">FailureEnvelope</span><span class="o">&amp;</span><span class="w"> </span><span class="n">failure</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">LOG_ERROR</span><span class="p">(</span><span class="s">&quot;delivery.failure&quot;</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;Delivery to {} failed: {}&quot;</span><span class="p">,</span>
+<span class="w">              </span><span class="n">failure</span><span class="p">.</span><span class="n">receiver</span><span class="p">,</span><span class="w"> </span><span class="n">failure</span><span class="p">.</span><span class="n">reason</span><span class="p">);</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">failure</span><span class="p">.</span><span class="n">retryable</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Retry logic — but don&#39;t retry forever</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">});</span>
+</pre></div>
+</div>
+<p><strong>Handle downstream timeouts:</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="w"> </span><span class="n">handle</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">ask</span><span class="o">&lt;</span><span class="n">Response</span><span class="o">&gt;</span><span class="p">(</span><span class="n">target</span><span class="p">,</span><span class="w"> </span><span class="n">request</span><span class="p">,</span>
+<span class="w">    </span><span class="n">RequestTimeout</span><span class="o">::</span><span class="n">after</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">chrono</span><span class="o">::</span><span class="n">seconds</span><span class="p">(</span><span class="mi">3</span><span class="p">)));</span>
+
+<span class="c1">// Later, check for timeout:</span>
+<span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="o">!</span><span class="n">handle</span><span class="p">.</span><span class="n">ready</span><span class="p">())</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="c1">// Handle timeout — fallback, retry, or fail</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="dead-letter-queue-dlq">
+<h2>Dead-Letter Queue (DLQ)<a class="headerlink" href="#dead-letter-queue-dlq" title="Link to this heading"></a></h2>
+<p>Messages that cannot be delivered are routed to the DLQ. The DLQ
+retains full message payload, trace context, and failure reason.</p>
+<p><strong>DLQ as a safety valve:</strong></p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[[actors]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;critical-worker&quot;</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;worker&quot;</span>
+<span class="n">mailbox_capacity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10000</span>
+<span class="n">mailbox_overflow</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;dlq&quot;</span><span class="w">     </span><span class="c1"># Overflow → DLQ instead of dropping</span>
+</pre></div>
+</div>
+<p><strong>Inspecting the DLQ:</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>/dlq list
+/dlq show 0
+/dlq replay 0                 # Retry delivery
+/dlq export --format json     # Export for offline analysis
+</pre></div>
+</div>
+<p><strong>Programmatic DLQ access:</strong></p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">dlq</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">system</span><span class="p">.</span><span class="n">dead_letter_queue</span><span class="p">();</span>
+<span class="k">auto</span><span class="w"> </span><span class="n">snapshot</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">dlq</span><span class="p">.</span><span class="n">snapshot_records</span><span class="p">();</span>
+<span class="k">for</span><span class="w"> </span><span class="p">(</span><span class="k">const</span><span class="w"> </span><span class="k">auto</span><span class="o">&amp;</span><span class="w"> </span><span class="n">record</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="n">snapshot</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="k">if</span><span class="w"> </span><span class="p">(</span><span class="n">record</span><span class="p">.</span><span class="n">reason</span><span class="w"> </span><span class="o">==</span><span class="w"> </span><span class="n">DeadLetterReason</span><span class="o">::</span><span class="n">MailboxFull</span><span class="p">)</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Investigate pressure</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="circuit-breaker">
+<h2>Circuit Breaker<a class="headerlink" href="#circuit-breaker" title="Link to this heading"></a></h2>
+<p>For actors that call external services, use the circuit breaker to
+prevent cascading failures:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.quarantine]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+
+<span class="k">[[actors]]</span>
+<span class="n">name</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;external-api-caller&quot;</span>
+<span class="n">behavior</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;api_client&quot;</span>
+<span class="n">quarantine</span><span class="p">.</span><span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">quarantine</span><span class="p">.</span><span class="n">trip_threshold</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span><span class="w">        </span><span class="c1"># 5 consecutive failures → trip</span>
+<span class="n">quarantine</span><span class="p">.</span><span class="n">cooldown_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30000</span><span class="w">       </span><span class="c1"># 30s cooldown before probe</span>
+<span class="n">quarantine</span><span class="p">.</span><span class="n">half_open_max_probes</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">3</span><span class="w">  </span><span class="c1"># Allow 3 probes in half-open state</span>
+</pre></div>
+</div>
+<p>States:
+- <strong>Closed</strong> — normal operation.
+- <strong>Open</strong> — all requests rejected immediately (fast-fail).
+- <strong>Half-Open</strong> — limited probes allowed to test recovery.</p>
+</section>
+<section id="error-handling-checklist">
+<h2>Error Handling Checklist<a class="headerlink" href="#error-handling-checklist" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p>[ ] Every <code class="docutils literal notranslate"><span class="pre">on_request</span></code> handler validates input and returns errors for
+invalid input.</p></li>
+<li><p>[ ] Critical messages use <code class="docutils literal notranslate"><span class="pre">AtLeastOnce</span></code> delivery mode.</p></li>
+<li><p>[ ] Mailboxes have bounded capacity with explicit overflow policies.</p></li>
+<li><p>[ ] DLQ is monitored and periodically drained.</p></li>
+<li><p>[ ] External service calls are protected by circuit breakers.</p></li>
+<li><p>[ ] Supervision policies limit restart frequency.</p></li>
+<li><p>[ ] Failure callbacks handle <code class="docutils literal notranslate"><span class="pre">FailureEnvelope</span></code> (log, retry, or escalate).</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="actor-design.html" class="btn btn-neutral float-left" title="Actor Design Patterns" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="performance.html" class="btn btn-neutral float-right" title="Performance Tuning" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

@@ -1,0 +1,319 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HTTP Gateway &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Daemon Mode &amp; systemd Deployment" href="daemon-mode.html" />
+    <link rel="prev" title="CLI Server &amp; Remote Access" href="cli-server.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">HTTP Gateway</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#built-in-endpoints">Built-in Endpoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#custom-http-routes">Custom HTTP Routes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#message-protocol">Message Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#security">Security</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-example-prometheus">Integration Example: Prometheus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#integration-example-health-check-for-load-balancer">Integration Example: Health Check for Load Balancer</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">HTTP Gateway</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/operations/http-gateway.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="http-gateway">
+<span id="operations-http-gateway"></span><h1>HTTP Gateway<a class="headerlink" href="#http-gateway" title="Link to this heading"></a></h1>
+<p>The <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">HTTPGatewayActor</span></code> provides HTTP ingress for external
+tooling, enabling RESTful interaction with an HPActor system.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>External Tool ──► HTTP :8080 ──► HTTPGatewayActor ──► Actors
+(curl, browser,                    │
+ Prometheus, etc.)                 ├── /metrics  → MetricsActor
+                                   ├── /healthz  → HealthHttpServer
+                                   ├── /api/*    → Application actors
+                                   └── /admin/*  → System commands
+</pre></div>
+</div>
+<p>The gateway translates HTTP requests into actor messages and HTTP
+responses back to the client.</p>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.http]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">listen_address</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;0.0.0.0&quot;</span>
+<span class="n">listen_port</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">8080</span>
+<span class="n">max_connections</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">1000</span>
+<span class="n">request_timeout_ms</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">30000</span>
+
+<span class="c1"># Optional TLS</span>
+<span class="c1"># [system.http.tls]</span>
+<span class="c1"># cert_file = &quot;/etc/ssl/certs/hpactor.crt&quot;</span>
+<span class="c1"># key_file = &quot;/etc/ssl/private/hpactor.key&quot;</span>
+</pre></div>
+</div>
+</section>
+<section id="built-in-endpoints">
+<h2>Built-in Endpoints<a class="headerlink" href="#built-in-endpoints" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Endpoint</p></th>
+<th class="head"><p>Method</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/metrics</span></code></p></td>
+<td><p>GET</p></td>
+<td><p>Prometheus OpenMetrics text</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/healthz</span></code></p></td>
+<td><p>GET</p></td>
+<td><p>Liveness check (returns 200)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/readyz</span></code></p></td>
+<td><p>GET</p></td>
+<td><p>Readiness check (200 or 503)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/v1/actors</span></code></p></td>
+<td><p>GET</p></td>
+<td><p>List actors (query: <code class="docutils literal notranslate"><span class="pre">?type=worker&amp;state=running</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/v1/actors/:id</span></code></p></td>
+<td><p>GET</p></td>
+<td><p>Actor detail</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/v1/actors/:id</span></code></p></td>
+<td><p>POST</p></td>
+<td><p>Send a message to an actor</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">/api/v1/dlq</span></code></p></td>
+<td><p>GET</p></td>
+<td><p>DLQ records (query: <code class="docutils literal notranslate"><span class="pre">?actor_id=3&amp;limit=100</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">/api/v1/dlq/:index/replay</span></code></p></td>
+<td><p>POST</p></td>
+<td><p>Replay a DLQ record</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+<section id="custom-http-routes">
+<h2>Custom HTTP Routes<a class="headerlink" href="#custom-http-routes" title="Link to this heading"></a></h2>
+<p>Register application-specific routes:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MyHttpGateway</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">net</span><span class="o">::</span><span class="n">HTTPGatewayActor</span><span class="w"> </span><span class="p">{</span>
+<span class="k">protected</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">configure_routes</span><span class="p">(</span><span class="n">RouteTable</span><span class="o">&amp;</span><span class="w"> </span><span class="n">routes</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">HTTPGatewayActor</span><span class="o">::</span><span class="n">configure_routes</span><span class="p">(</span><span class="n">routes</span><span class="p">);</span><span class="w">  </span><span class="c1">// keep built-ins</span>
+
+<span class="w">        </span><span class="c1">// GET /api/v1/orders/:id</span>
+<span class="w">        </span><span class="n">routes</span><span class="p">.</span><span class="n">get</span><span class="p">(</span><span class="s">&quot;/api/v1/orders/:id&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="p">[</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">HttpRequest</span><span class="o">&amp;</span><span class="w"> </span><span class="n">req</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">HttpResponse</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="w"> </span><span class="n">order_id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">req</span><span class="p">.</span><span class="n">path_param</span><span class="p">(</span><span class="s">&quot;id&quot;</span><span class="p">);</span>
+<span class="w">                </span><span class="k">auto</span><span class="w"> </span><span class="n">result</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">query_order</span><span class="p">(</span><span class="n">order_id</span><span class="p">);</span>
+<span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="n">HttpResponse</span><span class="o">::</span><span class="n">json</span><span class="p">(</span><span class="n">result</span><span class="p">);</span>
+<span class="w">            </span><span class="p">});</span>
+
+<span class="w">        </span><span class="c1">// POST /api/v1/orders</span>
+<span class="w">        </span><span class="n">routes</span><span class="p">.</span><span class="k">post</span><span class="p">(</span><span class="s">&quot;/api/v1/orders&quot;</span><span class="p">,</span>
+<span class="w">            </span><span class="p">[</span><span class="k">this</span><span class="p">](</span><span class="k">const</span><span class="w"> </span><span class="n">HttpRequest</span><span class="o">&amp;</span><span class="w"> </span><span class="n">req</span><span class="p">)</span><span class="w"> </span><span class="o">-&gt;</span><span class="w"> </span><span class="n">HttpResponse</span><span class="w"> </span><span class="p">{</span>
+<span class="w">                </span><span class="k">auto</span><span class="w"> </span><span class="n">order</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">parse_order</span><span class="p">(</span><span class="n">req</span><span class="p">.</span><span class="n">body</span><span class="p">());</span>
+<span class="w">                </span><span class="k">auto</span><span class="w"> </span><span class="n">ref</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">spawn</span><span class="o">&lt;</span><span class="n">OrderActor</span><span class="o">&gt;</span><span class="p">();</span>
+<span class="w">                </span><span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">ref</span><span class="p">,</span><span class="w"> </span><span class="n">order</span><span class="p">);</span>
+<span class="w">                </span><span class="k">return</span><span class="w"> </span><span class="n">HttpResponse</span><span class="o">::</span><span class="n">created</span><span class="p">({.</span><span class="n">id</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="n">ref</span><span class="p">.</span><span class="n">id</span><span class="p">()});</span>
+<span class="w">            </span><span class="p">});</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+
+<span class="n">HPACTOR_REGISTER_ACTOR</span><span class="p">(</span><span class="n">MyHttpGateway</span><span class="p">,</span><span class="w"> </span><span class="s">&quot;my_http_gateway&quot;</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="message-protocol">
+<h2>Message Protocol<a class="headerlink" href="#message-protocol" title="Link to this heading"></a></h2>
+<p>POST to <code class="docutils literal notranslate"><span class="pre">/api/v1/actors/:id</span></code> sends a message:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>curl<span class="w"> </span>-X<span class="w"> </span>POST<span class="w"> </span>http://localhost:8080/api/v1/actors/3<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-H<span class="w"> </span><span class="s2">&quot;Content-Type: application/json&quot;</span><span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-d<span class="w"> </span><span class="s1">&#39;{&quot;type&quot;: &quot;ProcessOrder&quot;, &quot;order_id&quot;: &quot;ORD-1234&quot;, &quot;quantity&quot;: 5}&#39;</span>
+</pre></div>
+</div>
+<p>The gateway:
+1. Parses the JSON body.
+2. Looks up the <code class="docutils literal notranslate"><span class="pre">TypeTag</span></code> from the <code class="docutils literal notranslate"><span class="pre">type</span></code> field.
+3. Deserializes the protobuf payload.
+4. Sends the <code class="docutils literal notranslate"><span class="pre">TypedMessage</span></code> to the target actor.
+5. Returns the response or a 202 Accepted for fire-and-forget.</p>
+</section>
+<section id="security">
+<h2>Security<a class="headerlink" href="#security" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><strong>Rate limiting</strong>: Configure per-endpoint rate limits (future).</p></li>
+<li><p><strong>Authentication</strong>: Use a reverse proxy (Nginx, Envoy) with mTLS for
+production HTTP access.</p></li>
+<li><p><strong>Input validation</strong>: The gateway validates message structure but
+delegates business-logic validation to actors.</p></li>
+</ul>
+</section>
+<section id="integration-example-prometheus">
+<h2>Integration Example: Prometheus<a class="headerlink" href="#integration-example-prometheus" title="Link to this heading"></a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># prometheus.yml</span>
+<span class="nt">scrape_configs</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_name</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;hpactor&#39;</span>
+<span class="w">    </span><span class="nt">static_configs</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">targets</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&#39;my-app:8080&#39;</span><span class="p p-Indicator">]</span>
+<span class="w">    </span><span class="nt">metrics_path</span><span class="p">:</span><span class="w"> </span><span class="s">&#39;/metrics&#39;</span>
+</pre></div>
+</div>
+</section>
+<section id="integration-example-health-check-for-load-balancer">
+<h2>Integration Example: Health Check for Load Balancer<a class="headerlink" href="#integration-example-health-check-for-load-balancer" title="Link to this heading"></a></h2>
+<div class="highlight-nginx notranslate"><div class="highlight"><pre><span></span><span class="k">upstream</span><span class="w"> </span><span class="s">hpactor_backend</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kn">server</span><span class="w"> </span><span class="n">10.0.1.1</span><span class="p">:</span><span class="mi">8080</span><span class="p">;</span>
+<span class="w">    </span><span class="kn">server</span><span class="w"> </span><span class="n">10.0.1.2</span><span class="p">:</span><span class="mi">8080</span><span class="p">;</span>
+
+<span class="w">    </span><span class="kn">health_check</span><span class="w"> </span><span class="s">uri=/healthz</span><span class="w"> </span><span class="s">interval=5s</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="cli-server.html" class="btn btn-neutral float-left" title="CLI Server &amp; Remote Access" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="daemon-mode.html" class="btn btn-neutral float-right" title="Daemon Mode &amp; systemd Deployment" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

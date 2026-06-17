@@ -1,0 +1,301 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Framework Overview &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Installation" href="installation.html" />
+    <link rel="prev" title="HPActor Developer Manual" href="../index.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="current">
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Framework Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#why-actors">Why Actors?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#hpactor-architecture-at-a-glance">HPActor Architecture at a Glance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#key-concepts">Key Concepts</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#actors">Actors</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#messages">Messages</a></li>
+<li class="toctree-l3"><a class="reference internal" href="#supervision">Supervision</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#production-reliability-plane">Production Reliability Plane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#where-to-go-next">Where to Go Next</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Framework Overview</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/getting-started/overview.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="framework-overview">
+<span id="getting-started-overview"></span><h1>Framework Overview<a class="headerlink" href="#framework-overview" title="Link to this heading"></a></h1>
+<p>HPActor is a C++20 event-based actor framework inspired by the C++ Actor
+Framework (CAF). It provides the building blocks for constructing concurrent
+and distributed systems using the <strong>actor model</strong> — a computational model
+where “actors” are the universal primitives of computation, each with:</p>
+<ul class="simple">
+<li><p><strong>Private state</strong> — never shared directly with other actors.</p></li>
+<li><p><strong>A mailbox</strong> — an ordered queue of incoming messages.</p></li>
+<li><p><strong>Behavior</strong> — a function that processes one message at a time.</p></li>
+</ul>
+<section id="why-actors">
+<h2>Why Actors?<a class="headerlink" href="#why-actors" title="Link to this heading"></a></h2>
+<p>Traditional shared-memory concurrency with threads and locks is error-prone
+at scale. The actor model addresses this by enforcing:</p>
+<ul class="simple">
+<li><p><strong>Isolation</strong> — actors communicate only through message passing.</p></li>
+<li><p><strong>Single-threaded execution</strong> — each actor processes messages sequentially.</p></li>
+<li><p><strong>Location transparency</strong> — an actor reference abstracts whether the target
+is local or remote.</p></li>
+<li><p><strong>Supervision</strong> — parent actors manage the lifecycle and failure of children.</p></li>
+</ul>
+<p>These properties make actor-based systems easier to reason about, test, and
+scale across cores and machines.</p>
+</section>
+<section id="hpactor-architecture-at-a-glance">
+<h2>HPActor Architecture at a Glance<a class="headerlink" href="#hpactor-architecture-at-a-glance" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>┌─────────────────────────────────────────────────┐
+│                  ActorSystem                     │
+│  ┌──────────┐  ┌───────────┐  ┌──────────────┐  │
+│  │ Scheduler │  │ Registry  │  │   Transport   │  │
+│  └──────────┘  └───────────┘  └──────────────┘  │
+│  ┌──────────┐  ┌───────────┐  ┌──────────────┐  │
+│  │  Metrics  │  │  Tracing   │  │   Logging     │  │
+│  └──────────┘  └───────────┘  └──────────────┘  │
+└─────────────────────────────────────────────────┘
+         │              │              │
+    ┌────▼──┐      ┌───▼───┐     ┌───▼────┐
+    │ Actor │      │ Actor │     │ Actor  │
+    │  (A)  │◄────►│  (B)  │◄───►│  (C)   │
+    └───────┘      └───────┘     └────────┘
+      msg              msg           msg
+</pre></div>
+</div>
+<p>An <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ActorSystem</span></code> owns the scheduler, actor registry, transport
+layer, and observability subsystems. Actors are spawned within the system
+and communicate exclusively through messages.</p>
+</section>
+<section id="key-concepts">
+<h2>Key Concepts<a class="headerlink" href="#key-concepts" title="Link to this heading"></a></h2>
+<section id="actors">
+<h3>Actors<a class="headerlink" href="#actors" title="Link to this heading"></a></h3>
+<p>An <strong>actor</strong> is a lightweight concurrent entity identified by a unique
+<code class="xref cpp cpp-type docutils literal notranslate"><span class="pre">ActorId</span></code>. HPActor supports several actor flavors:</p>
+<ul class="simple">
+<li><p><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">EventBasedActor</span></code> — cooperative, message-driven (most common).</p></li>
+<li><p><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">StatefulActor</span></code> — event-based with explicit typed state.</p></li>
+<li><p><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TypedEventBasedActor</span></code> — statically typed handlers (template
+parameter pack <code class="docutils literal notranslate"><span class="pre">Signatures...</span></code>).</p></li>
+<li><p><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">BlockingActor</span></code> — dedicated thread with blocking receive.</p></li>
+<li><p><code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">DaemonActor</span></code> — dedicated thread with a <code class="docutils literal notranslate"><span class="pre">run_once()</span></code> loop.</p></li>
+</ul>
+<p>See <a class="reference internal" href="../building-applications/actor-types.html"><span class="doc">Actor Types</span></a> for detailed guidance.</p>
+</section>
+<section id="messages">
+<h3>Messages<a class="headerlink" href="#messages" title="Link to this heading"></a></h3>
+<p>Actors exchange messages. HPActor uses Protocol Buffers for wire-compatible
+serialization but also supports in-memory message passing:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="c1">// Send a message to another actor</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">send</span><span class="p">(</span><span class="n">target_addr</span><span class="p">,</span><span class="w"> </span><span class="n">my_message</span><span class="p">);</span>
+
+<span class="c1">// Reply to the current sender</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply</span><span class="p">(</span><span class="n">response</span><span class="p">);</span>
+
+<span class="c1">// Reply with an error</span>
+<span class="n">context</span><span class="p">()</span><span class="o">-&gt;</span><span class="n">reply_with_error</span><span class="p">(</span><span class="n">error_code</span><span class="p">);</span>
+</pre></div>
+</div>
+</section>
+<section id="supervision">
+<h3>Supervision<a class="headerlink" href="#supervision" title="Link to this heading"></a></h3>
+<p>Actors form <strong>supervision trees</strong>. A parent actor supervises its children
+and decides how to handle their failures:</p>
+<ul class="simple">
+<li><p><strong>OneForOne</strong> — restart only the failed child.</p></li>
+<li><p><strong>AllForOne</strong> — restart all children when any fails.</p></li>
+</ul>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">MySupervisor</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">SupervisorActor</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="nf">on_child_failure</span><span class="p">(</span><span class="n">ActorId</span><span class="w"> </span><span class="n">child</span><span class="p">,</span><span class="w"> </span><span class="k">const</span><span class="w"> </span><span class="n">error</span><span class="o">&amp;</span><span class="w"> </span><span class="n">err</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="n">restart_child</span><span class="p">(</span><span class="n">child</span><span class="p">);</span><span class="w">  </span><span class="c1">// or stop, escalate, etc.</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+</pre></div>
+</div>
+</section>
+</section>
+<section id="production-reliability-plane">
+<h2>Production Reliability Plane<a class="headerlink" href="#production-reliability-plane" title="Link to this heading"></a></h2>
+<p>HPActor organizes production features into three planes:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Plane</p></th>
+<th class="head"><p>Concerns</p></th>
+<th class="head"><p>Status</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Data Plane</strong></p></td>
+<td><p>Delivery semantics, mailbox admission, DLQ, reliable messaging,
+tracing, actor lifecycle</p></td>
+<td><p>Foundation implemented</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Control Plane</strong></p></td>
+<td><p>Cluster failure model, node identity, sharding, placement,
+graceful shutdown, rolling upgrades</p></td>
+<td><p>Partial (shutdown, lifecycle done; sharding/cluster in design)</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Operations Plane</strong></p></td>
+<td><p>Health endpoints, admin API, security, audit, config reload,
+chaos/soak testing</p></td>
+<td><p>Partial (health, fault injection done; admin API/security in design)</p></td>
+</tr>
+</tbody>
+</table>
+<p>For the detailed roadmap, see the production reliability architecture
+docs at <code class="docutils literal notranslate"><span class="pre">docs/architecture/production/production-reliability-plane.md</span></code>.</p>
+</section>
+<section id="where-to-go-next">
+<h2>Where to Go Next<a class="headerlink" href="#where-to-go-next" title="Link to this heading"></a></h2>
+<ul class="simple">
+<li><p><a class="reference internal" href="installation.html"><span class="doc">Installation</span></a> — build HPActor and link against your project.</p></li>
+<li><p><a class="reference internal" href="your-first-actor.html"><span class="doc">Your First Actor</span></a> — write and run your first actor in 5 minutes.</p></li>
+<li><p><a class="reference internal" href="../building-applications/actor-types.html"><span class="doc">Actor Types</span></a> — choose the right actor for
+each task.</p></li>
+</ul>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="../index.html" class="btn btn-neutral float-left" title="HPActor Developer Manual" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="installation.html" class="btn btn-neutral float-right" title="Installation" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

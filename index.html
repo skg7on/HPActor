@@ -1,0 +1,489 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="./">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>HPActor Developer Manual &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="_static/jquery.js?v=5d32c60e"></script>
+      <script src="_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="_static/documentation_options.js?v=01f34227"></script>
+      <script src="_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="genindex.html" />
+    <link rel="search" title="Search" href="search.html" />
+    <link rel="next" title="Framework Overview" href="getting-started/overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="#" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="#">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="#" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">HPActor Developer Manual</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="_sources/index.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="hpactor-developer-manual">
+<h1>HPActor Developer Manual<a class="headerlink" href="#hpactor-developer-manual" title="Link to this heading"></a></h1>
+<p><strong>HPActor</strong> is a C++20 event-based actor framework for building scalable,
+high-performance distributed applications. Inspired by CAF (C++ Actor
+Framework), it provides cooperative scheduling, hierarchical supervision,
+pluggable service discovery, and a production reliability plane with
+delivery semantics, bounded mailboxes, dead-letter queues, distributed
+tracing, and deterministic fault injection.</p>
+<p>This manual is the authoritative guide for developing, deploying,
+monitoring, and operating HPActor-based systems.</p>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/overview.html">Framework Overview</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/overview.html#why-actors">Why Actors?</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/overview.html#hpactor-architecture-at-a-glance">HPActor Architecture at a Glance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/overview.html#key-concepts">Key Concepts</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/overview.html#production-reliability-plane">Production Reliability Plane</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/overview.html#where-to-go-next">Where to Go Next</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/installation.html">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/installation.html#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/installation.html#cloning-the-repository">Cloning the Repository</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/installation.html#building-hpactor">Building HPActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/installation.html#running-tests">Running Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/installation.html#integrating-with-your-project">Integrating with Your Project</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/your-first-actor.html">Your First Actor</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/your-first-actor.html#complete-example">Complete Example</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/your-first-actor.html#step-by-step-breakdown">Step-by-Step Breakdown</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/your-first-actor.html#building-and-running">Building and Running</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/your-first-actor.html#what-s-next">What’s Next</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="getting-started/project-structure.html">Project Structure</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/project-structure.html#recommended-layout">Recommended Layout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/project-structure.html#cmakelists-txt">CMakeLists.txt</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/project-structure.html#actor-header-conventions">Actor Header Conventions</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/project-structure.html#actor-registration">Actor Registration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="getting-started/project-structure.html#separation-of-concerns">Separation of Concerns</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/actor-types.html">Actor Types</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#actor-type-hierarchy">Actor Type Hierarchy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#eventbasedactor">EventBasedActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#statefulactor-t">StatefulActor&lt;T&gt;</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#typedeventbasedactor-signatures">TypedEventBasedActor&lt;Signatures…&gt;</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#blockingactor">BlockingActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#scopedactor">ScopedActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#daemonactor">DaemonActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#densecomputingactor">DenseComputingActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/actor-types.html#decision-guide">Decision Guide</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/message-passing.html">Message Passing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#message-model">Message Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#fire-and-forget-handlers">Fire-and-Forget Handlers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#request-response-handlers">Request-Response Handlers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#sending-messages">Sending Messages</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#the-ask-pattern-request-future">The Ask Pattern (Request-Future)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#delivery-modes">Delivery Modes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#scheduled-delivery">Scheduled Delivery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#error-propagation">Error Propagation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/message-passing.html#message-serialization">Message Serialization</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/lifecycle.html#actor-lifecycle-states">Actor Lifecycle States</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/lifecycle.html#spawning-actors">Spawning Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/lifecycle.html#linking-and-monitoring">Linking and Monitoring</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/lifecycle.html#supervision">Supervision</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/lifecycle.html#graceful-shutdown">Graceful Shutdown</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/topology-config.html">Topology Configuration</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#pipeline-overview">Pipeline Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#basic-topology">Basic Topology</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#actor-definition-fields">Actor Definition Fields</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#registering-actors">Registering Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#template-inheritance">Template Inheritance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#imports">Imports</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#bootstrap-in-code">Bootstrap in Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#aot-compilation-production">AOT Compilation (Production)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/topology-config.html#extending-with-subsystem-parsers">Extending with Subsystem Parsers</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/remote-actors.html#location-transparency">Location Transparency</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/remote-actors.html#service-discovery">Service Discovery</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/remote-actors.html#actorlocationcache">ActorLocationCache</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/remote-actors.html#remote-spawn">Remote Spawn</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/remote-actors.html#actorref-resolution">ActorRef Resolution</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/remote-actors.html#considerations">Considerations</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="building-applications/distributed-patterns.html">Distributed Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/distributed-patterns.html#ask-pattern-request-response">Ask Pattern (Request-Response)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/distributed-patterns.html#scatter-gather">Scatter-Gather</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/distributed-patterns.html#router-pattern">Router Pattern</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/distributed-patterns.html#pub-sub-broadcast">Pub-Sub (Broadcast)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/distributed-patterns.html#work-pull-competing-consumers">Work Pull (Competing Consumers)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/distributed-patterns.html#sharding-conceptual">Sharding (Conceptual)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/distributed-patterns.html#actor-driven-finite-state-machines-fsm">Actor-Driven Finite State Machines (FSM)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="building-applications/distributed-patterns.html#workflow-composition">Workflow Composition</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/metrics.html">Metrics</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/metrics.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/metrics.html#metric-types">Metric Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/metrics.html#event-types">Event Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/metrics.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/metrics.html#prometheus-scrape-configuration">Prometheus Scrape Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/metrics.html#available-metrics">Available Metrics</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/metrics.html#programmatic-access">Programmatic Access</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/metrics.html#custom-metrics">Custom Metrics</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/logging.html">Structured Logging</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/logging.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/logging.html#log-levels">Log Levels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/logging.html#log-categories">Log Categories</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/logging.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/logging.html#output-formats">Output Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/logging.html#compile-time-disable">Compile-Time Disable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/logging.html#sink-selection-guide">Sink Selection Guide</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/tracing.html">Distributed Tracing</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#w3c-trace-context">W3C Trace Context</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#span-types">Span Types</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#span-structure">Span Structure</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#raii-span-guard">RAII Span Guard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#sampling">Sampling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#remote-propagation">Remote Propagation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/tracing.html#cli-inspection">CLI Inspection</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="monitoring/health.html">Health &amp; Readiness</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/health.html#healthhttpserver">HealthHttpServer</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/health.html#liveness-vs-readiness">Liveness vs. Readiness</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/health.html#kubernetes-pod-configuration">Kubernetes Pod Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/health.html#systemd-watchdog">systemd Watchdog</a></li>
+<li class="toctree-l2"><a class="reference internal" href="monitoring/health.html#custom-health-checks">Custom Health Checks</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="operations/cli.html">Interactive CLI</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#accessing-the-cli">Accessing the CLI</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#command-architecture">Command Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#actor-commands">Actor Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#system-commands">System Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#dlq-commands">DLQ Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#fault-injection-commands">Fault Injection Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#ask-commands">Ask Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#failure-commands">Failure Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#output-formats">Output Formats</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#pager">Pager</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli.html#writing-custom-commands">Writing Custom Commands</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="operations/cli-server.html">CLI Server &amp; Remote Access</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli-server.html#architecture">Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli-server.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli-server.html#standalone-cli-client">Standalone CLI Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli-server.html#building-the-cli-client">Building the CLI Client</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli-server.html#session-model">Session Model</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli-server.html#security-considerations">Security Considerations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/cli-server.html#programmatic-access">Programmatic Access</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="operations/http-gateway.html">HTTP Gateway</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="operations/http-gateway.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/http-gateway.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/http-gateway.html#built-in-endpoints">Built-in Endpoints</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/http-gateway.html#custom-http-routes">Custom HTTP Routes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/http-gateway.html#message-protocol">Message Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/http-gateway.html#security">Security</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/http-gateway.html#integration-example-prometheus">Integration Example: Prometheus</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/http-gateway.html#integration-example-health-check-for-load-balancer">Integration Example: Health Check for Load Balancer</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="operations/daemon-mode.html#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/daemon-mode.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/daemon-mode.html#signal-handling">Signal Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/daemon-mode.html#systemd-unit-file">systemd Unit File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/daemon-mode.html#enabling-and-starting">Enabling and Starting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/daemon-mode.html#logging-in-daemon-mode">Logging in Daemon Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/daemon-mode.html#thread-safety">Thread Safety</a></li>
+<li class="toctree-l2"><a class="reference internal" href="operations/daemon-mode.html#deployment-checklist">Deployment Checklist</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/prometheus-grafana.html#prometheus-integration">Prometheus Integration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/prometheus-grafana.html#grafana-dashboard">Grafana Dashboard</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/prometheus-grafana.html#grafana-provisioning">Grafana Provisioning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/prometheus-grafana.html#docker-compose-example">Docker Compose Example</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/logging-loki.html">Log Aggregation with Loki</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/logging-loki.html#integration-strategy">Integration Strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/logging-loki.html#configuring-json-log-format">Configuring JSON Log Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/logging-loki.html#promtail-configuration">Promtail Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/logging-loki.html#loki-logql-queries">Loki LogQL Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/logging-loki.html#grafana-correlation">Grafana Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/logging-loki.html#elk-stack-alternative">ELK Stack Alternative</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/logging-loki.html#log-retention-rotation">Log Retention &amp; Rotation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/tracing-jaeger.html#trace-flow-in-hpactor">Trace Flow in HPActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/tracing-jaeger.html#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/tracing-jaeger.html#jaeger-via-opentelemetry-collector">Jaeger via OpenTelemetry Collector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/tracing-jaeger.html#analyzing-traces-in-jaeger">Analyzing Traces in Jaeger</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/tracing-jaeger.html#debugging-with-traces">Debugging with Traces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/tracing-jaeger.html#sampling-strategy">Sampling Strategy</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/alerting.html">Alerting Rules</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/alerting.html#alert-severity-levels">Alert Severity Levels</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/alerting.html#alertmanager-configuration">AlertManager Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/alerting.html#prometheus-alert-rules">Prometheus Alert Rules</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/alerting.html#runbooks">Runbooks</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="sre-integration/chaos-engineering.html">Chaos Engineering</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#fault-injection-architecture">Fault Injection Architecture</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#injecting-faults">Injecting Faults</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#fault-domains-14-total">Fault Domains (14 total)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#fault-actions-5-types">Fault Actions (5 types)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#building-a-fault-schedule">Building a Fault Schedule</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#seed-replayable-determinism">Seed-Replayable Determinism</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#cli-commands">CLI Commands</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#compile-time-disable">Compile-Time Disable</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#chaos-experiment-design">Chaos Experiment Design</a></li>
+<li class="toctree-l2"><a class="reference internal" href="sre-integration/chaos-engineering.html#ci-integration">CI Integration</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/actor-design.html">Actor Design Patterns</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/actor-design.html#principles">Principles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/actor-design.html#patterns">Patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/actor-design.html#anti-patterns">Anti-Patterns</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/actor-design.html#sizing-guidelines">Sizing Guidelines</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/error-handling.html">Error Handling</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/error-handling.html#failure-envelope">Failure Envelope</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/error-handling.html#failurereason-taxonomy">FailureReason Taxonomy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/error-handling.html#delivery-modes-choosing-the-right-guarantee">Delivery Modes: Choosing the Right Guarantee</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/error-handling.html#handling-errors-in-actors">Handling Errors in Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/error-handling.html#dead-letter-queue-dlq">Dead-Letter Queue (DLQ)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/error-handling.html#circuit-breaker">Circuit Breaker</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/error-handling.html#error-handling-checklist">Error Handling Checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/performance.html">Performance Tuning</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/performance.html#scheduler-configuration">Scheduler Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/performance.html#worker-affinity">Worker Affinity</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/performance.html#mailbox-tuning">Mailbox Tuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/performance.html#memory-allocator">Memory Allocator</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/performance.html#coroutine-tuning">Coroutine Tuning</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/performance.html#message-batching">Message Batching</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/performance.html#measuring-performance">Measuring Performance</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/performance.html#performance-checklist">Performance Checklist</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/testing.html">Testing Strategies</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#test-tiers">Test Tiers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#principles">Principles</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#testing-actors">Testing Actors</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#testing-mailboxes">Testing Mailboxes</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#testing-schedulers">Testing Schedulers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#testing-network-code">Testing Network Code</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#sanitizer-testing">Sanitizer Testing</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#fault-injection-tests">Fault Injection Tests</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/testing.html#ci-pipeline">CI Pipeline</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="best-practices/deployment.html">Production Deployment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#build-for-production">Build for Production</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#aot-topology-compilation">AOT Topology Compilation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#configuration-management">Configuration Management</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#daemon-deployment">Daemon Deployment</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#containerization">Containerization</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#health-check-aware-load-balancers">Health-Check Aware Load Balancers</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#graceful-rollout">Graceful Rollout</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#monitoring-in-production">Monitoring in Production</a></li>
+<li class="toctree-l2"><a class="reference internal" href="best-practices/deployment.html#pre-launch-checklist">Pre-Launch Checklist</a></li>
+</ul>
+</li>
+</ul>
+</div>
+<div class="toctree-wrapper compound">
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="limitations.html">Limitations &amp; Known Gaps</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#production-reliability-gaps">Production Reliability Gaps</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#security-not-implemented">Security (Not Implemented)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#operations-plane-partial">Operations Plane (Partial)</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#platform-support">Platform Support</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#scalability-limits">Scalability Limits</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#wire-protocol">Wire Protocol</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#language-bindings">Language Bindings</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#coroutine-limitations">Coroutine Limitations</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#test-coverage">Test Coverage</a></li>
+<li class="toctree-l2"><a class="reference internal" href="limitations.html#roadmap">Roadmap</a></li>
+</ul>
+</li>
+</ul>
+</div>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="getting-started/overview.html" class="btn btn-neutral float-right" title="Framework Overview" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

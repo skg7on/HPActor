@@ -1,0 +1,344 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Daemon Mode &amp; systemd Deployment &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Prometheus &amp; Grafana" href="../sre-integration/prometheus-grafana.html" />
+    <link rel="prev" title="HTTP Gateway" href="http-gateway.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Daemon Mode &amp; systemd Deployment</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#overview">Overview</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#signal-handling">Signal Handling</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#systemd-unit-file">systemd Unit File</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#enabling-and-starting">Enabling and Starting</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#logging-in-daemon-mode">Logging in Daemon Mode</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#thread-safety">Thread Safety</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#deployment-checklist">Deployment Checklist</a></li>
+</ul>
+</li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Daemon Mode &amp; systemd Deployment</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/operations/daemon-mode.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="daemon-mode-systemd-deployment">
+<span id="operations-daemon-mode"></span><h1>Daemon Mode &amp; systemd Deployment<a class="headerlink" href="#daemon-mode-systemd-deployment" title="Link to this heading"></a></h1>
+<p>HPActor can run as a background daemon with systemd integration,
+suitable for production server deployments.</p>
+<section id="overview">
+<h2>Overview<a class="headerlink" href="#overview" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Foreground Mode           Daemon Mode
+┌──────────┐              ┌──────────────┐
+│ hpactor  │              │ systemd      │
+│ (stdin)  │              │   │          │
+│   │      │              │   ▼          │
+│   ▼      │              │ fork() ×2    │
+│ Actors   │              │ setsid()     │
+│ CLI (tty)│              │   │          │
+└──────────┘              │   ▼          │
+                          │ hpactor(d)   │
+                          │ sd_notify()  │
+                          │ WatchdogActor│
+                          │ CliServerActor│
+                          │ SyslogSink   │
+                          └──────────────┘
+</pre></div>
+</div>
+<p>The <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">ProcessManager</span></code> handles daemonization, signal handling,
+and lifecycle coordination.</p>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.process]</span>
+<span class="n">mode</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;daemon&quot;</span><span class="w">                   </span><span class="c1"># &quot;foreground&quot; or &quot;daemon&quot;</span>
+<span class="n">pid_file</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/var/run/hpactor/hpactor.pid&quot;</span>
+<span class="n">work_dir</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/var/lib/hpactor&quot;</span>
+
+<span class="k">[system.process.watchdog]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">interval_sec</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">5</span>
+</pre></div>
+</div>
+<p>Enable daemon mode:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-DENABLE_CLI<span class="o">=</span>ON<span class="w"> </span>..<span class="w">    </span><span class="c1"># CLI must be enabled</span>
+
+<span class="c1"># Run as daemon</span>
+./build/apps/your_app<span class="w"> </span>--daemon
+</pre></div>
+</div>
+</section>
+<section id="signal-handling">
+<h2>Signal Handling<a class="headerlink" href="#signal-handling" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Signal</p></th>
+<th class="head"><p>Behavior</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SIGTERM</span></code></p></td>
+<td><p>Graceful shutdown (drain → stop)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SIGINT</span></code></p></td>
+<td><p>Graceful shutdown (drain → stop)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">SIGHUP</span></code></p></td>
+<td><p>Configuration reload (future)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">SIGUSR1</span></code></p></td>
+<td><p>Application-defined</p></td>
+</tr>
+</tbody>
+</table>
+<p>Signal handling uses <code class="docutils literal notranslate"><span class="pre">signalfd</span></code> on Linux and a self-pipe trick on
+other Unix platforms.</p>
+</section>
+<section id="systemd-unit-file">
+<h2>systemd Unit File<a class="headerlink" href="#systemd-unit-file" title="Link to this heading"></a></h2>
+<div class="highlight-ini notranslate"><div class="highlight"><pre><span></span><span class="c1"># /etc/systemd/system/hpactor.service</span>
+<span class="k">[Unit]</span>
+<span class="na">Description</span><span class="o">=</span><span class="s">HPActor Application Service</span>
+<span class="na">Documentation</span><span class="o">=</span><span class="s">https://github.com/skg7on/HPActor</span>
+<span class="na">After</span><span class="o">=</span><span class="s">network-online.target</span>
+<span class="na">Wants</span><span class="o">=</span><span class="s">network-online.target</span>
+
+<span class="k">[Service]</span>
+<span class="na">Type</span><span class="o">=</span><span class="s">notify</span>
+<span class="na">NotifyAccess</span><span class="o">=</span><span class="s">main</span>
+<span class="na">ExecStart</span><span class="o">=</span><span class="s">/usr/local/bin/my_hpactor_app --daemon</span>
+<span class="na">ExecReload</span><span class="o">=</span><span class="s">/bin/kill -HUP $MAINPID</span>
+<span class="na">WorkingDirectory</span><span class="o">=</span><span class="s">/var/lib/hpactor</span>
+<span class="na">PIDFile</span><span class="o">=</span><span class="s">/var/run/hpactor/hpactor.pid</span>
+<span class="na">User</span><span class="o">=</span><span class="s">hpactor</span>
+<span class="na">Group</span><span class="o">=</span><span class="s">hpactor</span>
+
+<span class="c1"># Restart policy</span>
+<span class="na">Restart</span><span class="o">=</span><span class="s">on-failure</span>
+<span class="na">RestartSec</span><span class="o">=</span><span class="s">10s</span>
+
+<span class="c1"># Watchdog</span>
+<span class="na">WatchdogSec</span><span class="o">=</span><span class="s">10s</span>
+
+<span class="c1"># Security hardening</span>
+<span class="na">NoNewPrivileges</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">PrivateTmp</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">ProtectSystem</span><span class="o">=</span><span class="s">strict</span>
+<span class="na">ProtectHome</span><span class="o">=</span><span class="s">yes</span>
+<span class="na">ReadWritePaths</span><span class="o">=</span><span class="s">/var/lib/hpactor /var/log/hpactor</span>
+<span class="na">ReadOnlyPaths</span><span class="o">=</span><span class="s">/etc/hpactor</span>
+
+<span class="c1"># Resource limits</span>
+<span class="na">LimitNOFILE</span><span class="o">=</span><span class="s">65536</span>
+<span class="na">LimitNPROC</span><span class="o">=</span><span class="s">4096</span>
+<span class="na">MemoryMax</span><span class="o">=</span><span class="s">2G</span>
+<span class="na">CPUQuota</span><span class="o">=</span><span class="s">200%</span>
+
+<span class="k">[Install]</span>
+<span class="na">WantedBy</span><span class="o">=</span><span class="s">multi-user.target</span>
+</pre></div>
+</div>
+</section>
+<section id="enabling-and-starting">
+<h2>Enabling and Starting<a class="headerlink" href="#enabling-and-starting" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo<span class="w"> </span>systemctl<span class="w"> </span>daemon-reload
+sudo<span class="w"> </span>systemctl<span class="w"> </span><span class="nb">enable</span><span class="w"> </span>hpactor
+sudo<span class="w"> </span>systemctl<span class="w"> </span>start<span class="w"> </span>hpactor
+
+<span class="c1"># Check status</span>
+sudo<span class="w"> </span>systemctl<span class="w"> </span>status<span class="w"> </span>hpactor
+
+<span class="c1"># View logs</span>
+sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>hpactor<span class="w"> </span>-f
+</pre></div>
+</div>
+</section>
+<section id="logging-in-daemon-mode">
+<h2>Logging in Daemon Mode<a class="headerlink" href="#logging-in-daemon-mode" title="Link to this heading"></a></h2>
+<p>In daemon mode, configure the syslog sink for integration with
+journald:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.log]</span>
+<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;info&quot;</span>
+<span class="n">sinks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;syslog&quot;</span><span class="p">,</span><span class="w"> </span><span class="s2">&quot;rotating_file&quot;</span><span class="p">]</span>
+
+<span class="k">[system.log.syslog]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">facility</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;local0&quot;</span>
+</pre></div>
+</div>
+<p>All structured logs are forwarded to syslog, which systemd-journald
+picks up automatically.</p>
+</section>
+<section id="thread-safety">
+<h2>Thread Safety<a class="headerlink" href="#thread-safety" title="Link to this heading"></a></h2>
+<div class="admonition important">
+<p class="admonition-title">Important</p>
+<p>All thread creation MUST happen AFTER daemonization. The
+<code class="docutils literal notranslate"><span class="pre">ProcessManager::init()</span></code> call must precede <code class="docutils literal notranslate"><span class="pre">ActorSystem</span></code>
+construction:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="kt">int</span><span class="w"> </span><span class="nf">main</span><span class="p">(</span><span class="kt">int</span><span class="w"> </span><span class="n">argc</span><span class="p">,</span><span class="w"> </span><span class="kt">char</span><span class="o">*</span><span class="w"> </span><span class="n">argv</span><span class="p">[])</span><span class="w"> </span><span class="p">{</span>
+<span class="w">    </span><span class="n">ProcessManager</span><span class="o">::</span><span class="n">init</span><span class="p">(</span><span class="n">config</span><span class="p">);</span><span class="w">   </span><span class="c1">// Daemonize here</span>
+<span class="w">    </span><span class="n">ActorSystem</span><span class="w"> </span><span class="n">system</span><span class="p">(</span><span class="n">config</span><span class="p">);</span><span class="w">     </span><span class="c1">// Threads created here</span>
+<span class="w">    </span><span class="n">system</span><span class="p">.</span><span class="n">load_topology</span><span class="p">(</span><span class="s">&quot;topology.toml&quot;</span><span class="p">);</span>
+<span class="w">    </span><span class="n">system</span><span class="p">.</span><span class="n">await_shutdown</span><span class="p">();</span>
+<span class="w">    </span><span class="k">return</span><span class="w"> </span><span class="mi">0</span><span class="p">;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+<p>This ordering ensures forked children don’t inherit running threads
+or held locks.</p>
+</div>
+</section>
+<section id="deployment-checklist">
+<h2>Deployment Checklist<a class="headerlink" href="#deployment-checklist" title="Link to this heading"></a></h2>
+<ol class="arabic simple">
+<li><p>Build with <code class="docutils literal notranslate"><span class="pre">cmake</span> <span class="pre">-DENABLE_APPS=OFF</span> <span class="pre">-GNinja</span></code> (production build).</p></li>
+<li><p>Install the binary to <code class="docutils literal notranslate"><span class="pre">/usr/local/bin/</span></code>.</p></li>
+<li><p>Deploy the systemd unit file.</p></li>
+<li><p>Place topology config at <code class="docutils literal notranslate"><span class="pre">/etc/hpactor/topology.toml</span></code>.</p></li>
+<li><p>Create data directories with correct permissions.</p></li>
+<li><p>Enable and start the service.</p></li>
+<li><p>Verify: <code class="docutils literal notranslate"><span class="pre">systemctl</span> <span class="pre">status</span> <span class="pre">hpactor</span></code>, <code class="docutils literal notranslate"><span class="pre">curl</span> <span class="pre">localhost:9090/healthz</span></code>.</p></li>
+</ol>
+<p>For guidance on health checks and monitoring, see
+<a class="reference internal" href="../monitoring/health.html"><span class="doc">Health &amp; Readiness</span></a> and <a class="reference internal" href="../sre-integration/prometheus-grafana.html"><span class="doc">Prometheus &amp; Grafana</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="http-gateway.html" class="btn btn-neutral float-left" title="HTTP Gateway" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="../sre-integration/prometheus-grafana.html" class="btn btn-neutral float-right" title="Prometheus &amp; Grafana" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

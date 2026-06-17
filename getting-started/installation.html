@@ -1,0 +1,329 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Installation &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Your First Actor" href="your-first-actor.html" />
+    <link rel="prev" title="Framework Overview" href="overview.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="overview.html">Framework Overview</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Installation</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#prerequisites">Prerequisites</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#cloning-the-repository">Cloning the Repository</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#building-hpactor">Building HPActor</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#build-options">Build Options</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#running-tests">Running Tests</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#sanitizer-builds">Sanitizer Builds</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#integrating-with-your-project">Integrating with Your Project</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../sre-integration/chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Installation</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/getting-started/installation.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="installation">
+<span id="getting-started-installation"></span><h1>Installation<a class="headerlink" href="#installation" title="Link to this heading"></a></h1>
+<section id="prerequisites">
+<h2>Prerequisites<a class="headerlink" href="#prerequisites" title="Link to this heading"></a></h2>
+<p>HPActor requires:</p>
+<ul class="simple">
+<li><p><strong>C++20 compiler</strong>: GCC 11+ or Clang 14+.</p></li>
+<li><p><strong>CMake 3.20+</strong>.</p></li>
+<li><p><strong>Ninja</strong> (recommended) or Make.</p></li>
+<li><p><strong>System libraries</strong>: OpenSSL (dev), Protobuf (dev, with protoc).</p></li>
+</ul>
+<p>On macOS:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>brew<span class="w"> </span>install<span class="w"> </span>cmake<span class="w"> </span>ninja<span class="w"> </span>openssl<span class="w"> </span>protobuf
+</pre></div>
+</div>
+<p>On Ubuntu/Debian:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo<span class="w"> </span>apt<span class="w"> </span>install<span class="w"> </span>cmake<span class="w"> </span>ninja-build<span class="w"> </span>libssl-dev<span class="w"> </span>protobuf-compiler<span class="w"> </span><span class="se">\</span>
+<span class="w">                 </span>libprotobuf-dev
+</pre></div>
+</div>
+<p>On RHEL/Fedora:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>sudo<span class="w"> </span>dnf<span class="w"> </span>install<span class="w"> </span>cmake<span class="w"> </span>ninja-build<span class="w"> </span>openssl-devel<span class="w"> </span>protobuf-compiler<span class="w"> </span><span class="se">\</span>
+<span class="w">                 </span>protobuf-devel
+</pre></div>
+</div>
+</section>
+<section id="cloning-the-repository">
+<h2>Cloning the Repository<a class="headerlink" href="#cloning-the-repository" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>git<span class="w"> </span>clone<span class="w"> </span>https://github.com/skg7on/HPActor.git
+<span class="nb">cd</span><span class="w"> </span>HPActor
+</pre></div>
+</div>
+</section>
+<section id="building-hpactor">
+<h2>Building HPActor<a class="headerlink" href="#building-hpactor" title="Link to this heading"></a></h2>
+<p>The standard build uses Ninja for fast incremental compilation:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Configure</span>
+cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-GNinja<span class="w"> </span>-DCMAKE_EXPORT_COMPILE_COMMANDS<span class="o">=</span>ON
+
+<span class="c1"># Build the library and all targets</span>
+ninja<span class="w"> </span>-C<span class="w"> </span>build
+</pre></div>
+</div>
+<p>This produces:</p>
+<ul class="simple">
+<li><p><code class="docutils literal notranslate"><span class="pre">build/libhpactor.a</span></code> — the HPActor runtime library.</p></li>
+<li><p>Test binaries under <code class="docutils literal notranslate"><span class="pre">build/tests/</span></code>.</p></li>
+<li><p>Example binaries under <code class="docutils literal notranslate"><span class="pre">build/examples/</span></code> (if <code class="docutils literal notranslate"><span class="pre">ENABLE_EXAMPLES=ON</span></code>).</p></li>
+<li><p>App binaries under <code class="docutils literal notranslate"><span class="pre">build/apps/</span></code> (if <code class="docutils literal notranslate"><span class="pre">ENABLE_APPS=ON</span></code>).</p></li>
+</ul>
+<section id="build-options">
+<h3>Build Options<a class="headerlink" href="#build-options" title="Link to this heading"></a></h3>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Option</p></th>
+<th class="head"><p>Default</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_EXAMPLES</span></code></p></td>
+<td><p>ON</p></td>
+<td><p>Build simple API usage examples</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_APPS</span></code></p></td>
+<td><p>ON</p></td>
+<td><p>Build complex demo applications</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_PROACTOR</span></code></p></td>
+<td><p>OFF</p></td>
+<td><p>Enable proactor I/O backend</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_MEMORY_TRACKING</span></code></p></td>
+<td><p>ON</p></td>
+<td><p>Per-actor memory allocation tracking</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_MEMORY_DEBUG</span></code></p></td>
+<td><p>OFF</p></td>
+<td><p>Memory poisoning + canary verification</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_ACTOR_METRICS</span></code></p></td>
+<td><p>ON</p></td>
+<td><p>Actor-level Prometheus-compatible metrics</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_ACTOR_LOGGING</span></code></p></td>
+<td><p>ON</p></td>
+<td><p>Structured actor logging subsystem</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_ACTOR_TRACING</span></code></p></td>
+<td><p>ON</p></td>
+<td><p>W3C-compatible distributed tracing</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_CLI</span></code></p></td>
+<td><p>ON</p></td>
+<td><p>Interactive CLI subsystem (runtime opt-in)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_COVERAGE</span></code></p></td>
+<td><p>OFF</p></td>
+<td><p>gcov/llvm-cov coverage instrumentation</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_CLANG_TIDY</span></code></p></td>
+<td><p>OFF</p></td>
+<td><p>Run clang-tidy during C++ builds</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">ENABLE_FAULT_INJECTION</span></code></p></td>
+<td><p>ON</p></td>
+<td><p>Deterministic fault injection hooks</p></td>
+</tr>
+</tbody>
+</table>
+<p>Example: minimal build for production:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span>cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build<span class="w"> </span>-GNinja<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-DENABLE_EXAMPLES<span class="o">=</span>OFF<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-DENABLE_APPS<span class="o">=</span>OFF<span class="w"> </span><span class="se">\</span>
+<span class="w">    </span>-DENABLE_COVERAGE<span class="o">=</span>OFF
+</pre></div>
+</div>
+</section>
+</section>
+<section id="running-tests">
+<h2>Running Tests<a class="headerlink" href="#running-tests" title="Link to this heading"></a></h2>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># Run the full test suite (parallel)</span>
+ctest<span class="w"> </span>--output-on-failure<span class="w"> </span>--parallel<span class="w"> </span><span class="m">8</span>
+
+<span class="c1"># Run a single test binary</span>
+./build/tests/unit/core/test_unit_core
+
+<span class="c1"># Run a specific test case</span>
+./build/tests/unit/core/test_unit_core<span class="w"> </span>--gtest_filter<span class="o">=</span><span class="s2">&quot;*ActorId*&quot;</span>
+
+<span class="c1"># Run via ctest pattern matching</span>
+ctest<span class="w"> </span>-R<span class="w"> </span><span class="s2">&quot;ActorIdDefaultConstruction&quot;</span><span class="w"> </span>--output-on-failure
+</pre></div>
+</div>
+<section id="sanitizer-builds">
+<h3>Sanitizer Builds<a class="headerlink" href="#sanitizer-builds" title="Link to this heading"></a></h3>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># ThreadSanitizer</span>
+cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build-tsan<span class="w"> </span>-GNinja<span class="w"> </span>-DENABLE_TSAN<span class="o">=</span>ON
+ninja<span class="w"> </span>-C<span class="w"> </span>build-tsan
+
+<span class="c1"># AddressSanitizer</span>
+cmake<span class="w"> </span>-S<span class="w"> </span>.<span class="w"> </span>-B<span class="w"> </span>build-asan<span class="w"> </span>-GNinja<span class="w"> </span>-DENABLE_ASAN<span class="o">=</span>ON
+ninja<span class="w"> </span>-C<span class="w"> </span>build-asan
+</pre></div>
+</div>
+</section>
+</section>
+<section id="integrating-with-your-project">
+<h2>Integrating with Your Project<a class="headerlink" href="#integrating-with-your-project" title="Link to this heading"></a></h2>
+<p>Add HPActor as a CMake subdirectory (recommended):</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="c"># In your project&#39;s CMakeLists.txt</span>
+<span class="nb">add_subdirectory</span><span class="p">(</span><span class="s">path/to/HPActor</span><span class="p">)</span>
+
+<span class="nb">add_executable</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">main.cpp</span><span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">hpactor_lib</span><span class="p">)</span>
+</pre></div>
+</div>
+<p>Or link against an installed library:</p>
+<div class="highlight-cmake notranslate"><div class="highlight"><pre><span></span><span class="nb">find_package</span><span class="p">(</span><span class="s">hpactor</span><span class="w"> </span><span class="s">REQUIRED</span><span class="p">)</span>
+<span class="nb">target_link_libraries</span><span class="p">(</span><span class="s">my_app</span><span class="w"> </span><span class="s">PRIVATE</span><span class="w"> </span><span class="s">hpactor::hpactor_lib</span><span class="p">)</span>
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="overview.html" class="btn btn-neutral float-left" title="Framework Overview" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="your-first-actor.html" class="btn btn-neutral float-right" title="Your First Actor" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

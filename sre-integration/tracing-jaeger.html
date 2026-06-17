@@ -1,0 +1,335 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Distributed Tracing with Jaeger &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Alerting Rules" href="alerting.html" />
+    <link rel="prev" title="Log Aggregation with Loki" href="logging-loki.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1"><a class="reference internal" href="logging-loki.html">Log Aggregation with Loki</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Distributed Tracing with Jaeger</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#trace-flow-in-hpactor">Trace Flow in HPActor</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuration">Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#jaeger-via-opentelemetry-collector">Jaeger via OpenTelemetry Collector</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#analyzing-traces-in-jaeger">Analyzing Traces in Jaeger</a><ul>
+<li class="toctree-l3"><a class="reference internal" href="#trace-attributes">Trace Attributes</a></li>
+</ul>
+</li>
+<li class="toctree-l2"><a class="reference internal" href="#debugging-with-traces">Debugging with Traces</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#sampling-strategy">Sampling Strategy</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Distributed Tracing with Jaeger</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/sre-integration/tracing-jaeger.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="distributed-tracing-with-jaeger">
+<span id="sre-integration-tracing-jaeger"></span><h1>Distributed Tracing with Jaeger<a class="headerlink" href="#distributed-tracing-with-jaeger" title="Link to this heading"></a></h1>
+<p>HPActor’s W3C-compatible trace context propagates across actor
+boundaries and network hops. This guide covers exporting traces to
+Jaeger (or any OpenTelemetry-compatible collector) for visualization.</p>
+<section id="trace-flow-in-hpactor">
+<h2>Trace Flow in HPActor<a class="headerlink" href="#trace-flow-in-hpactor" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Client ──► HTTP Gateway ──► CoordinatorActor ──► WorkerActor
+             │                  │                    │
+             ├─ Span A ─────────┼─ Span B ───────────┼─ Span C
+             │  (server)        │  (consumer)        │  (consumer)
+             │                  │  (producer)        │
+             ▼                  ▼                    ▼
+          TraceManager ───────────────────► Exporter ──► Jaeger
+</pre></div>
+</div>
+<p>Each actor message handler creates spans automatically. The
+<code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TraceManager</span></code> collects and exports them.</p>
+</section>
+<section id="configuration">
+<h2>Configuration<a class="headerlink" href="#configuration" title="Link to this heading"></a></h2>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.tracing]</span>
+<span class="n">enabled</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="kc">true</span>
+<span class="n">sampling_rate</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mf">0.1</span>
+<span class="n">ring_buffer_capacity</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">65536</span>
+<span class="n">exporter</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;memory&quot;</span><span class="w">   </span><span class="c1"># Built-in memory exporter for testing</span>
+
+<span class="c1"># For production, implement a custom exporter:</span>
+</pre></div>
+</div>
+<p>The built-in <code class="docutils literal notranslate"><span class="pre">MemoryExporter</span></code> keeps spans in memory for CLI inspection
+and testing. For production, implement the <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">TraceExporter</span></code>
+interface:</p>
+<div class="highlight-cpp notranslate"><div class="highlight"><pre><span></span><span class="k">class</span><span class="w"> </span><span class="nc">JaegerTraceExporter</span><span class="w"> </span><span class="o">:</span><span class="w"> </span><span class="k">public</span><span class="w"> </span><span class="n">TraceExporter</span><span class="w"> </span><span class="p">{</span>
+<span class="k">public</span><span class="o">:</span>
+<span class="w">    </span><span class="kt">void</span><span class="w"> </span><span class="n">export_spans</span><span class="p">(</span><span class="n">std</span><span class="o">::</span><span class="n">vector</span><span class="o">&lt;</span><span class="n">Span</span><span class="o">&gt;</span><span class="w"> </span><span class="n">spans</span><span class="p">)</span><span class="w"> </span><span class="k">override</span><span class="w"> </span><span class="p">{</span>
+<span class="w">        </span><span class="c1">// Convert spans to Jaeger Thrift or OTLP format</span>
+<span class="w">        </span><span class="c1">// Send to Jaeger collector via UDP or gRPC</span>
+<span class="w">    </span><span class="p">}</span>
+<span class="p">};</span>
+
+<span class="c1">// Register with the trace manager:</span>
+<span class="n">system</span><span class="p">.</span><span class="n">trace_manager</span><span class="p">().</span><span class="n">set_exporter</span><span class="p">(</span>
+<span class="w">    </span><span class="n">std</span><span class="o">::</span><span class="n">make_unique</span><span class="o">&lt;</span><span class="n">JaegerTraceExporter</span><span class="o">&gt;</span><span class="p">(</span><span class="n">jaeger_config</span><span class="p">));</span>
+</pre></div>
+</div>
+</section>
+<section id="jaeger-via-opentelemetry-collector">
+<h2>Jaeger via OpenTelemetry Collector<a class="headerlink" href="#jaeger-via-opentelemetry-collector" title="Link to this heading"></a></h2>
+<p>The recommended approach is to route HPActor traces through the
+OpenTelemetry Collector, which can forward to Jaeger (and many other
+backends):</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>HPActor ──► OTLP gRPC ──► OpenTelemetry Collector ──► Jaeger
+                                    │
+                                    ├──► Prometheus (span metrics)
+                                    └──► Logging exporter (debug)
+</pre></div>
+</div>
+<p>OpenTelemetry Collector Configuration:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># otel-collector-config.yaml</span>
+<span class="nt">receivers</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">otlp</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">protocols</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">grpc</span><span class="p">:</span>
+<span class="w">        </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">0.0.0.0:4317</span>
+
+<span class="nt">exporters</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">jaeger</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">endpoint</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">jaeger:14250</span>
+<span class="w">    </span><span class="nt">tls</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">insecure</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="w">  </span><span class="nt">logging</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">loglevel</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">debug</span>
+
+<span class="nt">service</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">pipelines</span><span class="p">:</span>
+<span class="w">    </span><span class="nt">traces</span><span class="p">:</span>
+<span class="w">      </span><span class="nt">receivers</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">otlp</span><span class="p p-Indicator">]</span>
+<span class="w">      </span><span class="nt">exporters</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="nv">jaeger</span><span class="p p-Indicator">,</span><span class="w"> </span><span class="nv">logging</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+<p>Then implement an OTLP exporter in HPActor (or use a sidecar that reads
+the memory exporter via CLI and forwards).</p>
+</section>
+<section id="analyzing-traces-in-jaeger">
+<h2>Analyzing Traces in Jaeger<a class="headerlink" href="#analyzing-traces-in-jaeger" title="Link to this heading"></a></h2>
+<p>Key queries in Jaeger UI:</p>
+<ul class="simple">
+<li><p><strong>Service</strong>: <code class="docutils literal notranslate"><span class="pre">hpactor</span></code></p></li>
+<li><p><strong>Operation</strong>: filter by span name (e.g., <code class="docutils literal notranslate"><span class="pre">process</span> <span class="pre">OrderRequest</span></code>)</p></li>
+<li><p><strong>Tags</strong>: <code class="docutils literal notranslate"><span class="pre">actor.type=worker</span></code>, <code class="docutils literal notranslate"><span class="pre">message.type=6</span></code></p></li>
+<li><p><strong>Duration</strong>: find slow handlers: <code class="docutils literal notranslate"><span class="pre">duration</span> <span class="pre">&gt;</span> <span class="pre">100ms</span></code></p></li>
+</ul>
+<section id="trace-attributes">
+<h3>Trace Attributes<a class="headerlink" href="#trace-attributes" title="Link to this heading"></a></h3>
+<p>Each span includes these attributes for filtering:</p>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Attribute</p></th>
+<th class="head"><p>Description</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">actor.id</span></code></p></td>
+<td><p>ActorId string (e.g., <code class="docutils literal notranslate"><span class="pre">actor:42</span></code>)</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">actor.type</span></code></p></td>
+<td><p>Actor type name (e.g., <code class="docutils literal notranslate"><span class="pre">worker</span></code>)</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">message.type</span></code></p></td>
+<td><p>TypeTag of the processed message</p></td>
+</tr>
+<tr class="row-odd"><td><p><code class="docutils literal notranslate"><span class="pre">message.id</span></code></p></td>
+<td><p>Correlated MessageId</p></td>
+</tr>
+<tr class="row-even"><td><p><code class="docutils literal notranslate"><span class="pre">node.id</span></code></p></td>
+<td><p>Node identifier for cross-node traces</p></td>
+</tr>
+</tbody>
+</table>
+</section>
+</section>
+<section id="debugging-with-traces">
+<h2>Debugging with Traces<a class="headerlink" href="#debugging-with-traces" title="Link to this heading"></a></h2>
+<p>Common debugging scenarios:</p>
+<p><strong>Finding slow actors:</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>In Jaeger: filter by service=hpactor, sort by duration descending.
+Long spans indicate slow message handlers.
+</pre></div>
+</div>
+<p><strong>Tracing message flow:</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Search by trace_id (from log line or API response header).
+The trace shows every actor that touched the message.
+</pre></div>
+</div>
+<p><strong>Identifying missing handlers:</strong></p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>Look for spans with status=ERROR. These indicate messages that
+could not be delivered or processed.
+</pre></div>
+</div>
+</section>
+<section id="sampling-strategy">
+<h2>Sampling Strategy<a class="headerlink" href="#sampling-strategy" title="Link to this heading"></a></h2>
+<table class="docutils align-default">
+<thead>
+<tr class="row-odd"><th class="head"><p>Strategy</p></th>
+<th class="head"><p>Config</p></th>
+<th class="head"><p>Use Case</p></th>
+</tr>
+</thead>
+<tbody>
+<tr class="row-even"><td><p><strong>Always off</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sampling_rate</span> <span class="pre">=</span> <span class="pre">0</span></code></p></td>
+<td><p>Disable tracing entirely</p></td>
+</tr>
+<tr class="row-odd"><td><p><strong>Probability</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sampling_rate</span> <span class="pre">=</span> <span class="pre">0.1</span></code> (10%)</p></td>
+<td><p>Production: sample enough to see patterns</p></td>
+</tr>
+<tr class="row-even"><td><p><strong>Always on</strong></p></td>
+<td><p><code class="docutils literal notranslate"><span class="pre">sampling_rate</span> <span class="pre">=</span> <span class="pre">1.0</span></code></p></td>
+<td><p>Development, debugging, low-traffic systems</p></td>
+</tr>
+</tbody>
+</table>
+<p>Parent-based sampling ensures that if any span in a trace is sampled,
+all spans in that trace are sampled (complete traces, never partial).</p>
+<p>For health and readiness checks that participate in tracing, see
+<a class="reference internal" href="../monitoring/health.html"><span class="doc">Health &amp; Readiness</span></a>.</p>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="logging-loki.html" class="btn btn-neutral float-left" title="Log Aggregation with Loki" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="alerting.html" class="btn btn-neutral float-right" title="Alerting Rules" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>

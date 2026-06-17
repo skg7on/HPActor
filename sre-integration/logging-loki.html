@@ -1,0 +1,312 @@
+
+
+<!DOCTYPE html>
+<html class="writer-html5" lang="en" data-content_root="../">
+<head>
+  <meta charset="utf-8" /><meta name="viewport" content="width=device-width, initial-scale=1" />
+
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Log Aggregation with Loki &mdash; HPActor 0.1.0 documentation</title>
+      <link rel="stylesheet" type="text/css" href="../_static/pygments.css?v=b86133f3" />
+      <link rel="stylesheet" type="text/css" href="../_static/css/theme.css?v=9edc463e" />
+
+  
+      <script src="../_static/jquery.js?v=5d32c60e"></script>
+      <script src="../_static/_sphinx_javascript_frameworks_compat.js?v=2cd50e6c"></script>
+      <script src="../_static/documentation_options.js?v=01f34227"></script>
+      <script src="../_static/doctools.js?v=fd6eb6e6"></script>
+      <script src="../_static/sphinx_highlight.js?v=6ffebe34"></script>
+    <script src="../_static/js/theme.js"></script>
+    <link rel="index" title="Index" href="../genindex.html" />
+    <link rel="search" title="Search" href="../search.html" />
+    <link rel="next" title="Distributed Tracing with Jaeger" href="tracing-jaeger.html" />
+    <link rel="prev" title="Prometheus &amp; Grafana" href="prometheus-grafana.html" /> 
+</head>
+
+<body class="wy-body-for-nav"> 
+  <div class="wy-grid-for-nav">
+    <nav data-toggle="wy-nav-shift" class="wy-nav-side">
+      <div class="wy-side-scroll">
+        <div class="wy-side-nav-search" >
+
+          
+          
+          <a href="../index.html" class="icon icon-home">
+            HPActor
+          </a>
+<div role="search">
+  <form id="rtd-search-form" class="wy-form" action="../search.html" method="get">
+    <input type="text" name="q" placeholder="Search docs" aria-label="Search docs" />
+    <input type="hidden" name="check_keywords" value="yes" />
+    <input type="hidden" name="area" value="default" />
+  </form>
+</div>
+        </div><div class="wy-menu wy-menu-vertical" data-spy="affix" role="navigation" aria-label="Navigation menu">
+              <p class="caption" role="heading"><span class="caption-text">Getting Started</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/overview.html">Framework Overview</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/installation.html">Installation</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/your-first-actor.html">Your First Actor</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../getting-started/project-structure.html">Project Structure</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Building Applications</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/actor-types.html">Actor Types</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/message-passing.html">Message Passing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/lifecycle.html">Actor Lifecycle &amp; Supervision</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/topology-config.html">Topology Configuration</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/remote-actors.html">Remote Actors &amp; Service Discovery</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../building-applications/distributed-patterns.html">Distributed Patterns</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Monitoring</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/metrics.html">Metrics</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/logging.html">Structured Logging</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/tracing.html">Distributed Tracing</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../monitoring/health.html">Health &amp; Readiness</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Operations</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli.html">Interactive CLI</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/cli-server.html">CLI Server &amp; Remote Access</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/http-gateway.html">HTTP Gateway</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../operations/daemon-mode.html">Daemon Mode &amp; systemd Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">SRE Integration</span></p>
+<ul class="current">
+<li class="toctree-l1"><a class="reference internal" href="prometheus-grafana.html">Prometheus &amp; Grafana</a></li>
+<li class="toctree-l1 current"><a class="current reference internal" href="#">Log Aggregation with Loki</a><ul>
+<li class="toctree-l2"><a class="reference internal" href="#integration-strategy">Integration Strategy</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#configuring-json-log-format">Configuring JSON Log Format</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#promtail-configuration">Promtail Configuration</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#loki-logql-queries">Loki LogQL Queries</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#grafana-correlation">Grafana Correlation</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#elk-stack-alternative">ELK Stack Alternative</a></li>
+<li class="toctree-l2"><a class="reference internal" href="#log-retention-rotation">Log Retention &amp; Rotation</a></li>
+</ul>
+</li>
+<li class="toctree-l1"><a class="reference internal" href="tracing-jaeger.html">Distributed Tracing with Jaeger</a></li>
+<li class="toctree-l1"><a class="reference internal" href="alerting.html">Alerting Rules</a></li>
+<li class="toctree-l1"><a class="reference internal" href="chaos-engineering.html">Chaos Engineering</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Best Practices</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/actor-design.html">Actor Design Patterns</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/error-handling.html">Error Handling</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/performance.html">Performance Tuning</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/testing.html">Testing Strategies</a></li>
+<li class="toctree-l1"><a class="reference internal" href="../best-practices/deployment.html">Production Deployment</a></li>
+</ul>
+<p class="caption" role="heading"><span class="caption-text">Appendix</span></p>
+<ul>
+<li class="toctree-l1"><a class="reference internal" href="../limitations.html">Limitations &amp; Known Gaps</a></li>
+</ul>
+
+        </div>
+      </div>
+    </nav>
+
+    <section data-toggle="wy-nav-shift" class="wy-nav-content-wrap"><nav class="wy-nav-top" aria-label="Mobile navigation menu" >
+          <i data-toggle="wy-nav-top" class="fa fa-bars"></i>
+          <a href="../index.html">HPActor</a>
+      </nav>
+
+      <div class="wy-nav-content">
+        <div class="rst-content">
+          <div role="navigation" aria-label="Page navigation">
+  <ul class="wy-breadcrumbs">
+      <li><a href="../index.html" class="icon icon-home" aria-label="Home"></a></li>
+      <li class="breadcrumb-item active">Log Aggregation with Loki</li>
+      <li class="wy-breadcrumbs-aside">
+            <a href="../_sources/sre-integration/logging-loki.rst.txt" rel="nofollow"> View page source</a>
+      </li>
+  </ul>
+  <hr/>
+</div>
+          <div role="main" class="document" itemscope="itemscope" itemtype="http://schema.org/Article">
+           <div itemprop="articleBody">
+             
+  <section id="log-aggregation-with-loki">
+<span id="sre-integration-logging-loki"></span><h1>Log Aggregation with Loki<a class="headerlink" href="#log-aggregation-with-loki" title="Link to this heading"></a></h1>
+<p>This guide covers integrating HPActor structured logging with Grafana
+Loki for centralized log aggregation and correlation with metrics and
+traces.</p>
+<section id="integration-strategy">
+<h2>Integration Strategy<a class="headerlink" href="#integration-strategy" title="Link to this heading"></a></h2>
+<p>HPActor’s <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">JsonLogFormatter</span></code> produces structured JSON log
+entries that include W3C trace context. This enables correlation between
+logs, traces, and metrics in Grafana.</p>
+<p>Architecture:</p>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span>HPActor ──► JsonLogFormatter ──► File/RotatingFile ──► Promtail ──► Loki
+          │                                                                │
+          └── TraceId, SpanId in each log line ────────────────────────────┘
+                                                           Grafana
+                                                   (Logs + Metrics + Traces)
+</pre></div>
+</div>
+</section>
+<section id="configuring-json-log-format">
+<h2>Configuring JSON Log Format<a class="headerlink" href="#configuring-json-log-format" title="Link to this heading"></a></h2>
+<p>Enable JSON output for machine parsing:</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.log]</span>
+<span class="n">level</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;info&quot;</span>
+<span class="n">sinks</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="p">[</span><span class="s2">&quot;rotating_file&quot;</span><span class="p">]</span>
+
+<span class="k">[system.log.rotating_file]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/var/log/hpactor/hpactor.log&quot;</span>
+<span class="n">max_size_mb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
+<span class="n">max_files</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span>
+
+<span class="c1"># Configure JSON format (default is text for development)</span>
+<span class="k">[system.log.formatter]</span>
+<span class="n">type</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;json&quot;</span>
+</pre></div>
+</div>
+<p>Example JSON log line:</p>
+<div class="highlight-json notranslate"><div class="highlight"><pre><span></span><span class="p">{</span>
+<span class="w">  </span><span class="nt">&quot;timestamp&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;2026-06-17T10:15:30.123Z&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;level&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;info&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;category&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actor.lifecycle&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;message&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;Actor worker-1 spawned&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;actor_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;actor:42&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;actor_type&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;worker&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;trace_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;0a1b2c3d4e5f6789abcdef0123456789&quot;</span><span class="p">,</span>
+<span class="w">  </span><span class="nt">&quot;span_id&quot;</span><span class="p">:</span><span class="w"> </span><span class="s2">&quot;1234567890abcdef&quot;</span>
+<span class="p">}</span>
+</pre></div>
+</div>
+</section>
+<section id="promtail-configuration">
+<h2>Promtail Configuration<a class="headerlink" href="#promtail-configuration" title="Link to this heading"></a></h2>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># promtail.yaml</span>
+<span class="nt">server</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">http_listen_port</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">9080</span>
+
+<span class="nt">clients</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">url</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">http://loki:3100/loki/api/v1/push</span>
+
+<span class="nt">scrape_configs</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">job_name</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hpactor</span>
+<span class="w">    </span><span class="nt">static_configs</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">targets</span><span class="p">:</span>
+<span class="w">          </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">localhost</span>
+<span class="w">        </span><span class="nt">labels</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">job</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">hpactor</span>
+<span class="w">          </span><span class="nt">node</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">${HOSTNAME}</span>
+<span class="w">          </span><span class="nt">__path__</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/log/hpactor/hpactor.log</span>
+<span class="w">    </span><span class="nt">pipeline_stages</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">json</span><span class="p">:</span>
+<span class="w">          </span><span class="nt">expressions</span><span class="p">:</span>
+<span class="w">            </span><span class="nt">timestamp</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">timestamp</span>
+<span class="w">            </span><span class="nt">level</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">level</span>
+<span class="w">            </span><span class="nt">category</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">category</span>
+<span class="w">            </span><span class="nt">message</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">message</span>
+<span class="w">            </span><span class="nt">actor_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">actor_id</span>
+<span class="w">            </span><span class="nt">trace_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">trace_id</span>
+<span class="w">            </span><span class="nt">span_id</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">span_id</span>
+</pre></div>
+</div>
+</section>
+<section id="loki-logql-queries">
+<h2>Loki LogQL Queries<a class="headerlink" href="#loki-logql-queries" title="Link to this heading"></a></h2>
+<div class="highlight-text notranslate"><div class="highlight"><pre><span></span># All error logs
+{job=&quot;hpactor&quot;} |= &quot;error&quot;
+
+# Delivery failures for a specific actor
+{job=&quot;hpactor&quot;} | json | category=&quot;delivery.failure&quot; | actor_id=&quot;actor:42&quot;
+
+# Mailbox pressure warnings
+{job=&quot;hpactor&quot;} | json | category=&quot;mailbox.pressure&quot;
+
+# Logs correlated with a specific trace
+{job=&quot;hpactor&quot;} | json | trace_id=&quot;0a1b2c3d4e5f6789abcdef0123456789&quot;
+
+# Recent supervision restarts
+{job=&quot;hpactor&quot;} | json | category=&quot;supervision.restart&quot; | line_format &quot;{{.actor_id}} restarted: {{.message}}&quot;
+</pre></div>
+</div>
+</section>
+<section id="grafana-correlation">
+<h2>Grafana Correlation<a class="headerlink" href="#grafana-correlation" title="Link to this heading"></a></h2>
+<p>When Loki, Tempo/Jaeger, and Prometheus are all configured as Grafana
+data sources, you can:</p>
+<ul class="simple">
+<li><p><strong>Logs → Traces</strong>: Click a <code class="docutils literal notranslate"><span class="pre">trace_id</span></code> in a Loki log entry to jump
+to the corresponding trace in Tempo/Jaeger.</p></li>
+<li><p><strong>Traces → Logs</strong>: View logs associated with a span.</p></li>
+<li><p><strong>Metrics → Logs</strong>: Drill from a Prometheus alert (e.g., high mailbox
+depth) to the corresponding actor’s logs.</p></li>
+</ul>
+<p>This requires the trace context (<code class="docutils literal notranslate"><span class="pre">trace_id</span></code>, <code class="docutils literal notranslate"><span class="pre">span_id</span></code>) in each log
+line — which the JSON formatter includes automatically when
+<code class="docutils literal notranslate"><span class="pre">ENABLE_ACTOR_TRACING=ON</span></code>.</p>
+</section>
+<section id="elk-stack-alternative">
+<h2>ELK Stack Alternative<a class="headerlink" href="#elk-stack-alternative" title="Link to this heading"></a></h2>
+<p>For teams using Elasticsearch, the JSON log format is equally compatible
+with Filebeat → Elasticsearch pipelines:</p>
+<div class="highlight-yaml notranslate"><div class="highlight"><pre><span></span><span class="c1"># filebeat.yml</span>
+<span class="nt">filebeat.inputs</span><span class="p">:</span>
+<span class="w">  </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="nt">type</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">log</span>
+<span class="w">    </span><span class="nt">enabled</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">paths</span><span class="p">:</span>
+<span class="w">      </span><span class="p p-Indicator">-</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">/var/log/hpactor/hpactor.log</span>
+<span class="w">    </span><span class="nt">json.keys_under_root</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+<span class="w">    </span><span class="nt">json.add_error_key</span><span class="p">:</span><span class="w"> </span><span class="l l-Scalar l-Scalar-Plain">true</span>
+
+<span class="nt">output.elasticsearch</span><span class="p">:</span>
+<span class="w">  </span><span class="nt">hosts</span><span class="p">:</span><span class="w"> </span><span class="p p-Indicator">[</span><span class="s">&quot;elasticsearch:9200&quot;</span><span class="p p-Indicator">]</span>
+</pre></div>
+</div>
+</section>
+<section id="log-retention-rotation">
+<h2>Log Retention &amp; Rotation<a class="headerlink" href="#log-retention-rotation" title="Link to this heading"></a></h2>
+<p>HPActor’s <code class="xref cpp cpp-class docutils literal notranslate"><span class="pre">RotatingFileSink</span></code> handles local log rotation.
+For long-term retention, rely on Loki or Elasticsearch — configure
+appropriate retention policies there, not in the application.</p>
+<div class="highlight-toml notranslate"><div class="highlight"><pre><span></span><span class="k">[system.log.rotating_file]</span>
+<span class="n">path</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="s2">&quot;/var/log/hpactor/hpactor.log&quot;</span>
+<span class="n">max_size_mb</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">100</span>
+<span class="n">max_files</span><span class="w"> </span><span class="o">=</span><span class="w"> </span><span class="mi">10</span><span class="w">   </span><span class="c1"># Keep ~1GB of local logs</span>
+</pre></div>
+</div>
+<p>For daemon mode with syslog, journald handles rotation automatically:</p>
+<div class="highlight-bash notranslate"><div class="highlight"><pre><span></span><span class="c1"># View daemon logs</span>
+sudo<span class="w"> </span>journalctl<span class="w"> </span>-u<span class="w"> </span>hpactor<span class="w"> </span>-f<span class="w"> </span>--output<span class="o">=</span>json
+</pre></div>
+</div>
+</section>
+</section>
+
+
+           </div>
+          </div>
+          <footer><div class="rst-footer-buttons" role="navigation" aria-label="Footer">
+        <a href="prometheus-grafana.html" class="btn btn-neutral float-left" title="Prometheus &amp; Grafana" accesskey="p" rel="prev"><span class="fa fa-arrow-circle-left" aria-hidden="true"></span> Previous</a>
+        <a href="tracing-jaeger.html" class="btn btn-neutral float-right" title="Distributed Tracing with Jaeger" accesskey="n" rel="next">Next <span class="fa fa-arrow-circle-right" aria-hidden="true"></span></a>
+    </div>
+
+  <hr/>
+
+  <div role="contentinfo">
+    <p>&#169; Copyright 2026, HPActor Contributors.</p>
+  </div>
+
+  Built with <a href="https://www.sphinx-doc.org/">Sphinx</a> using a
+    <a href="https://github.com/readthedocs/sphinx_rtd_theme">theme</a>
+    provided by <a href="https://readthedocs.org">Read the Docs</a>.
+   
+
+</footer>
+        </div>
+      </div>
+    </section>
+  </div>
+  <script>
+      jQuery(function () {
+          SphinxRtdTheme.Navigation.enable(true);
+      });
+  </script> 
+
+</body>
+</html>
