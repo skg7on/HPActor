@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/core/actor_system.hpp>
 #include <hpactor/process/process_config.hpp>
 #include <hpactor/process/process_manager.hpp>
 
@@ -59,4 +60,20 @@ TEST(DaemonIntegrationTest, SignalHandlersInstall) {
     auto result = ProcessManager::install_signal_handlers(
         [&]() { terminate_count++; }, [&]() { reload_count++; });
     EXPECT_TRUE(result.ok());
+}
+
+// When the process is running as a systemd service or daemon, the stdin-based
+// CliActor must NOT be spawned — there is no terminal attached.  CLI access in
+// those modes goes through CliLegacyServerActor / CliProtoServerActor via
+// UDS/TCP sockets instead.
+TEST(DaemonIntegrationTest, ActorSystemSkipsCliActorInSystemdMode) {
+    hpactor::Config sys_config;
+    sys_config.scheduler_threads = 0;
+    sys_config.cli.enabled = true;
+    sys_config.process.mode = ProcessMode::Systemd;
+
+    hpactor::ActorSystem system(sys_config);
+
+    // CliActor (stdin-based) must NOT be spawned in non-foreground modes.
+    EXPECT_EQ(system.cli_actor(), nullptr);
 }

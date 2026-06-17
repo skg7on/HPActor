@@ -305,7 +305,11 @@ ActorSystem::ActorSystem(const Config& config)
             *this, durable_store.release(), defaults);
     }
 
-    if (config_.cli.enabled) {
+    // CliActor reads from stdin — only appropriate in foreground mode.
+    // In daemon/systemd modes, CLI access goes through CliLegacyServerActor
+    // or CliProtoServerActor via UDS/TCP sockets instead.
+    if (config_.cli.enabled &&
+        process::ProcessManager::mode() == process::ProcessMode::Foreground) {
         auto spawned = spawn<cli::CliActor>(config_.cli);
         cli_actor_ = std::static_pointer_cast<cli::CliActor>(spawned.get());
     }
