@@ -111,8 +111,14 @@ class JsonBuilder {
     JsonBuilder& field(const char* key, bool v);
 
     /// \brief Emit any integral type as a JSON number.
-    /// Accepts uint64_t, int64_t, uint32_t, int32_t, unsigned long,
-    /// unsigned long long, long, long long, etc. without ambiguity.
+    ///
+    /// Accepts \c uint64_t, \c int64_t, \c uint32_t, \c int32_t,
+    /// \c unsigned long, \c unsigned long long, \c long, \c long long,
+    /// and any other integral type except \c bool, without ambiguity.
+    ///
+    /// \tparam T Integral type to emit (SFINAE-excludes \c bool).
+    /// \param[in] key JSON object key.
+    /// \param[in] v   Numeric value.
     template <typename T>
     std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, JsonBuilder&>
     field(const char* key, T v) {
@@ -136,6 +142,9 @@ class JsonBuilder {
     JsonBuilder& element(bool v);
 
     /// \brief Emit any integral type as a JSON number (array element).
+    ///
+    /// \tparam T Integral type to emit (SFINAE-excludes \c bool).
+    /// \param[in] v Numeric value.
     template <typename T>
     std::enable_if_t<std::is_integral_v<T> && !std::is_same_v<T, bool>, JsonBuilder&>
     element(T v) {
