@@ -1,9 +1,11 @@
 // Copyright 2026 HPActor Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#include <hpactor/cli/cli_legacy_server_actor.hpp>
 #include <hpactor/cli/cli_proto_server_actor.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/core/actor_system.hpp>
 
 #include <charconv>
 #include <string>
@@ -11,6 +13,21 @@
 namespace hpactor {
 namespace cli {
 namespace {
+
+/// Find a CliProtoServerActor in the ActorSystem.  Needed when the command
+/// runs in the local stdin CLI (CliActor) session — ctx.cli_proto_server is
+/// only set for remote client sessions handled by the proto server itself.
+static CliProtoServerActor* find_proto_server(ActorSystem* sys) {
+    if (!sys)
+        return nullptr;
+    CliProtoServerActor* found = nullptr;
+    sys->for_each_actor([&](ActorId, AbstractActor& actor) {
+        if (!found && actor.type_name() ==
+                          std::string_view(CliProtoServerActor::kActorTypeName))
+            found = static_cast<CliProtoServerActor*>(&actor);
+    });
+    return found;
+}
 
 class ClientListCommand final : public ICommand {
   public:
@@ -25,14 +42,22 @@ class ClientListCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
+        // Remote CLI: delegate to the server via execute_path.
         if (ctx.system_host &&
             ctx.system_host->execute_path("client/list", {}, {}, *ctx.output))
             return result<void>::make();
-        if (ctx.cli_proto_server) {
-            ctx.output->raw(ctx.cli_proto_server->list_clients());
+        // Direct access: ctx.cli_proto_server (set in proto server sessions).
+        if (auto* srv = ctx.cli_proto_server) {
+            ctx.output->raw(srv->list_clients());
             return result<void>::make();
         }
-        ctx.output->error("Client management not available on this host");
+        // Local CLI: find the proto server in the ActorSystem.
+        if (auto* srv = find_proto_server(ctx.system)) {
+            ctx.output->raw(srv->list_clients());
+            return result<void>::make();
+        }
+        ctx.output->error("No CLI server running — client management "
+                          "not available.");
         return result<void>::make();
     }
 };
@@ -68,14 +93,16 @@ class ClientCloseCommand final : public ICommand {
             ctx.system_host->execute_path("client/" + *seqno_str + "/close", {},
                                           {}, *ctx.output))
             return result<void>::make();
-        if (ctx.cli_proto_server) {
-            if (ctx.cli_proto_server->close_client(seqno))
+        auto* srv = ctx.cli_proto_server ? ctx.cli_proto_server
+                                         : find_proto_server(ctx.system);
+        if (srv) {
+            if (srv->close_client(seqno))
                 ctx.output->raw("Client " + *seqno_str + " disconnected.\n");
             else
                 ctx.output->error("Client " + *seqno_str + " not found.");
             return result<void>::make();
         }
-        ctx.output->error("Client management not available on this host");
+        ctx.output->error("No CLI server running.");
         return result<void>::make();
     }
 };
@@ -111,11 +138,13 @@ class ClientHistoryCommand final : public ICommand {
             ctx.system_host->execute_path("client/" + *seqno_str + "/history",
                                           {}, {}, *ctx.output))
             return result<void>::make();
-        if (ctx.cli_proto_server) {
-            ctx.output->raw(ctx.cli_proto_server->client_history(seqno));
+        auto* srv = ctx.cli_proto_server ? ctx.cli_proto_server
+                                         : find_proto_server(ctx.system);
+        if (srv) {
+            ctx.output->raw(srv->client_history(seqno));
             return result<void>::make();
         }
-        ctx.output->error("Client management not available on this host");
+        ctx.output->error("No CLI server running.");
         return result<void>::make();
     }
 };
