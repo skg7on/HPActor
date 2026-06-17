@@ -28,17 +28,18 @@
 namespace hpactor::apps::hpactor_demo {
 
 int run_foreground(ActorSystem& system, const ForegroundConfig& cfg) {
-    // Spawn CliServerActor for remote hpactor-cli access
+    // Spawn CliLegacyServerActor for remote hpactor-cli access.
+    // uds_path is always populated by main.cpp (either user-provided or
+    // platform-aware default); no fallback needed here.
     cli::CliLegacyServerConfig server_cfg;
-    server_cfg.uds_listen_path =
-        cfg.uds_path.empty() ? "/tmp/hpactor/hpactor.sock" : cfg.uds_path;
+    server_cfg.uds_listen_path = cfg.uds_path;
     server_cfg.max_sessions = 16;
     server_cfg.default_format = "pretty";
     server_cfg.page_size = 20;
 
     auto cli_server = system.spawn<cli::CliLegacyServerActor>(server_cfg);
 
-    // Notify ready
+    // Notify ready (no-op in foreground mode, kept for consistency)
     process::ProcessManager::notify_ready();
 
     // Print banner (CliActor owns stdout but banner printed before CLI loop)
@@ -48,17 +49,23 @@ int run_foreground(ActorSystem& system, const ForegroundConfig& cfg) {
               << server_cfg.uds_listen_path << "]\n"
               << std::endl;
 
-    // Block until CliActor exits (/quit or EOF)
+    // Block until CliActor exits (/quit or EOF).
+    //
+    // TODO: Replace polling with a std::promise/future signaled by CliActor
+    // when its daemon loop exits.  This requires adding a shutdown callback
+    // hook to InteractiveCliActor (framework change).  Until then, poll at
+    // 50 ms — a reasonable tradeoff between responsiveness and CPU waste.
     while (system.cli_actor() && system.cli_actor()->is_running()) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(200));
+        std::this_thread::sleep_for(std::chrono::milliseconds(50));
     }
 
-    // Shutdown the CLI server
-    auto* server_raw = std::static_pointer_cast<cli::CliLegacyServerActor>(
-                           system.get_actor(cli_server.id()))
-                           .get();
-    if (server_raw) {
-        server_raw->request_shutdown();
+    // Shutdown the CLI server before system.shutdown() to ensure the
+    // daemon thread's event loop is stopped before ActorSystem drains
+    // resources the event loop may still reference.
+    auto server =
+        std::static_pointer_cast<cli::CliLegacyServerActor>(cli_server.get());
+    if (server) {
+        server->request_shutdown();
     }
 
     std::cout << "\nInitiating graceful shutdown..." << std::endl;

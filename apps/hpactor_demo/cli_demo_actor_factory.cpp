@@ -111,34 +111,26 @@ CliDemoActors spawn_cli_demo_actors(ActorSystem& system) {
             system.get_actor(system.spawn<WorkerActor>(cfg).id()));
     }
 
-    // Wire addresses
+    // Wire addresses — merged into a single pass over the workers array.
+    std::vector<ActorAddress> worker_addrs;
     for (auto& w : a.workers) {
         w->set_aggregator_addr(a.aggregator->address());
         w->set_log_addr(a.log->address());
-    }
-
-    auto* health_raw = a.health_check.get();
-    auto* broadcast_raw = a.broadcast.get();
-
-    std::vector<ActorAddress> worker_addrs;
-    for (auto& w : a.workers) {
-        health_raw->add_worker(w->address());
-        broadcast_raw->add_worker(w->address());
+        a.health_check->add_worker(w->address());
+        a.broadcast->add_worker(w->address());
         worker_addrs.push_back(w->address());
     }
 
-    auto* dlq_raw = a.dlq_demo.get();
-    dlq_raw->set_target_actors(worker_addrs);
-
-    auto* query_raw = a.query.get();
-    query_raw->set_clock_addr(a.clock->address());
+    a.dlq_demo->set_target_actors(worker_addrs);
+    a.query->set_clock_addr(a.clock->address());
 
     return a;
 }
 
 void kickoff_cli_demo_actors(ActorSystem& system, const CliDemoActors& actors) {
-    std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
+    // spawn() is synchronous — actor constructors, behavior setup, and
+    // mailbox initialization all complete before spawn() returns.  No
+    // pre-kickoff sleep is needed.
     for (auto& w : actors.workers) {
         deliver_local(system, w->id(), StartTag);
     }
@@ -149,6 +141,8 @@ void kickoff_cli_demo_actors(ActorSystem& system, const CliDemoActors& actors) {
     deliver_local(system, actors.dlq_demo->id(), StartTag);
     deliver_local(system, actors.query->id(), StartTag);
 
+    // Yield briefly so enqueued messages are picked up by scheduler workers
+    // before the CLI starts accepting input.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
 }
 

@@ -21,7 +21,9 @@
 #include <hpactor/process/process_manager.hpp>
 #include <hpactor/process/watchdog_actor.hpp>
 
+#include <chrono>
 #include <iostream>
+#include <thread>
 
 namespace hpactor::apps::hpactor_demo {
 
@@ -53,6 +55,12 @@ int run_daemon(ActorSystem& system, const DaemonConfig& cfg) {
         health_cfg.port = cfg.health_port;
         system.spawn<process::HealthHttpServer>(health_cfg);
     }
+
+    // Yield briefly so DaemonActor threads start and bind sockets before
+    // we signal readiness to systemd.  Without this, systemd may mark the
+    // unit active and launch dependent services before the UDS socket or
+    // TCP port is accepting connections.
+    std::this_thread::sleep_for(std::chrono::milliseconds(10));
 
     // Signal readiness to systemd
     process::ProcessManager::notify_ready();

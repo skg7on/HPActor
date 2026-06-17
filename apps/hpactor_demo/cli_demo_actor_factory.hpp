@@ -68,8 +68,11 @@ CliDemoActors spawn_cli_demo_actors(ActorSystem& system);
 
 /// \brief Send StartTag and PeriodicTickTag messages to kick off periodic work.
 ///
-/// Must be called after \c spawn_cli_demo_actors() and a short sleep
-/// (~100ms) to ensure mailboxes are initialized.
+/// Must be called after \c spawn_cli_demo_actors().  \c spawn() is
+/// synchronous — mailboxes and behaviors are fully initialized before it
+/// returns, so no pre-kickoff delay is needed.  A brief yield after
+/// sending messages gives scheduler workers a chance to pick up enqueued
+/// work before the CLI starts.
 ///
 /// \param[in] system The actor system for local delivery.
 /// \param[in] actors The actors returned by \c spawn_cli_demo_actors().

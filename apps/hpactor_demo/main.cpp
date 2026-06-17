@@ -12,6 +12,15 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+/// \file main.cpp
+/// \brief hpactor_demo — unified foreground/service binary using cli_demo
+/// actors.
+///
+/// Supports three modes:
+///   --foreground  Interactive CLI via stdin + UDS socket (default)
+///   --systemd     systemd Type=notify service (Linux only)
+///   --daemon      Traditional double-fork daemon (Linux only)
+
 #include "cli_demo_actor_factory.hpp"
 #include "daemon_runner.hpp"
 #include "foreground_runner.hpp"
@@ -20,6 +29,7 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/process/process_config.hpp>
 
+#include <cerrno>
 #include <chrono>
 #include <cstdlib>
 #include <cstring>
@@ -50,7 +60,6 @@ void print_usage(const char* prog) {
               << "  --uds-path PATH       UDS listen path\n"
               << "  --tcp-port PORT       TCP port (0=disabled)\n"
               << "  --health-port PORT    Health HTTP port (default: 8089)\n"
-              << "  --log-level LEVEL     Override log level\n"
               << "  --help                Show this help\n";
 }
 
@@ -60,6 +69,26 @@ std::string default_uds_path() {
 #else
     return "/var/run/hpactor/hpactor.sock";
 #endif
+}
+
+/// Parse a port number from a CLI argument. Prints error and exits on invalid
+/// input.
+static uint16_t parse_port(const char* arg, const char* flag_name) {
+    char* end = nullptr;
+    errno = 0;
+    long val = std::strtol(arg, &end, 10);
+    if (errno != 0 || end == arg || *end != '\0' || val < 0 || val > 65535) {
+        std::cerr << "Error: invalid port for " << flag_name << ": " << arg << "\n";
+        std::exit(1);
+    }
+    return static_cast<uint16_t>(val);
+}
+
+/// Print an error message and exit when a flag requires an argument but none is
+/// provided (flag is the last token on the command line).
+[[noreturn]] static void missing_arg(const char* flag_name) {
+    std::cerr << "Error: " << flag_name << " requires an argument\n";
+    std::exit(1);
 }
 
 CliOptions parse_args(int argc, char* argv[]) {
@@ -73,25 +102,37 @@ CliOptions parse_args(int argc, char* argv[]) {
         } else if (arg == "--daemon") {
             opts.mode = process::ProcessMode::Daemon;
         } else if (arg == "--config") {
-            if (i + 1 < argc)
-                opts.config_path = argv[++i];
+            if (i + 1 >= argc)
+                missing_arg("--config");
+            opts.config_path = argv[++i];
         } else if (arg == "--uds-path") {
-            if (i + 1 < argc)
-                opts.uds_path = argv[++i];
+            if (i + 1 >= argc)
+                missing_arg("--uds-path");
+            opts.uds_path = argv[++i];
         } else if (arg == "--tcp-port") {
-            if (i + 1 < argc)
-                opts.tcp_port = static_cast<uint16_t>(std::atoi(argv[++i]));
+            if (i + 1 >= argc)
+                missing_arg("--tcp-port");
+            opts.tcp_port = parse_port(argv[++i], "--tcp-port");
         } else if (arg == "--health-port") {
-            if (i + 1 < argc)
-                opts.health_port = static_cast<uint16_t>(std::atoi(argv[++i]));
-        } else if (arg == "--log-level") {
-            if (i + 1 < argc)
-                opts.log_level = argv[++i];
+            if (i + 1 >= argc)
+                missing_arg("--health-port");
+            opts.health_port = parse_port(argv[++i], "--health-port");
         } else if (arg == "--help" || arg == "-h") {
             print_usage(argv[0]);
             std::exit(0);
+        } else if (arg == "--log-level") {
+            // Accepted for forward-compatibility. Log-level overrides require
+            // TOML [system.logging] configuration or environment variables;
+            // the CLI flag is not yet wired to LogManager.
+            if (i + 1 < argc) {
+                opts.log_level = argv[++i];
+                std::cerr << "Warning: --log-level is not yet supported; use "
+                             "TOML config or environment variables.\n";
+            } else {
+                missing_arg("--log-level");
+            }
         } else {
-            std::cerr << "Unknown option: " << arg << "\n";
+            std::cerr << "Error: unknown option: " << arg << "\n";
             print_usage(argv[0]);
             std::exit(1);
         }
@@ -127,10 +168,6 @@ Config build_config(const CliOptions& opts) {
                                     .history_max = 1000};
     }
 
-    // Note: Config does not have a 'logging' member for log-level overrides.
-    // Log level is configured via LogConfig managed internally by ActorSystem.
-    // Use TOML config or environment variables for log-level overrides.
-
     return config;
 }
 
@@ -138,6 +175,22 @@ Config build_config(const CliOptions& opts) {
 
 int main(int argc, char* argv[]) {
     auto opts = parse_args(argc, argv);
+
+    // Platform guard: daemon/systemd modes are Linux-only.
+    // Must run BEFORE ActorSystem construction because ProcessManager::init()
+    // calls daemonize() (double-fork) as a side effect of the constructor.
+    if (opts.mode != process::ProcessMode::Foreground) {
+#ifdef __APPLE__
+        std::cerr << "Error: daemon/systemd mode is not supported on macOS.\n"
+                  << "Use --foreground mode instead.\n";
+        return 1;
+#endif
+    }
+
+    // Resolve UDS path once — used by splash, foreground runner, and daemon
+    // runner.
+    auto uds_path =
+        opts.uds_path.empty() ? default_uds_path() : std::move(opts.uds_path);
 
     // Splash for foreground mode
     if (opts.mode == process::ProcessMode::Foreground) {
@@ -161,8 +214,7 @@ int main(int argc, char* argv[]) {
             << "║    • Graceful shutdown (30s drain timeout)                   ║\n"
             << "║                                                              ║\n"
             << "║  Connect via hpactor-cli:                                    ║\n"
-            << "║    hpactor-cli --socket "
-            << (opts.uds_path.empty() ? default_uds_path() : opts.uds_path) << "\n"
+            << "║    hpactor-cli --socket " << uds_path << "\n"
             << "║                                                              ║\n"
             << "╚══════════════════════════════════════════════════════════════╝\n"
             << std::endl;
@@ -172,20 +224,25 @@ int main(int argc, char* argv[]) {
     auto config = build_config(opts);
     ActorSystem system(config);
 
-    // Spawn all cli_demo actors
-    auto actors = cli_demo::spawn_cli_demo_actors(system);
-    cli_demo::kickoff_cli_demo_actors(system, actors);
+    // Demo actors are only spawned in foreground (interactive) mode.
+    // In daemon/systemd mode they consume scheduler resources with no
+    // connected CLI user.  A future enhancement could defer spawning to
+    // when the first CLI session attaches.
+    if (opts.mode == process::ProcessMode::Foreground) {
+        auto actors = cli_demo::spawn_cli_demo_actors(system);
+        cli_demo::kickoff_cli_demo_actors(system, actors);
+    }
 
     // Dispatch by mode
     if (opts.mode == process::ProcessMode::Foreground) {
         hpactor_demo::ForegroundConfig fg_cfg;
-        fg_cfg.uds_path = opts.uds_path.empty() ? default_uds_path() : opts.uds_path;
+        fg_cfg.uds_path = uds_path;
         return hpactor_demo::run_foreground(system, fg_cfg);
     }
 
     // Daemon/systemd mode
     hpactor_demo::DaemonConfig daemon_cfg;
-    daemon_cfg.uds_path = opts.uds_path.empty() ? default_uds_path() : opts.uds_path;
+    daemon_cfg.uds_path = uds_path;
     daemon_cfg.tcp_port = opts.tcp_port;
     daemon_cfg.health_port = opts.health_port;
     daemon_cfg.watchdog_interval = (opts.mode == process::ProcessMode::Systemd)
