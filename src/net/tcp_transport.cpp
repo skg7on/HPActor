@@ -315,7 +315,7 @@ bool TcpTransport::complete_connect(int fd, bool use_tls) {
     });
 
     // Timeout via event loop timer — fires after 5s if the connect
-    // hasn't completed, preventing a stale write_handler leak.
+    // hasn't completed.
     loop_.run_after(
         [this, fd, done]() {
             if (*done)
@@ -332,7 +332,18 @@ bool TcpTransport::complete_connect(int fd, bool use_tls) {
         },
         5000);
 
-    return true;
+    // Wait for the write handler or timeout to fire.  The fd becomes
+    // writable when the TCP handshake completes (success or error).
+    while (!*done) {
+        loop_.process_completions();
+        loop_.wait(100);
+    }
+
+    // Return true only if the connection reached Connected state.
+    auto it = connections_.find(fd);
+    if (it == connections_.end())
+        return false;
+    return it->second->state() == ConnectionState::Connected;
 }
 
 void TcpTransport::listen(uint16_t port) {

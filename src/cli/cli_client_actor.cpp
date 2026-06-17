@@ -123,7 +123,6 @@ void CliClientActor::pre_stop_hook() {
 // ---------------------------------------------------------------------------
 
 void CliClientActor::connect() {
-    // Already fully connected — nothing to do.
     if (connector_.is_connected())
         return;
 
@@ -131,36 +130,10 @@ void CliClientActor::connect() {
         return; // HTTP JSON mode is deferred
     }
 
-    // If we have a stale fd from a previous EINPROGRESS that never
-    // completed, tear it down so connect_tcp / connect_uds create a
-    // fresh socket.  fd() >= 0 does not imply is_connected() — the
-    // TCP handshake may still be pending.
-    if (connector_.fd() >= 0)
-        connector_.disconnect();
-
     if (!config_.host.empty()) {
         connector_.connect_tcp(config_.host, config_.port, config_.connect_timeout);
     } else {
         connector_.connect_uds(config_.uds_path, config_.connect_timeout);
-    }
-
-    // Pump the transport event loop until the TCP handshake completes
-    // (or the connect_timeout expires).  connect_tcp / connect_uds may
-    // return before the non-blocking connect finishes (EINPROGRESS);
-    // without this the write-handler never fires and we stay stuck in
-    // Connecting state forever.
-    auto* transport = connector_.transport();
-    if (transport && connector_.fd() >= 0 && !connector_.is_connected()) {
-        auto deadline = std::chrono::steady_clock::now() + config_.connect_timeout;
-        while (!connector_.is_connected() &&
-               std::chrono::steady_clock::now() < deadline) {
-            transport->loop().process_completions();
-            transport->loop().wait(50);
-        }
-        // If still not connected after timeout, tear down so the next
-        // pre_input_hook iteration retries with a fresh socket.
-        if (!connector_.is_connected())
-            connector_.disconnect();
     }
 }
 
