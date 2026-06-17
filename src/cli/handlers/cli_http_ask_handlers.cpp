@@ -27,8 +27,6 @@ namespace hpactor {
 namespace cli {
 namespace handlers {
 
-using adt::JsonBuilder;
-
 // ====================================================================
 // Task 13: handle_list_asks
 // ====================================================================
