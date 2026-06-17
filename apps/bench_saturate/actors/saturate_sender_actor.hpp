@@ -178,7 +178,8 @@ class SaturateSenderActor : public EventBasedActor {
             }
 
             auto& target = receiver_addrs_[next_receiver_idx_];
-            next_receiver_idx_ = (next_receiver_idx_ + 1) % receiver_addrs_.size();
+            next_receiver_idx_ = static_cast<uint32_t>((next_receiver_idx_ + 1) %
+                                                       receiver_addrs_.size());
 
             context()->send(target, make_msg(LoadMessageTag, std::move(payload)));
             sent_count_.fetch_add(1, std::memory_order_relaxed);
