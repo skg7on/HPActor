@@ -48,10 +48,9 @@ CliClientActor::~CliClientActor() = default;
 // ---------------------------------------------------------------------------
 
 void CliClientActor::print_greeting() {
-    // Don't claim "Connected" here — the connection hasn't been attempted yet.
-    // pre_input_hook() retries until the transport is up.
-    printf("HPActor Remote CLI — connecting...  Type /help for commands, /quit to "
-           "exit.\n\n");
+    // Defer the real greeting to pre_input_hook() — the connection hasn't been
+    // attempted yet at this point.  Don't claim "Connected" or suggest typing
+    // commands until the transport is actually up.
 }
 
 void CliClientActor::print_farewell() {
@@ -91,13 +90,10 @@ bool CliClientActor::pre_input_hook() {
         return false; // exit after exec
     }
 
-    if (connector_.fd() < 0) {
+    if (!connector_.is_connected()) {
         connect();
-        if (connector_.fd() < 0) {
+        if (!connector_.is_connected()) {
             if (!was_ever_connected_) {
-                // Show target on first failure so the user knows what we're
-                // trying to reach — avoids the "Connected" lie when the
-                // address is wrong.
                 if (!config_.host.empty())
                     printf("Connecting to %s:%u... (retrying every 1s)\n",
                            config_.host.c_str(),
@@ -110,7 +106,8 @@ bool CliClientActor::pre_input_hook() {
             return running_; // keep retrying
         }
         if (!was_ever_connected_) {
-            printf("Connected.\n");
+            printf("HPActor Remote CLI — Connected.  Type /help for commands, "
+                   "/quit to exit.\n\n");
             was_ever_connected_ = true;
         }
     }
@@ -173,7 +170,7 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
 
     auto* transport = connector_.transport();
     auto conn = connector_.connection();
-    if (!transport || !conn)
+    if (!transport || !conn || !connector_.is_connected())
         return resp;
 
     // 1. Encode CliCommand as an HPAC Frame and send through
