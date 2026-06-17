@@ -182,8 +182,15 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
 
     // Poll the EventLoop.  WireFrameConnection::handle_read() decodes
     // incoming HPAC frames and delivers the body to the frame handler.
+    //
+    // Must call process_completions() before wait() so that the send
+    // completion from conn->send() above drains is_sending_.  On epoll
+    // the async_send pushes completions to a pending queue that is only
+    // drained by process_events(); without this, is_sending_ stays true
+    // and the next send_and_wait silently queues without flushing.
     auto deadline = std::chrono::steady_clock::now() + config_.request_timeout;
     while (!*done && std::chrono::steady_clock::now() < deadline) {
+        transport->loop().process_completions();
         transport->loop().wait(50);
     }
 
