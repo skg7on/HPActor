@@ -66,5 +66,49 @@ uint32_t parse_limit(const net::HttpRequest& req);
 
 std::vector<std::string> parse_fields(const net::HttpRequest& req);
 
+// ── Pagination helper ─────────────────────────────────────────────────
+
+/// Emit a "pagination" object with offset, limit, and total.
+inline void add_pagination(adt::JsonBuilder& jb, uint32_t offset,
+                           uint32_t limit, uint32_t total) {
+    jb.object("pagination")
+        .field("offset", offset)
+        .field("limit", limit)
+        .field("total", total)
+        .end_object();
+}
+
+// ── Actor ID validation helper ──────────────────────────────────────────
+
+/// Parse an actor_id from path params, returning nullopt and sending
+/// a 400 error if missing, zero, or invalid.
+inline std::optional<uint64_t>
+parse_actor_id_or_error(const std::unordered_map<std::string, std::string>& path_params,
+                        net::HTTPConnection* conn) {
+    auto id_val = parse_path_uint64(path_params, "id");
+    if (!id_val || *id_val == 0) {
+        send_error(conn, net::HttpStatusCode::BadRequest, "INVALID_FIELD",
+                   "actor_id must be a positive integer");
+        return std::nullopt;
+    }
+    return *id_val;
+}
+
+// ── Content-Type validation ────────────────────────────────────────────
+
+/// Returns true if Content-Type is JSON (or absent — be lenient).
+/// Sends 415 error and returns false if Content-Type is set to non-JSON.
+inline bool validate_json_content_type(net::HTTPConnection* conn,
+                                       const net::HttpRequest& req) {
+    auto ct = req.content_type();
+    if (ct.has_value() && ct->find("application/json") == std::string::npos) {
+        send_error(conn, net::HttpStatusCode::UnsupportedMedia,
+                   "UNSUPPORTED_MEDIA_TYPE",
+                   "Content-Type must be application/json");
+        return false;
+    }
+    return true;
+}
+
 } // namespace cli
 } // namespace hpactor
