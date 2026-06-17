@@ -35,6 +35,8 @@
 
 #include "handlers/cli_http_handler_helpers.hpp"
 
+#include "commands/command_utils.hpp"
+
 #include <chrono>
 #include <cstdio>
 #include <cstring>
@@ -327,6 +329,10 @@ void CliHttpServerActor::render_fault_status(OutputFormatter& output) {
     kv["Seed"] = std::to_string(fc.replay_seed());
     kv["Hooks triggered"] = std::to_string(fc.faults_fired());
     output.key_value(kv);
+}
+
+void CliHttpServerActor::render_scheduler_workers(OutputFormatter& output) {
+    hpactor::cli::render_scheduler_workers(system_, output);
 }
 
 void CliHttpServerActor::render_dlq_list(OutputFormatter& output,

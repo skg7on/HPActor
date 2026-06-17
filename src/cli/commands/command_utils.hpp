@@ -20,10 +20,22 @@
 #include <string>
 
 namespace hpactor {
+
+class ActorSystem;
+
 namespace cli {
+
+class OutputFormatter;
 
 /// \brief Format a byte count as a human-readable string (e.g. "1.2 MB").
 std::string format_bytes(uint64_t bytes);
+
+/// \brief Render per-worker scheduler statistics to \p output.
+///
+/// Fetches worker snapshots from \p sys and formats them as a table with
+/// columns: Worker, Thread ID, Work, IdleIters, CV->block, CV-notify,
+/// CV-timeout, Model, Steals, Idle.
+void render_scheduler_workers(ActorSystem& sys, OutputFormatter& output);
 
 inline ActorId parse_actor_id(const std::string& s) {
     uint64_t raw = 0;
