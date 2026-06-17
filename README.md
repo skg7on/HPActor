@@ -10,6 +10,30 @@
 
 A high-performance distributed Actor framework with million-level concurrency support. Combines work-stealing schedulers, EDF (Earliest Deadline First) real-time scheduling, multi-priority queues, and an application-defined two-tier slab memory allocator for deterministic response times without GC pauses.
 
+## Documentation
+
+The **[HPActor Developer Manual](docs/manual/index.rst)** is the authoritative guide for building, deploying, monitoring, and operating HPActor-based systems. It is written in reStructuredText and built with Sphinx.
+
+| Section | Description |
+|---------|-------------|
+| [Getting Started](docs/manual/getting-started/overview.rst) | Framework overview, installation, your first actor, project structure |
+| [Building Applications](docs/manual/building-applications/actor-types.rst) | Actor types, message passing, lifecycle, topology config, remote actors, distributed patterns |
+| [Monitoring](docs/manual/monitoring/metrics.rst) | Prometheus metrics, structured logging, distributed tracing, health/readiness |
+| [Operations](docs/manual/operations/cli.rst) | Interactive CLI, CLI server, HTTP gateway, daemon mode with systemd |
+| [SRE Integration](docs/manual/sre-integration/prometheus-grafana.rst) | Prometheus + Grafana, Loki, Jaeger, AlertManager, chaos engineering |
+| [Best Practices](docs/manual/best-practices/actor-design.rst) | Actor design, error handling, performance tuning, testing, deployment |
+| [Limitations](docs/manual/limitations.rst) | Known gaps, scalability limits, platform support, roadmap |
+
+To build the manual locally:
+
+```bash
+cd docs/manual
+pip install sphinx sphinx-rtd-theme
+make html
+```
+
+Built HTML lands in `docs/manual/_build/html/`. In the future, the manual will be published to the project's GitHub Pages alongside the API coverage report.
+
 ## Recent Work (June 7–14, 2026)
 
 This week delivered the daemon service architecture for Linux systemd deployment, AI accelerator subsystem foundations, scheduler reliability hardening, mailbox thread-safety formal validation, reliable messaging primitives, and a performance benchmark app — ~236 commits across 274 files (+39,742 −2,558).
