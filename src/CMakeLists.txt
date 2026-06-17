@@ -198,6 +198,7 @@ target_sources(hpactor_lib PRIVATE
     cli/commands/fault_commands.cpp
     cli/commands/dlq_commands.cpp
     cli/commands/ask_commands.cpp
+    cli/commands/client_commands.cpp
     cli/commands/endpoint_commands.cpp
     cli/commands/reliable_commands.cpp
     cli/commands/tracing_commands.cpp
