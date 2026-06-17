@@ -346,7 +346,14 @@ void CliProtoServerActor::on_frame_received(int client_fd, adt::StreamBuffer dat
     }
 
     // Build a command-line string from the path + params + args.
+    // Convert slash-separated path (e.g., "system/memory") to
+    // space-separated command-line tokens ("system memory") expected
+    // by CliSession::process_line / execute_tokens.
     std::string command_line = cmd.path();
+    for (char& c : command_line) {
+        if (c == '/')
+            c = ' ';
+    }
     for (const auto& [key, value] : cmd.params()) {
         command_line += " --" + key;
         if (!value.empty()) {
