@@ -21,6 +21,7 @@ set(TEST_SYSTEM_SOURCES
     test_system_gossip.cpp
     test_dlq_handoff.cpp
     test_system_rpc_workflow.cpp
+    test_system_http_api_workflow.cpp
 )
 
 if(ENABLE_APPS)
