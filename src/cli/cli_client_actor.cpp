@@ -30,6 +30,8 @@
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/net/wireframe_connection.hpp>
 
+#include "commands/command_utils.hpp"
+
 namespace hpactor {
 namespace cli {
 
@@ -48,6 +50,9 @@ CliClientActor::~CliClientActor() = default;
 // ---------------------------------------------------------------------------
 
 void CliClientActor::print_greeting() {
+    // Wire the client pointer into CliSession so /client commands can detect
+    // they're running on a client and show self-only information.
+    session_->set_client_actor(this);
     // Defer the real greeting to pre_input_hook() — the connection hasn't been
     // attempted yet at this point.  Don't claim "Connected" or suggest typing
     // commands until the transport is actually up.
@@ -89,6 +94,20 @@ bool CliClientActor::pre_input_hook() {
         disconnect();
         return false; // exit after exec
     }
+
+    // Active disconnect via /client close — don't reconnect.
+    if (intentionally_disconnected_) {
+        printf("\n[Disconnected from server]\n");
+        running_ = false;
+        return false;
+    }
+
+    // Pump the transport EventLoop so any pending read handlers fire.
+    // This lets WireFrameConnection::handle_read() detect server-side EOF
+    // and transition the ConnectionState to Disconnected before we check
+    // is_connected() below.
+    if (auto* transport = connector_.transport())
+        transport->loop().wait(0);
 
     if (!connector_.is_connected()) {
         // Previously connected and now disconnected — the remote side
@@ -153,23 +172,6 @@ void CliClientActor::disconnect() {
 // receive via EventLoop read handler with HPAC Frame decoding.
 // ---------------------------------------------------------------------------
 
-namespace {
-
-/// Encode protobuf data as an HPAC WireFrame: magic + big-endian length + data.
-inline StreamBuffer encode_as_frame(const std::string& protobuf_data) {
-    StreamBuffer result;
-    const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'C'};
-    result.append(magic.data(), 4);
-    uint32_t payload_len = static_cast<uint32_t>(protobuf_data.size());
-    uint32_t net_len = htonl(payload_len);
-    result.append(reinterpret_cast<const uint8_t*>(&net_len), 4);
-    result.append(reinterpret_cast<const uint8_t*>(protobuf_data.data()),
-                  protobuf_data.size());
-    return result;
-}
-
-} // anonymous namespace
-
 CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
     CliResponse resp;
     resp.set_is_error(true);
@@ -224,6 +226,12 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
         resp.ParseFromArray(response_body->data(),
                             static_cast<int>(response_body->size()));
     }
+
+    // 4. If the request failed (timeout or transport error), force a
+    //    disconnect so pre_input_hook() detects it on the next iteration
+    //    and can print a disconnection message + trigger reconnection.
+    if (resp.is_error())
+        connector_.disconnect();
 
     return resp;
 }
@@ -362,6 +370,34 @@ result<void> CliClientActor::shutdown() {
     if (resp.is_error())
         return result<void>::make(error(errors::unknown, "shutdown failed"));
     return result<void>::make();
+}
+
+// ---------------------------------------------------------------------------
+// Client-side /client command support — self-only information
+// ---------------------------------------------------------------------------
+
+std::string CliClientActor::list_clients() const {
+    if (connector_.is_connected()) {
+        if (!config_.host.empty())
+            return "Client connected to server at " + config_.host + ":" +
+                   std::to_string(config_.port) + "\n";
+        else
+            return "Client connected to server via " + config_.uds_path + "\n";
+    }
+    return "Not connected to any server.\n";
+}
+
+bool CliClientActor::close_client(uint32_t /*seqno*/) {
+    if (!connector_.is_connected())
+        return false;
+    printf("Disconnecting from server...\n");
+    disconnect();
+    intentionally_disconnected_ = true;
+    return true;
+}
+
+std::string CliClientActor::client_history(uint32_t /*seqno*/) const {
+    return "Command history is tracked on the server side.\n";
 }
 
 } // namespace cli

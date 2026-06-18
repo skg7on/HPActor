@@ -20,6 +20,7 @@
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/command_tree_builder.hpp>
+#include <hpactor/cli/http_handler.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
@@ -49,79 +50,15 @@
 namespace hpactor {
 namespace cli {
 
-// ── Forward declarations for handler functions ─────────────────────────
-// (defined in src/cli/handlers/*.cpp)
+// ── Handler registration functions (defined in src/cli/handlers/*.cpp) ─
 namespace handlers {
-void handle_legacy_post_cli(CliHttpServerActor* actor,
-                            net::HTTPConnection* conn, net::HttpRequest&& req);
-
-// Actor handlers
-void handle_list_actors(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                        net::HttpRequest&& req);
-void handle_get_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                      net::HttpRequest&& req);
-void handle_kill_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                       net::HttpRequest&& req);
-void handle_get_mailbox(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                        net::HttpRequest&& req);
-void handle_get_children(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                         net::HttpRequest&& req);
-void handle_get_circuit_breaker(CliHttpServerActor* actor,
-                                net::HTTPConnection* conn, net::HttpRequest&& req);
-void handle_reset_circuit_breaker(CliHttpServerActor* actor,
-                                  net::HTTPConnection* conn,
-                                  net::HttpRequest&& req);
-void handle_quarantine_actor(CliHttpServerActor* actor,
-                             net::HTTPConnection* conn, net::HttpRequest&& req);
-void handle_unquarantine_actor(CliHttpServerActor* actor,
-                               net::HTTPConnection* conn, net::HttpRequest&& req);
-void handle_get_actor_memory(CliHttpServerActor* actor,
-                             net::HTTPConnection* conn, net::HttpRequest&& req);
-
-// System handlers
-void handle_api_index(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                      net::HttpRequest&& req);
-void handle_get_system(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                       net::HttpRequest&& req);
-void handle_get_system_stats(CliHttpServerActor* actor,
-                             net::HTTPConnection* conn, net::HttpRequest&& req);
-void handle_get_system_memory(CliHttpServerActor* actor,
-                              net::HTTPConnection* conn, net::HttpRequest&& req);
-void handle_drain(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                  net::HttpRequest&& req);
-void handle_shutdown(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                     net::HttpRequest&& req);
-
-// Fault handlers
-void handle_get_faults(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                       net::HttpRequest&& req);
-void handle_clear_faults(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                         net::HttpRequest&& req);
-
-// DLQ handlers
-void handle_list_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                     net::HttpRequest&& req);
-void handle_get_dlq_record(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                           net::HttpRequest&& req);
-void handle_replay_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                       net::HttpRequest&& req);
-void handle_export_dlq(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                       net::HttpRequest&& req);
-
-// Ask handlers
-void handle_list_asks(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                      net::HttpRequest&& req);
-void handle_get_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                    net::HttpRequest&& req);
-void handle_cancel_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                       net::HttpRequest&& req);
+void register_fault_handlers();
+void register_ask_handlers();
+void register_system_handlers();
+void register_dlq_handlers();
+void register_actor_handlers();
+void register_legacy_handler();
 } // namespace handlers
-
-// ── Route table PIMPL ──────────────────────────────────────────────────
-
-struct CliHttpServerActor::RouteTable {
-    std::vector<RouteEntry> routes;
-};
 
 // ---------------------------------------------------------------------------
 // Construction / destruction
@@ -130,7 +67,7 @@ struct CliHttpServerActor::RouteTable {
 CliHttpServerActor::CliHttpServerActor(ActorContext* ctx, ActorSystem& system,
                                        const CliHttpServerConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
-      gateway_(std::make_unique<net::HTTPGateway>()) {}
+      gateway_(std::make_unique<net::HTTPGateway>()), host_impl_(system_) {}
 
 CliHttpServerActor::~CliHttpServerActor() = default;
 
@@ -180,9 +117,7 @@ void CliHttpServerActor::on_daemon_stop() {
 // ---------------------------------------------------------------------------
 
 void CliHttpServerActor::build_command_tree() {
-    auto root = std::make_unique<CommandNode>("/", "CLI root");
-    build_command_tree_from_registry(*root);
-    command_tree_ = std::move(root);
+    command_tree_ = host_impl_.build_command_tree();
 }
 
 // ---------------------------------------------------------------------------
@@ -190,90 +125,26 @@ void CliHttpServerActor::build_command_tree() {
 // ---------------------------------------------------------------------------
 
 void CliHttpServerActor::init_routes() {
-    route_table_ = std::make_unique<RouteTable>();
-    static constexpr std::string_view kApiV1 = "/api/v1";
-    route_table_->routes = {
-        // Actor handlers
-        {net::HttpMethod::GET, std::string(kApiV1) + "/actors",
-         handlers::handle_list_actors},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id",
-         handlers::handle_get_actor},
-        {net::HttpMethod::DELETE, std::string(kApiV1) + "/actors/:id",
-         handlers::handle_kill_actor},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id/mailbox",
-         handlers::handle_get_mailbox},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id/children",
-         handlers::handle_get_children},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id/circuit-breaker",
-         handlers::handle_get_circuit_breaker},
-        {net::HttpMethod::POST,
-         std::string(kApiV1) + "/actors/:id/circuit-breaker/reset",
-         handlers::handle_reset_circuit_breaker},
-        {net::HttpMethod::POST, std::string(kApiV1) + "/actors/:id/quarantine",
-         handlers::handle_quarantine_actor},
-        {net::HttpMethod::DELETE, std::string(kApiV1) + "/actors/:id/quarantine",
-         handlers::handle_unquarantine_actor},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/actors/:id/memory",
-         handlers::handle_get_actor_memory},
-
-        // System handlers
-        {net::HttpMethod::GET, std::string(kApiV1), handlers::handle_api_index},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/system",
-         handlers::handle_get_system},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/system/stats",
-         handlers::handle_get_system_stats},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/system/memory",
-         handlers::handle_get_system_memory},
-        {net::HttpMethod::POST, std::string(kApiV1) + "/system/drain",
-         handlers::handle_drain},
-        {net::HttpMethod::POST, std::string(kApiV1) + "/system/shutdown",
-         handlers::handle_shutdown},
-
-        // Fault handlers
-        {net::HttpMethod::GET, std::string(kApiV1) + "/faults",
-         handlers::handle_get_faults},
-        {net::HttpMethod::POST, std::string(kApiV1) + "/faults/clear",
-         handlers::handle_clear_faults},
-
-        // DLQ handlers
-        {net::HttpMethod::GET, std::string(kApiV1) + "/dlq",
-         handlers::handle_list_dlq},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/dlq/export",
-         handlers::handle_export_dlq},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/dlq/:index",
-         handlers::handle_get_dlq_record},
-        {net::HttpMethod::POST, std::string(kApiV1) + "/dlq/:index/replay",
-         handlers::handle_replay_dlq},
-
-        // Ask handlers
-        {net::HttpMethod::GET, std::string(kApiV1) + "/asks",
-         handlers::handle_list_asks},
-        {net::HttpMethod::GET, std::string(kApiV1) + "/asks/:message_id",
-         handlers::handle_get_ask},
-        {net::HttpMethod::DELETE, std::string(kApiV1) + "/asks/:message_id",
-         handlers::handle_cancel_ask},
-    };
-
-    // Legacy backward compat (Phase 1 only)
-    if (config_.legacy_cli_endpoint) {
-        route_table_->routes.push_back(
-            {net::HttpMethod::POST, "/cli", handlers::handle_legacy_post_cli});
-    }
+    // Register OO-style handlers (they take priority in dispatch).
+    handlers::register_fault_handlers();
+    handlers::register_ask_handlers();
+    handlers::register_system_handlers();
+    handlers::register_dlq_handlers();
+    handlers::register_actor_handlers();
+    handlers::register_legacy_handler();
 }
 
 void CliHttpServerActor::dispatch_route(net::HTTPConnection* conn,
                                         net::HttpRequest&& req) {
-    for (const auto& route : route_table_->routes) {
-        if (route.method != req.method)
+    for (const auto& entry : HttpHandlerRegistry::instance().routes()) {
+        if (entry.method != req.method)
             continue;
         req.path_params.clear();
-        if (match_route_pattern(route.pattern, req.path, req.path_params)) {
-            route.handler(this, conn, std::move(req));
+        if (match_route_pattern(entry.pattern, req.path, req.path_params)) {
+            entry.handler->handle(*this, *conn, std::move(req));
             return;
         }
     }
-
-    // No route matched
     send_error(conn, net::HttpStatusCode::NotFound, "NOT_FOUND",
                std::string(net::to_string(req.method)) + " " + req.path +
                    " has no handler");
@@ -282,24 +153,7 @@ void CliHttpServerActor::dispatch_route(net::HTTPConnection* conn,
 // execute_path is inline in header (returns false — local host).
 
 result<void> CliHttpServerActor::dlq_replay(uint32_t index, ActorId target) {
-    auto* dlq = system_.dead_letter_queue();
-    if (!dlq)
-        return result<void>::make(
-            error(errors::actor_not_found, "DLQ not configured"));
-
-    mailbox::DeadLetterRecord record;
-    if (!dlq->try_pop_at(index, record))
-        return result<void>::make(
-            error(errors::invalid_argument, "DLQ index out of range"));
-
-    TypedMessage msg(record.type_tag, std::move(record.payload_sample));
-    msg.set_sender_address(address());
-    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-    if (!enqueue_result.accepted())
-        return result<void>::make(
-            error(errors::mailbox_full, "replay delivery failed"));
-
-    return result<void>::make();
+    return host_impl_.dlq_replay(index, target, address());
 }
 
 // ---------------------------------------------------------------------------
@@ -307,14 +161,11 @@ result<void> CliHttpServerActor::dlq_replay(uint32_t index, ActorId target) {
 // ---------------------------------------------------------------------------
 
 result<void> CliHttpServerActor::drain() {
-    // TODO: Implement soft drain (stop accepting new work, process in-flight).
-    // Currently delegates to full shutdown — pending proper drain support in
-    // ActorSystem.
-    return system_.shutdown();
+    return host_impl_.drain();
 }
 
 result<void> CliHttpServerActor::shutdown() {
-    return system_.shutdown();
+    return host_impl_.shutdown();
 }
 
 // ---------------------------------------------------------------------------
@@ -324,136 +175,23 @@ result<void> CliHttpServerActor::shutdown() {
 std::optional<InspectStateReply>
 CliHttpServerActor::inspect(ActorId target, const InspectStateRequest& req,
                             std::chrono::milliseconds timeout) {
-    MessageId correlation_id = generate_message_id();
-    uint64_t corr_value = correlation_id.value();
-
-    TypedMessage msg(TypeTag::InspectStateRequestTag, req);
-    msg.set_sender_address(address());
-    msg.set_ask_message_id(corr_value);
-
-    ActorAddress target_addr;
-    target_addr.id = target;
-    context()->send(target_addr, std::move(msg));
-
-    // Poll mailbox for reply with timeout
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        TypedMessage m;
-        if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::InspectStateResponseTag &&
-                m.ask_message_id() == corr_value) {
-                auto reply = m.as<InspectStateReply>();
-                if (reply)
-                    return *reply;
-                return std::nullopt;
-            }
-            // Message not for us (likely for a concurrent request),
-            // continue polling.
-            std::fprintf(stderr,
-                         "CliHttpServerActor::inspect: non-matching message "
-                         "(type=%u ask_id=%llu expected=%llu), polling\n",
-                         static_cast<unsigned>(m.type_id()),
-                         static_cast<unsigned long long>(m.ask_message_id()),
-                         static_cast<unsigned long long>(corr_value));
-        }
-        // Small sleep to avoid busy-spinning the daemon thread
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return std::nullopt;
+    return host_impl_.inspect(target, req, mailbox(), address(), timeout);
 }
 
 std::optional<KillReply>
 CliHttpServerActor::kill(ActorId target, const KillRequest& req,
                          std::chrono::milliseconds timeout) {
-    MessageId correlation_id = generate_message_id();
-    uint64_t corr_value = correlation_id.value();
-
-    TypedMessage msg(TypeTag::KillRequestTag, req);
-    msg.set_sender_address(address());
-    msg.set_ask_message_id(corr_value);
-
-    ActorAddress target_addr;
-    target_addr.id = target;
-    context()->send(target_addr, std::move(msg));
-
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        TypedMessage m;
-        if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::KillResponseTag &&
-                m.ask_message_id() == corr_value) {
-                auto reply = m.as<KillReply>();
-                if (reply)
-                    return *reply;
-                return std::nullopt;
-            }
-            // Message not for us (likely for a concurrent request),
-            // continue polling.
-            std::fprintf(stderr,
-                         "CliHttpServerActor::kill: non-matching message "
-                         "(type=%u ask_id=%llu expected=%llu), polling\n",
-                         static_cast<unsigned>(m.type_id()),
-                         static_cast<unsigned long long>(m.ask_message_id()),
-                         static_cast<unsigned long long>(corr_value));
-        }
-        // Small sleep to avoid busy-spinning the daemon thread
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return std::nullopt;
+    return host_impl_.kill(target, req, mailbox(), address(), timeout);
 }
 
 std::optional<QuarantineReply>
 CliHttpServerActor::quarantine(ActorId target, const QuarantineRequest& req,
                                std::chrono::milliseconds timeout) {
-    MessageId correlation_id = generate_message_id();
-    uint64_t corr_value = correlation_id.value();
-
-    TypedMessage msg(TypeTag::QuarantineRequestTag, req);
-    msg.set_sender_address(address());
-    msg.set_ask_message_id(corr_value);
-
-    ActorAddress target_addr;
-    target_addr.id = target;
-    context()->send(target_addr, std::move(msg));
-
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        TypedMessage m;
-        if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::QuarantineResponseTag &&
-                m.ask_message_id() == corr_value) {
-                auto reply = m.as<QuarantineReply>();
-                if (reply)
-                    return *reply;
-                return std::nullopt;
-            }
-            // Message not for us (likely for a concurrent request),
-            // continue polling.
-            std::fprintf(stderr,
-                         "CliHttpServerActor::quarantine: non-matching message "
-                         "(type=%u ask_id=%llu expected=%llu), polling\n",
-                         static_cast<unsigned>(m.type_id()),
-                         static_cast<unsigned long long>(m.ask_message_id()),
-                         static_cast<unsigned long long>(corr_value));
-        }
-        // Small sleep to avoid busy-spinning the daemon thread
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return std::nullopt;
+    return host_impl_.quarantine(target, req, mailbox(), address(), timeout);
 }
 
 std::vector<ActorMeta> CliHttpServerActor::enumerate(std::string_view filter) {
-    std::vector<ActorMeta> result;
-    system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
-        auto meta = actor.to_metadata();
-        if (!filter.empty()) {
-            // Filter by type name substring match
-            if (meta.actor_type.find(filter) == std::string::npos)
-                return;
-        }
-        result.push_back(std::move(meta));
-    });
-    return result;
+    return host_impl_.enumerate(filter);
 }
 
 } // namespace cli

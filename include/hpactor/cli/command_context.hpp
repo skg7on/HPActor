@@ -28,6 +28,7 @@ class ActorSystem;
 namespace cli {
 
 class CliActor;
+class CliClientActor;
 class CliLegacyServerActor;
 class CliProtoServerActor;
 class CliSession;
@@ -62,6 +63,8 @@ struct CommandContext {
     CliLegacyServerActor* cli_server_actor = nullptr;
     /// \brief The protobuf CLI server, for client-management commands.
     CliProtoServerActor* cli_proto_server = nullptr;
+    /// \brief The remote CLI client actor, for client-side /client commands.
+    CliClientActor* cli_client_actor = nullptr;
     /// \brief The owning session, for shutdown requests.
     CliSession* cli_session = nullptr;
     /// \brief Output formatter for rendering results.

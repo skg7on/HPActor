@@ -1,22 +1,12 @@
 // Copyright 2026 HPActor Contributors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 #include "cli_http_handler_helpers.hpp"
 
 #include <hpactor/adt/json_helpers.hpp>
 #include <hpactor/cli/cli_command_host.hpp>
 #include <hpactor/cli/cli_http_server_actor.hpp>
+#include <hpactor/cli/http_handler.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/http_connection.hpp>
@@ -26,556 +16,480 @@
 #include <cstdint>
 #include <string>
 
-namespace hpactor {
-namespace cli {
-namespace handlers {
-
+namespace hpactor::cli::handlers {
 using adt::JsonBuilder;
-
-// ──────────────────────────────────────────────────────────────────
-// Helper: build a JSON object for a single actor (ActorMeta)
-// ──────────────────────────────────────────────────────────────────
-
 namespace {
-
-// ──────────────────────────────────────────────────────────────────
-// Helper: build a JSON object from InspectStateReply
-// ──────────────────────────────────────────────────────────────────
-
 std::string build_inspect_json(const InspectStateReply& reply,
                                const std::vector<std::string>& fields) {
-    bool include_all = fields.empty();
-
+    bool ia = fields.empty();
     auto jb = JsonBuilder::root_object();
-
-    // Metadata (always included)
-    if (include_all ||
-        std::find(fields.begin(), fields.end(), "metadata") != fields.end()) {
+    if (ia || std::find(fields.begin(), fields.end(), "metadata") != fields.end()) {
         const auto& md = reply.metadata();
         jb.object("metadata");
-        jb.field("actor_id", md.actor_id());
-        jb.field("actor_type", md.actor_type());
-        jb.field("state", md.state());
-        jb.field("incarnation", md.incarnation());
-        jb.field("messages_processed", md.messages_processed());
-        jb.field("uptime_ms", md.uptime_ms());
-        jb.field("behavior_name", md.behavior_name());
+        jb.field("actor_id", md.actor_id())
+            .field("actor_type", md.actor_type())
+            .field("state", md.state())
+            .field("incarnation", md.incarnation())
+            .field("messages_processed", md.messages_processed())
+            .field("uptime_ms", md.uptime_ms())
+            .field("behavior_name", md.behavior_name());
         jb.end_object();
     }
-
-    // Mailbox
-    if (reply.has_mailbox() &&
-        (include_all ||
-         std::find(fields.begin(), fields.end(), "mailbox") != fields.end())) {
+    if (reply.has_mailbox() && (ia || std::find(fields.begin(), fields.end(),
+                                                "mailbox") != fields.end())) {
         const auto& mb = reply.mailbox();
         jb.object("mailbox");
-        jb.field("depth", mb.depth());
-        jb.field("capacity", mb.capacity());
-        jb.field("queued_bytes", mb.queued_bytes());
-        jb.field("byte_capacity", mb.byte_capacity());
-        jb.field("pressure_ratio_ppm", mb.pressure_ratio_ppm());
-        jb.field("total_enqueued", mb.total_enqueued());
-        jb.field("total_dequeued", mb.total_dequeued());
-        jb.field("total_rejected", mb.total_rejected());
-        jb.field("total_dropped", mb.total_dropped());
-        jb.field("total_dead_letters", mb.total_dead_letters());
-        jb.field("max_depth", mb.max_depth());
-        jb.field("high_priority_depth", mb.high_priority_depth());
-        jb.field("pressure_state", mb.pressure_state());
-        jb.field("overflow_policy", mb.overflow_policy());
-
-        // Rate limiter
+        jb.field("depth", mb.depth())
+            .field("capacity", mb.capacity())
+            .field("queued_bytes", mb.queued_bytes())
+            .field("byte_capacity", mb.byte_capacity())
+            .field("pressure_ratio_ppm", mb.pressure_ratio_ppm())
+            .field("total_enqueued", mb.total_enqueued())
+            .field("total_dequeued", mb.total_dequeued())
+            .field("total_rejected", mb.total_rejected())
+            .field("total_dropped", mb.total_dropped())
+            .field("total_dead_letters", mb.total_dead_letters())
+            .field("max_depth", mb.max_depth())
+            .field("high_priority_depth", mb.high_priority_depth())
+            .field("pressure_state", mb.pressure_state())
+            .field("overflow_policy", mb.overflow_policy());
         jb.object("rate_limiter");
-        jb.field("enabled", mb.rate_limiter_enabled());
-        jb.field("rate", mb.rate_limiter_rate());
-        jb.field("burst", mb.rate_limiter_burst());
-        jb.field("current_tokens", mb.rate_limiter_current_tokens());
-        jb.field("blocked_total", mb.rate_limit_blocked_total());
+        jb.field("enabled", mb.rate_limiter_enabled())
+            .field("rate", mb.rate_limiter_rate())
+            .field("burst", mb.rate_limiter_burst())
+            .field("current_tokens", mb.rate_limiter_current_tokens())
+            .field("blocked_total", mb.rate_limit_blocked_total());
         jb.end_object();
-
-        // Admission
         jb.object("admission");
-        jb.field("policy_count", mb.admission_policy_count());
-        jb.field("rejected_total", mb.admission_rejected_total());
-        jb.field("dlq_routed_total", mb.admission_dlq_routed_total());
+        jb.field("policy_count", mb.admission_policy_count())
+            .field("rejected_total", mb.admission_rejected_total())
+            .field("dlq_routed_total", mb.admission_dlq_routed_total());
         jb.end_object();
-
-        // Delivery
         jb.object("delivery");
-        jb.field("accepted_total", mb.delivery_accepted_total());
-        jb.field("rejected_total", mb.delivery_rejected_total());
-        jb.field("failed_total", mb.delivery_failed_total());
-        jb.field("retryable_total", mb.delivery_retryable_total());
+        jb.field("accepted_total", mb.delivery_accepted_total())
+            .field("rejected_total", mb.delivery_rejected_total())
+            .field("failed_total", mb.delivery_failed_total())
+            .field("retryable_total", mb.delivery_retryable_total());
         jb.end_object();
-
-        jb.end_object(); // mailbox
+        jb.end_object();
     }
-
-    // Children
-    if ((include_all ||
-         std::find(fields.begin(), fields.end(), "children") != fields.end())) {
+    if (ia || std::find(fields.begin(), fields.end(), "children") != fields.end()) {
         jb.array("children");
         for (int i = 0; i < reply.children_size(); ++i) {
             const auto& ch = reply.children(i);
             jb.object();
-            jb.field("actor_id", ch.actor_id());
-            jb.field("actor_type", ch.actor_type());
-            jb.field("state", ch.state());
+            jb.field("actor_id", ch.actor_id())
+                .field("actor_type", ch.actor_type())
+                .field("state", ch.state());
             jb.end_object();
         }
         jb.end_array();
     }
-
-    // Circuit breaker
     if (reply.has_circuit_breaker() &&
-        (include_all || std::find(fields.begin(), fields.end(),
-                                  "circuit_breaker") != fields.end())) {
+        (ia || std::find(fields.begin(), fields.end(), "circuit_breaker") !=
+                   fields.end())) {
         const auto& cb = reply.circuit_breaker();
         jb.object("circuit_breaker");
-        jb.field("state", cb.state());
-        jb.field("trip_count", cb.trip_count());
-        jb.field("failure_ema", cb.failure_ema());
-        uint64_t opened_at_ms = cb.opened_at_ns() / 1'000'000ULL;
-        jb.field("opened_at_ms", opened_at_ms);
+        jb.field("state", cb.state())
+            .field("trip_count", cb.trip_count())
+            .field("failure_ema", cb.failure_ema());
+        jb.field("opened_at_ms", cb.opened_at_ns() / 1'000'000ULL);
         jb.end_object();
     }
-
-    // Quarantine
-    if ((include_all || std::find(fields.begin(), fields.end(), "quarantine") !=
-                            fields.end())) {
+    if (ia ||
+        std::find(fields.begin(), fields.end(), "quarantine") != fields.end()) {
         jb.object("quarantine");
-        jb.field("reason", reply.quarantine_reason());
-        jb.field("enabled", reply.quarantine_enabled());
+        jb.field("reason", reply.quarantine_reason())
+            .field("enabled", reply.quarantine_enabled());
         jb.end_object();
     }
-
     return jb.end_object().build();
 }
-
-// Extract a string value from a JSON body for a given key.
-// Simple string search between first occurrence of "<key>" and the
-// following value string.
 std::string extract_json_body_str(const std::string& body, const std::string& key) {
-    std::string search_key = "\"" + key + "\"";
-    size_t pos = body.find(search_key);
-    if (pos == std::string::npos)
+    std::string sk = "\"" + key + "\"";
+    size_t p = body.find(sk);
+    if (p == std::string::npos)
         return {};
-
-    pos += search_key.size();
-    // Skip to the colon
-    pos = body.find(':', pos);
-    if (pos == std::string::npos)
+    p += sk.size();
+    p = body.find(':', p);
+    if (p == std::string::npos)
         return {};
-
-    ++pos;
-    // Skip whitespace
-    while (pos < body.size() &&
-           (body[pos] == ' ' || body[pos] == '\t' || body[pos] == '\n')) {
-        ++pos;
+    ++p;
+    while (p < body.size() && (body[p] == ' ' || body[p] == '\t' || body[p] == '\n'))
+        ++p;
+    if (p >= body.size() || body[p] != '"')
+        return {};
+    ++p;
+    size_t e = p;
+    while (e < body.size() && body[e] != '"') {
+        if (body[e] == '\\')
+            ++e;
+        ++e;
     }
-
-    // Expect a string value
-    if (pos >= body.size() || body[pos] != '"')
-        return {};
-
-    ++pos; // skip opening quote
-    size_t end = pos;
-    while (end < body.size() && body[end] != '"') {
-        if (body[end] == '\\')
-            ++end; // skip escaped char
-        ++end;
-    }
-
-    if (end <= body.size())
-        return adt::json_unescape(body.substr(pos, end - pos));
+    if (e <= body.size())
+        return adt::json_unescape(body.substr(p, e - p));
     return {};
 }
+} // namespace
 
-} // anonymous namespace
-
-// ====================================================================
-// Task 7: handle_list_actors
-// ====================================================================
-
-void handle_list_actors(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                        net::HttpRequest&& req) {
-    auto filter = parse_query_string(req, "actor_type").value_or(std::string());
-    uint32_t offset = parse_offset(req);
-    uint32_t limit = parse_limit(req);
-
-    auto all_actors = actor->enumerate(filter);
-
-    // Apply offset/limit
-    uint32_t total = static_cast<uint32_t>(all_actors.size());
-    uint32_t start = (offset > total) ? total : offset;
-    uint32_t end = (start + limit > total) ? total : (start + limit);
-
-    auto jb = JsonBuilder::root_object();
-
-    jb.array("data");
-    for (uint32_t i = start; i < end; ++i) {
-        const auto& meta = all_actors[i];
-        jb.object()
-            .field("actor_id", meta.actor_id)
-            .field("actor_type", meta.actor_type)
-            .field("state", meta.state)
-            .field("incarnation", meta.incarnation)
-            .field("messages_processed", meta.messages_processed)
-            .field("uptime_ms", meta.uptime_ms)
-            .field("behavior_name", meta.behavior_name)
-            .end_object();
-    }
-    jb.end_array();
-
-    add_pagination(jb, offset, limit, total);
-
-    send_json_ok(conn, jb.end_object().build());
-}
-
-// ====================================================================
-// Task 7: handle_get_actor
-// ====================================================================
-
-void handle_get_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                      net::HttpRequest&& req) {
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    auto fields = parse_fields(req);
-
-    InspectStateRequest insp_req;
-    insp_req.set_target_actor_id(*id_val);
-
-    if (fields.empty()) {
-        insp_req.set_include_state(true);
-        insp_req.set_include_mailbox(true);
-        insp_req.set_include_children(true);
-        insp_req.set_include_circuit_breaker(true);
-        insp_req.set_include_quarantine_info(true);
-        insp_req.set_include_rate_limiter(true);
-        insp_req.set_include_admission(true);
-    } else {
-        for (const auto& f : fields) {
-            if (f == "mailbox") {
-                insp_req.set_include_mailbox(true);
-                insp_req.set_include_rate_limiter(true);
-                insp_req.set_include_admission(true);
-            } else if (f == "children") {
-                insp_req.set_include_children(true);
-            } else if (f == "circuit_breaker") {
-                insp_req.set_include_circuit_breaker(true);
-            } else if (f == "quarantine") {
-                insp_req.set_include_quarantine_info(true);
-            } else if (f == "rate_limiter") {
-                insp_req.set_include_rate_limiter(true);
-            } else if (f == "admission") {
-                insp_req.set_include_admission(true);
-            } else if (f == "metadata") {
-                /* metadata is always included */
-            }
+class ListActorsHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::GET;
+    static constexpr std::string_view kPath = "/api/v1/actors";
+    void handle(CliHttpServerActor& actor, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        auto filter =
+            parse_query_string(req, "actor_type").value_or(std::string());
+        uint32_t offset = parse_offset(req), limit = parse_limit(req);
+        auto aa = actor.enumerate(filter);
+        uint32_t total = uint32_t(aa.size());
+        uint32_t start = (offset > total) ? total : offset;
+        uint32_t end = (start + limit > total) ? total : (start + limit);
+        auto jb = JsonBuilder::root_object();
+        jb.array("data");
+        for (uint32_t i = start; i < end; ++i) {
+            const auto& m = aa[i];
+            jb.object()
+                .field("actor_id", m.actor_id)
+                .field("actor_type", m.actor_type)
+                .field("state", m.state)
+                .field("incarnation", m.incarnation)
+                .field("messages_processed", m.messages_processed)
+                .field("uptime_ms", m.uptime_ms)
+                .field("behavior_name", m.behavior_name)
+                .end_object();
         }
+        jb.end_array();
+        add_pagination(jb, offset, limit, total);
+        send_json_ok(&conn, jb.end_object().build());
     }
+};
 
-    auto reply = actor->inspect(ActorId{*id_val}, insp_req);
-    if (!reply) {
-        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) +
-                       " not found or not responding");
-        return;
+class GetActorHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::GET;
+    static constexpr std::string_view kPath = "/api/v1/actors/:id";
+    void handle(CliHttpServerActor& actor, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        auto fields = parse_fields(req);
+        InspectStateRequest ir;
+        ir.set_target_actor_id(*iv);
+        if (fields.empty()) {
+            ir.set_include_state(true);
+            ir.set_include_mailbox(true);
+            ir.set_include_children(true);
+            ir.set_include_circuit_breaker(true);
+            ir.set_include_quarantine_info(true);
+            ir.set_include_rate_limiter(true);
+            ir.set_include_admission(true);
+        } else
+            for (auto& f : fields) {
+                if (f == "mailbox") {
+                    ir.set_include_mailbox(true);
+                    ir.set_include_rate_limiter(true);
+                    ir.set_include_admission(true);
+                } else if (f == "children")
+                    ir.set_include_children(true);
+                else if (f == "circuit_breaker")
+                    ir.set_include_circuit_breaker(true);
+                else if (f == "quarantine")
+                    ir.set_include_quarantine_info(true);
+                else if (f == "rate_limiter")
+                    ir.set_include_rate_limiter(true);
+                else if (f == "admission")
+                    ir.set_include_admission(true);
+            }
+        auto r = actor.inspect(ActorId{*iv}, ir);
+        if (!r) {
+            send_error(&conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
+                       "Actor " + std::to_string(*iv) +
+                           " not found or not responding");
+            return;
+        }
+        send_json_ok(&conn, build_inspect_json(*r, fields));
     }
+};
 
-    std::string json = build_inspect_json(*reply, fields);
-    send_json_ok(conn, json);
-}
-
-// ====================================================================
-// Task 8: handle_kill_actor
-// ====================================================================
-
-void handle_kill_actor(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                       net::HttpRequest&& req) {
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    auto force_str =
-        parse_query_string(req, "force").value_or(std::string("true"));
-    bool force = !(force_str == "false" || force_str == "0");
-
-    KillRequest kill_req;
-    kill_req.set_target_actor_id(*id_val);
-    kill_req.set_force(force);
-
-    auto reply = actor->kill(ActorId{*id_val}, kill_req);
-    if (!reply) {
-        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) +
-                       " not found or not responding");
-        return;
+class KillActorHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::DELETE;
+    static constexpr std::string_view kPath = "/api/v1/actors/:id";
+    void handle(CliHttpServerActor& actor, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        auto fs = parse_query_string(req, "force").value_or(std::string("true"));
+        bool force = !(fs == "false" || fs == "0");
+        KillRequest kr;
+        kr.set_target_actor_id(*iv);
+        kr.set_force(force);
+        auto r = actor.kill(ActorId{*iv}, kr);
+        if (!r) {
+            send_error(&conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
+                       "Actor " + std::to_string(*iv) +
+                           " not found or not responding");
+            return;
+        }
+        if (r->success())
+            send_success(&conn);
+        else
+            send_error(&conn, net::HttpStatusCode::Conflict,
+                       "ACTOR_NOT_STOPPABLE", r->error_message());
     }
+};
 
-    if (reply->success()) {
-        send_success(conn);
-    } else {
-        send_error(conn, net::HttpStatusCode::Conflict, "ACTOR_NOT_STOPPABLE",
-                   reply->error_message());
-    }
-}
-
-// ====================================================================
-// Task 8: handle_get_mailbox
-// ====================================================================
-
-void handle_get_mailbox(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                        net::HttpRequest&& req) {
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    InspectStateRequest insp_req;
-    insp_req.set_target_actor_id(*id_val);
-    insp_req.set_include_mailbox(true);
-    insp_req.set_include_rate_limiter(true);
-    insp_req.set_include_admission(true);
-
-    auto reply = actor->inspect(ActorId{*id_val}, insp_req);
-    if (!reply || !reply->has_mailbox()) {
-        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) +
-                       " not found or not responding");
-        return;
-    }
-
-    const auto& mb = reply->mailbox();
-    auto jb = JsonBuilder::root_object();
-
-    jb.object("data");
-    jb.field("depth", mb.depth());
-    jb.field("capacity", mb.capacity());
-    jb.field("queued_bytes", mb.queued_bytes());
-    jb.field("byte_capacity", mb.byte_capacity());
-    jb.field("pressure_ratio_ppm", mb.pressure_ratio_ppm());
-    jb.field("pressure_state", mb.pressure_state());
-    jb.field("overflow_policy", mb.overflow_policy());
-    jb.field("total_enqueued", mb.total_enqueued());
-    jb.field("total_dequeued", mb.total_dequeued());
-    jb.field("total_rejected", mb.total_rejected());
-    jb.field("total_dropped", mb.total_dropped());
-    jb.field("total_dead_letters", mb.total_dead_letters());
-    jb.field("max_depth", mb.max_depth());
-    jb.field("high_priority_depth", mb.high_priority_depth());
-    jb.field("system_lane_depth", mb.depth()); // approximate with depth
-
-    jb.object("rate_limiter");
-    jb.field("enabled", mb.rate_limiter_enabled());
-    jb.field("rate", mb.rate_limiter_rate());
-    jb.field("burst", mb.rate_limiter_burst());
-    jb.field("current_tokens", mb.rate_limiter_current_tokens());
-    jb.field("blocked_total", mb.rate_limit_blocked_total());
-    jb.end_object();
-
-    jb.object("admission");
-    jb.field("policy_count", mb.admission_policy_count());
-    jb.field("rejected_total", mb.admission_rejected_total());
-    jb.field("dlq_routed_total", mb.admission_dlq_routed_total());
-    jb.end_object();
-
-    jb.object("delivery");
-    jb.field("accepted_total", mb.delivery_accepted_total());
-    jb.field("rejected_total", mb.delivery_rejected_total());
-    jb.field("failed_total", mb.delivery_failed_total());
-    jb.field("retryable_total", mb.delivery_retryable_total());
-    jb.end_object();
-
-    jb.end_object(); // data
-
-    send_json_ok(conn, jb.end_object().build());
-}
-
-// ====================================================================
-// Task 8: handle_get_children
-// ====================================================================
-
-void handle_get_children(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                         net::HttpRequest&& req) {
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    InspectStateRequest insp_req;
-    insp_req.set_target_actor_id(*id_val);
-    insp_req.set_include_children(true);
-
-    auto reply = actor->inspect(ActorId{*id_val}, insp_req);
-    if (!reply) {
-        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) +
-                       " not found or not responding");
-        return;
-    }
-
-    auto jb = JsonBuilder::root_object();
-    jb.array("data");
-    for (int i = 0; i < reply->children_size(); ++i) {
-        const auto& ch = reply->children(i);
-        jb.object();
-        jb.field("actor_id", ch.actor_id());
-        jb.field("actor_type", ch.actor_type());
-        jb.field("state", ch.state());
+class GetMailboxHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::GET;
+    static constexpr std::string_view kPath = "/api/v1/actors/:id/mailbox";
+    void handle(CliHttpServerActor& actor, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        InspectStateRequest ir;
+        ir.set_target_actor_id(*iv);
+        ir.set_include_mailbox(true);
+        ir.set_include_rate_limiter(true);
+        ir.set_include_admission(true);
+        auto r = actor.inspect(ActorId{*iv}, ir);
+        if (!r || !r->has_mailbox()) {
+            send_error(&conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
+                       "Actor " + std::to_string(*iv) +
+                           " not found or not responding");
+            return;
+        }
+        const auto& mb = r->mailbox();
+        auto jb = JsonBuilder::root_object();
+        jb.object("data");
+        jb.field("depth", mb.depth())
+            .field("capacity", mb.capacity())
+            .field("queued_bytes", mb.queued_bytes())
+            .field("byte_capacity", mb.byte_capacity())
+            .field("pressure_ratio_ppm", mb.pressure_ratio_ppm())
+            .field("pressure_state", mb.pressure_state())
+            .field("overflow_policy", mb.overflow_policy())
+            .field("total_enqueued", mb.total_enqueued())
+            .field("total_dequeued", mb.total_dequeued())
+            .field("total_rejected", mb.total_rejected())
+            .field("total_dropped", mb.total_dropped())
+            .field("total_dead_letters", mb.total_dead_letters())
+            .field("max_depth", mb.max_depth())
+            .field("high_priority_depth", mb.high_priority_depth())
+            .field("system_lane_depth", mb.depth());
+        jb.object("rate_limiter");
+        jb.field("enabled", mb.rate_limiter_enabled())
+            .field("rate", mb.rate_limiter_rate())
+            .field("burst", mb.rate_limiter_burst())
+            .field("current_tokens", mb.rate_limiter_current_tokens())
+            .field("blocked_total", mb.rate_limit_blocked_total());
         jb.end_object();
+        jb.object("admission");
+        jb.field("policy_count", mb.admission_policy_count())
+            .field("rejected_total", mb.admission_rejected_total())
+            .field("dlq_routed_total", mb.admission_dlq_routed_total());
+        jb.end_object();
+        jb.object("delivery");
+        jb.field("accepted_total", mb.delivery_accepted_total())
+            .field("rejected_total", mb.delivery_rejected_total())
+            .field("failed_total", mb.delivery_failed_total())
+            .field("retryable_total", mb.delivery_retryable_total());
+        jb.end_object();
+        jb.end_object();
+        send_json_ok(&conn, jb.end_object().build());
     }
-    jb.end_array();
+};
 
-    send_json_ok(conn, jb.end_object().build());
+class GetChildrenHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::GET;
+    static constexpr std::string_view kPath = "/api/v1/actors/:id/children";
+    void handle(CliHttpServerActor& actor, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        InspectStateRequest ir;
+        ir.set_target_actor_id(*iv);
+        ir.set_include_children(true);
+        auto r = actor.inspect(ActorId{*iv}, ir);
+        if (!r) {
+            send_error(&conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
+                       "Actor " + std::to_string(*iv) +
+                           " not found or not responding");
+            return;
+        }
+        auto jb = JsonBuilder::root_object();
+        jb.array("data");
+        for (int i = 0; i < r->children_size(); ++i) {
+            const auto& ch = r->children(i);
+            jb.object();
+            jb.field("actor_id", ch.actor_id())
+                .field("actor_type", ch.actor_type())
+                .field("state", ch.state());
+            jb.end_object();
+        }
+        jb.end_array();
+        send_json_ok(&conn, jb.end_object().build());
+    }
+};
+
+class GetCircuitBreakerHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::GET;
+    static constexpr std::string_view kPath = "/api/v1/actors/:id/circuit-breaker";
+    void handle(CliHttpServerActor& actor, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        InspectStateRequest ir;
+        ir.set_target_actor_id(*iv);
+        ir.set_include_circuit_breaker(true);
+        auto r = actor.inspect(ActorId{*iv}, ir);
+        if (!r || !r->has_circuit_breaker()) {
+            send_error(&conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
+                       "Actor " + std::to_string(*iv) +
+                           " not found or not responding");
+            return;
+        }
+        const auto& cb = r->circuit_breaker();
+        auto oms = cb.opened_at_ns() / 1'000'000ULL;
+        send_json_ok(&conn, JsonBuilder::root_object()
+                                .object("data")
+                                .field("state", cb.state())
+                                .field("trip_count", cb.trip_count())
+                                .field("failure_ema", cb.failure_ema())
+                                .field("opened_at_ms", oms)
+                                .end_object()
+                                .end_object()
+                                .build());
+    }
+};
+
+class ResetCircuitBreakerHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::POST;
+    static constexpr std::string_view kPath =
+        "/api/v1/actors/:id/circuit-breaker/reset";
+    void handle(CliHttpServerActor&, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        if (!validate_json_content_type(&conn, req))
+            return;
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        send_error(&conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
+                   "Circuit breaker reset not yet implemented");
+    }
+};
+
+class QuarantineActorHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::POST;
+    static constexpr std::string_view kPath = "/api/v1/actors/:id/quarantine";
+    void handle(CliHttpServerActor& actor, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        if (!validate_json_content_type(&conn, req))
+            return;
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        std::string bs(reinterpret_cast<const char*>(req.body.data()),
+                       req.body.size());
+        std::string reason = extract_json_body_str(bs, "reason");
+        QuarantineRequest qr;
+        qr.set_target_actor_id(*iv);
+        if (!reason.empty())
+            qr.set_reason(reason);
+        qr.set_unquarantine(false);
+        auto r = actor.quarantine(ActorId{*iv}, qr);
+        if (!r) {
+            send_error(&conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
+                       "Actor " + std::to_string(*iv) +
+                           " not found or not responding");
+            return;
+        }
+        if (r->success())
+            send_success(&conn);
+        else
+            send_error(&conn, net::HttpStatusCode::Conflict,
+                       "QUARANTINE_FAILED", r->error_message());
+    }
+};
+
+class UnquarantineActorHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::DELETE;
+    static constexpr std::string_view kPath = "/api/v1/actors/:id/quarantine";
+    void handle(CliHttpServerActor& actor, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        QuarantineRequest qr;
+        qr.set_target_actor_id(*iv);
+        qr.set_unquarantine(true);
+        auto r = actor.quarantine(ActorId{*iv}, qr);
+        if (!r) {
+            send_error(&conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
+                       "Actor " + std::to_string(*iv) +
+                           " not found or not responding");
+            return;
+        }
+        if (r->success())
+            send_success(&conn);
+        else
+            send_error(&conn, net::HttpStatusCode::Conflict,
+                       "UNQUARANTINE_FAILED", r->error_message());
+    }
+};
+
+class GetActorMemoryHandler final : public IHttpHandler {
+  public:
+    static constexpr auto kMethod = net::HttpMethod::GET;
+    static constexpr std::string_view kPath = "/api/v1/actors/:id/memory";
+    void handle(CliHttpServerActor&, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        auto iv = parse_actor_id_or_error(req.path_params, &conn);
+        if (!iv)
+            return;
+        send_error(
+            &conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
+            "Per-actor memory stats not yet available. Use GET /api/v1/system/memory?actor_id=N for system-wide memory.");
+    }
+};
+
+void register_actor_handlers() {
+    auto& r = HttpHandlerRegistry::instance();
+    r.add(ListActorsHandler::kMethod, std::string(ListActorsHandler::kPath),
+          std::make_unique<ListActorsHandler>());
+    r.add(GetActorHandler::kMethod, std::string(GetActorHandler::kPath),
+          std::make_unique<GetActorHandler>());
+    r.add(KillActorHandler::kMethod, std::string(KillActorHandler::kPath),
+          std::make_unique<KillActorHandler>());
+    r.add(GetMailboxHandler::kMethod, std::string(GetMailboxHandler::kPath),
+          std::make_unique<GetMailboxHandler>());
+    r.add(GetChildrenHandler::kMethod, std::string(GetChildrenHandler::kPath),
+          std::make_unique<GetChildrenHandler>());
+    r.add(GetCircuitBreakerHandler::kMethod,
+          std::string(GetCircuitBreakerHandler::kPath),
+          std::make_unique<GetCircuitBreakerHandler>());
+    r.add(ResetCircuitBreakerHandler::kMethod,
+          std::string(ResetCircuitBreakerHandler::kPath),
+          std::make_unique<ResetCircuitBreakerHandler>());
+    r.add(QuarantineActorHandler::kMethod,
+          std::string(QuarantineActorHandler::kPath),
+          std::make_unique<QuarantineActorHandler>());
+    r.add(UnquarantineActorHandler::kMethod,
+          std::string(UnquarantineActorHandler::kPath),
+          std::make_unique<UnquarantineActorHandler>());
+    r.add(GetActorMemoryHandler::kMethod, std::string(GetActorMemoryHandler::kPath),
+          std::make_unique<GetActorMemoryHandler>());
 }
 
-// ====================================================================
-// Task 9: handle_get_circuit_breaker
-// ====================================================================
-
-void handle_get_circuit_breaker(CliHttpServerActor* actor,
-                                net::HTTPConnection* conn, net::HttpRequest&& req) {
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    InspectStateRequest insp_req;
-    insp_req.set_target_actor_id(*id_val);
-    insp_req.set_include_circuit_breaker(true);
-
-    auto reply = actor->inspect(ActorId{*id_val}, insp_req);
-    if (!reply || !reply->has_circuit_breaker()) {
-        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) +
-                       " not found or not responding");
-        return;
-    }
-
-    const auto& cb = reply->circuit_breaker();
-    uint64_t opened_at_ms = cb.opened_at_ns() / 1'000'000ULL;
-
-    std::string json = JsonBuilder::root_object()
-                           .object("data")
-                           .field("state", cb.state())
-                           .field("trip_count", cb.trip_count())
-                           .field("failure_ema", cb.failure_ema())
-                           .field("opened_at_ms", opened_at_ms)
-                           .end_object()
-                           .end_object()
-                           .build();
-
-    send_json_ok(conn, json);
-}
-
-// ====================================================================
-// Task 9: handle_reset_circuit_breaker
-// ====================================================================
-
-void handle_reset_circuit_breaker(CliHttpServerActor* /*actor*/,
-                                  net::HTTPConnection* conn,
-                                  net::HttpRequest&& req) {
-    if (!validate_json_content_type(conn, req))
-        return;
-
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    // TODO: implement circuit breaker reset via InspectStateRequest extension
-    send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
-               "Circuit breaker reset not yet implemented");
-}
-
-// ====================================================================
-// Task 9: handle_quarantine_actor
-// ====================================================================
-
-void handle_quarantine_actor(CliHttpServerActor* actor,
-                             net::HTTPConnection* conn, net::HttpRequest&& req) {
-    if (!validate_json_content_type(conn, req))
-        return;
-
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    // Extract reason from JSON body
-    std::string body_str(reinterpret_cast<const char*>(req.body.data()),
-                         req.body.size());
-    std::string reason = extract_json_body_str(body_str, "reason");
-
-    QuarantineRequest q_req;
-    q_req.set_target_actor_id(*id_val);
-    if (!reason.empty()) {
-        q_req.set_reason(reason);
-    }
-    q_req.set_unquarantine(false);
-
-    auto reply = actor->quarantine(ActorId{*id_val}, q_req);
-    if (!reply) {
-        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) +
-                       " not found or not responding");
-        return;
-    }
-
-    if (reply->success()) {
-        send_success(conn);
-    } else {
-        send_error(conn, net::HttpStatusCode::Conflict, "QUARANTINE_FAILED",
-                   reply->error_message());
-    }
-}
-
-// ====================================================================
-// Task 9: handle_unquarantine_actor
-// ====================================================================
-
-void handle_unquarantine_actor(CliHttpServerActor* actor,
-                               net::HTTPConnection* conn, net::HttpRequest&& req) {
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    QuarantineRequest q_req;
-    q_req.set_target_actor_id(*id_val);
-    q_req.set_unquarantine(true);
-
-    auto reply = actor->quarantine(ActorId{*id_val}, q_req);
-    // nullopt means the actor is not reachable — treat as error, not
-    // idempotent success. Only the actor itself can confirm it is
-    // unquarantined.
-    if (!reply) {
-        send_error(conn, net::HttpStatusCode::NotFound, "ACTOR_NOT_FOUND",
-                   "Actor " + std::to_string(*id_val) +
-                       " not found or not responding");
-        return;
-    }
-
-    if (reply->success()) {
-        send_success(conn);
-    } else {
-        send_error(conn, net::HttpStatusCode::Conflict, "UNQUARANTINE_FAILED",
-                   reply->error_message());
-    }
-}
-
-// ====================================================================
-// Task 9: handle_get_actor_memory
-// ====================================================================
-
-void handle_get_actor_memory(CliHttpServerActor* /*actor*/,
-                             net::HTTPConnection* conn, net::HttpRequest&& req) {
-    auto id_val = parse_actor_id_or_error(req.path_params, conn);
-    if (!id_val)
-        return;
-
-    send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
-               "Per-actor memory stats not yet available. "
-               "Use GET /api/v1/system/memory?actor_id=N for system-wide memory.");
-}
-
-} // namespace handlers
-} // namespace cli
-} // namespace hpactor
+} // namespace hpactor::cli::handlers

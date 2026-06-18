@@ -43,7 +43,6 @@
 #include <unistd.h>
 
 #include <chrono>
-#include <thread>
 #include <unordered_map>
 
 namespace hpactor {
@@ -56,7 +55,7 @@ namespace cli {
 CliLegacyServerActor::CliLegacyServerActor(ActorContext* ctx, ActorSystem& system,
                                            const CliLegacyServerConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
-      loop_(std::make_unique<net::EventLoop>()) {}
+      loop_(std::make_unique<net::EventLoop>()), host_impl_(system_) {}
 
 CliLegacyServerActor::~CliLegacyServerActor() = default;
 
@@ -74,7 +73,7 @@ void CliLegacyServerActor::on_daemon_start() {
 
         uds_acceptor_ = std::make_unique<net::UnixDomainAcceptor>(loop_.get());
         uds_acceptor_->set_accept_handler(
-            [this](int fd, EndPoint /*remote*/) { on_client_accepted(fd); });
+            [this](int fd, EndPoint /*remote*/) { on_uds_accepted(fd); });
 
         if (!uds_acceptor_->listen(config_.uds_listen_path)) {
             std::fprintf(stderr, "CliLegacyServerActor: UDS listen failed on %s\n",
@@ -107,8 +106,9 @@ void CliLegacyServerActor::on_daemon_start() {
     // --- TCP socket ---
     if (config_.tcp_listen_port > 0) {
         tcp_acceptor_ = std::make_unique<net::TcpAcceptor>(loop_.get());
-        tcp_acceptor_->set_accept_handler(
-            [this](int fd, EndPoint /*remote*/) { on_client_accepted(fd); });
+        tcp_acceptor_->set_accept_handler([this](int fd, EndPoint remote_ep) {
+            on_tcp_accepted(fd, remote_ep);
+        });
 
         if (!tcp_acceptor_->listen(config_.tcp_listen_port, 0,
                                    config_.tcp_bind_address)) {
@@ -161,7 +161,7 @@ bool CliLegacyServerActor::run_once() {
 // Client connection management
 // ---------------------------------------------------------------------------
 
-void CliLegacyServerActor::on_client_accepted(int client_fd) {
+void CliLegacyServerActor::on_tcp_accepted(int client_fd, EndPoint remote_ep) {
     if (sessions_.size() >= config_.max_sessions) {
         ::close(client_fd);
         return;
@@ -195,6 +195,61 @@ void CliLegacyServerActor::on_client_accepted(int client_fd) {
     SessionState state;
     state.session = std::move(session);
     state.last_activity = std::chrono::steady_clock::now();
+    state.seqno = next_seqno_++;
+    // Build "IP:port" string for TCP clients.
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&remote_ep)) {
+        char buf[32];
+        uint32_t a = ipv4->addr;
+        snprintf(buf, sizeof(buf), "%u.%u.%u.%u:%u", (a >> 24) & 0xFF,
+                 (a >> 16) & 0xFF, (a >> 8) & 0xFF, a & 0xFF, ipv4->port());
+        state.remote_addr = buf;
+    } else {
+        state.remote_addr = "tcp";
+    }
+    int fd = client_fd;
+    sessions_.emplace(fd, std::move(state));
+
+    // Register a read_handler so the EventLoop wakes us when data arrives.
+    loop_->set_read_handler(
+        fd, [this](int ready_fd) { on_client_readable(ready_fd); });
+}
+
+void CliLegacyServerActor::on_uds_accepted(int client_fd) {
+    if (sessions_.size() >= config_.max_sessions) {
+        ::close(client_fd);
+        return;
+    }
+
+    auto formatter = OutputFormatter::create(config_.default_format);
+    auto session = std::make_unique<CliSession>(
+        &system_, command_tree_.get(), std::move(formatter),
+        [client_fd](const std::string& text) {
+            // Best-effort write — the fd is non-blocking and may fail.
+            ssize_t ignored = ::write(client_fd, text.data(), text.size());
+            (void)ignored;
+            const char sentinel = '\0';
+            ignored = ::write(client_fd, &sentinel, 1);
+            (void)ignored;
+        },
+        config_.page_size);
+    session->set_cli_server_actor(this);
+    session->set_command_host(this);
+    session->set_system_host(this);
+    session->set_lifecycle_host(this);
+
+    // Send greeting.
+    const char* greeting = "HPActor CLI — Type /help for commands, /quit to exit.\n";
+    ssize_t ignored = ::write(client_fd, greeting, std::strlen(greeting));
+    (void)ignored;
+    const char sentinel = '\0';
+    ignored = ::write(client_fd, &sentinel, 1);
+    (void)ignored;
+
+    SessionState state;
+    state.session = std::move(session);
+    state.last_activity = std::chrono::steady_clock::now();
+    state.seqno = next_seqno_++;
+    state.remote_addr = "uds";
     int fd = client_fd;
     sessions_.emplace(fd, std::move(state));
 
@@ -262,15 +317,55 @@ void CliLegacyServerActor::close_session(int client_fd) {
 }
 
 // ---------------------------------------------------------------------------
+// Client management (for /client commands)
+// ---------------------------------------------------------------------------
+
+std::string CliLegacyServerActor::list_clients() const {
+    std::string result;
+    if (sessions_.empty())
+        return "No connected clients.\n";
+    result += "Seqno  Remote\n";
+    result += "-----  ------\n";
+    for (const auto& [fd, state] : sessions_) {
+        char buf[80];
+        snprintf(buf, sizeof(buf), "%-6u %s\n", state.seqno,
+                 state.remote_addr.c_str());
+        result += buf;
+    }
+    return result;
+}
+
+bool CliLegacyServerActor::close_client(uint32_t seqno) {
+    for (auto& [fd, state] : sessions_) {
+        if (state.seqno == seqno) {
+            // Need to remove read handler before closing fd.
+            // close_session is const-safe if we cast away the sessions_ lookup
+            // — but it's a private method on `this`, so we can just call it
+            // directly.  Copy the closure logic inline to avoid modifying
+            // close_session to accept a seqno.
+            loop_->clear_read_handler(fd);
+            ::close(fd);
+            sessions_.erase(fd);
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string CliLegacyServerActor::client_history(uint32_t seqno) const {
+    for (const auto& [fd, state] : sessions_) {
+        if (state.seqno == seqno)
+            return "(not tracked for text-based sessions)\n";
+    }
+    return "Client " + std::to_string(seqno) + " not found.\n";
+}
+
+// ---------------------------------------------------------------------------
 // Metadata
 // ---------------------------------------------------------------------------
 
 cli::ActorMeta CliLegacyServerActor::to_metadata() const {
-    cli::ActorMeta m;
-    m.actor_id = id().value();
-    m.actor_type = std::string(type_name());
-    m.state = running_ ? "Running" : "Stopped";
-    return m;
+    return host_impl_.make_metadata(id(), type_name(), running_);
 }
 
 // ---------------------------------------------------------------------------
@@ -278,33 +373,12 @@ cli::ActorMeta CliLegacyServerActor::to_metadata() const {
 // ---------------------------------------------------------------------------
 
 void CliLegacyServerActor::build_command_tree() {
-    auto root = std::make_unique<CommandNode>("/", "CLI root");
-    build_command_tree_from_registry(*root);
-    command_tree_ = std::move(root);
+    command_tree_ = host_impl_.build_command_tree();
 }
 
 // ---------------------------------------------------------------------------
 // Request-Response Helpers (mirrors CliActor's methods)
 // ---------------------------------------------------------------------------
-
-namespace {
-
-std::optional<StreamBuffer>
-poll_for_response(mailbox::MPSCActorMailbox<TypedMessage>* mbox,
-                  TypeTag expected_tag, std::chrono::milliseconds timeout) {
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        TypedMessage msg;
-        if (mbox->try_pop(msg)) {
-            if (msg.type_id() == expected_tag)
-                return std::move(msg).payload();
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return std::nullopt;
-}
-
-} // anonymous namespace
 
 std::optional<InspectStateReply>
 CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
@@ -317,131 +391,29 @@ CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
         pb_meta->set_state("Running");
         return reply;
     }
-    auto actor = system_.get_actor(target);
-    if (!actor)
-        return std::nullopt;
-
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    for (;;) {
-        TypedMessage msg(TypeTag::InspectStateRequestTag, req);
-        msg.set_sender_address(address());
-        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-        if (enqueue_result.accepted())
-            break;
-        if (std::chrono::steady_clock::now() >= deadline)
-            return std::nullopt;
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-    auto payload =
-        poll_for_response(mailbox(), TypeTag::InspectStateResponseTag, timeout);
-    if (!payload)
-        return std::nullopt;
-    InspectStateReply reply;
-    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
-        return std::nullopt;
-    std::string wire = reply.SerializeAsString();
-    InspectStateReply safe_reply;
-    if (!safe_reply.ParseFromString(wire))
-        return std::nullopt;
-    return safe_reply;
+    return host_impl_.inspect(target, req, mailbox(), address(), timeout);
 }
 
 std::optional<KillReply>
 CliLegacyServerActor::kill(ActorId target, const KillRequest& req,
                            std::chrono::milliseconds timeout) {
-    auto actor = system_.get_actor(target);
-    if (!actor)
-        return std::nullopt;
-    auto kill_deadline = std::chrono::steady_clock::now() + timeout;
-    for (;;) {
-        TypedMessage msg(TypeTag::KillRequestTag, req);
-        msg.set_sender_address(address());
-        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-        if (enqueue_result.accepted())
-            break;
-        if (std::chrono::steady_clock::now() >= kill_deadline)
-            return std::nullopt;
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-    auto payload = poll_for_response(mailbox(), TypeTag::KillResponseTag, timeout);
-    if (!payload)
-        return std::nullopt;
-    KillReply reply;
-    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
-        return std::nullopt;
-    std::string wire = reply.SerializeAsString();
-    KillReply safe_reply;
-    if (!safe_reply.ParseFromString(wire))
-        return std::nullopt;
-    return safe_reply;
+    return host_impl_.kill(target, req, mailbox(), address(), timeout);
 }
 
 std::optional<QuarantineReply>
 CliLegacyServerActor::quarantine(ActorId target, const QuarantineRequest& req,
                                  std::chrono::milliseconds timeout) {
-    auto actor = system_.get_actor(target);
-    if (!actor)
-        return std::nullopt;
-    auto q_deadline = std::chrono::steady_clock::now() + timeout;
-    for (;;) {
-        TypedMessage msg(TypeTag::QuarantineRequestTag, req);
-        msg.set_sender_address(address());
-        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-        if (enqueue_result.accepted())
-            break;
-        if (std::chrono::steady_clock::now() >= q_deadline)
-            return std::nullopt;
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-    auto payload =
-        poll_for_response(mailbox(), TypeTag::QuarantineResponseTag, timeout);
-    if (!payload)
-        return std::nullopt;
-    QuarantineReply reply;
-    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
-        return std::nullopt;
-    std::string wire = reply.SerializeAsString();
-    QuarantineReply safe_reply;
-    if (!safe_reply.ParseFromString(wire))
-        return std::nullopt;
-    return safe_reply;
+    return host_impl_.quarantine(target, req, mailbox(), address(), timeout);
 }
 
 std::vector<ActorMeta> CliLegacyServerActor::enumerate(std::string_view filter) {
-    std::vector<ActorMeta> result;
-    system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
-        if (!filter.empty()) {
-            std::string tn(actor.type_name().data(), actor.type_name().size());
-            if (tn.find(filter) == std::string::npos)
-                return;
-        }
-        result.push_back(actor.to_metadata());
-    });
-    return result;
+    return host_impl_.enumerate(filter);
 }
 
 // execute_path is inline in header (returns false — local host).
 
 result<void> CliLegacyServerActor::dlq_replay(uint32_t index, ActorId target) {
-    auto* dlq = system_.dead_letter_queue();
-    if (!dlq)
-        return result<void>::make(
-            error(errors::actor_not_found, "DLQ not configured"));
-
-    mailbox::DeadLetterRecord record;
-    if (!dlq->try_pop_at(index, record))
-        return result<void>::make(
-            error(errors::invalid_argument, "DLQ index out of range"));
-
-    // Reconstruct and re-deliver the message from the dead-letter record.
-    TypedMessage msg(record.type_tag, std::move(record.payload_sample));
-    msg.set_sender_address(address());
-    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-    if (!enqueue_result.accepted())
-        return result<void>::make(
-            error(errors::mailbox_full, "replay delivery failed"));
-
-    return result<void>::make();
+    return host_impl_.dlq_replay(index, target, address());
 }
 
 // ---------------------------------------------------------------------------
@@ -449,11 +421,11 @@ result<void> CliLegacyServerActor::dlq_replay(uint32_t index, ActorId target) {
 // ---------------------------------------------------------------------------
 
 result<void> CliLegacyServerActor::drain() {
-    return system_.shutdown();
+    return host_impl_.drain();
 }
 
 result<void> CliLegacyServerActor::shutdown() {
-    return system_.shutdown();
+    return host_impl_.shutdown();
 }
 
 } // namespace cli

@@ -6,6 +6,7 @@
 #include <hpactor/cli/cli_command_host.hpp>
 #include <hpactor/cli/cli_proto_server_config.hpp>
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/cli/local_server_cli_host.hpp>
 
 #include <chrono>
 #include <memory>
@@ -128,6 +129,7 @@ class CliProtoServerActor : public DaemonActor,
     std::unique_ptr<net::TcpAcceptor> tcp_acceptor_;
     std::unique_ptr<net::UnixDomainAcceptor> uds_acceptor_;
     std::unique_ptr<CommandNode> command_tree_;
+    LocalServerCliHost host_impl_;
     bool running_ = true;
     uint32_t next_seqno_ = 1;
 

@@ -17,22 +17,6 @@ namespace cli {
 
 class CliHttpServerActor;
 
-// ── Route entry ──────────────────────────────────────────────────────
-
-using RouteHandler = void (*)(CliHttpServerActor* actor,
-                              net::HTTPConnection* conn, net::HttpRequest&& req);
-
-struct RouteEntry {
-    net::HttpMethod method;
-    std::string pattern;
-    RouteHandler handler;
-};
-
-// ── Route matching ───────────────────────────────────────────────────
-
-bool match_route_pattern(const std::string& pattern, const std::string& path,
-                         std::unordered_map<std::string, std::string>& path_params);
-
 // ── HTTP response helpers ────────────────────────────────────────────
 
 void send_error(net::HTTPConnection* conn, net::HttpStatusCode code,

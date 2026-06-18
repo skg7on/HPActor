@@ -110,6 +110,11 @@ class CliSession {
         proto_server_ = server;
     }
 
+    /// \brief Set the owning CliClientActor, if any.
+    void set_client_actor(class CliClientActor* client) {
+        client_actor_ = client;
+    }
+
     /// \brief Set the command host for actor operations.
     void set_command_host(class ICliCommandHost* host) {
         command_host_ = host;
@@ -151,6 +156,7 @@ class CliSession {
     class CliActor* cli_actor_ = nullptr;
     class CliLegacyServerActor* cli_server_actor_ = nullptr;
     class CliProtoServerActor* proto_server_ = nullptr;
+    class CliClientActor* client_actor_ = nullptr;
     class ICliCommandHost* command_host_ = nullptr;
     class ISystemCliHost* system_host_ = nullptr;
     class ILifecycleCliHost* lifecycle_host_ = nullptr;

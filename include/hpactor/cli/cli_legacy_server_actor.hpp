@@ -18,6 +18,7 @@
 #include <hpactor/cli/cli_command_host.hpp>
 #include <hpactor/cli/cli_legacy_server_config.hpp>
 #include <hpactor/cli/cli_types.hpp>
+#include <hpactor/cli/local_server_cli_host.hpp>
 
 #include <chrono>
 #include <memory>
@@ -88,6 +89,11 @@ class CliLegacyServerActor : public DaemonActor,
         running_ = false;
     }
 
+    // --- Client management (for /client commands) ---
+    std::string list_clients() const;
+    bool close_client(uint32_t seqno);
+    std::string client_history(uint32_t seqno) const;
+
     // --- ICliCommandHost interface ---
     std::optional<class InspectStateReply>
     inspect(ActorId target, const class InspectStateRequest& req,
@@ -114,8 +120,11 @@ class CliLegacyServerActor : public DaemonActor,
     result<void> shutdown() override;
 
   private:
-    /// Called by acceptors when a new client connects.
-    void on_client_accepted(int client_fd);
+    /// Called by TCP acceptor when a new client connects.
+    void on_tcp_accepted(int client_fd, EndPoint remote_ep);
+
+    /// Called by UDS acceptor when a new client connects.
+    void on_uds_accepted(int client_fd);
 
     /// Called by the EventLoop when a client fd is readable.
     void on_client_readable(int client_fd);
@@ -138,13 +147,17 @@ class CliLegacyServerActor : public DaemonActor,
     std::unique_ptr<net::UnixDomainAcceptor> uds_acceptor_;
 
     std::unique_ptr<CommandNode> command_tree_;
+    LocalServerCliHost host_impl_;
     bool running_ = true;
+    uint32_t next_seqno_ = 1;
 
     /// Per-session state, keyed by client fd.
     struct SessionState {
         std::unique_ptr<CliSession> session;
         std::chrono::steady_clock::time_point last_activity;
         std::string read_buffer;
+        uint32_t seqno = 0;
+        std::string remote_addr;
     };
     /// Map from client fd → SessionState.  Used by the read_handler
     /// callback to locate the owning session.

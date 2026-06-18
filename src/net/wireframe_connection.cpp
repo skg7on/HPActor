@@ -179,6 +179,7 @@ void WireFrameConnection::handle_read() {
         } else if (n == 0) {
             // EOF — remote end closed connection.
             read_buffer_.clear();
+            set_state(ConnectionState::Disconnected);
             if (error_handler_) {
                 error_handler_(nullptr, error(errors::unknown, "EOF on read"));
             }
@@ -188,6 +189,7 @@ void WireFrameConnection::handle_read() {
                 return;
             // Hard read error.
             read_buffer_.clear();
+            set_state(ConnectionState::Error);
             if (error_handler_) {
                 error_handler_(nullptr, error(errors::unknown, "read error"));
             }
@@ -223,6 +225,7 @@ void WireFrameConnection::handle_read() {
         } else if (n == 0) {
             // EOF mid-frame — remote end closed connection.
             read_buffer_.clear();
+            set_state(ConnectionState::Disconnected);
             if (error_handler_) {
                 error_handler_(nullptr, error(errors::unknown, "EOF mid-frame"));
             }
@@ -232,6 +235,7 @@ void WireFrameConnection::handle_read() {
                 return;
             // Hard read error.
             read_buffer_.clear();
+            set_state(ConnectionState::Error);
             if (error_handler_) {
                 error_handler_(nullptr, error(errors::unknown, "read error"));
             }
