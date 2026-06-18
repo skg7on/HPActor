@@ -43,7 +43,6 @@
 #include <unistd.h>
 
 #include <chrono>
-#include <thread>
 #include <unordered_map>
 
 namespace hpactor {
@@ -56,7 +55,7 @@ namespace cli {
 CliLegacyServerActor::CliLegacyServerActor(ActorContext* ctx, ActorSystem& system,
                                            const CliLegacyServerConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
-      loop_(std::make_unique<net::EventLoop>()) {}
+      loop_(std::make_unique<net::EventLoop>()), host_impl_(system_) {}
 
 CliLegacyServerActor::~CliLegacyServerActor() = default;
 
@@ -366,11 +365,7 @@ std::string CliLegacyServerActor::client_history(uint32_t seqno) const {
 // ---------------------------------------------------------------------------
 
 cli::ActorMeta CliLegacyServerActor::to_metadata() const {
-    cli::ActorMeta m;
-    m.actor_id = id().value();
-    m.actor_type = std::string(type_name());
-    m.state = running_ ? "Running" : "Stopped";
-    return m;
+    return host_impl_.make_metadata(id(), type_name(), running_);
 }
 
 // ---------------------------------------------------------------------------
@@ -378,33 +373,12 @@ cli::ActorMeta CliLegacyServerActor::to_metadata() const {
 // ---------------------------------------------------------------------------
 
 void CliLegacyServerActor::build_command_tree() {
-    auto root = std::make_unique<CommandNode>("/", "CLI root");
-    build_command_tree_from_registry(*root);
-    command_tree_ = std::move(root);
+    command_tree_ = host_impl_.build_command_tree();
 }
 
 // ---------------------------------------------------------------------------
 // Request-Response Helpers (mirrors CliActor's methods)
 // ---------------------------------------------------------------------------
-
-namespace {
-
-std::optional<StreamBuffer>
-poll_for_response(mailbox::MPSCActorMailbox<TypedMessage>* mbox,
-                  TypeTag expected_tag, std::chrono::milliseconds timeout) {
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        TypedMessage msg;
-        if (mbox->try_pop(msg)) {
-            if (msg.type_id() == expected_tag)
-                return std::move(msg).payload();
-        }
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return std::nullopt;
-}
-
-} // anonymous namespace
 
 std::optional<InspectStateReply>
 CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
@@ -417,131 +391,29 @@ CliLegacyServerActor::inspect(ActorId target, const InspectStateRequest& req,
         pb_meta->set_state("Running");
         return reply;
     }
-    auto actor = system_.get_actor(target);
-    if (!actor)
-        return std::nullopt;
-
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    for (;;) {
-        TypedMessage msg(TypeTag::InspectStateRequestTag, req);
-        msg.set_sender_address(address());
-        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-        if (enqueue_result.accepted())
-            break;
-        if (std::chrono::steady_clock::now() >= deadline)
-            return std::nullopt;
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-    auto payload =
-        poll_for_response(mailbox(), TypeTag::InspectStateResponseTag, timeout);
-    if (!payload)
-        return std::nullopt;
-    InspectStateReply reply;
-    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
-        return std::nullopt;
-    std::string wire = reply.SerializeAsString();
-    InspectStateReply safe_reply;
-    if (!safe_reply.ParseFromString(wire))
-        return std::nullopt;
-    return safe_reply;
+    return host_impl_.inspect(target, req, mailbox(), address(), timeout);
 }
 
 std::optional<KillReply>
 CliLegacyServerActor::kill(ActorId target, const KillRequest& req,
                            std::chrono::milliseconds timeout) {
-    auto actor = system_.get_actor(target);
-    if (!actor)
-        return std::nullopt;
-    auto kill_deadline = std::chrono::steady_clock::now() + timeout;
-    for (;;) {
-        TypedMessage msg(TypeTag::KillRequestTag, req);
-        msg.set_sender_address(address());
-        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-        if (enqueue_result.accepted())
-            break;
-        if (std::chrono::steady_clock::now() >= kill_deadline)
-            return std::nullopt;
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-    auto payload = poll_for_response(mailbox(), TypeTag::KillResponseTag, timeout);
-    if (!payload)
-        return std::nullopt;
-    KillReply reply;
-    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
-        return std::nullopt;
-    std::string wire = reply.SerializeAsString();
-    KillReply safe_reply;
-    if (!safe_reply.ParseFromString(wire))
-        return std::nullopt;
-    return safe_reply;
+    return host_impl_.kill(target, req, mailbox(), address(), timeout);
 }
 
 std::optional<QuarantineReply>
 CliLegacyServerActor::quarantine(ActorId target, const QuarantineRequest& req,
                                  std::chrono::milliseconds timeout) {
-    auto actor = system_.get_actor(target);
-    if (!actor)
-        return std::nullopt;
-    auto q_deadline = std::chrono::steady_clock::now() + timeout;
-    for (;;) {
-        TypedMessage msg(TypeTag::QuarantineRequestTag, req);
-        msg.set_sender_address(address());
-        auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-        if (enqueue_result.accepted())
-            break;
-        if (std::chrono::steady_clock::now() >= q_deadline)
-            return std::nullopt;
-        std::this_thread::sleep_for(std::chrono::milliseconds(5));
-    }
-    auto payload =
-        poll_for_response(mailbox(), TypeTag::QuarantineResponseTag, timeout);
-    if (!payload)
-        return std::nullopt;
-    QuarantineReply reply;
-    if (!reply.ParseFromArray(payload->data(), static_cast<int>(payload->size())))
-        return std::nullopt;
-    std::string wire = reply.SerializeAsString();
-    QuarantineReply safe_reply;
-    if (!safe_reply.ParseFromString(wire))
-        return std::nullopt;
-    return safe_reply;
+    return host_impl_.quarantine(target, req, mailbox(), address(), timeout);
 }
 
 std::vector<ActorMeta> CliLegacyServerActor::enumerate(std::string_view filter) {
-    std::vector<ActorMeta> result;
-    system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
-        if (!filter.empty()) {
-            std::string tn(actor.type_name().data(), actor.type_name().size());
-            if (tn.find(filter) == std::string::npos)
-                return;
-        }
-        result.push_back(actor.to_metadata());
-    });
-    return result;
+    return host_impl_.enumerate(filter);
 }
 
 // execute_path is inline in header (returns false — local host).
 
 result<void> CliLegacyServerActor::dlq_replay(uint32_t index, ActorId target) {
-    auto* dlq = system_.dead_letter_queue();
-    if (!dlq)
-        return result<void>::make(
-            error(errors::actor_not_found, "DLQ not configured"));
-
-    mailbox::DeadLetterRecord record;
-    if (!dlq->try_pop_at(index, record))
-        return result<void>::make(
-            error(errors::invalid_argument, "DLQ index out of range"));
-
-    // Reconstruct and re-deliver the message from the dead-letter record.
-    TypedMessage msg(record.type_tag, std::move(record.payload_sample));
-    msg.set_sender_address(address());
-    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-    if (!enqueue_result.accepted())
-        return result<void>::make(
-            error(errors::mailbox_full, "replay delivery failed"));
-
-    return result<void>::make();
+    return host_impl_.dlq_replay(index, target, address());
 }
 
 // ---------------------------------------------------------------------------
@@ -549,11 +421,11 @@ result<void> CliLegacyServerActor::dlq_replay(uint32_t index, ActorId target) {
 // ---------------------------------------------------------------------------
 
 result<void> CliLegacyServerActor::drain() {
-    return system_.shutdown();
+    return host_impl_.drain();
 }
 
 result<void> CliLegacyServerActor::shutdown() {
-    return system_.shutdown();
+    return host_impl_.shutdown();
 }
 
 } // namespace cli

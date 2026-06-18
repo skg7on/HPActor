@@ -185,6 +185,7 @@ target_sources(hpactor_lib PRIVATE
     cli/cli_local_actor.cpp
     cli/cli_session.cpp
     cli/cli_legacy_server_actor.cpp
+    cli/local_server_cli_host.cpp
     cli/cli_http_server_actor.cpp
     cli/cli_client_actor.cpp
     cli/cli_proto_server_actor.cpp

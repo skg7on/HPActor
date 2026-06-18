@@ -5,6 +5,7 @@
 #include <hpactor/actor/daemon_actor.hpp>
 #include <hpactor/cli/cli_command_host.hpp>
 #include <hpactor/cli/cli_http_server_config.hpp>
+#include <hpactor/cli/local_server_cli_host.hpp>
 
 #include <memory>
 
@@ -173,6 +174,7 @@ class CliHttpServerActor : public DaemonActor,
     CliHttpServerConfig config_;
     std::unique_ptr<net::HTTPGateway> gateway_;
     std::unique_ptr<CommandNode> command_tree_;
+    LocalServerCliHost host_impl_;
     bool running_ = true;
     bool listen_ok_ = false;
 };

@@ -130,7 +130,7 @@ struct CliHttpServerActor::RouteTable {
 CliHttpServerActor::CliHttpServerActor(ActorContext* ctx, ActorSystem& system,
                                        const CliHttpServerConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
-      gateway_(std::make_unique<net::HTTPGateway>()) {}
+      gateway_(std::make_unique<net::HTTPGateway>()), host_impl_(system_) {}
 
 CliHttpServerActor::~CliHttpServerActor() = default;
 
@@ -180,9 +180,7 @@ void CliHttpServerActor::on_daemon_stop() {
 // ---------------------------------------------------------------------------
 
 void CliHttpServerActor::build_command_tree() {
-    auto root = std::make_unique<CommandNode>("/", "CLI root");
-    build_command_tree_from_registry(*root);
-    command_tree_ = std::move(root);
+    command_tree_ = host_impl_.build_command_tree();
 }
 
 // ---------------------------------------------------------------------------
@@ -282,24 +280,7 @@ void CliHttpServerActor::dispatch_route(net::HTTPConnection* conn,
 // execute_path is inline in header (returns false — local host).
 
 result<void> CliHttpServerActor::dlq_replay(uint32_t index, ActorId target) {
-    auto* dlq = system_.dead_letter_queue();
-    if (!dlq)
-        return result<void>::make(
-            error(errors::actor_not_found, "DLQ not configured"));
-
-    mailbox::DeadLetterRecord record;
-    if (!dlq->try_pop_at(index, record))
-        return result<void>::make(
-            error(errors::invalid_argument, "DLQ index out of range"));
-
-    TypedMessage msg(record.type_tag, std::move(record.payload_sample));
-    msg.set_sender_address(address());
-    auto enqueue_result = system_.try_deliver_local(target, std::move(msg));
-    if (!enqueue_result.accepted())
-        return result<void>::make(
-            error(errors::mailbox_full, "replay delivery failed"));
-
-    return result<void>::make();
+    return host_impl_.dlq_replay(index, target, address());
 }
 
 // ---------------------------------------------------------------------------
@@ -307,14 +288,11 @@ result<void> CliHttpServerActor::dlq_replay(uint32_t index, ActorId target) {
 // ---------------------------------------------------------------------------
 
 result<void> CliHttpServerActor::drain() {
-    // TODO: Implement soft drain (stop accepting new work, process in-flight).
-    // Currently delegates to full shutdown — pending proper drain support in
-    // ActorSystem.
-    return system_.shutdown();
+    return host_impl_.drain();
 }
 
 result<void> CliHttpServerActor::shutdown() {
-    return system_.shutdown();
+    return host_impl_.shutdown();
 }
 
 // ---------------------------------------------------------------------------
@@ -324,136 +302,23 @@ result<void> CliHttpServerActor::shutdown() {
 std::optional<InspectStateReply>
 CliHttpServerActor::inspect(ActorId target, const InspectStateRequest& req,
                             std::chrono::milliseconds timeout) {
-    MessageId correlation_id = generate_message_id();
-    uint64_t corr_value = correlation_id.value();
-
-    TypedMessage msg(TypeTag::InspectStateRequestTag, req);
-    msg.set_sender_address(address());
-    msg.set_ask_message_id(corr_value);
-
-    ActorAddress target_addr;
-    target_addr.id = target;
-    context()->send(target_addr, std::move(msg));
-
-    // Poll mailbox for reply with timeout
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        TypedMessage m;
-        if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::InspectStateResponseTag &&
-                m.ask_message_id() == corr_value) {
-                auto reply = m.as<InspectStateReply>();
-                if (reply)
-                    return *reply;
-                return std::nullopt;
-            }
-            // Message not for us (likely for a concurrent request),
-            // continue polling.
-            std::fprintf(stderr,
-                         "CliHttpServerActor::inspect: non-matching message "
-                         "(type=%u ask_id=%llu expected=%llu), polling\n",
-                         static_cast<unsigned>(m.type_id()),
-                         static_cast<unsigned long long>(m.ask_message_id()),
-                         static_cast<unsigned long long>(corr_value));
-        }
-        // Small sleep to avoid busy-spinning the daemon thread
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return std::nullopt;
+    return host_impl_.inspect(target, req, mailbox(), address(), timeout);
 }
 
 std::optional<KillReply>
 CliHttpServerActor::kill(ActorId target, const KillRequest& req,
                          std::chrono::milliseconds timeout) {
-    MessageId correlation_id = generate_message_id();
-    uint64_t corr_value = correlation_id.value();
-
-    TypedMessage msg(TypeTag::KillRequestTag, req);
-    msg.set_sender_address(address());
-    msg.set_ask_message_id(corr_value);
-
-    ActorAddress target_addr;
-    target_addr.id = target;
-    context()->send(target_addr, std::move(msg));
-
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        TypedMessage m;
-        if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::KillResponseTag &&
-                m.ask_message_id() == corr_value) {
-                auto reply = m.as<KillReply>();
-                if (reply)
-                    return *reply;
-                return std::nullopt;
-            }
-            // Message not for us (likely for a concurrent request),
-            // continue polling.
-            std::fprintf(stderr,
-                         "CliHttpServerActor::kill: non-matching message "
-                         "(type=%u ask_id=%llu expected=%llu), polling\n",
-                         static_cast<unsigned>(m.type_id()),
-                         static_cast<unsigned long long>(m.ask_message_id()),
-                         static_cast<unsigned long long>(corr_value));
-        }
-        // Small sleep to avoid busy-spinning the daemon thread
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return std::nullopt;
+    return host_impl_.kill(target, req, mailbox(), address(), timeout);
 }
 
 std::optional<QuarantineReply>
 CliHttpServerActor::quarantine(ActorId target, const QuarantineRequest& req,
                                std::chrono::milliseconds timeout) {
-    MessageId correlation_id = generate_message_id();
-    uint64_t corr_value = correlation_id.value();
-
-    TypedMessage msg(TypeTag::QuarantineRequestTag, req);
-    msg.set_sender_address(address());
-    msg.set_ask_message_id(corr_value);
-
-    ActorAddress target_addr;
-    target_addr.id = target;
-    context()->send(target_addr, std::move(msg));
-
-    auto deadline = std::chrono::steady_clock::now() + timeout;
-    while (std::chrono::steady_clock::now() < deadline) {
-        TypedMessage m;
-        if (mailbox()->try_pop(m)) {
-            if (m.type_id() == TypeTag::QuarantineResponseTag &&
-                m.ask_message_id() == corr_value) {
-                auto reply = m.as<QuarantineReply>();
-                if (reply)
-                    return *reply;
-                return std::nullopt;
-            }
-            // Message not for us (likely for a concurrent request),
-            // continue polling.
-            std::fprintf(stderr,
-                         "CliHttpServerActor::quarantine: non-matching message "
-                         "(type=%u ask_id=%llu expected=%llu), polling\n",
-                         static_cast<unsigned>(m.type_id()),
-                         static_cast<unsigned long long>(m.ask_message_id()),
-                         static_cast<unsigned long long>(corr_value));
-        }
-        // Small sleep to avoid busy-spinning the daemon thread
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
-    }
-    return std::nullopt;
+    return host_impl_.quarantine(target, req, mailbox(), address(), timeout);
 }
 
 std::vector<ActorMeta> CliHttpServerActor::enumerate(std::string_view filter) {
-    std::vector<ActorMeta> result;
-    system_.for_each_actor([&](ActorId /*id*/, AbstractActor& actor) {
-        auto meta = actor.to_metadata();
-        if (!filter.empty()) {
-            // Filter by type name substring match
-            if (meta.actor_type.find(filter) == std::string::npos)
-                return;
-        }
-        result.push_back(std::move(meta));
-    });
-    return result;
+    return host_impl_.enumerate(filter);
 }
 
 } // namespace cli
