@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-18 02:49:57</td>
+            <td class="headerValue">2026-06-18 07:12:13</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">87.5&nbsp;%</td>
@@ -134,15 +134,15 @@
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">         433 :     std::string buf;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">         433 :     buf.reserve(4096);</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         433 :     buffer_.drain([&amp;](const LogEvent&amp; event) {</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">         729 :         buf.clear();</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">         729 :         formatter_.format(event, buf);</span></span>
-<span id="L61"><span class="lineNum">      61</span>         [<span class="tlaGBC" title="Branch 0 was taken 729 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 729 times"> + </span>]:<span class="tlaGNC">        1458 :         for (auto&amp; sink : sinks_) {</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">         729 :             auto result = sink-&gt;write(buf);</span></span>
-<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 729 times"> + </span>]:<span class="tlaGNC">         729 :             if (!result.has_value()) {</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">         736 :         buf.clear();</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">         736 :         formatter_.format(event, buf);</span></span>
+<span id="L61"><span class="lineNum">      61</span>         [<span class="tlaGBC" title="Branch 0 was taken 736 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 736 times"> + </span>]:<span class="tlaGNC">        1472 :         for (auto&amp; sink : sinks_) {</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">         736 :             auto result = sink-&gt;write(buf);</span></span>
+<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 736 times"> + </span>]:<span class="tlaGNC">         736 :             if (!result.has_value()) {</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 sink_errors_.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :             }</span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">         729 :         }</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         729 :     });</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">         736 :         }</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         736 :     });</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 433 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 433 times"> + </span>]:<span class="tlaGNC">         866 :     for (auto&amp; sink : sinks_) {</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">         433 :         sink-&gt;flush();</span></span>
@@ -158,25 +158,25 @@
 <span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">         433 :     std::string buf;</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">         433 :     buf.reserve(4096);</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
-<span id="L83"><span class="lineNum">      83</span>         [<span class="tlaGBC" title="Branch 0 was taken 577 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 433 times"> + </span>]:<span class="tlaGNC">        1010 :     while (running_.load(std::memory_order_relaxed)) {</span></span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">         577 :         buffer_.drain([&amp;](const LogEvent&amp; event) {</span></span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">         547 :             buf.clear();</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">         547 :             formatter_.format(event, buf);</span></span>
-<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 547 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 547 times"> + </span>]:<span class="tlaGNC">        1094 :             for (auto&amp; sink : sinks_) {</span></span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         547 :                 auto result = sink-&gt;write(buf);</span></span>
-<span id="L89"><span class="lineNum">      89</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 547 times"> + </span>]:<span class="tlaGNC">         547 :                 if (!result.has_value()) {</span></span>
+<span id="L83"><span class="lineNum">      83</span>         [<span class="tlaGBC" title="Branch 0 was taken 567 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 433 times"> + </span>]:<span class="tlaGNC">        1000 :     while (running_.load(std::memory_order_relaxed)) {</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">         567 :         buffer_.drain([&amp;](const LogEvent&amp; event) {</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">         545 :             buf.clear();</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">         545 :             formatter_.format(event, buf);</span></span>
+<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 545 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 545 times"> + </span>]:<span class="tlaGNC">        1090 :             for (auto&amp; sink : sinks_) {</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         545 :                 auto result = sink-&gt;write(buf);</span></span>
+<span id="L89"><span class="lineNum">      89</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 545 times"> + </span>]:<span class="tlaGNC">         545 :                 if (!result.has_value()) {</span></span>
 <span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                     sink_errors_.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L91"><span class="lineNum">      91</span>                 :             :                 }</span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC tlaBgGNC">         547 :             }</span></span>
-<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">         547 :             if (static_cast&lt;uint8_t&gt;(event.level) &lt;=</span></span>
-<span id="L94"><span class="lineNum">      94</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 547 times"> + </span>]:<span class="tlaGNC">         547 :                 static_cast&lt;uint8_t&gt;(config_.flush_on_level)) {</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC tlaBgGNC">         545 :             }</span></span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">         545 :             if (static_cast&lt;uint8_t&gt;(event.level) &lt;=</span></span>
+<span id="L94"><span class="lineNum">      94</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 545 times"> + </span>]:<span class="tlaGNC">         545 :                 static_cast&lt;uint8_t&gt;(config_.flush_on_level)) {</span></span>
 <span id="L95"><span class="lineNum">      95</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :                 for (auto&amp; sink : sinks_) {</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaUNC">           0 :                     sink-&gt;flush();</span></span>
 <span id="L97"><span class="lineNum">      97</span>                 :             :                 }</span>
 <span id="L98"><span class="lineNum">      98</span>                 :             :             }</span>
-<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC tlaBgGNC">         547 :         });</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC tlaBgGNC">         545 :         });</span></span>
 <span id="L100"><span class="lineNum">     100</span>                 :             : </span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">         577 :         std::this_thread::sleep_for(std::chrono::milliseconds(100));</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">         567 :         std::this_thread::sleep_for(std::chrono::milliseconds(100));</span></span>
 <span id="L102"><span class="lineNum">     102</span>                 :             :     }</span>
 <span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">         433 : }</span></span>
 <span id="L104"><span class="lineNum">     104</span>                 :             : </span>

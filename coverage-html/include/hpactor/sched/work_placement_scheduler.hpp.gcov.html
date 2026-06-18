@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-18 02:49:57</td>
+            <td class="headerValue">2026-06-18 07:12:13</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -312,13 +312,13 @@
 <span id="L234"><span class="lineNum">     234</span>                 :             : </span>
 <span id="L235"><span class="lineNum">     235</span>                 :             :         /// Wake a worker blocked on \c sleep_cv_ (idempotent, safe from</span>
 <span id="L236"><span class="lineNum">     236</span>                 :             :         /// any thread).  If the worker is not blocking this is a no-op.</span>
-<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC tlaBgGNC">        1437 :         void wake_if_blocking() {</span></span>
-<span id="L238"><span class="lineNum">     238</span>         [<span class="tlaGBC" title="Branch 0 was taken 199 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1238 times"> + </span>]:<span class="tlaGNC">        1437 :             if (is_blocking_.load(std::memory_order_acquire)) {</span></span>
+<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC tlaBgGNC">        1434 :         void wake_if_blocking() {</span></span>
+<span id="L238"><span class="lineNum">     238</span>         [<span class="tlaGBC" title="Branch 0 was taken 199 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1235 times"> + </span>]:<span class="tlaGNC">        1434 :             if (is_blocking_.load(std::memory_order_acquire)) {</span></span>
 <span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaGNC">         199 :                 std::lock_guard&lt;std::mutex&gt; lk(sleep_mutex_);</span></span>
 <span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">         199 :                 is_blocking_.store(false, std::memory_order_release);</span></span>
 <span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">         199 :                 sleep_cv_.notify_one();</span></span>
 <span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">         199 :             }</span></span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">        1437 :         }</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">        1434 :         }</span></span>
 <span id="L244"><span class="lineNum">     244</span>                 :             :     };</span>
 <span id="L245"><span class="lineNum">     245</span>                 :             : </span>
 <span id="L246"><span class="lineNum">     246</span>                 :             :     /// \return Number of worker threads.</span>
@@ -334,8 +334,8 @@
 <span id="L256"><span class="lineNum">     256</span>                 :             : </span>
 <span id="L257"><span class="lineNum">     257</span>                 :             :     /// \return Reference to the worker state vector (for \c WorkerThread</span>
 <span id="L258"><span class="lineNum">     258</span>                 :             :     ///         use).</span>
-<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">        1233 :     std::vector&lt;WorkerState&gt;&amp; workers() noexcept {</span></span>
-<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC">        1233 :         return workers_;</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">        1231 :     std::vector&lt;WorkerState&gt;&amp; workers() noexcept {</span></span>
+<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC">        1231 :         return workers_;</span></span>
 <span id="L261"><span class="lineNum">     261</span>                 :             :     }</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             : </span>
 <span id="L263"><span class="lineNum">     263</span>                 :             :   private:</span>

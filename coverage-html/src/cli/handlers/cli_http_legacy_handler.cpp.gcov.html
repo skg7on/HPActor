@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
-            <td class="headerCovTableEntry">134</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntryLo">3.9&nbsp;%</td>
+            <td class="headerCovTableEntry">128</td>
+            <td class="headerCovTableEntry">5</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-18 02:49:57</td>
+            <td class="headerValue">2026-06-18 07:12:13</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">20.0&nbsp;%</td>
             <td class="headerCovTableEntry">5</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">1</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -57,7 +57,7 @@
             <td></td>
             <td class="headerItem">Branches:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
-            <td class="headerCovTableEntry">118</td>
+            <td class="headerCovTableEntry">112</td>
             <td class="headerCovTableEntry">0</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
@@ -77,281 +77,198 @@
 <pre class="sourceHeading">             Branch data     Line data    Source code</pre>
 <pre class="source">
 <span id="L1"><span class="lineNum">       1</span>                 :             : // Copyright 2026 HPActor Contributors</span>
-<span id="L2"><span class="lineNum">       2</span>                 :             : //</span>
-<span id="L3"><span class="lineNum">       3</span>                 :             : // Licensed under the Apache License, Version 2.0 (the &quot;License&quot;);</span>
-<span id="L4"><span class="lineNum">       4</span>                 :             : // you may not use this file except in compliance with the License.</span>
-<span id="L5"><span class="lineNum">       5</span>                 :             : // You may obtain a copy of the License at</span>
-<span id="L6"><span class="lineNum">       6</span>                 :             : //</span>
-<span id="L7"><span class="lineNum">       7</span>                 :             : //     http://www.apache.org/licenses/LICENSE-2.0</span>
-<span id="L8"><span class="lineNum">       8</span>                 :             : //</span>
-<span id="L9"><span class="lineNum">       9</span>                 :             : // Unless required by applicable law or agreed to in writing, software</span>
-<span id="L10"><span class="lineNum">      10</span>                 :             : // distributed under the License is distributed on an &quot;AS IS&quot; BASIS,</span>
-<span id="L11"><span class="lineNum">      11</span>                 :             : // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.</span>
-<span id="L12"><span class="lineNum">      12</span>                 :             : // See the License for the specific language governing permissions and</span>
-<span id="L13"><span class="lineNum">      13</span>                 :             : // limitations under the License.</span>
-<span id="L14"><span class="lineNum">      14</span>                 :             : </span>
-<span id="L15"><span class="lineNum">      15</span>                 :             : #include &quot;cli_http_handler_helpers.hpp&quot;</span>
+<span id="L2"><span class="lineNum">       2</span>                 :             : // SPDX-License-Identifier: Apache-2.0</span>
+<span id="L3"><span class="lineNum">       3</span>                 :             : </span>
+<span id="L4"><span class="lineNum">       4</span>                 :             : #include &quot;cli_http_handler_helpers.hpp&quot;</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : #include &lt;hpactor/adt/json_helpers.hpp&gt;</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : #include &lt;hpactor/cli.pb.h&gt;</span>
+<span id="L7"><span class="lineNum">       7</span>                 :             : #include &lt;hpactor/cli/cli_http_server_actor.hpp&gt;</span>
+<span id="L8"><span class="lineNum">       8</span>                 :             : #include &lt;hpactor/cli/cli_session.hpp&gt;</span>
+<span id="L9"><span class="lineNum">       9</span>                 :             : #include &lt;hpactor/cli/command_node.hpp&gt;</span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : #include &lt;hpactor/cli/http_handler.hpp&gt;</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : #include &lt;hpactor/cli/output_formatter.hpp&gt;</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             : #include &lt;hpactor/core/actor_system.hpp&gt;</span>
+<span id="L13"><span class="lineNum">      13</span>                 :             : #include &lt;hpactor/net/http_connection.hpp&gt;</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             : #include &lt;hpactor/net/http_types.hpp&gt;</span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : #include &lt;string&gt;</span>
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
-<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/cli/cli_http_server_actor.hpp&gt;</span>
-<span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :             : #include &lt;hpactor/adt/json_helpers.hpp&gt;</span>
-<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/cli.pb.h&gt;</span>
-<span id="L21"><span class="lineNum">      21</span>                 :             : </span>
-<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/cli/cli_session.hpp&gt;</span>
-<span id="L23"><span class="lineNum">      23</span>                 :             : #include &lt;hpactor/cli/command_node.hpp&gt;</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;hpactor/cli/output_formatter.hpp&gt;</span>
-<span id="L25"><span class="lineNum">      25</span>                 :             : #include &lt;hpactor/core/actor_system.hpp&gt;</span>
-<span id="L26"><span class="lineNum">      26</span>                 :             : #include &lt;hpactor/net/http_connection.hpp&gt;</span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : #include &lt;hpactor/net/http_types.hpp&gt;</span>
-<span id="L28"><span class="lineNum">      28</span>                 :             : </span>
-<span id="L29"><span class="lineNum">      29</span>                 :             : #include &lt;string&gt;</span>
-<span id="L30"><span class="lineNum">      30</span>                 :             : </span>
-<span id="L31"><span class="lineNum">      31</span>                 :             : namespace hpactor {</span>
-<span id="L32"><span class="lineNum">      32</span>                 :             : namespace cli {</span>
-<span id="L33"><span class="lineNum">      33</span>                 :             : namespace handlers {</span>
-<span id="L34"><span class="lineNum">      34</span>                 :             : </span>
-<span id="L35"><span class="lineNum">      35</span>                 :             : // ---------------------------------------------------------------------------</span>
-<span id="L36"><span class="lineNum">      36</span>                 :             : // Minimal JSON helpers (no protobuf JSON util dependency)</span>
-<span id="L37"><span class="lineNum">      37</span>                 :             : // ---------------------------------------------------------------------------</span>
-<span id="L38"><span class="lineNum">      38</span>                 :             : </span>
-<span id="L39"><span class="lineNum">      39</span>                 :             : /// Alias ADT helpers into the anonymous namespace so the protobuf-aware</span>
-<span id="L40"><span class="lineNum">      40</span>                 :             : /// parse/serialize functions below can call them without qualification.</span>
-<span id="L41"><span class="lineNum">      41</span>                 :             : namespace {</span>
-<span id="L42"><span class="lineNum">      42</span>                 :             : </span>
-<span id="L43"><span class="lineNum">      43</span>                 :             : using adt::extract_json_array_raw;</span>
-<span id="L44"><span class="lineNum">      44</span>                 :             : using adt::extract_json_object_raw;</span>
-<span id="L45"><span class="lineNum">      45</span>                 :             : using adt::extract_json_string;</span>
-<span id="L46"><span class="lineNum">      46</span>                 :             : using adt::json_escape;</span>
-<span id="L47"><span class="lineNum">      47</span>                 :             : using adt::parse_json_string_array;</span>
-<span id="L48"><span class="lineNum">      48</span>                 :             : using adt::parse_json_string_map;</span>
-<span id="L49"><span class="lineNum">      49</span>                 :             : using adt::skip_json_ws;</span>
-<span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>                 :             : /// Parse a JSON object to populate a CliCommand's fields.</span>
-<span id="L52"><span class="lineNum">      52</span>                 :             : /// Returns true on success, false on parse failure.</span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC tlaBgUNC">           0 : bool parse_cli_command_json(const std::string&amp; json, hpactor::cli::CliCommand&amp; cmd) {</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaUNC">           0 :     size_t pos = 0;</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC">           0 :     pos = skip_json_ws(json, pos);</span></span>
-<span id="L56"><span class="lineNum">      56</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :     if (pos &gt;= json.size() || json[pos] != '{')</span></span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::cli::handlers {</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : namespace {</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : using adt::extract_json_array_raw, adt::extract_json_object_raw,</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             :     adt::extract_json_string, adt::json_escape;</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : using adt::parse_json_string_array, adt::parse_json_string_map, adt::skip_json_ws;</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : </span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaUNC tlaBgUNC">           0 : bool parse_cli_command_json(const std::string&amp; json, CliCommand&amp; cmd) {</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaUNC">           0 :     size_t pos = skip_json_ws(json, 0);</span></span>
+<span id="L25"><span class="lineNum">      25</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :     if (pos &gt;= json.size() || json[pos] != '{')</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaUNC">           0 :         return false;</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaUNC">           0 :     ++pos;</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :             : </span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaUNC">           0 :     std::string current_key;</span></span>
-<span id="L61"><span class="lineNum">      61</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     while (pos &lt; json.size()) {</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaUNC">           0 :         pos = skip_json_ws(json, pos);</span></span>
-<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (pos &gt;= json.size())</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
-<span id="L65"><span class="lineNum">      65</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (json[pos] == '}') {</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaUNC">           0 :             ++pos;</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :             :         }</span>
-<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (json[pos] == ',') {</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaUNC">           0 :             ++pos;</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaUNC">           0 :             current_key.clear();</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaUNC">           0 :             continue;</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :             :         }</span>
-<span id="L74"><span class="lineNum">      74</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :         if (json[pos] == '&quot;' &amp;&amp; current_key.empty()) {</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaUNC">           0 :         return false;</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC">           0 :     ++pos;</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaUNC">           0 :     std::string ck;</span></span>
+<span id="L29"><span class="lineNum">      29</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     while (pos &lt; json.size()) {</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 :         pos = skip_json_ws(json, pos);</span></span>
+<span id="L31"><span class="lineNum">      31</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (pos &gt;= json.size())</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L33"><span class="lineNum">      33</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (json[pos] == '}') {</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaUNC">           0 :             ++pos;</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaUNC">           0 :             break;</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :             :         }</span>
+<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (json[pos] == ',') {</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaUNC">           0 :             ++pos;</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaUNC">           0 :             ck.clear();</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC">           0 :             continue;</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :         }</span>
+<span id="L42"><span class="lineNum">      42</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :         if (json[pos] == '&quot;' &amp;&amp; ck.empty()) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L75"><span class="lineNum">      75</span>                 :             :             // Reading a key</span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaUNC">           0 :             current_key = extract_json_string(json, pos);</span></span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaUNC">           0 :             pos = skip_json_ws(json, pos);</span></span>
-<span id="L78"><span class="lineNum">      78</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :             if (pos &lt; json.size() &amp;&amp; json[pos] == ':')</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC">           0 :             ck = extract_json_string(json, pos);</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaUNC">           0 :             pos = skip_json_ws(json, pos);</span></span>
+<span id="L45"><span class="lineNum">      45</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :             if (pos &lt; json.size() &amp;&amp; json[pos] == ':')</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaUNC">           0 :                 ++pos;</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaUNC">           0 :             pos = skip_json_ws(json, pos);</span></span>
-<span id="L81"><span class="lineNum">      81</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (pos &gt;= json.size())</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaUNC">           0 :                 break;</span></span>
-<span id="L83"><span class="lineNum">      83</span>                 :             : </span>
-<span id="L84"><span class="lineNum">      84</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (current_key == &quot;path&quot;) {</span></span>
-<span id="L85"><span class="lineNum">      85</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '&quot;') {</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaUNC">           0 :                     cmd.set_path(extract_json_string(json, pos));</span></span>
-<span id="L87"><span class="lineNum">      87</span>                 :             :                 }</span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaUNC">           0 :                 current_key.clear();</span></span>
-<span id="L89"><span class="lineNum">      89</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             } else if (current_key == &quot;format&quot;) {</span></span>
-<span id="L90"><span class="lineNum">      90</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '&quot;') {</span></span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaUNC">           0 :                     cmd.set_format(extract_json_string(json, pos));</span></span>
-<span id="L92"><span class="lineNum">      92</span>                 :             :                 }</span>
-<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaUNC">           0 :                 current_key.clear();</span></span>
-<span id="L94"><span class="lineNum">      94</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             } else if (current_key == &quot;params&quot;) {</span></span>
-<span id="L95"><span class="lineNum">      95</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '{') {</span></span>
-<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaUNC">           0 :                     auto obj_raw = extract_json_object_raw(json, pos);</span></span>
-<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaUNC">           0 :                     auto pairs = parse_json_string_map(obj_raw);</span></span>
-<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaUNC">           0 :                     auto* params_map = cmd.mutable_params();</span></span>
-<span id="L99"><span class="lineNum">      99</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     for (auto&amp; [k, v] : pairs) {</span></span>
-<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaUNC">           0 :                         (*params_map)[k] = v;</span></span>
-<span id="L101"><span class="lineNum">     101</span>                 :             :                     }</span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaUNC">           0 :                 }</span></span>
-<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaUNC">           0 :                 current_key.clear();</span></span>
-<span id="L104"><span class="lineNum">     104</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             } else if (current_key == &quot;args&quot;) {</span></span>
-<span id="L105"><span class="lineNum">     105</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '[') {</span></span>
-<span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaUNC">           0 :                     auto arr_raw = extract_json_array_raw(json, pos);</span></span>
-<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaUNC">           0 :                     auto values = parse_json_string_array(arr_raw);</span></span>
-<span id="L108"><span class="lineNum">     108</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     for (auto&amp; v : values) {</span></span>
-<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaUNC">           0 :                         cmd.add_args(std::move(v));</span></span>
-<span id="L110"><span class="lineNum">     110</span>                 :             :                     }</span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaUNC">           0 :                 }</span></span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaUNC">           0 :                 current_key.clear();</span></span>
-<span id="L113"><span class="lineNum">     113</span>                 :             :             } else {</span>
-<span id="L114"><span class="lineNum">     114</span>                 :             :                 // Skip unknown field</span>
-<span id="L115"><span class="lineNum">     115</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '&quot;') {</span></span>
-<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaUNC">           0 :                     skip_json_ws(json, pos); // dummy — extract_json_string</span></span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :                                              // advances</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             :                     // Reset pos to where we were, then skip the value</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             :                 }</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             :                 // Skip the value (string, object, array, or literal)</span>
-<span id="L121"><span class="lineNum">     121</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :                 if (pos &lt; json.size() &amp;&amp; json[pos] == '&quot;') {</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaUNC">           0 :                 ++pos;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC">           0 :             pos = skip_json_ws(json, pos);</span></span>
+<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (pos &gt;= json.size())</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaUNC">           0 :                 break;</span></span>
+<span id="L50"><span class="lineNum">      50</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (ck == &quot;path&quot;) {</span></span>
+<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '&quot;')</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaUNC">           0 :                     cmd.set_path(extract_json_string(json, pos));</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC">           0 :                 ck.clear();</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             } else if (ck == &quot;format&quot;) {</span></span>
+<span id="L55"><span class="lineNum">      55</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '&quot;')</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaUNC">           0 :                     cmd.set_format(extract_json_string(json, pos));</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaUNC">           0 :                 ck.clear();</span></span>
+<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             } else if (ck == &quot;params&quot;) {</span></span>
+<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '{') {</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaUNC">           0 :                     auto obj_raw = extract_json_object_raw(json, pos);</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaUNC">           0 :                     auto pairs = parse_json_string_map(obj_raw);</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaUNC">           0 :                     auto* pm = cmd.mutable_params();</span></span>
+<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     for (auto&amp; [k, v] : pairs)</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaUNC">           0 :                         (*pm)[k] = v;</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaUNC">           0 :                 }</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaUNC">           0 :                 ck.clear();</span></span>
+<span id="L67"><span class="lineNum">      67</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             } else if (ck == &quot;args&quot;) {</span></span>
+<span id="L68"><span class="lineNum">      68</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (json[pos] == '[') {</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaUNC">           0 :                     auto arr_raw = extract_json_array_raw(json, pos);</span></span>
+<span id="L70"><span class="lineNum">      70</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                     for (auto&amp; v : parse_json_string_array(arr_raw))</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaUNC">           0 :                         cmd.add_args(std::move(v));</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaUNC">           0 :                 }</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaUNC">           0 :                 ck.clear();</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :             } else {</span>
+<span id="L75"><span class="lineNum">      75</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :                 if (pos &lt; json.size() &amp;&amp; json[pos] == '&quot;')</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaUNC">           0 :                     extract_json_string(json, pos);</span></span>
-<span id="L123"><span class="lineNum">     123</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :                 } else if (pos &lt; json.size() &amp;&amp; json[pos] == '{') {</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaUNC">           0 :                     extract_json_string(json, pos);</span></span>
+<span id="L77"><span class="lineNum">      77</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :                 else if (pos &lt; json.size() &amp;&amp; json[pos] == '{')</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaUNC">           0 :                     extract_json_object_raw(json, pos);</span></span>
-<span id="L125"><span class="lineNum">     125</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :                 } else if (pos &lt; json.size() &amp;&amp; json[pos] == '[') {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaUNC">           0 :                     extract_json_object_raw(json, pos);</span></span>
+<span id="L79"><span class="lineNum">      79</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :                 else if (pos &lt; json.size() &amp;&amp; json[pos] == '[')</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaUNC">           0 :                     extract_json_array_raw(json, pos);</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :             :                 } else {</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :                     // Skip literal (number, true, false, null)</span>
-<span id="L129"><span class="lineNum">     129</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :                     while (pos &lt; json.size() &amp;&amp; json[pos] != ',' &amp;&amp;</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaUNC">           0 :                     extract_json_array_raw(json, pos);</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :             :                 else</span>
+<span id="L82"><span class="lineNum">      82</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :                     while (pos &lt; json.size() &amp;&amp; json[pos] != ',' &amp;&amp; json[pos] != '}')</span></span>
+<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span><span class="tlaUNC" title="Branch 6 was not executed"> # </span><span class="tlaUNC" title="Branch 7 was not executed"> # </span>]
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaUNC">           0 :                         ++pos;</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaUNC">           0 :                 ck.clear();</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :             }</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             :         } else {</span>
+<span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaUNC">           0 :             ++pos;</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :             :         }</span>
+<span id="L89"><span class="lineNum">      89</span>                 :             :     }</span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaUNC">           0 :     return true;</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :             : </span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaUNC">           0 : void send_json_response(net::HTTPConnection* conn, net::HttpStatusCode sc,</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :             :                         const CliResponse&amp; resp) {</span>
+<span id="L95"><span class="lineNum">      95</span>                 :             :     std::string j =</span>
+<span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaUNC">           0 :         &quot;{\&quot;content_type\&quot;:\&quot;&quot; + json_escape(resp.content_type()) +</span></span>
+<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaUNC">           0 :         &quot;\&quot;,\&quot;payload\&quot;:\&quot;&quot; + json_escape(resp.payload()) +</span></span>
+<span id="L98"><span class="lineNum">      98</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         &quot;\&quot;,\&quot;is_error\&quot;:&quot; + std::string(resp.is_error() ? &quot;true&quot; : &quot;false&quot;) +</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaUNC">           0 :         &quot;,\&quot;error_code\&quot;:&quot; + std::to_string(resp.error_code()) +</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaUNC">           0 :         &quot;,\&quot;is_structured\&quot;:&quot; +</span></span>
+<span id="L101"><span class="lineNum">     101</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         std::string(resp.is_structured() ? &quot;true&quot; : &quot;false&quot;) + &quot;}&quot;;</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaUNC">           0 :     StreamBuffer sb(reinterpret_cast&lt;const uint8_t*&gt;(j.data()),</span></span>
+<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaUNC">           0 :                     reinterpret_cast&lt;const uint8_t*&gt;(j.data() + j.size()));</span></span>
+<span id="L104"><span class="lineNum">     104</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     conn-&gt;send_response(sc, {{&quot;Content-Type&quot;, &quot;application/json&quot;}}, sb);</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L106"><span class="lineNum">     106</span>                 :             : } // namespace</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             : </span>
+<span id="L108"><span class="lineNum">     108</span>                 :             : class LegacyPostCliHandler final : public IHttpHandler {</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             :   public:</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     static constexpr auto kMethod = net::HttpMethod::POST;</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             :     static constexpr std::string_view kPath = &quot;/cli&quot;;</span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaUNC">           0 :     void handle(CliHttpServerActor&amp; actor, net::HTTPConnection&amp; conn,</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :                 net::HttpRequest&amp;&amp; req) override {</span>
+<span id="L114"><span class="lineNum">     114</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!actor.config().legacy_cli_endpoint) {</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaUNC">           0 :             send_error(&amp;conn, net::HttpStatusCode::NotFound, &quot;NOT_FOUND&quot;,</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :                        &quot;Legacy /cli not enabled&quot;);</span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :         }</span>
+<span id="L119"><span class="lineNum">     119</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!validate_json_content_type(&amp;conn, req))</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaUNC">           0 :         std::string bs(reinterpret_cast&lt;const char*&gt;(req.body.data()),</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaUNC">           0 :                        req.body.size());</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaUNC">           0 :         CliCommand cmd;</span></span>
+<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!parse_cli_command_json(bs, cmd)) {</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaUNC">           0 :             CliResponse er;</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :             er.set_content_type(&quot;text/plain&quot;);</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             :             er.set_payload(&quot;Invalid JSON in request body&quot;);</span>
+<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaUNC">           0 :             er.set_is_error(true);</span></span>
+<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaUNC">           0 :             er.set_error_code(400);</span></span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaUNC">           0 :             send_json_response(&amp;conn, net::HttpStatusCode::BadRequest, er);</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaUNC">           0 :         }</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaUNC">           0 :         std::string cl = &quot;/&quot;;</span></span>
+<span id="L134"><span class="lineNum">     134</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!cmd.path().empty()) {</span></span>
+<span id="L135"><span class="lineNum">     135</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             for (char c : cmd.path()) {</span></span>
+<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                 if (c == '/')</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaUNC">           0 :                     cl += ' ';</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :                 else</span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaUNC">           0 :                     cl += c;</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :             }</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :         }</span>
+<span id="L142"><span class="lineNum">     142</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         for (auto&amp; [k, v] : cmd.params()) {</span></span>
+<span id="L143"><span class="lineNum">     143</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (v == &quot;true&quot;)</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaUNC">           0 :                 cl += &quot; --&quot; + k;</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :             else</span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaUNC">           0 :                 cl += &quot; --&quot; + k + &quot; &quot; + v;</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :         }</span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaUNC">           0 :         std::string fmt = cmd.format();</span></span>
+<span id="L149"><span class="lineNum">     149</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!fmt.empty())</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaUNC">           0 :             cl += &quot; --format &quot; + fmt;</span></span>
+<span id="L151"><span class="lineNum">     151</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         for (auto&amp; a : cmd.args())</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaUNC">           0 :             cl += &quot; &quot; + a;</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaUNC">           0 :         std::string ct = &quot;text/plain&quot;;</span></span>
+<span id="L154"><span class="lineNum">     154</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (fmt == &quot;json&quot;)</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaUNC">           0 :             ct = &quot;application/json&quot;;</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaUNC">           0 :         const auto&amp; c = actor.config();</span></span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaUNC">           0 :         std::string out;</span></span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :         {</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :             auto s = std::make_unique&lt;CliSession&gt;(</span>
+<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaUNC">           0 :                 &amp;actor.system(), actor.command_tree(),</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaUNC">           0 :                 OutputFormatter::create(c.default_format),</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaUNC">           0 :                 [&amp;](const std::string&amp; t) { out = t; }, c.page_size);</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaUNC">           0 :             s-&gt;set_system_host(&amp;actor);</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaUNC">           0 :             s-&gt;set_lifecycle_host(&amp;actor);</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaUNC">           0 :             s-&gt;set_command_host(&amp;actor);</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaUNC">           0 :             s-&gt;process_line(cl);</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaUNC">           0 :         }</span></span>
+<span id="L168"><span class="lineNum">     168</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :         if (!out.empty() &amp;&amp; out.back() == '\n')</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L130"><span class="lineNum">     130</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :                            json[pos] != '}') {</span></span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaUNC">           0 :                         ++pos;</span></span>
-<span id="L132"><span class="lineNum">     132</span>                 :             :                     }</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             :                 }</span>
-<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaUNC">           0 :                 current_key.clear();</span></span>
-<span id="L135"><span class="lineNum">     135</span>                 :             :             }</span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :         } else {</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :             // Unexpected; skip one character</span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaUNC">           0 :             ++pos;</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :         }</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :     }</span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaUNC">           0 :     return true;</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L143"><span class="lineNum">     143</span>                 :             : </span>
-<span id="L144"><span class="lineNum">     144</span>                 :             : /// Serialize a CliResponse to a JSON string.</span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaUNC">           0 : std::string serialize_cli_response_json(const hpactor::cli::CliResponse&amp; resp) {</span></span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaUNC">           0 :     std::string json;</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaUNC">           0 :     json = &quot;{&quot;;</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaUNC">           0 :     json += &quot;\&quot;content_type\&quot;:\&quot;&quot; + json_escape(resp.content_type()) + &quot;\&quot;,&quot;;</span></span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaUNC">           0 :     json += &quot;\&quot;payload\&quot;:\&quot;&quot; + json_escape(resp.payload()) + &quot;\&quot;,&quot;;</span></span>
-<span id="L150"><span class="lineNum">     150</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     json += &quot;\&quot;is_error\&quot;:&quot; + std::string(resp.is_error() ? &quot;true&quot; : &quot;false&quot;) + &quot;,&quot;;</span></span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaUNC">           0 :     json += &quot;\&quot;error_code\&quot;:&quot; + std::to_string(resp.error_code()) + &quot;,&quot;;</span></span>
-<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaUNC">           0 :     json += &quot;\&quot;is_structured\&quot;:&quot; +</span></span>
-<span id="L153"><span class="lineNum">     153</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             std::string(resp.is_structured() ? &quot;true&quot; : &quot;false&quot;);</span></span>
-<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaUNC">           0 :     json += &quot;}&quot;;</span></span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaUNC">           0 :     return json;</span></span>
-<span id="L156"><span class="lineNum">     156</span>                 :             : }</span>
-<span id="L157"><span class="lineNum">     157</span>                 :             : </span>
-<span id="L158"><span class="lineNum">     158</span>                 :             : /// Send a JSON CliResponse as an HTTP response.</span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaUNC">           0 : void send_json_response(net::HTTPConnection* conn, net::HttpStatusCode http_code,</span></span>
-<span id="L160"><span class="lineNum">     160</span>                 :             :                         const hpactor::cli::CliResponse&amp; resp) {</span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaUNC">           0 :     std::string json_out = serialize_cli_response_json(resp);</span></span>
-<span id="L162"><span class="lineNum">     162</span>                 :             :     StreamBuffer body_buf(</span>
-<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaUNC">           0 :         reinterpret_cast&lt;const uint8_t*&gt;(json_out.data()),</span></span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaUNC">           0 :         reinterpret_cast&lt;const uint8_t*&gt;(json_out.data() + json_out.size()));</span></span>
-<span id="L165"><span class="lineNum">     165</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     conn-&gt;send_response(http_code, {{&quot;Content-Type&quot;, &quot;application/json&quot;}}, body_buf);</span></span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaUNC">           0 : }</span></span>
-<span id="L167"><span class="lineNum">     167</span>                 :             : </span>
-<span id="L168"><span class="lineNum">     168</span>                 :             : } // anonymous namespace</span>
-<span id="L169"><span class="lineNum">     169</span>                 :             : </span>
-<span id="L170"><span class="lineNum">     170</span>                 :             : // ---------------------------------------------------------------------------</span>
-<span id="L171"><span class="lineNum">     171</span>                 :             : // Legacy POST /cli handler</span>
-<span id="L172"><span class="lineNum">     172</span>                 :             : // ---------------------------------------------------------------------------</span>
-<span id="L173"><span class="lineNum">     173</span>                 :             : </span>
-<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaUNC">           0 : void handle_legacy_post_cli(CliHttpServerActor* actor,</span></span>
-<span id="L175"><span class="lineNum">     175</span>                 :             :                             net::HTTPConnection* conn, net::HttpRequest&amp;&amp; req) {</span>
-<span id="L176"><span class="lineNum">     176</span>                 :             :     // Extract body text</span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaUNC">           0 :     std::string body_str(reinterpret_cast&lt;const char*&gt;(req.body.data()),</span></span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaUNC">           0 :                          req.body.size());</span></span>
-<span id="L179"><span class="lineNum">     179</span>                 :             : </span>
-<span id="L180"><span class="lineNum">     180</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!validate_json_content_type(conn, req))</span></span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :             : </span>
-<span id="L183"><span class="lineNum">     183</span>                 :             :     // Parse JSON body -&gt; CliCommand</span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaUNC">           0 :     hpactor::cli::CliCommand cmd;</span></span>
-<span id="L185"><span class="lineNum">     185</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!parse_cli_command_json(body_str, cmd)) {</span></span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaUNC">           0 :         hpactor::cli::CliResponse err_resp;</span></span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :         err_resp.set_content_type(&quot;text/plain&quot;);</span>
-<span id="L188"><span class="lineNum">     188</span>                 :             :         err_resp.set_payload(&quot;Invalid JSON in request body&quot;);</span>
-<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaUNC">           0 :         err_resp.set_is_error(true);</span></span>
-<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaUNC">           0 :         err_resp.set_error_code(400);</span></span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaUNC">           0 :         err_resp.set_is_structured(false);</span></span>
-<span id="L192"><span class="lineNum">     192</span>                 :<span class="tlaUNC">           0 :         send_json_response(conn, net::HttpStatusCode::BadRequest, err_resp);</span></span>
-<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
-<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaUNC">           0 :     }</span></span>
-<span id="L195"><span class="lineNum">     195</span>                 :             : </span>
-<span id="L196"><span class="lineNum">     196</span>                 :             :     // Reconstruct command line from CliCommand fields.</span>
-<span id="L197"><span class="lineNum">     197</span>                 :             :     // Path uses &quot;/&quot; as separator: &quot;actor/42/show&quot; -&gt; tokens &quot;actor 42 show&quot;.</span>
-<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaUNC">           0 :     std::string cmd_line = &quot;/&quot;;</span></span>
-<span id="L199"><span class="lineNum">     199</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!cmd.path().empty()) {</span></span>
-<span id="L200"><span class="lineNum">     200</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         for (char c : cmd.path()) {</span></span>
-<span id="L201"><span class="lineNum">     201</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (c == '/')</span></span>
-<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaUNC">           0 :                 cmd_line += ' ';</span></span>
-<span id="L203"><span class="lineNum">     203</span>                 :             :             else</span>
-<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaUNC">           0 :                 cmd_line += c;</span></span>
-<span id="L205"><span class="lineNum">     205</span>                 :             :         }</span>
-<span id="L206"><span class="lineNum">     206</span>                 :             :     }</span>
-<span id="L207"><span class="lineNum">     207</span>                 :             : </span>
-<span id="L208"><span class="lineNum">     208</span>                 :             :     // Params: map of captured &lt;param&gt; values and --flags.</span>
-<span id="L209"><span class="lineNum">     209</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     for (const auto&amp; [key, value] : cmd.params()) {</span></span>
-<span id="L210"><span class="lineNum">     210</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (value == &quot;true&quot;) {</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaUNC">           0 :             cmd_line += &quot; --&quot; + key;</span></span>
-<span id="L212"><span class="lineNum">     212</span>                 :             :         } else {</span>
-<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaUNC">           0 :             cmd_line += &quot; --&quot; + key + &quot; &quot; + value;</span></span>
-<span id="L214"><span class="lineNum">     214</span>                 :             :         }</span>
-<span id="L215"><span class="lineNum">     215</span>                 :             :     }</span>
-<span id="L216"><span class="lineNum">     216</span>                 :             : </span>
-<span id="L217"><span class="lineNum">     217</span>                 :             :     // Format: explicit --format flag.</span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaUNC">           0 :     std::string format = cmd.format();</span></span>
-<span id="L219"><span class="lineNum">     219</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!format.empty()) {</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaUNC">           0 :         cmd_line += &quot; --format &quot; + format;</span></span>
-<span id="L221"><span class="lineNum">     221</span>                 :             :     }</span>
-<span id="L222"><span class="lineNum">     222</span>                 :             : </span>
-<span id="L223"><span class="lineNum">     223</span>                 :             :     // Positional args.</span>
-<span id="L224"><span class="lineNum">     224</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     for (const auto&amp; arg : cmd.args()) {</span></span>
-<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaUNC">           0 :         cmd_line += &quot; &quot; + arg;</span></span>
-<span id="L226"><span class="lineNum">     226</span>                 :             :     }</span>
-<span id="L227"><span class="lineNum">     227</span>                 :             : </span>
-<span id="L228"><span class="lineNum">     228</span>                 :             :     // Determine content_type for the CliResponse payload.</span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaUNC">           0 :     std::string content_type = &quot;text/plain&quot;;</span></span>
-<span id="L230"><span class="lineNum">     230</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (format == &quot;json&quot;) {</span></span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaUNC">           0 :         content_type = &quot;application/json&quot;;</span></span>
-<span id="L232"><span class="lineNum">     232</span>                 :             :     }</span>
-<span id="L233"><span class="lineNum">     233</span>                 :             : </span>
-<span id="L234"><span class="lineNum">     234</span>                 :             :     // Execute the command via CliSession.</span>
-<span id="L235"><span class="lineNum">     235</span>                 :<span class="tlaUNC">           0 :     const auto&amp; config = actor-&gt;config();</span></span>
-<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaUNC">           0 :     std::string output;</span></span>
-<span id="L237"><span class="lineNum">     237</span>                 :             :     {</span>
-<span id="L238"><span class="lineNum">     238</span>                 :             :         auto session = std::make_unique&lt;CliSession&gt;(</span>
-<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaUNC">           0 :             &amp;actor-&gt;system(), actor-&gt;command_tree(),</span></span>
-<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaUNC">           0 :             OutputFormatter::create(config.default_format),</span></span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaUNC">           0 :             [&amp;output](const std::string&amp; text) { output = text; },</span></span>
-<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaUNC">           0 :             config.page_size);</span></span>
-<span id="L243"><span class="lineNum">     243</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         session-&gt;set_system_host(actor);</span></span>
-<span id="L244"><span class="lineNum">     244</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         session-&gt;set_lifecycle_host(actor);</span></span>
-<span id="L245"><span class="lineNum">     245</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         session-&gt;set_command_host(actor);</span></span>
-<span id="L246"><span class="lineNum">     246</span>                 :             : </span>
-<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaUNC">           0 :         session-&gt;process_line(cmd_line);</span></span>
-<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaUNC">           0 :     }</span></span>
-<span id="L249"><span class="lineNum">     249</span>                 :             : </span>
-<span id="L250"><span class="lineNum">     250</span>                 :             :     // Strip trailing newline appended by process_line.</span>
-<span id="L251"><span class="lineNum">     251</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span> :<span class="tlaUNC">           0 :     if (!output.empty() &amp;&amp; output.back() == '\n') {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not executed"> # </span><span class="tlaUNC" title="Branch 5 was not executed"> # </span>]
-<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaUNC">           0 :         output.pop_back();</span></span>
-<span id="L253"><span class="lineNum">     253</span>                 :             :     }</span>
-<span id="L254"><span class="lineNum">     254</span>                 :             : </span>
-<span id="L255"><span class="lineNum">     255</span>                 :             :     // Build JSON CliResponse.</span>
-<span id="L256"><span class="lineNum">     256</span>                 :<span class="tlaUNC">           0 :     hpactor::cli::CliResponse resp;</span></span>
-<span id="L257"><span class="lineNum">     257</span>                 :             :     resp.set_content_type(content_type);</span>
-<span id="L258"><span class="lineNum">     258</span>                 :             :     resp.set_payload(output);</span>
-<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaUNC">           0 :     resp.set_is_error(false);</span></span>
-<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaUNC">           0 :     resp.set_error_code(0);</span></span>
-<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaUNC">           0 :     resp.set_is_structured(false);</span></span>
-<span id="L262"><span class="lineNum">     262</span>                 :             : </span>
-<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaUNC">           0 :     send_json_response(conn, net::HttpStatusCode::OK, resp);</span></span>
-<span id="L264"><span class="lineNum">     264</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 : }</span></span>
-<span id="L265"><span class="lineNum">     265</span>                 :             : </span>
-<span id="L266"><span class="lineNum">     266</span>                 :             : } // namespace handlers</span>
-<span id="L267"><span class="lineNum">     267</span>                 :             : } // namespace cli</span>
-<span id="L268"><span class="lineNum">     268</span>                 :             : } // namespace hpactor</span>
+<span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaUNC">           0 :             out.pop_back();</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaUNC">           0 :         CliResponse r;</span></span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :         r.set_content_type(ct);</span>
+<span id="L172"><span class="lineNum">     172</span>                 :             :         r.set_payload(out);</span>
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaUNC">           0 :         r.set_is_error(false);</span></span>
+<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaUNC">           0 :         r.set_error_code(0);</span></span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaUNC">           0 :         send_json_response(&amp;conn, net::HttpStatusCode::OK, r);</span></span>
+<span id="L176"><span class="lineNum">     176</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :     }</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :             : };</span>
+<span id="L178"><span class="lineNum">     178</span>                 :             : </span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC tlaBgGNC">           2 : void register_legacy_handler() {</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">           6 :     HttpHandlerRegistry::instance().add(LegacyPostCliHandler::kMethod,</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           6 :                                         std::string(LegacyPostCliHandler::kPath),</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           4 :                                         std::make_unique&lt;LegacyPostCliHandler&gt;());</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           2 : }</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :             : </span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : } // namespace hpactor::cli::handlers</span>
         </pre>
               </td>
             </tr>

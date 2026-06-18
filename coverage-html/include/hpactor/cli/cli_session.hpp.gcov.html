@@ -31,17 +31,17 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">52.9&nbsp;%</td>
-            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntryLo">45.0&nbsp;%</td>
+            <td class="headerCovTableEntry">20</td>
             <td class="headerCovTableEntry">9</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-18 02:49:57</td>
+            <td class="headerValue">2026-06-18 07:12:13</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
-            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntryLo">42.9&nbsp;%</td>
+            <td class="headerCovTableEntry">7</td>
             <td class="headerCovTableEntry">3</td>
           </tr>
           <tr>
@@ -188,54 +188,60 @@
 <span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaUNC">           0 :         proto_server_ = server;</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaUNC">           0 :     }</span></span>
 <span id="L112"><span class="lineNum">     112</span>                 :             : </span>
-<span id="L113"><span class="lineNum">     113</span>                 :             :     /// \brief Set the command host for actor operations.</span>
-<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     void set_command_host(class ICliCommandHost* host) {</span></span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           1 :         command_host_ = host;</span></span>
-<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">           1 :     }</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :     /// \brief Set the owning CliClientActor, if any.</span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaUNC">           0 :     void set_client_actor(class CliClientActor* client) {</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaUNC">           0 :         client_actor_ = client;</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaUNC">           0 :     }</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :             : </span>
-<span id="L118"><span class="lineNum">     118</span>                 :             :     /// \brief Set the system host for system queries.</span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           1 :     void set_system_host(class ISystemCliHost* host) {</span></span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">           1 :         system_host_ = host;</span></span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :     /// \brief Set the command host for actor operations.</span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     void set_command_host(class ICliCommandHost* host) {</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">           1 :         command_host_ = host;</span></span>
 <span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L122"><span class="lineNum">     122</span>                 :             : </span>
-<span id="L123"><span class="lineNum">     123</span>                 :             :     /// \brief Set the lifecycle host for drain/shutdown.</span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           1 :     void set_lifecycle_host(class ILifecycleCliHost* host) {</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">           1 :         lifecycle_host_ = host;</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :     /// \brief Set the system host for system queries.</span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           1 :     void set_system_host(class ISystemCliHost* host) {</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">           1 :         system_host_ = host;</span></span>
 <span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L127"><span class="lineNum">     127</span>                 :             : </span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :     /// \brief Access the pager for multi-page output.</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             :     /// \return Non-owning pointer. Never null after construction.</span>
-<span id="L130"><span class="lineNum">     130</span>                 :             :     Pager* pager() {</span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :         return pager_.get();</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             :     }</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             : </span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :     /// \brief Access the current output formatter.</span>
-<span id="L135"><span class="lineNum">     135</span>                 :             :     /// \return Non-owning pointer. Never null after construction.</span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :     OutputFormatter* formatter() {</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :         return formatter_.get();</span>
-<span id="L138"><span class="lineNum">     138</span>                 :             :     }</span>
-<span id="L139"><span class="lineNum">     139</span>                 :             : </span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :   private:</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             :     void execute_tokens(const std::vector&lt;Token&gt;&amp; tokens);</span>
-<span id="L142"><span class="lineNum">     142</span>                 :             : </span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :     ActorSystem* system_;</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             :     const CommandNode* command_tree_;</span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :     std::unique_ptr&lt;OutputFormatter&gt; formatter_;</span>
-<span id="L146"><span class="lineNum">     146</span>                 :             :     std::unique_ptr&lt;Pager&gt; pager_;</span>
-<span id="L147"><span class="lineNum">     147</span>                 :             :     std::function&lt;void(const std::string&amp;)&gt; output_fn_;</span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :     uint32_t page_size_;</span>
-<span id="L149"><span class="lineNum">     149</span>                 :             :     bool keep_running_ = true;</span>
-<span id="L150"><span class="lineNum">     150</span>                 :             :     std::string current_format_ = &quot;pretty&quot;;</span>
-<span id="L151"><span class="lineNum">     151</span>                 :             :     class CliActor* cli_actor_ = nullptr;</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             :     class CliLegacyServerActor* cli_server_actor_ = nullptr;</span>
-<span id="L153"><span class="lineNum">     153</span>                 :             :     class CliProtoServerActor* proto_server_ = nullptr;</span>
-<span id="L154"><span class="lineNum">     154</span>                 :             :     class ICliCommandHost* command_host_ = nullptr;</span>
-<span id="L155"><span class="lineNum">     155</span>                 :             :     class ISystemCliHost* system_host_ = nullptr;</span>
-<span id="L156"><span class="lineNum">     156</span>                 :             :     class ILifecycleCliHost* lifecycle_host_ = nullptr;</span>
-<span id="L157"><span class="lineNum">     157</span>                 :             : };</span>
-<span id="L158"><span class="lineNum">     158</span>                 :             : </span>
-<span id="L159"><span class="lineNum">     159</span>                 :             : } // namespace cli</span>
-<span id="L160"><span class="lineNum">     160</span>                 :             : } // namespace hpactor</span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :     /// \brief Set the lifecycle host for drain/shutdown.</span>
+<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">           1 :     void set_lifecycle_host(class ILifecycleCliHost* host) {</span></span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           1 :         lifecycle_host_ = host;</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">           1 :     }</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :             : </span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :     /// \brief Access the pager for multi-page output.</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             :     /// \return Non-owning pointer. Never null after construction.</span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :     Pager* pager() {</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :         return pager_.get();</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     }</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             : </span>
+<span id="L139"><span class="lineNum">     139</span>                 :             :     /// \brief Access the current output formatter.</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     /// \return Non-owning pointer. Never null after construction.</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :     OutputFormatter* formatter() {</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :         return formatter_.get();</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :     }</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             : </span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :   private:</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     void execute_tokens(const std::vector&lt;Token&gt;&amp; tokens);</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             : </span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :     ActorSystem* system_;</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             :     const CommandNode* command_tree_;</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     std::unique_ptr&lt;OutputFormatter&gt; formatter_;</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     std::unique_ptr&lt;Pager&gt; pager_;</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :     std::function&lt;void(const std::string&amp;)&gt; output_fn_;</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     uint32_t page_size_;</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             :     bool keep_running_ = true;</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :     std::string current_format_ = &quot;pretty&quot;;</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :     class CliActor* cli_actor_ = nullptr;</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             :     class CliLegacyServerActor* cli_server_actor_ = nullptr;</span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :     class CliProtoServerActor* proto_server_ = nullptr;</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :     class CliClientActor* client_actor_ = nullptr;</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :     class ICliCommandHost* command_host_ = nullptr;</span>
+<span id="L161"><span class="lineNum">     161</span>                 :             :     class ISystemCliHost* system_host_ = nullptr;</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             :     class ILifecycleCliHost* lifecycle_host_ = nullptr;</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             : };</span>
+<span id="L164"><span class="lineNum">     164</span>                 :             : </span>
+<span id="L165"><span class="lineNum">     165</span>                 :             : } // namespace cli</span>
+<span id="L166"><span class="lineNum">     166</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
