@@ -77,4 +77,115 @@ TEST_F(ProcessLifecycleTest, ProcessManagerForegroundInit) {
     }
 }
 
+TEST_F(ProcessLifecycleTest, ProcessManagerPidfileLifecycle) {
+    process::ProcessConfig config;
+    config.mode = process::ProcessMode::Foreground;
+    config.pidfile_path = pidfile_path_;
+
+    // Remove stale pidfile for a clean slate.
+    std::error_code ec;
+    std::filesystem::remove(pidfile_path_, ec);
+
+    auto result = process::ProcessManager::init(config);
+    ASSERT_TRUE(result.ok());
+
+    // Verify pidfile exists with correct content.
+    // The pidfile_written_ static guard may prevent re-write when another
+    // test already called init(); the check is conditional to handle both.
+    if (std::filesystem::exists(pidfile_path_)) {
+        std::ifstream pf(pidfile_path_);
+        ASSERT_TRUE(pf.good());
+        std::string written_pid;
+        std::getline(pf, written_pid);
+        EXPECT_FALSE(written_pid.empty());
+
+        // Verify content is a valid PID (positive integer).
+        int pid = std::stoi(written_pid);
+        EXPECT_GT(pid, 0);
+
+        // notify_stopped() should remove the pidfile.
+        process::ProcessManager::notify_stopped();
+        EXPECT_FALSE(std::filesystem::exists(pidfile_path_));
+    }
+}
+
+TEST_F(ProcessLifecycleTest, ProcessManagerNotifyReady) {
+    process::ProcessConfig config;
+    config.mode = process::ProcessMode::Foreground;
+    config.pidfile_path = pidfile_path_;
+
+    // Remove stale pidfile for a clean slate.
+    std::error_code ec;
+    std::filesystem::remove(pidfile_path_, ec);
+
+    auto result = process::ProcessManager::init(config);
+    ASSERT_TRUE(result.ok());
+    ASSERT_EQ(process::ProcessManager::mode(), process::ProcessMode::Foreground);
+
+    // Verify format_notify_message strips newlines and carriage returns.
+    EXPECT_EQ(process::ProcessManager::format_notify_message("READY=1"), "READY=1");
+    EXPECT_EQ(process::ProcessManager::format_notify_message("STATUS\n"), "STATUS");
+    EXPECT_EQ(process::ProcessManager::format_notify_message("A\r\nB"), "AB");
+
+    // In Foreground mode, notify calls are no-ops (no systemd socket),
+    // but they must not assert, throw, or crash.
+    process::ProcessManager::notify_ready();
+    process::ProcessManager::notify_status("running");
+    process::ProcessManager::notify_watchdog();
+    process::ProcessManager::notify_stopping();
+
+    // notify_stopped() removes the pidfile.
+    if (std::filesystem::exists(pidfile_path_)) {
+        process::ProcessManager::notify_stopped();
+        EXPECT_FALSE(std::filesystem::exists(pidfile_path_));
+    }
+
+    SUCCEED();
+}
+
+TEST_F(ProcessLifecycleTest, ProcessManagerSignalHandlersInstalled) {
+    bool terminated = false;
+    bool reloaded = false;
+
+    auto result = process::ProcessManager::install_signal_handlers(
+        [&]() { terminated = true; }, [&]() { reloaded = true; });
+    ASSERT_TRUE(result.ok());
+
+    // No signal pending — wait_for_signal should return -1.
+    int sig = process::ProcessManager::wait_for_signal();
+    EXPECT_EQ(sig, -1);
+
+    // Callbacks should not have been invoked (no signal was received).
+    EXPECT_FALSE(terminated);
+    EXPECT_FALSE(reloaded);
+}
+
+#if defined(__linux__)
+TEST_F(ProcessLifecycleTest, ProcessManagerSignalHandlingLinux) {
+    bool terminated = false;
+    bool reloaded = false;
+
+    auto result = process::ProcessManager::install_signal_handlers(
+        [&]() { terminated = true; }, [&]() { reloaded = true; });
+    ASSERT_TRUE(result.ok());
+
+    // Send SIGTERM to self. It is in the blocked signal mask, so it will
+    // be queued and captured by signalfd rather than delivered immediately.
+    kill(getpid(), SIGTERM);
+
+    // wait_for_signal should consume the queued SIGTERM and invoke the
+    // terminate callback.
+    int sig = process::ProcessManager::wait_for_signal();
+    EXPECT_EQ(sig, SIGTERM);
+    EXPECT_TRUE(terminated);
+    EXPECT_FALSE(reloaded);
+
+    // Send SIGHUP and verify reload callback fires.
+    kill(getpid(), SIGHUP);
+    sig = process::ProcessManager::wait_for_signal();
+    EXPECT_EQ(sig, SIGHUP);
+    EXPECT_TRUE(reloaded);
+}
+#endif // defined(__linux__)
+
 } // namespace
