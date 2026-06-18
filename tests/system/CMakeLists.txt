@@ -20,6 +20,7 @@ set(TEST_SYSTEM_SOURCES
     test_system_udp_registrar.cpp
     test_system_gossip.cpp
     test_dlq_handoff.cpp
+    test_system_rpc_workflow.cpp
 )
 
 if(ENABLE_APPS)
