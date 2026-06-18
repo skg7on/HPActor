@@ -272,3 +272,66 @@ TEST(SupervisionWorkflow, DeepSupervisionTreeSpawning) {
     EXPECT_EQ(r1->start_count(), 1);
     EXPECT_EQ(r2->start_count(), 1);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Group 3: Scheduled messages and edge cases
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── Schedule a self-message and verify it is delivered ────────────────
+
+TEST(SupervisionWorkflow, ScheduledMessageDelivery) {
+    // Scheduler must be running for timer callbacks to fire.  Use the
+    // assert_eventually polling helper with scheduler_start_paused=false.
+    Config cfg = test::config_with_scheduler(1);
+    cfg.scheduler_start_paused = false;
+    ActorSystem system(cfg);
+
+    auto actor = system.spawn<RestartTrackingActor>();
+    auto* rt = static_cast<RestartTrackingActor*>(actor.get().get());
+
+    // Schedule a message with zero delay — the scheduler will fire it
+    // as soon as its timer advancement thread processes the wheel.
+    TypedMessage msg(TypeTag(0x2001), StreamBuffer{});
+    msg.set_sender_address(actor.address());
+    rt->context()->schedule(std::chrono::milliseconds(0), std::move(msg));
+
+    bool delivered =
+        test::assert_eventually([&]() { return rt->message_count() >= 1; }, 5000);
+    EXPECT_TRUE(delivered);
+    EXPECT_EQ(rt->message_count(), 1);
+}
+
+// ── Two independent actor systems operate without interference ────────
+
+TEST(SupervisionWorkflow, MultipleActorSystemsIndependent) {
+    Config cfg1 = test::config_with_scheduler(1);
+    cfg1.scheduler_start_paused = true;
+    ActorSystem system1(cfg1);
+
+    Config cfg2 = test::config_with_scheduler(1);
+    cfg2.scheduler_start_paused = true;
+    ActorSystem system2(cfg2);
+
+    auto a1 = system1.spawn<RestartTrackingActor>();
+    auto a2 = system2.spawn<RestartTrackingActor>();
+
+    auto* r1 = static_cast<RestartTrackingActor*>(a1.get().get());
+    auto* r2 = static_cast<RestartTrackingActor*>(a2.get().get());
+
+    // Each actor was started in its own system
+    EXPECT_EQ(r1->start_count(), 1);
+    EXPECT_EQ(r2->start_count(), 1);
+
+    // Deliver a message to system1's actor only
+    TypedMessage msg(TypeTag(0x3001), StreamBuffer{});
+    msg.set_sender_address(a1.address());
+    system1.deliver_local(a1.id(), std::move(msg));
+
+    test::SchedulerTestDriver driver1(system1);
+    bool done1 = driver1.drain_until([&]() { return r1->message_count() >= 1; });
+    EXPECT_TRUE(done1);
+    EXPECT_EQ(r1->message_count(), 1);
+
+    // System2's actor is unaffected
+    EXPECT_EQ(r2->message_count(), 0);
+}
