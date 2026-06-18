@@ -21,12 +21,10 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/types/types.hpp>
 
-#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
-#include <sys/socket.h>
 #include <thread>
 
 #include <hpactor/msg/frame.hpp>
@@ -102,18 +100,12 @@ bool CliClientActor::pre_input_hook() {
         return false;
     }
 
-    // Liveness check: the local ConnectionState may still report Connected
-    // even after the server has closed its end of the socket.  A non-blocking
-    // peek detects the TCP FIN so we can trigger the reconnection path.
-    if (connector_.is_connected()) {
-        char discard;
-        ssize_t n = ::recv(connector_.fd(), &discard, 1, MSG_PEEK | MSG_DONTWAIT);
-        // EOF (n == 0): server closed the connection cleanly.
-        // Error (n < 0, not EAGAIN): hard error on the socket.
-        // Both force a disconnect so the reconnection block below picks up.
-        if (n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK))
-            connector_.disconnect();
-    }
+    // Pump the transport EventLoop so any pending read handlers fire.
+    // This lets WireFrameConnection::handle_read() detect server-side EOF
+    // and transition the ConnectionState to Disconnected before we check
+    // is_connected() below.
+    if (auto* transport = connector_.transport())
+        transport->loop().wait(0);
 
     if (!connector_.is_connected()) {
         // Previously connected and now disconnected — the remote side
