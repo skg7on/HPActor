@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 23:42:31</td>
+            <td class="headerValue">2026-06-18 02:49:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -134,19 +134,19 @@
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">         209 :     explicit Behavior(handler_type handler) : handler_(std::move(handler)) {}</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     /// \brief Returns \c true if a handler is set.</span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">         897 :     explicit operator bool() const {</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">         897 :         return handler_ != nullptr;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">         898 :     explicit operator bool() const {</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">         898 :         return handler_ != nullptr;</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     }</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     /// \brief Invoke the wrapped handler with \p msg.</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     ///</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     /// No-op if the behavior is empty.</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     /// \param[in,out] msg The incoming typed message.</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         882 :     void operator()(TypedMessage&amp; msg) const {</span></span>
-<span id="L68"><span class="lineNum">      68</span>         [<span class="tlaGBC" title="Branch 0 was taken 882 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         882 :         if (handler_) {</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         882 :             handler_(msg);</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         883 :     void operator()(TypedMessage&amp; msg) const {</span></span>
+<span id="L68"><span class="lineNum">      68</span>         [<span class="tlaGBC" title="Branch 0 was taken 883 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         883 :         if (handler_) {</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         883 :             handler_(msg);</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :         }</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">         882 :     }</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">         883 :     }</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :             : </span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :   private:</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             :     handler_type handler_;</span>

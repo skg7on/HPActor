@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-17 23:42:31</td>
+            <td class="headerValue">2026-06-18 02:49:57</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -145,15 +145,15 @@
 <span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         141 :         constexpr uint32_t kDurationsNs[] = {1'000,   10'000,  50'000,</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :                                              100'000, 500'000, 1'000'000};</span>
 <span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         141 :         uint32_t best = 50'000; // fallback</span></span>
-<span id="L70"><span class="lineNum">      70</span>         [<span class="tlaGBC" title="Branch 0 was taken 424 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         424 :         for (uint32_t dur_ns : kDurationsNs) {</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">         424 :             auto t0 = std::chrono::steady_clock::now();</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">         424 :             std::this_thread::sleep_for(std::chrono::nanoseconds(dur_ns));</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">         424 :             auto t1 = std::chrono::steady_clock::now();</span></span>
+<span id="L70"><span class="lineNum">      70</span>         [<span class="tlaGBC" title="Branch 0 was taken 423 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         423 :         for (uint32_t dur_ns : kDurationsNs) {</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">         423 :             auto t0 = std::chrono::steady_clock::now();</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">         423 :             std::this_thread::sleep_for(std::chrono::nanoseconds(dur_ns));</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">         423 :             auto t1 = std::chrono::steady_clock::now();</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             :             auto actual_ns =</span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">         424 :                 std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(t1 - t0).count();</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">         423 :                 std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(t1 - t0).count();</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :             // If the kernel honoured this sleep within a factor of 4,</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             :             // this duration is &quot;effective.&quot;</span>
-<span id="L78"><span class="lineNum">      78</span>   [<span class="tlaGBC" title="Branch 0 was taken 424 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 141 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 283 times"> + </span>]:<span class="tlaGNC">         424 :             if (actual_ns &gt; 0 &amp;&amp; actual_ns &lt;= static_cast&lt;int64_t&gt;(dur_ns) * 4) {</span></span>
+<span id="L78"><span class="lineNum">      78</span>   [<span class="tlaGBC" title="Branch 0 was taken 423 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 141 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 282 times"> + </span>]:<span class="tlaGNC">         423 :             if (actual_ns &gt; 0 &amp;&amp; actual_ns &lt;= static_cast&lt;int64_t&gt;(dur_ns) * 4) {</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">         141 :                 best = dur_ns;</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">         141 :                 break; // first effective duration is the granularity floor</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :             }</span>
@@ -255,8 +255,8 @@
 <span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">           7 :     local_queue_.push(priority, item);</span></span>
 <span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">           7 : }</span></span>
 <span id="L178"><span class="lineNum">     178</span>                 :             : </span>
-<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">          53 : bool WorkerThread::pop(WorkItem&amp; out) {</span></span>
-<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">          53 :     return local_queue_.pop(out);</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">          66 : bool WorkerThread::pop(WorkItem&amp; out) {</span></span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC">          66 :     return local_queue_.pop(out);</span></span>
 <span id="L181"><span class="lineNum">     181</span>                 :             : }</span>
 <span id="L182"><span class="lineNum">     182</span>                 :             : </span>
 <span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           2 : bool WorkerThread::steal(WorkItem&amp; out) {</span></span>
@@ -286,85 +286,85 @@
 <span id="L207"><span class="lineNum">     207</span>                 :             :     }</span>
 <span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L209"><span class="lineNum">     209</span>                 :             : </span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         211 : bool WorkerThread::try_steal(WorkItem&amp; out) {</span></span>
-<span id="L211"><span class="lineNum">     211</span>         [<span class="tlaGBC" title="Branch 0 was taken 211 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         211 :     if (owner_) {</span></span>
-<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">         211 :         return owner_-&gt;try_steal(out);</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         208 : bool WorkerThread::try_steal(WorkItem&amp; out) {</span></span>
+<span id="L211"><span class="lineNum">     211</span>         [<span class="tlaGBC" title="Branch 0 was taken 208 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         208 :     if (owner_) {</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">         208 :         return owner_-&gt;try_steal(out);</span></span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :     }</span>
 <span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return false;</span></span>
 <span id="L215"><span class="lineNum">     215</span>                 :             : }</span>
 <span id="L216"><span class="lineNum">     216</span>                 :             : </span>
-<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC tlaBgGNC">         220 : void WorkerThread::process_work_item(const WorkItem&amp; item) {</span></span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">         220 :     diag_work_found_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC tlaBgGNC">         212 : void WorkerThread::process_work_item(const WorkItem&amp; item) {</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">         212 :     diag_work_found_.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L219"><span class="lineNum">     219</span>                 :             :     // Reset idle tracking — worker is active.</span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">         220 :     idle_since_ = std::chrono::steady_clock::time_point{};</span></span>
-<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaGNC">         220 :     consecutive_empty_wakes_.store(0, std::memory_order_relaxed);</span></span>
-<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">         220 :     in_cv_model_.store(false, std::memory_order_relaxed);</span></span>
-<span id="L223"><span class="lineNum">     223</span>         [<span class="tlaGBC" title="Branch 0 was taken 220 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         220 :     if (processor_) {</span></span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">         220 :         processor_(item);</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">         212 :     idle_since_ = std::chrono::steady_clock::time_point{};</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaGNC">         212 :     consecutive_empty_wakes_.store(0, std::memory_order_relaxed);</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaGNC">         212 :     in_cv_model_.store(false, std::memory_order_relaxed);</span></span>
+<span id="L223"><span class="lineNum">     223</span>         [<span class="tlaGBC" title="Branch 0 was taken 212 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         212 :     if (processor_) {</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">         212 :         processor_(item);</span></span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     }</span>
-<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">         220 : }</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">         212 : }</span></span>
 <span id="L227"><span class="lineNum">     227</span>                 :             : </span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">        2596 : bool WorkerThread::try_find_and_process_work() {</span></span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">        2596 :     WorkItem item;</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">        2568 : bool WorkerThread::try_find_and_process_work() {</span></span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">        2568 :     WorkItem item;</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : </span>
 <span id="L231"><span class="lineNum">     231</span>                 :             :     // Phase 1 (fast path): only check local queues.  Stealing is deferred</span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :     // to the CV double-check in enter_cv_block() to avoid expensive</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             :     // cross-core atomic scans on every backoff iteration during polling.</span>
-<span id="L234"><span class="lineNum">     234</span>         [<span class="tlaGBC" title="Branch 0 was taken 2551 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 45 times"> + </span>]:<span class="tlaGNC">        2596 :     if (owner_) {</span></span>
-<span id="L235"><span class="lineNum">     235</span>         [<span class="tlaGBC" title="Branch 0 was taken 217 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2334 times"> + </span>]:<span class="tlaGNC">        2551 :         if (owner_-&gt;pop_local(item, config_.worker_index)) {</span></span>
-<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">         217 :             process_work_item(item);</span></span>
-<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC">         217 :             return true;</span></span>
+<span id="L234"><span class="lineNum">     234</span>         [<span class="tlaGBC" title="Branch 0 was taken 2510 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 58 times"> + </span>]:<span class="tlaGNC">        2568 :     if (owner_) {</span></span>
+<span id="L235"><span class="lineNum">     235</span>         [<span class="tlaGBC" title="Branch 0 was taken 209 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2301 times"> + </span>]:<span class="tlaGNC">        2510 :         if (owner_-&gt;pop_local(item, config_.worker_index)) {</span></span>
+<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaGNC">         209 :             process_work_item(item);</span></span>
+<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC">         209 :             return true;</span></span>
 <span id="L238"><span class="lineNum">     238</span>                 :             :         }</span>
 <span id="L239"><span class="lineNum">     239</span>                 :             :     } else {</span>
-<span id="L240"><span class="lineNum">     240</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 42 times"> + </span>]:<span class="tlaGNC">          45 :         if (pop(item)) {</span></span>
+<span id="L240"><span class="lineNum">     240</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 55 times"> + </span>]:<span class="tlaGNC">          58 :         if (pop(item)) {</span></span>
 <span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">           3 :             process_work_item(item);</span></span>
 <span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">           3 :             return true;</span></span>
 <span id="L243"><span class="lineNum">     243</span>                 :             :         }</span>
 <span id="L244"><span class="lineNum">     244</span>                 :             :     }</span>
 <span id="L245"><span class="lineNum">     245</span>                 :             : </span>
-<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaGNC">        2376 :     return false;</span></span>
+<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaGNC">        2356 :     return false;</span></span>
 <span id="L247"><span class="lineNum">     247</span>                 :             : }</span>
 <span id="L248"><span class="lineNum">     248</span>                 :             : </span>
-<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">        2376 : bool WorkerThread::try_poll_idle() {</span></span>
-<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">        2376 :     auto now = std::chrono::steady_clock::now();</span></span>
+<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">        2356 : bool WorkerThread::try_poll_idle() {</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">        2356 :     auto now = std::chrono::steady_clock::now();</span></span>
 <span id="L251"><span class="lineNum">     251</span>                 :             : </span>
 <span id="L252"><span class="lineNum">     252</span>                 :             :     // Record idle start on first idle iteration.</span>
-<span id="L253"><span class="lineNum">     253</span>         [<span class="tlaGBC" title="Branch 0 was taken 260 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2116 times"> + </span>]:<span class="tlaGNC">        2376 :     if (idle_since_ == std::chrono::steady_clock::time_point{}) {</span></span>
-<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaGNC">         260 :         idle_since_ = now;</span></span>
+<span id="L253"><span class="lineNum">     253</span>         [<span class="tlaGBC" title="Branch 0 was taken 261 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2095 times"> + </span>]:<span class="tlaGNC">        2356 :     if (idle_since_ == std::chrono::steady_clock::time_point{}) {</span></span>
+<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaGNC">         261 :         idle_since_ = now;</span></span>
 <span id="L255"><span class="lineNum">     255</span>                 :             :     }</span>
 <span id="L256"><span class="lineNum">     256</span>                 :             : </span>
 <span id="L257"><span class="lineNum">     257</span>                 :             :     auto elapsed_ns =</span>
-<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaGNC">        2376 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(now - idle_since_).count();</span></span>
+<span id="L258"><span class="lineNum">     258</span>                 :<span class="tlaGNC">        2356 :         std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(now - idle_since_).count();</span></span>
 <span id="L259"><span class="lineNum">     259</span>                 :             : </span>
-<span id="L260"><span class="lineNum">     260</span>         [<span class="tlaGBC" title="Branch 0 was taken 2163 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 213 times"> + </span>]:<span class="tlaGNC">        2376 :     if (static_cast&lt;uint64_t&gt;(elapsed_ns) &lt; calibration_.polling_budget_ns) {</span></span>
-<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">        2163 :         diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaGNC">        2163 :         increment_donations();</span></span>
+<span id="L260"><span class="lineNum">     260</span>         [<span class="tlaGBC" title="Branch 0 was taken 2145 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 211 times"> + </span>]:<span class="tlaGNC">        2356 :     if (static_cast&lt;uint64_t&gt;(elapsed_ns) &lt; calibration_.polling_budget_ns) {</span></span>
+<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">        2145 :         diag_idle_iters_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaGNC">        2145 :         increment_donations();</span></span>
 <span id="L263"><span class="lineNum">     263</span>                 :             : </span>
 <span id="L264"><span class="lineNum">     264</span>                 :             :         // Periodic steal attempt during polling (every 64 iterations).</span>
 <span id="L265"><span class="lineNum">     265</span>                 :             :         // Stealing on every backoff iteration burns CPU with cross-core</span>
 <span id="L266"><span class="lineNum">     266</span>                 :             :         // atomic traffic (dominant on Linux x86_64); never stealing forces</span>
 <span id="L267"><span class="lineNum">     267</span>                 :             :         // a full CV entry cycle just to discover cross-worker work (adds</span>
 <span id="L268"><span class="lineNum">     268</span>                 :             :         // ~600us CV-entry overhead on macOS).  Every 64th balances both.</span>
-<span id="L269"><span class="lineNum">     269</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2160 times"> + </span>]:<span class="tlaGNC">        4326 :         if ((diag_idle_iters_.load(std::memory_order_relaxed) &amp; 0x3F) == 0) {</span></span>
-<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">           3 :             WorkItem stolen;</span></span>
-<span id="L271"><span class="lineNum">     271</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :             if (try_steal(stolen)) {</span></span>
+<span id="L269"><span class="lineNum">     269</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2143 times"> + </span>]:<span class="tlaGNC">        4290 :         if ((diag_idle_iters_.load(std::memory_order_relaxed) &amp; 0x3F) == 0) {</span></span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">           2 :             WorkItem stolen;</span></span>
+<span id="L271"><span class="lineNum">     271</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :             if (try_steal(stolen)) {</span></span>
 <span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 process_work_item(stolen);</span></span>
 <span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaUNC">           0 :                 return true; // work found — exit polling, reset via</span></span>
 <span id="L274"><span class="lineNum">     274</span>                 :             :                              // process_work_item</span>
 <span id="L275"><span class="lineNum">     275</span>                 :             :             }</span>
 <span id="L276"><span class="lineNum">     276</span>                 :             :         }</span>
 <span id="L277"><span class="lineNum">     277</span>                 :             : </span>
-<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaGNC tlaBgGNC">        2163 :         backoff(std::chrono::nanoseconds(elapsed_ns));</span></span>
-<span id="L279"><span class="lineNum">     279</span>                 :<span class="tlaGNC">        2163 :         return true;</span></span>
+<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaGNC tlaBgGNC">        2145 :         backoff(std::chrono::nanoseconds(elapsed_ns));</span></span>
+<span id="L279"><span class="lineNum">     279</span>                 :<span class="tlaGNC">        2145 :         return true;</span></span>
 <span id="L280"><span class="lineNum">     280</span>                 :             :     }</span>
-<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaGNC">         213 :     return false;</span></span>
+<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaGNC">         211 :     return false;</span></span>
 <span id="L282"><span class="lineNum">     282</span>                 :             : }</span>
 <span id="L283"><span class="lineNum">     283</span>                 :             : </span>
-<span id="L284"><span class="lineNum">     284</span>                 :<span class="tlaGNC">         213 : bool WorkerThread::enter_cv_block() {</span></span>
+<span id="L284"><span class="lineNum">     284</span>                 :<span class="tlaGNC">         211 : bool WorkerThread::enter_cv_block() {</span></span>
 <span id="L285"><span class="lineNum">     285</span>                 :             :     // Standalone workers (no owner_ scheduler) use a simple timed sleep</span>
 <span id="L286"><span class="lineNum">     286</span>                 :             :     // without the full lost-wakeup protocol.  Work pushed while sleeping is</span>
 <span id="L287"><span class="lineNum">     287</span>                 :             :     // found on the next loop iteration via try_find_and_process_work().</span>
-<span id="L288"><span class="lineNum">     288</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 208 times"> + </span>]:<span class="tlaGNC">         213 :     if (!owner_) {</span></span>
+<span id="L288"><span class="lineNum">     288</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 206 times"> + </span>]:<span class="tlaGNC">         211 :     if (!owner_) {</span></span>
 <span id="L289"><span class="lineNum">     289</span>                 :             :         // Double-check for work that arrived before sleeping.</span>
 <span id="L290"><span class="lineNum">     290</span>                 :             :         {</span>
 <span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">           5 :             WorkItem item;</span></span>
@@ -392,35 +392,35 @@
 <span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC">           5 :         return false;</span></span>
 <span id="L314"><span class="lineNum">     314</span>                 :             :     }</span>
 <span id="L315"><span class="lineNum">     315</span>                 :             : </span>
-<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">         208 :     auto&amp; ws = owner_-&gt;placement_workers()[config_.worker_index];</span></span>
+<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">         206 :     auto&amp; ws = owner_-&gt;placement_workers()[config_.worker_index];</span></span>
 <span id="L317"><span class="lineNum">     317</span>                 :             : </span>
 <span id="L318"><span class="lineNum">     318</span>                 :             :     // Advertise blocking intent with seq_cst to prevent the enqueue path</span>
 <span id="L319"><span class="lineNum">     319</span>                 :             :     // from reordering its is_blocking_ load before this store (lost-wakeup</span>
 <span id="L320"><span class="lineNum">     320</span>                 :             :     // protocol).</span>
-<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">         208 :     ws.is_blocking_.store(true, std::memory_order_seq_cst);</span></span>
+<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">         206 :     ws.is_blocking_.store(true, std::memory_order_seq_cst);</span></span>
 <span id="L322"><span class="lineNum">     322</span>                 :             : </span>
 <span id="L323"><span class="lineNum">     323</span>                 :             :     // Double-check for work that may have arrived between our last poll and</span>
 <span id="L324"><span class="lineNum">     324</span>                 :             :     // setting is_blocking_.  If work is found, clear the flag and return</span>
 <span id="L325"><span class="lineNum">     325</span>                 :             :     // immediately.</span>
 <span id="L326"><span class="lineNum">     326</span>                 :             :     {</span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         208 :         WorkItem item;</span></span>
-<span id="L328"><span class="lineNum">     328</span>   [<span class="tlaGBC" title="Branch 0 was taken 208 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 208 times"> + </span> :<span class="tlaGNC">         208 :         if (owner_-&gt;pop_local(item, config_.worker_index) || try_steal(item)) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 208 times"> + </span>]
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         206 :         WorkItem item;</span></span>
+<span id="L328"><span class="lineNum">     328</span>   [<span class="tlaGBC" title="Branch 0 was taken 206 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 206 times"> + </span> :<span class="tlaGNC">         206 :         if (owner_-&gt;pop_local(item, config_.worker_index) || try_steal(item)) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 206 times"> + </span>]
 <span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             ws.is_blocking_.store(false, std::memory_order_release);</span></span>
 <span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaUNC">           0 :             process_work_item(item);</span></span>
 <span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaUNC">           0 :             return true; // caller continues the main loop</span></span>
 <span id="L332"><span class="lineNum">     332</span>                 :             :         }</span>
 <span id="L333"><span class="lineNum">     333</span>                 :             :     }</span>
 <span id="L334"><span class="lineNum">     334</span>                 :             : </span>
-<span id="L335"><span class="lineNum">     335</span>                 :<span class="tlaGNC tlaBgGNC">         208 :     diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">         208 :     in_cv_model_.store(true, std::memory_order_relaxed);</span></span>
+<span id="L335"><span class="lineNum">     335</span>                 :<span class="tlaGNC tlaBgGNC">         206 :     diag_cv_escalations_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">         206 :     in_cv_model_.store(true, std::memory_order_relaxed);</span></span>
 <span id="L337"><span class="lineNum">     337</span>                 :             : </span>
 <span id="L338"><span class="lineNum">     338</span>                 :             :     // Compute EDF-aware CV timeout.  Wake before the earliest deadline</span>
 <span id="L339"><span class="lineNum">     339</span>                 :             :     // expires so another worker can steal deadline work.</span>
-<span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">         208 :     auto now = std::chrono::steady_clock::now();</span></span>
-<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">         208 :     auto timeout = std::chrono::milliseconds(100);</span></span>
-<span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaGNC">         208 :     int64_t edf_ns = owner_-&gt;edf_next_deadline();</span></span>
-<span id="L343"><span class="lineNum">     343</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 208 times"> + </span>]:<span class="tlaGNC">         208 :     if (edf_ns != INT64_MAX) {</span></span>
+<span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">         206 :     auto now = std::chrono::steady_clock::now();</span></span>
+<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">         206 :     auto timeout = std::chrono::milliseconds(100);</span></span>
+<span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaGNC">         206 :     int64_t edf_ns = owner_-&gt;edf_next_deadline();</span></span>
+<span id="L343"><span class="lineNum">     343</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 206 times"> + </span>]:<span class="tlaGNC">         206 :     if (edf_ns != INT64_MAX) {</span></span>
 <span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         int64_t now_ns = now.time_since_epoch().count();</span></span>
 <span id="L345"><span class="lineNum">     345</span>                 :<span class="tlaUNC">           0 :         int64_t delta_ns = edf_ns - now_ns;</span></span>
 <span id="L346"><span class="lineNum">     346</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (delta_ns &lt;= 0)</span></span>
@@ -438,52 +438,52 @@
 <span id="L358"><span class="lineNum">     358</span>                 :             :         // Doubles each empty wake, capped at 30 seconds.</span>
 <span id="L359"><span class="lineNum">     359</span>                 :             :         // 500 ms base (2 wakeups/s) is safe because real work arrival</span>
 <span id="L360"><span class="lineNum">     360</span>                 :             :         // always uses the zero-latency notify path (wake_if_blocking).</span>
-<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC tlaBgGNC">         208 :         constexpr uint32_t kBaseTimeoutMs = 500;</span></span>
-<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">         208 :         constexpr uint32_t kMaxTimeoutMs = 30'000;</span></span>
-<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">         208 :         uint32_t c = consecutive_empty_wakes_.load(std::memory_order_relaxed);</span></span>
-<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">         208 :         uint32_t shift = std::min(c, 9u); // 2^6 * 500ms = 32s &gt; 30s cap</span></span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">         208 :         uint32_t ms = kBaseTimeoutMs &lt;&lt; shift;</span></span>
-<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">         208 :         timeout = std::chrono::milliseconds(std::min(ms, kMaxTimeoutMs));</span></span>
+<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC tlaBgGNC">         206 :         constexpr uint32_t kBaseTimeoutMs = 500;</span></span>
+<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">         206 :         constexpr uint32_t kMaxTimeoutMs = 30'000;</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">         206 :         uint32_t c = consecutive_empty_wakes_.load(std::memory_order_relaxed);</span></span>
+<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">         206 :         uint32_t shift = std::min(c, 9u); // 2^6 * 500ms = 32s &gt; 30s cap</span></span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">         206 :         uint32_t ms = kBaseTimeoutMs &lt;&lt; shift;</span></span>
+<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">         206 :         timeout = std::chrono::milliseconds(std::min(ms, kMaxTimeoutMs));</span></span>
 <span id="L367"><span class="lineNum">     367</span>                 :             :     }</span>
 <span id="L368"><span class="lineNum">     368</span>                 :             : </span>
-<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">         208 :     std::unique_lock&lt;std::mutex&gt; lk(ws.sleep_mutex_);</span></span>
-<span id="L370"><span class="lineNum">     370</span>                 :<span class="tlaGNC">         208 :     bool timed_out = !ws.sleep_cv_.wait_for(lk, timeout, [&amp;] {</span></span>
-<span id="L371"><span class="lineNum">     371</span>         [<span class="tlaGBC" title="Branch 0 was taken 217 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         633 :         return !ws.is_blocking_.load(std::memory_order_relaxed) ||</span></span>
-<span id="L372"><span class="lineNum">     372</span>         [<span class="tlaGBC" title="Branch 0 was taken 217 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 199 times"> + </span>]:<span class="tlaGNC">         633 :                stop_requested_.load(std::memory_order_relaxed) ||</span></span>
-<span id="L373"><span class="lineNum">     373</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 217 times"> + </span>]:<span class="tlaGNC">         633 :                !running_.load(std::memory_order_relaxed);</span></span>
-<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">         208 :     });</span></span>
-<span id="L375"><span class="lineNum">     375</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 199 times"> + </span>]:<span class="tlaGNC">         208 :     if (timed_out) {</span></span>
-<span id="L376"><span class="lineNum">     376</span>                 :<span class="tlaGNC">           9 :         diag_cv_timeout_wakes_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">           9 :         consecutive_empty_wakes_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">         206 :     std::unique_lock&lt;std::mutex&gt; lk(ws.sleep_mutex_);</span></span>
+<span id="L370"><span class="lineNum">     370</span>                 :<span class="tlaGNC">         206 :     bool timed_out = !ws.sleep_cv_.wait_for(lk, timeout, [&amp;] {</span></span>
+<span id="L371"><span class="lineNum">     371</span>         [<span class="tlaGBC" title="Branch 0 was taken 213 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         625 :         return !ws.is_blocking_.load(std::memory_order_relaxed) ||</span></span>
+<span id="L372"><span class="lineNum">     372</span>         [<span class="tlaGBC" title="Branch 0 was taken 213 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 199 times"> + </span>]:<span class="tlaGNC">         625 :                stop_requested_.load(std::memory_order_relaxed) ||</span></span>
+<span id="L373"><span class="lineNum">     373</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 213 times"> + </span>]:<span class="tlaGNC">         625 :                !running_.load(std::memory_order_relaxed);</span></span>
+<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">         206 :     });</span></span>
+<span id="L375"><span class="lineNum">     375</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 199 times"> + </span>]:<span class="tlaGNC">         206 :     if (timed_out) {</span></span>
+<span id="L376"><span class="lineNum">     376</span>                 :<span class="tlaGNC">           7 :         diag_cv_timeout_wakes_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">           7 :         consecutive_empty_wakes_.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L378"><span class="lineNum">     378</span>                 :             :     } else {</span>
 <span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">         199 :         diag_cv_notify_wakes_.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L380"><span class="lineNum">     380</span>                 :             :         // A notify indicates the system is active — reset the empty-wake</span>
 <span id="L381"><span class="lineNum">     381</span>                 :             :         // streak so the next CV entry doesn't use a stale inflated timeout.</span>
 <span id="L382"><span class="lineNum">     382</span>                 :<span class="tlaGNC">         199 :         consecutive_empty_wakes_.store(0, std::memory_order_relaxed);</span></span>
 <span id="L383"><span class="lineNum">     383</span>                 :             :     }</span>
-<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">         208 :     return false; // CV wait completed; caller resets backoff and loops</span></span>
-<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaGNC">         208 : }</span></span>
+<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">         206 :     return false; // CV wait completed; caller resets backoff and loops</span></span>
+<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaGNC">         206 : }</span></span>
 <span id="L386"><span class="lineNum">     386</span>                 :             : </span>
 <span id="L387"><span class="lineNum">     387</span>                 :<span class="tlaGNC">         215 : void WorkerThread::thread_loop() {</span></span>
 <span id="L388"><span class="lineNum">     388</span>                 :<span class="tlaGNC">         215 :     tl_current_worker_id = config_.worker_index;</span></span>
 <span id="L389"><span class="lineNum">     389</span>                 :             : </span>
-<span id="L390"><span class="lineNum">     390</span>   [<span class="tlaGBC" title="Branch 0 was taken 2596 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 215 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2596 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">        5407 :     while (!stop_requested_.load(std::memory_order_acquire) &amp;&amp;</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2596 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 215 times"> + </span>]
-<span id="L391"><span class="lineNum">     391</span>                 :<span class="tlaGNC">        2596 :            running_.load(std::memory_order_acquire)) {</span></span>
+<span id="L390"><span class="lineNum">     390</span>   [<span class="tlaGBC" title="Branch 0 was taken 2568 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 215 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2568 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">        5351 :     while (!stop_requested_.load(std::memory_order_acquire) &amp;&amp;</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2568 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 215 times"> + </span>]
+<span id="L391"><span class="lineNum">     391</span>                 :<span class="tlaGNC">        2568 :            running_.load(std::memory_order_acquire)) {</span></span>
 <span id="L392"><span class="lineNum">     392</span>                 :             :         // Check if paused (test harness)</span>
-<span id="L393"><span class="lineNum">     393</span>         [<span class="tlaGBC" title="Branch 0 was taken 2551 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 45 times"> + </span>]:<span class="tlaGNC">        2596 :         if (pause_handler_) {</span></span>
-<span id="L394"><span class="lineNum">     394</span>                 :<span class="tlaGNC">        2551 :             pause_handler_();</span></span>
+<span id="L393"><span class="lineNum">     393</span>         [<span class="tlaGBC" title="Branch 0 was taken 2510 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 58 times"> + </span>]:<span class="tlaGNC">        2568 :         if (pause_handler_) {</span></span>
+<span id="L394"><span class="lineNum">     394</span>                 :<span class="tlaGNC">        2510 :             pause_handler_();</span></span>
 <span id="L395"><span class="lineNum">     395</span>                 :             :         }</span>
 <span id="L396"><span class="lineNum">     396</span>                 :             : </span>
 <span id="L397"><span class="lineNum">     397</span>                 :             :         // Phase 1: Try to find and process work (local pop → steal).</span>
-<span id="L398"><span class="lineNum">     398</span>         [<span class="tlaGBC" title="Branch 0 was taken 220 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2376 times"> + </span>]:<span class="tlaGNC">        2596 :         if (try_find_and_process_work()) {</span></span>
-<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">         220 :             continue;</span></span>
+<span id="L398"><span class="lineNum">     398</span>         [<span class="tlaGBC" title="Branch 0 was taken 212 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2356 times"> + </span>]:<span class="tlaGNC">        2568 :         if (try_find_and_process_work()) {</span></span>
+<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">         212 :             continue;</span></span>
 <span id="L400"><span class="lineNum">     400</span>                 :             :         }</span>
 <span id="L401"><span class="lineNum">     401</span>                 :             : </span>
 <span id="L402"><span class="lineNum">     402</span>                 :             :         // Phase 2: Polling idle model (yield -&gt; proportional sleep -&gt; capped</span>
 <span id="L403"><span class="lineNum">     403</span>                 :             :         // sleep).</span>
-<span id="L404"><span class="lineNum">     404</span>         [<span class="tlaGBC" title="Branch 0 was taken 2163 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 213 times"> + </span>]:<span class="tlaGNC">        2376 :         if (try_poll_idle()) {</span></span>
-<span id="L405"><span class="lineNum">     405</span>                 :<span class="tlaGNC">        2163 :             continue;</span></span>
+<span id="L404"><span class="lineNum">     404</span>         [<span class="tlaGBC" title="Branch 0 was taken 2145 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 211 times"> + </span>]:<span class="tlaGNC">        2356 :         if (try_poll_idle()) {</span></span>
+<span id="L405"><span class="lineNum">     405</span>                 :<span class="tlaGNC">        2145 :             continue;</span></span>
 <span id="L406"><span class="lineNum">     406</span>                 :             :         }</span>
 <span id="L407"><span class="lineNum">     407</span>                 :             : </span>
 <span id="L408"><span class="lineNum">     408</span>                 :             :         // Phase 3: CV blocking model.</span>
@@ -493,7 +493,7 @@
 <span id="L412"><span class="lineNum">     412</span>                 :             :         // In the false case, DON'T reset idle_since_ — let it keep</span>
 <span id="L413"><span class="lineNum">     413</span>                 :             :         // tracking from the original idle start so the next</span>
 <span id="L414"><span class="lineNum">     414</span>                 :             :         // try_poll_idle() immediately re-enters CV.</span>
-<span id="L415"><span class="lineNum">     415</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 213 times"> + </span>]:<span class="tlaGNC">         213 :         if (enter_cv_block()) {</span></span>
+<span id="L415"><span class="lineNum">     415</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 211 times"> + </span>]:<span class="tlaGNC">         211 :         if (enter_cv_block()) {</span></span>
 <span id="L416"><span class="lineNum">     416</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             continue;</span></span>
 <span id="L417"><span class="lineNum">     417</span>                 :             :         }</span>
 <span id="L418"><span class="lineNum">     418</span>                 :             :         // CV wait completed without finding work.</span>
@@ -505,24 +505,24 @@
 <span id="L424"><span class="lineNum">     424</span>                 :<span class="tlaGNC">          28 :     return in_cv_model_.load(std::memory_order_relaxed);</span></span>
 <span id="L425"><span class="lineNum">     425</span>                 :             : }</span>
 <span id="L426"><span class="lineNum">     426</span>                 :             : </span>
-<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">        2163 : void WorkerThread::backoff(std::chrono::nanoseconds elapsed) {</span></span>
-<span id="L428"><span class="lineNum">     428</span>                 :<span class="tlaGNC">        2163 :     uint64_t ns = static_cast&lt;uint64_t&gt;(elapsed.count());</span></span>
+<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">        2145 : void WorkerThread::backoff(std::chrono::nanoseconds elapsed) {</span></span>
+<span id="L428"><span class="lineNum">     428</span>                 :<span class="tlaGNC">        2145 :     uint64_t ns = static_cast&lt;uint64_t&gt;(elapsed.count());</span></span>
 <span id="L429"><span class="lineNum">     429</span>                 :             : </span>
 <span id="L430"><span class="lineNum">     430</span>                 :             :     // Stage 0: spin (yield) only when yield is effective and we're within</span>
 <span id="L431"><span class="lineNum">     431</span>                 :             :     // the spin threshold.</span>
-<span id="L432"><span class="lineNum">     432</span>         [<span class="tlaGBC" title="Branch 0 was taken 1703 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 460 times"> + </span>]:<span class="tlaGNC">        2163 :     if (ns &lt; calibration_.spin_threshold_ns) {</span></span>
-<span id="L433"><span class="lineNum">     433</span>         [<span class="tlaGBC" title="Branch 0 was taken 1703 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1703 :         if (calibration_.yield_is_effective) {</span></span>
-<span id="L434"><span class="lineNum">     434</span>                 :<span class="tlaGNC">        1703 :             std::this_thread::yield();</span></span>
+<span id="L432"><span class="lineNum">     432</span>         [<span class="tlaGBC" title="Branch 0 was taken 1698 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 447 times"> + </span>]:<span class="tlaGNC">        2145 :     if (ns &lt; calibration_.spin_threshold_ns) {</span></span>
+<span id="L433"><span class="lineNum">     433</span>         [<span class="tlaGBC" title="Branch 0 was taken 1698 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1698 :         if (calibration_.yield_is_effective) {</span></span>
+<span id="L434"><span class="lineNum">     434</span>                 :<span class="tlaGNC">        1698 :             std::this_thread::yield();</span></span>
 <span id="L435"><span class="lineNum">     435</span>                 :             :         }</span>
 <span id="L436"><span class="lineNum">     436</span>                 :             :         // On platforms where yield is a no-op, don't busy-wait at all.</span>
-<span id="L437"><span class="lineNum">     437</span>                 :<span class="tlaGNC">        1703 :         return;</span></span>
+<span id="L437"><span class="lineNum">     437</span>                 :<span class="tlaGNC">        1698 :         return;</span></span>
 <span id="L438"><span class="lineNum">     438</span>                 :             :     }</span>
 <span id="L439"><span class="lineNum">     439</span>                 :             : </span>
 <span id="L440"><span class="lineNum">     440</span>                 :             :     // Stage 1: proportional sleep for the first 1 ms of idle time.</span>
 <span id="L441"><span class="lineNum">     441</span>                 :             :     // Sleep for elapsed/4 so backoff ramps up but polls frequently enough</span>
 <span id="L442"><span class="lineNum">     442</span>                 :             :     // to catch bursty work.</span>
-<span id="L443"><span class="lineNum">     443</span>         [<span class="tlaGBC" title="Branch 0 was taken 429 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 31 times"> + </span>]:<span class="tlaGNC">         460 :     if (ns &lt; 1'000'000) {</span></span>
-<span id="L444"><span class="lineNum">     444</span>                 :<span class="tlaGNC">         429 :         uint64_t sleep_ns = ns / 4;</span></span>
+<span id="L443"><span class="lineNum">     443</span>         [<span class="tlaGBC" title="Branch 0 was taken 424 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span>]:<span class="tlaGNC">         447 :     if (ns &lt; 1'000'000) {</span></span>
+<span id="L444"><span class="lineNum">     444</span>                 :<span class="tlaGNC">         424 :         uint64_t sleep_ns = ns / 4;</span></span>
 <span id="L445"><span class="lineNum">     445</span>                 :             : #ifdef __linux__</span>
 <span id="L446"><span class="lineNum">     446</span>                 :             :         // On Linux CFS, nanosleep() with durations below ~100 us often</span>
 <span id="L447"><span class="lineNum">     447</span>                 :             :         // busy-waits instead of context-switching the thread (the kernel</span>
@@ -530,8 +530,8 @@
 <span id="L449"><span class="lineNum">     449</span>                 :             :         // Use a 500 us floor — above the context-switch threshold on all</span>
 <span id="L450"><span class="lineNum">     450</span>                 :             :         // modern kernels — so the thread actually deschedules during</span>
 <span id="L451"><span class="lineNum">     451</span>                 :             :         // backoff.  This avoids burning CPU in the polling phase.</span>
-<span id="L452"><span class="lineNum">     452</span>         [<span class="tlaGBC" title="Branch 0 was taken 429 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         429 :         if (sleep_ns &lt; 500'000) {</span></span>
-<span id="L453"><span class="lineNum">     453</span>                 :<span class="tlaGNC">         429 :             sleep_ns = 500'000;</span></span>
+<span id="L452"><span class="lineNum">     452</span>         [<span class="tlaGBC" title="Branch 0 was taken 424 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         424 :         if (sleep_ns &lt; 500'000) {</span></span>
+<span id="L453"><span class="lineNum">     453</span>                 :<span class="tlaGNC">         424 :             sleep_ns = 500'000;</span></span>
 <span id="L454"><span class="lineNum">     454</span>                 :             :         }</span>
 <span id="L455"><span class="lineNum">     455</span>                 :             : #else</span>
 <span id="L456"><span class="lineNum">     456</span>                 :             :         // On macOS/Mach, thread_switch() deschedules the caller at any</span>
@@ -540,14 +540,14 @@
 <span id="L459"><span class="lineNum">     459</span>                 :             :             sleep_ns = calibration_.min_effective_sleep_ns;</span>
 <span id="L460"><span class="lineNum">     460</span>                 :             :         }</span>
 <span id="L461"><span class="lineNum">     461</span>                 :             : #endif</span>
-<span id="L462"><span class="lineNum">     462</span>                 :<span class="tlaGNC">         429 :         std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_ns));</span></span>
-<span id="L463"><span class="lineNum">     463</span>                 :<span class="tlaGNC">         429 :         return;</span></span>
+<span id="L462"><span class="lineNum">     462</span>                 :<span class="tlaGNC">         424 :         std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_ns));</span></span>
+<span id="L463"><span class="lineNum">     463</span>                 :<span class="tlaGNC">         424 :         return;</span></span>
 <span id="L464"><span class="lineNum">     464</span>                 :             :     }</span>
 <span id="L465"><span class="lineNum">     465</span>                 :             : </span>
 <span id="L466"><span class="lineNum">     466</span>                 :             :     // Stage 2: capped moderate sleep (500 us) for the remainder of the</span>
 <span id="L467"><span class="lineNum">     467</span>                 :             :     // polling budget.  Polls often enough to be responsive but avoids</span>
 <span id="L468"><span class="lineNum">     468</span>                 :             :     // burning CPU.</span>
-<span id="L469"><span class="lineNum">     469</span>                 :<span class="tlaGNC">          31 :     std::this_thread::sleep_for(std::chrono::nanoseconds(500'000));</span></span>
+<span id="L469"><span class="lineNum">     469</span>                 :<span class="tlaGNC">          23 :     std::this_thread::sleep_for(std::chrono::nanoseconds(500'000));</span></span>
 <span id="L470"><span class="lineNum">     470</span>                 :             : }</span>
 <span id="L471"><span class="lineNum">     471</span>                 :             : </span>
 <span id="L472"><span class="lineNum">     472</span>                 :             : } // namespace hpactor::sched</span>
