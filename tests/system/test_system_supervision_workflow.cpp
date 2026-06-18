@@ -151,3 +151,124 @@ TEST(SupervisionWorkflow, SupervisorRestartsFailedChild) {
     EXPECT_TRUE(ok);
     EXPECT_EQ(child_ptr->as_lifecycle()->state(), LifecycleState::kFailed);
 }
+
+// ═══════════════════════════════════════════════════════════════════════════
+// Group 2: Multi-child supervision
+// ═══════════════════════════════════════════════════════════════════════════
+
+// ── SelfSupervisingActor tracks local children ────────────────────────
+
+TEST(SupervisionWorkflow, SelfSupervisingActorManagesOwnChildren) {
+    Config cfg = test::config_with_scheduler(1);
+    ActorSystem system(cfg);
+
+    SupervisionPolicy policy;
+    auto supervisor = system.spawn<SelfSupervisingActor>(policy);
+    auto* sup = static_cast<SelfSupervisingActor*>(supervisor.get().get());
+
+    auto c1 = system.spawn<RestartTrackingActor>();
+    auto c2 = system.spawn<RestartTrackingActor>();
+
+    sup->add_child(c1);
+    sup->add_child(c2);
+
+    // Both children should be alive and have on_start called
+    auto* r1 = static_cast<RestartTrackingActor*>(c1.get().get());
+    auto* r2 = static_cast<RestartTrackingActor*>(c2.get().get());
+    EXPECT_EQ(r1->start_count(), 1);
+    EXPECT_EQ(r2->start_count(), 1);
+    EXPECT_EQ(r1->as_lifecycle()->state(), LifecycleState::kActive);
+    EXPECT_EQ(r2->as_lifecycle()->state(), LifecycleState::kActive);
+
+    // Remove child and verify it is independent of supervisor tracking
+    sup->remove_child(c1);
+    // Child still alive after removal — removal only stops supervision
+    EXPECT_EQ(r1->as_lifecycle()->state(), LifecycleState::kActive);
+}
+
+// ── Supervisor with 5 children; one fails, others unaffected ────────────
+
+TEST(SupervisionWorkflow, SupervisorWithMultipleChildren) {
+    Config cfg = test::config_with_scheduler(1);
+    ActorSystem system(cfg);
+    test::SchedulerTestDriver driver(system);
+
+    SupervisionPolicy policy;
+    policy.strategy = SupervisionPolicy::Strategy::OneForOne;
+    policy.max_restarts = 5;
+
+    auto supervisor = system.spawn<SelfSupervisingActor>(policy);
+    auto* sup = static_cast<SelfSupervisingActor*>(supervisor.get().get());
+
+    // Spawn 5 children — mix of CountingActor and FailingActor
+    auto child1 = system.spawn<test::CountingActor>();
+    auto child2 = system.spawn<test::CountingActor>();
+    auto child3 = system.spawn<test::CountingActor>();
+    auto child4 = system.spawn<test::CountingActor>();
+    auto child5 = system.spawn<test::FailingActor>();
+    auto* f5 = static_cast<test::FailingActor*>(child5.get().get());
+    f5->fail_after = 1;
+
+    sup->add_child(child1);
+    sup->add_child(child2);
+    sup->add_child(child3);
+    sup->add_child(child4);
+    sup->add_child(child5);
+
+    // Drain spawn-time notify_ready items
+    driver.drain(10);
+
+    // Pin the failing child for deterministic execution
+    driver.pin_actor_to_worker(child5.address().id, 0);
+
+    // Send a message to trigger failure in child5
+    TypedMessage msg(TypeTag(0x1001), StreamBuffer{});
+    msg.set_sender_address(supervisor.address());
+    f5->context()->send(child5.address(), std::move(msg));
+
+    EXPECT_TRUE(driver.run_actor(child5.address().id));
+    EXPECT_EQ(f5->as_lifecycle()->state(), LifecycleState::kFailed);
+
+    // Other 4 children should still be active
+    auto* c1 = static_cast<test::CountingActor*>(child1.get().get());
+    auto* c2 = static_cast<test::CountingActor*>(child2.get().get());
+    auto* c3 = static_cast<test::CountingActor*>(child3.get().get());
+    auto* c4 = static_cast<test::CountingActor*>(child4.get().get());
+    EXPECT_EQ(c1->as_lifecycle()->state(), LifecycleState::kActive);
+    EXPECT_EQ(c2->as_lifecycle()->state(), LifecycleState::kActive);
+    EXPECT_EQ(c3->as_lifecycle()->state(), LifecycleState::kActive);
+    EXPECT_EQ(c4->as_lifecycle()->state(), LifecycleState::kActive);
+}
+
+// ── Deep supervision tree: root → mid → leaf ─────────────────────────
+
+TEST(SupervisionWorkflow, DeepSupervisionTreeSpawning) {
+    Config cfg = test::config_with_scheduler(1);
+    ActorSystem system(cfg);
+
+    // Root supervisor
+    auto root = system.spawn<SelfSupervisingActor>();
+    auto* root_sup = static_cast<SelfSupervisingActor*>(root.get().get());
+
+    // Mid-level supervisor (child of root)
+    auto mid = system.spawn<SelfSupervisingActor>();
+    auto* mid_sup = static_cast<SelfSupervisingActor*>(mid.get().get());
+
+    // Leaf actors (children of mid)
+    auto leaf1 = system.spawn<RestartTrackingActor>();
+    auto leaf2 = system.spawn<RestartTrackingActor>();
+
+    // Build the tree: root → mid, mid → leaf1, leaf2
+    root_sup->add_child(mid);
+    mid_sup->add_child(leaf1);
+    mid_sup->add_child(leaf2);
+
+    auto* r1 = static_cast<RestartTrackingActor*>(leaf1.get().get());
+    auto* r2 = static_cast<RestartTrackingActor*>(leaf2.get().get());
+
+    // All actors are alive and initialized
+    EXPECT_EQ(r1->as_lifecycle()->state(), LifecycleState::kActive);
+    EXPECT_EQ(r2->as_lifecycle()->state(), LifecycleState::kActive);
+    EXPECT_EQ(r1->start_count(), 1);
+    EXPECT_EQ(r2->start_count(), 1);
+}
