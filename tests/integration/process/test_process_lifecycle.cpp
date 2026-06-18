@@ -312,4 +312,38 @@ TEST_F(ProcessLifecycleTest, HealthHttpServerStartAndRespond) {
     daemon->on_deactivate();
 }
 
+TEST_F(ProcessLifecycleTest, WatchdogActorPeriodicNotify) {
+    // Remove stale pidfile for a clean slate.
+    std::error_code ec;
+    std::filesystem::remove(pidfile_path_, ec);
+
+    process::ProcessConfig proc_cfg;
+    proc_cfg.mode = process::ProcessMode::Foreground;
+    proc_cfg.pidfile_path = pidfile_path_;
+    proc_cfg.watchdog_interval = std::chrono::milliseconds(100);
+
+    auto init_result = process::ProcessManager::init(proc_cfg);
+    ASSERT_TRUE(init_result.ok());
+
+    Config cfg;
+    cfg.scheduler_threads = 1;
+
+    ActorSystem system(cfg);
+    auto watchdog =
+        system.spawn<process::WatchdogActor>(proc_cfg.watchdog_interval);
+    ASSERT_TRUE(watchdog);
+
+    // Let the watchdog run for a few intervals to exercise the periodic
+    // health check and notify_watchdog() path.
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    // Verify the actor is still alive after several check cycles.
+    auto* raw = static_cast<process::WatchdogActor*>(
+        system.get_actor(watchdog.id()).get());
+    ASSERT_NE(raw, nullptr);
+
+    system.shutdown();
+    SUCCEED();
+}
+
 } // namespace
