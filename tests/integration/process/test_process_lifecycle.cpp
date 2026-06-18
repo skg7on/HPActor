@@ -13,10 +13,16 @@
 
 #include <chrono>
 #include <cstdio>
+#include <cstring>
 #include <filesystem>
 #include <fstream>
 #include <string>
 #include <thread>
+
+#include <arpa/inet.h>
+#include <netinet/in.h>
+#include <sys/socket.h>
+#include <unistd.h>
 
 #if defined(__linux__)
 #    include <signal.h>
@@ -187,5 +193,123 @@ TEST_F(ProcessLifecycleTest, ProcessManagerSignalHandlingLinux) {
     EXPECT_TRUE(reloaded);
 }
 #endif // defined(__linux__)
+
+TEST_F(ProcessLifecycleTest, ProcessConfigParsing) {
+    // Test ProcessMode enum values
+    process::ProcessConfig foreground;
+    foreground.mode = process::ProcessMode::Foreground;
+    EXPECT_EQ(foreground.mode, process::ProcessMode::Foreground);
+
+    process::ProcessConfig systemd_cfg;
+    systemd_cfg.mode = process::ProcessMode::Systemd;
+    EXPECT_EQ(systemd_cfg.mode, process::ProcessMode::Systemd);
+
+    process::ProcessConfig daemon_cfg;
+    daemon_cfg.mode = process::ProcessMode::Daemon;
+    EXPECT_EQ(daemon_cfg.mode, process::ProcessMode::Daemon);
+
+    // Test all fields with explicit values
+    process::ProcessConfig cfg;
+    cfg.mode = process::ProcessMode::Daemon;
+    cfg.pidfile_path = "/tmp/test.pid";
+    cfg.redirect_stdio = true;
+    cfg.log_file = "/var/log/hpactor.log";
+    cfg.working_directory = "/var/lib/hpactor";
+    cfg.watchdog_interval = std::chrono::milliseconds(5000);
+    cfg.notify_socket = "/tmp/notify.sock";
+
+    EXPECT_EQ(cfg.mode, process::ProcessMode::Daemon);
+    EXPECT_EQ(cfg.pidfile_path, "/tmp/test.pid");
+    EXPECT_TRUE(cfg.redirect_stdio);
+    EXPECT_EQ(cfg.log_file, "/var/log/hpactor.log");
+    EXPECT_EQ(cfg.working_directory, "/var/lib/hpactor");
+    EXPECT_EQ(cfg.watchdog_interval, std::chrono::milliseconds(5000));
+    EXPECT_EQ(cfg.notify_socket, "/tmp/notify.sock");
+
+    // Test default values
+    process::ProcessConfig defaults;
+    EXPECT_EQ(defaults.mode, process::ProcessMode::Foreground);
+    EXPECT_TRUE(defaults.pidfile_path.empty());
+    EXPECT_FALSE(defaults.redirect_stdio);
+    EXPECT_TRUE(defaults.log_file.empty());
+    EXPECT_EQ(defaults.working_directory, "/");
+    EXPECT_EQ(defaults.watchdog_interval, std::chrono::milliseconds(0));
+    EXPECT_TRUE(defaults.notify_socket.empty());
+
+    // Test parse_mode (case-insensitive, defaults to Foreground for unknown)
+    EXPECT_EQ(process::ProcessConfig::parse_mode("foreground"),
+              process::ProcessMode::Foreground);
+    EXPECT_EQ(process::ProcessConfig::parse_mode("Foreground"),
+              process::ProcessMode::Foreground);
+    EXPECT_EQ(process::ProcessConfig::parse_mode("FOREGROUND"),
+              process::ProcessMode::Foreground);
+    EXPECT_EQ(process::ProcessConfig::parse_mode("systemd"),
+              process::ProcessMode::Systemd);
+    EXPECT_EQ(process::ProcessConfig::parse_mode("daemon"),
+              process::ProcessMode::Daemon);
+    EXPECT_EQ(process::ProcessConfig::parse_mode("bogus"),
+              process::ProcessMode::Foreground);
+    EXPECT_EQ(process::ProcessConfig::parse_mode(""),
+              process::ProcessMode::Foreground);
+}
+
+TEST_F(ProcessLifecycleTest, HealthHttpServerStartAndRespond) {
+    // ActorSystem with a scheduler thread (daemon gets its own dedicated
+    // thread).
+    Config sys_cfg;
+    sys_cfg.scheduler_threads = 1;
+    sys_cfg.enable_network = false;
+
+    ActorSystem system(sys_cfg);
+
+    // Spawn HealthHttpServer on a loopback port.
+    process::HealthHttpConfig health_cfg;
+    health_cfg.port = 18081;
+    health_cfg.bind_address = "127.0.0.1";
+
+    auto server = system.spawn<process::HealthHttpServer>(health_cfg);
+    ASSERT_TRUE(server);
+
+    // Give the daemon thread time to bind and start its accept loop.
+    std::this_thread::sleep_for(std::chrono::milliseconds(400));
+
+    // Make a raw HTTP request over a loopback socket.
+    int sock = socket(AF_INET, SOCK_STREAM, 0);
+    ASSERT_GE(sock, 0);
+
+    struct sockaddr_in addr{};
+    addr.sin_family = AF_INET;
+    addr.sin_port = htons(18081);
+    ASSERT_EQ(inet_pton(AF_INET, "127.0.0.1", &addr.sin_addr), 1);
+
+    int conn_rc =
+        connect(sock, reinterpret_cast<struct sockaddr*>(&addr), sizeof(addr));
+    ASSERT_EQ(conn_rc, 0);
+
+    const char* request = "GET /health/live HTTP/1.1\r\n"
+                          "Host: 127.0.0.1:18081\r\n"
+                          "Connection: close\r\n"
+                          "\r\n";
+    ssize_t sent = send(sock, request, std::strlen(request), 0);
+    ASSERT_GT(sent, 0);
+
+    char buf[4096];
+    ssize_t n = recv(sock, buf, sizeof(buf) - 1, 0);
+    ASSERT_GT(n, 0);
+    buf[n] = '\0';
+    std::string response(buf, static_cast<size_t>(n));
+
+    EXPECT_NE(response.find("200"), std::string::npos);
+    EXPECT_NE(response.find("OK"), std::string::npos);
+    close(sock);
+
+    // Stop the daemon thread before destruction to avoid a use-after-free race:
+    // the derived-class `gateway_` unique_ptr is destroyed before the
+    // base-class
+    // `~DaemonActor()` joins the thread.  Calling on_deactivate() joins the
+    // daemon thread now, while gateway_ is still alive.
+    auto* daemon = static_cast<DaemonActor*>(server.get().get());
+    daemon->on_deactivate();
+}
 
 } // namespace
