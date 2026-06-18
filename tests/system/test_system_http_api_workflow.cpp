@@ -5,6 +5,7 @@
 
 #include "../support/system_test_fixture.hpp"
 
+#include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/cli/cli_http_server_actor.hpp>
 #include <hpactor/cli/cli_http_server_config.hpp>
 #include <hpactor/cli/http_handler.hpp>
@@ -144,6 +145,241 @@ TEST(HttpApiWorkflow, HttpServerStartAndApiIndex) {
     EXPECT_NE(body.find("v1"), std::string::npos);
 
     // Shutdown server
+    auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
+        system.get_actor(server.id()).get());
+    if (raw)
+        raw->request_shutdown();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+// ─── A.3 System handler tests ────────────────────────────────────────
+
+TEST(HttpApiWorkflow, SystemInfoEndpoint) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 0;
+
+    hpactor::ActorSystem system(cfg);
+
+    hpactor::cli::CliHttpServerConfig server_cfg;
+    server_cfg.http_port = 19091;
+    server_cfg.http_bind_address = "127.0.0.1";
+
+    auto server = system.spawn<hpactor::cli::CliHttpServerActor>(server_cfg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    HttpClient client;
+    ASSERT_TRUE(client.connect(19091));
+
+    auto response = client.request("GET", "/api/v1/system");
+    EXPECT_EQ(response_status(response), 200);
+    EXPECT_NE(response_body(response).find("total_actors"), std::string::npos);
+
+    auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
+        system.get_actor(server.id()).get());
+    if (raw)
+        raw->request_shutdown();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST(HttpApiWorkflow, SystemStatsEndpoint) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 0;
+
+    hpactor::ActorSystem system(cfg);
+
+    hpactor::cli::CliHttpServerConfig server_cfg;
+    server_cfg.http_port = 19092;
+    server_cfg.http_bind_address = "127.0.0.1";
+
+    auto server = system.spawn<hpactor::cli::CliHttpServerActor>(server_cfg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    HttpClient client;
+    ASSERT_TRUE(client.connect(19092));
+
+    auto response = client.request("GET", "/api/v1/system/stats");
+    int status = response_status(response);
+    EXPECT_TRUE(status == 200 || status == 503);
+
+    auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
+        system.get_actor(server.id()).get());
+    if (raw)
+        raw->request_shutdown();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST(HttpApiWorkflow, SystemMemoryEndpoint) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 0;
+
+    hpactor::ActorSystem system(cfg);
+
+    hpactor::cli::CliHttpServerConfig server_cfg;
+    server_cfg.http_port = 19093;
+    server_cfg.http_bind_address = "127.0.0.1";
+
+    auto server = system.spawn<hpactor::cli::CliHttpServerActor>(server_cfg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    HttpClient client;
+    ASSERT_TRUE(client.connect(19093));
+
+    auto response = client.request("GET", "/api/v1/system/memory");
+    EXPECT_EQ(response_status(response), 200);
+
+    auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
+        system.get_actor(server.id()).get());
+    if (raw)
+        raw->request_shutdown();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST(HttpApiWorkflow, DrainEndpoint) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 0;
+
+    hpactor::ActorSystem system(cfg);
+
+    hpactor::cli::CliHttpServerConfig server_cfg;
+    server_cfg.http_port = 19094;
+    server_cfg.http_bind_address = "127.0.0.1";
+
+    auto server = system.spawn<hpactor::cli::CliHttpServerActor>(server_cfg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    HttpClient client;
+    ASSERT_TRUE(client.connect(19094));
+
+    auto response = client.request("POST", "/api/v1/system/drain", "{}");
+    int status = response_status(response);
+    EXPECT_TRUE(status == 200 || status == 202);
+
+    auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
+        system.get_actor(server.id()).get());
+    if (raw)
+        raw->request_shutdown();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+// ─── A.4 Actor endpoint tests ─────────────────────────────────────────
+
+TEST(HttpApiWorkflow, ListActorsEndpoint) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 0;
+
+    hpactor::ActorSystem system(cfg);
+
+    // Spawn two actors so the list is non-empty.
+    auto a1 = system.spawn<hpactor::EventBasedActor>();
+    auto a2 = system.spawn<hpactor::EventBasedActor>();
+    (void)a1;
+    (void)a2;
+
+    hpactor::cli::CliHttpServerConfig server_cfg;
+    server_cfg.http_port = 19096;
+    server_cfg.http_bind_address = "127.0.0.1";
+
+    auto server = system.spawn<hpactor::cli::CliHttpServerActor>(server_cfg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    HttpClient client;
+    ASSERT_TRUE(client.connect(19096));
+
+    auto response = client.request("GET", "/api/v1/actors");
+    EXPECT_EQ(response_status(response), 200);
+    EXPECT_NE(response_body(response).find("data"), std::string::npos);
+
+    auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
+        system.get_actor(server.id()).get());
+    if (raw)
+        raw->request_shutdown();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST(HttpApiWorkflow, GetActorEndpoint) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 1;
+
+    hpactor::ActorSystem system(cfg);
+
+    auto actor = system.spawn<hpactor::EventBasedActor>();
+    uint64_t id = actor.id().value();
+
+    hpactor::cli::CliHttpServerConfig server_cfg;
+    server_cfg.http_port = 19097;
+    server_cfg.http_bind_address = "127.0.0.1";
+
+    auto server = system.spawn<hpactor::cli::CliHttpServerActor>(server_cfg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    HttpClient client;
+    ASSERT_TRUE(client.connect(19097));
+
+    auto response = client.request("GET", "/api/v1/actors/" + std::to_string(id));
+    EXPECT_EQ(response_status(response), 200);
+
+    auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
+        system.get_actor(server.id()).get());
+    if (raw)
+        raw->request_shutdown();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST(HttpApiWorkflow, KillActorEndpoint) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 1;
+
+    hpactor::ActorSystem system(cfg);
+
+    auto actor = system.spawn<hpactor::EventBasedActor>();
+    uint64_t id = actor.id().value();
+
+    hpactor::cli::CliHttpServerConfig server_cfg;
+    server_cfg.http_port = 19098;
+    server_cfg.http_bind_address = "127.0.0.1";
+
+    auto server = system.spawn<hpactor::cli::CliHttpServerActor>(server_cfg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    HttpClient client;
+    ASSERT_TRUE(client.connect(19098));
+
+    auto response =
+        client.request("DELETE", "/api/v1/actors/" + std::to_string(id));
+    int status = response_status(response);
+    EXPECT_TRUE(status == 200 || status == 202);
+
+    auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
+        system.get_actor(server.id()).get());
+    if (raw)
+        raw->request_shutdown();
+    std::this_thread::sleep_for(std::chrono::milliseconds(100));
+}
+
+TEST(HttpApiWorkflow, GetActorMailboxEndpoint) {
+    hpactor::Config cfg;
+    cfg.scheduler_threads = 1;
+
+    hpactor::ActorSystem system(cfg);
+
+    auto actor = system.spawn<hpactor::EventBasedActor>();
+    uint64_t id = actor.id().value();
+
+    hpactor::cli::CliHttpServerConfig server_cfg;
+    server_cfg.http_port = 19099;
+    server_cfg.http_bind_address = "127.0.0.1";
+
+    auto server = system.spawn<hpactor::cli::CliHttpServerActor>(server_cfg);
+    std::this_thread::sleep_for(std::chrono::milliseconds(500));
+
+    HttpClient client;
+    ASSERT_TRUE(client.connect(19099));
+
+    auto response =
+        client.request("GET", "/api/v1/actors/" + std::to_string(id) + "/mailbox");
+    EXPECT_EQ(response_status(response), 200);
+    EXPECT_NE(response_body(response).find("depth"), std::string::npos);
+
     auto* raw = static_cast<hpactor::cli::CliHttpServerActor*>(
         system.get_actor(server.id()).get());
     if (raw)
