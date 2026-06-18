@@ -21,10 +21,12 @@
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/types/types.hpp>
 
+#include <cerrno>
 #include <chrono>
 #include <cstdio>
 #include <cstdlib>
 #include <memory>
+#include <sys/socket.h>
 #include <thread>
 
 #include <hpactor/msg/frame.hpp>
@@ -98,6 +100,19 @@ bool CliClientActor::pre_input_hook() {
         printf("\n[Disconnected from server]\n");
         running_ = false;
         return false;
+    }
+
+    // Liveness check: the local ConnectionState may still report Connected
+    // even after the server has closed its end of the socket.  A non-blocking
+    // peek detects the TCP FIN so we can trigger the reconnection path.
+    if (connector_.is_connected()) {
+        char discard;
+        ssize_t n = ::recv(connector_.fd(), &discard, 1, MSG_PEEK | MSG_DONTWAIT);
+        // EOF (n == 0): server closed the connection cleanly.
+        // Error (n < 0, not EAGAIN): hard error on the socket.
+        // Both force a disconnect so the reconnection block below picks up.
+        if (n == 0 || (n < 0 && errno != EAGAIN && errno != EWOULDBLOCK))
+            connector_.disconnect();
     }
 
     if (!connector_.is_connected()) {
@@ -234,6 +249,12 @@ CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
         resp.ParseFromArray(response_body->data(),
                             static_cast<int>(response_body->size()));
     }
+
+    // 4. If the request failed (timeout or transport error), force a
+    //    disconnect so pre_input_hook() detects it on the next iteration
+    //    and can print a disconnection message + trigger reconnection.
+    if (resp.is_error())
+        connector_.disconnect();
 
     return resp;
 }
