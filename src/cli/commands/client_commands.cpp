@@ -1,6 +1,7 @@
 // Copyright 2026 HPActor Contributors
 // SPDX-License-Identifier: Apache-2.0
 
+#include <hpactor/cli/cli_client_actor.hpp>
 #include <hpactor/cli/cli_legacy_server_actor.hpp>
 #include <hpactor/cli/cli_proto_server_actor.hpp>
 #include <hpactor/cli/command_registry.hpp>
@@ -29,6 +30,42 @@ static CliProtoServerActor* find_proto_server(ActorSystem* sys) {
     return found;
 }
 
+/// Find a CliLegacyServerActor in the ActorSystem.  Needed when the command
+/// runs in the local stdin CLI (CliActor) session.
+static CliLegacyServerActor* find_legacy_server(ActorSystem* sys) {
+    if (!sys)
+        return nullptr;
+    CliLegacyServerActor* found = nullptr;
+    sys->for_each_actor([&](ActorId, AbstractActor& actor) {
+        if (!found && actor.type_name() ==
+                          std::string_view(CliLegacyServerActor::kActorTypeName))
+            found = static_cast<CliLegacyServerActor*>(&actor);
+    });
+    return found;
+}
+
+/// Helper: try to find any server (proto first, then legacy) in the
+/// ActorSystem and call \p fn on it.  Returns false if no server found.
+template <typename Fn> static bool try_with_server(CommandContext& ctx, Fn fn) {
+    if (auto* srv = ctx.cli_proto_server) {
+        fn(srv);
+        return true;
+    }
+    if (auto* srv = ctx.cli_server_actor) {
+        fn(srv);
+        return true;
+    }
+    if (auto* srv = find_proto_server(ctx.system)) {
+        fn(srv);
+        return true;
+    }
+    if (auto* srv = find_legacy_server(ctx.system)) {
+        fn(srv);
+        return true;
+    }
+    return false;
+}
+
 class ClientListCommand final : public ICommand {
   public:
     std::string_view path() const noexcept override {
@@ -42,20 +79,17 @@ class ClientListCommand final : public ICommand {
     }
 
     result<void> execute(CommandContext& ctx) const override {
-        // Remote CLI: delegate to the server via execute_path.
-        if (ctx.system_host &&
-            ctx.system_host->execute_path("client/list", {}, {}, *ctx.output))
-            return result<void>::make();
-        // Direct access: ctx.cli_proto_server (set in proto server sessions).
-        if (auto* srv = ctx.cli_proto_server) {
-            ctx.output->raw(srv->list_clients());
+        // 1. Client-side: show only this client's own connection status.
+        if (auto* client = ctx.cli_client_actor) {
+            ctx.output->raw(client->list_clients());
             return result<void>::make();
         }
-        // Local CLI: find the proto server in the ActorSystem.
-        if (auto* srv = find_proto_server(ctx.system)) {
-            ctx.output->raw(srv->list_clients());
+        // 2. Server-side: show all connected clients.
+        bool found = try_with_server(
+            ctx, [&ctx](auto* srv) { ctx.output->raw(srv->list_clients()); });
+        if (found)
             return result<void>::make();
-        }
+        // 3. No server available.
         ctx.output->error("No CLI server running — client management "
                           "not available.");
         return result<void>::make();
@@ -89,19 +123,23 @@ class ClientCloseCommand final : public ICommand {
         }
         uint32_t seqno = static_cast<uint32_t>(val);
 
-        if (ctx.system_host &&
-            ctx.system_host->execute_path("client/" + *seqno_str + "/close", {},
-                                          {}, *ctx.output))
+        // 1. Client-side: disconnect self from server.
+        if (auto* client = ctx.cli_client_actor) {
+            if (client->close_client(seqno))
+                ctx.output->raw("Disconnected from server.\n");
+            else
+                ctx.output->error("Not connected to any server.");
             return result<void>::make();
-        auto* srv = ctx.cli_proto_server ? ctx.cli_proto_server
-                                         : find_proto_server(ctx.system);
-        if (srv) {
+        }
+        // 2. Server-side: close a specific client by seqno.
+        bool found = try_with_server(ctx, [&ctx, seqno, &seqno_str](auto* srv) {
             if (srv->close_client(seqno))
                 ctx.output->raw("Client " + *seqno_str + " disconnected.\n");
             else
                 ctx.output->error("Client " + *seqno_str + " not found.");
+        });
+        if (found)
             return result<void>::make();
-        }
         ctx.output->error("No CLI server running.");
         return result<void>::make();
     }
@@ -134,16 +172,17 @@ class ClientHistoryCommand final : public ICommand {
         }
         uint32_t seqno = static_cast<uint32_t>(val);
 
-        if (ctx.system_host &&
-            ctx.system_host->execute_path("client/" + *seqno_str + "/history",
-                                          {}, {}, *ctx.output))
-            return result<void>::make();
-        auto* srv = ctx.cli_proto_server ? ctx.cli_proto_server
-                                         : find_proto_server(ctx.system);
-        if (srv) {
-            ctx.output->raw(srv->client_history(seqno));
+        // 1. Client-side: history is tracked on the server.
+        if (auto* client = ctx.cli_client_actor) {
+            ctx.output->raw(client->client_history(seqno));
             return result<void>::make();
         }
+        // 2. Server-side: show history for a specific client.
+        bool found = try_with_server(ctx, [&ctx, seqno](auto* srv) {
+            ctx.output->raw(srv->client_history(seqno));
+        });
+        if (found)
+            return result<void>::make();
         ctx.output->error("No CLI server running.");
         return result<void>::make();
     }

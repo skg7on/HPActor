@@ -65,6 +65,14 @@ class CliClientActor : public InteractiveCliActor {
         exec_mode_ = true;
     }
 
+    // ── Client-side /client command support ──────────────────────────
+    /// \brief Return connection status for this client (self only).
+    std::string list_clients() const;
+    /// \brief Disconnect this client from the server.
+    bool close_client(uint32_t seqno);
+    /// \brief Return own command history (not tracked locally).
+    std::string client_history(uint32_t seqno) const;
+
   protected:
     // InteractiveCliActor virtual hooks
     void print_greeting() override;
@@ -85,6 +93,7 @@ class CliClientActor : public InteractiveCliActor {
     class CliConnector connector_;
     bool exec_mode_ = false;
     bool was_ever_connected_ = false;
+    bool intentionally_disconnected_ = false;
     std::string exec_cmd_;
 };
 

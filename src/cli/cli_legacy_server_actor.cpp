@@ -74,7 +74,7 @@ void CliLegacyServerActor::on_daemon_start() {
 
         uds_acceptor_ = std::make_unique<net::UnixDomainAcceptor>(loop_.get());
         uds_acceptor_->set_accept_handler(
-            [this](int fd, EndPoint /*remote*/) { on_client_accepted(fd); });
+            [this](int fd, EndPoint /*remote*/) { on_uds_accepted(fd); });
 
         if (!uds_acceptor_->listen(config_.uds_listen_path)) {
             std::fprintf(stderr, "CliLegacyServerActor: UDS listen failed on %s\n",
@@ -107,8 +107,9 @@ void CliLegacyServerActor::on_daemon_start() {
     // --- TCP socket ---
     if (config_.tcp_listen_port > 0) {
         tcp_acceptor_ = std::make_unique<net::TcpAcceptor>(loop_.get());
-        tcp_acceptor_->set_accept_handler(
-            [this](int fd, EndPoint /*remote*/) { on_client_accepted(fd); });
+        tcp_acceptor_->set_accept_handler([this](int fd, EndPoint remote_ep) {
+            on_tcp_accepted(fd, remote_ep);
+        });
 
         if (!tcp_acceptor_->listen(config_.tcp_listen_port, 0,
                                    config_.tcp_bind_address)) {
@@ -161,7 +162,7 @@ bool CliLegacyServerActor::run_once() {
 // Client connection management
 // ---------------------------------------------------------------------------
 
-void CliLegacyServerActor::on_client_accepted(int client_fd) {
+void CliLegacyServerActor::on_tcp_accepted(int client_fd, EndPoint remote_ep) {
     if (sessions_.size() >= config_.max_sessions) {
         ::close(client_fd);
         return;
@@ -195,6 +196,61 @@ void CliLegacyServerActor::on_client_accepted(int client_fd) {
     SessionState state;
     state.session = std::move(session);
     state.last_activity = std::chrono::steady_clock::now();
+    state.seqno = next_seqno_++;
+    // Build "IP:port" string for TCP clients.
+    if (auto* ipv4 = std::get_if<Ipv4Endpoint>(&remote_ep)) {
+        char buf[32];
+        uint32_t a = ipv4->addr;
+        snprintf(buf, sizeof(buf), "%u.%u.%u.%u:%u", (a >> 24) & 0xFF,
+                 (a >> 16) & 0xFF, (a >> 8) & 0xFF, a & 0xFF, ipv4->port());
+        state.remote_addr = buf;
+    } else {
+        state.remote_addr = "tcp";
+    }
+    int fd = client_fd;
+    sessions_.emplace(fd, std::move(state));
+
+    // Register a read_handler so the EventLoop wakes us when data arrives.
+    loop_->set_read_handler(
+        fd, [this](int ready_fd) { on_client_readable(ready_fd); });
+}
+
+void CliLegacyServerActor::on_uds_accepted(int client_fd) {
+    if (sessions_.size() >= config_.max_sessions) {
+        ::close(client_fd);
+        return;
+    }
+
+    auto formatter = OutputFormatter::create(config_.default_format);
+    auto session = std::make_unique<CliSession>(
+        &system_, command_tree_.get(), std::move(formatter),
+        [client_fd](const std::string& text) {
+            // Best-effort write — the fd is non-blocking and may fail.
+            ssize_t ignored = ::write(client_fd, text.data(), text.size());
+            (void)ignored;
+            const char sentinel = '\0';
+            ignored = ::write(client_fd, &sentinel, 1);
+            (void)ignored;
+        },
+        config_.page_size);
+    session->set_cli_server_actor(this);
+    session->set_command_host(this);
+    session->set_system_host(this);
+    session->set_lifecycle_host(this);
+
+    // Send greeting.
+    const char* greeting = "HPActor CLI — Type /help for commands, /quit to exit.\n";
+    ssize_t ignored = ::write(client_fd, greeting, std::strlen(greeting));
+    (void)ignored;
+    const char sentinel = '\0';
+    ignored = ::write(client_fd, &sentinel, 1);
+    (void)ignored;
+
+    SessionState state;
+    state.session = std::move(session);
+    state.last_activity = std::chrono::steady_clock::now();
+    state.seqno = next_seqno_++;
+    state.remote_addr = "uds";
     int fd = client_fd;
     sessions_.emplace(fd, std::move(state));
 
@@ -259,6 +315,50 @@ void CliLegacyServerActor::close_session(int client_fd) {
     loop_->clear_read_handler(client_fd);
     ::close(client_fd);
     sessions_.erase(it);
+}
+
+// ---------------------------------------------------------------------------
+// Client management (for /client commands)
+// ---------------------------------------------------------------------------
+
+std::string CliLegacyServerActor::list_clients() const {
+    std::string result;
+    if (sessions_.empty())
+        return "No connected clients.\n";
+    result += "Seqno  Remote\n";
+    result += "-----  ------\n";
+    for (const auto& [fd, state] : sessions_) {
+        char buf[80];
+        snprintf(buf, sizeof(buf), "%-6u %s\n", state.seqno,
+                 state.remote_addr.c_str());
+        result += buf;
+    }
+    return result;
+}
+
+bool CliLegacyServerActor::close_client(uint32_t seqno) {
+    for (auto& [fd, state] : sessions_) {
+        if (state.seqno == seqno) {
+            // Need to remove read handler before closing fd.
+            // close_session is const-safe if we cast away the sessions_ lookup
+            // — but it's a private method on `this`, so we can just call it
+            // directly.  Copy the closure logic inline to avoid modifying
+            // close_session to accept a seqno.
+            loop_->clear_read_handler(fd);
+            ::close(fd);
+            sessions_.erase(fd);
+            return true;
+        }
+    }
+    return false;
+}
+
+std::string CliLegacyServerActor::client_history(uint32_t seqno) const {
+    for (const auto& [fd, state] : sessions_) {
+        if (state.seqno == seqno)
+            return "(not tracked for text-based sessions)\n";
+    }
+    return "Client " + std::to_string(seqno) + " not found.\n";
 }
 
 // ---------------------------------------------------------------------------

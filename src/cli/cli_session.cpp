@@ -62,6 +62,7 @@ void CliSession::execute_tokens(const std::vector<Token>& tokens) {
     ctx.cli_actor = cli_actor_;
     ctx.cli_server_actor = cli_server_actor_;
     ctx.cli_proto_server = proto_server_;
+    ctx.cli_client_actor = client_actor_;
     ctx.command_host = command_host_;
     ctx.system_host = system_host_;
     ctx.lifecycle_host = lifecycle_host_;

@@ -48,6 +48,9 @@ CliClientActor::~CliClientActor() = default;
 // ---------------------------------------------------------------------------
 
 void CliClientActor::print_greeting() {
+    // Wire the client pointer into CliSession so /client commands can detect
+    // they're running on a client and show self-only information.
+    session_->set_client_actor(this);
     // Defer the real greeting to pre_input_hook() — the connection hasn't been
     // attempted yet at this point.  Don't claim "Connected" or suggest typing
     // commands until the transport is actually up.
@@ -88,6 +91,13 @@ bool CliClientActor::pre_input_hook() {
         session_->process_line(exec_cmd_);
         disconnect();
         return false; // exit after exec
+    }
+
+    // Active disconnect via /client close — don't reconnect.
+    if (intentionally_disconnected_) {
+        printf("\n[Disconnected from server]\n");
+        running_ = false;
+        return false;
     }
 
     if (!connector_.is_connected()) {
@@ -362,6 +372,34 @@ result<void> CliClientActor::shutdown() {
     if (resp.is_error())
         return result<void>::make(error(errors::unknown, "shutdown failed"));
     return result<void>::make();
+}
+
+// ---------------------------------------------------------------------------
+// Client-side /client command support — self-only information
+// ---------------------------------------------------------------------------
+
+std::string CliClientActor::list_clients() const {
+    if (connector_.is_connected()) {
+        if (!config_.host.empty())
+            return "Client connected to server at " + config_.host + ":" +
+                   std::to_string(config_.port) + "\n";
+        else
+            return "Client connected to server via " + config_.uds_path + "\n";
+    }
+    return "Not connected to any server.\n";
+}
+
+bool CliClientActor::close_client(uint32_t /*seqno*/) {
+    if (!connector_.is_connected())
+        return false;
+    printf("Disconnecting from server...\n");
+    disconnect();
+    intentionally_disconnected_ = true;
+    return true;
+}
+
+std::string CliClientActor::client_history(uint32_t /*seqno*/) const {
+    return "Command history is tracked on the server side.\n";
 }
 
 } // namespace cli
