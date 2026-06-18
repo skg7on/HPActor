@@ -14,6 +14,7 @@
 
 #pragma once
 
+#include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <charconv>
@@ -42,6 +43,13 @@ void render_scheduler_workers(ActorSystem& sys, OutputFormatter& output);
 /// Fetches the MetricsActor from the system and calls format_snapshot().
 /// If the metrics subsystem is not enabled, prints a short message.
 void render_metrics_show(ActorSystem& sys, OutputFormatter& output);
+
+/// \brief Encode protobuf data as an HPAC WireFrame.
+///
+/// Prepends the 4-byte magic "HPAC" + 4-byte big-endian payload length
+/// before the payload so that WireFrameConnection can decode it on the
+/// receiving end.
+StreamBuffer encode_as_frame(const std::string& protobuf_data);
 
 inline ActorId parse_actor_id(const std::string& s) {
     uint64_t raw = 0;

@@ -8,9 +8,28 @@
 #include <hpactor/metrics/metrics_actor.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
+#include <arpa/inet.h>
+#include <array>
+#include <cstdint>
 #include <cstdio>
 #include <string>
 #include <vector>
+
+namespace hpactor::cli {
+
+StreamBuffer encode_as_frame(const std::string& protobuf_data) {
+    StreamBuffer result;
+    const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'C'};
+    result.append(magic.data(), 4);
+    uint32_t payload_len = static_cast<uint32_t>(protobuf_data.size());
+    uint32_t net_len = htonl(payload_len);
+    result.append(reinterpret_cast<const uint8_t*>(&net_len), 4);
+    result.append(reinterpret_cast<const uint8_t*>(protobuf_data.data()),
+                  protobuf_data.size());
+    return result;
+}
+
+} // namespace hpactor::cli
 
 namespace hpactor::cli {
 

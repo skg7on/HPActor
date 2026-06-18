@@ -30,6 +30,8 @@
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/net/wireframe_connection.hpp>
 
+#include "commands/command_utils.hpp"
+
 namespace hpactor {
 namespace cli {
 
@@ -169,23 +171,6 @@ void CliClientActor::disconnect() {
 // Wire protocol — send via Connection::send() (same path as try_send),
 // receive via EventLoop read handler with HPAC Frame decoding.
 // ---------------------------------------------------------------------------
-
-namespace {
-
-/// Encode protobuf data as an HPAC WireFrame: magic + big-endian length + data.
-inline StreamBuffer encode_as_frame(const std::string& protobuf_data) {
-    StreamBuffer result;
-    const std::array<uint8_t, 4> magic = {'H', 'P', 'A', 'C'};
-    result.append(magic.data(), 4);
-    uint32_t payload_len = static_cast<uint32_t>(protobuf_data.size());
-    uint32_t net_len = htonl(payload_len);
-    result.append(reinterpret_cast<const uint8_t*>(&net_len), 4);
-    result.append(reinterpret_cast<const uint8_t*>(protobuf_data.data()),
-                  protobuf_data.size());
-    return result;
-}
-
-} // anonymous namespace
 
 CliResponse CliClientActor::send_and_wait(const CliCommand& cmd) {
     CliResponse resp;
