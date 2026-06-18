@@ -1,68 +1,58 @@
 // Copyright 2026 HPActor Contributors
-//
-// Licensed under the Apache License, Version 2.0 (the "License");
-// you may not use this file except in compliance with the License.
-// You may obtain a copy of the License at
-//
-//     http://www.apache.org/licenses/LICENSE-2.0
-//
-// Unless required by applicable law or agreed to in writing, software
-// distributed under the License is distributed on an "AS IS" BASIS,
-// WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-// See the License for the specific language governing permissions and
-// limitations under the License.
+// SPDX-License-Identifier: Apache-2.0
 
 #include "cli_http_handler_helpers.hpp"
 
 #include <hpactor/cli/cli_http_server_actor.hpp>
+#include <hpactor/cli/http_handler.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_types.hpp>
 
-namespace hpactor {
-namespace cli {
-namespace handlers {
+namespace hpactor::cli::handlers {
 
-// ====================================================================
-// Task 13: handle_list_asks
-// ====================================================================
+class ListAsksHandler final : public IHttpHandler {
+  public:
+    static constexpr net::HttpMethod kMethod = net::HttpMethod::GET;
+    static constexpr std::string_view kPath = "/api/v1/asks";
+    void handle(CliHttpServerActor&, net::HTTPConnection& conn,
+                net::HttpRequest&&) override {
+        send_error(&conn, net::HttpStatusCode::NotImplemented,
+                   "NOT_IMPLEMENTED", "Ask enumeration not yet available");
+    }
+};
 
-void handle_list_asks(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                      net::HttpRequest&& req) {
-    (void)actor;
-    (void)req;
-    send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
-               "Ask enumeration not yet available");
+class GetAskHandler final : public IHttpHandler {
+  public:
+    static constexpr net::HttpMethod kMethod = net::HttpMethod::GET;
+    static constexpr std::string_view kPath = "/api/v1/asks/:message_id";
+    void handle(CliHttpServerActor&, net::HTTPConnection& conn,
+                net::HttpRequest&&) override {
+        send_error(&conn, net::HttpStatusCode::NotFound, "ASK_NOT_FOUND",
+                   "Ask lookup by message_id is not yet implemented");
+    }
+};
+
+class CancelAskHandler final : public IHttpHandler {
+  public:
+    static constexpr net::HttpMethod kMethod = net::HttpMethod::DELETE;
+    static constexpr std::string_view kPath = "/api/v1/asks/:message_id";
+    void handle(CliHttpServerActor&, net::HTTPConnection& conn,
+                net::HttpRequest&& req) override {
+        if (!validate_json_content_type(&conn, req))
+            return;
+        send_error(&conn, net::HttpStatusCode::NotImplemented,
+                   "NOT_IMPLEMENTED", "Ask cancellation not yet available");
+    }
+};
+
+void register_ask_handlers() {
+    auto& r = HttpHandlerRegistry::instance();
+    r.add(ListAsksHandler::kMethod, std::string(ListAsksHandler::kPath),
+          std::make_unique<ListAsksHandler>());
+    r.add(GetAskHandler::kMethod, std::string(GetAskHandler::kPath),
+          std::make_unique<GetAskHandler>());
+    r.add(CancelAskHandler::kMethod, std::string(CancelAskHandler::kPath),
+          std::make_unique<CancelAskHandler>());
 }
 
-// ====================================================================
-// Task 13: handle_get_ask
-// ====================================================================
-
-void handle_get_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                    net::HttpRequest&& req) {
-    // TODO: implement when AskManager exposes lookup by message_id
-    (void)actor;
-    (void)req;
-
-    send_error(conn, net::HttpStatusCode::NotFound, "ASK_NOT_FOUND",
-               "Ask lookup by message_id is not yet implemented");
-}
-
-// ====================================================================
-// Task 13: handle_cancel_ask
-// ====================================================================
-
-void handle_cancel_ask(CliHttpServerActor* actor, net::HTTPConnection* conn,
-                       net::HttpRequest&& req) {
-    if (!validate_json_content_type(conn, req))
-        return;
-
-    // TODO: implement when AskManager exposes cancel by message_id
-    (void)actor;
-    send_error(conn, net::HttpStatusCode::NotImplemented, "NOT_IMPLEMENTED",
-               "Ask cancellation not yet available");
-}
-
-} // namespace handlers
-} // namespace cli
-} // namespace hpactor
+} // namespace hpactor::cli::handlers

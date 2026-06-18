@@ -3,6 +3,8 @@
 
 #include "cli_http_handler_helpers.hpp"
 
+#include <hpactor/cli/http_handler.hpp>
+
 #include <cctype>
 #include <cstdlib>
 #include <sstream>

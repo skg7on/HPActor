@@ -165,11 +165,6 @@ class CliHttpServerActor : public DaemonActor,
     void dispatch_route(net::HTTPConnection* conn, net::HttpRequest&& req);
     void init_routes();
 
-    // PIMPL for route table storage (avoids exposing src/cli/handlers types
-    // in this public header).
-    struct RouteTable;
-    std::unique_ptr<RouteTable> route_table_;
-
     ActorSystem& system_;
     CliHttpServerConfig config_;
     std::unique_ptr<net::HTTPGateway> gateway_;
