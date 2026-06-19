@@ -20,8 +20,6 @@
 #include <hpactor/cli/cli_types.hpp>
 
 #include "../messages.hpp"
-#include "saturate_receiver_actor.hpp"
-#include "saturate_sender_actor.hpp"
 
 #include <algorithm>
 #include <atomic>
@@ -201,6 +199,11 @@ class SaturateCoordinatorActor : public EventBasedActor {
         const auto& p = msg.payload();
         std::string preset_name(p.data(), p.data() + p.size());
 
+        if (sender_addrs_.empty() && receiver_addrs_.empty()) {
+            last_error_ = "Actors not yet initialized. Please wait and try again.";
+            return;
+        }
+
         const SaturatePreset* preset = nullptr;
         for (auto& pr : presets_) {
             if (pr.name == preset_name) {
@@ -211,39 +214,6 @@ class SaturateCoordinatorActor : public EventBasedActor {
         if (!preset) {
             last_error_ = "Unknown preset: " + preset_name;
             return;
-        }
-
-        // Clean up any previously spawned actors from a prior run.
-        if (spawned_) {
-            for (auto& addr : sender_addrs_)
-                context()->stop(addr.id);
-            for (auto& addr : receiver_addrs_)
-                context()->stop(addr.id);
-            sender_addrs_.clear();
-            receiver_addrs_.clear();
-            spawned_ = false;
-        }
-
-        // Dynamic spawn when no addresses were pre-set (interactive mode).
-        if (sender_addrs_.empty()) {
-            if (!collector_addr_) {
-                last_error_ = "Collector not set. Please wait and try again.";
-                return;
-            }
-
-            for (uint32_t i = 0; i < preset->num_receivers; ++i) {
-                auto r =
-                    home_system().spawn<SaturateReceiverActor>(collector_addr_, i);
-                receiver_addrs_.push_back(r.address());
-            }
-
-            for (uint32_t i = 0; i < preset->num_senders; ++i) {
-                auto s = home_system().spawn<SaturateSenderActor>(
-                    collector_addr_, receiver_addrs_, i);
-                sender_addrs_.push_back(s.address());
-            }
-
-            spawned_ = true;
         }
 
         active_senders_ = std::min(preset->num_senders,
@@ -298,17 +268,6 @@ class SaturateCoordinatorActor : public EventBasedActor {
         context()->send(collector_addr_, make_msg(SaturateStopTag, empty));
         running_ = false;
         phase_ = RampPhase::Reporting;
-
-        // Tear down dynamically spawned actors so the next run starts fresh.
-        if (spawned_) {
-            for (auto& addr : sender_addrs_)
-                context()->stop(addr.id);
-            for (auto& addr : receiver_addrs_)
-                context()->stop(addr.id);
-            sender_addrs_.clear();
-            receiver_addrs_.clear();
-            spawned_ = false;
-        }
     }
 
     void handle_stats_poll() {
@@ -448,7 +407,6 @@ class SaturateCoordinatorActor : public EventBasedActor {
     std::vector<ActorAddress> receiver_addrs_;
     uint32_t active_senders_ = 0;
     uint32_t active_receivers_ = 0;
-    bool spawned_ = false;
     ActorAddress collector_addr_;
     std::string active_preset_;
     std::string last_error_;

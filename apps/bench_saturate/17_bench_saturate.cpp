@@ -323,12 +323,33 @@ int main(int argc, char* argv[]) {
     auto* coord_raw = static_cast<bench_saturate::SaturateCoordinatorActor*>(
         coordinator.get().get());
 
+    constexpr uint32_t kMaxSenders = 5000;
+    constexpr uint32_t kMaxReceivers = 1000;
+
     auto collector_addr = collector.address();
 
-    // Pass the collector address to the coordinator so it can spawn
-    // senders/receivers on demand when a preset is started.  No actors
-    // are pre-created — the coordinator spawns exactly the right number
-    // for each preset and cleans them up on stop.
+    // Pre-create the maximum pool size so that actors exist before the
+    // scheduler begins steady-state operation.  The coordinator gates
+    // which subset participates via active_senders_/active_receivers_
+    // so only the preset's count actually sends/receives messages.
+    std::vector<hpactor::ActorAddress> receiver_addrs;
+    receiver_addrs.reserve(kMaxReceivers);
+    for (uint32_t i = 0; i < kMaxReceivers; ++i) {
+        auto r =
+            system.spawn<bench_saturate::SaturateReceiverActor>(collector_addr, i);
+        receiver_addrs.push_back(r.address());
+    }
+
+    std::vector<hpactor::ActorAddress> sender_addrs;
+    sender_addrs.reserve(kMaxSenders);
+    for (uint32_t i = 0; i < kMaxSenders; ++i) {
+        auto s = system.spawn<bench_saturate::SaturateSenderActor>(
+            collector_addr, receiver_addrs, i);
+        sender_addrs.push_back(s.address());
+    }
+
+    coord_raw->set_sender_addrs(sender_addrs);
+    coord_raw->set_receiver_addrs(receiver_addrs);
     coord_raw->set_collector_addr(collector_addr);
 
     std::this_thread::sleep_for(std::chrono::milliseconds(200));
