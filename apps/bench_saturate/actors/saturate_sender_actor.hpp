@@ -55,6 +55,7 @@ class SaturateSenderActor : public EventBasedActor {
         : EventBasedActor(ctx, sys), collector_addr_(collector_addr),
           receiver_addrs_(receiver_addrs), sender_index_(sender_index),
           epoch_start_(std::chrono::steady_clock::now()) {
+        add_fast_tag(SendTickTag);
         become(make_behavior());
     }
 

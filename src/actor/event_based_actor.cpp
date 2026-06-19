@@ -84,6 +84,15 @@ void EventBasedActor::receive(TypedMessage& msg) {
         return;
     }
 
+    // Fast-tag dispatch: system messages (tag < TypeTag::User) never
+    // take the fast path — they must go through dispatch_system_message().
+    // User messages with a registered fast tag skip all pipeline gates.
+    if (static_cast<uint32_t>(msg.type_id()) >= 0x1000 &&
+        is_fast_tag(msg.type_id())) {
+        dispatch_user_message(msg);
+        return;
+    }
+
     // Trace: set up receive span + context scope (RAII-managed)
     auto* ctx = context();
     auto* trace_manager = system().trace_manager();
@@ -869,6 +878,22 @@ void EventBasedActor::check_mailbox_pressure() {
             }
         }
     }
+}
+
+// ── Fast-tag dispatch ───────────────────────────────────────────────
+
+void EventBasedActor::add_fast_tag(TypeTag tag) noexcept {
+    uint32_t idx = static_cast<uint32_t>(tag) & 0xFF;
+    uint32_t word = idx / 64;
+    uint32_t bit = idx % 64;
+    fast_tag_bitset_[word] |= (uint64_t{1} << bit);
+}
+
+bool EventBasedActor::is_fast_tag(TypeTag tag) const noexcept {
+    uint32_t idx = static_cast<uint32_t>(tag) & 0xFF;
+    uint32_t word = idx / 64;
+    uint32_t bit = idx % 64;
+    return (fast_tag_bitset_[word] & (uint64_t{1} << bit)) != 0;
 }
 
 } // namespace hpactor

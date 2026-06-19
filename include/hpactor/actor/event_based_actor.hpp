@@ -419,6 +419,27 @@ class EventBasedActor : public LocalActor {
 
     cli::MboxSnapshot mailbox_snapshot() const override;
 
+    // ── Fast-tag dispatch ──────────────────────────────────────────
+
+    /// \brief Register a TypeTag for fast-path dispatch.
+    ///
+    /// Messages with this tag skip the full receive() pipeline (drain gate,
+    /// lifecycle gate, CLI dispatch, drain completion, mailbox pressure
+    /// check) and go directly to \c dispatch_user_message(). System
+    /// messages (tag < \c TypeTag::User) are never fast-pathed.
+    ///
+    /// \param[in] tag TypeTag to fast-path.
+    /// \note Thread safety: call from the owning scheduler thread before
+    ///       the actor begins processing messages.
+    void add_fast_tag(TypeTag tag) noexcept;
+
+    /// \brief Check whether a tag is registered for fast-path dispatch.
+    ///
+    /// \param[in] tag TypeTag to check.
+    /// \return \c true if \p tag was previously registered via
+    ///         \c add_fast_tag().
+    [[nodiscard]] bool is_fast_tag(TypeTag tag) const noexcept;
+
   protected:
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
     log::Logger* logger_{nullptr};
@@ -487,6 +508,9 @@ class EventBasedActor : public LocalActor {
     ProtoHandlerMap proto_handlers_{
         mem::MemStdAllocator<std::pair<const TypeTag, ProtoHandler>>(
             id_ptr(), mem::RegionType::kActor)};
+
+    // 256-bit bitset indexed by tag.value() & 0xFF for fast-tag dispatch.
+    uint64_t fast_tag_bitset_[4] = {};
 };
 
 } // namespace hpactor
