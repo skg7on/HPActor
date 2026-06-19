@@ -228,17 +228,22 @@ void SelfSupervisingActor::handle_child_down(TypeTag /*tag*/,
     if (!pb->ParseFromArray(payload.data(), static_cast<int>(payload.size()))) {
         return;
     }
-    auto directive =
-        decide_restart(ActorId(pb->actor_id()), error(pb->reason_code()));
+    auto child_id = ActorId(pb->actor_id());
+    auto reason = error(pb->reason_code());
+    auto directive = decide_restart(child_id, reason);
     // Apply the supervision directive
     if (directive == SupervisionDirective::Stop) {
         // Remove the stopped child from our tracking
-        auto id = ActorId(pb->actor_id());
-        auto it = std::find_if(children_.begin(), children_.end(),
-                               [id](const Actor& a) { return a.id() == id; });
+        auto it = std::find_if(
+            children_.begin(), children_.end(),
+            [child_id](const Actor& a) { return a.id() == child_id; });
         if (it != children_.end()) {
             remove_child(*it);
         }
+        on_failure(child_id, reason);
+    } else {
+        // Restart or Quarantine — delegate to subclass override.
+        on_failure(child_id, reason);
     }
 }
 

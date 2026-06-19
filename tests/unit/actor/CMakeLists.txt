@@ -14,6 +14,9 @@ add_executable(test_unit_actor
     test_proto_registry.cpp
     test_actor_directory.cpp
     test_quarantine_reason.cpp
+    routing/test_routing_logic.cpp
+    routing/test_pool_router.cpp
+    routing/test_group_router.cpp
 )
-target_link_libraries(test_unit_actor hpactor hpactor_proto pthread GTest::gtest_main)
+target_link_libraries(test_unit_actor hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_actor)
