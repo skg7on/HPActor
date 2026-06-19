@@ -322,6 +322,32 @@ struct DropReportPayload {
 };
 
 // =============================================================================
+// ThroughputSample payload encoding
+// =============================================================================
+
+struct ThroughputSamplePayload {
+    uint32_t sender_id = 0;
+    uint64_t total_sent = 0;
+
+    StreamBuffer encode() const {
+        uint8_t buf[12];
+        std::memcpy(buf, &sender_id, 4);
+        std::memcpy(buf + 4, &total_sent, 8);
+        return StreamBuffer(buf, buf + sizeof(buf));
+    }
+
+    static ThroughputSamplePayload decode(const StreamBuffer& buf) {
+        ThroughputSamplePayload p;
+        if (buf.size() < 12)
+            return p;
+        const uint8_t* d = buf.data();
+        std::memcpy(&p.sender_id, d, 4);
+        std::memcpy(&p.total_sent, d + 4, 8);
+        return p;
+    }
+};
+
+// =============================================================================
 // Convenience: wrap a StreamBuffer in a TypedMessage
 // =============================================================================
 

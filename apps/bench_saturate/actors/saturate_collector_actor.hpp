@@ -126,11 +126,17 @@ class SaturateCollectorActor : public EventBasedActor {
   private:
     static constexpr size_t kReservoirSize = 10000;
 
-    void handle_throughput_sample(TypedMessage& /*msg*/) {
-        // Each sender emits one ThroughputSampleTag per ~100 messages.
-        // total_sent_ is therefore an estimate — accurate to within ~99
-        // messages per sender.  Use total_received_ for exact counts.
-        total_sent_.fetch_add(100, std::memory_order_relaxed);
+    void handle_throughput_sample(TypedMessage& msg) {
+        const auto& p = msg.payload();
+        if (p.size() >= 12) {
+            auto sample = ThroughputSamplePayload::decode(p);
+            uint64_t prev = last_sender_sent_[sample.sender_id];
+            if (sample.total_sent > prev) {
+                total_sent_.fetch_add(sample.total_sent - prev,
+                                      std::memory_order_relaxed);
+                last_sender_sent_[sample.sender_id] = sample.total_sent;
+            }
+        }
         if (running_ && drop_curve_.size() < 1024) {
             drop_curve_.push_back(
                 {static_cast<uint64_t>(
@@ -154,7 +160,6 @@ class SaturateCollectorActor : public EventBasedActor {
                 latencies_.begin() +
                     static_cast<ptrdiff_t>(latencies_.size() - kReservoirSize));
         }
-        total_received_.fetch_add(1, std::memory_order_relaxed);
     }
 
     void handle_drop_report(TypedMessage& msg) {
@@ -163,21 +168,27 @@ class SaturateCollectorActor : public EventBasedActor {
             return;
         DropReportPayload report = DropReportPayload::decode(p);
 
-        // total_received_ is already tracked per-message via
-        // handle_latency_sample().  Only accumulate dropped counts
-        // from drop reports, computing the delta since the last
-        // report from this receiver.
+        // Track per-receiver deltas for accurate received + dropped counts.
+        uint64_t prev_recv = last_receiver_received_[report.receiver_id];
         uint64_t prev_drop = last_receiver_dropped_[report.receiver_id];
-        uint64_t delta_drop = (report.total_dropped > prev_drop)
-                                  ? report.total_dropped - prev_drop
-                                  : 0;
-        last_receiver_dropped_[report.receiver_id] = report.total_dropped;
-        total_dropped_.fetch_add(delta_drop, std::memory_order_relaxed);
+
+        if (report.total_received > prev_recv) {
+            total_received_.fetch_add(report.total_received - prev_recv,
+                                      std::memory_order_relaxed);
+            last_receiver_received_[report.receiver_id] = report.total_received;
+        }
+        if (report.total_dropped > prev_drop) {
+            total_dropped_.fetch_add(report.total_dropped - prev_drop,
+                                     std::memory_order_relaxed);
+            last_receiver_dropped_[report.receiver_id] = report.total_dropped;
+        }
     }
 
     void handle_start() {
         latencies_.clear();
         drop_curve_.clear();
+        last_sender_sent_.clear();
+        last_receiver_received_.clear();
         last_receiver_dropped_.clear();
         total_sent_.store(0);
         total_received_.store(0);
@@ -269,6 +280,8 @@ class SaturateCollectorActor : public EventBasedActor {
     std::atomic<uint64_t> total_sent_{0};
     std::atomic<uint64_t> total_received_{0};
     std::atomic<uint64_t> total_dropped_{0};
+    std::unordered_map<uint64_t, uint64_t> last_sender_sent_;
+    std::unordered_map<uint64_t, uint64_t> last_receiver_received_;
     std::unordered_map<uint64_t, uint64_t> last_receiver_dropped_;
     double p50_us_ = 0.0, p99_us_ = 0.0, p999_us_ = 0.0;
     double drop_rate_pct_ = 0.0;

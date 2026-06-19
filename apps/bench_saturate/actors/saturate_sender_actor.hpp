@@ -206,7 +206,11 @@ class SaturateSenderActor : public EventBasedActor {
 
         uint64_t sent = sent_count_.load();
         if (sent % 100 == 0) {
-            context()->send(collector_addr_, make_msg(ThroughputSampleTag));
+            ThroughputSamplePayload tsp;
+            tsp.sender_id = sender_index_;
+            tsp.total_sent = sent;
+            context()->send(collector_addr_,
+                            make_msg(ThroughputSampleTag, tsp.encode()));
         }
 
         schedule_next();
