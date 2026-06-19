@@ -122,12 +122,16 @@ class PoolRouter final : public SelfSupervisingActor {
     SupervisionDirective on_failure(ActorId child_id, const error& err) override;
 
   private:
+    /// \brief Spawn and register a single routee. Returns the Actor handle.
+    Actor spawn_single_routee();
+
     /// \brief Spawn \p count routees and add them as children.
     void spawn_routees(size_t count);
 
     std::unique_ptr<IRoutingLogic> routing_logic_;
     config::ActorFactory factory_;
-    size_t pool_size_{0};
+    bool needs_snapshots_{false};
+    size_t initial_pool_size_{0};
     std::vector<ActorRef> routees_;
 };
 

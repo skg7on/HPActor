@@ -112,6 +112,7 @@ class GroupRouter final : public EventBasedActor {
   private:
     std::unique_ptr<IRoutingLogic> routing_logic_;
     std::string service_key_;
+    bool needs_snapshots_{false};
     std::vector<ActorRef> routees_;
 };
 

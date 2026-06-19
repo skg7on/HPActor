@@ -27,7 +27,8 @@ GroupRouter::GroupRouter(ActorContext* ctx, ActorSystem& sys,
                          std::unique_ptr<IRoutingLogic> logic,
                          std::string service_key)
     : EventBasedActor(ctx, sys), routing_logic_(std::move(logic)),
-      service_key_(std::move(service_key)) {
+      service_key_(std::move(service_key)),
+      needs_snapshots_(routing_logic_->needs_mailbox_snapshots()) {
     become(make_behavior());
 }
 
@@ -39,7 +40,7 @@ Behavior GroupRouter::make_behavior() {
 
         // Only collect snapshots when the strategy needs them.
         std::vector<cli::MboxSnapshot> snapshots;
-        if (routing_logic_->needs_mailbox_snapshots()) {
+        if (needs_snapshots_) {
             collect_snapshots(routees_, snapshots);
         }
 
@@ -75,6 +76,7 @@ void GroupRouter::broadcast(TypedMessage msg) {
 }
 
 void GroupRouter::set_routing_logic(std::unique_ptr<IRoutingLogic> logic) {
+    needs_snapshots_ = logic->needs_mailbox_snapshots();
     routing_logic_ = std::move(logic);
     routing_logic_->on_routees_changed(routees_);
 }
