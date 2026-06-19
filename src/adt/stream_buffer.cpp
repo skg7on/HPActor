@@ -37,6 +37,14 @@ StreamBuffer StreamBuffer::with_capacity(size_t cap) {
     return sb;
 }
 
+StreamBuffer StreamBuffer::from_data(const uint8_t* data, size_t len) {
+    StreamBuffer sb = with_capacity(len);
+    if (len > 0 && data != nullptr) {
+        sb.append(data, len);
+    }
+    return sb;
+}
+
 // ---- Copy ----
 
 StreamBuffer::StreamBuffer(const StreamBuffer& other)
@@ -113,16 +121,19 @@ void StreamBuffer::assign(std::initializer_list<uint8_t> ilist) {
     buf_.assign(ilist);
 }
 
-StreamBuffer::iterator StreamBuffer::insert(const_iterator pos,
-                                            std::initializer_list<uint8_t> ilist) {
+StreamBuffer::iterator
+StreamBuffer::insert(const_iterator pos, std::initializer_list<uint8_t> ilist) {
     size_t offset = static_cast<size_t>(pos - (buf_.data() + read_pos_));
     compact();
-    auto it = buf_.insert(buf_.begin() + static_cast<std::ptrdiff_t>(offset), ilist);
+    auto it =
+        buf_.insert(buf_.begin() + static_cast<std::ptrdiff_t>(offset), ilist);
     return buf_.data() + static_cast<size_t>(it - buf_.begin());
 }
 
-StreamBuffer::iterator StreamBuffer::erase(const_iterator first, const_iterator last) {
-    if (first >= last) return begin();
+StreamBuffer::iterator
+StreamBuffer::erase(const_iterator first, const_iterator last) {
+    if (first >= last)
+        return begin();
 
     size_t old_read_pos = read_pos_;
     const uint8_t* logical_begin = buf_.data() + old_read_pos;
@@ -168,8 +179,10 @@ void StreamBuffer::compact() {
 // ---- Comparison ----
 
 bool StreamBuffer::operator==(const StreamBuffer& other) const {
-    if (size() != other.size()) return false;
-    if (size() == 0) return true;
+    if (size() != other.size())
+        return false;
+    if (size() == 0)
+        return true;
     return std::memcmp(data(), other.data(), size()) == 0;
 }
 
@@ -193,8 +206,8 @@ void StreamBuffer::ensure_capacity(size_t additional_bytes) {
     }
     size_t usable = buf_.capacity() - buf_.size();
     if (usable < additional_bytes) {
-        size_t new_cap = std::max(buf_.capacity() * 2,
-                                  buf_.size() + additional_bytes);
+        size_t new_cap =
+            std::max(buf_.capacity() * 2, buf_.size() + additional_bytes);
         new_cap = std::max(new_cap, kDefaultInitialCapacity);
         buf_.reserve(new_cap);
     }
