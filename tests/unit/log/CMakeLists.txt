@@ -6,6 +6,7 @@ add_executable(test_unit_log
     test_log_ring_buffer.cpp
     test_log_sinks.cpp
     test_syslog_sink.cpp
+    test_log_branches.cpp
 )
 target_link_libraries(test_unit_log hpactor GTest::gtest_main)
 gtest_discover_tests(test_unit_log)
