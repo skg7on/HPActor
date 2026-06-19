@@ -20,7 +20,6 @@
 #include "actors/saturate_coordinator_actor.hpp"
 #include "actors/saturate_receiver_actor.hpp"
 #include "actors/saturate_sender_actor.hpp"
-#include "messages.hpp"
 
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
@@ -100,17 +99,19 @@ static void probe_system() {
 
     auto hr = [] { std::cout << "+" << std::string(kW, '-') << "+\n"; };
     auto blank = [] { std::cout << "|" << std::string(kW, ' ') << "|\n"; };
+    // inner box = 62.  row: 2 + 18 + 1 + 41 = 62 between borders.
     auto row = [](const char* label, const char* value) {
-        printf("|  %-18s %-41s |\n", label, value);
+        printf("|  %-18s %-41s|\n", label, value);
     };
+    // presets: 4 + 18 + 1 + 39 = 62 between borders.
     auto presets = [](const char* name, const char* desc) {
-        printf("|    %-18s %-37s |\n", name, desc);
+        printf("|    %-18s %-39s|\n", name, desc);
     };
 
     std::cout << "\n";
     hr();
-    printf("| %-61s |\n", "HPActor App 17 — Bench Saturate");
-    printf("| %-61s |\n", "Actor System Saturation Benchmark");
+    printf("| %-61s|\n", "HPActor App 17 — Bench Saturate");
+    printf("| %-61s|\n", "Actor System Saturation Benchmark");
     hr();
     blank();
 
@@ -135,7 +136,7 @@ static void probe_system() {
     }
 
     blank();
-    printf("| %-61s |\n", "Presets:");
+    printf("| %-61s|\n", "Presets:");
     presets("quick-saturate", "100→10, 16B, fast ceiling find ~30s");
     presets("deep-saturate", "1000→100, 16B, thorough curve ~60s");
     presets("alloc-stress", "500→50, 1KB-64KB junk, alloc pressure");
@@ -144,7 +145,7 @@ static void probe_system() {
     presets("fan-out-burst", "10→1000, 1KB-16KB junk, broad fan-out");
     blank();
 
-    printf("| %-61s |\n", "Try:");
+    printf("| %-61s|\n", "Try:");
     presets("/saturate list", "see all presets");
     presets("/saturate start <preset>", "start a saturation run");
     presets("/saturate status", "check progress");
