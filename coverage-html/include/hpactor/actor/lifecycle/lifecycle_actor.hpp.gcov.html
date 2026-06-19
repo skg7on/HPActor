@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 02:16:58</td>
+            <td class="headerValue">2026-06-19 10:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">91.7&nbsp;%</td>
@@ -127,16 +127,16 @@
 <span id="L49"><span class="lineNum">      49</span>                 :             :     ///</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :     /// The initial incarnation counter is zero. The failure reason</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :     /// is default-initialized to \c error{0}.</span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC tlaBgGNC">         132 :     LifecycleActor()</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">         132 :         : state_(static_cast&lt;uint8_t&gt;(LifecycleState::kStarting)),</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">         132 :           incarnation_(0) {}</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC tlaBgGNC">         225 :     LifecycleActor()</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">         225 :         : state_(static_cast&lt;uint8_t&gt;(LifecycleState::kStarting)),</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">         225 :           incarnation_(0) {}</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : </span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     /// \brief Virtual destructor.</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     ///</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     /// Ownership: the destructor is trivial. Subclass destructors are</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     /// responsible for releasing actor-specific resources before the</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     /// lifecycle base is destroyed.</span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         132 :     virtual ~LifecycleActor() = default;</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">         225 :     virtual ~LifecycleActor() = default;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     // ── State queries ──────────────────────────────────</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : </span>
@@ -146,8 +146,8 @@
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///         \c transition() call, or \c kStarting if no transition</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     ///         has occurred.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     /// \note Thread safety: lock-free atomic load with acquire ordering.</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        1665 :     LifecycleState state() const noexcept {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        3330 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">        1775 :     LifecycleState state() const noexcept {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">        3550 :         return static_cast&lt;LifecycleState&gt;(state_.load(std::memory_order_acquire));</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     /// \brief Whether the actor accepts user (data-plane) messages in</span>
@@ -210,9 +210,9 @@
 <span id="L132"><span class="lineNum">     132</span>                 :             :     /// \note Thread safety: not atomic. Call from the thread that owns</span>
 <span id="L133"><span class="lineNum">     133</span>                 :             :     ///       the upcoming \c transition() call.</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :     // Set before transition(kFailed) so on_fail() receives the real error.</span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           2 :     void set_failure_reason(error err) {</span></span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">           2 :         failure_reason_ = err;</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">           2 :     }</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           7 :     void set_failure_reason(error err) {</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">           7 :         failure_reason_ = err;</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">           7 :     }</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             : </span>
 <span id="L139"><span class="lineNum">     139</span>                 :             :     /// \brief The error that caused the most recent failure.</span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :     ///</span>
@@ -339,7 +339,7 @@
 <span id="L261"><span class="lineNum">     261</span>                 :             :     /// subscribe to events, send bootstrap messages).</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             :     /// \note Called from the CAS path in \c transition(), under the</span>
 <span id="L263"><span class="lineNum">     263</span>                 :             :     ///       owning scheduler thread.</span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">         105 :     virtual void on_start() {}</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">         170 :     virtual void on_start() {}</span></span>
 <span id="L265"><span class="lineNum">     265</span>                 :             : </span>
 <span id="L266"><span class="lineNum">     266</span>                 :             :     /// \brief Hook invoked when the actor enters \c kDraining.</span>
 <span id="L267"><span class="lineNum">     267</span>                 :             :     ///</span>

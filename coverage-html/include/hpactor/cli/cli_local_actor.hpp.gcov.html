@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 02:16:58</td>
+            <td class="headerValue">2026-06-19 10:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
@@ -185,18 +185,19 @@
 <span id="L107"><span class="lineNum">     107</span>                 :             :     uint32_t get_history_max() override;</span>
 <span id="L108"><span class="lineNum">     108</span>                 :             :     std::string get_default_format() override;</span>
 <span id="L109"><span class="lineNum">     109</span>                 :             :     uint32_t get_page_size() override;</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             : </span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :   private:</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             :     std::optional&lt;StreamBuffer&gt;</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             :     poll_for_response(TypeTag expected_tag, std::chrono::milliseconds timeout);</span>
-<span id="L114"><span class="lineNum">     114</span>                 :             : </span>
-<span id="L115"><span class="lineNum">     115</span>                 :             :     CliConfig config_;</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             :     std::unique_ptr&lt;OutputFormatter&gt; formatter_;</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :     std::unique_ptr&lt;Pager&gt; pager_;</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             : };</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             : </span>
-<span id="L120"><span class="lineNum">     120</span>                 :             : } // namespace cli</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             : } // namespace hpactor</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     void on_session_wired(CliSession&amp; session) override;</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             : </span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :   private:</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :     std::optional&lt;StreamBuffer&gt;</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :     poll_for_response(TypeTag expected_tag, std::chrono::milliseconds timeout);</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             : </span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :     CliConfig config_;</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :     std::unique_ptr&lt;OutputFormatter&gt; formatter_;</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :     std::unique_ptr&lt;Pager&gt; pager_;</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             : };</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             : </span>
+<span id="L121"><span class="lineNum">     121</span>                 :             : } // namespace cli</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

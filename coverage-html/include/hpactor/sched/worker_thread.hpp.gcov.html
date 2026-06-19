@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 02:16:58</td>
+            <td class="headerValue">2026-06-19 10:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
@@ -284,9 +284,9 @@
 <span id="L206"><span class="lineNum">     206</span>                 :             :     /// Must be set before `start()` is called.</span>
 <span id="L207"><span class="lineNum">     207</span>                 :             :     ///</span>
 <span id="L208"><span class="lineNum">     208</span>                 :             :     /// \param[in] proc Callback invoked for each dequeued work item.</span>
-<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC tlaBgGNC">         207 :     void set_work_processor(WorkProcessor proc) {</span></span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         207 :         processor_ = std::move(proc);</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">         207 :     }</span></span>
+<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC tlaBgGNC">         243 :     void set_work_processor(WorkProcessor proc) {</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         243 :         processor_ = std::move(proc);</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">         243 :     }</span></span>
 <span id="L212"><span class="lineNum">     212</span>                 :             : </span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :     /// \brief Callback invoked at the top of each loop iteration to pause</span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :     ///        the worker.</span>
@@ -302,9 +302,9 @@
 <span id="L224"><span class="lineNum">     224</span>                 :             :     /// worker to proceed.</span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     ///</span>
 <span id="L226"><span class="lineNum">     226</span>                 :             :     /// \param[in] handler Callback that blocks until the worker may proceed.</span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         204 :     void set_pause_handler(PauseHandler handler) {</span></span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">         204 :         pause_handler_ = std::move(handler);</span></span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">         204 :     }</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         240 :     void set_pause_handler(PauseHandler handler) {</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">         240 :         pause_handler_ = std::move(handler);</span></span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">         240 :     }</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : </span>
 <span id="L231"><span class="lineNum">     231</span>                 :             :     /// \brief Return this worker's index in the scheduler's worker array.</span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :     ///</span>
@@ -367,9 +367,9 @@
 <span id="L289"><span class="lineNum">     289</span>                 :             :     }</span>
 <span id="L290"><span class="lineNum">     290</span>                 :             : </span>
 <span id="L291"><span class="lineNum">     291</span>                 :             :     /// \brief Increment the donation counter (called each idle iteration).</span>
-<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">        1959 :     void increment_donations() {</span></span>
-<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">        1959 :         donation_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">        1959 :     }</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">        2416 :     void increment_donations() {</span></span>
+<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">        2416 :         donation_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">        2416 :     }</span></span>
 <span id="L295"><span class="lineNum">     295</span>                 :             : </span>
 <span id="L296"><span class="lineNum">     296</span>                 :             :     /// \brief Acquire a coroutine frame from this worker's frame pool.</span>
 <span id="L297"><span class="lineNum">     297</span>                 :             :     ///</span>
@@ -393,18 +393,18 @@
 <span id="L315"><span class="lineNum">     315</span>                 :             :     /// Must be set before `start()`.</span>
 <span id="L316"><span class="lineNum">     316</span>                 :             :     ///</span>
 <span id="L317"><span class="lineNum">     317</span>                 :             :     /// \param[in] owner Pointer to the owning `HybridScheduler`.</span>
-<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">         204 :     void set_owner(HybridScheduler* owner) {</span></span>
-<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">         204 :         owner_ = owner;</span></span>
-<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">         204 :     }</span></span>
+<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">         240 :     void set_owner(HybridScheduler* owner) {</span></span>
+<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">         240 :         owner_ = owner;</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">         240 :     }</span></span>
 <span id="L321"><span class="lineNum">     321</span>                 :             : </span>
 <span id="L322"><span class="lineNum">     322</span>                 :             :     /// \brief Set the fault controller for per-thread fault injection.</span>
 <span id="L323"><span class="lineNum">     323</span>                 :             :     ///</span>
 <span id="L324"><span class="lineNum">     324</span>                 :             :     /// May be `nullptr` to disable fault injection for this worker.</span>
 <span id="L325"><span class="lineNum">     325</span>                 :             :     ///</span>
 <span id="L326"><span class="lineNum">     326</span>                 :             :     /// \param[in] fc Opaque pointer to a `FaultController`, or `nullptr`.</span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         204 :     void set_fault_controller(void* fc) {</span></span>
-<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         204 :         fault_controller_ = fc;</span></span>
-<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">         204 :     }</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         240 :     void set_fault_controller(void* fc) {</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         240 :         fault_controller_ = fc;</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">         240 :     }</span></span>
 <span id="L330"><span class="lineNum">     330</span>                 :             : </span>
 <span id="L331"><span class="lineNum">     331</span>                 :             :     /// \brief Access the per-thread memory allocator.</span>
 <span id="L332"><span class="lineNum">     332</span>                 :             :     ///</span>

@@ -37,12 +37,12 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 02:16:58</td>
+            <td class="headerValue">2026-06-19 10:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryMed">89.2&nbsp;%</td>
-            <td class="headerCovTableEntry">93</td>
-            <td class="headerCovTableEntry">83</td>
+            <td class="headerCovTableEntryMed">89.6&nbsp;%</td>
+            <td class="headerCovTableEntry">96</td>
+            <td class="headerCovTableEntry">86</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -400,15 +400,15 @@
 <span id="L322"><span class="lineNum">     322</span>                 :             :     // ── Node identity ─────────────────────────────────────────────────────</span>
 <span id="L323"><span class="lineNum">     323</span>                 :             : </span>
 <span id="L324"><span class="lineNum">     324</span>                 :             :     /// \brief Network endpoint of this node.</span>
-<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC tlaBgGNC">         132 :     EndPoint endpoint() const {</span></span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">         132 :         return endpoint_;</span></span>
+<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC tlaBgGNC">         146 :     EndPoint endpoint() const {</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">         146 :         return endpoint_;</span></span>
 <span id="L327"><span class="lineNum">     327</span>                 :             :     }</span>
 <span id="L328"><span class="lineNum">     328</span>                 :             : </span>
 <span id="L329"><span class="lineNum">     329</span>                 :             :     // ── Running state ─────────────────────────────────────────────────────</span>
 <span id="L330"><span class="lineNum">     330</span>                 :             : </span>
 <span id="L331"><span class="lineNum">     331</span>                 :             :     /// \brief Returns \c true while the system is accepting messages.</span>
-<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">         150 :     bool is_running() const {</span></span>
-<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">         150 :         return running_.load(std::memory_order_acquire);</span></span>
+<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">         138 :     bool is_running() const {</span></span>
+<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">         138 :         return running_.load(std::memory_order_acquire);</span></span>
 <span id="L334"><span class="lineNum">     334</span>                 :             :     }</span>
 <span id="L335"><span class="lineNum">     335</span>                 :             : </span>
 <span id="L336"><span class="lineNum">     336</span>                 :             :     /// \brief System uptime since construction.</span>
@@ -427,15 +427,15 @@
 <span id="L349"><span class="lineNum">     349</span>                 :             :     // ── Scheduler ─────────────────────────────────────────────────────────</span>
 <span id="L350"><span class="lineNum">     350</span>                 :             : </span>
 <span id="L351"><span class="lineNum">     351</span>                 :             :     /// \brief Pointer to the scheduler for direct scheduling operations.</span>
-<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC tlaBgGNC">         113 :     sched::IScheduler* scheduler() {</span></span>
-<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">         113 :         return scheduler_.get();</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC tlaBgGNC">         130 :     sched::IScheduler* scheduler() {</span></span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">         130 :         return scheduler_.get();</span></span>
 <span id="L354"><span class="lineNum">     354</span>                 :             :     }</span>
 <span id="L355"><span class="lineNum">     355</span>                 :             : </span>
 <span id="L356"><span class="lineNum">     356</span>                 :             :     /// \brief Returns \c true if coroutine-based execution is configured.</span>
 <span id="L357"><span class="lineNum">     357</span>                 :             :     ///</span>
 <span id="L358"><span class="lineNum">     358</span>                 :             :     /// Requires \c HPACTOR_SUPPORT_COROUTINES=1 at compile time.</span>
-<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">        1039 :     bool use_coroutines() const {</span></span>
-<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">        1039 :         return config_.use_coroutines;</span></span>
+<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">        1187 :     bool use_coroutines() const {</span></span>
+<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">        1187 :         return config_.use_coroutines;</span></span>
 <span id="L361"><span class="lineNum">     361</span>                 :             :     }</span>
 <span id="L362"><span class="lineNum">     362</span>                 :             : </span>
 <span id="L363"><span class="lineNum">     363</span>                 :             :     // ── RPC ───────────────────────────────────────────────────────────────</span>
@@ -473,8 +473,8 @@
 <span id="L395"><span class="lineNum">     395</span>                 :             :     // ── Distributed tracing ───────────────────────────────────────────────</span>
 <span id="L396"><span class="lineNum">     396</span>                 :             : </span>
 <span id="L397"><span class="lineNum">     397</span>                 :             :     /// \brief Trace manager (nullptr if tracing is disabled).</span>
-<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC tlaBgGNC">        1690 :     tracing::TraceManager* trace_manager() noexcept {</span></span>
-<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">        1690 :         return trace_manager_.get();</span></span>
+<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC tlaBgGNC">        1751 :     tracing::TraceManager* trace_manager() noexcept {</span></span>
+<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">        1751 :         return trace_manager_.get();</span></span>
 <span id="L400"><span class="lineNum">     400</span>                 :             :     }</span>
 <span id="L401"><span class="lineNum">     401</span>                 :             :     const tracing::TraceManager* trace_manager() const noexcept {</span>
 <span id="L402"><span class="lineNum">     402</span>                 :             :         return trace_manager_.get();</span>
@@ -493,8 +493,8 @@
 <span id="L415"><span class="lineNum">     415</span>                 :             : </span>
 <span id="L416"><span class="lineNum">     416</span>                 :             :     // ── Fault injection ───────────────────────────────────────────────────</span>
 <span id="L417"><span class="lineNum">     417</span>                 :             : </span>
-<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC tlaBgGNC">         211 :     fault::FaultController&amp; fault_controller() noexcept {</span></span>
-<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">         211 :         return fault_controller_;</span></span>
+<span id="L418"><span class="lineNum">     418</span>                 :<span class="tlaGNC tlaBgGNC">         247 :     fault::FaultController&amp; fault_controller() noexcept {</span></span>
+<span id="L419"><span class="lineNum">     419</span>                 :<span class="tlaGNC">         247 :         return fault_controller_;</span></span>
 <span id="L420"><span class="lineNum">     420</span>                 :             :     }</span>
 <span id="L421"><span class="lineNum">     421</span>                 :             :     const fault::FaultController&amp; fault_controller() const noexcept {</span>
 <span id="L422"><span class="lineNum">     422</span>                 :             :         return fault_controller_;</span>
@@ -954,47 +954,47 @@
 <span id="L876"><span class="lineNum">     876</span>                 :             : // -----------------------------------------------------------------------------</span>
 <span id="L877"><span class="lineNum">     877</span>                 :             : </span>
 <span id="L878"><span class="lineNum">     878</span>                 :             : template &lt;typename T, typename... Args&gt;</span>
-<span id="L879"><span class="lineNum">     879</span>                 :<span class="tlaGNC">         816 : Actor ActorSystem::spawn(Args&amp;&amp;... args) {</span></span>
-<span id="L880"><span class="lineNum">     880</span>                 :<span class="tlaGNC">         816 :     ActorId id = actor_directory_.allocate_id();</span></span>
-<span id="L881"><span class="lineNum">     881</span>                 :<span class="tlaGNC">         816 :     auto actor = std::make_shared&lt;T&gt;(nullptr, *this, std::forward&lt;Args&gt;(args)...);</span></span>
-<span id="L882"><span class="lineNum">     882</span>                 :<span class="tlaGNC">         816 :     actor-&gt;set_address(ActorAddress(endpoint_, actor-&gt;type(), id, 0));</span></span>
+<span id="L879"><span class="lineNum">     879</span>                 :<span class="tlaGNC">         934 : Actor ActorSystem::spawn(Args&amp;&amp;... args) {</span></span>
+<span id="L880"><span class="lineNum">     880</span>                 :<span class="tlaGNC">         934 :     ActorId id = actor_directory_.allocate_id();</span></span>
+<span id="L881"><span class="lineNum">     881</span>                 :<span class="tlaGNC">         934 :     auto actor = std::make_shared&lt;T&gt;(nullptr, *this, std::forward&lt;Args&gt;(args)...);</span></span>
+<span id="L882"><span class="lineNum">     882</span>                 :<span class="tlaGNC">         934 :     actor-&gt;set_address(ActorAddress(endpoint_, actor-&gt;type(), id, 0));</span></span>
 <span id="L883"><span class="lineNum">     883</span>                 :             :     if constexpr (requires { T::kActorTypeName; }) {</span>
-<span id="L884"><span class="lineNum">     884</span>                 :<span class="tlaGNC">         884 :         actor-&gt;set_type_name(T::kActorTypeName);</span></span>
+<span id="L884"><span class="lineNum">     884</span>                 :<span class="tlaGNC">         956 :         actor-&gt;set_type_name(T::kActorTypeName);</span></span>
 <span id="L885"><span class="lineNum">     885</span>                 :             :     } else {</span>
-<span id="L886"><span class="lineNum">     886</span>                 :<span class="tlaGNC">         748 :         actor-&gt;set_type_name(&quot;unknown&quot;);</span></span>
+<span id="L886"><span class="lineNum">     886</span>                 :<span class="tlaGNC">         912 :         actor-&gt;set_type_name(&quot;unknown&quot;);</span></span>
 <span id="L887"><span class="lineNum">     887</span>                 :             :     }</span>
 <span id="L888"><span class="lineNum">     888</span>                 :             : </span>
-<span id="L889"><span class="lineNum">     889</span>                 :<span class="tlaGNC">         816 :     auto mailbox_ptr = std::make_shared&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;&gt;(</span></span>
-<span id="L890"><span class="lineNum">     890</span>                 :<span class="tlaGNC">         816 :         id, scheduler_.get(), mailbox_config_for_spawn());</span></span>
-<span id="L891"><span class="lineNum">     891</span>                 :<span class="tlaGNC">         816 :     auto* mbox = mailbox_ptr.get();</span></span>
+<span id="L889"><span class="lineNum">     889</span>                 :<span class="tlaGNC">         934 :     auto mailbox_ptr = std::make_shared&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;&gt;(</span></span>
+<span id="L890"><span class="lineNum">     890</span>                 :<span class="tlaGNC">         934 :         id, scheduler_.get(), mailbox_config_for_spawn());</span></span>
+<span id="L891"><span class="lineNum">     891</span>                 :<span class="tlaGNC">         934 :     auto* mbox = mailbox_ptr.get();</span></span>
 <span id="L892"><span class="lineNum">     892</span>                 :             : </span>
-<span id="L893"><span class="lineNum">     893</span>                 :<span class="tlaGNC">         816 :     auto actor_ctx = std::make_shared&lt;ActorContext&gt;(Actor(actor), this);</span></span>
-<span id="L894"><span class="lineNum">     894</span>                 :<span class="tlaGNC">         816 :     actor-&gt;set_context(actor_ctx.get());</span></span>
+<span id="L893"><span class="lineNum">     893</span>                 :<span class="tlaGNC">         934 :     auto actor_ctx = std::make_shared&lt;ActorContext&gt;(Actor(actor), this);</span></span>
+<span id="L894"><span class="lineNum">     894</span>                 :<span class="tlaGNC">         934 :     actor-&gt;set_context(actor_ctx.get());</span></span>
 <span id="L895"><span class="lineNum">     895</span>                 :             : </span>
-<span id="L896"><span class="lineNum">     896</span>                 :<span class="tlaGNC">         816 :     ActorDirectoryEntry entry;</span></span>
-<span id="L897"><span class="lineNum">     897</span>                 :<span class="tlaGNC">         816 :     entry.actor = Actor(actor);</span></span>
-<span id="L898"><span class="lineNum">     898</span>                 :<span class="tlaGNC">         816 :     entry.instance = actor;</span></span>
-<span id="L899"><span class="lineNum">     899</span>                 :<span class="tlaGNC">         816 :     entry.mailbox = mailbox_ptr;</span></span>
-<span id="L900"><span class="lineNum">     900</span>                 :<span class="tlaGNC">         816 :     entry.context = actor_ctx;</span></span>
-<span id="L901"><span class="lineNum">     901</span>                 :<span class="tlaGNC">         816 :     actor_directory_.insert(std::move(entry));</span></span>
+<span id="L896"><span class="lineNum">     896</span>                 :<span class="tlaGNC">         934 :     ActorDirectoryEntry entry;</span></span>
+<span id="L897"><span class="lineNum">     897</span>                 :<span class="tlaGNC">         934 :     entry.actor = Actor(actor);</span></span>
+<span id="L898"><span class="lineNum">     898</span>                 :<span class="tlaGNC">         934 :     entry.instance = actor;</span></span>
+<span id="L899"><span class="lineNum">     899</span>                 :<span class="tlaGNC">         934 :     entry.mailbox = mailbox_ptr;</span></span>
+<span id="L900"><span class="lineNum">     900</span>                 :<span class="tlaGNC">         934 :     entry.context = actor_ctx;</span></span>
+<span id="L901"><span class="lineNum">     901</span>                 :<span class="tlaGNC">         934 :     actor_directory_.insert(std::move(entry));</span></span>
 <span id="L902"><span class="lineNum">     902</span>                 :             : </span>
-<span id="L903"><span class="lineNum">     903</span>                 :<span class="tlaGNC">         816 :     actor-&gt;set_scheduler(scheduler_.get());</span></span>
-<span id="L904"><span class="lineNum">     904</span>                 :<span class="tlaGNC">         816 :     actor-&gt;set_mailbox(mbox);</span></span>
+<span id="L903"><span class="lineNum">     903</span>                 :<span class="tlaGNC">         934 :     actor-&gt;set_scheduler(scheduler_.get());</span></span>
+<span id="L904"><span class="lineNum">     904</span>                 :<span class="tlaGNC">         934 :     actor-&gt;set_mailbox(mbox);</span></span>
 <span id="L905"><span class="lineNum">     905</span>                 :             : </span>
-<span id="L906"><span class="lineNum">     906</span>         [<span class="tlaGBC" title="Branch 0 was taken 816 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         816 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
-<span id="L907"><span class="lineNum">     907</span>                 :<span class="tlaGNC">         816 :         mbox-&gt;set_metrics_ring_buffer(metrics_ring_buffer_.get());</span></span>
-<span id="L908"><span class="lineNum">     908</span>                 :<span class="tlaGNC">         816 :         actor-&gt;set_metrics_ring_buffer(metrics_ring_buffer_.get());</span></span>
+<span id="L906"><span class="lineNum">     906</span>         [<span class="tlaGBC" title="Branch 0 was taken 934 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         934 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L907"><span class="lineNum">     907</span>                 :<span class="tlaGNC">         934 :         mbox-&gt;set_metrics_ring_buffer(metrics_ring_buffer_.get());</span></span>
+<span id="L908"><span class="lineNum">     908</span>                 :<span class="tlaGNC">         934 :         actor-&gt;set_metrics_ring_buffer(metrics_ring_buffer_.get());</span></span>
 <span id="L909"><span class="lineNum">     909</span>                 :             :     }</span>
 <span id="L910"><span class="lineNum">     910</span>                 :             : </span>
-<span id="L911"><span class="lineNum">     911</span>         [<span class="tlaGBC" title="Branch 0 was taken 388 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 428 times"> + </span>]:<span class="tlaGNC">         816 :     if (logger_) [[unlikely]] {</span></span>
-<span id="L912"><span class="lineNum">     912</span>                 :<span class="tlaGNC">         388 :         mbox-&gt;set_logger(logger_);</span></span>
-<span id="L913"><span class="lineNum">     913</span>                 :<span class="tlaGNC">         388 :         actor-&gt;set_logger(logger_);</span></span>
+<span id="L911"><span class="lineNum">     911</span>         [<span class="tlaGBC" title="Branch 0 was taken 470 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 464 times"> + </span>]:<span class="tlaGNC">         934 :     if (logger_) [[unlikely]] {</span></span>
+<span id="L912"><span class="lineNum">     912</span>                 :<span class="tlaGNC">         470 :         mbox-&gt;set_logger(logger_);</span></span>
+<span id="L913"><span class="lineNum">     913</span>                 :<span class="tlaGNC">         470 :         actor-&gt;set_logger(logger_);</span></span>
 <span id="L914"><span class="lineNum">     914</span>                 :             :     }</span>
 <span id="L915"><span class="lineNum">     915</span>                 :             : </span>
-<span id="L916"><span class="lineNum">     916</span>   [<span class="tlaGBC" title="Branch 0 was taken 799 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         816 :     switch (actor-&gt;dispatch_policy()) {</span></span>
-<span id="L917"><span class="lineNum">     917</span>                 :<span class="tlaGNC">         799 :         case sched::DispatchPolicy::Cooperative:</span></span>
-<span id="L918"><span class="lineNum">     918</span>                 :<span class="tlaGNC">         799 :             scheduler_-&gt;notify_ready(id, 0, INT64_MAX);</span></span>
-<span id="L919"><span class="lineNum">     919</span>                 :<span class="tlaGNC">         799 :             break;</span></span>
+<span id="L916"><span class="lineNum">     916</span>   [<span class="tlaGBC" title="Branch 0 was taken 917 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         934 :     switch (actor-&gt;dispatch_policy()) {</span></span>
+<span id="L917"><span class="lineNum">     917</span>                 :<span class="tlaGNC">         917 :         case sched::DispatchPolicy::Cooperative:</span></span>
+<span id="L918"><span class="lineNum">     918</span>                 :<span class="tlaGNC">         917 :             scheduler_-&gt;notify_ready(id, 0, INT64_MAX);</span></span>
+<span id="L919"><span class="lineNum">     919</span>                 :<span class="tlaGNC">         917 :             break;</span></span>
 <span id="L920"><span class="lineNum">     920</span>                 :<span class="tlaGNC">          15 :         case sched::DispatchPolicy::DedicatedThread:</span></span>
 <span id="L921"><span class="lineNum">     921</span>                 :<span class="tlaGNC">          30 :             scheduler_-&gt;register_dedicated_thread(</span></span>
 <span id="L922"><span class="lineNum">     922</span>                 :<span class="tlaGNC">          15 :                 id, actor-&gt;dispatch_hints().cpu_affinity);</span></span>
@@ -1004,27 +1004,27 @@
 <span id="L926"><span class="lineNum">     926</span>                 :<span class="tlaGNC">           2 :             break;</span></span>
 <span id="L927"><span class="lineNum">     927</span>                 :             :     }</span>
 <span id="L928"><span class="lineNum">     928</span>                 :             : </span>
-<span id="L929"><span class="lineNum">     929</span>                 :<span class="tlaGNC">         816 :     actor-&gt;on_activate();</span></span>
+<span id="L929"><span class="lineNum">     929</span>                 :<span class="tlaGNC">         934 :     actor-&gt;on_activate();</span></span>
 <span id="L930"><span class="lineNum">     930</span>                 :             : </span>
-<span id="L931"><span class="lineNum">     931</span>         [<span class="tlaGBC" title="Branch 0 was taken 100 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 716 times"> + </span>]:<span class="tlaGNC">         816 :     if (auto* lc = actor-&gt;as_lifecycle()) {</span></span>
-<span id="L932"><span class="lineNum">     932</span>                 :<span class="tlaGNC">         100 :         lc-&gt;transition(LifecycleState::kActive);</span></span>
+<span id="L931"><span class="lineNum">     931</span>         [<span class="tlaGBC" title="Branch 0 was taken 165 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 769 times"> + </span>]:<span class="tlaGNC">         934 :     if (auto* lc = actor-&gt;as_lifecycle()) {</span></span>
+<span id="L932"><span class="lineNum">     932</span>                 :<span class="tlaGNC">         165 :         lc-&gt;transition(LifecycleState::kActive);</span></span>
 <span id="L933"><span class="lineNum">     933</span>                 :             :     }</span>
 <span id="L934"><span class="lineNum">     934</span>                 :             : </span>
-<span id="L935"><span class="lineNum">     935</span>         [<span class="tlaGBC" title="Branch 0 was taken 408 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 408 times"> + </span>]:<span class="tlaGNC">         816 :     HPACTOR_LOG_INFO(log::LogCategory::kActor, id,</span></span>
+<span id="L935"><span class="lineNum">     935</span>         [<span class="tlaGBC" title="Branch 0 was taken 490 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 444 times"> + </span>]:<span class="tlaGNC">         934 :     HPACTOR_LOG_INFO(log::LogCategory::kActor, id,</span></span>
 <span id="L936"><span class="lineNum">     936</span>                 :             :                      static_cast&lt;uint32_t&gt;(log::LogEventId::kActorSpawned),</span>
 <span id="L937"><span class="lineNum">     937</span>                 :             :                      &quot;actor spawned&quot;,</span>
 <span id="L938"><span class="lineNum">     938</span>                 :             :                      log::field_lit(&quot;type&quot;, actor-&gt;type_name().data()));</span>
 <span id="L939"><span class="lineNum">     939</span>                 :             : </span>
-<span id="L940"><span class="lineNum">     940</span>         [<span class="tlaGBC" title="Branch 0 was taken 816 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         816 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
-<span id="L941"><span class="lineNum">     941</span>                 :<span class="tlaGNC">         816 :         metrics::MetricEvent evt{};</span></span>
-<span id="L942"><span class="lineNum">     942</span>                 :<span class="tlaGNC">         816 :         evt.actor_id = id;</span></span>
-<span id="L943"><span class="lineNum">     943</span>                 :<span class="tlaGNC">         816 :         evt.event_type = metrics::MetricEventType::kActorSpawned;</span></span>
-<span id="L944"><span class="lineNum">     944</span>                 :<span class="tlaGNC">         816 :         evt.value_hi = 1;</span></span>
-<span id="L945"><span class="lineNum">     945</span>                 :<span class="tlaGNC">         816 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
+<span id="L940"><span class="lineNum">     940</span>         [<span class="tlaGBC" title="Branch 0 was taken 934 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         934 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L941"><span class="lineNum">     941</span>                 :<span class="tlaGNC">         934 :         metrics::MetricEvent evt{};</span></span>
+<span id="L942"><span class="lineNum">     942</span>                 :<span class="tlaGNC">         934 :         evt.actor_id = id;</span></span>
+<span id="L943"><span class="lineNum">     943</span>                 :<span class="tlaGNC">         934 :         evt.event_type = metrics::MetricEventType::kActorSpawned;</span></span>
+<span id="L944"><span class="lineNum">     944</span>                 :<span class="tlaGNC">         934 :         evt.value_hi = 1;</span></span>
+<span id="L945"><span class="lineNum">     945</span>                 :<span class="tlaGNC">         934 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
 <span id="L946"><span class="lineNum">     946</span>                 :             :     }</span>
 <span id="L947"><span class="lineNum">     947</span>                 :             : </span>
-<span id="L948"><span class="lineNum">     948</span>                 :<span class="tlaGNC">         816 :     return Actor(actor);</span></span>
-<span id="L949"><span class="lineNum">     949</span>                 :<span class="tlaGNC">         816 : }</span></span>
+<span id="L948"><span class="lineNum">     948</span>                 :<span class="tlaGNC">         934 :     return Actor(actor);</span></span>
+<span id="L949"><span class="lineNum">     949</span>                 :<span class="tlaGNC">         934 : }</span></span>
 <span id="L950"><span class="lineNum">     950</span>                 :             : </span>
 <span id="L951"><span class="lineNum">     951</span>                 :             : } // namespace hpactor</span>
         </pre>

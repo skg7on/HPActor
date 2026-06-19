@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 02:16:58</td>
+            <td class="headerValue">2026-06-19 10:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">90.9&nbsp;%</td>
@@ -108,19 +108,19 @@
 <span id="L30"><span class="lineNum">      30</span>                 :             :     ActorId source_actor;</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     uint64_t message_id;</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">        1600 :     bool operator==(const DedupKey&amp; other) const noexcept {</span></span>
-<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1594 times"> + </span>]:<span class="tlaGNC">        3200 :         return source_node == other.source_node &amp;&amp;</span></span>
-<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaGBC" title="Branch 0 was taken 1600 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        3200 :                source_actor == other.source_actor &amp;&amp;</span></span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1606 :                message_id == other.message_id;</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">         310 :     bool operator==(const DedupKey&amp; other) const noexcept {</span></span>
+<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 304 times"> + </span>]:<span class="tlaGNC">         620 :         return source_node == other.source_node &amp;&amp;</span></span>
+<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaGBC" title="Branch 0 was taken 310 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         620 :                source_actor == other.source_actor &amp;&amp;</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         316 :                message_id == other.message_id;</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     }</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : };</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : </span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : struct DedupKeyHash {</span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        8966 :     size_t operator()(const DedupKey&amp; k) const noexcept {</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">        8966 :         size_t h = std::hash&lt;EndPoint&gt;{}(k.source_node);</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">        8966 :         h = h * 31 + static_cast&lt;size_t&gt;(k.source_actor.value());</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">        8966 :         h = h * 31 + static_cast&lt;size_t&gt;(k.message_id);</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">        8966 :         return h;</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        8324 :     size_t operator()(const DedupKey&amp; k) const noexcept {</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">        8324 :         size_t h = std::hash&lt;EndPoint&gt;{}(k.source_node);</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">        8324 :         h = h * 31 + static_cast&lt;size_t&gt;(k.source_actor.value());</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">        8324 :         h = h * 31 + static_cast&lt;size_t&gt;(k.message_id);</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">        8324 :         return h;</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     }</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : };</span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>
@@ -138,11 +138,11 @@
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : // ── Public API ────────────────────────────────────────────────────────────</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">         438 : DedupCache::DedupCache(Config cfg) : impl_(new Impl) {</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">         438 :     impl_-&gt;cfg = std::move(cfg);</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">         438 : }</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">         474 : DedupCache::DedupCache(Config cfg) : impl_(new Impl) {</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">         474 :     impl_-&gt;cfg = std::move(cfg);</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">         474 : }</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         439 : DedupCache::~DedupCache() = default;</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         475 : DedupCache::~DedupCache() = default;</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           1 : DedupCache::DedupCache(DedupCache&amp;&amp;) noexcept = default;</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaUNC tlaBgUNC">           0 : DedupCache&amp; DedupCache::operator=(DedupCache&amp;&amp;) noexcept = default;</span></span>

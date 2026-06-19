@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">43.6&nbsp;%</td>
-            <td class="headerCovTableEntry">156</td>
+            <td class="headerCovTableEntryLo">42.8&nbsp;%</td>
+            <td class="headerCovTableEntry">159</td>
             <td class="headerCovTableEntry">68</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 02:16:58</td>
+            <td class="headerValue">2026-06-19 10:59:24</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">57.7&nbsp;%</td>
@@ -241,29 +241,29 @@
 <span id="L158"><span class="lineNum">     158</span>                 :             :     }</span>
 <span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L160"><span class="lineNum">     160</span>                 :             : </span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC tlaBgGNC">          18 : SelfSupervisingActor::SelfSupervisingActor(ActorContext* ctx, ActorSystem&amp; sys,</span></span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">          18 :                                            SupervisionPolicy policy)</span></span>
-<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">          18 :     : EventBasedActor(ctx, sys), policy_(policy),</span></span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">          18 :       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC tlaBgGNC">          28 : SelfSupervisingActor::SelfSupervisingActor(ActorContext* ctx, ActorSystem&amp; sys,</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">          28 :                                            SupervisionPolicy policy)</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">          28 :     : EventBasedActor(ctx, sys), policy_(policy),</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">          28 :       first_failure_time_(std::chrono::steady_clock::time_point::min()) {}</span></span>
 <span id="L165"><span class="lineNum">     165</span>                 :             : </span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">           6 : void SelfSupervisingActor::add_child(Actor child) {</span></span>
-<span id="L167"><span class="lineNum">     167</span>   [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 6 times"> + </span> :<span class="tlaGNC">           6 :     FAULT_INJECT(&quot;hpactor.supervision.add_child.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span>]
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">          34 : void SelfSupervisingActor::add_child(Actor child) {</span></span>
+<span id="L167"><span class="lineNum">     167</span>   [<span class="tlaGBC" title="Branch 0 was taken 34 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 34 times"> + </span> :<span class="tlaGNC">          34 :     FAULT_INJECT(&quot;hpactor.supervision.add_child.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 34 times"> + </span>]
 <span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L169"><span class="lineNum">     169</span>                 :             :     }</span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC tlaBgGNC">           6 :     children_.push_back(std::move(child));</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC tlaBgGNC">          34 :     children_.push_back(std::move(child));</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             : }</span>
 <span id="L172"><span class="lineNum">     172</span>                 :             : </span>
-<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">           1 : void SelfSupervisingActor::remove_child(Actor child) {</span></span>
-<span id="L174"><span class="lineNum">     174</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">           1 :     FAULT_INJECT(&quot;hpactor.supervision.remove_child.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span>]
+<span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">           4 : void SelfSupervisingActor::remove_child(Actor child) {</span></span>
+<span id="L174"><span class="lineNum">     174</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 4 times"> + </span> :<span class="tlaGNC">           4 :     FAULT_INJECT(&quot;hpactor.supervision.remove_child.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span>]
 <span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L176"><span class="lineNum">     176</span>                 :             :     }</span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     children_.erase(std::remove_if(children_.begin(), children_.end(),</span></span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">           1 :                                    [&amp;child](const Actor&amp; a) {</span></span>
-<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">           1 :                                        return a.address() == child.address();</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     children_.erase(std::remove_if(children_.begin(), children_.end(),</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">          11 :                                    [&amp;child](const Actor&amp; a) {</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">          11 :                                        return a.address() == child.address();</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :             :                                    }),</span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           2 :                     children_.end());</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           8 :                     children_.end());</span></span>
 <span id="L182"><span class="lineNum">     182</span>                 :             : }</span>
 <span id="L183"><span class="lineNum">     183</span>                 :             : </span>
 <span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">           8 : void SelfSupervisingActor::add_remote_child(ActorRef child) {</span></span>
@@ -313,47 +313,52 @@
 <span id="L228"><span class="lineNum">     228</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!pb-&gt;ParseFromArray(payload.data(), static_cast&lt;int&gt;(payload.size()))) {</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :             :     }</span>
-<span id="L231"><span class="lineNum">     231</span>                 :             :     auto directive =</span>
-<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaUNC">           0 :         decide_restart(ActorId(pb-&gt;actor_id()), error(pb-&gt;reason_code()));</span></span>
-<span id="L233"><span class="lineNum">     233</span>                 :             :     // Apply the supervision directive</span>
-<span id="L234"><span class="lineNum">     234</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (directive == SupervisionDirective::Stop) {</span></span>
-<span id="L235"><span class="lineNum">     235</span>                 :             :         // Remove the stopped child from our tracking</span>
-<span id="L236"><span class="lineNum">     236</span>                 :<span class="tlaUNC">           0 :         auto id = ActorId(pb-&gt;actor_id());</span></span>
-<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaUNC">           0 :         auto it = std::find_if(children_.begin(), children_.end(),</span></span>
-<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaUNC">           0 :                                [id](const Actor&amp; a) { return a.id() == id; });</span></span>
-<span id="L239"><span class="lineNum">     239</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (it != children_.end()) {</span></span>
-<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaUNC">           0 :             remove_child(*it);</span></span>
-<span id="L241"><span class="lineNum">     241</span>                 :             :         }</span>
-<span id="L242"><span class="lineNum">     242</span>                 :             :     }</span>
-<span id="L243"><span class="lineNum">     243</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 : }</span></span>
-<span id="L244"><span class="lineNum">     244</span>                 :             : </span>
-<span id="L245"><span class="lineNum">     245</span>                 :             : SupervisionDirective</span>
-<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaGNC tlaBgGNC">          15 : SelfSupervisingActor::decide_restart(ActorId child_id, const error&amp; /*err*/) {</span></span>
-<span id="L247"><span class="lineNum">     247</span>   [<span class="tlaGBC" title="Branch 0 was taken 15 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 15 times"> + </span> :<span class="tlaGNC">          15 :     FAULT_INJECT(&quot;hpactor.supervision.decide_restart.fail&quot;) {</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaUNC">           0 :     auto child_id = ActorId(pb-&gt;actor_id());</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaUNC">           0 :     auto reason = error(pb-&gt;reason_code());</span></span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaUNC">           0 :     auto directive = decide_restart(child_id, reason);</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :             :     // Apply the supervision directive</span>
+<span id="L235"><span class="lineNum">     235</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (directive == SupervisionDirective::Stop) {</span></span>
+<span id="L236"><span class="lineNum">     236</span>                 :             :         // Remove the stopped child from our tracking</span>
+<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaUNC">           0 :         auto it = std::find_if(</span></span>
+<span id="L238"><span class="lineNum">     238</span>                 :             :             children_.begin(), children_.end(),</span>
+<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaUNC">           0 :             [child_id](const Actor&amp; a) { return a.id() == child_id; });</span></span>
+<span id="L240"><span class="lineNum">     240</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (it != children_.end()) {</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaUNC">           0 :             remove_child(*it);</span></span>
+<span id="L242"><span class="lineNum">     242</span>                 :             :         }</span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaUNC">           0 :         on_failure(child_id, reason);</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :             :     } else {</span>
+<span id="L245"><span class="lineNum">     245</span>                 :             :         // Restart or Quarantine — delegate to subclass override.</span>
+<span id="L246"><span class="lineNum">     246</span>                 :<span class="tlaUNC">           0 :         on_failure(child_id, reason);</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :             :     }</span>
+<span id="L248"><span class="lineNum">     248</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 : }</span></span>
+<span id="L249"><span class="lineNum">     249</span>                 :             : </span>
+<span id="L250"><span class="lineNum">     250</span>                 :             : SupervisionDirective</span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC tlaBgGNC">          15 : SelfSupervisingActor::decide_restart(ActorId child_id, const error&amp; /*err*/) {</span></span>
+<span id="L252"><span class="lineNum">     252</span>   [<span class="tlaGBC" title="Branch 0 was taken 15 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 15 times"> + </span> :<span class="tlaGNC">          15 :     FAULT_INJECT(&quot;hpactor.supervision.decide_restart.fail&quot;) {</span></span>
 <span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 15 times"> + </span>]
-<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return SupervisionDirective::Stop;</span></span>
-<span id="L249"><span class="lineNum">     249</span>                 :             :     }</span>
-<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC tlaBgGNC">          15 :     auto now = std::chrono::steady_clock::now();</span></span>
-<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC">          15 :     auto&amp; count = restart_counts_[child_id];</span></span>
-<span id="L252"><span class="lineNum">     252</span>                 :             : </span>
-<span id="L253"><span class="lineNum">     253</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          15 :     if (now - first_failure_time_ &gt; policy_.restart_interval) {</span></span>
-<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         count = 0;</span></span>
-<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaUNC">           0 :         first_failure_time_ = now;</span></span>
-<span id="L256"><span class="lineNum">     256</span>                 :             :     }</span>
+<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return SupervisionDirective::Stop;</span></span>
+<span id="L254"><span class="lineNum">     254</span>                 :             :     }</span>
+<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaGNC tlaBgGNC">          15 :     auto now = std::chrono::steady_clock::now();</span></span>
+<span id="L256"><span class="lineNum">     256</span>                 :<span class="tlaGNC">          15 :     auto&amp; count = restart_counts_[child_id];</span></span>
 <span id="L257"><span class="lineNum">     257</span>                 :             : </span>
-<span id="L258"><span class="lineNum">     258</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          15 :     if (count &gt;= policy_.max_restarts) {</span></span>
-<span id="L259"><span class="lineNum">     259</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           5 :         if (policy_.quarantine.enabled &amp;&amp;</span></span>
-<span id="L260"><span class="lineNum">     260</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           3 :             policy_.quarantine.escalate_on_max_restarts) {</span></span>
-<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">           2 :             return SupervisionDirective::Quarantine;</span></span>
-<span id="L262"><span class="lineNum">     262</span>                 :             :         }</span>
-<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">           3 :         return SupervisionDirective::Stop;</span></span>
-<span id="L264"><span class="lineNum">     264</span>                 :             :     }</span>
-<span id="L265"><span class="lineNum">     265</span>                 :             : </span>
-<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaGNC">          10 :     ++count;</span></span>
-<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaGNC">          10 :     return SupervisionDirective::Restart;</span></span>
-<span id="L268"><span class="lineNum">     268</span>                 :             : }</span>
-<span id="L269"><span class="lineNum">     269</span>                 :             : </span>
-<span id="L270"><span class="lineNum">     270</span>                 :             : } // namespace hpactor</span>
+<span id="L258"><span class="lineNum">     258</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          15 :     if (now - first_failure_time_ &gt; policy_.restart_interval) {</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         count = 0;</span></span>
+<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaUNC">           0 :         first_failure_time_ = now;</span></span>
+<span id="L261"><span class="lineNum">     261</span>                 :             :     }</span>
+<span id="L262"><span class="lineNum">     262</span>                 :             : </span>
+<span id="L263"><span class="lineNum">     263</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          15 :     if (count &gt;= policy_.max_restarts) {</span></span>
+<span id="L264"><span class="lineNum">     264</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           5 :         if (policy_.quarantine.enabled &amp;&amp;</span></span>
+<span id="L265"><span class="lineNum">     265</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           3 :             policy_.quarantine.escalate_on_max_restarts) {</span></span>
+<span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaGNC">           2 :             return SupervisionDirective::Quarantine;</span></span>
+<span id="L267"><span class="lineNum">     267</span>                 :             :         }</span>
+<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaGNC">           3 :         return SupervisionDirective::Stop;</span></span>
+<span id="L269"><span class="lineNum">     269</span>                 :             :     }</span>
+<span id="L270"><span class="lineNum">     270</span>                 :             : </span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">          10 :     ++count;</span></span>
+<span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaGNC">          10 :     return SupervisionDirective::Restart;</span></span>
+<span id="L273"><span class="lineNum">     273</span>                 :             : }</span>
+<span id="L274"><span class="lineNum">     274</span>                 :             : </span>
+<span id="L275"><span class="lineNum">     275</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
