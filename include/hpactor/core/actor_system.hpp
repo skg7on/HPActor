@@ -523,6 +523,21 @@ class ActorSystem {
                       int64_t deadline_ns = INT64_MAX,
                       mailbox::DeliveryOptions options = {});
 
+    /// \brief Fast local delivery that bypasses the full DeliveryPipeline.
+    ///
+    /// Enqueues directly to the target mailbox without circuit breaker,
+    /// TTL, dedup, or backpressure checks. Intended for internal benchmarks
+    /// and hot paths where those checks are known to be unnecessary.
+    ///
+    /// \pre The target actor exists.
+    /// \pre No circuit breaker, TTL, or dedup is needed.
+    /// \param[in] target Actor ID to deliver to.
+    /// \param[in] msg    Message to deliver (moved).
+    /// \return \c EnqueueResult describing acceptance or rejection.
+    /// \retval Accepted        Message was enqueued.
+    /// \retval ActorNotFound   Target actor does not exist.
+    mailbox::EnqueueResult try_deliver_local_fast(ActorId target, TypedMessage msg);
+
     /// \brief Deliver with a user-facing \c DeliveryResult.
     ///
     /// Wraps \c try_deliver_local() and converts the internal
