@@ -13,6 +13,7 @@ add_library(hpactor_lib SHARED
     actor/actor_system.cpp
     actor/ask_manager.cpp
     actor/daemon_actor.cpp
+    actor/behavior.cpp
     actor/event_based_actor.cpp
     actor/local_actor.cpp
     actor/spawn_receiver.cpp
