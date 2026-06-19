@@ -161,29 +161,21 @@ class SaturateCollectorActor : public EventBasedActor {
             return;
         DropReportPayload report = DropReportPayload::decode(p);
 
-        // Receiver counters are cumulative, so only add the delta since the
-        // last report from this receiver to avoid double-counting.
-        uint64_t prev_recv = last_receiver_received_[report.receiver_id];
+        // total_received_ is already tracked per-message via
+        // handle_latency_sample().  Only accumulate dropped counts
+        // from drop reports, computing the delta since the last
+        // report from this receiver.
         uint64_t prev_drop = last_receiver_dropped_[report.receiver_id];
-
-        uint64_t delta_recv = (report.total_received > prev_recv)
-                                  ? report.total_received - prev_recv
-                                  : 0;
         uint64_t delta_drop = (report.total_dropped > prev_drop)
                                   ? report.total_dropped - prev_drop
                                   : 0;
-
-        last_receiver_received_[report.receiver_id] = report.total_received;
         last_receiver_dropped_[report.receiver_id] = report.total_dropped;
-
-        total_received_.fetch_add(delta_recv, std::memory_order_relaxed);
         total_dropped_.fetch_add(delta_drop, std::memory_order_relaxed);
     }
 
     void handle_start() {
         latencies_.clear();
         drop_curve_.clear();
-        last_receiver_received_.clear();
         last_receiver_dropped_.clear();
         total_sent_.store(0);
         total_received_.store(0);
@@ -275,7 +267,6 @@ class SaturateCollectorActor : public EventBasedActor {
     std::atomic<uint64_t> total_sent_{0};
     std::atomic<uint64_t> total_received_{0};
     std::atomic<uint64_t> total_dropped_{0};
-    std::unordered_map<uint64_t, uint64_t> last_receiver_received_;
     std::unordered_map<uint64_t, uint64_t> last_receiver_dropped_;
     double p50_us_ = 0.0, p99_us_ = 0.0, p999_us_ = 0.0;
     double drop_rate_pct_ = 0.0;
