@@ -142,6 +142,12 @@ class SaturateSenderActor : public EventBasedActor {
     void schedule_next() {
         if (!running_)
             return;
+
+        // Cancel any pending tick so rate changes don't spawn overlapping
+        // tick streams that flood the mailbox pipeline.
+        if (pending_tick_.valid())
+            context()->cancel_schedule(pending_tick_);
+
         constexpr uint32_t kBatchSize = 10;
         // Clamp the target rate to what the scheduling timer can achieve.
         // Minimum interval is 1 ms → at most 1 000 ticks/s → 10 000 msg/s
@@ -153,8 +159,8 @@ class SaturateSenderActor : public EventBasedActor {
         uint32_t interval_ms = 1000 / ticks_per_sec;
         if (interval_ms == 0)
             interval_ms = 1;
-        context()->schedule(std::chrono::milliseconds(interval_ms),
-                            make_msg(SendTickTag));
+        pending_tick_ = context()->schedule(
+            std::chrono::milliseconds(interval_ms), make_msg(SendTickTag));
     }
 
     void do_tick() {
@@ -217,6 +223,7 @@ class SaturateSenderActor : public EventBasedActor {
     std::vector<ActorAddress> receiver_addrs_;
     uint32_t sender_index_;
     uint32_t num_active_receivers_ = 0;
+    AlarmHandle pending_tick_;
     std::chrono::steady_clock::time_point epoch_start_;
     std::chrono::steady_clock::time_point start_time_;
     std::atomic<uint64_t> sent_count_{0};
