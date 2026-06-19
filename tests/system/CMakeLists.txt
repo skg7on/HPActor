@@ -25,6 +25,7 @@ set(TEST_SYSTEM_SOURCES
     test_system_http_api_workflow.cpp
     test_system_actor_lifecycle_workflow.cpp
     test_system_mailbox_scheduler_workflow.cpp
+    test_system_network_deep_workflow.cpp
 )
 
 if(ENABLE_APPS)
