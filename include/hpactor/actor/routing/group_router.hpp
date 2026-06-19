@@ -110,9 +110,6 @@ class GroupRouter final : public EventBasedActor {
     }
 
   private:
-    /// \brief Collect mailbox snapshots from all routees.
-    void snapshot_routees(std::vector<cli::MboxSnapshot>& out);
-
     std::unique_ptr<IRoutingLogic> routing_logic_;
     std::string service_key_;
     std::vector<ActorRef> routees_;

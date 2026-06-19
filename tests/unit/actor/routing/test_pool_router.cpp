@@ -182,6 +182,11 @@ TEST_F(PoolRouterTest, AddAndRemoveRoutee) {
 // ── Routee Failure and Restart ─────────────────────────────────────────────
 
 TEST_F(PoolRouterTest, RouteeFailureRestart) {
+    // Use fail_after=2 so the routee fails on the 2nd message.
+    SupervisionPolicy policy;
+    policy.max_restarts = 5;
+    policy.restart_interval = std::chrono::milliseconds{5000};
+
     auto actor = system_->spawn<PoolRouter>(
         std::make_unique<RoundRobinLogic>(),
         [](ActorContext* ctx, ActorSystem& sys) -> std::shared_ptr<AbstractActor> {
@@ -189,21 +194,40 @@ TEST_F(PoolRouterTest, RouteeFailureRestart) {
             a->fail_after = 2;
             return a;
         },
-        1);
+        1, policy);
     driver_->drain(100);
     auto* router = as_router(actor);
 
-    EXPECT_EQ(router->routee_count(), 1u);
+    ASSERT_EQ(router->routee_count(), 1u);
     auto router_addr = router->address();
 
-    // Send enough messages to trigger failure at message 2
+    // Send messages: msg 1 handles ok, msg 2 triggers failure,
+    // msg 3-5 should be handled by the replacement routee.
     for (uint32_t i = 0; i < 5; ++i) {
         deliver_to_router(router_addr, i + 100);
     }
-    driver_->drain(200);
+    driver_->drain(300);
 
-    // The routee should be restarted, pool should still be functional.
-    EXPECT_GE(router->routee_count(), 0u);
+    // Routee should have been replaced (still 1 routee in pool).
+    EXPECT_EQ(router->routee_count(), 1u);
+
+    // Routee should have been replaced (still 1 routee in pool).
+    EXPECT_EQ(router->routee_count(), 1u);
+
+    // Verify the pool is still functional by sending one more message.
+    deliver_to_router(router_addr, 200);
+    driver_->drain(100);
+
+    auto& rts = router->routees();
+    ASSERT_EQ(rts.size(), 1u);
+    if (rts[0].is_local()) {
+        auto* actor_ptr = rts[0].get_actor();
+        ASSERT_NE(actor_ptr, nullptr);
+        ASSERT_NE(actor_ptr->get(), nullptr);
+        auto* fa = static_cast<test::FailingActor*>(actor_ptr->get().get());
+        // Routee processed messages; pool is functional after failure.
+        EXPECT_GT(fa->messages_processed, 0);
+    }
 }
 
 // ── Routing Logic Swap ────────────────────────────────────────────────────

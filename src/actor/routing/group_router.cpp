@@ -32,19 +32,22 @@ GroupRouter::GroupRouter(ActorContext* ctx, ActorSystem& sys,
 }
 
 Behavior GroupRouter::make_behavior() {
-    return Behavior::receive([this](TypedMessage& msg) {
+    return Behavior{[this](TypedMessage& msg) {
         if (routees_.empty()) {
             return; // no routees — drop the message
         }
 
+        // Only collect snapshots when the strategy needs them.
         std::vector<cli::MboxSnapshot> snapshots;
-        snapshot_routees(snapshots);
+        if (routing_logic_->needs_mailbox_snapshots()) {
+            collect_snapshots(routees_, snapshots);
+        }
 
         size_t idx = routing_logic_->select_routee(routees_, msg, snapshots);
         if (idx < routees_.size()) {
             context()->send(routees_[idx].address(), std::move(msg));
         }
-    });
+    }};
 }
 
 void GroupRouter::add_routee(ActorRef routee) {
@@ -68,32 +71,12 @@ void GroupRouter::set_routees(std::vector<ActorRef> routees) {
 }
 
 void GroupRouter::broadcast(TypedMessage msg) {
-    for (auto& routee : routees_) {
-        StreamBuffer payload_copy(msg.payload());
-        TypedMessage copy(msg.type_id(), std::move(payload_copy));
-        context()->send(routee.address(), std::move(copy));
-    }
+    broadcast_to_routees(context(), routees_, msg);
 }
 
 void GroupRouter::set_routing_logic(std::unique_ptr<IRoutingLogic> logic) {
     routing_logic_ = std::move(logic);
     routing_logic_->on_routees_changed(routees_);
-}
-
-void GroupRouter::snapshot_routees(std::vector<cli::MboxSnapshot>& out) {
-    out.clear();
-    out.reserve(routees_.size());
-
-    for (auto& ref : routees_) {
-        if (ref.is_local()) {
-            auto* actor = ref.get_actor();
-            if (actor && actor->get()) {
-                out.push_back(actor->get()->mailbox_snapshot());
-                continue;
-            }
-        }
-        out.emplace_back();
-    }
 }
 
 } // namespace hpactor::routing

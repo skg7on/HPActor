@@ -125,9 +125,6 @@ class PoolRouter final : public SelfSupervisingActor {
     /// \brief Spawn \p count routees and add them as children.
     void spawn_routees(size_t count);
 
-    /// \brief Collect mailbox snapshots from all routees.
-    void snapshot_routees(std::vector<cli::MboxSnapshot>& out);
-
     std::unique_ptr<IRoutingLogic> routing_logic_;
     config::ActorFactory factory_;
     size_t pool_size_{0};

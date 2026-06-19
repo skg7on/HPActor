@@ -14,9 +14,14 @@
 
 #pragma once
 
+#include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/cli/cli_types.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_ref.hpp>
+
+// Needed only by the shared broadcast_to_routees helper; the rest of the
+// interface works with forward declarations.
+#include <hpactor/actor/actor_context.hpp>
 
 #include <atomic>
 #include <cstddef>
@@ -25,6 +30,44 @@
 #include <vector>
 
 namespace hpactor::routing {
+
+// ── Shared helpers (used by both PoolRouter and GroupRouter) ────────────────
+
+/// \brief Collect mailbox snapshots from a list of routees.
+///
+/// Local routees contribute their \c mailbox_snapshot(). Remote or
+/// unavailable routees contribute a zeroed \c MboxSnapshot.
+inline void collect_snapshots(std::vector<ActorRef>& routees,
+                              std::vector<cli::MboxSnapshot>& out) {
+    out.clear();
+    out.reserve(routees.size());
+    for (auto& ref : routees) {
+        if (ref.is_local()) {
+            auto* actor_ptr = ref.get_actor();
+            if (actor_ptr && actor_ptr->get()) {
+                out.push_back(actor_ptr->get()->mailbox_snapshot());
+                continue;
+            }
+        }
+        out.emplace_back();
+    }
+}
+
+/// \brief Broadcast a message to every routee.
+///
+/// TypedMessage copy constructor is deleted; each copy is reconstructed
+/// from the original \c TypeTag and a copy of the \c StreamBuffer payload.
+/// Note that \c sender_address_ and \c ask_message_id_ are NOT preserved
+/// in the copies (v1 limitation — transparent reply routing is future work).
+inline void
+broadcast_to_routees(ActorContext* ctx, const std::vector<ActorRef>& routees,
+                     const TypedMessage& msg) {
+    for (auto& routee : routees) {
+        StreamBuffer payload_copy(msg.payload());
+        TypedMessage copy(msg.type_id(), std::move(payload_copy));
+        ctx->send(routee.address(), std::move(copy));
+    }
+}
 
 /// \brief Abstract strategy for selecting a routee from a pool.
 ///
@@ -56,6 +99,16 @@ class IRoutingLogic {
     /// Default no-op. Override to rebuild internal state (e.g., hash ring).
     /// \param[in] routees The updated full list of routees.
     virtual void on_routees_changed(const std::vector<ActorRef>& /*routees*/) {}
+
+    /// \brief Whether this strategy needs mailbox snapshots for selection.
+    ///
+    /// Default returns \c false. Override to return \c true when
+    /// \c select_routee() reads from \c routee_states (e.g.,
+    /// \c SmallestMailboxLogic). Routers skip snapshot collection when
+    /// this returns \c false, avoiding per-message allocations.
+    [[nodiscard]] virtual bool needs_mailbox_snapshots() const {
+        return false;
+    }
 };
 
 // ────────────────────────────────────────────────────────────────────────────
@@ -179,6 +232,10 @@ class SmallestMailboxLogic final : public IRoutingLogic {
 
     [[nodiscard]] const char* name() const override {
         return "smallest-mailbox";
+    }
+
+    [[nodiscard]] bool needs_mailbox_snapshots() const override {
+        return true;
     }
 };
 

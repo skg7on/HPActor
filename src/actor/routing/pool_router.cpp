@@ -45,25 +45,46 @@ void PoolRouter::on_activate() {
 }
 
 Behavior PoolRouter::make_behavior() {
-    return Behavior::receive([this](TypedMessage& msg) {
+    return Behavior{[this](TypedMessage& msg) {
+        // DownMsg triggers child failure handling; do not forward to
+        // routees. All other messages (including other system messages
+        // already handled by dispatch_system_message) are forwarded.
+        if (msg.type_id() == TypeTag::DownMsg) {
+            SelfSupervisingActor::handle_child_down(msg.type_id(), msg.payload());
+            return;
+        }
+
         if (routees_.empty()) {
             return; // no routees — drop the message
         }
 
+        // Only collect snapshots when the strategy needs them (avoids
+        // per-message vector allocation for RoundRobin/Random/ConsHash).
         std::vector<cli::MboxSnapshot> snapshots;
-        snapshot_routees(snapshots);
+        if (routing_logic_->needs_mailbox_snapshots()) {
+            collect_snapshots(routees_, snapshots);
+        }
 
         size_t idx = routing_logic_->select_routee(routees_, msg, snapshots);
         if (idx < routees_.size()) {
             context()->send(routees_[idx].address(), std::move(msg));
         }
-    });
+    }};
 }
 
 void PoolRouter::spawn_routees(size_t count) {
     for (size_t i = 0; i < count; ++i) {
-        add_routee();
+        // Inline the factory→spawn_configured→add_child logic without
+        // triggering on_routees_changed on every iteration — we notify
+        // once after the loop.
+        auto actor_ptr = factory_(context(), home_system());
+        config::ActorDef def;
+        def.behavior = std::string(actor_ptr->type_name());
+        auto child = home_system().spawn_configured(std::move(actor_ptr), def);
+        SelfSupervisingActor::add_child(child);
+        routees_.emplace_back(std::move(child));
     }
+    routing_logic_->on_routees_changed(routees_);
 }
 
 void PoolRouter::add_routee() {
@@ -119,12 +140,7 @@ void PoolRouter::resize(size_t new_size) {
 }
 
 void PoolRouter::broadcast(TypedMessage msg) {
-    for (auto& routee : routees_) {
-        // TypedMessage copy constructor is deleted; reconstruct from parts.
-        StreamBuffer payload_copy(msg.payload());
-        TypedMessage copy(msg.type_id(), std::move(payload_copy));
-        context()->send(routee.address(), std::move(copy));
-    }
+    broadcast_to_routees(context(), routees_, msg);
 }
 
 void PoolRouter::set_routing_logic(std::unique_ptr<IRoutingLogic> logic) {
@@ -168,23 +184,6 @@ SupervisionDirective PoolRouter::on_failure(ActorId child_id, const error& err) 
 
     routing_logic_->on_routees_changed(routees_);
     return SupervisionDirective::Restart;
-}
-
-void PoolRouter::snapshot_routees(std::vector<cli::MboxSnapshot>& out) {
-    out.clear();
-    out.reserve(routees_.size());
-
-    for (auto& ref : routees_) {
-        if (ref.is_local()) {
-            auto* actor = ref.get_actor();
-            if (actor && actor->get()) {
-                out.push_back(actor->get()->mailbox_snapshot());
-                continue;
-            }
-        }
-        // Remote or unavailable routee — zeroed snapshot.
-        out.emplace_back();
-    }
 }
 
 } // namespace hpactor::routing
