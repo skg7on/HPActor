@@ -308,8 +308,6 @@ class SaturateCoordinatorActor : public EventBasedActor {
             sender_addrs_.clear();
             receiver_addrs_.clear();
             spawned_ = false;
-            active_senders_ = 0;
-            active_receivers_ = 0;
         }
     }
 
