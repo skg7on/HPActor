@@ -22,6 +22,7 @@
 #include "../messages.hpp"
 
 #include <algorithm>
+#include <array>
 #include <atomic>
 #include <chrono>
 #include <cstdint>
@@ -45,7 +46,6 @@ class SaturateCollectorActor : public EventBasedActor {
     explicit SaturateCollectorActor(ActorContext* ctx, ActorSystem& sys)
         : EventBasedActor(ctx, sys),
           epoch_start_(std::chrono::steady_clock::now()) {
-        latencies_.reserve(kReservoirSize);
         drop_curve_.reserve(1024);
         become(make_behavior());
     }
@@ -161,13 +161,12 @@ class SaturateCollectorActor : public EventBasedActor {
             return;
         LatencySamplePayload sample = LatencySamplePayload::decode(p);
 
-        latencies_.push_back(static_cast<double>(sample.latency_us));
-        if (latencies_.size() > kReservoirSize) {
-            latencies_.erase(
-                latencies_.begin(),
-                latencies_.begin() +
-                    static_cast<ptrdiff_t>(latencies_.size() - kReservoirSize));
-        }
+        // Lock-free ring buffer: atomic write index wraps, overwriting
+        // oldest samples once capacity is reached. O(1) per insert.
+        size_t idx = latency_write_count_.fetch_add(1, std::memory_order_relaxed) %
+                     kReservoirSize;
+        latencies_[idx].store(static_cast<double>(sample.latency_us),
+                              std::memory_order_relaxed);
     }
 
     void handle_drop_report(TypedMessage& msg) {
@@ -193,7 +192,7 @@ class SaturateCollectorActor : public EventBasedActor {
     }
 
     void handle_start() {
-        latencies_.clear();
+        latency_write_count_.store(0, std::memory_order_relaxed);
         drop_curve_.clear();
         last_sender_sent_.clear();
         last_sender_dropped_.clear();
@@ -222,12 +221,19 @@ class SaturateCollectorActor : public EventBasedActor {
     }
 
     void recompute_percentiles() {
-        if (!latencies_.empty()) {
-            std::vector<double> sorted(latencies_);
+        // Snapshot from lock-free ring buffer.
+        size_t total = latency_write_count_.load(std::memory_order_acquire);
+        size_t count = total < kReservoirSize ? total : kReservoirSize;
+        if (count > 0) {
+            std::vector<double> sorted;
+            sorted.reserve(count);
+            for (size_t i = 0; i < count; ++i) {
+                sorted.push_back(latencies_[i].load(std::memory_order_relaxed));
+            }
             std::sort(sorted.begin(), sorted.end());
-            p50_us_ = sorted[sorted.size() / 2];
-            p99_us_ = sorted[sorted.size() * 99 / 100];
-            p999_us_ = sorted[sorted.size() * 999 / 1000];
+            p50_us_ = sorted[count / 2];
+            p99_us_ = sorted[count * 99 / 100];
+            p999_us_ = sorted[count * 999 / 1000];
         }
 
         uint64_t received = total_received_.load();
@@ -284,7 +290,10 @@ class SaturateCollectorActor : public EventBasedActor {
     std::chrono::steady_clock::time_point epoch_start_;
     std::chrono::steady_clock::time_point run_start_;
     std::chrono::steady_clock::time_point run_end_;
-    std::vector<double> latencies_;
+    // Lock-free ring buffer for latency samples: fixed-size array +
+    // atomic write count. Writes wrap modulo kReservoirSize.
+    std::array<std::atomic<double>, kReservoirSize> latencies_{};
+    std::atomic<size_t> latency_write_count_{0};
     std::vector<CurvePoint> drop_curve_;
     std::atomic<uint64_t> total_sent_{0};
     std::atomic<uint64_t> total_received_{0};
