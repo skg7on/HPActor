@@ -45,19 +45,9 @@ namespace bench_saturate = hpactor::apps::bench_saturate;
 // =============================================================================
 
 static void probe_system() {
-    std::cout << "\n";
-    std::cout
-        << "+--------------------------------------------------------------+\n";
-    std::cout << "|     HPActor App 17 — Bench Saturate                         |\n";
-    std::cout << "|     Actor System Saturation Benchmark                       |\n";
-    std::cout
-        << "+--------------------------------------------------------------+\n";
-    std::cout
-        << "|                                                              |\n";
-
+    // Collect system info.
     unsigned int logical_cores = std::thread::hardware_concurrency();
-    std::cout << "|  CPU Cores:     " << logical_cores << " logical";
-
+    std::string cpu_detail;
 #if defined(__APPLE__)
     int perf_cores = 0, eff_cores = 0;
     FILE* fp = popen("sysctl -n hw.perflevel0.logicalcpu 2>/dev/null", "r");
@@ -74,14 +64,14 @@ static void probe_system() {
             eff_cores = atoi(buf);
         pclose(fp);
     }
-    if (perf_cores > 0 && eff_cores > 0)
-        std::cout << " (" << perf_cores << "P + " << eff_cores << "E)";
-#endif
-    std::cout << "\n";
+    if (perf_cores > 0 && eff_cores > 0) {
+        char buf[48];
+        snprintf(buf, sizeof(buf), " (%dP + %dE)", perf_cores, eff_cores);
+        cpu_detail = buf;
+    }
 
-#if defined(__APPLE__)
+    int l1d = 0, l2 = 0;
     fp = popen("sysctl -n hw.l1dcachesize 2>/dev/null", "r");
-    int l1d = 0;
     if (fp) {
         char buf[32];
         if (fgets(buf, sizeof(buf), fp))
@@ -89,51 +79,80 @@ static void probe_system() {
         pclose(fp);
     }
     fp = popen("sysctl -n hw.l2cachesize 2>/dev/null", "r");
-    int l2 = 0;
     if (fp) {
         char buf[32];
         if (fgets(buf, sizeof(buf), fp))
             l2 = atoi(buf);
         pclose(fp);
     }
-    if (l1d > 0)
-        std::cout << "|  L1d Cache:     " << (l1d / 1024) << " KB\n";
-    if (l2 > 0)
-        std::cout << "|  L2 Cache:      " << (l2 / 1024) << " KB\n";
 #endif
 
     long page_size = sysconf(_SC_PAGESIZE);
     long phys_pages = sysconf(_SC_PHYS_PAGES);
-    if (phys_pages > 0 && page_size > 0) {
-        uint64_t total_mem =
+    uint64_t total_mem = 0;
+    if (phys_pages > 0 && page_size > 0)
+        total_mem =
             static_cast<uint64_t>(phys_pages) * static_cast<uint64_t>(page_size);
-        std::cout << "|  Memory:        " << (total_mem >> 30) << " GB\n";
+
+    // Render with fixed-width columns so values and descriptions align.
+    constexpr int kW = 62; // inner box width
+    char buf[256];
+
+    auto hr = [] { std::cout << "+" << std::string(kW, '-') << "+\n"; };
+    auto blank = [] { std::cout << "|" << std::string(kW, ' ') << "|\n"; };
+    auto row = [](const char* label, const char* value) {
+        printf("|  %-18s %-41s |\n", label, value);
+    };
+    auto presets = [](const char* name, const char* desc) {
+        printf("|    %-18s %-37s |\n", name, desc);
+    };
+
+    std::cout << "\n";
+    hr();
+    printf("| %-61s |\n", "HPActor App 17 — Bench Saturate");
+    printf("| %-61s |\n", "Actor System Saturation Benchmark");
+    hr();
+    blank();
+
+    snprintf(buf, sizeof(buf), "%u logical%s", logical_cores, cpu_detail.c_str());
+    row("CPU Cores:", buf);
+
+#if defined(__APPLE__)
+    if (l1d > 0) {
+        snprintf(buf, sizeof(buf), "%d KB", l1d / 1024);
+        row("L1d Cache:", buf);
+    }
+    if (l2 > 0) {
+        snprintf(buf, sizeof(buf), "%d KB", l2 / 1024);
+        row("L2 Cache:", buf);
+    }
+#endif
+
+    if (total_mem > 0) {
+        snprintf(buf, sizeof(buf), "%llu GB",
+                 static_cast<unsigned long long>(total_mem >> 30));
+        row("Memory:", buf);
     }
 
-    std::cout
-        << "|                                                              |\n";
-    std::cout
-        << "|  Presets:                                                    |\n";
-    std::cout << "|    quick-saturate — 100→10, 16B, fast ceiling find ~30s     |\n";
-    std::cout << "|    deep-saturate  — 1000→100, 16B, thorough curve ~60s     |\n";
-    std::cout << "|    alloc-stress   — 500→50, 1KB-64KB junk, alloc pressure   |\n";
-    std::cout
-        << "|    mixed-load     — 500→50, 80/20 mixed, realistic           |\n";
-    std::cout << "|    fan-in-extreme — 5000→1, 16B, extreme contention         |\n";
-    std::cout << "|    fan-out-burst  — 10→1000, 1KB-16KB junk, broad fan-out   |\n";
-    std::cout
-        << "|                                                              |\n";
-    std::cout
-        << "|  Try:                                                        |\n";
-    std::cout << "|    /saturate list              — see all presets            |\n";
-    std::cout << "|    /saturate start quick-saturate — fast ceiling find       |\n";
-    std::cout << "|    /saturate status            — check progress             |\n";
-    std::cout << "|    /saturate report            — view results               |\n";
-    std::cout << "|    /quit                       — exit                       |\n";
-    std::cout
-        << "|                                                              |\n";
-    std::cout
-        << "+--------------------------------------------------------------+\n";
+    blank();
+    printf("| %-61s |\n", "Presets:");
+    presets("quick-saturate", "100→10, 16B, fast ceiling find ~30s");
+    presets("deep-saturate", "1000→100, 16B, thorough curve ~60s");
+    presets("alloc-stress", "500→50, 1KB-64KB junk, alloc pressure");
+    presets("mixed-load", "500→50, 80/20 mixed, realistic");
+    presets("fan-in-extreme", "5000→1, 16B, extreme contention");
+    presets("fan-out-burst", "10→1000, 1KB-16KB junk, broad fan-out");
+    blank();
+
+    printf("| %-61s |\n", "Try:");
+    presets("/saturate list", "see all presets");
+    presets("/saturate start <preset>", "start a saturation run");
+    presets("/saturate status", "check progress");
+    presets("/saturate report", "view results");
+    presets("/quit", "exit");
+    blank();
+
+    hr();
     std::cout << std::endl;
 }
 
