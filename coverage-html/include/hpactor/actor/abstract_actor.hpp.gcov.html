@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 01:58:45</td>
+            <td class="headerValue">2026-06-19 02:16:58</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">68.0&nbsp;%</td>
@@ -139,8 +139,8 @@
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC tlaBgGNC">         928 :     virtual ~AbstractActor() = default;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     /// \brief Globally-unique actor identifier assigned at spawn.</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        4437 :     ActorId id() const {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        4437 :         return id_;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        4443 :     ActorId id() const {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        4443 :         return id_;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     /// \brief Pointer to the actor's \c ActorId for consumers that need</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     ///        an address without copying.</span>
@@ -211,8 +211,8 @@
 <span id="L133"><span class="lineNum">     133</span>                 :             :     /// \brief RTTI-free downcast to the \c LifecycleActor mixin.</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :     ///</span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     /// Returns \c nullptr for actors that do not opt into lifecycle management.</span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">        4105 :     virtual LifecycleActor* as_lifecycle() {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        4105 :         return nullptr;</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">        4107 :     virtual LifecycleActor* as_lifecycle() {</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        4107 :         return nullptr;</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :     }</span>
 <span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">           1 :     virtual const LifecycleActor* as_lifecycle() const {</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">           1 :         return nullptr;</span></span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 01:58:45</td>
+            <td class="headerValue">2026-06-19 02:16:58</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -341,8 +341,8 @@
 <span id="L261"><span class="lineNum">     261</span>                 :             :     }</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             : </span>
 <span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">      122542 :     [[nodiscard]] bool accepted() const noexcept {</span></span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">      242165 :         return code == EnqueueResultCode::Accepted ||</span></span>
-<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 119623 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2919 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 119341 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 282 times"> + </span>]:<span class="tlaGNC">      241883 :                code == EnqueueResultCode::AcceptedWithSoftPressure ||</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">      242164 :         return code == EnqueueResultCode::Accepted ||</span></span>
+<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 119622 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2920 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 119341 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 281 times"> + </span>]:<span class="tlaGNC">      241883 :                code == EnqueueResultCode::AcceptedWithSoftPressure ||</span></span>
 <span id="L266"><span class="lineNum">     266</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 119341 times"> + </span>]:<span class="tlaGNC">      241883 :                code == EnqueueResultCode::ReroutedToOverflow;</span></span>
 <span id="L267"><span class="lineNum">     267</span>                 :             :     }</span>
 <span id="L268"><span class="lineNum">     268</span>                 :             : </span>
@@ -403,8 +403,8 @@
 <span id="L323"><span class="lineNum">     323</span>                 :             : }</span>
 <span id="L324"><span class="lineNum">     324</span>                 :             : </span>
 <span id="L325"><span class="lineNum">     325</span>                 :             : [[nodiscard]] inline uint64_t</span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">      300389 : estimate_message_bytes(const TypedMessage&amp; msg) noexcept {</span></span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">      300389 :     return sizeof(TypedMessage) + msg.payload().size();</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">      302591 : estimate_message_bytes(const TypedMessage&amp; msg) noexcept {</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">      302591 :     return sizeof(TypedMessage) + msg.payload().size();</span></span>
 <span id="L328"><span class="lineNum">     328</span>                 :             : }</span>
 <span id="L329"><span class="lineNum">     329</span>                 :             : </span>
 <span id="L330"><span class="lineNum">     330</span>                 :             : /// \brief Human-readable snake_case string for an \c OverflowPolicy.</span>
