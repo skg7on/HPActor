@@ -37,5 +37,8 @@ target_link_libraries(11_cli_interactive_demo PRIVATE hpactor_lib)
 add_executable(12_registrar_star_topology 12_registrar_star_topology.cpp)
 target_link_libraries(12_registrar_star_topology PRIVATE hpactor_lib)
 
+add_executable(14_actor_routing 14_actor_routing.cpp)
+target_link_libraries(14_actor_routing PRIVATE hpactor_lib)
+
 add_executable(13_edf_scheduling_demo 13_edf_scheduling_demo.cpp)
 target_link_libraries(13_edf_scheduling_demo PRIVATE hpactor_lib)

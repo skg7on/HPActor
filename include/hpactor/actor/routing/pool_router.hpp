@@ -105,6 +105,11 @@ class PoolRouter final : public SelfSupervisingActor {
     /// \param[in] logic New routing strategy (ownership taken).
     void set_routing_logic(std::unique_ptr<IRoutingLogic> logic);
 
+    /// \brief Access the current routing logic.
+    [[nodiscard]] IRoutingLogic* routing_logic() const {
+        return routing_logic_.get();
+    }
+
     // ── Supervision ────────────────────────────────────────────────
 
     /// \brief Handle child failure — replace the failed routee.

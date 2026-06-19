@@ -104,6 +104,11 @@ class GroupRouter final : public EventBasedActor {
     /// \param[in] logic New routing strategy (ownership taken).
     void set_routing_logic(std::unique_ptr<IRoutingLogic> logic);
 
+    /// \brief Access the current routing logic.
+    [[nodiscard]] IRoutingLogic* routing_logic() const {
+        return routing_logic_.get();
+    }
+
   private:
     /// \brief Collect mailbox snapshots from all routees.
     void snapshot_routees(std::vector<cli::MboxSnapshot>& out);
