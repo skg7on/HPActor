@@ -30,6 +30,7 @@ add_executable(test_unit_mailbox
     test_mailbox_formal_validation.cpp
     test_mailbox_stress_formal.cpp
     test_prearm_race.cpp
+    test_stash_buffer.cpp
 )
 target_link_libraries(test_unit_mailbox hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_mailbox)
