@@ -208,3 +208,78 @@ TEST(NetworkWorkflow, ConnectionPoolIsConnectedForUnknown) {
     auto result = system.shutdown();
     EXPECT_TRUE(result.has_value());
 }
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Test Group 3: Event loop + timer
+// ═══════════════════════════════════════════════════════════════════════════════
+
+TEST(NetworkWorkflow, EventLoopRunStop) {
+    // Create a standalone EventLoop, start and stop it
+    net::EventLoop loop;
+    EXPECT_FALSE(loop.is_running());
+
+    // Run the event loop in a background thread
+    std::atomic<bool> loop_started{false};
+    std::thread loop_thread([&loop, &loop_started]() {
+        loop_started.store(true);
+        loop.run();
+    });
+
+    // Wait for the loop to start
+    test::assert_eventually([&loop]() { return loop.is_running(); }, 3000);
+    EXPECT_TRUE(loop.is_running());
+
+    // Stop the loop
+    loop.stop();
+    if (loop_thread.joinable()) {
+        loop_thread.join();
+    }
+    EXPECT_FALSE(loop.is_running());
+}
+
+TEST(NetworkWorkflow, EventLoopTimerIntegration) {
+    // Verify EventLoop timer API through transport's event loop.
+    // Timers are scheduled and can be cancelled without crashing.
+    // (Timer dispatch is backend-dependent; GCD may need active run loop.)
+    Config cfg = test::config_with_scheduler(1);
+    cfg.enable_network = true;
+    cfg.tcp_port = 0;
+    cfg.service_discovery =
+        std::make_shared<net::StaticDiscovery>(std::vector<net::Member>{});
+
+    ActorSystem system(cfg);
+    EXPECT_TRUE(system.is_running());
+    auto* transport = system.transport();
+    ASSERT_NE(transport, nullptr);
+
+    // Access the underlying EventLoop
+    auto* tcp = static_cast<net::TcpTransport*>(transport);
+    net::EventLoop& loop = tcp->loop();
+    EXPECT_FALSE(loop.is_running());
+
+    // Run the event loop in a background thread
+    std::thread loop_thread([&loop]() { loop.run(); });
+    test::assert_eventually([&loop]() { return loop.is_running(); }, 3000);
+    EXPECT_TRUE(loop.is_running());
+
+    // Schedule a one-shot timer — verify handle is non-zero
+    uint64_t handle = loop.run_after([]() { /* no-op */ }, 100);
+    EXPECT_GT(handle, 0u);
+
+    // Cancel the timer before it fires
+    loop.cancel_timer(handle);
+
+    // Schedule a repeating timer and cancel it
+    uint64_t rep_handle = loop.run_every([]() { /* no-op */ }, 200);
+    EXPECT_GT(rep_handle, 0u);
+    loop.cancel_timer(rep_handle);
+
+    // Stop the loop and join
+    loop.stop();
+    if (loop_thread.joinable()) {
+        loop_thread.join();
+    }
+
+    auto result = system.shutdown();
+    EXPECT_TRUE(result.has_value());
+}
