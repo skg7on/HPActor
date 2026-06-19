@@ -50,10 +50,7 @@ CliClientActor::~CliClientActor() = default;
 // ---------------------------------------------------------------------------
 
 void CliClientActor::print_greeting() {
-    // Wire the client pointer into CliSession so /client commands can detect
-    // they're running on a client and show self-only information.
-    session_->set_client_actor(this);
-    // Defer the real greeting to pre_input_hook() — the connection hasn't been
+    // Defer the greeting to pre_input_hook() — the connection hasn't been
     // attempted yet at this point.  Don't claim "Connected" or suggest typing
     // commands until the transport is actually up.
 }
@@ -142,6 +139,12 @@ bool CliClientActor::pre_input_hook() {
 
 void CliClientActor::pre_stop_hook() {
     disconnect();
+}
+
+void CliClientActor::on_session_wired(CliSession& session) {
+    // Wire the client pointer into CliSession so /client commands can detect
+    // they're running on a client and show self-only information.
+    session.set_client_actor(this);
 }
 
 // ---------------------------------------------------------------------------

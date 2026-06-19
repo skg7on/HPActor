@@ -80,6 +80,10 @@ uint32_t CliActor::get_page_size() {
     return config_.page_size;
 }
 
+void CliActor::on_session_wired(CliSession& session) {
+    session.set_cli_actor(this);
+}
+
 // ---------------------------------------------------------------------------
 // Mailbox polling — block on this dedicated thread until the expected
 // response tag arrives or the timeout expires.

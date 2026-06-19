@@ -107,6 +107,7 @@ class CliActor : public InteractiveCliActor {
     uint32_t get_history_max() override;
     std::string get_default_format() override;
     uint32_t get_page_size() override;
+    void on_session_wired(CliSession& session) override;
 
   private:
     std::optional<StreamBuffer>

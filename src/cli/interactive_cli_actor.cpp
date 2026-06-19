@@ -66,7 +66,10 @@ void InteractiveCliActor::on_daemon_start() {
     session_->set_system_host(this);
     session_->set_lifecycle_host(this);
 
-    // 5. Subclass hook — print the welcome banner.
+    // 5. Subclass hook — wire subclass-specific pointers into the session.
+    on_session_wired(*session_);
+
+    // 6. Subclass hook — print the welcome banner.
     print_greeting();
 }
 
