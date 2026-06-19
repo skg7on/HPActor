@@ -413,8 +413,9 @@ TEST(TraceBranchesTest, MultipleSpansCorrelation) {
             db_count++;
         if (s.actor_id == ActorId{3})
             cache_count++;
-        if (s.status == SpanStatus::kError)
+        if (s.status == SpanStatus::kError) {
             EXPECT_EQ(s.actor_id, ActorId{3});
+        }
     }
     EXPECT_EQ(root_count, 1);
     EXPECT_EQ(db_count, 1);
