@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 01:25:54</td>
+            <td class="headerValue">2026-06-19 01:58:45</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">95.0&nbsp;%</td>
@@ -112,7 +112,7 @@
 <span id="L34"><span class="lineNum">      34</span>                 :             : ///       mailbox.</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : class TypedMessage {</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :   public:</span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC tlaBgGNC">        9989 :     TypedMessage() = default;</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC tlaBgGNC">        9988 :     TypedMessage() = default;</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     /// Copy is disabled — the \c mpsc_next atomic member deletes the</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     /// implicitly-generated copy constructor.</span>
@@ -123,14 +123,14 @@
 <span id="L45"><span class="lineNum">      45</span>                 :             :     ///</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     /// Transfers all fields from \p other. The moved-from object's</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :     /// \c mpsc_next is left default-initialized.</span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">     1083513 :     TypedMessage(TypedMessage&amp;&amp; other) noexcept</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">     1083513 :         : tag_(other.tag_), payload_(std::move(other.payload_)),</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">     1083513 :           parsed_(std::move(other.parsed_)),</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">     1083513 :           sender_address_(other.sender_address_),</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">     1083513 :           trace_context_(other.trace_context_),</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">     1083513 :           has_trace_context_(other.has_trace_context_),</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">     1083513 :           deadline_ns_(other.deadline_ns_),</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">     1083513 :           ask_message_id_(other.ask_message_id_) {}</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">     1083771 :     TypedMessage(TypedMessage&amp;&amp; other) noexcept</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">     1083771 :         : tag_(other.tag_), payload_(std::move(other.payload_)),</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">     1083771 :           parsed_(std::move(other.parsed_)),</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">     1083771 :           sender_address_(other.sender_address_),</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">     1083771 :           trace_context_(other.trace_context_),</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">     1083771 :           has_trace_context_(other.has_trace_context_),</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">     1083771 :           deadline_ns_(other.deadline_ns_),</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">     1083771 :           ask_message_id_(other.ask_message_id_) {}</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : </span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     /// \brief Move assignment.</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     ///</span>
@@ -165,8 +165,8 @@
 <span id="L87"><span class="lineNum">      87</span>                 :             :     ///</span>
 <span id="L88"><span class="lineNum">      88</span>                 :             :     /// \param[in] tag Message type tag for dispatch.</span>
 <span id="L89"><span class="lineNum">      89</span>                 :             :     /// \param[in] payload Serialized protobuf payload from the wire.</span>
-<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">     1223377 :     explicit TypedMessage(TypeTag tag, StreamBuffer payload)</span></span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">     1223377 :         : tag_(tag), payload_(std::move(payload)) {}</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">     1223435 :     explicit TypedMessage(TypeTag tag, StreamBuffer payload)</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">     1223435 :         : tag_(tag), payload_(std::move(payload)) {}</span></span>
 <span id="L92"><span class="lineNum">      92</span>                 :             : </span>
 <span id="L93"><span class="lineNum">      93</span>                 :             :     /// \brief Convenience constructor — serializes \p msg eagerly.</span>
 <span id="L94"><span class="lineNum">      94</span>                 :             :     ///</span>
@@ -178,13 +178,13 @@
 <span id="L100"><span class="lineNum">     100</span>                 :             :     TypedMessage(TypeTag tag, const google::protobuf::Message&amp; msg);</span>
 <span id="L101"><span class="lineNum">     101</span>                 :             : </span>
 <span id="L102"><span class="lineNum">     102</span>                 :             :     /// \brief The \c TypeTag used for dispatch routing.</span>
-<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">       10575 :     [[nodiscard]] TypeTag type_id() const noexcept {</span></span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">       10575 :         return tag_;</span></span>
+<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC">       10648 :     [[nodiscard]] TypeTag type_id() const noexcept {</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">       10648 :         return tag_;</span></span>
 <span id="L105"><span class="lineNum">     105</span>                 :             :     }</span>
 <span id="L106"><span class="lineNum">     106</span>                 :             : </span>
 <span id="L107"><span class="lineNum">     107</span>                 :             :     /// \brief Raw serialized payload for wire transfer.</span>
-<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">      301725 :     [[nodiscard]] const StreamBuffer&amp; payload() const noexcept {</span></span>
-<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">      301725 :         return payload_;</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">      301935 :     [[nodiscard]] const StreamBuffer&amp; payload() const noexcept {</span></span>
+<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">      301935 :         return payload_;</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :             :     }</span>
 <span id="L111"><span class="lineNum">     111</span>                 :             : </span>
 <span id="L112"><span class="lineNum">     112</span>                 :             :     /// \brief Pre-parsed protobuf message, when available.</span>
