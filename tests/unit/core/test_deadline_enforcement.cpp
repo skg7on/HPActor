@@ -367,3 +367,77 @@ TEST(DeadlineEnforcementCoroutineTest, ExpiredMessageSkippedInAwaitResume) {
 }
 
 #endif // HPACTOR_SUPPORT_COROUTINES
+
+// =============================================================================
+// Fast delivery path (try_deliver_local_fast)
+// =============================================================================
+
+TEST_F(DeadlineEnforcementTest, FastDeliveryEnqueuesToMailbox) {
+    TypedMessage msg(TypeTag::User, StreamBuffer{1});
+    auto result = system_->try_deliver_local_fast(target_.id(), std::move(msg));
+
+    EXPECT_TRUE(result.accepted());
+    EXPECT_EQ(result.code, EnqueueResultCode::Accepted);
+
+    // Verify the message is actually in the mailbox.
+    auto* mbox = system_->get_mailbox(target_.id());
+    ASSERT_NE(mbox, nullptr);
+    EXPECT_FALSE(mbox->empty());
+}
+
+TEST_F(DeadlineEnforcementTest, FastDeliveryActorNotFound) {
+    TypedMessage msg(TypeTag::User, StreamBuffer{1});
+    auto result = system_->try_deliver_local_fast(ActorId{999999}, std::move(msg));
+
+    EXPECT_FALSE(result.accepted());
+    EXPECT_EQ(result.code, EnqueueResultCode::ActorNotFound);
+}
+
+TEST_F(DeadlineEnforcementTest, FastDeliveryNoDeadlineApplied) {
+    TypedMessage msg(TypeTag::User, StreamBuffer{1});
+    auto result = system_->try_deliver_local_fast(target_.id(), std::move(msg));
+
+    EXPECT_TRUE(result.accepted());
+
+    // Pop the message — fast path must NOT apply a deadline (stays INT64_MAX).
+    auto* mbox = system_->get_mailbox(target_.id());
+    ASSERT_NE(mbox, nullptr);
+    TypedMessage popped;
+    ASSERT_TRUE(mbox->try_pop(popped));
+    EXPECT_EQ(popped.deadline_ns(), INT64_MAX)
+        << "Fast path must not apply a default TTL";
+}
+
+TEST_F(DeadlineEnforcementTest, FastDeliveryBypassesCircuitBreaker) {
+    // Fast path enqueues even when the normal path might check circuit breaker.
+    // The fast path is for callers who know no circuit breaker is configured.
+    TypedMessage msg(TypeTag::User, StreamBuffer{42});
+    auto result = system_->try_deliver_local_fast(target_.id(), std::move(msg));
+
+    EXPECT_TRUE(result.accepted());
+
+    auto* mbox = system_->get_mailbox(target_.id());
+    ASSERT_NE(mbox, nullptr);
+    EXPECT_FALSE(mbox->empty());
+}
+
+TEST_F(DeadlineEnforcementTest, FastDeliveryMultipleMessages) {
+    for (int i = 0; i < 10; ++i) {
+        StreamBuffer payload(1);
+        payload[0] = static_cast<uint8_t>(i);
+        TypedMessage msg(TypeTag::User, std::move(payload));
+        auto result =
+            system_->try_deliver_local_fast(target_.id(), std::move(msg));
+        EXPECT_TRUE(result.accepted()) << "msg " << i;
+    }
+
+    auto* mbox = system_->get_mailbox(target_.id());
+    ASSERT_NE(mbox, nullptr);
+
+    // Pop all and verify they arrived in order
+    for (int i = 0; i < 10; ++i) {
+        TypedMessage popped;
+        ASSERT_TRUE(mbox->try_pop(popped)) << "msg " << i;
+        EXPECT_EQ(popped.payload()[0], static_cast<uint8_t>(i)) << "msg " << i;
+    }
+}
