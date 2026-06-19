@@ -489,7 +489,7 @@ std::vector<WorkerSnapshot> HybridScheduler::worker_snapshots() const {
         WorkerSnapshot ws;
         ws.worker_index = static_cast<uint16_t>(i);
         ws.is_idle = !worker_threads_[i]->is_running() ||
-                     worker_threads_[i]->depth() == 0;
+                     worker_threads_[i]->diag_is_in_cv_model();
         ws.steals_attempted = worker_threads_[i]->donation_count();
         ws.steals_successful = 0;
         ws.actors_executed = 0;

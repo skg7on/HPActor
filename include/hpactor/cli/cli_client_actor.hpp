@@ -83,6 +83,7 @@ class CliClientActor : public InteractiveCliActor {
     uint32_t get_page_size() override;
     bool pre_input_hook() override;
     void pre_stop_hook() override;
+    void on_session_wired(CliSession& session) override;
 
   private:
     void connect();

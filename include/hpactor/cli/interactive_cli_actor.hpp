@@ -110,6 +110,15 @@ class InteractiveCliActor : public DaemonActor,
     ///        \c on_daemon_stop() saves history and prints farewell.
     virtual void pre_stop_hook() {}
 
+    /// \brief Hook called after the CliSession is created and the three
+    ///        host interfaces (command_host, system_host, lifecycle_host)
+    ///        are wired.  Subclasses override to wire their specific type
+    ///        pointer (e.g. \c set_cli_actor, \c set_client_actor) into
+    ///        the session so that \c CommandContext fields are populated.
+    ///
+    /// \param[in,out] session The newly-created CliSession.
+    virtual void on_session_wired(CliSession& /*session*/) {}
+
     // ── Shared state ──────────────────────────────────────────────────
 
     ActorSystem& system_;

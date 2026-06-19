@@ -121,10 +121,20 @@ class SaturateSenderActor : public EventBasedActor {
             schedule_next();
     }
 
-    void handle_start(TypedMessage& /*msg*/) {
+    void handle_start(TypedMessage& msg) {
         sent_count_.store(0);
+        send_dropped_.store(0);
         seq_no_ = 0;
         next_receiver_idx_ = 0;
+
+        // Honour the preset's receiver count so the sender round-robins
+        // only over the active subset, not all pre-created receivers.
+        auto start = SaturateStartPayload::decode(msg.payload());
+        num_active_receivers_ = start.num_receivers;
+        if (num_active_receivers_ == 0 ||
+            num_active_receivers_ > receiver_addrs_.size())
+            num_active_receivers_ = static_cast<uint32_t>(receiver_addrs_.size());
+
         running_ = true;
         start_time_ = std::chrono::steady_clock::now();
         schedule_next();
@@ -133,15 +143,25 @@ class SaturateSenderActor : public EventBasedActor {
     void schedule_next() {
         if (!running_)
             return;
+
+        // Cancel any pending tick so rate changes don't spawn overlapping
+        // tick streams that flood the mailbox pipeline.
+        if (pending_tick_.valid())
+            context()->cancel_schedule(pending_tick_);
+
         constexpr uint32_t kBatchSize = 10;
-        uint32_t ticks_per_sec = (current_rate_msgps_ + kBatchSize - 1) / kBatchSize;
+        // Clamp the target rate to what the scheduling timer can achieve.
+        // Minimum interval is 1 ms → at most 1 000 ticks/s → 10 000 msg/s
+        // per sender regardless of how high current_rate_msgps_ is set.
+        uint32_t effective_rate = std::min(current_rate_msgps_, kBatchSize * 1000u);
+        uint32_t ticks_per_sec = (effective_rate + kBatchSize - 1) / kBatchSize;
         if (ticks_per_sec == 0)
             ticks_per_sec = 1;
         uint32_t interval_ms = 1000 / ticks_per_sec;
         if (interval_ms == 0)
             interval_ms = 1;
-        context()->schedule(std::chrono::milliseconds(interval_ms),
-                            make_msg(SendTickTag));
+        pending_tick_ = context()->schedule(
+            std::chrono::milliseconds(interval_ms), make_msg(SendTickTag));
     }
 
     void do_tick() {
@@ -179,15 +199,23 @@ class SaturateSenderActor : public EventBasedActor {
 
             auto& target = receiver_addrs_[next_receiver_idx_];
             next_receiver_idx_ = static_cast<uint32_t>((next_receiver_idx_ + 1) %
-                                                       receiver_addrs_.size());
+                                                       num_active_receivers_);
 
-            context()->send(target, make_msg(LoadMessageTag, std::move(payload)));
+            auto result = home_system().try_deliver_local(
+                target.id, make_msg(LoadMessageTag, std::move(payload)));
             sent_count_.fetch_add(1, std::memory_order_relaxed);
+            if (!result.accepted())
+                send_dropped_.fetch_add(1, std::memory_order_relaxed);
         }
 
         uint64_t sent = sent_count_.load();
         if (sent % 100 == 0) {
-            context()->send(collector_addr_, make_msg(ThroughputSampleTag));
+            ThroughputSamplePayload tsp;
+            tsp.sender_id = sender_index_;
+            tsp.total_sent = sent;
+            tsp.send_dropped = send_dropped_.load();
+            context()->send(collector_addr_,
+                            make_msg(ThroughputSampleTag, tsp.encode()));
         }
 
         schedule_next();
@@ -203,9 +231,12 @@ class SaturateSenderActor : public EventBasedActor {
     ActorAddress collector_addr_;
     std::vector<ActorAddress> receiver_addrs_;
     uint32_t sender_index_;
+    uint32_t num_active_receivers_ = 0;
+    AlarmHandle pending_tick_;
     std::chrono::steady_clock::time_point epoch_start_;
     std::chrono::steady_clock::time_point start_time_;
     std::atomic<uint64_t> sent_count_{0};
+    std::atomic<uint64_t> send_dropped_{0};
     std::atomic<uint64_t> processed_{0};
     uint64_t seq_no_ = 0;
     uint64_t seq_no_seed_ = 12345;
