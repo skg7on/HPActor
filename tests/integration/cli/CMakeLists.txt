@@ -2,6 +2,7 @@ add_executable(test_integration_cli
     test_cli_actor.cpp
     test_cli_commands_workflow.cpp
     test_cli_deep_workflow.cpp
+    test_cli_final.cpp
     test_cli_integration.cpp
     test_cli_server_proto.cpp
     test_dlq_integration.cpp
