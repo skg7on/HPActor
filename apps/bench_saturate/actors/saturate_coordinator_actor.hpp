@@ -225,6 +225,7 @@ class SaturateCoordinatorActor : public EventBasedActor {
         last_error_.clear();
         phase_ = RampPhase::Probing;
         current_rate_msgps_ = preset->initial_rate_msgps;
+        actual_throughput_msgps_ = 0.0;
         saturation_ceiling_ = 0;
         refine_iteration_ = 0;
         last_good_rate_ = 0;
@@ -283,6 +284,8 @@ class SaturateCoordinatorActor : public EventBasedActor {
         while (std::getline(iss, line)) {
             if (line.starts_with("drop_rate_pct=")) {
                 current_drop_rate_pct_ = std::stod(line.substr(14));
+            } else if (line.starts_with("throughput_msgps=")) {
+                actual_throughput_msgps_ = std::stod(line.substr(18));
             }
         }
     }
@@ -384,6 +387,7 @@ class SaturateCoordinatorActor : public EventBasedActor {
             oss << "elapsed_ms=" << elapsed << "\n";
         }
         oss << "current_rate_msgps=" << current_rate_msgps_ << "\n";
+        oss << "actual_throughput_msgps=" << actual_throughput_msgps_ << "\n";
         oss << "drop_rate_pct=" << current_drop_rate_pct_ << "\n";
         oss << "saturation_ceiling=" << saturation_ceiling_ << "\n";
         oss << "senders=" << active_senders_ << "\n";
@@ -414,6 +418,7 @@ class SaturateCoordinatorActor : public EventBasedActor {
 
     RampPhase phase_ = RampPhase::Idle;
     uint32_t current_rate_msgps_ = 100;
+    double actual_throughput_msgps_ = 0.0;
     uint32_t saturation_ceiling_ = 0;
     uint32_t last_good_rate_ = 0;
     uint32_t first_bad_rate_ = 0;

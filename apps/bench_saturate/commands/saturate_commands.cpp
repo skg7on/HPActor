@@ -228,7 +228,10 @@ class SaturateStatusCommand final : public ICommand {
         display["Preset"] = kv["preset"];
         display["Phase"] = kv["phase"];
         display["Running"] = kv["running"];
-        display["Current Rate (msg/s)"] = kv["current_rate_msgps"];
+        display["Target Rate (msg/s)"] = kv["current_rate_msgps"];
+        if (kv.count("actual_throughput_msgps") &&
+            kv["actual_throughput_msgps"] != "0.00")
+            display["Actual Throughput (msg/s)"] = kv["actual_throughput_msgps"];
         display["Drop Rate (%)"] = kv["drop_rate_pct"];
         display["Saturation Ceiling"] = kv.count("saturation_ceiling")
                                             ? kv["saturation_ceiling"]
