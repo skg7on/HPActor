@@ -230,8 +230,9 @@ class SaturateStatusCommand final : public ICommand {
         display["Running"] = kv["running"];
         display["Target Rate (msg/s)"] = kv["current_rate_msgps"];
         if (kv.count("actual_throughput_msgps") &&
-            kv["actual_throughput_msgps"] != "0.00")
-            display["Actual Throughput (msg/s)"] = kv["actual_throughput_msgps"];
+            kv["actual_throughput_msgps"] != "0.00") {
+            display["Total Throughput (msg/s)"] = kv["actual_throughput_msgps"];
+        }
         display["Drop Rate (%)"] = kv["drop_rate_pct"];
         display["Saturation Ceiling"] = kv.count("saturation_ceiling")
                                             ? kv["saturation_ceiling"]
@@ -311,7 +312,7 @@ class SaturateReportCommand final : public ICommand {
         overview["Total Received"] = kv["total_received"];
         overview["Total Dropped"] = kv["total_dropped"];
         overview["Drop Rate (%)"] = kv["drop_rate_pct"];
-        overview["Throughput (msg/s)"] = kv["throughput_msgps"];
+        overview["Total Throughput (msg/s)"] = kv["throughput_msgps"];
         overview["Elapsed (ms)"] = kv["elapsed_ms"];
         ctx.output->key_value(overview);
 
