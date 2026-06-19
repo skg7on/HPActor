@@ -79,6 +79,8 @@ supervisor. The only difference is that `dispatch_policy()` returns
       ├── StatefulActor<T>        (explicit state member)
       ├── SupervisorActor          (manages child supervision)
       ├── SelfSupervisingActor     (supervision + parent in one)
+      │     └── PoolRouter         (routee pool + supervision)
+      ├── GroupRouter              (external routee routing by service key)
       └── SpawnReceiver            (handles remote spawn requests)
 
 Specialization via DispatchPolicy (NOT inheritance):
@@ -171,6 +173,40 @@ compute-heavy actors never starve the cooperative pool:
 
 **DenseComputingActor** — handlers dispatched to a private thread pool. The
 actor still participates in message-passing; only execution is isolated.
+
+---
+
+### 6.1 Actor Routers
+
+Routers distribute messages across a set of routees using a pluggable routing
+strategy. Two router types cover the primary use cases:
+
+**PoolRouter** extends `SelfSupervisingActor`. It spawns a pool of child actors
+(routees), supervises them (restart on failure, quarantine on excessive
+failures), and forwards messages to the routee selected by the current
+`IRoutingLogic`. Supports broadcast, resize, and runtime routing logic swap.
+
+**GroupRouter** extends `EventBasedActor`. It routes to externally-registered
+actor references discovered by a service key string. Routees are not children
+and receive no supervision from the router. Supports add/remove/set routees,
+broadcast, and runtime routing logic swap.
+
+**Routing strategies** (all implement `IRoutingLogic`):
+
+| Strategy | Selection | State |
+|----------|-----------|-------|
+| `RoundRobinLogic` | Atomic counter, sequential | `atomic<uint64_t>` |
+| `RandomLogic` | xorshift64 PRNG, CAS-based | `atomic<uint64_t>` |
+| `ConsistentHashingLogic` | Hash ring, 128 vnodes, O(log n) | Sorted ring vector |
+| `SmallestMailboxLogic` | Lowest `MboxSnapshot::depth` | Stateless |
+
+**No-RTTI design:** `IRoutingLogic::on_routees_changed()` is a virtual hook
+called when routees are added/removed. `ConsistentHashingLogic` overrides it to
+rebuild the hash ring; other strategies leave it as a no-op. This avoids
+`dynamic_cast` (prohibited by `-fno-rtti`).
+
+See [Actor Routing Design](actor-routing-design.md) for the full architecture,
+API, message flow, supervision integration, and usage examples.
 
 ---
 
@@ -336,7 +372,11 @@ include/hpactor/
 │   ├── passivation_config.hpp
 │   ├── durable_actor.hpp, durable_state_store.hpp
 │   ├── actor_route.hpp
-│   └── daemon_actor.hpp, polling_actor.hpp, dense_computing_actor.hpp
+│   ├── daemon_actor.hpp, polling_actor.hpp, dense_computing_actor.hpp
+│   └── routing/            # Actor routers — workload distribution
+│       ├── routing_logic.hpp
+│       ├── pool_router.hpp
+│       └── group_router.hpp
 ├── core/                   # ActorSystem, ActorContext
 ├── ref/                    # ActorAddress, ActorRef, ActorProxy
 ├── mailbox/                # Mailbox, DLQ, overflow handlers, backpressure
@@ -357,6 +397,7 @@ include/hpactor/
 ## 14. References
 
 - [ACT-008 Passivation Design Spec](../../superpowers/specs/2026-06-06-act-008-actor-passivation-design.md)
+- [Actor Routing Design](actor-routing-design.md)
 - [Actor Concurrency and Lock-Free Mailbox Rules](actor-concurrency-and-lockfree-mailbox-rules.md)
 - [Mailbox Management and Backpressure Design](mailbox-management-backpressure-design.md)
 - [Distributed Actor System Architecture](../system-architecture-and-key-concept-high-level-design.md)
