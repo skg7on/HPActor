@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 00:16:16</td>
+            <td class="headerValue">2026-06-19 01:25:54</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">97.0&nbsp;%</td>
@@ -116,14 +116,14 @@
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : class ReceiveSpanGuard {</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :   public:</span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC tlaBgGNC">         946 :     ReceiveSpanGuard(tracing::TraceManager* manager, tracing::SpanHandle* handle) noexcept</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">         946 :         : manager_(manager), handle_(handle) {}</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC tlaBgGNC">         938 :     ReceiveSpanGuard(tracing::TraceManager* manager, tracing::SpanHandle* handle) noexcept</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">         938 :         : manager_(manager), handle_(handle) {}</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : </span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">         946 :     ~ReceiveSpanGuard() {</span></span>
-<span id="L45"><span class="lineNum">      45</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 945 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         946 :         if (manager_ != nullptr &amp;&amp; handle_ != nullptr) {</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">         938 :     ~ReceiveSpanGuard() {</span></span>
+<span id="L45"><span class="lineNum">      45</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 937 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         938 :         if (manager_ != nullptr &amp;&amp; handle_ != nullptr) {</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">           1 :             manager_-&gt;finish_span(*handle_, status_);</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :         }</span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         946 :     }</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         938 :     }</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :     void set_status(tracing::SpanStatus status) noexcept {</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :         status_ = status;</span>
@@ -154,23 +154,23 @@
 <span id="L76"><span class="lineNum">      76</span>                 :             : </span>
 <span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">         831 : void EventBasedActor::on_activate() {}</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :             : </span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">         946 : void EventBasedActor::receive(TypedMessage&amp; msg) {</span></span>
-<span id="L80"><span class="lineNum">      80</span>   [<span class="tlaGBC" title="Branch 0 was taken 944 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 944 times"> + </span> :<span class="tlaGNC">         946 :     FAULT_INJECT(&quot;hpactor.actor.handler.delay&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 946 times"> + </span>]
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">         938 : void EventBasedActor::receive(TypedMessage&amp; msg) {</span></span>
+<span id="L80"><span class="lineNum">      80</span>   [<span class="tlaGBC" title="Branch 0 was taken 936 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 936 times"> + </span> :<span class="tlaGNC">         938 :     FAULT_INJECT(&quot;hpactor.actor.handler.delay&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 938 times"> + </span>]
 <span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         _fc-&gt;stall(hpactor::fault::FaultDomain::kActor, /*delay_ticks=*/5);</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     }</span>
-<span id="L83"><span class="lineNum">      83</span>   [<span class="tlaGBC" title="Branch 0 was taken 944 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 944 times"> + </span> :<span class="tlaGNC tlaBgGNC">         946 :     FAULT_INJECT(&quot;hpactor.actor.receive.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 946 times"> + </span>]
+<span id="L83"><span class="lineNum">      83</span>   [<span class="tlaGBC" title="Branch 0 was taken 936 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 936 times"> + </span> :<span class="tlaGNC tlaBgGNC">         938 :     FAULT_INJECT(&quot;hpactor.actor.receive.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 938 times"> + </span>]
 <span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">          23 :         return;</span></span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :     }</span>
 <span id="L86"><span class="lineNum">      86</span>                 :             : </span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :     // Trace: set up receive span + context scope (RAII-managed)</span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         946 :     auto* ctx = context();</span></span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">         946 :     auto* trace_manager = system().trace_manager();</span></span>
-<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">         946 :     tracing::SpanHandle receive_span;</span></span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">         946 :     std::unique_ptr&lt;ActorContext::TraceScope&gt; trace_scope;</span></span>
-<span id="L92"><span class="lineNum">      92</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 945 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         947 :     if (trace_manager != nullptr &amp;&amp; trace_manager-&gt;enabled() &amp;&amp;</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 945 times"> + </span>]
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">         938 :     auto* ctx = context();</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">         938 :     auto* trace_manager = system().trace_manager();</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">         938 :     tracing::SpanHandle receive_span;</span></span>
+<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">         938 :     std::unique_ptr&lt;ActorContext::TraceScope&gt; trace_scope;</span></span>
+<span id="L92"><span class="lineNum">      92</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 937 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         939 :     if (trace_manager != nullptr &amp;&amp; trace_manager-&gt;enabled() &amp;&amp;</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 937 times"> + </span>]
 <span id="L93"><span class="lineNum">      93</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :         trace_manager-&gt;config().record_actor_receive_spans) {</span></span>
 <span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">           1 :         tracing::SpanStart start;</span></span>
 <span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">           1 :         start.name = &quot;hpactor.actor.receive&quot;;</span></span>
@@ -190,43 +190,43 @@
 <span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           1 :                 ctx, receive_span.context);</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :             :         }</span>
 <span id="L110"><span class="lineNum">     110</span>                 :             :     }</span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">         946 :     ReceiveSpanGuard span_guard(trace_manager, &amp;receive_span);</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">         938 :     ReceiveSpanGuard span_guard(trace_manager, &amp;receive_span);</span></span>
 <span id="L112"><span class="lineNum">     112</span>                 :             : </span>
 <span id="L113"><span class="lineNum">     113</span>                 :             :     // Pipeline: each stage may consume or reject the message</span>
-<span id="L114"><span class="lineNum">     114</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 942 times"> + </span>]:<span class="tlaGNC">         946 :     if (!apply_drain_gate(msg))</span></span>
+<span id="L114"><span class="lineNum">     114</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 934 times"> + </span>]:<span class="tlaGNC">         938 :     if (!apply_drain_gate(msg))</span></span>
 <span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           4 :         return;</span></span>
-<span id="L116"><span class="lineNum">     116</span>         [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 929 times"> + </span>]:<span class="tlaGNC">         942 :     if (dispatch_system_message(msg))</span></span>
+<span id="L116"><span class="lineNum">     116</span>         [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 921 times"> + </span>]:<span class="tlaGNC">         934 :     if (dispatch_system_message(msg))</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">          13 :         return;</span></span>
-<span id="L118"><span class="lineNum">     118</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 928 times"> + </span>]:<span class="tlaGNC">         929 :     if (!apply_lifecycle_gate(msg))</span></span>
+<span id="L118"><span class="lineNum">     118</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 920 times"> + </span>]:<span class="tlaGNC">         921 :     if (!apply_lifecycle_gate(msg))</span></span>
 <span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           1 :         return;</span></span>
 <span id="L120"><span class="lineNum">     120</span>                 :             : </span>
 <span id="L121"><span class="lineNum">     121</span>                 :             :     // Lazy init + sender capture for reply() tracking</span>
-<span id="L122"><span class="lineNum">     122</span>         [<span class="tlaGBC" title="Branch 0 was taken 119 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 809 times"> + </span>]:<span class="tlaGNC">         928 :     if (!handlers_initialized_) {</span></span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">         119 :         initialize_proto_handlers();</span></span>
+<span id="L122"><span class="lineNum">     122</span>         [<span class="tlaGBC" title="Branch 0 was taken 118 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 802 times"> + </span>]:<span class="tlaGNC">         920 :     if (!handlers_initialized_) {</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">         118 :         initialize_proto_handlers();</span></span>
 <span id="L124"><span class="lineNum">     124</span>                 :             :     }</span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         928 :     ctx = context();</span></span>
-<span id="L126"><span class="lineNum">     126</span>         [<span class="tlaGBC" title="Branch 0 was taken 928 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         928 :     if (ctx != nullptr) {</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">         928 :         ctx-&gt;set_current_sender(msg.sender_address());</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         920 :     ctx = context();</span></span>
+<span id="L126"><span class="lineNum">     126</span>         [<span class="tlaGBC" title="Branch 0 was taken 920 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         920 :     if (ctx != nullptr) {</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">         920 :         ctx-&gt;set_current_sender(msg.sender_address());</span></span>
 <span id="L128"><span class="lineNum">     128</span>                 :             :         // Propagate ask_message_id so reply() routes through AskManager</span>
-<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">         928 :         ctx-&gt;set_current_ask_message_id(msg.ask_message_id());</span></span>
+<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">         920 :         ctx-&gt;set_current_ask_message_id(msg.ask_message_id());</span></span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :     }</span>
 <span id="L131"><span class="lineNum">     131</span>                 :             : </span>
-<span id="L132"><span class="lineNum">     132</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 923 times"> + </span>]:<span class="tlaGNC">         928 :     if (dispatch_cli_message(msg)) {</span></span>
+<span id="L132"><span class="lineNum">     132</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 915 times"> + </span>]:<span class="tlaGNC">         920 :     if (dispatch_cli_message(msg)) {</span></span>
 <span id="L133"><span class="lineNum">     133</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :         if (ctx != nullptr) {</span></span>
 <span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">           5 :             ctx-&gt;set_current_ask_message_id(0);</span></span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :         }</span>
 <span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">           5 :         return;</span></span>
 <span id="L137"><span class="lineNum">     137</span>                 :             :     }</span>
 <span id="L138"><span class="lineNum">     138</span>                 :             : </span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">         923 :     dispatch_user_message(msg);</span></span>
-<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">         923 :     try_drain_completion();</span></span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">         923 :     check_mailbox_pressure();</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">         915 :     dispatch_user_message(msg);</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">         915 :     try_drain_completion();</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">         915 :     check_mailbox_pressure();</span></span>
 <span id="L142"><span class="lineNum">     142</span>                 :             : </span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :     // Clear unconsumed ask_message_id</span>
-<span id="L144"><span class="lineNum">     144</span>         [<span class="tlaGBC" title="Branch 0 was taken 923 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         923 :     if (ctx != nullptr) {</span></span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">         923 :         ctx-&gt;set_current_ask_message_id(0);</span></span>
+<span id="L144"><span class="lineNum">     144</span>         [<span class="tlaGBC" title="Branch 0 was taken 915 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         915 :     if (ctx != nullptr) {</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">         915 :         ctx-&gt;set_current_ask_message_id(0);</span></span>
 <span id="L146"><span class="lineNum">     146</span>                 :             :     }</span>
-<span id="L147"><span class="lineNum">     147</span>   [<span class="tlaGBC" title="Branch 0 was taken 923 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 923 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 23 times"> + </span>]:<span class="tlaGNC">         969 : }</span></span>
+<span id="L147"><span class="lineNum">     147</span>   [<span class="tlaGBC" title="Branch 0 was taken 915 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 915 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 23 times"> + </span>]:<span class="tlaGNC">         961 : }</span></span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : </span>
 <span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           7 : bool EventBasedActor::handle_link_msg(const TypedMessage&amp; msg) {</span></span>
 <span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           7 :     auto* ctx = context();</span></span>
@@ -280,13 +280,13 @@
 <span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">           1 :     return true;</span></span>
 <span id="L199"><span class="lineNum">     199</span>                 :             : }</span>
 <span id="L200"><span class="lineNum">     200</span>                 :             : </span>
-<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">           7 : void EventBasedActor::handle_down_msg(const TypedMessage&amp; msg) {</span></span>
-<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">           7 :     auto* ctx = context();</span></span>
-<span id="L203"><span class="lineNum">     203</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           7 :     if (ctx != nullptr) {</span></span>
-<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">           7 :         ctx-&gt;remove_linked(msg.sender_address());</span></span>
-<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">           7 :         ctx-&gt;remove_monitored(msg.sender_address());</span></span>
+<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">           6 : void EventBasedActor::handle_down_msg(const TypedMessage&amp; msg) {</span></span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">           6 :     auto* ctx = context();</span></span>
+<span id="L203"><span class="lineNum">     203</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           6 :     if (ctx != nullptr) {</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">           6 :         ctx-&gt;remove_linked(msg.sender_address());</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">           6 :         ctx-&gt;remove_monitored(msg.sender_address());</span></span>
 <span id="L206"><span class="lineNum">     206</span>                 :             :     }</span>
-<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">           7 : }</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">           6 : }</span></span>
 <span id="L208"><span class="lineNum">     208</span>                 :             : </span>
 <span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">         212 : void EventBasedActor::become(Behavior bh) {</span></span>
 <span id="L210"><span class="lineNum">     210</span>   [<span class="tlaGBC" title="Branch 0 was taken 212 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 212 times"> + </span> :<span class="tlaGNC">         212 :     FAULT_INJECT(&quot;hpactor.actor.become.drop&quot;) {</span></span>
@@ -300,11 +300,11 @@
 <span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC">           2 :     behavior_ = Behavior{};</span></span>
 <span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L219"><span class="lineNum">     219</span>                 :             : </span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">         119 : void EventBasedActor::initialize_proto_handlers() {</span></span>
-<span id="L221"><span class="lineNum">     221</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 119 times"> + </span>]:<span class="tlaGNC">         119 :     if (handlers_initialized_)</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">         118 : void EventBasedActor::initialize_proto_handlers() {</span></span>
+<span id="L221"><span class="lineNum">     221</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 118 times"> + </span>]:<span class="tlaGNC">         118 :     if (handlers_initialized_)</span></span>
 <span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC tlaBgGNC">         119 :     register_handlers();</span></span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">         119 :     handlers_initialized_ = true;</span></span>
+<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC tlaBgGNC">         118 :     register_handlers();</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">         118 :     handlers_initialized_ = true;</span></span>
 <span id="L225"><span class="lineNum">     225</span>                 :             : }</span>
 <span id="L226"><span class="lineNum">     226</span>                 :             : </span>
 <span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void EventBasedActor::on_proto_message(TypeTag tag, const StreamBuffer&amp; payload) {</span></span>
@@ -341,81 +341,81 @@
 <span id="L256"><span class="lineNum">     256</span>                 :             : #endif</span>
 <span id="L257"><span class="lineNum">     257</span>                 :<span class="tlaGNC tlaBgGNC">           1 : }</span></span>
 <span id="L258"><span class="lineNum">     258</span>                 :             : </span>
-<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">         460 : void EventBasedActor::on_exit() {</span></span>
-<span id="L260"><span class="lineNum">     260</span>   [<span class="tlaGBC" title="Branch 0 was taken 456 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 456 times"> + </span> :<span class="tlaGNC">         460 :     FAULT_INJECT(&quot;hpactor.actor.on_exit.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 460 times"> + </span>]
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">         458 : void EventBasedActor::on_exit() {</span></span>
+<span id="L260"><span class="lineNum">     260</span>   [<span class="tlaGBC" title="Branch 0 was taken 454 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 454 times"> + </span> :<span class="tlaGNC">         458 :     FAULT_INJECT(&quot;hpactor.actor.on_exit.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 458 times"> + </span>]
 <span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L262"><span class="lineNum">     262</span>                 :             :     }</span>
-<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC tlaBgGNC">         460 :     auto* ctx = context();</span></span>
-<span id="L264"><span class="lineNum">     264</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 460 times"> + </span>]:<span class="tlaGNC">         460 :     if (ctx == nullptr) {</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC tlaBgGNC">         458 :     auto* ctx = context();</span></span>
+<span id="L264"><span class="lineNum">     264</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 458 times"> + </span>]:<span class="tlaGNC">         458 :     if (ctx == nullptr) {</span></span>
 <span id="L265"><span class="lineNum">     265</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L266"><span class="lineNum">     266</span>                 :             :     }</span>
 <span id="L267"><span class="lineNum">     267</span>                 :             : </span>
-<span id="L268"><span class="lineNum">     268</span>         [<span class="tlaGBC" title="Branch 0 was taken 456 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         460 :     HPACTOR_LOG_INFO(log::LogCategory::kActor, id(),</span></span>
+<span id="L268"><span class="lineNum">     268</span>         [<span class="tlaGBC" title="Branch 0 was taken 454 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         458 :     HPACTOR_LOG_INFO(log::LogCategory::kActor, id(),</span></span>
 <span id="L269"><span class="lineNum">     269</span>                 :             :                      static_cast&lt;uint32_t&gt;(log::LogEventId::kActorTerminated),</span>
 <span id="L270"><span class="lineNum">     270</span>                 :             :                      &quot;actor terminated&quot;);</span>
 <span id="L271"><span class="lineNum">     271</span>                 :             : </span>
-<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaGBC" title="Branch 0 was taken 394 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span>]:<span class="tlaGNC">         460 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
-<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">         394 :         metrics::MetricEvent evt{};</span></span>
-<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">         394 :         evt.actor_id = id();</span></span>
-<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaGNC">         394 :         evt.event_type = metrics::MetricEventType::kActorTerminated;</span></span>
-<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">         394 :         evt.value_hi = static_cast&lt;uint32_t&gt;(exit_reason_);</span></span>
-<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">         394 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
+<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaGBC" title="Branch 0 was taken 392 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span>]:<span class="tlaGNC">         458 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">         392 :         metrics::MetricEvent evt{};</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">         392 :         evt.actor_id = id();</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaGNC">         392 :         evt.event_type = metrics::MetricEventType::kActorTerminated;</span></span>
+<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">         392 :         evt.value_hi = static_cast&lt;uint32_t&gt;(exit_reason_);</span></span>
+<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">         392 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
 <span id="L278"><span class="lineNum">     278</span>                 :             :     }</span>
 <span id="L279"><span class="lineNum">     279</span>                 :             : </span>
 <span id="L280"><span class="lineNum">     280</span>                 :             :     // Build DownMessage</span>
-<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaGNC">         460 :     hpactor::DownMessage pb;</span></span>
-<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaGNC">         460 :     pb.set_actor_id(id().value());</span></span>
-<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">         460 :     pb.set_reason_code(exit_reason_);</span></span>
+<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaGNC">         458 :     hpactor::DownMessage pb;</span></span>
+<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaGNC">         458 :     pb.set_actor_id(id().value());</span></span>
+<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">         458 :     pb.set_reason_code(exit_reason_);</span></span>
 <span id="L284"><span class="lineNum">     284</span>                 :             : </span>
-<span id="L285"><span class="lineNum">     285</span>                 :<span class="tlaGNC">         460 :     StreamBuffer payload(pb.ByteSizeLong());</span></span>
-<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">         460 :     (void)pb.SerializeToArray(payload.data(), static_cast&lt;int&gt;(payload.size()));</span></span>
+<span id="L285"><span class="lineNum">     285</span>                 :<span class="tlaGNC">         458 :     StreamBuffer payload(pb.ByteSizeLong());</span></span>
+<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">         458 :     (void)pb.SerializeToArray(payload.data(), static_cast&lt;int&gt;(payload.size()));</span></span>
 <span id="L287"><span class="lineNum">     287</span>                 :             : </span>
 <span id="L288"><span class="lineNum">     288</span>                 :             :     // Send DownMsg to all linked actors</span>
-<span id="L289"><span class="lineNum">     289</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 460 times"> + </span>]:<span class="tlaGNC">         464 :     for (const auto&amp; addr : ctx-&gt;linked_actors()) {</span></span>
-<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">           4 :         TypedMessage down_msg(TypeTag::DownMsg, StreamBuffer(payload));</span></span>
-<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">           4 :         ctx-&gt;send(addr, std::move(down_msg));</span></span>
-<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">         464 :     }</span></span>
+<span id="L289"><span class="lineNum">     289</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 458 times"> + </span>]:<span class="tlaGNC">         461 :     for (const auto&amp; addr : ctx-&gt;linked_actors()) {</span></span>
+<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">           3 :         TypedMessage down_msg(TypeTag::DownMsg, StreamBuffer(payload));</span></span>
+<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">           3 :         ctx-&gt;send(addr, std::move(down_msg));</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">         461 :     }</span></span>
 <span id="L293"><span class="lineNum">     293</span>                 :             : </span>
 <span id="L294"><span class="lineNum">     294</span>                 :             :     // Send DownMsg to all monitored actors</span>
-<span id="L295"><span class="lineNum">     295</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 460 times"> + </span>]:<span class="tlaGNC">         463 :     for (const auto&amp; addr : ctx-&gt;monitored_actors()) {</span></span>
+<span id="L295"><span class="lineNum">     295</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 458 times"> + </span>]:<span class="tlaGNC">         461 :     for (const auto&amp; addr : ctx-&gt;monitored_actors()) {</span></span>
 <span id="L296"><span class="lineNum">     296</span>                 :<span class="tlaGNC">           3 :         TypedMessage down_msg(TypeTag::DownMsg, StreamBuffer(payload));</span></span>
 <span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaGNC">           3 :         ctx-&gt;send(addr, std::move(down_msg));</span></span>
 <span id="L298"><span class="lineNum">     298</span>                 :<span class="tlaGNC">           3 :     }</span></span>
 <span id="L299"><span class="lineNum">     299</span>                 :             :     // linked_ and monitored_ vectors will be destroyed with the context</span>
-<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">         460 : }</span></span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">         458 : }</span></span>
 <span id="L301"><span class="lineNum">     301</span>                 :             : </span>
 <span id="L302"><span class="lineNum">     302</span>                 :             : // ── receive() pipeline stages ───────────────────────────────</span>
 <span id="L303"><span class="lineNum">     303</span>                 :             : </span>
-<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">         946 : bool EventBasedActor::apply_drain_gate(TypedMessage&amp; msg) {</span></span>
-<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">         946 :     auto* lc = as_lifecycle();</span></span>
-<span id="L306"><span class="lineNum">     306</span>   [<span class="tlaGBC" title="Branch 0 was taken 96 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 850 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 78 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 18 times"> + </span> :<span class="tlaGNC">         946 :     if (!lc || lc-&gt;state() != LifecycleState::kDraining)</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 928 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 18 times"> + </span>]
-<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">         928 :         return true;</span></span>
+<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">         938 : bool EventBasedActor::apply_drain_gate(TypedMessage&amp; msg) {</span></span>
+<span id="L305"><span class="lineNum">     305</span>                 :<span class="tlaGNC">         938 :     auto* lc = as_lifecycle();</span></span>
+<span id="L306"><span class="lineNum">     306</span>   [<span class="tlaGBC" title="Branch 0 was taken 96 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 842 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 79 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 17 times"> + </span> :<span class="tlaGNC">         938 :     if (!lc || lc-&gt;state() != LifecycleState::kDraining)</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 921 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 17 times"> + </span>]
+<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">         921 :         return true;</span></span>
 <span id="L308"><span class="lineNum">     308</span>                 :             : </span>
-<span id="L309"><span class="lineNum">     309</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">          18 :     if (!drain_one(msg)) {</span></span>
+<span id="L309"><span class="lineNum">     309</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 13 times"> + </span>]:<span class="tlaGNC">          17 :     if (!drain_one(msg)) {</span></span>
 <span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaGNC">           4 :         try_drain_completion();</span></span>
 <span id="L311"><span class="lineNum">     311</span>                 :<span class="tlaGNC">           4 :         return false;</span></span>
 <span id="L312"><span class="lineNum">     312</span>                 :             :     }</span>
-<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC">          14 :     return true;</span></span>
+<span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC">          13 :     return true;</span></span>
 <span id="L314"><span class="lineNum">     314</span>                 :             : }</span>
 <span id="L315"><span class="lineNum">     315</span>                 :             : </span>
-<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">         927 : void EventBasedActor::try_drain_completion() {</span></span>
-<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">         927 :     auto* lc = as_lifecycle();</span></span>
-<span id="L318"><span class="lineNum">     318</span>   [<span class="tlaGBC" title="Branch 0 was taken 85 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 842 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 67 times"> + </span> :<span class="tlaGNC">         927 :     if (!lc || lc-&gt;state() != LifecycleState::kDraining || !mailbox_is_empty())</span></span>
-<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 919 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 8 times"> + </span>]
-<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">         919 :         return;</span></span>
+<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">         919 : void EventBasedActor::try_drain_completion() {</span></span>
+<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">         919 :     auto* lc = as_lifecycle();</span></span>
+<span id="L318"><span class="lineNum">     318</span>   [<span class="tlaGBC" title="Branch 0 was taken 85 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 834 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 68 times"> + </span> :<span class="tlaGNC">         919 :     if (!lc || lc-&gt;state() != LifecycleState::kDraining || !mailbox_is_empty())</span></span>
+<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 912 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 7 times"> + </span>]
+<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">         912 :         return;</span></span>
 <span id="L320"><span class="lineNum">     320</span>                 :             : </span>
-<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">           8 :     cancel_drain_timer();</span></span>
-<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">           8 :     lc-&gt;transition(LifecycleState::kStopping);</span></span>
-<span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaGNC">           8 :     lc-&gt;transition(LifecycleState::kStopped);</span></span>
-<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">           8 :     on_exit();</span></span>
+<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">           7 :     cancel_drain_timer();</span></span>
+<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">           7 :     lc-&gt;transition(LifecycleState::kStopping);</span></span>
+<span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaGNC">           7 :     lc-&gt;transition(LifecycleState::kStopped);</span></span>
+<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">           7 :     on_exit();</span></span>
 <span id="L325"><span class="lineNum">     325</span>                 :             : }</span>
 <span id="L326"><span class="lineNum">     326</span>                 :             : </span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         942 : bool EventBasedActor::dispatch_system_message(const TypedMessage&amp; msg) {</span></span>
-<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         942 :     bool handled = false;</span></span>
-<span id="L329"><span class="lineNum">     329</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">         942 :     switch (msg.type_id()) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 922 times"> + </span>]
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         934 : bool EventBasedActor::dispatch_system_message(const TypedMessage&amp; msg) {</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         934 :     bool handled = false;</span></span>
+<span id="L329"><span class="lineNum">     329</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">         934 :     switch (msg.type_id()) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 915 times"> + </span>]
 <span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">           7 :         case TypeTag::LinkMsg:</span></span>
 <span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaGNC">           7 :             handled = handle_link_msg(msg);</span></span>
 <span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">           7 :             break;</span></span>
@@ -428,23 +428,23 @@
 <span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">           1 :         case TypeTag::DemonitorMsg:</span></span>
 <span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">           1 :             handled = handle_demonitor_msg(msg);</span></span>
 <span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">           1 :             break;</span></span>
-<span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaGNC">           7 :         case TypeTag::DownMsg:</span></span>
-<span id="L343"><span class="lineNum">     343</span>                 :<span class="tlaGNC">           7 :             handle_down_msg(msg);</span></span>
-<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaGNC">           7 :             break;</span></span>
-<span id="L345"><span class="lineNum">     345</span>                 :<span class="tlaGNC">         922 :         default:</span></span>
-<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">         922 :             break;</span></span>
+<span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaGNC">           6 :         case TypeTag::DownMsg:</span></span>
+<span id="L343"><span class="lineNum">     343</span>                 :<span class="tlaGNC">           6 :             handle_down_msg(msg);</span></span>
+<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaGNC">           6 :             break;</span></span>
+<span id="L345"><span class="lineNum">     345</span>                 :<span class="tlaGNC">         915 :         default:</span></span>
+<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC">         915 :             break;</span></span>
 <span id="L347"><span class="lineNum">     347</span>                 :             :     }</span>
-<span id="L348"><span class="lineNum">     348</span>                 :<span class="tlaGNC">         942 :     return handled;</span></span>
+<span id="L348"><span class="lineNum">     348</span>                 :<span class="tlaGNC">         934 :     return handled;</span></span>
 <span id="L349"><span class="lineNum">     349</span>                 :             : }</span>
 <span id="L350"><span class="lineNum">     350</span>                 :             : </span>
-<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">         929 : bool EventBasedActor::apply_lifecycle_gate(const TypedMessage&amp; msg) {</span></span>
+<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">         921 : bool EventBasedActor::apply_lifecycle_gate(const TypedMessage&amp; msg) {</span></span>
 <span id="L352"><span class="lineNum">     352</span>                 :             :     // System messages (TypeTag &lt; 0x1000) always pass through.</span>
-<span id="L353"><span class="lineNum">     353</span>         [<span class="tlaGBC" title="Branch 0 was taken 44 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 885 times"> + </span>]:<span class="tlaGNC">         929 :     if (static_cast&lt;uint32_t&gt;(msg.type_id()) &lt; 0x1000)</span></span>
-<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">          44 :         return true;</span></span>
+<span id="L353"><span class="lineNum">     353</span>         [<span class="tlaGBC" title="Branch 0 was taken 43 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 878 times"> + </span>]:<span class="tlaGNC">         921 :     if (static_cast&lt;uint32_t&gt;(msg.type_id()) &lt; 0x1000)</span></span>
+<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">          43 :         return true;</span></span>
 <span id="L355"><span class="lineNum">     355</span>                 :             : </span>
-<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">         885 :     auto* lc = as_lifecycle();</span></span>
-<span id="L357"><span class="lineNum">     357</span>         [<span class="tlaGBC" title="Branch 0 was taken 836 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 49 times"> + </span>]:<span class="tlaGNC">         885 :     if (!lc)</span></span>
-<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">         836 :         return true;</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">         878 :     auto* lc = as_lifecycle();</span></span>
+<span id="L357"><span class="lineNum">     357</span>         [<span class="tlaGBC" title="Branch 0 was taken 829 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 49 times"> + </span>]:<span class="tlaGNC">         878 :     if (!lc)</span></span>
+<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">         829 :         return true;</span></span>
 <span id="L359"><span class="lineNum">     359</span>   [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 39 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          49 :     if (lc-&gt;accepts_user_msgs() || lc-&gt;state() == LifecycleState::kDraining)</span></span>
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 48 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span>]
 <span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">          48 :         return true;</span></span>
@@ -471,13 +471,13 @@
 <span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">           1 :     return false;</span></span>
 <span id="L382"><span class="lineNum">     382</span>                 :             : }</span>
 <span id="L383"><span class="lineNum">     383</span>                 :             : </span>
-<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">         928 : bool EventBasedActor::dispatch_cli_message(TypedMessage&amp; msg) {</span></span>
-<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaGNC">         928 :     auto* ctx = context();</span></span>
-<span id="L386"><span class="lineNum">     386</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 928 times"> + </span>]:<span class="tlaGNC">         928 :     if (ctx == nullptr)</span></span>
+<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">         920 : bool EventBasedActor::dispatch_cli_message(TypedMessage&amp; msg) {</span></span>
+<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaGNC">         920 :     auto* ctx = context();</span></span>
+<span id="L386"><span class="lineNum">     386</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 920 times"> + </span>]:<span class="tlaGNC">         920 :     if (ctx == nullptr)</span></span>
 <span id="L387"><span class="lineNum">     387</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L388"><span class="lineNum">     388</span>                 :             : </span>
 <span id="L389"><span class="lineNum">     389</span>                 :             :     // InspectStateRequest: gather metadata + optional state/mailbox/children</span>
-<span id="L390"><span class="lineNum">     390</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 927 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         928 :     if (msg.type_id() == TypeTag::InspectStateRequestTag) {</span></span>
+<span id="L390"><span class="lineNum">     390</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 919 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         920 :     if (msg.type_id() == TypeTag::InspectStateRequestTag) {</span></span>
 <span id="L391"><span class="lineNum">     391</span>                 :<span class="tlaGNC">           1 :         cli::InspectStateRequest req;</span></span>
 <span id="L392"><span class="lineNum">     392</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (!req.ParseFromArray(msg.payload().data(),</span></span>
 <span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">           1 :                                 static_cast&lt;int&gt;(msg.payload().size()))) {</span></span>
@@ -589,7 +589,7 @@
 <span id="L496"><span class="lineNum">     496</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L497"><span class="lineNum">     497</span>                 :             : </span>
 <span id="L498"><span class="lineNum">     498</span>                 :             :     // KillRequest: terminate this actor</span>
-<span id="L499"><span class="lineNum">     499</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 926 times"> + </span>]:<span class="tlaGNC">         927 :     if (msg.type_id() == TypeTag::KillRequestTag) {</span></span>
+<span id="L499"><span class="lineNum">     499</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 918 times"> + </span>]:<span class="tlaGNC">         919 :     if (msg.type_id() == TypeTag::KillRequestTag) {</span></span>
 <span id="L500"><span class="lineNum">     500</span>                 :<span class="tlaGNC">           1 :         cli::KillRequest req;</span></span>
 <span id="L501"><span class="lineNum">     501</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (!req.ParseFromArray(msg.payload().data(),</span></span>
 <span id="L502"><span class="lineNum">     502</span>                 :<span class="tlaGNC">           1 :                                 static_cast&lt;int&gt;(msg.payload().size()))) {</span></span>
@@ -613,7 +613,7 @@
 <span id="L520"><span class="lineNum">     520</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L521"><span class="lineNum">     521</span>                 :             : </span>
 <span id="L522"><span class="lineNum">     522</span>                 :             :     // QuarantineRequest: quarantine or unquarantine this actor</span>
-<span id="L523"><span class="lineNum">     523</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 923 times"> + </span>]:<span class="tlaGNC">         926 :     if (msg.type_id() == TypeTag::QuarantineRequestTag) {</span></span>
+<span id="L523"><span class="lineNum">     523</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 915 times"> + </span>]:<span class="tlaGNC">         918 :     if (msg.type_id() == TypeTag::QuarantineRequestTag) {</span></span>
 <span id="L524"><span class="lineNum">     524</span>                 :<span class="tlaGNC">           3 :         cli::QuarantineRequest req;</span></span>
 <span id="L525"><span class="lineNum">     525</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :         if (!req.ParseFromArray(msg.payload().data(),</span></span>
 <span id="L526"><span class="lineNum">     526</span>                 :<span class="tlaGNC">           3 :                                 static_cast&lt;int&gt;(msg.payload().size()))) {</span></span>
@@ -662,17 +662,17 @@
 <span id="L569"><span class="lineNum">     569</span>                 :<span class="tlaGNC">           3 :         return true;</span></span>
 <span id="L570"><span class="lineNum">     570</span>                 :<span class="tlaGNC">           3 :     }</span></span>
 <span id="L571"><span class="lineNum">     571</span>                 :             : </span>
-<span id="L572"><span class="lineNum">     572</span>                 :<span class="tlaGNC">         923 :     return false;</span></span>
+<span id="L572"><span class="lineNum">     572</span>                 :<span class="tlaGNC">         915 :     return false;</span></span>
 <span id="L573"><span class="lineNum">     573</span>                 :             : }</span>
 <span id="L574"><span class="lineNum">     574</span>                 :             : </span>
-<span id="L575"><span class="lineNum">     575</span>                 :<span class="tlaGNC">         923 : void EventBasedActor::dispatch_user_message(TypedMessage&amp; msg) {</span></span>
-<span id="L576"><span class="lineNum">     576</span>         [<span class="tlaGBC" title="Branch 0 was taken 916 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">         923 :     auto t0 = metrics_ring_buffer_ ? std::chrono::steady_clock::now()</span></span>
+<span id="L575"><span class="lineNum">     575</span>                 :<span class="tlaGNC">         915 : void EventBasedActor::dispatch_user_message(TypedMessage&amp; msg) {</span></span>
+<span id="L576"><span class="lineNum">     576</span>         [<span class="tlaGBC" title="Branch 0 was taken 908 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">         915 :     auto t0 = metrics_ring_buffer_ ? std::chrono::steady_clock::now()</span></span>
 <span id="L577"><span class="lineNum">     577</span>                 :<span class="tlaGNC">           7 :                                    : std::chrono::steady_clock::time_point{};</span></span>
-<span id="L578"><span class="lineNum">     578</span>                 :<span class="tlaGNC">         923 :     auto* ctx = context();</span></span>
+<span id="L578"><span class="lineNum">     578</span>                 :<span class="tlaGNC">         915 :     auto* ctx = context();</span></span>
 <span id="L579"><span class="lineNum">     579</span>                 :             : </span>
 <span id="L580"><span class="lineNum">     580</span>                 :             :     // Proto handler dispatch by TypeTag</span>
-<span id="L581"><span class="lineNum">     581</span>                 :<span class="tlaGNC">         923 :     auto it = proto_handlers_.find(msg.type_id());</span></span>
-<span id="L582"><span class="lineNum">     582</span>         [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 905 times"> + </span>]:<span class="tlaGNC">         923 :     if (it != proto_handlers_.end()) {</span></span>
+<span id="L581"><span class="lineNum">     581</span>                 :<span class="tlaGNC">         915 :     auto it = proto_handlers_.find(msg.type_id());</span></span>
+<span id="L582"><span class="lineNum">     582</span>         [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 897 times"> + </span>]:<span class="tlaGNC">         915 :     if (it != proto_handlers_.end()) {</span></span>
 <span id="L583"><span class="lineNum">     583</span>                 :<span class="tlaGNC">          18 :         auto deserialized = it-&gt;second.deserialize(msg.payload());</span></span>
 <span id="L584"><span class="lineNum">     584</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          18 :         if (deserialized) {</span></span>
 <span id="L585"><span class="lineNum">     585</span>                 :<span class="tlaGNC">          17 :             StreamBuffer response = it-&gt;second.invoke(std::move(deserialized));</span></span>
@@ -703,23 +703,23 @@
 <span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">          18 :     }</span></span>
 <span id="L610"><span class="lineNum">     610</span>                 :             : </span>
 <span id="L611"><span class="lineNum">     611</span>                 :             :     // Behavior fallback</span>
-<span id="L612"><span class="lineNum">     612</span>         [<span class="tlaGBC" title="Branch 0 was taken 890 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">         905 :     if (behavior_) {</span></span>
-<span id="L613"><span class="lineNum">     613</span>                 :<span class="tlaGNC">         890 :         behavior_(msg);</span></span>
+<span id="L612"><span class="lineNum">     612</span>         [<span class="tlaGBC" title="Branch 0 was taken 882 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">         897 :     if (behavior_) {</span></span>
+<span id="L613"><span class="lineNum">     613</span>                 :<span class="tlaGNC">         882 :         behavior_(msg);</span></span>
 <span id="L614"><span class="lineNum">     614</span>                 :             :     }</span>
 <span id="L615"><span class="lineNum">     615</span>                 :             : </span>
-<span id="L616"><span class="lineNum">     616</span>         [<span class="tlaGBC" title="Branch 0 was taken 40 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 865 times"> + </span>]:<span class="tlaGNC">         905 :     if (quarantine_policy_.enabled) [[unlikely]] {</span></span>
-<span id="L617"><span class="lineNum">     617</span>                 :<span class="tlaGNC">          40 :         record_circuit_breaker_result(true);</span></span>
+<span id="L616"><span class="lineNum">     616</span>         [<span class="tlaGBC" title="Branch 0 was taken 38 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 859 times"> + </span>]:<span class="tlaGNC">         897 :     if (quarantine_policy_.enabled) [[unlikely]] {</span></span>
+<span id="L617"><span class="lineNum">     617</span>                 :<span class="tlaGNC">          38 :         record_circuit_breaker_result(true);</span></span>
 <span id="L618"><span class="lineNum">     618</span>                 :             :     }</span>
 <span id="L619"><span class="lineNum">     619</span>                 :             : </span>
-<span id="L620"><span class="lineNum">     620</span>         [<span class="tlaGBC" title="Branch 0 was taken 898 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">         905 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
-<span id="L621"><span class="lineNum">     621</span>                 :<span class="tlaGNC">         898 :         auto t1 = std::chrono::steady_clock::now();</span></span>
+<span id="L620"><span class="lineNum">     620</span>         [<span class="tlaGBC" title="Branch 0 was taken 890 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">         897 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L621"><span class="lineNum">     621</span>                 :<span class="tlaGNC">         890 :         auto t1 = std::chrono::steady_clock::now();</span></span>
 <span id="L622"><span class="lineNum">     622</span>                 :             :         auto ns =</span>
-<span id="L623"><span class="lineNum">     623</span>                 :<span class="tlaGNC">         898 :             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(t1 - t0).count();</span></span>
-<span id="L624"><span class="lineNum">     624</span>                 :<span class="tlaGNC">         898 :         metrics::MetricEvent evt{};</span></span>
-<span id="L625"><span class="lineNum">     625</span>                 :<span class="tlaGNC">         898 :         evt.actor_id = id();</span></span>
-<span id="L626"><span class="lineNum">     626</span>                 :<span class="tlaGNC">         898 :         evt.event_type = metrics::MetricEventType::kMessageProcessed;</span></span>
-<span id="L627"><span class="lineNum">     627</span>                 :<span class="tlaGNC">         898 :         evt.value_hi = static_cast&lt;uint32_t&gt;(ns &gt; UINT32_MAX ? UINT32_MAX : ns);</span></span>
-<span id="L628"><span class="lineNum">     628</span>                 :<span class="tlaGNC">         898 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
+<span id="L623"><span class="lineNum">     623</span>                 :<span class="tlaGNC">         890 :             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(t1 - t0).count();</span></span>
+<span id="L624"><span class="lineNum">     624</span>                 :<span class="tlaGNC">         890 :         metrics::MetricEvent evt{};</span></span>
+<span id="L625"><span class="lineNum">     625</span>                 :<span class="tlaGNC">         890 :         evt.actor_id = id();</span></span>
+<span id="L626"><span class="lineNum">     626</span>                 :<span class="tlaGNC">         890 :         evt.event_type = metrics::MetricEventType::kMessageProcessed;</span></span>
+<span id="L627"><span class="lineNum">     627</span>                 :<span class="tlaGNC">         890 :         evt.value_hi = static_cast&lt;uint32_t&gt;(ns &gt; UINT32_MAX ? UINT32_MAX : ns);</span></span>
+<span id="L628"><span class="lineNum">     628</span>                 :<span class="tlaGNC">         890 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
 <span id="L629"><span class="lineNum">     629</span>                 :             :     }</span>
 <span id="L630"><span class="lineNum">     630</span>                 :             : }</span>
 <span id="L631"><span class="lineNum">     631</span>                 :             : </span>
@@ -732,22 +732,22 @@
 <span id="L638"><span class="lineNum">     638</span>                 :             : // ── Drain helpers</span>
 <span id="L639"><span class="lineNum">     639</span>                 :             : // ─────────────────────────────────────────────────────────────</span>
 <span id="L640"><span class="lineNum">     640</span>                 :             : </span>
-<span id="L641"><span class="lineNum">     641</span>                 :<span class="tlaGNC tlaBgGNC">          18 : bool EventBasedActor::drain_one(TypedMessage&amp; msg) {</span></span>
-<span id="L642"><span class="lineNum">     642</span>   [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 18 times"> + </span> :<span class="tlaGNC">          18 :     FAULT_INJECT(&quot;hpactor.actor.drain_one.corrupt&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 18 times"> + </span>]
+<span id="L641"><span class="lineNum">     641</span>                 :<span class="tlaGNC tlaBgGNC">          17 : bool EventBasedActor::drain_one(TypedMessage&amp; msg) {</span></span>
+<span id="L642"><span class="lineNum">     642</span>   [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 17 times"> + </span> :<span class="tlaGNC">          17 :     FAULT_INJECT(&quot;hpactor.actor.drain_one.corrupt&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 17 times"> + </span>]
 <span id="L643"><span class="lineNum">     643</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return true; // always process</span></span>
 <span id="L644"><span class="lineNum">     644</span>                 :             :     }</span>
-<span id="L645"><span class="lineNum">     645</span>                 :<span class="tlaGNC tlaBgGNC">          18 :     auto* lc = as_lifecycle();</span></span>
-<span id="L646"><span class="lineNum">     646</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 18 times"> + </span>]:<span class="tlaGNC">          18 :     if (!lc)</span></span>
+<span id="L645"><span class="lineNum">     645</span>                 :<span class="tlaGNC tlaBgGNC">          17 :     auto* lc = as_lifecycle();</span></span>
+<span id="L646"><span class="lineNum">     646</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          17 :     if (!lc)</span></span>
 <span id="L647"><span class="lineNum">     647</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return true; // no lifecycle = process normally</span></span>
 <span id="L648"><span class="lineNum">     648</span>                 :             : </span>
-<span id="L649"><span class="lineNum">     649</span>                 :<span class="tlaGNC tlaBgGNC">          18 :     auto policy = lc-&gt;drain_config().policy;</span></span>
-<span id="L650"><span class="lineNum">     650</span>                 :<span class="tlaGNC">          18 :     bool is_system = static_cast&lt;uint32_t&gt;(msg.type_id()) &lt; 0x1000;</span></span>
+<span id="L649"><span class="lineNum">     649</span>                 :<span class="tlaGNC tlaBgGNC">          17 :     auto policy = lc-&gt;drain_config().policy;</span></span>
+<span id="L650"><span class="lineNum">     650</span>                 :<span class="tlaGNC">          17 :     bool is_system = static_cast&lt;uint32_t&gt;(msg.type_id()) &lt; 0x1000;</span></span>
 <span id="L651"><span class="lineNum">     651</span>                 :             : </span>
-<span id="L652"><span class="lineNum">     652</span>   [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          18 :     switch (policy) {</span></span>
+<span id="L652"><span class="lineNum">     652</span>   [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          17 :     switch (policy) {</span></span>
 <span class="lineNum">        </span>             <span class="tlaUNC" title="Branch 4 was not taken"> - </span>]
-<span id="L653"><span class="lineNum">     653</span>                 :<span class="tlaGNC">          10 :         case DrainPolicy::Drain:</span></span>
-<span id="L654"><span class="lineNum">     654</span>                 :<span class="tlaGNC">          10 :             return true; // process normally</span></span>
+<span id="L653"><span class="lineNum">     653</span>                 :<span class="tlaGNC">           9 :         case DrainPolicy::Drain:</span></span>
+<span id="L654"><span class="lineNum">     654</span>                 :<span class="tlaGNC">           9 :             return true; // process normally</span></span>
 <span id="L655"><span class="lineNum">     655</span>                 :             : </span>
 <span id="L656"><span class="lineNum">     656</span>                 :<span class="tlaGNC">           7 :         case DrainPolicy::DropUserMessages:</span></span>
 <span id="L657"><span class="lineNum">     657</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           7 :             if (!is_system) {</span></span>
@@ -830,24 +830,24 @@
 <span id="L733"><span class="lineNum">     733</span>                 :             :         delay_ns);</span>
 <span id="L734"><span class="lineNum">     734</span>                 :<span class="tlaGNC">          62 : }</span></span>
 <span id="L735"><span class="lineNum">     735</span>                 :             : </span>
-<span id="L736"><span class="lineNum">     736</span>                 :<span class="tlaGNC">           8 : void EventBasedActor::cancel_drain_timer() {</span></span>
-<span id="L737"><span class="lineNum">     737</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           8 :     if (drain_timer_handle_.valid() &amp;&amp; scheduler_) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 5 times"> + </span>]
-<span id="L738"><span class="lineNum">     738</span>                 :<span class="tlaGNC">           3 :         scheduler_-&gt;cancel_timer(drain_timer_handle_);</span></span>
-<span id="L739"><span class="lineNum">     739</span>                 :<span class="tlaGNC">           3 :         drain_timer_handle_ = sched::TimerHandle{};</span></span>
+<span id="L736"><span class="lineNum">     736</span>                 :<span class="tlaGNC">           7 : void EventBasedActor::cancel_drain_timer() {</span></span>
+<span id="L737"><span class="lineNum">     737</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           7 :     if (drain_timer_handle_.valid() &amp;&amp; scheduler_) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 5 times"> + </span>]
+<span id="L738"><span class="lineNum">     738</span>                 :<span class="tlaGNC">           2 :         scheduler_-&gt;cancel_timer(drain_timer_handle_);</span></span>
+<span id="L739"><span class="lineNum">     739</span>                 :<span class="tlaGNC">           2 :         drain_timer_handle_ = sched::TimerHandle{};</span></span>
 <span id="L740"><span class="lineNum">     740</span>                 :             :     }</span>
-<span id="L741"><span class="lineNum">     741</span>                 :<span class="tlaGNC">           8 : }</span></span>
+<span id="L741"><span class="lineNum">     741</span>                 :<span class="tlaGNC">           7 : }</span></span>
 <span id="L742"><span class="lineNum">     742</span>                 :             : </span>
-<span id="L743"><span class="lineNum">     743</span>                 :<span class="tlaGNC">          66 : void EventBasedActor::record_circuit_breaker_result(bool success) {</span></span>
-<span id="L744"><span class="lineNum">     744</span>   [<span class="tlaGBC" title="Branch 0 was taken 66 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 66 times"> + </span> :<span class="tlaGNC">          66 :     FAULT_INJECT(&quot;hpactor.actor.circuit_breaker.record.fail&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 66 times"> + </span>]
+<span id="L743"><span class="lineNum">     743</span>                 :<span class="tlaGNC">          62 : void EventBasedActor::record_circuit_breaker_result(bool success) {</span></span>
+<span id="L744"><span class="lineNum">     744</span>   [<span class="tlaGBC" title="Branch 0 was taken 62 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 62 times"> + </span> :<span class="tlaGNC">          62 :     FAULT_INJECT(&quot;hpactor.actor.circuit_breaker.record.fail&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 62 times"> + </span>]
 <span id="L745"><span class="lineNum">     745</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         success = false;</span></span>
 <span id="L746"><span class="lineNum">     746</span>                 :             :     }</span>
-<span id="L747"><span class="lineNum">     747</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 64 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          66 :     if (!quarantine_policy_.enabled)</span></span>
-<span id="L748"><span class="lineNum">     748</span>                 :<span class="tlaGNC">          59 :         return;</span></span>
+<span id="L747"><span class="lineNum">     747</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 60 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          62 :     if (!quarantine_policy_.enabled)</span></span>
+<span id="L748"><span class="lineNum">     748</span>                 :<span class="tlaGNC">          55 :         return;</span></span>
 <span id="L749"><span class="lineNum">     749</span>                 :             : </span>
-<span id="L750"><span class="lineNum">     750</span>         [<span class="tlaGBC" title="Branch 0 was taken 56 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          64 :     if (success) {</span></span>
-<span id="L751"><span class="lineNum">     751</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 52 times"> + </span>]:<span class="tlaGNC">          56 :         if (circuit_breaker_.state == CircuitBreakerState::kHalfOpen) {</span></span>
+<span id="L750"><span class="lineNum">     750</span>         [<span class="tlaGBC" title="Branch 0 was taken 52 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          60 :     if (success) {</span></span>
+<span id="L751"><span class="lineNum">     751</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 48 times"> + </span>]:<span class="tlaGNC">          52 :         if (circuit_breaker_.state == CircuitBreakerState::kHalfOpen) {</span></span>
 <span id="L752"><span class="lineNum">     752</span>                 :<span class="tlaGNC">           4 :             circuit_breaker_.state = CircuitBreakerState::kClosed;</span></span>
 <span id="L753"><span class="lineNum">     753</span>                 :<span class="tlaGNC">           4 :             circuit_breaker_.trip_count = 0;</span></span>
 <span id="L754"><span class="lineNum">     754</span>                 :<span class="tlaGNC">           4 :             circuit_breaker_.half_open_probe_in_flight = false;</span></span>
@@ -865,7 +865,7 @@
 <span id="L766"><span class="lineNum">     766</span>                 :<span class="tlaGNC">           4 :                 metrics_ring_buffer_-&gt;try_push(evt);</span></span>
 <span id="L767"><span class="lineNum">     767</span>                 :             :             }</span>
 <span id="L768"><span class="lineNum">     768</span>                 :             :         }</span>
-<span id="L769"><span class="lineNum">     769</span>                 :<span class="tlaGNC">          56 :         return;</span></span>
+<span id="L769"><span class="lineNum">     769</span>                 :<span class="tlaGNC">          52 :         return;</span></span>
 <span id="L770"><span class="lineNum">     770</span>                 :             :     }</span>
 <span id="L771"><span class="lineNum">     771</span>                 :             : </span>
 <span id="L772"><span class="lineNum">     772</span>                 :<span class="tlaGNC">           8 :     double threshold =</span></span>
@@ -942,20 +942,20 @@
 <span id="L843"><span class="lineNum">     843</span>                 :             :     }</span>
 <span id="L844"><span class="lineNum">     844</span>                 :<span class="tlaGNC">           9 : }</span></span>
 <span id="L845"><span class="lineNum">     845</span>                 :             : </span>
-<span id="L846"><span class="lineNum">     846</span>                 :<span class="tlaGNC">         926 : void EventBasedActor::check_mailbox_pressure() {</span></span>
-<span id="L847"><span class="lineNum">     847</span>         [<span class="tlaGBC" title="Branch 0 was taken 884 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 42 times"> + </span>]:<span class="tlaGNC">         926 :     if (!quarantine_policy_.enabled)</span></span>
-<span id="L848"><span class="lineNum">     848</span>                 :<span class="tlaGNC">         909 :         return;</span></span>
+<span id="L846"><span class="lineNum">     846</span>                 :<span class="tlaGNC">         918 : void EventBasedActor::check_mailbox_pressure() {</span></span>
+<span id="L847"><span class="lineNum">     847</span>         [<span class="tlaGBC" title="Branch 0 was taken 878 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 40 times"> + </span>]:<span class="tlaGNC">         918 :     if (!quarantine_policy_.enabled)</span></span>
+<span id="L848"><span class="lineNum">     848</span>                 :<span class="tlaGNC">         903 :         return;</span></span>
 <span id="L849"><span class="lineNum">     849</span>                 :             : </span>
-<span id="L850"><span class="lineNum">     850</span>                 :<span class="tlaGNC">          42 :     float threshold = quarantine_policy_.mailbox_pressure_threshold;</span></span>
-<span id="L851"><span class="lineNum">     851</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          42 :     if (threshold &lt;= 0.0f)</span></span>
+<span id="L850"><span class="lineNum">     850</span>                 :<span class="tlaGNC">          40 :     float threshold = quarantine_policy_.mailbox_pressure_threshold;</span></span>
+<span id="L851"><span class="lineNum">     851</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          40 :     if (threshold &lt;= 0.0f)</span></span>
 <span id="L852"><span class="lineNum">     852</span>                 :<span class="tlaGNC">          25 :         return;</span></span>
 <span id="L853"><span class="lineNum">     853</span>                 :             : </span>
-<span id="L854"><span class="lineNum">     854</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          17 :     if (!mailbox_)</span></span>
+<span id="L854"><span class="lineNum">     854</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          15 :     if (!mailbox_)</span></span>
 <span id="L855"><span class="lineNum">     855</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L856"><span class="lineNum">     856</span>                 :             : </span>
-<span id="L857"><span class="lineNum">     857</span>                 :<span class="tlaGNC tlaBgGNC">          17 :     auto snap = mailbox_-&gt;snapshot();</span></span>
-<span id="L858"><span class="lineNum">     858</span>                 :<span class="tlaGNC">          17 :     float ratio = static_cast&lt;float&gt;(snap.pressure_ratio_ppm) / 1000000.0f;</span></span>
-<span id="L859"><span class="lineNum">     859</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 16 times"> + </span>]:<span class="tlaGNC">          17 :     if (ratio &gt;= threshold) {</span></span>
+<span id="L857"><span class="lineNum">     857</span>                 :<span class="tlaGNC tlaBgGNC">          15 :     auto snap = mailbox_-&gt;snapshot();</span></span>
+<span id="L858"><span class="lineNum">     858</span>                 :<span class="tlaGNC">          15 :     float ratio = static_cast&lt;float&gt;(snap.pressure_ratio_ppm) / 1000000.0f;</span></span>
+<span id="L859"><span class="lineNum">     859</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">          15 :     if (ratio &gt;= threshold) {</span></span>
 <span id="L860"><span class="lineNum">     860</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (circuit_breaker_.state == CircuitBreakerState::kClosed ||</span></span>
 <span id="L861"><span class="lineNum">     861</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             circuit_breaker_.state == CircuitBreakerState::kHalfOpen) {</span></span>
 <span id="L862"><span class="lineNum">     862</span>                 :<span class="tlaGNC tlaBgGNC">           1 :             trip_circuit(std::chrono::steady_clock::now());</span></span>
@@ -968,7 +968,7 @@
 <span id="L869"><span class="lineNum">     869</span>                 :             :             }</span>
 <span id="L870"><span class="lineNum">     870</span>                 :             :         }</span>
 <span id="L871"><span class="lineNum">     871</span>                 :             :     }</span>
-<span id="L872"><span class="lineNum">     872</span>                 :<span class="tlaGNC tlaBgGNC">          17 : }</span></span>
+<span id="L872"><span class="lineNum">     872</span>                 :<span class="tlaGNC tlaBgGNC">          15 : }</span></span>
 <span id="L873"><span class="lineNum">     873</span>                 :             : </span>
 <span id="L874"><span class="lineNum">     874</span>                 :             : } // namespace hpactor</span>
         </pre>

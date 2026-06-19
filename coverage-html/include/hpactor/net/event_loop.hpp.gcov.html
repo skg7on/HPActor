@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 00:16:16</td>
+            <td class="headerValue">2026-06-19 01:25:54</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
@@ -221,9 +221,9 @@
 <span id="L143"><span class="lineNum">     143</span>                 :             : </span>
 <span id="L144"><span class="lineNum">     144</span>                 :             :     // Set callback for test verification (test-only API)</span>
 <span id="L145"><span class="lineNum">     145</span>                 :             :     using completion_callback = std::function&lt;void(OpCompletion)&gt;;</span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC tlaBgGNC">         115 :     void set_completion_callback(completion_callback cb) {</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         115 :         completion_callback_ = std::move(cb);</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">         115 :     }</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC tlaBgGNC">         117 :     void set_completion_callback(completion_callback cb) {</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         117 :         completion_callback_ = std::move(cb);</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">         117 :     }</span></span>
 <span id="L149"><span class="lineNum">     149</span>                 :             : </span>
 <span id="L150"><span class="lineNum">     150</span>                 :             :     // Get the underlying backend for direct async operations</span>
 <span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          16 :     IReactorBackend* backend() {</span></span>
