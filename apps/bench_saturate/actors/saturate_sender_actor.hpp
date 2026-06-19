@@ -189,36 +189,81 @@ class SaturateSenderActor : public EventBasedActor {
                 now.time_since_epoch())
                 .count());
 
-        for (uint32_t i = 0; i < kBatchSize; ++i) {
-            PayloadMode mode = payload_mode_;
-            if (mode == PayloadMode::Mixed) {
-                mode = (seq_no_ % 5 == 0) ? PayloadMode::Junk : PayloadMode::Small;
+        // When all messages in the batch go to the same receiver
+        // (single active receiver or round-robin with 1 receiver),
+        // use batch enqueue for lower per-message overhead.
+        if (num_active_receivers_ == 1) {
+            // Build all messages for the single receiver.
+            std::vector<TypedMessage> batch;
+            batch.reserve(kBatchSize);
+            for (uint32_t i = 0; i < kBatchSize; ++i) {
+                PayloadMode mode = payload_mode_;
+                if (mode == PayloadMode::Mixed) {
+                    mode = (seq_no_ % 5 == 0) ? PayloadMode::Junk
+                                              : PayloadMode::Small;
+                }
+                LoadMessagePayload load;
+                load.sender_id = sender_index_;
+                load.seq_no = seq_no_++;
+                load.send_timestamp_us = now_us;
+
+                StreamBuffer payload;
+                if (mode == PayloadMode::Small) {
+                    payload = load.encode_header();
+                } else {
+                    size_t junk_size = random_payload_size(
+                        payload_size_min_, payload_size_max_, seq_no_seed_);
+                    payload = load.encode_with_junk(junk_size, seq_no_seed_);
+                }
+                batch.push_back(make_msg(LoadMessageTag, std::move(payload)));
             }
 
-            LoadMessagePayload load;
-            load.sender_id = sender_index_;
-            load.seq_no = seq_no_++;
-            load.send_timestamp_us = now_us;
-
-            StreamBuffer payload;
-            if (mode == PayloadMode::Small) {
-                payload = load.encode_header();
-            } else {
-                size_t junk_size = random_payload_size(
-                    payload_size_min_, payload_size_max_, seq_no_seed_);
-                payload = load.encode_with_junk(junk_size, seq_no_seed_);
+            // Batch-enqueue to the single receiver.
+            auto* mbox = home_system().get_mailbox(receiver_addrs_[0].id);
+            if (mbox) {
+                mailbox::MailboxEnvelopeMeta meta;
+                meta.type_tag = LoadMessageTag;
+                meta.priority = 0;
+                meta.deadline_ns = INT64_MAX;
+                auto result =
+                    mbox->try_push_batch(batch.begin(), batch.end(), meta);
+                sent_count_.fetch_add(kBatchSize, std::memory_order_relaxed);
+                if (!result.accepted())
+                    send_dropped_.fetch_add(kBatchSize, std::memory_order_relaxed);
             }
+        } else {
+            // Multiple receivers — round-robin with individual enqueues.
+            for (uint32_t i = 0; i < kBatchSize; ++i) {
+                PayloadMode mode = payload_mode_;
+                if (mode == PayloadMode::Mixed) {
+                    mode = (seq_no_ % 5 == 0) ? PayloadMode::Junk
+                                              : PayloadMode::Small;
+                }
 
-            auto& target = receiver_addrs_[next_receiver_idx_];
-            next_receiver_idx_ = static_cast<uint32_t>((next_receiver_idx_ + 1) %
-                                                       num_active_receivers_);
+                LoadMessagePayload load;
+                load.sender_id = sender_index_;
+                load.seq_no = seq_no_++;
+                load.send_timestamp_us = now_us;
 
-            // Use the fast delivery path — no pipeline overhead.
-            auto result = home_system().try_deliver_local_fast(
-                target.id, make_msg(LoadMessageTag, std::move(payload)));
-            sent_count_.fetch_add(1, std::memory_order_relaxed);
-            if (!result.accepted())
-                send_dropped_.fetch_add(1, std::memory_order_relaxed);
+                StreamBuffer payload;
+                if (mode == PayloadMode::Small) {
+                    payload = load.encode_header();
+                } else {
+                    size_t junk_size = random_payload_size(
+                        payload_size_min_, payload_size_max_, seq_no_seed_);
+                    payload = load.encode_with_junk(junk_size, seq_no_seed_);
+                }
+
+                auto& target = receiver_addrs_[next_receiver_idx_];
+                next_receiver_idx_ = static_cast<uint32_t>(
+                    (next_receiver_idx_ + 1) % num_active_receivers_);
+
+                auto result = home_system().try_deliver_local_fast(
+                    target.id, make_msg(LoadMessageTag, std::move(payload)));
+                sent_count_.fetch_add(1, std::memory_order_relaxed);
+                if (!result.accepted())
+                    send_dropped_.fetch_add(1, std::memory_order_relaxed);
+            }
         }
 
         // ── Periodic throughput sampling ─────────────────────────────

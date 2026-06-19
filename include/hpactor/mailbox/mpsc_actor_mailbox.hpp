@@ -438,6 +438,68 @@ template <typename T> class MPSCActorMailbox {
         return make_result(pressure_state_.code_after_accept());
     }
 
+    /// \brief Batch-enqueue a range of messages with a single reservation
+    ///        and a single edge-triggered wakeup.
+    ///
+    /// All messages in the batch share the same \p meta (priority, deadline,
+    /// lane routing). The batch reserves capacity for all N messages at once,
+    /// allocates N nodes, links them into a chain, and enqueues the chain
+    /// head atomically. The edge-triggered wakeup fires at most once for the
+    /// entire batch.
+    ///
+    /// \tparam Iterator Forward iterator over \c T values.
+    /// \param[in] begin Start of the message range.
+    /// \param[in] end   End of the message range.
+    /// \param[in] meta  Envelope metadata shared by all messages.
+    /// \return \c EnqueueResult describing acceptance or rejection.
+    /// \note Thread safety: lock-free and safe to call from any thread.
+    template <typename Iterator>
+    EnqueueResult try_push_batch(Iterator begin, Iterator end,
+                                 MailboxEnvelopeMeta meta = {}) noexcept {
+        size_t count = 0;
+        uint64_t total_bytes = 0;
+        for (auto it = begin; it != end; ++it) {
+            ++count;
+            total_bytes += estimate_node_bytes(*it);
+        }
+        if (count == 0) {
+            return make_result(pressure_state_.code_after_accept());
+        }
+
+        meta.estimated_bytes = total_bytes;
+
+        // Single reservation for the entire batch.
+        auto reserve_result =
+            reservation_.try_reserve(total_bytes, config_.capacity.max_messages,
+                                     config_.capacity.max_bytes);
+        if (reserve_result != detail::ReservationResult::Reserved) {
+            // Fall back to individual enqueues for each message.
+            update_pressure_state(/*hard_failure=*/true);
+            EnqueueResult last_result;
+            for (auto it = begin; it != end; ++it) {
+                last_result = try_push(std::move(*it), meta);
+            }
+            return last_result;
+        }
+
+        // Allocate each node and enqueue individually, suppressing wakeup
+        // for all but the first (which may trigger the edge-triggered CAS).
+        uint8_t lane = route_lane(meta);
+        bool first = true;
+        for (auto it = begin; it != end; ++it) {
+            void* raw =
+                mem::allocate(mem::RegionType::kMessage, sizeof(T), actor_id_);
+            auto* node = new (raw) T(std::move(*it));
+            // Suppress wakeup for all nodes after the first — the
+            // edge-triggered CAS on the first node claims the wakeup
+            // right, and subsequent nodes see mailbox_was_empty_=false.
+            enqueue_reserved(node, meta, lane, /*suppress_wakeup=*/!first);
+            first = false;
+        }
+
+        return make_result(pressure_state_.code_after_accept());
+    }
+
     /// \brief Fire-and-forget enqueue — discards the admission result.
     ///
     /// Equivalent to \c try_push() but the caller does not inspect the
