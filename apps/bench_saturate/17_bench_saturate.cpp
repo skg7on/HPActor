@@ -13,7 +13,7 @@
 // limitations under the License.
 
 // =============================================================================
-// HPActor App 17: Bench Saturate — Actor System Saturation Benchmark
+// HPActor App 17: Bench Saturate -- Actor System Saturation Benchmark
 // =============================================================================
 
 #include "actors/saturate_collector_actor.hpp"
@@ -110,7 +110,7 @@ static void probe_system() {
 
     std::cout << "\n";
     hr();
-    printf("| %-61s|\n", "HPActor App 17 — Bench Saturate");
+    printf("| %-61s|\n", "HPActor App 17 -- Bench Saturate");
     printf("| %-61s|\n", "Actor System Saturation Benchmark");
     hr();
     blank();
@@ -137,17 +137,17 @@ static void probe_system() {
 
     blank();
     printf("| %-61s|\n", "Presets:");
-    presets("quick-saturate", "100→10, 16B, fast ceiling find ~30s");
-    presets("deep-saturate", "1000→100, 16B, thorough curve ~60s");
-    presets("alloc-stress", "500→50, 1KB-64KB junk, alloc pressure");
-    presets("mixed-load", "500→50, 80/20 mixed, realistic");
-    presets("fan-in-extreme", "5000→1, 16B, extreme contention");
-    presets("fan-out-burst", "10→1000, 1KB-16KB junk, broad fan-out");
+    presets("quick-saturate", "100->10, 16B, fast ceiling find ~30s");
+    presets("deep-saturate", "1000->100, 16B, thorough curve ~60s");
+    presets("alloc-stress", "500->50, 1KB-64KB junk, alloc pressure");
+    presets("mixed-load", "500->50, 80/20 mixed, realistic");
+    presets("fan-in-extreme", "5000->1, 16B, extreme contention");
+    presets("fan-out-burst", "10->1000, 1KB-16KB junk, broad fan-out");
     blank();
 
     printf("| %-61s|\n", "Try:");
     presets("/saturate list", "see all presets");
-    presets("/saturate start <preset>", "start a saturation run");
+    presets("/saturate start", "start <preset> run");
     presets("/saturate status", "check progress");
     presets("/saturate report", "view results");
     presets("/quit", "exit");
@@ -383,7 +383,7 @@ int main(int argc, char* argv[]) {
     if (shutdown_result.has_value()) {
         std::cout << "Shutdown complete." << std::endl;
     } else {
-        std::cout << "Shutdown timed out — forcing exit." << std::endl;
+        std::cout << "Shutdown timed out -- forcing exit." << std::endl;
     }
 
     std::cout << "=== Bench Saturate Complete ===" << std::endl;
