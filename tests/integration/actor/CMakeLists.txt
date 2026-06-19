@@ -34,6 +34,7 @@ add_executable(test_integration_actor
     test_ask_local.cpp
     test_passivation_reactivation.cpp
     test_durable_state_workflow.cpp
+    test_actor_integration_final.cpp
 )
 target_link_libraries(test_integration_actor
     hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main
