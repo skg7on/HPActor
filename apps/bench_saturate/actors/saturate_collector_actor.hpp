@@ -127,7 +127,9 @@ class SaturateCollectorActor : public EventBasedActor {
     static constexpr size_t kReservoirSize = 10000;
 
     void handle_throughput_sample(TypedMessage& /*msg*/) {
-        // Each sender emits one ThroughputSampleTag per ~100 messages sent.
+        // Each sender emits one ThroughputSampleTag per ~100 messages.
+        // total_sent_ is therefore an estimate — accurate to within ~99
+        // messages per sender.  Use total_received_ for exact counts.
         total_sent_.fetch_add(100, std::memory_order_relaxed);
         if (running_ && drop_curve_.size() < 1024) {
             drop_curve_.push_back(

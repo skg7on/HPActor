@@ -308,9 +308,9 @@ class SaturateReportCommand final : public ICommand {
 
         ctx.output->header("Throughput & Drops");
         std::map<std::string, std::string> overview;
-        overview["Total Sent"] = kv["total_sent"];
-        overview["Total Received"] = kv["total_received"];
-        overview["Total Dropped"] = kv["total_dropped"];
+        overview["Total Sent (≈, samples×100)"] = kv["total_sent"];
+        overview["Total Received (exact)"] = kv["total_received"];
+        overview["Total Dropped (receiver only)"] = kv["total_dropped"];
         overview["Drop Rate (%)"] = kv["drop_rate_pct"];
         overview["Total Throughput (msg/s)"] = kv["throughput_msgps"];
         overview["Elapsed (ms)"] = kv["elapsed_ms"];
