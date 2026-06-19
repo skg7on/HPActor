@@ -210,8 +210,6 @@ TEST(NetworkWorkflow, ConnectionPoolIsConnectedForUnknown) {
 }
 
 // ═══════════════════════════════════════════════════════════════════════════════
-// Test Group 3: Event loop + timer
-// ═══════════════════════════════════════════════════════════════════════════════
 
 TEST(NetworkWorkflow, EventLoopRunStop) {
     // Create a standalone EventLoop, start and stop it
@@ -282,4 +280,152 @@ TEST(NetworkWorkflow, EventLoopTimerIntegration) {
 
     auto result = system.shutdown();
     EXPECT_TRUE(result.has_value());
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Test Group 4: Acceptor
+// ═══════════════════════════════════════════════════════════════════════════════
+
+TEST(NetworkWorkflow, AcceptorListenOnEphemeralPort) {
+    net::EventLoop loop;
+
+    // Run the event loop in a background thread
+    std::thread loop_thread([&loop]() { loop.run(); });
+    test::assert_eventually([&loop]() { return loop.is_running(); }, 3000);
+    EXPECT_TRUE(loop.is_running());
+
+    // Create a TCP acceptor and listen on ephemeral port
+    net::TcpAcceptor acceptor(&loop);
+    bool bound = acceptor.listen(0); // ephemeral
+    EXPECT_TRUE(bound);
+    EXPECT_TRUE(acceptor.is_listening());
+
+    // port() returns the requested port (0 for ephemeral), not the
+    // OS-assigned port. Verify the API works without crashing.
+    uint16_t assigned_port = acceptor.port();
+    (void)assigned_port;
+
+    // Set an accept handler — verify it does not crash
+    std::atomic<int> accept_calls{0};
+    acceptor.set_accept_handler(
+        [&accept_calls](int /*fd*/, EndPoint /*ep*/) { accept_calls++; });
+
+    // Clean up
+    acceptor.close();
+    EXPECT_FALSE(acceptor.is_listening());
+
+    loop.stop();
+    if (loop_thread.joinable()) {
+        loop_thread.join();
+    }
+}
+
+TEST(NetworkWorkflow, AcceptorStopListening) {
+    net::EventLoop loop;
+
+    std::thread loop_thread([&loop]() { loop.run(); });
+    test::assert_eventually([&loop]() { return loop.is_running(); }, 3000);
+
+    net::TcpAcceptor acceptor(&loop);
+    EXPECT_FALSE(acceptor.is_listening());
+
+    // Listen on ephemeral port
+    bool bound = acceptor.listen(0);
+    EXPECT_TRUE(bound);
+    EXPECT_TRUE(acceptor.is_listening());
+
+    // Multiple close calls should be safe (idempotent)
+    acceptor.close();
+    EXPECT_FALSE(acceptor.is_listening());
+
+    // Second close should be safe
+    acceptor.close();
+    EXPECT_FALSE(acceptor.is_listening());
+
+    // Re-listen after close
+    bool re_bound = acceptor.listen(0);
+    EXPECT_TRUE(re_bound);
+    EXPECT_TRUE(acceptor.is_listening());
+
+    acceptor.close();
+
+    loop.stop();
+    if (loop_thread.joinable()) {
+        loop_thread.join();
+    }
+}
+
+// ═══════════════════════════════════════════════════════════════════════════════
+// Test Group 5: HTTP client + location cache
+// ═══════════════════════════════════════════════════════════════════════════════
+
+TEST(NetworkWorkflow, HttpClientExistence) {
+    // Verify HttpClient can be created and configured
+    net::EventLoop loop;
+    net::HttpClient client(&loop);
+
+    // Configure timeout and retries
+    client.set_default_timeout(std::chrono::milliseconds(3000));
+    client.set_max_retries(2);
+
+    // Abort should not crash when no requests are in-flight
+    client.abort();
+
+    // Verify the client can be destroyed cleanly
+    SUCCEED();
+}
+
+TEST(NetworkWorkflow, ActorLocationCacheOperations) {
+    net::ActorLocationCache cache;
+
+    // Put entries into the cache
+    ActorId id_a(1);
+    ActorId id_b(2);
+    EndPoint ep_a = endpoint_ops::parse_endpoint("127.0.0.1:10001");
+    EndPoint ep_b = endpoint_ops::parse_endpoint("127.0.0.1:10002");
+
+    cache.put(id_a, ep_a);
+    cache.put(id_b, ep_b, std::chrono::seconds(60));
+
+    // Get entries
+    auto result_a = cache.get(id_a);
+    ASSERT_TRUE(result_a.has_value());
+    EXPECT_EQ(result_a.value(), ep_a);
+
+    auto result_b = cache.get(id_b);
+    ASSERT_TRUE(result_b.has_value());
+    EXPECT_EQ(result_b.value(), ep_b);
+
+    // Get unknown entry
+    ActorId id_unknown(999);
+    auto result_unknown = cache.get(id_unknown);
+    EXPECT_FALSE(result_unknown.has_value());
+
+    // Evict a specific entry
+    cache.evict(id_a);
+    auto result_after_evict = cache.get(id_a);
+    EXPECT_FALSE(result_after_evict.has_value());
+
+    // id_b should still be present
+    auto result_b_after = cache.get(id_b);
+    ASSERT_TRUE(result_b_after.has_value());
+    EXPECT_EQ(result_b_after.value(), ep_b);
+
+    // Evict all entries for a node
+    cache.put(id_a, ep_a);
+    cache.evict_node(ep_a);
+    EXPECT_FALSE(cache.get(id_a).has_value());
+    // id_b on a different node should still be present
+    EXPECT_TRUE(cache.get(id_b).has_value());
+
+    // Purge expired — nothing should be expired yet (TTL is 30s default)
+    cache.purge_expired();
+
+    // Add a new entry with short TTL for purge test coverage
+    ActorId id_c(3);
+    EndPoint ep_c = endpoint_ops::parse_endpoint("127.0.0.1:10003");
+    cache.put(id_c, ep_c, std::chrono::seconds(0)); // expires immediately
+    cache.purge_expired();
+    auto result_c = cache.get(id_c);
+    EXPECT_FALSE(result_c.has_value());
 }
