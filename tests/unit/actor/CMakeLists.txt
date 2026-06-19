@@ -1,6 +1,7 @@
 add_executable(test_unit_actor
     test_abstract_actor.cpp
     test_behavior_builder.cpp
+    test_behavior_combinators.cpp
     test_circuit_breaker_tracker.cpp
     test_circuit_breaker_result.cpp
     test_failure_rate_tracker.cpp
