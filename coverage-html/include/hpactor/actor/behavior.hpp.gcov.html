@@ -32,17 +32,17 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">8</td>
-            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">29</td>
+            <td class="headerCovTableEntry">29</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-18 07:12:13</td>
+            <td class="headerValue">2026-06-19 00:16:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">4</td>
-            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">11</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
-            <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
+            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntry">12</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -93,66 +93,153 @@
 <span id="L15"><span class="lineNum">      15</span>                 :             : #pragma once</span>
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;functional&gt;</span>
-<span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor {</span>
-<span id="L20"><span class="lineNum">      20</span>                 :             : </span>
-<span id="L21"><span class="lineNum">      21</span>                 :             : class TypedMessage;</span>
-<span id="L22"><span class="lineNum">      22</span>                 :             : </span>
-<span id="L23"><span class="lineNum">      23</span>                 :             : /// \brief Helper for \c std::visit with lambdas (C++20 backport of</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             : ///        P0051R3 \c overloaded pattern).</span>
-<span id="L25"><span class="lineNum">      25</span>                 :             : ///</span>
-<span id="L26"><span class="lineNum">      26</span>                 :             : /// Usage: \code{.cpp}</span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : /// std::visit(overloaded{</span>
-<span id="L28"><span class="lineNum">      28</span>                 :             : ///     [](int i) { ... },</span>
-<span id="L29"><span class="lineNum">      29</span>                 :             : ///     [](std::string s) { ... },</span>
-<span id="L30"><span class="lineNum">      30</span>                 :             : /// }, my_variant);</span>
-<span id="L31"><span class="lineNum">      31</span>                 :             : /// \endcode</span>
-<span id="L32"><span class="lineNum">      32</span>                 :             : template &lt;class... Ts&gt; struct overloaded : Ts... {</span>
-<span id="L33"><span class="lineNum">      33</span>                 :             :     using Ts::operator()...;</span>
-<span id="L34"><span class="lineNum">      34</span>                 :             : };</span>
-<span id="L35"><span class="lineNum">      35</span>                 :             : template &lt;class... Ts&gt; overloaded(Ts...) -&gt; overloaded&lt;Ts...&gt;;</span>
-<span id="L36"><span class="lineNum">      36</span>                 :             : </span>
-<span id="L37"><span class="lineNum">      37</span>                 :             : /// \brief Message handler function wrapper with \c become() support.</span>
-<span id="L38"><span class="lineNum">      38</span>                 :             : ///</span>
-<span id="L39"><span class="lineNum">      39</span>                 :             : /// The primary unit of actor behavior. Each \c Behavior wraps a callable</span>
-<span id="L40"><span class="lineNum">      40</span>                 :             : /// that receives a \c TypedMessage. Actors change behavior by assigning a</span>
-<span id="L41"><span class="lineNum">      41</span>                 :             : /// new \c Behavior (the &quot;become&quot; pattern). A default-constructed \c Behavior</span>
-<span id="L42"><span class="lineNum">      42</span>                 :             : /// is empty and evaluates to \c false.</span>
-<span id="L43"><span class="lineNum">      43</span>                 :             : ///</span>
-<span id="L44"><span class="lineNum">      44</span>                 :             : /// \note Thread safety: Assigning and invoking a \c Behavior must happen on</span>
-<span id="L45"><span class="lineNum">      45</span>                 :             : ///       the actor's scheduler thread. No internal synchronization.</span>
-<span id="L46"><span class="lineNum">      46</span>                 :             : class Behavior {</span>
-<span id="L47"><span class="lineNum">      47</span>                 :             :   public:</span>
-<span id="L48"><span class="lineNum">      48</span>                 :             :     /// \brief Signature of the wrapped handler function.</span>
-<span id="L49"><span class="lineNum">      49</span>                 :             :     using handler_type = std::function&lt;void(TypedMessage&amp;)&gt;;</span>
-<span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>                 :             :     /// \brief Construct an empty behavior that drops all messages.</span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC tlaBgGNC">         928 :     Behavior() = default;</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :             : </span>
-<span id="L54"><span class="lineNum">      54</span>                 :             :     /// \brief Construct a behavior wrapping \p handler.</span>
-<span id="L55"><span class="lineNum">      55</span>                 :             :     /// \param[in] handler Callable invoked for each message.</span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">         209 :     explicit Behavior(handler_type handler) : handler_(std::move(handler)) {}</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :             : </span>
-<span id="L58"><span class="lineNum">      58</span>                 :             :     /// \brief Returns \c true if a handler is set.</span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">         897 :     explicit operator bool() const {</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">         897 :         return handler_ != nullptr;</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :             :     }</span>
-<span id="L62"><span class="lineNum">      62</span>                 :             : </span>
-<span id="L63"><span class="lineNum">      63</span>                 :             :     /// \brief Invoke the wrapped handler with \p msg.</span>
-<span id="L64"><span class="lineNum">      64</span>                 :             :     ///</span>
-<span id="L65"><span class="lineNum">      65</span>                 :             :     /// No-op if the behavior is empty.</span>
-<span id="L66"><span class="lineNum">      66</span>                 :             :     /// \param[in,out] msg The incoming typed message.</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         882 :     void operator()(TypedMessage&amp; msg) const {</span></span>
-<span id="L68"><span class="lineNum">      68</span>         [<span class="tlaGBC" title="Branch 0 was taken 882 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         882 :         if (handler_) {</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         882 :             handler_(msg);</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :             :         }</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">         882 :     }</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :             : </span>
-<span id="L73"><span class="lineNum">      73</span>                 :             :   private:</span>
-<span id="L74"><span class="lineNum">      74</span>                 :             :     handler_type handler_;</span>
-<span id="L75"><span class="lineNum">      75</span>                 :             : };</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;unordered_map&gt;</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : </span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/core/proto_type_registry.hpp&gt;</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : #include &lt;hpactor/msg/type_tag.hpp&gt;</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/msg/typed_message.hpp&gt;</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : </span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : namespace hpactor {</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : </span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : /// \brief Helper for \c std::visit with lambdas (C++20 backport of</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : ///        P0051R3 \c overloaded pattern).</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : ///</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : /// Usage: \code{.cpp}</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : /// std::visit(overloaded{</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : ///     [](int i) { ... },</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             : ///     [](std::string s) { ... },</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             : /// }, my_variant);</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             : /// \endcode</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             : template &lt;class... Ts&gt; struct overloaded : Ts... {</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             :     using Ts::operator()...;</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             : };</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             : template &lt;class... Ts&gt; overloaded(Ts...) -&gt; overloaded&lt;Ts...&gt;;</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             : </span>
+<span id="L40"><span class="lineNum">      40</span>                 :             : /// \brief Message handler collection with fluent builder API and \c become()</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             : ///        support.</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : ///</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : /// \c Behavior is the primary unit of actor message handling. It supports two</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : /// styles of handler registration:</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : ///</span>
+<span id="L46"><span class="lineNum">      46</span>                 :             : /// **Fluent builder API (recommended):**</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             : /// \code{.cpp}</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             : /// Behavior make_behavior() override {</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             : ///     return Behavior::make()</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : ///         .on_request&lt;Lookup, LookupResponse&gt;(</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : ///             [this](const Lookup&amp; req) { ... })</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : ///         .on&lt;Invalidate&gt;([this](const Invalidate&amp; inv) { ... });</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             : /// }</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             : /// \endcode</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             : ///</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : /// **Legacy raw-handler constructor (for backward compatibility):**</span>
+<span id="L57"><span class="lineNum">      57</span>                 :             : /// \code{.cpp}</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             : /// return Behavior{[this](TypedMessage&amp; msg) {</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             : ///     // manual type_id() dispatch</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             : /// }};</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             : /// \endcode</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             : ///</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             : /// Dispatch order: typed handlers (registered via \c on&lt;T&gt;() and</span>
+<span id="L64"><span class="lineNum">      64</span>                 :             : /// \c on_request&lt;ReqT,ResT&gt;()) are checked first. If no typed handler</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             : /// matches, the raw fallback handler (set via the constructor) is invoked.</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             : ///</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             : /// \note Thread safety: Assigning and invoking a \c Behavior must happen on</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             : ///       the actor's scheduler thread. No internal synchronization.</span>
+<span id="L69"><span class="lineNum">      69</span>                 :             : class Behavior {</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             :   public:</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             :     /// \brief Signature of the wrapped fallback handler function.</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :     using handler_type = std::function&lt;void(TypedMessage&amp;)&gt;;</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             : </span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :     /// \brief Construct an empty behavior that drops all messages.</span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC tlaBgGNC">         940 :     Behavior() = default;</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : </span>
-<span id="L77"><span class="lineNum">      77</span>                 :             : } // namespace hpactor</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :     /// \brief Construct a behavior wrapping a raw fallback \p handler.</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     ///</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             :     /// The fallback is invoked only when no typed handler matches.</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             :     /// \param[in] handler Callable invoked for each unmatched message.</span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">         212 :     explicit Behavior(handler_type handler) : handler_(std::move(handler)) {}</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :             : </span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :     /// \brief Factory that returns an empty \c Behavior ready for fluent</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :     ///        chaining via \c on&lt;T&gt;() and \c on_request&lt;ReqT,ResT&gt;().</span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">          11 :     static Behavior make() {</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">          11 :         return Behavior{};</span></span>
+<span id="L87"><span class="lineNum">      87</span>                 :             :     }</span>
+<span id="L88"><span class="lineNum">      88</span>                 :             : </span>
+<span id="L89"><span class="lineNum">      89</span>                 :             :     /// \brief Register a fire-and-forget handler for a protobuf message type.</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             :     ///</span>
+<span id="L91"><span class="lineNum">      91</span>                 :             :     /// The handler receives a const reference to the deserialized message.</span>
+<span id="L92"><span class="lineNum">      92</span>                 :             :     /// Use for one-way messages that do not expect a reply.</span>
+<span id="L93"><span class="lineNum">      93</span>                 :             :     ///</span>
+<span id="L94"><span class="lineNum">      94</span>                 :             :     /// \tparam T Protobuf message type (must have \c MessageTraits&lt;T&gt;</span>
+<span id="L95"><span class="lineNum">      95</span>                 :             :     ///           specialization).</span>
+<span id="L96"><span class="lineNum">      96</span>                 :             :     /// \param[in] handler Callable invoked with a const reference to the</span>
+<span id="L97"><span class="lineNum">      97</span>                 :             :     ///                    deserialized message.</span>
+<span id="L98"><span class="lineNum">      98</span>                 :             :     /// \return Reference to \c *this for fluent chaining.</span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">           9 :     template &lt;typename T&gt; Behavior&amp; on(std::function&lt;void(const T&amp;)&gt; handler) {</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">           9 :         TypeTag tag = MessageTraits&lt;T&gt;::tag();</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">          27 :         typed_handlers_[tag] = [h = std::move(handler)](TypedMessage&amp; msg) {</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">           9 :             auto parsed = msg.as&lt;T&gt;();</span></span>
+<span id="L103"><span class="lineNum">     103</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span>]:<span class="tlaGNC">           9 :             if (parsed) {</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">           8 :                 h(*parsed);</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :             :             }</span>
+<span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">           9 :         };</span></span>
+<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">           9 :         return *this;</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :             :     }</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             : </span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     /// \brief Register a request-response handler for a protobuf message type.</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             :     ///</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :     /// The handler receives a const reference to the deserialized request.</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :     /// Use \c context()-&gt;reply() inside the handler to send a response.</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :     ///</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             :     /// \tparam ReqT Request protobuf message type (must have</span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :     ///              \c MessageTraits&lt;ReqT&gt; specialization).</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :     /// \tparam ResT Expected response protobuf message type (for documentation</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :     ///              and future compile-time checking; not used at runtime).</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             :     /// \param[in] handler Callable invoked with a const reference to the</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             :     ///                    deserialized request.</span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :     /// \return Reference to \c *this for fluent chaining.</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :     template &lt;typename ReqT, typename ResT&gt;</span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           2 :     Behavior&amp; on_request(std::function&lt;void(const ReqT&amp;)&gt; handler) {</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           2 :         TypeTag tag = MessageTraits&lt;ReqT&gt;::tag();</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">           2 :         typed_handlers_[tag] = [h = std::move(handler)](TypedMessage&amp; msg) {</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           2 :             auto parsed = msg.as&lt;ReqT&gt;();</span></span>
+<span id="L127"><span class="lineNum">     127</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :             if (parsed) {</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">           2 :                 h(*parsed);</span></span>
+<span id="L129"><span class="lineNum">     129</span>                 :             :             }</span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           2 :         };</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">           2 :         return *this;</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     }</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             : </span>
+<span id="L134"><span class="lineNum">     134</span>                 :             :     /// \brief Returns \c true if any handler (typed or fallback) is set.</span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">         910 :     explicit operator bool() const {</span></span>
+<span id="L136"><span class="lineNum">     136</span>   [<span class="tlaGBC" title="Branch 0 was taken 907 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 890 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 17 times"> + </span>]:<span class="tlaGNC">         910 :         return !typed_handlers_.empty() || handler_ != nullptr;</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     }</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             : </span>
+<span id="L139"><span class="lineNum">     139</span>                 :             :     /// \brief Dispatch \p msg to the matching typed handler, or fall back to</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     ///        the raw handler.</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :     ///</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :     /// Typed handlers are checked first by \c TypeTag. If no typed handler</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :     /// matches, the raw fallback handler (if set) is invoked. No-op if the</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :     /// behavior is completely empty.</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :     ///</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :     /// \param[in,out] msg The incoming typed message.</span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         906 :     void operator()(TypedMessage&amp; msg) const {</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">         906 :         auto it = typed_handlers_.find(msg.type_id());</span></span>
+<span id="L149"><span class="lineNum">     149</span>         [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 895 times"> + </span>]:<span class="tlaGNC">         906 :         if (it != typed_handlers_.end()) {</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">          11 :             it-&gt;second(msg);</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          11 :             return;</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :         }</span>
+<span id="L153"><span class="lineNum">     153</span>         [<span class="tlaGBC" title="Branch 0 was taken 893 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">         895 :         if (handler_) {</span></span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">         893 :             handler_(msg);</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :         }</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :     }</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             : </span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :   private:</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :     using typed_handler_type = std::function&lt;void(TypedMessage&amp;)&gt;;</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :     std::unordered_map&lt;TypeTag, typed_handler_type&gt; typed_handlers_;</span>
+<span id="L161"><span class="lineNum">     161</span>                 :             :     handler_type handler_;</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             : };</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             : </span>
+<span id="L164"><span class="lineNum">     164</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

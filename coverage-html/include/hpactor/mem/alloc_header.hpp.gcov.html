@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-18 07:12:13</td>
+            <td class="headerValue">2026-06-19 00:16:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -119,8 +119,8 @@
 <span id="L41"><span class="lineNum">      41</span>                 :             : ///</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : /// \param[in] region The region to encode.</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : /// \return Flags value with only the region bits set.</span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC tlaBgGNC">      251373 : inline constexpr uint16_t flags_for_region(RegionType region) noexcept {</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">      251373 :     return static_cast&lt;uint16_t&gt;(region) &amp; kAllocRegionMask;</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC tlaBgGNC">      250051 : inline constexpr uint16_t flags_for_region(RegionType region) noexcept {</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">      250051 :     return static_cast&lt;uint16_t&gt;(region) &amp; kAllocRegionMask;</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : }</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : // Forward declaration</span>
@@ -155,10 +155,10 @@
 <span id="L77"><span class="lineNum">      77</span>                 :             :     /// \param[in] header The block's AllocHeader.</span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     /// \param[in] block_sz Total block size.</span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     /// \return Pointer to the CanaryFooter at the end of the block.</span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      251368 :     static CanaryFooter* from_header(AllocHeader* header, size_t block_sz) noexcept {</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      251368 :         auto* base = reinterpret_cast&lt;char*&gt;(header);</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">      251368 :         return reinterpret_cast&lt;CanaryFooter*&gt;(base + block_sz -</span></span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">      251368 :                                                sizeof(CanaryFooter));</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      250046 :     static CanaryFooter* from_header(AllocHeader* header, size_t block_sz) noexcept {</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      250046 :         auto* base = reinterpret_cast&lt;char*&gt;(header);</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">      250046 :         return reinterpret_cast&lt;CanaryFooter*&gt;(base + block_sz -</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">      250046 :                                                sizeof(CanaryFooter));</span></span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     }</span>
 <span id="L85"><span class="lineNum">      85</span>                 :             : </span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :     /// \brief Verify the canary magic is intact.</span>
@@ -206,38 +206,38 @@
 <span id="L128"><span class="lineNum">     128</span>                 :             :     /// \param[in] region Memory region for provenance (default kInternal).</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             :     /// \param[in] fallback \c true if allocated via the fallback path.</span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :     /// \return Pointer to the initialized AllocHeader.</span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">      251371 :     static AllocHeader* stamp(void* block, SizeClass sc, ActorId owner,</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">      250049 :     static AllocHeader* stamp(void* block, SizeClass sc, ActorId owner,</span></span>
 <span id="L132"><span class="lineNum">     132</span>                 :             :                               RegionType region = RegionType::kInternal,</span>
 <span id="L133"><span class="lineNum">     133</span>                 :             :                               bool fallback = false) noexcept {</span>
-<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">      251371 :         auto* h = static_cast&lt;AllocHeader*&gt;(block);</span></span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">      251371 :         h-&gt;owner_id = owner.value();</span></span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">      251371 :         h-&gt;incarnation = 0;</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">      251371 :         h-&gt;magic = kAllocMagic;</span></span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">      251371 :         h-&gt;size_class = static_cast&lt;uint8_t&gt;(sc);</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">      251371 :         h-&gt;generation = 0;</span></span>
-<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">      251371 :         h-&gt;flags = flags_for_region(region);</span></span>
-<span id="L141"><span class="lineNum">     141</span>         [<span class="tlaGBC" title="Branch 0 was taken 86980 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 164391 times"> + </span>]:<span class="tlaGNC">      251371 :         if (fallback) {</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">       86980 :             h-&gt;flags |= kAllocFallbackFlag;</span></span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">      250049 :         auto* h = static_cast&lt;AllocHeader*&gt;(block);</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">      250049 :         h-&gt;owner_id = owner.value();</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">      250049 :         h-&gt;incarnation = 0;</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">      250049 :         h-&gt;magic = kAllocMagic;</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">      250049 :         h-&gt;size_class = static_cast&lt;uint8_t&gt;(sc);</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">      250049 :         h-&gt;generation = 0;</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">      250049 :         h-&gt;flags = flags_for_region(region);</span></span>
+<span id="L141"><span class="lineNum">     141</span>         [<span class="tlaGBC" title="Branch 0 was taken 85658 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 164391 times"> + </span>]:<span class="tlaGNC">      250049 :         if (fallback) {</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">       85658 :             h-&gt;flags |= kAllocFallbackFlag;</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :         }</span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">      251371 :         h-&gt;_padding = 0;</span></span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">      251371 :         h-&gt;timestamp = 0;</span></span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">      251371 :         return h;</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">      250049 :         h-&gt;_padding = 0;</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">      250049 :         h-&gt;timestamp = 0;</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">      250049 :         return h;</span></span>
 <span id="L147"><span class="lineNum">     147</span>                 :             :     }</span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : </span>
 <span id="L149"><span class="lineNum">     149</span>                 :             :     /// \brief Return a pointer to the user data payload following this header.</span>
 <span id="L150"><span class="lineNum">     150</span>                 :             :     ///</span>
 <span id="L151"><span class="lineNum">     151</span>                 :             :     /// \return Pointer to the first user-usable byte.</span>
-<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">      351466 :     void* user_data() noexcept {</span></span>
-<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">      351466 :         return reinterpret_cast&lt;char*&gt;(this) + sizeof(AllocHeader);</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">      350144 :     void* user_data() noexcept {</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">      350144 :         return reinterpret_cast&lt;char*&gt;(this) + sizeof(AllocHeader);</span></span>
 <span id="L154"><span class="lineNum">     154</span>                 :             :     }</span>
 <span id="L155"><span class="lineNum">     155</span>                 :             : </span>
 <span id="L156"><span class="lineNum">     156</span>                 :             :     /// \brief Recover the AllocHeader pointer from a user data pointer.</span>
 <span id="L157"><span class="lineNum">     157</span>                 :             :     ///</span>
 <span id="L158"><span class="lineNum">     158</span>                 :             :     /// \param[in] user_ptr Pointer previously returned by \c user_data().</span>
 <span id="L159"><span class="lineNum">     159</span>                 :             :     /// \return Pointer to the AllocHeader preceding the user data.</span>
-<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">      412708 :     static AllocHeader* from_user_data(void* user_ptr) noexcept {</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">      411390 :     static AllocHeader* from_user_data(void* user_ptr) noexcept {</span></span>
 <span id="L161"><span class="lineNum">     161</span>                 :             :         return reinterpret_cast&lt;AllocHeader*&gt;(static_cast&lt;char*&gt;(user_ptr) -</span>
-<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">      412708 :                                               sizeof(AllocHeader));</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">      411390 :                                               sizeof(AllocHeader));</span></span>
 <span id="L163"><span class="lineNum">     163</span>                 :             :     }</span>
 <span id="L164"><span class="lineNum">     164</span>                 :             : </span>
 <span id="L165"><span class="lineNum">     165</span>                 :             :     /// \brief Compute the user data pointer from a raw block pointer.</span>
@@ -289,8 +289,8 @@
 <span id="L211"><span class="lineNum">     211</span>                 :             :     /// \brief Return the memory region this block is charged to.</span>
 <span id="L212"><span class="lineNum">     212</span>                 :             :     ///</span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :     /// \return The RegionType encoded in the flags field.</span>
-<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">       85979 :     RegionType region() const noexcept {</span></span>
-<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">       85979 :         return static_cast&lt;RegionType&gt;(flags &amp; kAllocRegionMask);</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">       84657 :     RegionType region() const noexcept {</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">       84657 :         return static_cast&lt;RegionType&gt;(flags &amp; kAllocRegionMask);</span></span>
 <span id="L216"><span class="lineNum">     216</span>                 :             :     }</span>
 <span id="L217"><span class="lineNum">     217</span>                 :             : </span>
 <span id="L218"><span class="lineNum">     218</span>                 :             :     /// \brief Update the region provenance for this block.</span>
@@ -304,8 +304,8 @@
 <span id="L226"><span class="lineNum">     226</span>                 :             :     /// \brief Check whether this block was allocated via the fallback path.</span>
 <span id="L227"><span class="lineNum">     227</span>                 :             :     ///</span>
 <span id="L228"><span class="lineNum">     228</span>                 :             :     /// \return \c true if the fallback flag is set.</span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">       85977 :     bool is_fallback() const noexcept {</span></span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">       85977 :         return (flags &amp; kAllocFallbackFlag) != 0;</span></span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">       84655 :     bool is_fallback() const noexcept {</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">       84655 :         return (flags &amp; kAllocFallbackFlag) != 0;</span></span>
 <span id="L231"><span class="lineNum">     231</span>                 :             :     }</span>
 <span id="L232"><span class="lineNum">     232</span>                 :             : </span>
 <span id="L233"><span class="lineNum">     233</span>                 :             :     /// \brief Mark this block as having been allocated via the fallback path.</span>
@@ -315,11 +315,11 @@
 <span id="L237"><span class="lineNum">     237</span>                 :             : };</span>
 <span id="L238"><span class="lineNum">     238</span>                 :             : </span>
 <span id="L239"><span class="lineNum">     239</span>                 :             : // Out-of-line because it needs AllocHeader complete type</span>
-<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">      251363 : inline void CanaryFooter::stamp(AllocHeader* header, size_t block_sz) noexcept {</span></span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">      251363 :     auto* f = from_header(header, block_sz);</span></span>
-<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">      251363 :     f-&gt;magic = kAllocMagic;</span></span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">      251363 :     f-&gt;checksum = 0;</span></span>
-<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">      251363 : }</span></span>
+<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">      250041 : inline void CanaryFooter::stamp(AllocHeader* header, size_t block_sz) noexcept {</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">      250041 :     auto* f = from_header(header, block_sz);</span></span>
+<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">      250041 :     f-&gt;magic = kAllocMagic;</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">      250041 :     f-&gt;checksum = 0;</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">      250041 : }</span></span>
 <span id="L245"><span class="lineNum">     245</span>                 :             : </span>
 <span id="L246"><span class="lineNum">     246</span>                 :             : } // namespace hpactor::mem</span>
         </pre>

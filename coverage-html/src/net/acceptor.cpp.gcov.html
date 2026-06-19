@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">73.4&nbsp;%</td>
+            <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
             <td class="headerCovTableEntry">124</td>
-            <td class="headerCovTableEntry">91</td>
+            <td class="headerCovTableEntry">93</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-18 07:12:13</td>
+            <td class="headerValue">2026-06-19 00:16:16</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">47.1&nbsp;%</td>
+            <td class="headerCovTableEntryLo">48.5&nbsp;%</td>
             <td class="headerCovTableEntry">68</td>
-            <td class="headerCovTableEntry">32</td>
+            <td class="headerCovTableEntry">33</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -118,13 +118,13 @@
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         143 : }</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : </span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">         367 : void Acceptor::close() {</span></span>
-<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 68 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 299 times"> + </span>]:<span class="tlaGNC">         367 :     if (listening_fd_ &gt;= 0) {</span></span>
-<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 68 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          68 :         if (loop_ != nullptr) {</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">          68 :             loop_-&gt;clear_read_handler(listening_fd_);</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          68 :             loop_-&gt;remove_fd(listening_fd_);</span></span>
+<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 67 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 300 times"> + </span>]:<span class="tlaGNC">         367 :     if (listening_fd_ &gt;= 0) {</span></span>
+<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 67 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          67 :         if (loop_ != nullptr) {</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">          67 :             loop_-&gt;clear_read_handler(listening_fd_);</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          67 :             loop_-&gt;remove_fd(listening_fd_);</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :         }</span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          68 :         ::close(listening_fd_);</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          68 :         listening_fd_ = -1;</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          67 :         ::close(listening_fd_);</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          67 :         listening_fd_ = -1;</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :     }</span>
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">         367 : }</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
@@ -182,51 +182,51 @@
 <span id="L103"><span class="lineNum">     103</span>                 :             :     }</span>
 <span id="L104"><span class="lineNum">     104</span>                 :             : </span>
 <span id="L105"><span class="lineNum">     105</span>                 :             :     // Listen</span>
-<span id="L106"><span class="lineNum">     106</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 42 times"> + </span>]:<span class="tlaGNC">          42 :     if (::listen(fd, SOMAXCONN) &lt; 0) {</span></span>
-<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         ::close(fd);</span></span>
-<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaUNC">           0 :         return false;</span></span>
+<span id="L106"><span class="lineNum">     106</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 41 times"> + </span>]:<span class="tlaGNC">          42 :     if (::listen(fd, SOMAXCONN) &lt; 0) {</span></span>
+<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">           1 :         ::close(fd);</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           1 :         return false;</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :             :     }</span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : </span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC tlaBgGNC">          42 :     listening_fd_ = fd;</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">          41 :     listening_fd_ = fd;</span></span>
 <span id="L112"><span class="lineNum">     112</span>                 :             : </span>
 <span id="L113"><span class="lineNum">     113</span>                 :             :     // Register with event loop</span>
-<span id="L114"><span class="lineNum">     114</span>         [<span class="tlaGBC" title="Branch 0 was taken 42 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          42 :     if (loop_ != nullptr) {</span></span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">          42 :         loop_-&gt;add_fd(listening_fd_, EventLoop::Event::Read);</span></span>
-<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">          49 :         loop_-&gt;set_read_handler(listening_fd_, [this](int) { handle_read(); });</span></span>
+<span id="L114"><span class="lineNum">     114</span>         [<span class="tlaGBC" title="Branch 0 was taken 41 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          41 :     if (loop_ != nullptr) {</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">          41 :         loop_-&gt;add_fd(listening_fd_, EventLoop::Event::Read);</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">          47 :         loop_-&gt;set_read_handler(listening_fd_, [this](int) { handle_read(); });</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :             :     }</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : </span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">          42 :     return true;</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">          41 :     return true;</span></span>
 <span id="L120"><span class="lineNum">     120</span>                 :             : }</span>
 <span id="L121"><span class="lineNum">     121</span>                 :             : </span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           7 : void TcpAcceptor::handle_read() {</span></span>
-<span id="L123"><span class="lineNum">     123</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           7 :     FAULT_INJECT(&quot;hpactor.acceptor.accept.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span>]
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           6 : void TcpAcceptor::handle_read() {</span></span>
+<span id="L123"><span class="lineNum">     123</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           6 :     FAULT_INJECT(&quot;hpactor.acceptor.accept.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span>]
 <span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L125"><span class="lineNum">     125</span>                 :             :     }</span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     struct sockaddr_storage client_addr{};</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           7 :     socklen_t client_len = sizeof(client_addr);</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC tlaBgGNC">           6 :     struct sockaddr_storage client_addr{};</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           6 :     socklen_t client_len = sizeof(client_addr);</span></span>
 <span id="L128"><span class="lineNum">     128</span>                 :             : </span>
 <span id="L129"><span class="lineNum">     129</span>                 :             :     int client_fd =</span>
-<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           7 :         accept(listening_fd_, reinterpret_cast&lt;struct sockaddr*&gt;(&amp;client_addr),</span></span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           6 :         accept(listening_fd_, reinterpret_cast&lt;struct sockaddr*&gt;(&amp;client_addr),</span></span>
 <span id="L131"><span class="lineNum">     131</span>                 :             :                &amp;client_len);</span>
 <span id="L132"><span class="lineNum">     132</span>                 :             : </span>
-<span id="L133"><span class="lineNum">     133</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :     if (client_fd &lt; 0) {</span></span>
+<span id="L133"><span class="lineNum">     133</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :     if (client_fd &lt; 0) {</span></span>
 <span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     }</span>
 <span id="L136"><span class="lineNum">     136</span>                 :             : </span>
 <span id="L137"><span class="lineNum">     137</span>                 :             :     // Set TCP_NODELAY for low latency</span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     int nodelay = 1;</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">           7 :     setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &amp;nodelay, sizeof(nodelay));</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC tlaBgGNC">           6 :     int nodelay = 1;</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">           6 :     setsockopt(client_fd, IPPROTO_TCP, TCP_NODELAY, &amp;nodelay, sizeof(nodelay));</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             : </span>
 <span id="L141"><span class="lineNum">     141</span>                 :             :     // Set non-blocking</span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">           7 :     int flags = fcntl(client_fd, F_GETFL, 0);</span></span>
-<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">           7 :     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">           6 :     int flags = fcntl(client_fd, F_GETFL, 0);</span></span>
+<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">           6 :     fcntl(client_fd, F_SETFL, flags | O_NONBLOCK);</span></span>
 <span id="L144"><span class="lineNum">     144</span>                 :             : </span>
-<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           7 :     if (accept_handler_) {</span></span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">           7 :         EndPoint endpoint;</span></span>
-<span id="L147"><span class="lineNum">     147</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           7 :         if (client_addr.ss_family == AF_INET) {</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">           7 :             auto* in4 = reinterpret_cast&lt;struct sockaddr_in*&gt;(&amp;client_addr);</span></span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           7 :             endpoint = Ipv4Endpoint{in4-&gt;sin_addr.s_addr, in4-&gt;sin_port};</span></span>
+<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           6 :     if (accept_handler_) {</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">           6 :         EndPoint endpoint;</span></span>
+<span id="L147"><span class="lineNum">     147</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           6 :         if (client_addr.ss_family == AF_INET) {</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">           6 :             auto* in4 = reinterpret_cast&lt;struct sockaddr_in*&gt;(&amp;client_addr);</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">           6 :             endpoint = Ipv4Endpoint{in4-&gt;sin_addr.s_addr, in4-&gt;sin_port};</span></span>
 <span id="L150"><span class="lineNum">     150</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :         } else if (client_addr.ss_family == AF_INET6) {</span></span>
 <span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaUNC">           0 :             auto* in6 = reinterpret_cast&lt;struct sockaddr_in6*&gt;(&amp;client_addr);</span></span>
 <span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaUNC">           0 :             std::array&lt;uint8_t, 16&gt; addr{};</span></span>
@@ -236,7 +236,7 @@
 <span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaUNC">           0 :             ::close(client_fd);</span></span>
 <span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
 <span id="L158"><span class="lineNum">     158</span>                 :             :         }</span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC tlaBgGNC">           7 :         accept_handler_(client_fd, endpoint);</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC tlaBgGNC">           6 :         accept_handler_(client_fd, endpoint);</span></span>
 <span id="L160"><span class="lineNum">     160</span>                 :             :     } else {</span>
 <span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         ::close(client_fd);</span></span>
 <span id="L162"><span class="lineNum">     162</span>                 :             :     }</span>
