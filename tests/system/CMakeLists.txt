@@ -29,6 +29,7 @@ set(TEST_SYSTEM_SOURCES
     test_system_actor_deep_workflow.cpp
     test_system_supervision_deep_workflow.cpp
     test_system_scheduler_deep_workflow.cpp
+    test_system_edge_cases.cpp
 )
 
 if(ENABLE_APPS)
