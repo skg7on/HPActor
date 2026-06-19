@@ -230,6 +230,7 @@ class SaturateCoordinatorActor : public EventBasedActor {
         refine_iteration_ = 0;
         last_good_rate_ = 0;
         first_bad_rate_ = 0;
+        duration_max_ms_ = preset->duration_max_ms;
 
         SaturateStartPayload start;
         start.num_senders = active_senders_;
@@ -352,7 +353,7 @@ class SaturateCoordinatorActor : public EventBasedActor {
         auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
                            std::chrono::steady_clock::now() - start_time_)
                            .count();
-        if (elapsed >= 120000) {
+        if (elapsed >= duration_max_ms_) {
             handle_stop();
             return;
         }
@@ -423,6 +424,7 @@ class SaturateCoordinatorActor : public EventBasedActor {
     uint32_t last_good_rate_ = 0;
     uint32_t first_bad_rate_ = 0;
     uint8_t refine_iteration_ = 0;
+    uint32_t duration_max_ms_ = 120000;
     double current_drop_rate_pct_ = 0.0;
     std::atomic<uint64_t> processed_{0};
     bool running_ = false;
