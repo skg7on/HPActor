@@ -1,7 +1,11 @@
 add_executable(test_unit_actor
     test_abstract_actor.cpp
     test_behavior_builder.cpp
+<<<<<<< HEAD
     test_behavior_combinators.cpp
+=======
+    test_behavior_fsm.cpp
+>>>>>>> d7d3a975 (feat(fsm): add FSM DSL with state data, per-state handlers, timeouts, and transition hooks)
     test_circuit_breaker_tracker.cpp
     test_circuit_breaker_result.cpp
     test_failure_rate_tracker.cpp
