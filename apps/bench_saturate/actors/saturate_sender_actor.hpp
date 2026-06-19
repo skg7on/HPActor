@@ -123,6 +123,7 @@ class SaturateSenderActor : public EventBasedActor {
 
     void handle_start(TypedMessage& msg) {
         sent_count_.store(0);
+        send_dropped_.store(0);
         seq_no_ = 0;
         next_receiver_idx_ = 0;
 
@@ -200,8 +201,11 @@ class SaturateSenderActor : public EventBasedActor {
             next_receiver_idx_ = static_cast<uint32_t>((next_receiver_idx_ + 1) %
                                                        num_active_receivers_);
 
-            context()->send(target, make_msg(LoadMessageTag, std::move(payload)));
+            auto result = home_system().try_deliver_local(
+                target.id, make_msg(LoadMessageTag, std::move(payload)));
             sent_count_.fetch_add(1, std::memory_order_relaxed);
+            if (!result.accepted())
+                send_dropped_.fetch_add(1, std::memory_order_relaxed);
         }
 
         uint64_t sent = sent_count_.load();
@@ -209,6 +213,7 @@ class SaturateSenderActor : public EventBasedActor {
             ThroughputSamplePayload tsp;
             tsp.sender_id = sender_index_;
             tsp.total_sent = sent;
+            tsp.send_dropped = send_dropped_.load();
             context()->send(collector_addr_,
                             make_msg(ThroughputSampleTag, tsp.encode()));
         }
@@ -231,6 +236,7 @@ class SaturateSenderActor : public EventBasedActor {
     std::chrono::steady_clock::time_point epoch_start_;
     std::chrono::steady_clock::time_point start_time_;
     std::atomic<uint64_t> sent_count_{0};
+    std::atomic<uint64_t> send_dropped_{0};
     std::atomic<uint64_t> processed_{0};
     uint64_t seq_no_ = 0;
     uint64_t seq_no_seed_ = 12345;

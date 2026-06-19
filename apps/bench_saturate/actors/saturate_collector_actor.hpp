@@ -128,13 +128,21 @@ class SaturateCollectorActor : public EventBasedActor {
 
     void handle_throughput_sample(TypedMessage& msg) {
         const auto& p = msg.payload();
-        if (p.size() >= 12) {
+        if (p.size() >= 20) {
             auto sample = ThroughputSamplePayload::decode(p);
-            uint64_t prev = last_sender_sent_[sample.sender_id];
-            if (sample.total_sent > prev) {
-                total_sent_.fetch_add(sample.total_sent - prev,
+
+            uint64_t prev_sent = last_sender_sent_[sample.sender_id];
+            if (sample.total_sent > prev_sent) {
+                total_sent_.fetch_add(sample.total_sent - prev_sent,
                                       std::memory_order_relaxed);
                 last_sender_sent_[sample.sender_id] = sample.total_sent;
+            }
+
+            uint64_t prev_drop = last_sender_dropped_[sample.sender_id];
+            if (sample.send_dropped > prev_drop) {
+                total_dropped_.fetch_add(sample.send_dropped - prev_drop,
+                                         std::memory_order_relaxed);
+                last_sender_dropped_[sample.sender_id] = sample.send_dropped;
             }
         }
         if (running_ && drop_curve_.size() < 1024) {
@@ -188,6 +196,7 @@ class SaturateCollectorActor : public EventBasedActor {
         latencies_.clear();
         drop_curve_.clear();
         last_sender_sent_.clear();
+        last_sender_dropped_.clear();
         last_receiver_received_.clear();
         last_receiver_dropped_.clear();
         total_sent_.store(0);
@@ -281,6 +290,7 @@ class SaturateCollectorActor : public EventBasedActor {
     std::atomic<uint64_t> total_received_{0};
     std::atomic<uint64_t> total_dropped_{0};
     std::unordered_map<uint64_t, uint64_t> last_sender_sent_;
+    std::unordered_map<uint64_t, uint64_t> last_sender_dropped_;
     std::unordered_map<uint64_t, uint64_t> last_receiver_received_;
     std::unordered_map<uint64_t, uint64_t> last_receiver_dropped_;
     double p50_us_ = 0.0, p99_us_ = 0.0, p999_us_ = 0.0;
