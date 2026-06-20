@@ -787,6 +787,12 @@ class ActorSystem {
     /// \brief Current phase of the shutdown state machine.
     ShutdownPhase shutdown_phase() const noexcept;
 
+    /// \brief Access the ShutdownCoordinator for registering user-defined
+    ///        shutdown phases.
+    ShutdownCoordinator* shutdown_coordinator() const {
+        return shutdown_coordinator_.get();
+    }
+
     // ── Health/readiness ──────────────────────────────────────────────────
 
     /// \brief Returns \c true when the system is ready to serve traffic.

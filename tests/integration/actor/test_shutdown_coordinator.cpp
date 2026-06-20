@@ -17,6 +17,7 @@
 #include <hpactor/actor/lifecycle/drain_config.hpp>
 #include <hpactor/actor/lifecycle/drain_policy.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
+#include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 
@@ -236,4 +237,55 @@ TEST_F(ShutdownCoordinatorIntegrationTest, IsReadyFlipsOnDrainingIngress) {
     ASSERT_TRUE(result.has_value());
 
     EXPECT_FALSE(system_->is_ready());
+}
+
+// ── User-Defined Phases ─────────────────────────────────────────
+
+TEST_F(ShutdownCoordinatorIntegrationTest, AddUserPhaseSucceeds) {
+    auto* coord = system_->shutdown_coordinator();
+    ASSERT_NE(coord, nullptr);
+    bool ok = coord->add_user_phase("custom-phase", ShutdownPhase::DrainingIngress,
+                                    std::chrono::milliseconds(500), []() {});
+    EXPECT_TRUE(ok);
+}
+
+TEST_F(ShutdownCoordinatorIntegrationTest, DuplicateUserPhaseNameFails) {
+    auto* coord = system_->shutdown_coordinator();
+    ASSERT_NE(coord, nullptr);
+    auto noop = []() {};
+    EXPECT_TRUE(coord->add_user_phase("phase1", ShutdownPhase::DrainingIngress,
+                                      std::chrono::milliseconds(500), noop));
+    EXPECT_FALSE(coord->add_user_phase("phase1", ShutdownPhase::DrainingActors,
+                                       std::chrono::milliseconds(500), noop));
+}
+
+TEST_F(ShutdownCoordinatorIntegrationTest, UserPhaseNamesReturnsOrderedList) {
+    auto* coord = system_->shutdown_coordinator();
+    ASSERT_NE(coord, nullptr);
+    coord->add_user_phase("a", ShutdownPhase::DrainingIngress,
+                          std::chrono::milliseconds(500), []() {});
+    coord->add_user_phase("b", ShutdownPhase::DrainingActors,
+                          std::chrono::milliseconds(500), []() {});
+
+    auto names = coord->user_phase_names();
+    EXPECT_EQ(names.size(), 2u);
+}
+
+TEST_F(ShutdownCoordinatorIntegrationTest, UserPhaseCallbackFiresDuringShutdown) {
+    auto* coord = system_->shutdown_coordinator();
+    ASSERT_NE(coord, nullptr);
+    bool fired = false;
+    coord->add_user_phase("fire-test", ShutdownPhase::DrainingIngress,
+                          std::chrono::milliseconds(500),
+                          [&fired]() { fired = true; });
+
+    ShutdownOptions opts;
+    opts.ingress_timeout = std::chrono::milliseconds(100);
+    opts.actor_drain_timeout = std::chrono::milliseconds(100);
+    opts.cluster_leave_timeout = std::chrono::milliseconds(100);
+    opts.force_after_timeout = false;
+
+    auto result = system_->shutdown(opts);
+    ASSERT_TRUE(result.has_value());
+    EXPECT_TRUE(fired);
 }
