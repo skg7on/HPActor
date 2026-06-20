@@ -32,17 +32,17 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">11</td>
-            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">13</td>
+            <td class="headerCovTableEntry">13</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">3</td>
-            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">4</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -312,30 +312,30 @@
 <span id="L234"><span class="lineNum">     234</span>                 :             : </span>
 <span id="L235"><span class="lineNum">     235</span>                 :             :         /// Wake a worker blocked on \c sleep_cv_ (idempotent, safe from</span>
 <span id="L236"><span class="lineNum">     236</span>                 :             :         /// any thread).  If the worker is not blocking this is a no-op.</span>
-<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC tlaBgGNC">        1668 :         void wake_if_blocking() {</span></span>
-<span id="L238"><span class="lineNum">     238</span>         [<span class="tlaGBC" title="Branch 0 was taken 235 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1433 times"> + </span>]:<span class="tlaGNC">        1668 :             if (is_blocking_.load(std::memory_order_acquire)) {</span></span>
-<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaGNC">         235 :                 std::lock_guard&lt;std::mutex&gt; lk(sleep_mutex_);</span></span>
-<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">         235 :                 is_blocking_.store(false, std::memory_order_release);</span></span>
-<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">         235 :                 sleep_cv_.notify_one();</span></span>
-<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">         235 :             }</span></span>
-<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">        1668 :         }</span></span>
+<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC tlaBgGNC">        2049 :         void wake_if_blocking() {</span></span>
+<span id="L238"><span class="lineNum">     238</span>         [<span class="tlaGBC" title="Branch 0 was taken 362 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1687 times"> + </span>]:<span class="tlaGNC">        2049 :             if (is_blocking_.load(std::memory_order_acquire)) {</span></span>
+<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaGNC">         362 :                 std::lock_guard&lt;std::mutex&gt; lk(sleep_mutex_);</span></span>
+<span id="L240"><span class="lineNum">     240</span>                 :<span class="tlaGNC">         362 :                 is_blocking_.store(false, std::memory_order_release);</span></span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC">         362 :                 sleep_cv_.notify_one();</span></span>
+<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">         362 :             }</span></span>
+<span id="L243"><span class="lineNum">     243</span>                 :<span class="tlaGNC">        2049 :         }</span></span>
 <span id="L244"><span class="lineNum">     244</span>                 :             :     };</span>
 <span id="L245"><span class="lineNum">     245</span>                 :             : </span>
 <span id="L246"><span class="lineNum">     246</span>                 :             :     /// \return Number of worker threads.</span>
-<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">        1168 :     uint32_t worker_count() const noexcept {</span></span>
-<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">        1168 :         return num_workers_;</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">        1703 :     uint32_t worker_count() const noexcept {</span></span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">        1703 :         return num_workers_;</span></span>
 <span id="L249"><span class="lineNum">     249</span>                 :             :     }</span>
 <span id="L250"><span class="lineNum">     250</span>                 :             : </span>
 <span id="L251"><span class="lineNum">     251</span>                 :             :     /// \return Reference to the A2WS victim selector (for \c WorkerThread</span>
 <span id="L252"><span class="lineNum">     252</span>                 :             :     ///         use).</span>
-<span id="L253"><span class="lineNum">     253</span>                 :             :     A2WS&amp; a2ws() noexcept {</span>
-<span id="L254"><span class="lineNum">     254</span>                 :             :         return a2ws_;</span>
+<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaGNC">           2 :     A2WS&amp; a2ws() noexcept {</span></span>
+<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaGNC">           2 :         return a2ws_;</span></span>
 <span id="L255"><span class="lineNum">     255</span>                 :             :     }</span>
 <span id="L256"><span class="lineNum">     256</span>                 :             : </span>
 <span id="L257"><span class="lineNum">     257</span>                 :             :     /// \return Reference to the worker state vector (for \c WorkerThread</span>
 <span id="L258"><span class="lineNum">     258</span>                 :             :     ///         use).</span>
-<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">        1447 :     std::vector&lt;WorkerState&gt;&amp; workers() noexcept {</span></span>
-<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC">        1447 :         return workers_;</span></span>
+<span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">        2198 :     std::vector&lt;WorkerState&gt;&amp; workers() noexcept {</span></span>
+<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC">        2198 :         return workers_;</span></span>
 <span id="L261"><span class="lineNum">     261</span>                 :             :     }</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             : </span>
 <span id="L263"><span class="lineNum">     263</span>                 :             :   private:</span>

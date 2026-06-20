@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">46.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">52.8&nbsp;%</td>
             <td class="headerCovTableEntry">176</td>
-            <td class="headerCovTableEntry">81</td>
+            <td class="headerCovTableEntry">93</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">65.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">80.0&nbsp;%</td>
             <td class="headerCovTableEntry">20</td>
-            <td class="headerCovTableEntry">13</td>
+            <td class="headerCovTableEntry">16</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">27.1&nbsp;%</td>
+            <td class="headerCovTableEntryLo">28.8&nbsp;%</td>
             <td class="headerCovTableEntry">118</td>
-            <td class="headerCovTableEntry">32</td>
+            <td class="headerCovTableEntry">34</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -104,54 +104,54 @@
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : namespace net {</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC tlaBgGNC">           5 : WireFrameConnection::WireFrameConnection(int fd, EndPoint local_endpoint,</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           5 :                                          EndPoint remote_endpoint, EventLoop* loop)</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           5 :     : Connection(fd, local_endpoint, remote_endpoint, loop), is_sending_(false) {</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           5 :     write_buffer_.reserve(kWriteChunkSize);</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           5 : }</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC tlaBgGNC">          10 : WireFrameConnection::WireFrameConnection(int fd, EndPoint local_endpoint,</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          10 :                                          EndPoint remote_endpoint, EventLoop* loop)</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          10 :     : Connection(fd, local_endpoint, remote_endpoint, loop), is_sending_(false) {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          10 :     write_buffer_.reserve(kWriteChunkSize);</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          10 : }</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          10 : WireFrameConnection::~WireFrameConnection() {</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           5 :     close();</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          10 : }</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          20 : WireFrameConnection::~WireFrameConnection() {</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          10 :     close();</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          20 : }</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : WireFrameConnectionPtr</span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           3 : WireFrameConnection::create_as_client(int fd, EndPoint local_endpoint,</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           5 : WireFrameConnection::create_as_client(int fd, EndPoint local_endpoint,</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :                                       EndPoint remote_endpoint, EventLoop* loop) {</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     auto conn = std::shared_ptr&lt;WireFrameConnection&gt;(</span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           3 :         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           3 :     conn-&gt;set_state(ConnectionState::Connected);</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           5 :         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           5 :     conn-&gt;set_state(ConnectionState::Connected);</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : </span>
-<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           5 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :                       &quot;connection opened&quot;);</span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>
-<span id="L49"><span class="lineNum">      49</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           3 :     if (loop &amp;&amp; fd &gt;= 0) {</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           3 :         loop-&gt;add_fd(fd, EventLoop::Event::Read);</span></span>
-<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :         if (loop-&gt;supports_read_handler()) {</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           3 :             std::weak_ptr&lt;WireFrameConnection&gt; weak_conn = conn;</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           3 :             loop-&gt;set_read_handler(fd, [weak_conn](int /*event_fd*/) {</span></span>
+<span id="L49"><span class="lineNum">      49</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           5 :     if (loop &amp;&amp; fd &gt;= 0) {</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           5 :         loop-&gt;add_fd(fd, EventLoop::Event::Read);</span></span>
+<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :         if (loop-&gt;supports_read_handler()) {</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           5 :             std::weak_ptr&lt;WireFrameConnection&gt; weak_conn = conn;</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           5 :             loop-&gt;set_read_handler(fd, [weak_conn](int /*event_fd*/) {</span></span>
 <span id="L54"><span class="lineNum">      54</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :                 if (auto self = weak_conn.lock()) {</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC">           0 :                     self-&gt;handle_read();</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaUNC">           0 :                 }</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaUNC">           0 :             });</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC tlaBgGNC">           3 :         }</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC tlaBgGNC">           5 :         }</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     }</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           3 :     return conn;</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           5 :     return conn;</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : }</span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : </span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : WireFrameConnectionPtr</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaUNC tlaBgUNC">           0 : WireFrameConnection::create_connecting_client(int fd, EndPoint local_endpoint,</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           1 : WireFrameConnection::create_connecting_client(int fd, EndPoint local_endpoint,</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :                                               EndPoint remote_endpoint,</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :                                               EventLoop* loop) {</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     auto conn = std::shared_ptr&lt;WireFrameConnection&gt;(</span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaUNC">           0 :         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaUNC">           0 :     conn-&gt;set_state(ConnectionState::Connecting);</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           1 :         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           1 :     conn-&gt;set_state(ConnectionState::Connecting);</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :     // Event loop registration deferred — caller must verify connect and call</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :     // setup_after_connect().</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaUNC">           0 :     return conn;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           1 :     return conn;</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : }</span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : </span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaUNC">           0 : void WireFrameConnection::setup_after_connect(WireFrameConnectionPtr conn) {</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void WireFrameConnection::setup_after_connect(WireFrameConnectionPtr conn) {</span></span>
 <span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaUNC">           0 :     conn-&gt;set_state(ConnectionState::Connected);</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :             : </span>
 <span id="L79"><span class="lineNum">      79</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
@@ -173,89 +173,89 @@
 <span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :             : </span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : WireFrameConnectionPtr</span>
-<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC tlaBgGNC">           2 : WireFrameConnection::create_as_server(int fd, EndPoint local_endpoint,</span></span>
+<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC tlaBgGNC">           4 : WireFrameConnection::create_as_server(int fd, EndPoint local_endpoint,</span></span>
 <span id="L99"><span class="lineNum">      99</span>                 :             :                                       EndPoint remote_endpoint, EventLoop* loop) {</span>
 <span id="L100"><span class="lineNum">     100</span>                 :             :     auto conn = std::shared_ptr&lt;WireFrameConnection&gt;(</span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">           2 :         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));</span></span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">           2 :     conn-&gt;set_state(ConnectionState::Connected);</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">           4 :         new WireFrameConnection(fd, local_endpoint, remote_endpoint, loop));</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">           4 :     conn-&gt;set_state(ConnectionState::Connected);</span></span>
 <span id="L103"><span class="lineNum">     103</span>                 :             : </span>
-<span id="L104"><span class="lineNum">     104</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
+<span id="L104"><span class="lineNum">     104</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
 <span id="L105"><span class="lineNum">     105</span>                 :             :                       &quot;connection opened&quot;);</span>
 <span id="L106"><span class="lineNum">     106</span>                 :             : </span>
-<span id="L107"><span class="lineNum">     107</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (loop &amp;&amp; fd &gt;= 0) {</span></span>
-<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           2 :         loop-&gt;add_fd(fd, EventLoop::Event::Read);</span></span>
-<span id="L109"><span class="lineNum">     109</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :         if (loop-&gt;supports_read_handler()) {</span></span>
-<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">           2 :             std::weak_ptr&lt;WireFrameConnection&gt; weak_conn = conn;</span></span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">           2 :             loop-&gt;set_read_handler(fd, [weak_conn](int /*event_fd*/) {</span></span>
+<span id="L107"><span class="lineNum">     107</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           4 :     if (loop &amp;&amp; fd &gt;= 0) {</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           4 :         loop-&gt;add_fd(fd, EventLoop::Event::Read);</span></span>
+<span id="L109"><span class="lineNum">     109</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :         if (loop-&gt;supports_read_handler()) {</span></span>
+<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">           4 :             std::weak_ptr&lt;WireFrameConnection&gt; weak_conn = conn;</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">           4 :             loop-&gt;set_read_handler(fd, [weak_conn](int /*event_fd*/) {</span></span>
 <span id="L112"><span class="lineNum">     112</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :                 if (auto self = weak_conn.lock()) {</span></span>
 <span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">           1 :                     self-&gt;handle_read();</span></span>
 <span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">           1 :                 }</span></span>
 <span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           1 :             });</span></span>
-<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">           2 :         }</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">           4 :         }</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :             :     }</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : </span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           2 :     return conn;</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           4 :     return conn;</span></span>
 <span id="L120"><span class="lineNum">     120</span>                 :             : }</span>
 <span id="L121"><span class="lineNum">     121</span>                 :             : </span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void WireFrameConnection::set_ready_handler(std::function&lt;void(ConnectionPtr)&gt; handler) {</span></span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaUNC">           0 :     ready_handler_ = std::move(handler);</span></span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::set_ready_handler(std::function&lt;void(ConnectionPtr)&gt; handler) {</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           2 :     ready_handler_ = std::move(handler);</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L125"><span class="lineNum">     125</span>                 :             : </span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaUNC">           0 : void WireFrameConnection::set_frame_handler(frame_handler handler) {</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaUNC">           0 :     frame_handler_ = std::move(handler);</span></span>
-<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::set_frame_handler(frame_handler handler) {</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           2 :     frame_handler_ = std::move(handler);</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L129"><span class="lineNum">     129</span>                 :             : </span>
-<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC tlaBgGNC">           1 : void WireFrameConnection::set_error_handler(</span></span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           3 : void WireFrameConnection::set_error_handler(</span></span>
 <span id="L131"><span class="lineNum">     131</span>                 :             :     std::function&lt;void(ConnectionPtr, const error&amp;)&gt; handler) {</span>
-<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           1 :     error_handler_ = std::move(handler);</span></span>
-<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           3 :     error_handler_ = std::move(handler);</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           3 : }</span></span>
 <span id="L134"><span class="lineNum">     134</span>                 :             : </span>
 <span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::set_send_completion_handler(</span></span>
 <span id="L136"><span class="lineNum">     136</span>                 :             :     std::function&lt;void(int result)&gt; handler) {</span>
 <span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">           2 :     send_completion_handler_ = std::move(handler);</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L139"><span class="lineNum">     139</span>                 :             : </span>
-<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">          11 : void WireFrameConnection::send(const StreamBuffer&amp; frame_data) {</span></span>
-<span id="L141"><span class="lineNum">     141</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          11 :     if (state_ != ConnectionState::Connected) {</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">          13 : void WireFrameConnection::send(const StreamBuffer&amp; frame_data) {</span></span>
+<span id="L141"><span class="lineNum">     141</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 13 times"> + </span>]:<span class="tlaGNC">          13 :     if (state_ != ConnectionState::Connected) {</span></span>
 <span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :     }</span>
 <span id="L144"><span class="lineNum">     144</span>                 :             : </span>
-<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          11 :     HPACTOR_LOG_TRACE(</span></span>
+<span id="L145"><span class="lineNum">     145</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 13 times"> + </span>]:<span class="tlaGNC tlaBgGNC">          13 :     HPACTOR_LOG_TRACE(</span></span>
 <span id="L146"><span class="lineNum">     146</span>                 :             :         log::LogCategory::kNetwork, ActorId{0}, 0, &quot;network frame sent&quot;,</span>
 <span id="L147"><span class="lineNum">     147</span>                 :             :         log::field(&quot;bytes&quot;, static_cast&lt;uint64_t&gt;(frame_data.size())));</span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : </span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">          11 :     send_raw(frame_data);</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">          13 :     send_raw(frame_data);</span></span>
 <span id="L150"><span class="lineNum">     150</span>                 :             : }</span>
 <span id="L151"><span class="lineNum">     151</span>                 :             : </span>
-<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">           7 : void WireFrameConnection::close() {</span></span>
-<span id="L153"><span class="lineNum">     153</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           7 :     if (fd_ &gt;= 0) {</span></span>
-<span id="L154"><span class="lineNum">     154</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :         if (loop_) {</span></span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">           5 :             loop_-&gt;clear_read_handler(fd_);</span></span>
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">           5 :             loop_-&gt;remove_fd(fd_);</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">          17 : void WireFrameConnection::close() {</span></span>
+<span id="L153"><span class="lineNum">     153</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">          17 :     if (fd_ &gt;= 0) {</span></span>
+<span id="L154"><span class="lineNum">     154</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          10 :         if (loop_) {</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">          10 :             loop_-&gt;clear_read_handler(fd_);</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">          10 :             loop_-&gt;remove_fd(fd_);</span></span>
 <span id="L157"><span class="lineNum">     157</span>                 :             :         }</span>
-<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">           5 :         ::close(fd_);</span></span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">           5 :         fd_ = -1;</span></span>
+<span id="L158"><span class="lineNum">     158</span>                 :<span class="tlaGNC">          10 :         ::close(fd_);</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">          10 :         fd_ = -1;</span></span>
 <span id="L160"><span class="lineNum">     160</span>                 :             :     }</span>
-<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">           7 :     set_state(ConnectionState::Disconnected);</span></span>
-<span id="L162"><span class="lineNum">     162</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">          17 :     set_state(ConnectionState::Disconnected);</span></span>
+<span id="L162"><span class="lineNum">     162</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          17 :     HPACTOR_LOG_DEBUG(log::LogCategory::kNetwork, ActorId{0}, 0,</span></span>
 <span id="L163"><span class="lineNum">     163</span>                 :             :                       &quot;connection closed&quot;);</span>
-<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">           7 : }</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">          17 : }</span></span>
 <span id="L165"><span class="lineNum">     165</span>                 :             : </span>
-<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">           1 : void WireFrameConnection::handle_read() {</span></span>
-<span id="L167"><span class="lineNum">     167</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           1 :     FAULT_INJECT(&quot;hpactor.wireframe.handle_read.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span>]
-<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">           1 :         return;</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::handle_read() {</span></span>
+<span id="L167"><span class="lineNum">     167</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           2 :     FAULT_INJECT(&quot;hpactor.wireframe.handle_read.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span>]
+<span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">           2 :         return;</span></span>
 <span id="L169"><span class="lineNum">     169</span>                 :             :     }</span>
 <span id="L170"><span class="lineNum">     170</span>                 :             :     // Phase 1 — accumulate header bytes (8 bytes: magic + payload length).</span>
 <span id="L171"><span class="lineNum">     171</span>                 :             :     // Read header first so we know the exact payload length before allocating</span>
 <span id="L172"><span class="lineNum">     172</span>                 :             :     // buffer space for it.</span>
-<span id="L173"><span class="lineNum">     173</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     while (read_buffer_.size() &lt; WireFrame::HeaderSize) {</span></span>
-<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">           2 :         size_t remaining = WireFrame::HeaderSize - read_buffer_.size();</span></span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">           2 :         uint8_t* area = read_buffer_.reserve_tail(remaining);</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">           2 :         ssize_t n = ::read(fd_, area, remaining);</span></span>
-<span id="L177"><span class="lineNum">     177</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :         if (n &gt; 0) {</span></span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">           1 :             read_buffer_.commit_tail(static_cast&lt;size_t&gt;(n));</span></span>
-<span id="L179"><span class="lineNum">     179</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :         } else if (n == 0) {</span></span>
+<span id="L173"><span class="lineNum">     173</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :     while (read_buffer_.size() &lt; WireFrame::HeaderSize) {</span></span>
+<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">           4 :         size_t remaining = WireFrame::HeaderSize - read_buffer_.size();</span></span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">           4 :         uint8_t* area = read_buffer_.reserve_tail(remaining);</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">           4 :         ssize_t n = ::read(fd_, area, remaining);</span></span>
+<span id="L177"><span class="lineNum">     177</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           4 :         if (n &gt; 0) {</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">           2 :             read_buffer_.commit_tail(static_cast&lt;size_t&gt;(n));</span></span>
+<span id="L179"><span class="lineNum">     179</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :         } else if (n == 0) {</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :             :             // EOF — remote end closed connection.</span>
 <span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">           1 :             read_buffer_.clear();</span></span>
 <span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">           1 :             set_state(ConnectionState::Disconnected);</span></span>
@@ -264,10 +264,10 @@
 <span id="L185"><span class="lineNum">     185</span>                 :             :             }</span>
 <span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC tlaBgGNC">           1 :             return;</span></span>
 <span id="L187"><span class="lineNum">     187</span>                 :             :         } else {</span>
-<span id="L188"><span class="lineNum">     188</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             if (errno == EAGAIN || errno == EWOULDBLOCK)</span></span>
-<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaUNC">           0 :                 return;</span></span>
+<span id="L188"><span class="lineNum">     188</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           1 :             if (errno == EAGAIN || errno == EWOULDBLOCK)</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">           1 :                 return;</span></span>
 <span id="L190"><span class="lineNum">     190</span>                 :             :             // Hard read error.</span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaUNC">           0 :             read_buffer_.clear();</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             read_buffer_.clear();</span></span>
 <span id="L192"><span class="lineNum">     192</span>                 :<span class="tlaUNC">           0 :             set_state(ConnectionState::Error);</span></span>
 <span id="L193"><span class="lineNum">     193</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (error_handler_) {</span></span>
 <span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaUNC">           0 :                 error_handler_(nullptr, error(errors::unknown, &quot;read error&quot;));</span></span>
@@ -341,35 +341,35 @@
 <span id="L261"><span class="lineNum">     261</span>                 :             :     }</span>
 <span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L263"><span class="lineNum">     263</span>                 :             : </span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC tlaBgGNC">          11 : void WireFrameConnection::send_raw(const StreamBuffer&amp; data) {</span></span>
-<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 11 times"> + </span>]:<span class="tlaGNC">          11 :     if (fd_ &lt; 0 || !loop_)</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC tlaBgGNC">          13 : void WireFrameConnection::send_raw(const StreamBuffer&amp; data) {</span></span>
+<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 13 times"> + </span>]:<span class="tlaGNC">          13 :     if (fd_ &lt; 0 || !loop_)</span></span>
 <span id="L266"><span class="lineNum">     266</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L267"><span class="lineNum">     267</span>                 :             : </span>
-<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaGNC tlaBgGNC">          11 :     write_buffer_.append(data.data(), data.size());</span></span>
+<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaGNC tlaBgGNC">          13 :     write_buffer_.append(data.data(), data.size());</span></span>
 <span id="L269"><span class="lineNum">     269</span>                 :             : </span>
-<span id="L270"><span class="lineNum">     270</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">          11 :     if (is_sending_)</span></span>
+<span id="L270"><span class="lineNum">     270</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          13 :     if (is_sending_)</span></span>
 <span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">           9 :         return;</span></span>
 <span id="L272"><span class="lineNum">     272</span>                 :             : </span>
-<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">           2 :     flush_write_buffer();</span></span>
+<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">           4 :     flush_write_buffer();</span></span>
 <span id="L274"><span class="lineNum">     274</span>                 :             : }</span>
 <span id="L275"><span class="lineNum">     275</span>                 :             : </span>
-<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">           2 : void WireFrameConnection::flush_write_buffer() {</span></span>
-<span id="L277"><span class="lineNum">     277</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           2 :     FAULT_INJECT(&quot;hpactor.wireframe.flush_write_buffer.drop&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span>]
+<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">           4 : void WireFrameConnection::flush_write_buffer() {</span></span>
+<span id="L277"><span class="lineNum">     277</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           4 :     FAULT_INJECT(&quot;hpactor.wireframe.flush_write_buffer.drop&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span>]
 <span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L279"><span class="lineNum">     279</span>                 :             :     }</span>
-<span id="L280"><span class="lineNum">     280</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC tlaBgGNC">           2 :     if (fd_ &lt; 0 || loop_ == nullptr || write_buffer_.empty()) {</span></span>
-<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span><span class="tlaGBC" title="Branch 7 was taken 2 times"> + </span>]
+<span id="L280"><span class="lineNum">     280</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC tlaBgGNC">           4 :     if (fd_ &lt; 0 || loop_ == nullptr || write_buffer_.empty()) {</span></span>
+<span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span><span class="tlaGBC" title="Branch 7 was taken 4 times"> + </span>]
 <span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L282"><span class="lineNum">     282</span>                 :             :     }</span>
 <span id="L283"><span class="lineNum">     283</span>                 :             : </span>
-<span id="L284"><span class="lineNum">     284</span>                 :<span class="tlaGNC tlaBgGNC">           2 :     is_sending_ = true;</span></span>
+<span id="L284"><span class="lineNum">     284</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     is_sending_ = true;</span></span>
 <span id="L285"><span class="lineNum">     285</span>                 :             : </span>
 <span id="L286"><span class="lineNum">     286</span>                 :             :     struct iovec iov;</span>
-<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">           2 :     iov.iov_base = write_buffer_.data();</span></span>
-<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC">           2 :     iov.iov_len = write_buffer_.size();</span></span>
+<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">           4 :     iov.iov_base = write_buffer_.data();</span></span>
+<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC">           4 :     iov.iov_len = write_buffer_.size();</span></span>
 <span id="L289"><span class="lineNum">     289</span>                 :             : </span>
-<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">           2 :     loop_-&gt;backend()-&gt;async_send(fd_, &amp;iov, 1, ActorId(0),</span></span>
+<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">           4 :     loop_-&gt;backend()-&gt;async_send(fd_, &amp;iov, 1, ActorId(0),</span></span>
 <span id="L291"><span class="lineNum">     291</span>                 :             :                                  static_cast&lt;uint32_t&gt;(OpType::Send));</span>
 <span id="L292"><span class="lineNum">     292</span>                 :             : }</span>
 <span id="L293"><span class="lineNum">     293</span>                 :             : </span>

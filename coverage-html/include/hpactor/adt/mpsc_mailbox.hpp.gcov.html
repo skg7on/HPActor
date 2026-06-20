@@ -37,12 +37,12 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">12</td>
-            <td class="headerCovTableEntry">12</td>
+            <td class="headerCovTableEntry">18</td>
+            <td class="headerCovTableEntry">18</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -137,12 +137,12 @@
 <span id="L59"><span class="lineNum">      59</span>                 :             :     ///</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     /// Initializes the dummy stub node and sets both \c head_ and \c tail_</span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     /// to point to it.  \c count_ starts at zero.</span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC tlaBgGNC">       10287 :     MPSCMailbox() {</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">       10287 :         stub_.mpsc_next.store(nullptr, std::memory_order_relaxed);</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">       10287 :         head_.store(&amp;stub_, std::memory_order_relaxed);</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">       10287 :         tail_.store(&amp;stub_, std::memory_order_relaxed);</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">       10287 :         count_.store(0, std::memory_order_relaxed);</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">       10287 :     }</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC tlaBgGNC">       13905 :     MPSCMailbox() {</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">       13905 :         stub_.mpsc_next.store(nullptr, std::memory_order_relaxed);</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">       13905 :         head_.store(&amp;stub_, std::memory_order_relaxed);</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">       13905 :         tail_.store(&amp;stub_, std::memory_order_relaxed);</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">       13905 :         count_.store(0, std::memory_order_relaxed);</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">       13905 :     }</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     /// \brief Enqueue a node at the head (wait-free, multi-producer safe).</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     ///</span>
@@ -159,12 +159,12 @@
 <span id="L81"><span class="lineNum">      81</span>                 :             :     ///       producers.  Uses `acq_rel` exchange + `release` store to</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     ///       publish the link; the consumer's `acquire` loads form the</span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     ///       matching synchronizes-with edge.</span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">       80979 :     void enqueue(T* node) noexcept {</span></span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">       80979 :         node-&gt;mpsc_next.store(nullptr, std::memory_order_relaxed);</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">       80979 :         T* prev = head_.exchange(node, std::memory_order_acq_rel);</span></span>
-<span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaGNC">       80979 :         prev-&gt;mpsc_next.store(node, std::memory_order_release);</span></span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">       80979 :         count_.fetch_add(1, std::memory_order_release);</span></span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">       80979 :     }</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">       77490 :     void enqueue(T* node) noexcept {</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">       77490 :         node-&gt;mpsc_next.store(nullptr, std::memory_order_relaxed);</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">       77490 :         T* prev = head_.exchange(node, std::memory_order_acq_rel);</span></span>
+<span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaGNC">       77490 :         prev-&gt;mpsc_next.store(node, std::memory_order_release);</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">       77490 :         count_.fetch_add(1, std::memory_order_release);</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">       77490 :     }</span></span>
 <span id="L90"><span class="lineNum">      90</span>                 :             : </span>
 <span id="L91"><span class="lineNum">      91</span>                 :             :     /// \brief Dequeue the oldest element from the queue.</span>
 <span id="L92"><span class="lineNum">      92</span>                 :             :     ///</span>
@@ -198,30 +198,30 @@
 <span id="L120"><span class="lineNum">     120</span>                 :             :     ///       enqueue.  The caller retries; `count_` is incremented only</span>
 <span id="L121"><span class="lineNum">     121</span>                 :             :     ///       after the `mpsc_next` store, so `empty()` correctly reports</span>
 <span id="L122"><span class="lineNum">     122</span>                 :             :     ///       the queue as non-empty and the actor is re-dispatched.</span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">      105671 :     T* dequeue() noexcept {</span></span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">      105671 :         T* t = tail_.load(std::memory_order_acquire);</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">      105671 :         T* next = t-&gt;mpsc_next.load(std::memory_order_acquire);</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">       98800 :     T* dequeue() noexcept {</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">       98800 :         T* t = tail_.load(std::memory_order_acquire);</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">       98800 :         T* next = t-&gt;mpsc_next.load(std::memory_order_acquire);</span></span>
 <span id="L126"><span class="lineNum">     126</span>                 :             : </span>
-<span id="L127"><span class="lineNum">     127</span>         [<span class="tlaGBC" title="Branch 0 was taken 21553 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 84118 times"> + </span>]:<span class="tlaGNC">      105671 :         if (next == nullptr) {</span></span>
-<span id="L128"><span class="lineNum">     128</span>         [<span class="tlaGBC" title="Branch 0 was taken 21553 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       21553 :             if (head_.load(std::memory_order_acquire) == t)</span></span>
-<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">       21553 :                 return nullptr;</span></span>
+<span id="L127"><span class="lineNum">     127</span>         [<span class="tlaGBC" title="Branch 0 was taken 19136 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 79664 times"> + </span>]:<span class="tlaGNC">       98800 :         if (next == nullptr) {</span></span>
+<span id="L128"><span class="lineNum">     128</span>         [<span class="tlaGBC" title="Branch 0 was taken 19136 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">       19136 :             if (head_.load(std::memory_order_acquire) == t)</span></span>
+<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">       19136 :                 return nullptr;</span></span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :             // Producer has exchanged head_ but mpsc_next isn't visible</span>
 <span id="L131"><span class="lineNum">     131</span>                 :             :             // yet — return nullptr, caller will retry.</span>
 <span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return nullptr;</span></span>
 <span id="L133"><span class="lineNum">     133</span>                 :             :         }</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             : </span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC tlaBgGNC">       84118 :         T* next_next = next-&gt;mpsc_next.load(std::memory_order_relaxed);</span></span>
-<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 4802 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 79316 times"> + </span>]:<span class="tlaGNC">       84118 :         if (next_next == nullptr) {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        4802 :             T* h = head_.load(std::memory_order_acquire);</span></span>
-<span id="L138"><span class="lineNum">     138</span>         [<span class="tlaGBC" title="Branch 0 was taken 4160 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 642 times"> + </span>]:<span class="tlaGNC">        4802 :             if (h != next)</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        4160 :                 return nullptr; // producer hasn't linked the next node yet</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC tlaBgGNC">       79664 :         T* next_next = next-&gt;mpsc_next.load(std::memory_order_relaxed);</span></span>
+<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 3933 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 75731 times"> + </span>]:<span class="tlaGNC">       79664 :         if (next_next == nullptr) {</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">        3933 :             T* h = head_.load(std::memory_order_acquire);</span></span>
+<span id="L138"><span class="lineNum">     138</span>         [<span class="tlaGBC" title="Branch 0 was taken 3213 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 720 times"> + </span>]:<span class="tlaGNC">        3933 :             if (h != next)</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">        3213 :                 return nullptr; // producer hasn't linked the next node yet</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :         }</span>
 <span id="L141"><span class="lineNum">     141</span>                 :             : </span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">       79958 :         t-&gt;mpsc_next.store(next_next, std::memory_order_release);</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">       76451 :         t-&gt;mpsc_next.store(next_next, std::memory_order_release);</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :             : </span>
-<span id="L144"><span class="lineNum">     144</span>         [<span class="tlaGBC" title="Branch 0 was taken 642 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 79316 times"> + </span>]:<span class="tlaGNC">       79958 :         if (next_next == nullptr) {</span></span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">         642 :             T* h = head_.load(std::memory_order_acquire);</span></span>
-<span id="L146"><span class="lineNum">     146</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 642 times"> + </span>]:<span class="tlaGNC">         642 :             if (h != next) {</span></span>
+<span id="L144"><span class="lineNum">     144</span>         [<span class="tlaGBC" title="Branch 0 was taken 720 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 75731 times"> + </span>]:<span class="tlaGNC">       76451 :         if (next_next == nullptr) {</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">         720 :             T* h = head_.load(std::memory_order_acquire);</span></span>
+<span id="L146"><span class="lineNum">     146</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 720 times"> + </span>]:<span class="tlaGNC">         720 :             if (h != next) {</span></span>
 <span id="L147"><span class="lineNum">     147</span>                 :             :                 // Producer enqueued between head_ check and chain update.</span>
 <span id="L148"><span class="lineNum">     148</span>                 :             :                 // Rather than spinning for mpsc_next, leave the chain as-is</span>
 <span id="L149"><span class="lineNum">     149</span>                 :             :                 // and return nullptr — the next dequeue() will fix it up.</span>
@@ -229,14 +229,14 @@
 <span id="L151"><span class="lineNum">     151</span>                 :             :             }</span>
 <span id="L152"><span class="lineNum">     152</span>                 :             :         }</span>
 <span id="L153"><span class="lineNum">     153</span>                 :             : </span>
-<span id="L154"><span class="lineNum">     154</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 79958 times"> + </span>]:<span class="tlaGNC tlaBgGNC">       79958 :         if (next_next == t) {</span></span>
+<span id="L154"><span class="lineNum">     154</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 76451 times"> + </span>]:<span class="tlaGNC tlaBgGNC">       76451 :         if (next_next == t) {</span></span>
 <span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             t-&gt;mpsc_next.store(nullptr, std::memory_order_release);</span></span>
 <span id="L156"><span class="lineNum">     156</span>                 :             :         }</span>
 <span id="L157"><span class="lineNum">     157</span>                 :             : </span>
 <span id="L158"><span class="lineNum">     158</span>                 :             :         {</span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC tlaBgGNC">       79958 :             T* h = head_.load(std::memory_order_acquire);</span></span>
-<span id="L160"><span class="lineNum">     160</span>         [<span class="tlaGBC" title="Branch 0 was taken 642 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 79316 times"> + </span>]:<span class="tlaGNC">       79958 :             if (h == next) {</span></span>
-<span id="L161"><span class="lineNum">     161</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 642 times"> + </span>]:<span class="tlaGNC">         642 :                 if (!head_.compare_exchange_strong(next, static_cast&lt;T*&gt;(&amp;stub_),</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC tlaBgGNC">       76451 :             T* h = head_.load(std::memory_order_acquire);</span></span>
+<span id="L160"><span class="lineNum">     160</span>         [<span class="tlaGBC" title="Branch 0 was taken 720 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 75731 times"> + </span>]:<span class="tlaGNC">       76451 :             if (h == next) {</span></span>
+<span id="L161"><span class="lineNum">     161</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 720 times"> + </span>]:<span class="tlaGNC">         720 :                 if (!head_.compare_exchange_strong(next, static_cast&lt;T*&gt;(&amp;stub_),</span></span>
 <span id="L162"><span class="lineNum">     162</span>                 :             :                                                    std::memory_order_release,</span>
 <span id="L163"><span class="lineNum">     163</span>                 :             :                                                    std::memory_order_relaxed)) {</span>
 <span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                     T* updated = next-&gt;mpsc_next.load(std::memory_order_acquire);</span></span>
@@ -258,8 +258,8 @@
 <span id="L180"><span class="lineNum">     180</span>                 :             :             }</span>
 <span id="L181"><span class="lineNum">     181</span>                 :             :         }</span>
 <span id="L182"><span class="lineNum">     182</span>                 :             : </span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC tlaBgGNC">       79958 :         count_.fetch_sub(1, std::memory_order_release);</span></span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">       79958 :         return next;</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC tlaBgGNC">       76451 :         count_.fetch_sub(1, std::memory_order_release);</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">       76451 :         return next;</span></span>
 <span id="L185"><span class="lineNum">     185</span>                 :             :     }</span>
 <span id="L186"><span class="lineNum">     186</span>                 :             : </span>
 <span id="L187"><span class="lineNum">     187</span>                 :             :     /// \brief Try to dequeue one element (non-blocking).</span>
@@ -285,8 +285,8 @@
 <span id="L207"><span class="lineNum">     207</span>                 :             :     ///       immediately after the load.  Do not use as a stable iteration</span>
 <span id="L208"><span class="lineNum">     208</span>                 :             :     ///       guard; prefer the `nullptr` return from `dequeue()` for</span>
 <span id="L209"><span class="lineNum">     209</span>                 :             :     ///       drain-loop termination.</span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">      180964 :     bool empty() const noexcept {</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">      361928 :         return count_.load(std::memory_order_acquire) == 0;</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">      175730 :     bool empty() const noexcept {</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">      351460 :         return count_.load(std::memory_order_acquire) == 0;</span></span>
 <span id="L212"><span class="lineNum">     212</span>                 :             :     }</span>
 <span id="L213"><span class="lineNum">     213</span>                 :             : </span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :     /// \brief Return the approximate number of elements in the queue.</span>
@@ -298,15 +298,15 @@
 <span id="L220"><span class="lineNum">     220</span>                 :             :     ///       may change the count before the caller inspects the result.</span>
 <span id="L221"><span class="lineNum">     221</span>                 :             :     ///       Useful for admission, pressure monitoring, observability, and</span>
 <span id="L222"><span class="lineNum">     222</span>                 :             :     ///       lost-wakeup checks, but not a precise size under contention.</span>
-<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">     6192575 :     int64_t count() const noexcept {</span></span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">    12385150 :         return count_.load(std::memory_order_acquire);</span></span>
+<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">     6026828 :     int64_t count() const noexcept {</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">    12053656 :         return count_.load(std::memory_order_acquire);</span></span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     }</span>
 <span id="L226"><span class="lineNum">     226</span>                 :             : </span>
 <span id="L227"><span class="lineNum">     227</span>                 :             :   private:</span>
 <span id="L228"><span class="lineNum">     228</span>                 :             :     /// \private Dummy node that inherits from \c T to provide a valid</span>
 <span id="L229"><span class="lineNum">     229</span>                 :             :     /// queue anchor without a separate allocation.</span>
 <span id="L230"><span class="lineNum">     230</span>                 :             :     struct Stub : public T {</span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">       10287 :         Stub() : T() {}</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">       13905 :         Stub() : T() {}</span></span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :     };</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             : </span>
 <span id="L234"><span class="lineNum">     234</span>                 :             :     alignas(64) std::atomic&lt;T*&gt; head_; ///&lt; Newest element (producer insertion</span>

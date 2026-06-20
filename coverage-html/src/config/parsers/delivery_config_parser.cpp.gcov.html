@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">14.8&nbsp;%</td>
+            <td class="headerCovTableEntryMed">85.2&nbsp;%</td>
             <td class="headerCovTableEntry">27</td>
-            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">23</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">25.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
             <td class="headerCovTableEntry">4</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">2</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">12.5&nbsp;%</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
             <td class="headerCovTableEntry">8</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">8</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -99,14 +99,14 @@
 <span id="L21"><span class="lineNum">      21</span>                 :             : namespace hpactor::config {</span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : namespace {</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaUNC tlaBgUNC">           0 : static hpactor::mailbox::DeliveryMode parse_delivery_mode(const std::string&amp; s) {</span></span>
-<span id="L25"><span class="lineNum">      25</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (s == &quot;observable_best_effort&quot;)</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaUNC">           0 :         return hpactor::mailbox::DeliveryMode::ObservableBestEffort;</span></span>
-<span id="L27"><span class="lineNum">      27</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (s == &quot;at_least_once&quot;)</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaUNC">           0 :         return hpactor::mailbox::DeliveryMode::AtLeastOnce;</span></span>
-<span id="L29"><span class="lineNum">      29</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (s == &quot;durable_at_least_once&quot;)</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 :         return hpactor::mailbox::DeliveryMode::DurableAtLeastOnce;</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaUNC">           0 :     return hpactor::mailbox::DeliveryMode::BestEffort;</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC tlaBgGNC">          17 : static hpactor::mailbox::DeliveryMode parse_delivery_mode(const std::string&amp; s) {</span></span>
+<span id="L25"><span class="lineNum">      25</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 16 times"> + </span>]:<span class="tlaGNC">          17 :     if (s == &quot;observable_best_effort&quot;)</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           1 :         return hpactor::mailbox::DeliveryMode::ObservableBestEffort;</span></span>
+<span id="L27"><span class="lineNum">      27</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">          16 :     if (s == &quot;at_least_once&quot;)</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">          14 :         return hpactor::mailbox::DeliveryMode::AtLeastOnce;</span></span>
+<span id="L29"><span class="lineNum">      29</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :     if (s == &quot;durable_at_least_once&quot;)</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           1 :         return hpactor::mailbox::DeliveryMode::DurableAtLeastOnce;</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           1 :     return hpactor::mailbox::DeliveryMode::BestEffort;</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : }</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : class DeliveryConfigParser final : public ITomlSystemConfigParser {</span>
@@ -114,31 +114,31 @@
 <span id="L36"><span class="lineNum">      36</span>                 :             :     static constexpr std::string_view kName = &quot;system.delivery&quot;;</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     static constexpr int kOrder = 95;</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaUNC">           0 :     std::string_view name() const noexcept override {</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     std::string_view name() const noexcept override {</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC">           0 :         return kName;</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     }</span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaUNC">           0 :     int order() const noexcept override {</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :     }</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : </span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC tlaBgGNC">          53 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC tlaBgGNC">          85 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          53 :         auto dt = system.table(&quot;delivery&quot;);</span></span>
-<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 53 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          53 :         if (!dt.valid())</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          53 :             return result&lt;void&gt;::make();</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          85 :         auto dt = system.table(&quot;delivery&quot;);</span></span>
+<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 68 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">          85 :         if (!dt.valid())</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          68 :             return result&lt;void&gt;::make();</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         out.delivery.default_mode =</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC">           0 :             parse_delivery_mode(dt.read_string(&quot;default_mode&quot;, &quot;best_effort&quot;));</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaUNC">           0 :         out.delivery.max_retries = dt.read_uint32(&quot;max_retries&quot;, 3);</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC">           0 :         out.delivery.retry_backoff_ms = dt.read_uint32(&quot;retry_backoff_ms&quot;, 100);</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaUNC">           0 :         out.delivery.retry_backoff_max_ms =</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaUNC">           0 :             dt.read_uint32(&quot;retry_backoff_max_ms&quot;, 10000);</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaUNC">           0 :         out.delivery.dedup_window_ms = dt.read_uint32(&quot;dedup_window_ms&quot;, 300000);</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaUNC">           0 :         out.delivery.dedup_max_entries = dt.read_uint32(&quot;dedup_max_entries&quot;, 65536);</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaUNC">           0 :         out.delivery.default_message_ttl_ms =</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaUNC">           0 :             dt.read_uint32(&quot;default_message_ttl_ms&quot;, 0);</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          17 :         out.delivery.default_mode =</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          17 :             parse_delivery_mode(dt.read_string(&quot;default_mode&quot;, &quot;best_effort&quot;));</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">          17 :         out.delivery.max_retries = dt.read_uint32(&quot;max_retries&quot;, 3);</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">          17 :         out.delivery.retry_backoff_ms = dt.read_uint32(&quot;retry_backoff_ms&quot;, 100);</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          17 :         out.delivery.retry_backoff_max_ms =</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          17 :             dt.read_uint32(&quot;retry_backoff_max_ms&quot;, 10000);</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">          17 :         out.delivery.dedup_window_ms = dt.read_uint32(&quot;dedup_window_ms&quot;, 300000);</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">          17 :         out.delivery.dedup_max_entries = dt.read_uint32(&quot;dedup_max_entries&quot;, 65536);</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">          17 :         out.delivery.default_message_ttl_ms =</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          17 :             dt.read_uint32(&quot;default_message_ttl_ms&quot;, 0);</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaUNC">           0 :         return result&lt;void&gt;::make();</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">          17 :         return result&lt;void&gt;::make();</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     }</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : };</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>

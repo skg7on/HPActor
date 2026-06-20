@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">33.3&nbsp;%</td>
@@ -108,18 +108,18 @@
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     }</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">          53 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">          85 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          53 :         auto mt = system.table(&quot;metrics&quot;);</span></span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 51 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">          53 :         if (!mt.valid())</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          51 :             return result&lt;void&gt;::make();</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          85 :         auto mt = system.table(&quot;metrics&quot;);</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 70 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">          85 :         if (!mt.valid())</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          70 :             return result&lt;void&gt;::make();</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           2 :         out.metrics_enabled = mt.read_bool(&quot;enabled&quot;, true);</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           2 :         out.metrics_ring_buffer_capacity =</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           2 :             mt.read_uint32(&quot;ring_buffer_capacity&quot;, 65536);</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           2 :         out.metrics_path = mt.read_string(&quot;metrics_path&quot;, &quot;/metrics&quot;);</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          15 :         out.metrics_enabled = mt.read_bool(&quot;enabled&quot;, true);</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">          15 :         out.metrics_ring_buffer_capacity =</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          15 :             mt.read_uint32(&quot;ring_buffer_capacity&quot;, 65536);</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">          15 :         out.metrics_path = mt.read_string(&quot;metrics_path&quot;, &quot;/metrics&quot;);</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : </span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           2 :         return result&lt;void&gt;::make();</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">          15 :         return result&lt;void&gt;::make();</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :     }</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : };</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>

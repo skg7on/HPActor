@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -274,17 +274,17 @@
 <span id="L196"><span class="lineNum">     196</span>                 :             : /// \note Thread safety: constexpr and lock-free — safe to call from any</span>
 <span id="L197"><span class="lineNum">     197</span>                 :             : ///       thread without synchronization.</span>
 <span id="L198"><span class="lineNum">     198</span>                 :             : [[nodiscard]] constexpr FailureReason</span>
-<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC tlaBgGNC">          39 : failure_reason(EnqueueResultCode code) noexcept {</span></span>
-<span id="L200"><span class="lineNum">     200</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          39 :     switch (code) {</span></span>
+<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC tlaBgGNC">          42 : failure_reason(EnqueueResultCode code) noexcept {</span></span>
+<span id="L200"><span class="lineNum">     200</span>   [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 26 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          42 :     switch (code) {</span></span>
 <span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span><span class="tlaUNC" title="Branch 8 was not taken"> - </span> 
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 9 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 10 was not taken"> - </span>]
-<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">           5 :         case EnqueueResultCode::Rejected:</span></span>
-<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">           5 :             return FailureReason::RejectedByPolicy;</span></span>
+<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">           7 :         case EnqueueResultCode::Rejected:</span></span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">           7 :             return FailureReason::RejectedByPolicy;</span></span>
 <span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">           2 :         case EnqueueResultCode::DroppedNewest:</span></span>
 <span id="L204"><span class="lineNum">     204</span>                 :             :         case EnqueueResultCode::DroppedExisting:</span>
 <span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">           2 :             return FailureReason::Dropped;</span></span>
-<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">          25 :         case EnqueueResultCode::ReroutedToDeadLetter:</span></span>
-<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">          25 :             return FailureReason::RejectedByPolicy;</span></span>
+<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">          26 :         case EnqueueResultCode::ReroutedToDeadLetter:</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">          26 :             return FailureReason::RejectedByPolicy;</span></span>
 <span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">           1 :         case EnqueueResultCode::ReroutedToOverflow:</span></span>
 <span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">           1 :             return FailureReason::RejectedByPolicy;</span></span>
 <span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">           1 :         case EnqueueResultCode::MailboxClosed:</span></span>
@@ -340,18 +340,18 @@
 <span id="L260"><span class="lineNum">     260</span>                 :             :         return accepted();</span>
 <span id="L261"><span class="lineNum">     261</span>                 :             :     }</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             : </span>
-<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">      122620 :     [[nodiscard]] bool accepted() const noexcept {</span></span>
-<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">      242242 :         return code == EnqueueResultCode::Accepted ||</span></span>
-<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 119622 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2998 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 119341 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 281 times"> + </span>]:<span class="tlaGNC">      241961 :                code == EnqueueResultCode::AcceptedWithSoftPressure ||</span></span>
-<span id="L266"><span class="lineNum">     266</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 119341 times"> + </span>]:<span class="tlaGNC">      241961 :                code == EnqueueResultCode::ReroutedToOverflow;</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">      122883 :     [[nodiscard]] bool accepted() const noexcept {</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">      242555 :         return code == EnqueueResultCode::Accepted ||</span></span>
+<span id="L265"><span class="lineNum">     265</span>   [<span class="tlaGBC" title="Branch 0 was taken 119672 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3211 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 119355 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 317 times"> + </span>]:<span class="tlaGNC">      242238 :                code == EnqueueResultCode::AcceptedWithSoftPressure ||</span></span>
+<span id="L266"><span class="lineNum">     266</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 119355 times"> + </span>]:<span class="tlaGNC">      242238 :                code == EnqueueResultCode::ReroutedToOverflow;</span></span>
 <span id="L267"><span class="lineNum">     267</span>                 :             :     }</span>
 <span id="L268"><span class="lineNum">     268</span>                 :             : </span>
-<span id="L269"><span class="lineNum">     269</span>                 :<span class="tlaGNC">          32 :     [[nodiscard]] bool retryable() const noexcept {</span></span>
-<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">          58 :         return code == EnqueueResultCode::Rejected ||</span></span>
-<span id="L271"><span class="lineNum">     271</span>         [<span class="tlaGBC" title="Branch 0 was taken 26 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          26 :                code == EnqueueResultCode::MailboxClosed ||</span></span>
-<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          26 :                code == EnqueueResultCode::ReroutedToOverflow ||</span></span>
-<span id="L273"><span class="lineNum">     273</span>   [<span class="tlaGBC" title="Branch 0 was taken 26 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 25 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          83 :                code == EnqueueResultCode::EndpointBackpressure ||</span></span>
-<span id="L274"><span class="lineNum">     274</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span>]:<span class="tlaGNC">          57 :                code == EnqueueResultCode::CircuitOpen;</span></span>
+<span id="L269"><span class="lineNum">     269</span>                 :<span class="tlaGNC">          35 :     [[nodiscard]] bool retryable() const noexcept {</span></span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">          62 :         return code == EnqueueResultCode::Rejected ||</span></span>
+<span id="L271"><span class="lineNum">     271</span>         [<span class="tlaGBC" title="Branch 0 was taken 27 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          27 :                code == EnqueueResultCode::MailboxClosed ||</span></span>
+<span id="L272"><span class="lineNum">     272</span>         [<span class="tlaGBC" title="Branch 0 was taken 26 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          27 :                code == EnqueueResultCode::ReroutedToOverflow ||</span></span>
+<span id="L273"><span class="lineNum">     273</span>   [<span class="tlaGBC" title="Branch 0 was taken 27 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 26 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          88 :                code == EnqueueResultCode::EndpointBackpressure ||</span></span>
+<span id="L274"><span class="lineNum">     274</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 26 times"> + </span>]:<span class="tlaGNC">          61 :                code == EnqueueResultCode::CircuitOpen;</span></span>
 <span id="L275"><span class="lineNum">     275</span>                 :             :     }</span>
 <span id="L276"><span class="lineNum">     276</span>                 :             : </span>
 <span id="L277"><span class="lineNum">     277</span>                 :             :     /// \brief Canonical failure reason for this admission result.</span>
@@ -359,8 +359,8 @@
 <span id="L279"><span class="lineNum">     279</span>                 :             :     /// \return The FailureReason corresponding to the \c code field.</span>
 <span id="L280"><span class="lineNum">     280</span>                 :             :     ///         Returns \c FailureReason::Unknown when the enqueue was</span>
 <span id="L281"><span class="lineNum">     281</span>                 :             :     ///         accepted.</span>
-<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaGNC">          30 :     [[nodiscard]] FailureReason failure_reason() const noexcept {</span></span>
-<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">          30 :         return mailbox::failure_reason(code);</span></span>
+<span id="L282"><span class="lineNum">     282</span>                 :<span class="tlaGNC">          33 :     [[nodiscard]] FailureReason failure_reason() const noexcept {</span></span>
+<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaGNC">          33 :         return mailbox::failure_reason(code);</span></span>
 <span id="L284"><span class="lineNum">     284</span>                 :             :     }</span>
 <span id="L285"><span class="lineNum">     285</span>                 :             : </span>
 <span id="L286"><span class="lineNum">     286</span>                 :             :     /// \brief Convert to the user-facing DeliveryResult type.</span>
@@ -397,26 +397,26 @@
 <span id="L317"><span class="lineNum">     317</span>                 :             :     uint64_t sequence = 0; ///&lt; Monotonically increasing signal sequence number.</span>
 <span id="L318"><span class="lineNum">     318</span>                 :             : };</span>
 <span id="L319"><span class="lineNum">     319</span>                 :             : </span>
-<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">      224770 : [[nodiscard]] constexpr bool is_system_message(TypeTag tag) noexcept {</span></span>
-<span id="L321"><span class="lineNum">     321</span>   [<span class="tlaGBC" title="Branch 0 was taken 3704 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 221066 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 250 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3454 times"> + </span>]:<span class="tlaGNC">      224770 :     return static_cast&lt;uint32_t&gt;(tag) &gt; 0 &amp;&amp;</span></span>
-<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">      224770 :            static_cast&lt;uint32_t&gt;(tag) &lt; static_cast&lt;uint32_t&gt;(TypeTag::User);</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">      224989 : [[nodiscard]] constexpr bool is_system_message(TypeTag tag) noexcept {</span></span>
+<span id="L321"><span class="lineNum">     321</span>   [<span class="tlaGBC" title="Branch 0 was taken 3923 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 221066 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 296 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3627 times"> + </span>]:<span class="tlaGNC">      224989 :     return static_cast&lt;uint32_t&gt;(tag) &gt; 0 &amp;&amp;</span></span>
+<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">      224989 :            static_cast&lt;uint32_t&gt;(tag) &lt; static_cast&lt;uint32_t&gt;(TypeTag::User);</span></span>
 <span id="L323"><span class="lineNum">     323</span>                 :             : }</span>
 <span id="L324"><span class="lineNum">     324</span>                 :             : </span>
 <span id="L325"><span class="lineNum">     325</span>                 :             : [[nodiscard]] inline uint64_t</span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">      302242 : estimate_message_bytes(const TypedMessage&amp; msg) noexcept {</span></span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">      302242 :     return sizeof(TypedMessage) + msg.payload().size();</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">      298833 : estimate_message_bytes(const TypedMessage&amp; msg) noexcept {</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">      298833 :     return sizeof(TypedMessage) + msg.payload().size();</span></span>
 <span id="L328"><span class="lineNum">     328</span>                 :             : }</span>
 <span id="L329"><span class="lineNum">     329</span>                 :             : </span>
 <span id="L330"><span class="lineNum">     330</span>                 :             : /// \brief Human-readable snake_case string for an \c OverflowPolicy.</span>
 <span id="L331"><span class="lineNum">     331</span>                 :             : ///</span>
 <span id="L332"><span class="lineNum">     332</span>                 :             : /// \param[in] policy The overflow policy value.</span>
 <span id="L333"><span class="lineNum">     333</span>                 :             : /// \return A null-terminated string literal. Never returns \c nullptr.</span>
-<span id="L334"><span class="lineNum">     334</span>                 :<span class="tlaGNC">          65 : inline const char* to_string(OverflowPolicy policy) noexcept {</span></span>
-<span id="L335"><span class="lineNum">     335</span>   [<span class="tlaGBC" title="Branch 0 was taken 47 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          65 :     switch (policy) {</span></span>
+<span id="L334"><span class="lineNum">     334</span>                 :<span class="tlaGNC">          81 : inline const char* to_string(OverflowPolicy policy) noexcept {</span></span>
+<span id="L335"><span class="lineNum">     335</span>   [<span class="tlaGBC" title="Branch 0 was taken 63 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          81 :     switch (policy) {</span></span>
 <span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span> 
 <span class="lineNum">        </span>             <span class="tlaUNC" title="Branch 8 was not taken"> - </span>]
-<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">          47 :         case OverflowPolicy::RejectNewest:</span></span>
-<span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaGNC">          47 :             return &quot;reject_newest&quot;;</span></span>
+<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">          63 :         case OverflowPolicy::RejectNewest:</span></span>
+<span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaGNC">          63 :             return &quot;reject_newest&quot;;</span></span>
 <span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">           3 :         case OverflowPolicy::DropNewest:</span></span>
 <span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">           3 :             return &quot;drop_newest&quot;;</span></span>
 <span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">           4 :         case OverflowPolicy::DropOldest:</span></span>
@@ -444,24 +444,24 @@
 <span id="L362"><span class="lineNum">     362</span>                 :             : /// \note Thread safety: constexpr and lock-free — safe to call from any</span>
 <span id="L363"><span class="lineNum">     363</span>                 :             : ///       thread without synchronization.</span>
 <span id="L364"><span class="lineNum">     364</span>                 :             : [[nodiscard]] constexpr bool</span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC tlaBgGNC">        1941 : is_expired(int64_t deadline_ns, uint64_t now_ns) noexcept {</span></span>
-<span id="L366"><span class="lineNum">     366</span>   [<span class="tlaGBC" title="Branch 0 was taken 1938 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 16 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1922 times"> + </span>]:<span class="tlaGNC">        1957 :     return deadline_ns &gt;= 0 &amp;&amp; deadline_ns != INT64_MAX &amp;&amp;</span></span>
-<span id="L367"><span class="lineNum">     367</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">        1957 :            static_cast&lt;uint64_t&gt;(deadline_ns) &lt; now_ns;</span></span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC tlaBgGNC">        2146 : is_expired(int64_t deadline_ns, uint64_t now_ns) noexcept {</span></span>
+<span id="L366"><span class="lineNum">     366</span>   [<span class="tlaGBC" title="Branch 0 was taken 2143 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2123 times"> + </span>]:<span class="tlaGNC">        2166 :     return deadline_ns &gt;= 0 &amp;&amp; deadline_ns != INT64_MAX &amp;&amp;</span></span>
+<span id="L367"><span class="lineNum">     367</span>         [<span class="tlaGBC" title="Branch 0 was taken 9 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">        2166 :            static_cast&lt;uint64_t&gt;(deadline_ns) &lt; now_ns;</span></span>
 <span id="L368"><span class="lineNum">     368</span>                 :             : }</span>
 <span id="L369"><span class="lineNum">     369</span>                 :             : </span>
 <span id="L370"><span class="lineNum">     370</span>                 :             : /// \brief Human-readable snake_case string for a \c MailboxPressureState.</span>
 <span id="L371"><span class="lineNum">     371</span>                 :             : ///</span>
 <span id="L372"><span class="lineNum">     372</span>                 :             : /// \param[in] state The pressure state value.</span>
 <span id="L373"><span class="lineNum">     373</span>                 :             : /// \return A null-terminated string literal. Never returns \c nullptr.</span>
-<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">          65 : inline const char* to_string(MailboxPressureState state) noexcept {</span></span>
-<span id="L375"><span class="lineNum">     375</span>   [<span class="tlaGBC" title="Branch 0 was taken 44 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">          65 :     switch (state) {</span></span>
+<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">          81 : inline const char* to_string(MailboxPressureState state) noexcept {</span></span>
+<span id="L375"><span class="lineNum">     375</span>   [<span class="tlaGBC" title="Branch 0 was taken 56 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 21 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">          81 :     switch (state) {</span></span>
 <span class="lineNum">        </span>             <span class="tlaUNC" title="Branch 4 was not taken"> - </span>]
-<span id="L376"><span class="lineNum">     376</span>                 :<span class="tlaGNC">          44 :         case MailboxPressureState::Normal:</span></span>
-<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">          44 :             return &quot;normal&quot;;</span></span>
-<span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaGNC">           1 :         case MailboxPressureState::SoftPressure:</span></span>
-<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">           1 :             return &quot;soft_pressure&quot;;</span></span>
-<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaGNC">          18 :         case MailboxPressureState::HardPressure:</span></span>
-<span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">          18 :             return &quot;hard_pressure&quot;;</span></span>
+<span id="L376"><span class="lineNum">     376</span>                 :<span class="tlaGNC">          56 :         case MailboxPressureState::Normal:</span></span>
+<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">          56 :             return &quot;normal&quot;;</span></span>
+<span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaGNC">           2 :         case MailboxPressureState::SoftPressure:</span></span>
+<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">           2 :             return &quot;soft_pressure&quot;;</span></span>
+<span id="L380"><span class="lineNum">     380</span>                 :<span class="tlaGNC">          21 :         case MailboxPressureState::HardPressure:</span></span>
+<span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">          21 :             return &quot;hard_pressure&quot;;</span></span>
 <span id="L382"><span class="lineNum">     382</span>                 :<span class="tlaGNC">           2 :         case MailboxPressureState::Recovering:</span></span>
 <span id="L383"><span class="lineNum">     383</span>                 :<span class="tlaGNC">           2 :             return &quot;recovering&quot;;</span></span>
 <span id="L384"><span class="lineNum">     384</span>                 :             :     }</span>

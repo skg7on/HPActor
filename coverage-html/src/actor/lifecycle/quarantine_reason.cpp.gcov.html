@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -94,19 +94,19 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">          11 : const char* to_string(QuarantineReason reason) noexcept {</span></span>
-<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">          11 :     switch (reason) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">           2 :         case QuarantineReason::SupervisionEscalation:</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">           2 :             return &quot;supervision_escalation&quot;;</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">           3 :         case QuarantineReason::CircuitBreakerTrip:</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">           3 :             return &quot;circuit_breaker_trip&quot;;</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           2 :         case QuarantineReason::MailboxPressure:</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           2 :             return &quot;mailbox_pressure&quot;;</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           2 :         case QuarantineReason::OperatorAction:</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           2 :             return &quot;operator_action&quot;;</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           2 :         case QuarantineReason::RecoveryFailure:</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           2 :             return &quot;recovery_failure&quot;;</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">          16 : const char* to_string(QuarantineReason reason) noexcept {</span></span>
+<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span> :<span class="tlaGNC">          16 :     switch (reason) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">           3 :         case QuarantineReason::SupervisionEscalation:</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">           3 :             return &quot;supervision_escalation&quot;;</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">           4 :         case QuarantineReason::CircuitBreakerTrip:</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">           4 :             return &quot;circuit_breaker_trip&quot;;</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           3 :         case QuarantineReason::MailboxPressure:</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           3 :             return &quot;mailbox_pressure&quot;;</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           3 :         case QuarantineReason::OperatorAction:</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           3 :             return &quot;operator_action&quot;;</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           3 :         case QuarantineReason::RecoveryFailure:</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           3 :             return &quot;recovery_failure&quot;;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     }</span>
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return &quot;unknown&quot;;</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : }</span>

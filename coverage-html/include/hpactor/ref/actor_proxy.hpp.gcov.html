@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -125,13 +125,13 @@
 <span id="L47"><span class="lineNum">      47</span>                 :             :     ActorProxy(const ActorAddress&amp; addr, ActorSystem* system);</span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     // Get the actor's address</span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC tlaBgGNC">          16 :     ActorAddress address() const {</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          16 :         return address_;</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC tlaBgGNC">          30 :     ActorAddress address() const {</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          30 :         return address_;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :     }</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             : </span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     // Get the endpoint where this actor resides</span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           2 :     EndPoint endpoint() const {</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           2 :         return address_.endpoint;</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           3 :     EndPoint endpoint() const {</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           3 :         return address_.endpoint;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     }</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : </span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     // Service discovery for address resolution (set by ActorSystem, may be</span>
@@ -141,21 +141,21 @@
 <span id="L63"><span class="lineNum">      63</span>                 :             :     // null).</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     net::ActorLocationCache* location_cache_ = nullptr;</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">           2 :     void set_discovery(net::IServiceDiscovery* d) {</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           2 :         discovery_ = d;</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           2 :     }</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           2 :     void set_location_cache(net::ActorLocationCache* c) {</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           2 :         location_cache_ = c;</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           2 :     }</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">           3 :     void set_discovery(net::IServiceDiscovery* d) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           3 :         discovery_ = d;</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           3 :     }</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           3 :     void set_location_cache(net::ActorLocationCache* c) {</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           3 :         location_cache_ = c;</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           3 :     }</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :             : </span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     // Check if this is a local actor (always false for proxy)</span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           2 :     bool is_local() const {</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           2 :         return false;</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           3 :     bool is_local() const {</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           3 :         return false;</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     }</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     // Check if this actor is valid (has a valid address)</span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">           3 :     explicit operator bool() const {</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">           3 :         return address_.operator bool();</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">           6 :     explicit operator bool() const {</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">           6 :         return address_.operator bool();</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :     }</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     // Send a message to this actor (fire-and-forget)</span>
@@ -169,8 +169,8 @@
 <span id="L91"><span class="lineNum">      91</span>                 :             :                                      mailbox::DeliveryOptions options = {});</span>
 <span id="L92"><span class="lineNum">      92</span>                 :             : </span>
 <span id="L93"><span class="lineNum">      93</span>                 :             :     // Access the underlying transport (for internal use)</span>
-<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">           1 :     net::Transport* transport() const {</span></span>
-<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">           1 :         return transport_;</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">           3 :     net::Transport* transport() const {</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">           3 :         return transport_;</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :     }</span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : </span>
 <span id="L98"><span class="lineNum">      98</span>                 :             :   private:</span>

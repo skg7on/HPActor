@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -94,22 +94,22 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::net {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">          36 : StaticDiscovery::StaticDiscovery(std::vector&lt;Member&gt; members)</span></span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">          36 :     : members_(std::move(members)) {</span></span>
-<span id="L21"><span class="lineNum">      21</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 36 times"> + </span>]:<span class="tlaGNC">          41 :     for (size_t i = 0; i &lt; members_.size(); ++i) {</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">           5 :         index_[members_[i].identity.endpoint] = i;</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">          66 : StaticDiscovery::StaticDiscovery(std::vector&lt;Member&gt; members)</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">          66 :     : members_(std::move(members)) {</span></span>
+<span id="L21"><span class="lineNum">      21</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span>]:<span class="tlaGNC">          78 :     for (size_t i = 0; i &lt; members_.size(); ++i) {</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">          12 :         index_[members_[i].identity.endpoint] = i;</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             :     }</span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          36 : }</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          66 : }</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : </span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           1 : std::vector&lt;Member&gt; StaticDiscovery::discover_all() const {</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           1 :     return members_;</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           7 : std::vector&lt;Member&gt; StaticDiscovery::discover_all() const {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           7 :     return members_;</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : }</span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           2 : const Member* StaticDiscovery::discover(EndPoint ep) const {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           2 :     auto it = index_.find(ep);</span></span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :     if (it != index_.end())</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           1 :         return &amp;members_[it-&gt;second];</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           1 :     return nullptr;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           9 : const Member* StaticDiscovery::discover(EndPoint ep) const {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           9 :     auto it = index_.find(ep);</span></span>
+<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           9 :     if (it != index_.end())</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           4 :         return &amp;members_[it-&gt;second];</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           5 :     return nullptr;</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : }</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : } // namespace hpactor::net</span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -129,20 +129,20 @@
 <span id="L51"><span class="lineNum">      51</span>                 :             : /// receiving end.</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : StreamBuffer encode_as_frame(const std::string&amp; protobuf_data);</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             : </span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC tlaBgGNC">          42 : inline ActorId parse_actor_id(const std::string&amp; s) {</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">          42 :     uint64_t raw = 0;</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          42 :     int base = 10;</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          42 :     const char* start = s.data();</span></span>
-<span id="L58"><span class="lineNum">      58</span>   [<span class="tlaGBC" title="Branch 0 was taken 37 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 21 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 16 times"> + </span> :<span class="tlaGNC">          42 :     if (s.size() &gt;= 2 &amp;&amp; s[0] == '0' &amp;&amp; (s[1] == 'x' || s[1] == 'X')) {</span></span>
-<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span><span class="tlaGBC" title="Branch 8 was taken 21 times"> + </span> 
-<span class="lineNum">        </span>             <span class="tlaGBC" title="Branch 9 was taken 21 times"> + </span>]
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">          21 :         base = 16;</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">          21 :         start = s.data() + 2;</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC tlaBgGNC">          46 : inline ActorId parse_actor_id(const std::string&amp; s) {</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">          46 :     uint64_t raw = 0;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          46 :     int base = 10;</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          46 :     const char* start = s.data();</span></span>
+<span id="L58"><span class="lineNum">      58</span>   [<span class="tlaGBC" title="Branch 0 was taken 41 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 24 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 17 times"> + </span> :<span class="tlaGNC">          46 :     if (s.size() &gt;= 2 &amp;&amp; s[0] == '0' &amp;&amp; (s[1] == 'x' || s[1] == 'X')) {</span></span>
+<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span><span class="tlaGBC" title="Branch 8 was taken 24 times"> + </span> 
+<span class="lineNum">        </span>             <span class="tlaGBC" title="Branch 9 was taken 22 times"> + </span>]
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">          24 :         base = 16;</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">          24 :         start = s.data() + 2;</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     }</span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          42 :     auto [ptr, ec] = std::from_chars(start, s.data() + s.size(), raw, base);</span></span>
-<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaGBC" title="Branch 0 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span>]:<span class="tlaGNC">          42 :     if (ec != std::errc{})</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">          17 :         return ActorId{0};</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          25 :     return ActorId{raw};</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          46 :     auto [ptr, ec] = std::from_chars(start, s.data() + s.size(), raw, base);</span></span>
+<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 28 times"> + </span>]:<span class="tlaGNC">          46 :     if (ec != std::errc{})</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">          18 :         return ActorId{0};</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          28 :     return ActorId{raw};</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : } // namespace cli</span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -229,8 +229,8 @@
 <span id="L151"><span class="lineNum">     151</span>                 :             :     ///</span>
 <span id="L152"><span class="lineNum">     152</span>                 :             :     /// \return The last \p now_ns value (capped) passed to \c advance().</span>
 <span id="L153"><span class="lineNum">     153</span>                 :             :     /// \note Lock-free.  Safe to call from any thread.</span>
-<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC tlaBgGNC">           8 :     int64_t current_time() const {</span></span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">          16 :         return current_time_.load(std::memory_order_relaxed);</span></span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC tlaBgGNC">          35 :     int64_t current_time() const {</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">          70 :         return current_time_.load(std::memory_order_relaxed);</span></span>
 <span id="L156"><span class="lineNum">     156</span>                 :             :     }</span>
 <span id="L157"><span class="lineNum">     157</span>                 :             : </span>
 <span id="L158"><span class="lineNum">     158</span>                 :             :     /// \brief Check whether the wheel has no pending timers.</span>

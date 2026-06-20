@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">82.1&nbsp;%</td>
             <td class="headerCovTableEntry">28</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">23</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
             <td class="headerCovTableEntry">7</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">6</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
             <td class="headerCovTableEntry">4</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">2</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -100,58 +100,58 @@
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : namespace hpactor::process {</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaUNC tlaBgUNC">           0 : HealthHttpServer::HealthHttpServer(ActorContext* ctx, ActorSystem&amp; system,</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaUNC">           0 :                                    const HealthHttpConfig&amp; config)</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC">           0 :     : DaemonActor(ctx, system), system_(system), config_(config),</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaUNC">           0 :       gateway_(std::make_unique&lt;net::HTTPGateway&gt;()) {}</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">           1 : HealthHttpServer::HealthHttpServer(ActorContext* ctx, ActorSystem&amp; system,</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           1 :                                    const HealthHttpConfig&amp; config)</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           1 :     : DaemonActor(ctx, system), system_(system), config_(config),</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           1 :       gateway_(std::make_unique&lt;net::HTTPGateway&gt;()) {}</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 : HealthHttpServer::~HealthHttpServer() = default;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           1 : HealthHttpServer::~HealthHttpServer() = default;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaUNC">           0 : void HealthHttpServer::on_daemon_start() {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           1 : void HealthHttpServer::on_daemon_start() {</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :     // Start listening via the HTTPGateway.  It creates a TcpAcceptor,</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     // initialises its EventLoop backend, and begins accepting connections.</span>
-<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!gateway_-&gt;listen(config_.port, config_.bind_address)) {</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaUNC">           0 :         std::fprintf(stderr, &quot;HealthHttpServer: failed to listen on %s:%u\n&quot;,</span></span>
+<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :     if (!gateway_-&gt;listen(config_.port, config_.bind_address)) {</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         std::fprintf(stderr, &quot;HealthHttpServer: failed to listen on %s:%u\n&quot;,</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :                      config_.bind_address.c_str(),</span>
 <span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaUNC">           0 :                      static_cast&lt;unsigned&gt;(config_.port));</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaUNC">           0 :         listen_ok_ = false;</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC">           0 :         return;</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     }</span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaUNC">           0 :     listen_ok_ = true;</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     listen_ok_ = true;</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : </span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :     // All paths return 200 OK.  HTTPConnection (via llhttp) has already</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :     // parsed the request, so req.path is exactly the URL path.</span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaUNC">           0 :     gateway_-&gt;set_request_handler(</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC">           0 :         [this](net::HTTPConnection* conn, net::HttpRequest&amp;&amp; req) {</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">           2 :     gateway_-&gt;set_request_handler(</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           2 :         [this](net::HTTPConnection* conn, net::HttpRequest&amp;&amp; req) {</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             :             (void)req;</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :             (void)system_;</span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaUNC">           0 :             std::string body = &quot;OK&quot;;</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           1 :             std::string body = &quot;OK&quot;;</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :             StreamBuffer body_buf(</span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaUNC">           0 :                 reinterpret_cast&lt;const uint8_t*&gt;(body.data()),</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC">           0 :                 reinterpret_cast&lt;const uint8_t*&gt;(body.data() + body.size()));</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaUNC">           0 :             conn-&gt;send_response(net::HttpStatusCode::OK, {}, body_buf);</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC">           0 :         });</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           1 :                 reinterpret_cast&lt;const uint8_t*&gt;(body.data()),</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           1 :                 reinterpret_cast&lt;const uint8_t*&gt;(body.data() + body.size()));</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           1 :             conn-&gt;send_response(net::HttpStatusCode::OK, {}, body_buf);</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           1 :         });</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : </span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     // Optionally cap connections (health checks are lightweight, but</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     // keep a reasonable bound).</span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaUNC">           0 :     gateway_-&gt;set_max_connections(64);</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           1 :     gateway_-&gt;set_max_connections(64);</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : }</span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : </span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaUNC">           0 : bool HealthHttpServer::run_once() {</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           5 : bool HealthHttpServer::run_once() {</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     // If the listen() call failed in on_daemon_start(), exit the daemon</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     // loop immediately rather than spinning forever.</span>
-<span id="L65"><span class="lineNum">      65</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (!listen_ok_)</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaUNC">           0 :         return false;</span></span>
+<span id="L65"><span class="lineNum">      65</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           5 :     if (!listen_ok_)</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     // Delegate to HTTPGateway's event loop poll — same pattern as</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     // HTTPGatewayActor: wait(100ms) + process_completions().</span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaUNC">           0 :     gateway_-&gt;run_once();</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaUNC">           0 :     return true;</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC tlaBgGNC">           5 :     gateway_-&gt;run_once();</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           5 :     return true;</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :             : }</span>
 <span id="L73"><span class="lineNum">      73</span>                 :             : </span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaUNC">           0 : void HealthHttpServer::on_daemon_stop() {</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaUNC">           0 :     gateway_-&gt;stop();</span></span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaUNC">           0 : }</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           1 : void HealthHttpServer::on_daemon_stop() {</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           1 :     gateway_-&gt;stop();</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">           1 : }</span></span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
 <span id="L78"><span class="lineNum">      78</span>                 :             : } // namespace hpactor::process</span>
         </pre>

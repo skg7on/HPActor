@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">83.3&nbsp;%</td>
@@ -96,52 +96,52 @@
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">          11 : DaemonActor::DaemonActor(ActorContext* ctx, ActorSystem&amp; sys)</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">          11 :     : EventBasedActor(ctx, sys) {}</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">          43 : DaemonActor::DaemonActor(ActorContext* ctx, ActorSystem&amp; sys)</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">          43 :     : EventBasedActor(ctx, sys) {}</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          11 : DaemonActor::~DaemonActor() {</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          11 :     running_.store(false, std::memory_order_release);</span></span>
-<span id="L26"><span class="lineNum">      26</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          11 :     if (daemon_thread_.joinable()) {</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          10 :         daemon_thread_.join();</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          43 : DaemonActor::~DaemonActor() {</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          43 :     running_.store(false, std::memory_order_release);</span></span>
+<span id="L26"><span class="lineNum">      26</span>         [<span class="tlaGBC" title="Branch 0 was taken 29 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">          43 :     if (daemon_thread_.joinable()) {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          29 :         daemon_thread_.join();</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :     }</span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">          11 : }</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">          43 : }</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          11 : void DaemonActor::on_activate() {</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          11 :     EventBasedActor::on_activate();</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          31 : void DaemonActor::on_activate() {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          31 :     EventBasedActor::on_activate();</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          11 :     running_.store(true, std::memory_order_release);</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          11 :     daemon_thread_ = std::thread(&amp;DaemonActor::daemon_loop, this);</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          11 : }</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          31 :     running_.store(true, std::memory_order_release);</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          31 :     daemon_thread_ = std::thread(&amp;DaemonActor::daemon_loop, this);</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          31 : }</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           1 : void DaemonActor::on_deactivate() {</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           1 :     running_.store(false, std::memory_order_release);</span></span>
-<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (daemon_thread_.joinable()) {</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           1 :         daemon_thread_.join();</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           2 : void DaemonActor::on_deactivate() {</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           2 :     running_.store(false, std::memory_order_release);</span></span>
+<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :     if (daemon_thread_.joinable()) {</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           2 :         daemon_thread_.join();</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     }</span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           1 :     EventBasedActor::on_deactivate();</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           2 :     EventBasedActor::on_deactivate();</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : </span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          11 : void DaemonActor::daemon_loop() {</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          11 :     on_daemon_start();</span></span>
-<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 37 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          38 :     while (running_.load(std::memory_order_acquire)) {</span></span>
-<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 27 times"> + </span>]:<span class="tlaGNC">          37 :         if (!run_once())</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          10 :             break;</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          31 : void DaemonActor::daemon_loop() {</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          31 :     on_daemon_start();</span></span>
+<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 171 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">         173 :     while (running_.load(std::memory_order_acquire)) {</span></span>
+<span id="L49"><span class="lineNum">      49</span>         [<span class="tlaGBC" title="Branch 0 was taken 29 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 142 times"> + </span>]:<span class="tlaGNC">         171 :         if (!run_once())</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          29 :             break;</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :     }</span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          11 :     on_daemon_stop();</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          11 :     running_.store(false, std::memory_order_release);</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          31 :     on_daemon_stop();</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          31 :     running_.store(false, std::memory_order_release);</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             : </span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     // When the daemon exits voluntarily (run_once() returned false), the</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     // lifecycle is still kActive — the shutdown coordinator's</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     // poll_drain_complete() would spin for the full drain timeout waiting for</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     // kStopped. Self-transition here so shutdown completes immediately.</span>
-<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          11 :     if (auto* lc = as_lifecycle()) {</span></span>
+<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 31 times"> + </span>]:<span class="tlaGNC">          31 :     if (auto* lc = as_lifecycle()) {</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         auto s = lc-&gt;state();</span></span>
 <span id="L61"><span class="lineNum">      61</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (s == LifecycleState::kActive || s == LifecycleState::kDraining) {</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaUNC">           0 :             lc-&gt;transition(LifecycleState::kStopping);</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaUNC">           0 :             lc-&gt;transition(LifecycleState::kStopped);</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :         }</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     }</span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">          11 : }</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">          31 : }</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : } // namespace hpactor</span>
         </pre>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -107,7 +107,7 @@
 <span id="L29"><span class="lineNum">      29</span>                 :             : // HybridScheduler::execute_actor().</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : class ActorCoroutine {</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :   public:</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">        1067 :     ActorCoroutine() noexcept = default;</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">        1488 :     ActorCoroutine() noexcept = default;</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
 <span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           9 :     explicit ActorCoroutine(CoroutineTask&amp;&amp; task, ActorId actor_id) noexcept</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">           9 :         : task_(std::move(task)), actor_id_(actor_id) {}</span></span>
@@ -134,10 +134,10 @@
 <span id="L56"><span class="lineNum">      56</span>                 :             :     ActorCoroutine(const ActorCoroutine&amp;) = delete;</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     ActorCoroutine&amp; operator=(const ActorCoroutine&amp;) = delete;</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : </span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">        1076 :     ~ActorCoroutine() = default;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">        1497 :     ~ActorCoroutine() = default;</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          27 :     explicit operator bool() const noexcept {</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          27 :         return static_cast&lt;bool&gt;(task_);</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          28 :     explicit operator bool() const noexcept {</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          28 :         return static_cast&lt;bool&gt;(task_);</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     }</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : </span>
 <span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          13 :     CoroutineTask&amp; task() {</span></span>

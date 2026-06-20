@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">86.3&nbsp;%</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
             <td class="headerCovTableEntry">51</td>
-            <td class="headerCovTableEntry">44</td>
+            <td class="headerCovTableEntry">51</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
             <td class="headerCovTableEntry">7</td>
-            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">7</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryMed">76.9&nbsp;%</td>
+            <td class="headerCovTableEntryMed">84.6&nbsp;%</td>
             <td class="headerCovTableEntry">26</td>
-            <td class="headerCovTableEntry">20</td>
+            <td class="headerCovTableEntry">22</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -96,81 +96,81 @@
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor::sched {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">           6 : DedicatedThreadPool::DedicatedThreadPool(uint32_t num_threads)</span></span>
-<span id="L22"><span class="lineNum">      22</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           6 :     : num_threads_(num_threads == 0 ? 1 : num_threads) {</span></span>
-<span id="L23"><span class="lineNum">      23</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          20 :     for (uint32_t i = 0; i &lt; num_threads_; ++i) {</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          14 :         workers_.push_back(std::make_unique&lt;WorkerState&gt;());</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">          12 : DedicatedThreadPool::DedicatedThreadPool(uint32_t num_threads)</span></span>
+<span id="L22"><span class="lineNum">      22</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          12 :     : num_threads_(num_threads == 0 ? 1 : num_threads) {</span></span>
+<span id="L23"><span class="lineNum">      23</span>         [<span class="tlaGBC" title="Branch 0 was taken 26 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span>]:<span class="tlaGNC">          38 :     for (uint32_t i = 0; i &lt; num_threads_; ++i) {</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          26 :         workers_.push_back(std::make_unique&lt;WorkerState&gt;());</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             :     }</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           6 : }</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          12 : }</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : </span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           6 : DedicatedThreadPool::~DedicatedThreadPool() {</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           6 :     stop();</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           6 : }</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">          12 : DedicatedThreadPool::~DedicatedThreadPool() {</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">          12 :     stop();</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          12 : }</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           6 : void DedicatedThreadPool::start() {</span></span>
-<span id="L33"><span class="lineNum">      33</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :     if (running_.load(std::memory_order_acquire)) return;</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           6 :     running_.store(true, std::memory_order_release);</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          11 : void DedicatedThreadPool::start() {</span></span>
+<span id="L33"><span class="lineNum">      33</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          11 :     if (running_.load(std::memory_order_acquire)) return;</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          11 :     running_.store(true, std::memory_order_release);</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          20 :     for (uint32_t i = 0; i &lt; num_threads_; ++i) {</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          14 :         threads_.emplace_back(&amp;DedicatedThreadPool::worker_loop, this, i);</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          36 :     for (uint32_t i = 0; i &lt; num_threads_; ++i) {</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          25 :         threads_.emplace_back(&amp;DedicatedThreadPool::worker_loop, this, i);</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     }</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : }</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : </span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           9 : void DedicatedThreadPool::stop() {</span></span>
-<span id="L42"><span class="lineNum">      42</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           9 :     if (!running_.load(std::memory_order_acquire)) return;</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           6 :     running_.store(false, std::memory_order_release);</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          19 : void DedicatedThreadPool::stop() {</span></span>
+<span id="L42"><span class="lineNum">      42</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          19 :     if (!running_.load(std::memory_order_acquire)) return;</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">          11 :     running_.store(false, std::memory_order_release);</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : </span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :     // Wake all workers by clearing their queues</span>
-<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          20 :     for (auto&amp; worker : workers_) {</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          14 :         std::lock_guard&lt;std::mutex&gt; lock(worker-&gt;mutex);</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          14 :         worker-&gt;queue.clear();</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          14 :     }</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          36 :     for (auto&amp; worker : workers_) {</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          25 :         std::lock_guard&lt;std::mutex&gt; lock(worker-&gt;mutex);</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          25 :         worker-&gt;queue.clear();</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          25 :     }</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          20 :     for (auto&amp; t : threads_) {</span></span>
-<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          14 :         if (t.joinable()) t.join();</span></span>
+<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          36 :     for (auto&amp; t : threads_) {</span></span>
+<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          25 :         if (t.joinable()) t.join();</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     }</span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           6 :     threads_.clear();</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">          11 :     threads_.clear();</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : }</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : </span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          24 : void DedicatedThreadPool::enqueue(ActorId /*actor*/, WorkFn work) {</span></span>
-<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 24 times"> + </span>]:<span class="tlaGNC">          24 :     if (!work) return;</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          28 : void DedicatedThreadPool::enqueue(ActorId /*actor*/, WorkFn work) {</span></span>
+<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 28 times"> + </span>]:<span class="tlaGNC">          28 :     if (!work) return;</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : </span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     // Round-robin distribution</span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          24 :     uint32_t idx = next_worker_.fetch_add(1, std::memory_order_relaxed) % num_threads_;</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          24 :     auto&amp; worker = workers_[idx];</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          28 :     uint32_t idx = next_worker_.fetch_add(1, std::memory_order_relaxed) % num_threads_;</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">          28 :     auto&amp; worker = workers_[idx];</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     {</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">          24 :         std::lock_guard&lt;std::mutex&gt; lock(worker-&gt;mutex);</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          24 :         worker-&gt;queue.push_back(std::move(work));</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">          24 :     }</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">          28 :         std::lock_guard&lt;std::mutex&gt; lock(worker-&gt;mutex);</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          28 :         worker-&gt;queue.push_back(std::move(work));</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">          28 :     }</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : }</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaUNC tlaBgUNC">           0 : size_t DedicatedThreadPool::pending() const {</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaUNC">           0 :     size_t total = 0;</span></span>
-<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     for (auto&amp; worker : workers_) {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaUNC">           0 :         std::lock_guard&lt;std::mutex&gt; lock(worker-&gt;mutex);</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaUNC">           0 :         total += worker-&gt;queue.size();</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaUNC">           0 :     }</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaUNC">           0 :     return total;</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           2 : size_t DedicatedThreadPool::pending() const {</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           2 :     size_t total = 0;</span></span>
+<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           5 :     for (auto&amp; worker : workers_) {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           3 :         std::lock_guard&lt;std::mutex&gt; lock(worker-&gt;mutex);</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           3 :         total += worker-&gt;queue.size();</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           3 :     }</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           2 :     return total;</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : }</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC tlaBgGNC">          14 : void DedicatedThreadPool::worker_loop(uint32_t worker_id) {</span></span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">          14 :     auto&amp; worker = workers_[worker_id];</span></span>
-<span id="L80"><span class="lineNum">      80</span>         [<span class="tlaGBC" title="Branch 0 was taken 270606 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">      270620 :     while (running_.load(std::memory_order_acquire)) {</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      270606 :         WorkFn work;</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">          25 : void DedicatedThreadPool::worker_loop(uint32_t worker_id) {</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">          25 :     auto&amp; worker = workers_[worker_id];</span></span>
+<span id="L80"><span class="lineNum">      80</span>         [<span class="tlaGBC" title="Branch 0 was taken 430109 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 25 times"> + </span>]:<span class="tlaGNC">      430134 :     while (running_.load(std::memory_order_acquire)) {</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      430109 :         WorkFn work;</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :         {</span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">      270606 :             std::lock_guard&lt;std::mutex&gt; lock(worker-&gt;mutex);</span></span>
-<span id="L84"><span class="lineNum">      84</span>         [<span class="tlaGBC" title="Branch 0 was taken 24 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 270582 times"> + </span>]:<span class="tlaGNC">      270606 :             if (!worker-&gt;queue.empty()) {</span></span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">          24 :                 work = std::move(worker-&gt;queue.front());</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">          24 :                 worker-&gt;queue.erase(worker-&gt;queue.begin());</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">      430109 :             std::lock_guard&lt;std::mutex&gt; lock(worker-&gt;mutex);</span></span>
+<span id="L84"><span class="lineNum">      84</span>         [<span class="tlaGBC" title="Branch 0 was taken 27 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 430082 times"> + </span>]:<span class="tlaGNC">      430109 :             if (!worker-&gt;queue.empty()) {</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">          27 :                 work = std::move(worker-&gt;queue.front());</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">          27 :                 worker-&gt;queue.erase(worker-&gt;queue.begin());</span></span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :             }</span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">      270606 :         }</span></span>
-<span id="L89"><span class="lineNum">      89</span>         [<span class="tlaGBC" title="Branch 0 was taken 24 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 270582 times"> + </span>]:<span class="tlaGNC">      270606 :         if (work) {</span></span>
-<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">          24 :             work();</span></span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">      430109 :         }</span></span>
+<span id="L89"><span class="lineNum">      89</span>         [<span class="tlaGBC" title="Branch 0 was taken 27 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 430082 times"> + </span>]:<span class="tlaGNC">      430109 :         if (work) {</span></span>
+<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">          27 :             work();</span></span>
 <span id="L91"><span class="lineNum">      91</span>                 :             :         } else {</span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">      270582 :             std::this_thread::yield();</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">      430082 :             std::this_thread::yield();</span></span>
 <span id="L93"><span class="lineNum">      93</span>                 :             :         }</span>
-<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">      270606 :     }</span></span>
-<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">          14 : }</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">      430109 :     }</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">          25 : }</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :             : </span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : } // namespace hpactor::sched</span>
         </pre>

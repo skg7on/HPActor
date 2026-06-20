@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -102,25 +102,25 @@
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : namespace hpactor {</span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC tlaBgGNC">          34 : ActorProxy::ActorProxy(ActorAddress address, net::Transport* transport)</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">          34 :     : address_(address), transport_(transport) {}</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC tlaBgGNC">          50 : ActorProxy::ActorProxy(ActorAddress address, net::Transport* transport)</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">          50 :     : address_(address), transport_(transport) {}</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           3 : ActorProxy::ActorProxy(const ActorAddress&amp; addr, ActorSystem* system)</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           3 :     : address_(addr),</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           3 :       transport_(system != nullptr ? system-&gt;get_transport_for(addr.endpoint)</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           4 : ActorProxy::ActorProxy(const ActorAddress&amp; addr, ActorSystem* system)</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           4 :     : address_(addr),</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           4 :       transport_(system != nullptr ? system-&gt;get_transport_for(addr.endpoint)</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :                                    : nullptr),</span>
-<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :       system_(system) {}</span></span>
+<span id="L34"><span class="lineNum">      34</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :       system_(system) {}</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
 <span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           1 : void ActorProxy::send(const ActorAddress&amp; target, TypedMessage msg) {</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           1 :     (void)try_send(target, std::move(msg));</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           1 : }</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : </span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : mailbox::DeliveryResult</span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          11 : ActorProxy::try_send(const ActorAddress&amp; target, TypedMessage msg,</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          14 : ActorProxy::try_send(const ActorAddress&amp; target, TypedMessage msg,</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :                      mailbox::DeliveryOptions options) {</span>
-<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          11 :     if (transport_ == nullptr) {</span></span>
+<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          14 :     if (transport_ == nullptr) {</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :         // Capture dead letter: no transport available</span>
-<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :         if (system_) {</span></span>
+<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           6 :         if (system_) {</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">           1 :             mailbox::DeadLetterRecord dl;</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           1 :             dl.reason = mailbox::DeadLetterReason::RemoteNodeUnreachable;</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           1 :             dl.source = mailbox::DeadLetterSource::ActorProxy;</span></span>
@@ -133,7 +133,7 @@
 <span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           1 :             (void)system_-&gt;dead_letter(std::move(dl));</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           1 :         }</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :         return {mailbox::DeliveryStatus::NoRoute, target,</span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           3 :                 MessageId{options.message_id}, 0};</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           6 :                 MessageId{options.message_id}, 0};</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     }</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     // Resolve via location cache or discovery</span>

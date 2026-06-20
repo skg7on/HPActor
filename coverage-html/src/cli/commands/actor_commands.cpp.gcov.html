@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">43.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">46.0&nbsp;%</td>
             <td class="headerCovTableEntry">533</td>
-            <td class="headerCovTableEntry">229</td>
+            <td class="headerCovTableEntry">245</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryHi">91.7&nbsp;%</td>
+            <td class="headerCovTableEntryHi">93.8&nbsp;%</td>
             <td class="headerCovTableEntry">48</td>
-            <td class="headerCovTableEntry">44</td>
+            <td class="headerCovTableEntry">45</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">28.1&nbsp;%</td>
+            <td class="headerCovTableEntryLo">30.6&nbsp;%</td>
             <td class="headerCovTableEntry">196</td>
-            <td class="headerCovTableEntry">55</td>
+            <td class="headerCovTableEntry">60</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -109,43 +109,43 @@
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : class ActorShowCommand final : public ICommand {</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :   public:</span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC tlaBgGNC">         107 :     std::string_view path() const noexcept override {</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">         107 :         return &quot;actor/&lt;id&gt;/show&quot;;</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC tlaBgGNC">         164 :     std::string_view path() const noexcept override {</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">         164 :         return &quot;actor/&lt;id&gt;/show&quot;;</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     }</span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           7 :         return &quot;Display actor metadata, state, mailbox, and children&quot;;</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">          39 :         return &quot;Display actor metadata, state, mailbox, and children&quot;;</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     }</span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         103 :     int order() const noexcept override {</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         103 :         return 100;</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         502 :     int order() const noexcept override {</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         502 :         return 100;</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     }</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : </span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           4 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           4 :         auto id_str = ctx.get_param(&quot;&lt;id&gt;&quot;);</span></span>
-<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :         if (!id_str) {</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           2 :             ctx.output-&gt;error(&quot;Missing actor ID (usage: /actor &lt;id&gt; show)&quot;);</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           1 :             return result&lt;void&gt;::make();</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           7 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           7 :         auto id_str = ctx.get_param(&quot;&lt;id&gt;&quot;);</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           7 :         if (!id_str) {</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           4 :             ctx.output-&gt;error(&quot;Missing actor ID (usage: /actor &lt;id&gt; show)&quot;);</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           2 :             return result&lt;void&gt;::make();</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :         }</span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           3 :         ActorId target_id = parse_actor_id(*id_str);</span></span>
-<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           3 :         if (target_id == ActorId{0}) {</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           2 :             ctx.output-&gt;error(&quot;Invalid actor ID: &quot; + *id_str);</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           2 :             return result&lt;void&gt;::make();</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           5 :         ActorId target_id = parse_actor_id(*id_str);</span></span>
+<span id="L51"><span class="lineNum">      51</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           5 :         if (target_id == ActorId{0}) {</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           3 :             ctx.output-&gt;error(&quot;Invalid actor ID: &quot; + *id_str);</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           3 :             return result&lt;void&gt;::make();</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :         }</span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : </span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           1 :         InspectStateRequest req;</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           1 :         req.set_target_actor_id(target_id.value());</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           1 :         req.set_include_state(true);</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           1 :         req.set_include_mailbox(true);</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           1 :         req.set_include_children(true);</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           2 :         InspectStateRequest req;</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           2 :         req.set_target_actor_id(target_id.value());</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           2 :         req.set_include_state(true);</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           2 :         req.set_include_mailbox(true);</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           2 :         req.set_include_children(true);</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : </span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           1 :         std::optional&lt;InspectStateReply&gt; reply;</span></span>
-<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (ctx.command_host) {</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           2 :         std::optional&lt;InspectStateReply&gt; reply;</span></span>
+<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :         if (ctx.command_host) {</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             reply = ctx.command_host-&gt;inspect(target_id, req);</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :         } else {</span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">           1 :             auto* cli = ctx.cli_actor;</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           1 :             auto* cli_srv = ctx.cli_server_actor;</span></span>
-<span id="L68"><span class="lineNum">      68</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           1 :             if (!cli &amp;&amp; !cli_srv) {</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           2 :                 ctx.output-&gt;error(&quot;Internal error: no CLI actor&quot;);</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           1 :                 return result&lt;void&gt;::make();</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">           2 :             auto* cli = ctx.cli_actor;</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           2 :             auto* cli_srv = ctx.cli_server_actor;</span></span>
+<span id="L68"><span class="lineNum">      68</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           2 :             if (!cli &amp;&amp; !cli_srv) {</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           4 :                 ctx.output-&gt;error(&quot;Internal error: no CLI actor&quot;);</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           2 :                 return result&lt;void&gt;::make();</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :             }</span>
 <span id="L72"><span class="lineNum">      72</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             reply = cli ? cli-&gt;inspect(target_id, req)</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaUNC">           0 :                         : cli_srv-&gt;inspect(target_id, req);</span></span>
@@ -189,46 +189,46 @@
 <span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaUNC">           0 :             ctx.output-&gt;raw(reply-&gt;state_blob());</span></span>
 <span id="L112"><span class="lineNum">     112</span>                 :             :         }</span>
 <span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaUNC">           0 :         return result&lt;void&gt;::make();</span></span>
-<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     }</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     }</span></span>
 <span id="L115"><span class="lineNum">     115</span>                 :             : };</span>
 <span id="L116"><span class="lineNum">     116</span>                 :             : </span>
 <span id="L117"><span class="lineNum">     117</span>                 :             : class ActorKillCommand final : public ICommand {</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             :   public:</span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">          98 :     std::string_view path() const noexcept override {</span></span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">          98 :         return &quot;actor/&lt;id&gt;/kill&quot;;</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">         153 :     std::string_view path() const noexcept override {</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">         153 :         return &quot;actor/&lt;id&gt;/kill&quot;;</span></span>
 <span id="L121"><span class="lineNum">     121</span>                 :             :     }</span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           7 :         return &quot;Terminate actor (graceful shutdown)&quot;;</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">          39 :         return &quot;Terminate actor (graceful shutdown)&quot;;</span></span>
 <span id="L124"><span class="lineNum">     124</span>                 :             :     }</span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">          79 :     int order() const noexcept override {</span></span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">          79 :         return 200;</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         326 :     int order() const noexcept override {</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">         326 :         return 200;</span></span>
 <span id="L127"><span class="lineNum">     127</span>                 :             :     }</span>
 <span id="L128"><span class="lineNum">     128</span>                 :             : </span>
-<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
-<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           3 :         auto id_str = ctx.get_param(&quot;&lt;id&gt;&quot;);</span></span>
-<span id="L131"><span class="lineNum">     131</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :         if (!id_str) {</span></span>
+<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">           4 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           4 :         auto id_str = ctx.get_param(&quot;&lt;id&gt;&quot;);</span></span>
+<span id="L131"><span class="lineNum">     131</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :         if (!id_str) {</span></span>
 <span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           2 :             ctx.output-&gt;error(&quot;Missing actor ID (usage: /actor &lt;id&gt; kill)&quot;);</span></span>
 <span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           1 :             return result&lt;void&gt;::make();</span></span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :         }</span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           2 :         ActorId target_id = parse_actor_id(*id_str);</span></span>
-<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :         if (target_id == ActorId{0}) {</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           3 :         ActorId target_id = parse_actor_id(*id_str);</span></span>
+<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :         if (target_id == ActorId{0}) {</span></span>
 <span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">           1 :             ctx.output-&gt;error(&quot;Invalid actor ID: &quot; + *id_str);</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">           1 :             return result&lt;void&gt;::make();</span></span>
 <span id="L139"><span class="lineNum">     139</span>                 :             :         }</span>
 <span id="L140"><span class="lineNum">     140</span>                 :             : </span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">           1 :         KillRequest req;</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">           1 :         req.set_target_actor_id(target_id.value());</span></span>
-<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">           1 :         req.set_force(false);</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">           2 :         KillRequest req;</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">           2 :         req.set_target_actor_id(target_id.value());</span></span>
+<span id="L143"><span class="lineNum">     143</span>                 :<span class="tlaGNC">           2 :         req.set_force(false);</span></span>
 <span id="L144"><span class="lineNum">     144</span>                 :             : </span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">           1 :         std::optional&lt;KillReply&gt; reply;</span></span>
-<span id="L146"><span class="lineNum">     146</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (ctx.command_host) {</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">           2 :         std::optional&lt;KillReply&gt; reply;</span></span>
+<span id="L146"><span class="lineNum">     146</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :         if (ctx.command_host) {</span></span>
 <span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             reply = ctx.command_host-&gt;kill(target_id, req);</span></span>
 <span id="L148"><span class="lineNum">     148</span>                 :             :         } else {</span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC tlaBgGNC">           1 :             auto* cli = ctx.cli_actor;</span></span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           1 :             auto* cli_srv = ctx.cli_server_actor;</span></span>
-<span id="L151"><span class="lineNum">     151</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           1 :             if (!cli &amp;&amp; !cli_srv) {</span></span>
-<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">           2 :                 ctx.output-&gt;error(&quot;Internal error: no CLI actor&quot;);</span></span>
-<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">           1 :                 return result&lt;void&gt;::make();</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC tlaBgGNC">           2 :             auto* cli = ctx.cli_actor;</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           2 :             auto* cli_srv = ctx.cli_server_actor;</span></span>
+<span id="L151"><span class="lineNum">     151</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           2 :             if (!cli &amp;&amp; !cli_srv) {</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">           4 :                 ctx.output-&gt;error(&quot;Internal error: no CLI actor&quot;);</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">           2 :                 return result&lt;void&gt;::make();</span></span>
 <span id="L154"><span class="lineNum">     154</span>                 :             :             }</span>
 <span id="L155"><span class="lineNum">     155</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             reply = cli ? cli-&gt;kill(target_id, req) : cli_srv-&gt;kill(target_id, req);</span></span>
 <span id="L156"><span class="lineNum">     156</span>                 :             :         }</span>
@@ -245,35 +245,35 @@
 <span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaUNC">           0 :                               reply-&gt;error_message());</span></span>
 <span id="L168"><span class="lineNum">     168</span>                 :             :         }</span>
 <span id="L169"><span class="lineNum">     169</span>                 :<span class="tlaUNC">           0 :         return result&lt;void&gt;::make();</span></span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC tlaBgGNC">           3 :     }</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     }</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             : };</span>
 <span id="L172"><span class="lineNum">     172</span>                 :             : </span>
 <span id="L173"><span class="lineNum">     173</span>                 :             : class ActorListCommand final : public ICommand {</span>
 <span id="L174"><span class="lineNum">     174</span>                 :             :   public:</span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">          92 :     std::string_view path() const noexcept override {</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">          92 :         return &quot;actor/list&quot;;</span></span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">         166 :     std::string_view path() const noexcept override {</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">         166 :         return &quot;actor/list&quot;;</span></span>
 <span id="L177"><span class="lineNum">     177</span>                 :             :     }</span>
-<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">           7 :         return &quot;List all actors [--filter &lt;type&gt;]&quot;;</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">          39 :         return &quot;List all actors [--filter &lt;type&gt;]&quot;;</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :             :     }</span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">         105 :     int order() const noexcept override {</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">         105 :         return 300;</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">         409 :     int order() const noexcept override {</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">         409 :         return 300;</span></span>
 <span id="L183"><span class="lineNum">     183</span>                 :             :     }</span>
 <span id="L184"><span class="lineNum">     184</span>                 :             : </span>
-<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">           2 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">           2 :         std::string filter;</span></span>
-<span id="L187"><span class="lineNum">     187</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           4 :         if (auto f = ctx.get_param(&quot;filter&quot;))</span></span>
-<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">           2 :             filter = *f;</span></span>
+<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
+<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC">           3 :         std::string filter;</span></span>
+<span id="L187"><span class="lineNum">     187</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           6 :         if (auto f = ctx.get_param(&quot;filter&quot;))</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">           3 :             filter = *f;</span></span>
 <span id="L189"><span class="lineNum">     189</span>                 :             : </span>
-<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">           2 :         std::vector&lt;ActorMeta&gt; actors;</span></span>
-<span id="L191"><span class="lineNum">     191</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           2 :         if (ctx.command_host) {</span></span>
+<span id="L190"><span class="lineNum">     190</span>                 :<span class="tlaGNC">           3 :         std::vector&lt;ActorMeta&gt; actors;</span></span>
+<span id="L191"><span class="lineNum">     191</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :         if (ctx.command_host) {</span></span>
 <span id="L192"><span class="lineNum">     192</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             actors = ctx.command_host-&gt;enumerate(filter);</span></span>
 <span id="L193"><span class="lineNum">     193</span>                 :             :         } else {</span>
-<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC tlaBgGNC">           2 :             auto* cli = ctx.cli_actor;</span></span>
-<span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaGNC">           2 :             auto* cli_srv = ctx.cli_server_actor;</span></span>
-<span id="L196"><span class="lineNum">     196</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           2 :             if (!cli &amp;&amp; !cli_srv) {</span></span>
-<span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaGNC">           4 :                 ctx.output-&gt;error(&quot;Internal error: no CLI actor&quot;);</span></span>
-<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">           2 :                 return result&lt;void&gt;::make();</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC tlaBgGNC">           3 :             auto* cli = ctx.cli_actor;</span></span>
+<span id="L195"><span class="lineNum">     195</span>                 :<span class="tlaGNC">           3 :             auto* cli_srv = ctx.cli_server_actor;</span></span>
+<span id="L196"><span class="lineNum">     196</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           3 :             if (!cli &amp;&amp; !cli_srv) {</span></span>
+<span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaGNC">           6 :                 ctx.output-&gt;error(&quot;Internal error: no CLI actor&quot;);</span></span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">           3 :                 return result&lt;void&gt;::make();</span></span>
 <span id="L199"><span class="lineNum">     199</span>                 :             :             }</span>
 <span id="L200"><span class="lineNum">     200</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             actors = cli ? cli-&gt;enumerate(filter) : cli_srv-&gt;enumerate(filter);</span></span>
 <span id="L201"><span class="lineNum">     201</span>                 :             :         }</span>
@@ -294,19 +294,19 @@
 <span id="L216"><span class="lineNum">     216</span>                 :             : </span>
 <span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaUNC">           0 :         ctx.output-&gt;table(cols, rows);</span></span>
 <span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaUNC">           0 :         return result&lt;void&gt;::make();</span></span>
-<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC tlaBgGNC">           2 :     }</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC tlaBgGNC">           3 :     }</span></span>
 <span id="L220"><span class="lineNum">     220</span>                 :             : };</span>
 <span id="L221"><span class="lineNum">     221</span>                 :             : </span>
 <span id="L222"><span class="lineNum">     222</span>                 :             : class ActorCircuitCommand final : public ICommand {</span>
 <span id="L223"><span class="lineNum">     223</span>                 :             :   public:</span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">          96 :     std::string_view path() const noexcept override {</span></span>
-<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">          96 :         return &quot;actor/&lt;id&gt;/circuit&quot;;</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">         132 :     std::string_view path() const noexcept override {</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">         132 :         return &quot;actor/&lt;id&gt;/circuit&quot;;</span></span>
 <span id="L226"><span class="lineNum">     226</span>                 :             :     }</span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">           7 :         return &quot;Show circuit breaker state: state, trip count, failure EMA&quot;;</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">          39 :         return &quot;Show circuit breaker state: state, trip count, failure EMA&quot;;</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :             :     }</span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">         121 :     int order() const noexcept override {</span></span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">         121 :         return 150;</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">         501 :     int order() const noexcept override {</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">         501 :         return 150;</span></span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :     }</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             : </span>
 <span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -375,14 +375,14 @@
 <span id="L297"><span class="lineNum">     297</span>                 :             : </span>
 <span id="L298"><span class="lineNum">     298</span>                 :             : class ActorQuarantineCommand final : public ICommand {</span>
 <span id="L299"><span class="lineNum">     299</span>                 :             :   public:</span>
-<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">          88 :     std::string_view path() const noexcept override {</span></span>
-<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">          88 :         return &quot;actor/&lt;id&gt;/quarantine&quot;;</span></span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">         124 :     std::string_view path() const noexcept override {</span></span>
+<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">         124 :         return &quot;actor/&lt;id&gt;/quarantine&quot;;</span></span>
 <span id="L302"><span class="lineNum">     302</span>                 :             :     }</span>
-<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">           7 :         return &quot;Manually quarantine an actor [--reason &lt;text&gt;]&quot;;</span></span>
+<span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">          39 :         return &quot;Manually quarantine an actor [--reason &lt;text&gt;]&quot;;</span></span>
 <span id="L305"><span class="lineNum">     305</span>                 :             :     }</span>
-<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">          97 :     int order() const noexcept override {</span></span>
-<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">          97 :         return 250;</span></span>
+<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">         401 :     int order() const noexcept override {</span></span>
+<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">         401 :         return 250;</span></span>
 <span id="L308"><span class="lineNum">     308</span>                 :             :     }</span>
 <span id="L309"><span class="lineNum">     309</span>                 :             : </span>
 <span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -437,14 +437,14 @@
 <span id="L359"><span class="lineNum">     359</span>                 :             : </span>
 <span id="L360"><span class="lineNum">     360</span>                 :             : class ActorUnquarantineCommand final : public ICommand {</span>
 <span id="L361"><span class="lineNum">     361</span>                 :             :   public:</span>
-<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">          84 :     std::string_view path() const noexcept override {</span></span>
-<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">          84 :         return &quot;actor/&lt;id&gt;/unquarantine&quot;;</span></span>
+<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">         120 :     std::string_view path() const noexcept override {</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">         120 :         return &quot;actor/&lt;id&gt;/unquarantine&quot;;</span></span>
 <span id="L364"><span class="lineNum">     364</span>                 :             :     }</span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">           7 :         return &quot;Release an actor from quarantine&quot;;</span></span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">          39 :         return &quot;Release an actor from quarantine&quot;;</span></span>
 <span id="L367"><span class="lineNum">     367</span>                 :             :     }</span>
-<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">          73 :     int order() const noexcept override {</span></span>
-<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">          73 :         return 260;</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">         301 :     int order() const noexcept override {</span></span>
+<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">         301 :         return 260;</span></span>
 <span id="L370"><span class="lineNum">     370</span>                 :             :     }</span>
 <span id="L371"><span class="lineNum">     371</span>                 :             : </span>
 <span id="L372"><span class="lineNum">     372</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -495,14 +495,14 @@
 <span id="L417"><span class="lineNum">     417</span>                 :             : </span>
 <span id="L418"><span class="lineNum">     418</span>                 :             : class ActorRateCommand final : public ICommand {</span>
 <span id="L419"><span class="lineNum">     419</span>                 :             :   public:</span>
-<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">          77 :     std::string_view path() const noexcept override {</span></span>
-<span id="L421"><span class="lineNum">     421</span>                 :<span class="tlaGNC">          77 :         return &quot;actor/&lt;id&gt;/rate&quot;;</span></span>
+<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">         113 :     std::string_view path() const noexcept override {</span></span>
+<span id="L421"><span class="lineNum">     421</span>                 :<span class="tlaGNC">         113 :         return &quot;actor/&lt;id&gt;/rate&quot;;</span></span>
 <span id="L422"><span class="lineNum">     422</span>                 :             :     }</span>
-<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaGNC">           6 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L424"><span class="lineNum">     424</span>                 :<span class="tlaGNC">           6 :         return &quot;Show actor rate limiter state&quot;;</span></span>
+<span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L424"><span class="lineNum">     424</span>                 :<span class="tlaGNC">          38 :         return &quot;Show actor rate limiter state&quot;;</span></span>
 <span id="L425"><span class="lineNum">     425</span>                 :             :     }</span>
-<span id="L426"><span class="lineNum">     426</span>                 :<span class="tlaGNC">         192 :     int order() const noexcept override {</span></span>
-<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">         192 :         return 270;</span></span>
+<span id="L426"><span class="lineNum">     426</span>                 :<span class="tlaGNC">         800 :     int order() const noexcept override {</span></span>
+<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">         800 :         return 270;</span></span>
 <span id="L428"><span class="lineNum">     428</span>                 :             :     }</span>
 <span id="L429"><span class="lineNum">     429</span>                 :             : </span>
 <span id="L430"><span class="lineNum">     430</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -562,14 +562,14 @@
 <span id="L484"><span class="lineNum">     484</span>                 :             : </span>
 <span id="L485"><span class="lineNum">     485</span>                 :             : class ActorAdmissionCommand final : public ICommand {</span>
 <span id="L486"><span class="lineNum">     486</span>                 :             :   public:</span>
-<span id="L487"><span class="lineNum">     487</span>                 :<span class="tlaGNC tlaBgGNC">          77 :     std::string_view path() const noexcept override {</span></span>
-<span id="L488"><span class="lineNum">     488</span>                 :<span class="tlaGNC">          77 :         return &quot;actor/&lt;id&gt;/admission&quot;;</span></span>
+<span id="L487"><span class="lineNum">     487</span>                 :<span class="tlaGNC tlaBgGNC">         113 :     std::string_view path() const noexcept override {</span></span>
+<span id="L488"><span class="lineNum">     488</span>                 :<span class="tlaGNC">         113 :         return &quot;actor/&lt;id&gt;/admission&quot;;</span></span>
 <span id="L489"><span class="lineNum">     489</span>                 :             :     }</span>
-<span id="L490"><span class="lineNum">     490</span>                 :<span class="tlaGNC">           6 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L491"><span class="lineNum">     491</span>                 :<span class="tlaGNC">           6 :         return &quot;Show actor admission policy state&quot;;</span></span>
+<span id="L490"><span class="lineNum">     490</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L491"><span class="lineNum">     491</span>                 :<span class="tlaGNC">          38 :         return &quot;Show actor admission policy state&quot;;</span></span>
 <span id="L492"><span class="lineNum">     492</span>                 :             :     }</span>
-<span id="L493"><span class="lineNum">     493</span>                 :<span class="tlaGNC">          84 :     int order() const noexcept override {</span></span>
-<span id="L494"><span class="lineNum">     494</span>                 :<span class="tlaGNC">          84 :         return 280;</span></span>
+<span id="L493"><span class="lineNum">     493</span>                 :<span class="tlaGNC">         350 :     int order() const noexcept override {</span></span>
+<span id="L494"><span class="lineNum">     494</span>                 :<span class="tlaGNC">         350 :         return 280;</span></span>
 <span id="L495"><span class="lineNum">     495</span>                 :             :     }</span>
 <span id="L496"><span class="lineNum">     496</span>                 :             : </span>
 <span id="L497"><span class="lineNum">     497</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -623,14 +623,14 @@
 <span id="L545"><span class="lineNum">     545</span>                 :             : </span>
 <span id="L546"><span class="lineNum">     546</span>                 :             : class ActorDeliveryCommand final : public ICommand {</span>
 <span id="L547"><span class="lineNum">     547</span>                 :             :   public:</span>
-<span id="L548"><span class="lineNum">     548</span>                 :<span class="tlaGNC tlaBgGNC">          77 :     std::string_view path() const noexcept override {</span></span>
-<span id="L549"><span class="lineNum">     549</span>                 :<span class="tlaGNC">          77 :         return &quot;actor/&lt;id&gt;/delivery&quot;;</span></span>
+<span id="L548"><span class="lineNum">     548</span>                 :<span class="tlaGNC tlaBgGNC">         113 :     std::string_view path() const noexcept override {</span></span>
+<span id="L549"><span class="lineNum">     549</span>                 :<span class="tlaGNC">         113 :         return &quot;actor/&lt;id&gt;/delivery&quot;;</span></span>
 <span id="L550"><span class="lineNum">     550</span>                 :             :     }</span>
-<span id="L551"><span class="lineNum">     551</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L552"><span class="lineNum">     552</span>                 :<span class="tlaGNC">           7 :         return &quot;Show per-actor delivery result counters&quot;;</span></span>
+<span id="L551"><span class="lineNum">     551</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L552"><span class="lineNum">     552</span>                 :<span class="tlaGNC">          39 :         return &quot;Show per-actor delivery result counters&quot;;</span></span>
 <span id="L553"><span class="lineNum">     553</span>                 :             :     }</span>
-<span id="L554"><span class="lineNum">     554</span>                 :<span class="tlaGNC">          85 :     int order() const noexcept override {</span></span>
-<span id="L555"><span class="lineNum">     555</span>                 :<span class="tlaGNC">          85 :         return 285;</span></span>
+<span id="L554"><span class="lineNum">     554</span>                 :<span class="tlaGNC">         351 :     int order() const noexcept override {</span></span>
+<span id="L555"><span class="lineNum">     555</span>                 :<span class="tlaGNC">         351 :         return 285;</span></span>
 <span id="L556"><span class="lineNum">     556</span>                 :             :     }</span>
 <span id="L557"><span class="lineNum">     557</span>                 :             : </span>
 <span id="L558"><span class="lineNum">     558</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -684,14 +684,14 @@
 <span id="L606"><span class="lineNum">     606</span>                 :             : </span>
 <span id="L607"><span class="lineNum">     607</span>                 :             : class ActorDeliveryStatsCommand final : public ICommand {</span>
 <span id="L608"><span class="lineNum">     608</span>                 :             :   public:</span>
-<span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">          73 :     std::string_view path() const noexcept override {</span></span>
-<span id="L610"><span class="lineNum">     610</span>                 :<span class="tlaGNC">          73 :         return &quot;actor/&lt;id&gt;/delivery-stats&quot;;</span></span>
+<span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">         109 :     std::string_view path() const noexcept override {</span></span>
+<span id="L610"><span class="lineNum">     610</span>                 :<span class="tlaGNC">         109 :         return &quot;actor/&lt;id&gt;/delivery-stats&quot;;</span></span>
 <span id="L611"><span class="lineNum">     611</span>                 :             :     }</span>
-<span id="L612"><span class="lineNum">     612</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L613"><span class="lineNum">     613</span>                 :<span class="tlaGNC">           7 :         return &quot;Show delivery statistics with accept/reject/retry ratios&quot;;</span></span>
+<span id="L612"><span class="lineNum">     612</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L613"><span class="lineNum">     613</span>                 :<span class="tlaGNC">          39 :         return &quot;Show delivery statistics with accept/reject/retry ratios&quot;;</span></span>
 <span id="L614"><span class="lineNum">     614</span>                 :             :     }</span>
-<span id="L615"><span class="lineNum">     615</span>                 :<span class="tlaGNC">          85 :     int order() const noexcept override {</span></span>
-<span id="L616"><span class="lineNum">     616</span>                 :<span class="tlaGNC">          85 :         return 286;</span></span>
+<span id="L615"><span class="lineNum">     615</span>                 :<span class="tlaGNC">         351 :     int order() const noexcept override {</span></span>
+<span id="L616"><span class="lineNum">     616</span>                 :<span class="tlaGNC">         351 :         return 286;</span></span>
 <span id="L617"><span class="lineNum">     617</span>                 :             :     }</span>
 <span id="L618"><span class="lineNum">     618</span>                 :             : </span>
 <span id="L619"><span class="lineNum">     619</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -774,14 +774,14 @@
 <span id="L696"><span class="lineNum">     696</span>                 :             : </span>
 <span id="L697"><span class="lineNum">     697</span>                 :             : class ActorLinksCommand final : public ICommand {</span>
 <span id="L698"><span class="lineNum">     698</span>                 :             :   public:</span>
-<span id="L699"><span class="lineNum">     699</span>                 :<span class="tlaGNC">          69 :     std::string_view path() const noexcept override {</span></span>
-<span id="L700"><span class="lineNum">     700</span>                 :<span class="tlaGNC">          69 :         return &quot;actor/&lt;id&gt;/links&quot;;</span></span>
+<span id="L699"><span class="lineNum">     699</span>                 :<span class="tlaGNC">         105 :     std::string_view path() const noexcept override {</span></span>
+<span id="L700"><span class="lineNum">     700</span>                 :<span class="tlaGNC">         105 :         return &quot;actor/&lt;id&gt;/links&quot;;</span></span>
 <span id="L701"><span class="lineNum">     701</span>                 :             :     }</span>
-<span id="L702"><span class="lineNum">     702</span>                 :<span class="tlaGNC">           6 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L703"><span class="lineNum">     703</span>                 :<span class="tlaGNC">           6 :         return &quot;Show linked and monitored actors&quot;;</span></span>
+<span id="L702"><span class="lineNum">     702</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L703"><span class="lineNum">     703</span>                 :<span class="tlaGNC">          38 :         return &quot;Show linked and monitored actors&quot;;</span></span>
 <span id="L704"><span class="lineNum">     704</span>                 :             :     }</span>
-<span id="L705"><span class="lineNum">     705</span>                 :<span class="tlaGNC">          84 :     int order() const noexcept override {</span></span>
-<span id="L706"><span class="lineNum">     706</span>                 :<span class="tlaGNC">          84 :         return 287;</span></span>
+<span id="L705"><span class="lineNum">     705</span>                 :<span class="tlaGNC">         350 :     int order() const noexcept override {</span></span>
+<span id="L706"><span class="lineNum">     706</span>                 :<span class="tlaGNC">         350 :         return 287;</span></span>
 <span id="L707"><span class="lineNum">     707</span>                 :             :     }</span>
 <span id="L708"><span class="lineNum">     708</span>                 :             : </span>
 <span id="L709"><span class="lineNum">     709</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -830,43 +830,43 @@
 <span id="L752"><span class="lineNum">     752</span>                 :             : </span>
 <span id="L753"><span class="lineNum">     753</span>                 :             : class ActorBackpressureCommand final : public ICommand {</span>
 <span id="L754"><span class="lineNum">     754</span>                 :             :   public:</span>
-<span id="L755"><span class="lineNum">     755</span>                 :<span class="tlaGNC tlaBgGNC">          69 :     std::string_view path() const noexcept override {</span></span>
-<span id="L756"><span class="lineNum">     756</span>                 :<span class="tlaGNC">          69 :         return &quot;actor/&lt;id&gt;/backpressure&quot;;</span></span>
+<span id="L755"><span class="lineNum">     755</span>                 :<span class="tlaGNC tlaBgGNC">         105 :     std::string_view path() const noexcept override {</span></span>
+<span id="L756"><span class="lineNum">     756</span>                 :<span class="tlaGNC">         105 :         return &quot;actor/&lt;id&gt;/backpressure&quot;;</span></span>
 <span id="L757"><span class="lineNum">     757</span>                 :             :     }</span>
-<span id="L758"><span class="lineNum">     758</span>                 :<span class="tlaGNC">           6 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L759"><span class="lineNum">     759</span>                 :<span class="tlaGNC">           6 :         return &quot;Show backpressure signal state and mailbox pressure&quot;;</span></span>
+<span id="L758"><span class="lineNum">     758</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L759"><span class="lineNum">     759</span>                 :<span class="tlaGNC">          38 :         return &quot;Show backpressure signal state and mailbox pressure&quot;;</span></span>
 <span id="L760"><span class="lineNum">     760</span>                 :             :     }</span>
-<span id="L761"><span class="lineNum">     761</span>                 :<span class="tlaGNC">          72 :     int order() const noexcept override {</span></span>
-<span id="L762"><span class="lineNum">     762</span>                 :<span class="tlaGNC">          72 :         return 288;</span></span>
+<span id="L761"><span class="lineNum">     761</span>                 :<span class="tlaGNC">         300 :     int order() const noexcept override {</span></span>
+<span id="L762"><span class="lineNum">     762</span>                 :<span class="tlaGNC">         300 :         return 288;</span></span>
 <span id="L763"><span class="lineNum">     763</span>                 :             :     }</span>
 <span id="L764"><span class="lineNum">     764</span>                 :             : </span>
-<span id="L765"><span class="lineNum">     765</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
-<span id="L766"><span class="lineNum">     766</span>                 :<span class="tlaUNC">           0 :         auto id_str = ctx.get_param(&quot;&lt;id&gt;&quot;);</span></span>
-<span id="L767"><span class="lineNum">     767</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!id_str) {</span></span>
-<span id="L768"><span class="lineNum">     768</span>                 :<span class="tlaUNC">           0 :             ctx.output-&gt;error(&quot;Missing actor ID (usage: /actor &lt;id&gt; backpressure)&quot;);</span></span>
+<span id="L765"><span class="lineNum">     765</span>                 :<span class="tlaGNC">           1 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
+<span id="L766"><span class="lineNum">     766</span>                 :<span class="tlaGNC">           1 :         auto id_str = ctx.get_param(&quot;&lt;id&gt;&quot;);</span></span>
+<span id="L767"><span class="lineNum">     767</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (!id_str) {</span></span>
+<span id="L768"><span class="lineNum">     768</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             ctx.output-&gt;error(&quot;Missing actor ID (usage: /actor &lt;id&gt; backpressure)&quot;);</span></span>
 <span id="L769"><span class="lineNum">     769</span>                 :<span class="tlaUNC">           0 :             return result&lt;void&gt;::make();</span></span>
 <span id="L770"><span class="lineNum">     770</span>                 :             :         }</span>
-<span id="L771"><span class="lineNum">     771</span>                 :<span class="tlaUNC">           0 :         ActorId target_id = parse_actor_id(*id_str);</span></span>
-<span id="L772"><span class="lineNum">     772</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (target_id == ActorId{0}) {</span></span>
-<span id="L773"><span class="lineNum">     773</span>                 :<span class="tlaUNC">           0 :             ctx.output-&gt;error(&quot;Invalid actor ID: &quot; + *id_str);</span></span>
+<span id="L771"><span class="lineNum">     771</span>                 :<span class="tlaGNC tlaBgGNC">           1 :         ActorId target_id = parse_actor_id(*id_str);</span></span>
+<span id="L772"><span class="lineNum">     772</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (target_id == ActorId{0}) {</span></span>
+<span id="L773"><span class="lineNum">     773</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             ctx.output-&gt;error(&quot;Invalid actor ID: &quot; + *id_str);</span></span>
 <span id="L774"><span class="lineNum">     774</span>                 :<span class="tlaUNC">           0 :             return result&lt;void&gt;::make();</span></span>
 <span id="L775"><span class="lineNum">     775</span>                 :             :         }</span>
 <span id="L776"><span class="lineNum">     776</span>                 :             : </span>
-<span id="L777"><span class="lineNum">     777</span>                 :<span class="tlaUNC">           0 :         InspectStateRequest req;</span></span>
-<span id="L778"><span class="lineNum">     778</span>                 :<span class="tlaUNC">           0 :         req.set_target_actor_id(target_id.value());</span></span>
-<span id="L779"><span class="lineNum">     779</span>                 :<span class="tlaUNC">           0 :         req.set_include_mailbox(true);</span></span>
+<span id="L777"><span class="lineNum">     777</span>                 :<span class="tlaGNC tlaBgGNC">           1 :         InspectStateRequest req;</span></span>
+<span id="L778"><span class="lineNum">     778</span>                 :<span class="tlaGNC">           1 :         req.set_target_actor_id(target_id.value());</span></span>
+<span id="L779"><span class="lineNum">     779</span>                 :<span class="tlaGNC">           1 :         req.set_include_mailbox(true);</span></span>
 <span id="L780"><span class="lineNum">     780</span>                 :             : </span>
-<span id="L781"><span class="lineNum">     781</span>                 :<span class="tlaUNC">           0 :         std::optional&lt;InspectStateReply&gt; reply;</span></span>
-<span id="L782"><span class="lineNum">     782</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (ctx.command_host) {</span></span>
-<span id="L783"><span class="lineNum">     783</span>                 :<span class="tlaUNC">           0 :             reply = ctx.command_host-&gt;inspect(target_id, req);</span></span>
+<span id="L781"><span class="lineNum">     781</span>                 :<span class="tlaGNC">           1 :         std::optional&lt;InspectStateReply&gt; reply;</span></span>
+<span id="L782"><span class="lineNum">     782</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (ctx.command_host) {</span></span>
+<span id="L783"><span class="lineNum">     783</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             reply = ctx.command_host-&gt;inspect(target_id, req);</span></span>
 <span id="L784"><span class="lineNum">     784</span>                 :             :         } else {</span>
-<span id="L785"><span class="lineNum">     785</span>                 :<span class="tlaUNC">           0 :             auto* cli = ctx.cli_actor;</span></span>
-<span id="L786"><span class="lineNum">     786</span>                 :<span class="tlaUNC">           0 :             auto* cli_srv = ctx.cli_server_actor;</span></span>
-<span id="L787"><span class="lineNum">     787</span>   [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span><span class="tlaUNC" title="Branch 2 was not executed"> # </span><span class="tlaUNC" title="Branch 3 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (!cli &amp;&amp; !cli_srv) {</span></span>
-<span id="L788"><span class="lineNum">     788</span>                 :<span class="tlaUNC">           0 :                 ctx.output-&gt;error(&quot;Internal error: no CLI actor&quot;);</span></span>
-<span id="L789"><span class="lineNum">     789</span>                 :<span class="tlaUNC">           0 :                 return result&lt;void&gt;::make();</span></span>
+<span id="L785"><span class="lineNum">     785</span>                 :<span class="tlaGNC tlaBgGNC">           1 :             auto* cli = ctx.cli_actor;</span></span>
+<span id="L786"><span class="lineNum">     786</span>                 :<span class="tlaGNC">           1 :             auto* cli_srv = ctx.cli_server_actor;</span></span>
+<span id="L787"><span class="lineNum">     787</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           1 :             if (!cli &amp;&amp; !cli_srv) {</span></span>
+<span id="L788"><span class="lineNum">     788</span>                 :<span class="tlaGNC">           2 :                 ctx.output-&gt;error(&quot;Internal error: no CLI actor&quot;);</span></span>
+<span id="L789"><span class="lineNum">     789</span>                 :<span class="tlaGNC">           1 :                 return result&lt;void&gt;::make();</span></span>
 <span id="L790"><span class="lineNum">     790</span>                 :             :             }</span>
-<span id="L791"><span class="lineNum">     791</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             reply = cli ? cli-&gt;inspect(target_id, req)</span></span>
+<span id="L791"><span class="lineNum">     791</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :             reply = cli ? cli-&gt;inspect(target_id, req)</span></span>
 <span id="L792"><span class="lineNum">     792</span>                 :<span class="tlaUNC">           0 :                         : cli_srv-&gt;inspect(target_id, req);</span></span>
 <span id="L793"><span class="lineNum">     793</span>                 :             :         }</span>
 <span id="L794"><span class="lineNum">     794</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!reply) {</span></span>
@@ -897,7 +897,7 @@
 <span id="L819"><span class="lineNum">     819</span>                 :<span class="tlaUNC">           0 :         kv[&quot;Overflow policy&quot;] = mbox.overflow_policy();</span></span>
 <span id="L820"><span class="lineNum">     820</span>                 :<span class="tlaUNC">           0 :         ctx.output-&gt;key_value(kv);</span></span>
 <span id="L821"><span class="lineNum">     821</span>                 :<span class="tlaUNC">           0 :         return result&lt;void&gt;::make();</span></span>
-<span id="L822"><span class="lineNum">     822</span>                 :<span class="tlaUNC">           0 :     }</span></span>
+<span id="L822"><span class="lineNum">     822</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     }</span></span>
 <span id="L823"><span class="lineNum">     823</span>                 :             : };</span>
 <span id="L824"><span class="lineNum">     824</span>                 :             : </span>
 <span id="L825"><span class="lineNum">     825</span>                 :             : const CommandRegistration&lt;ActorShowCommand&gt; kRegisterActorShow;</span>

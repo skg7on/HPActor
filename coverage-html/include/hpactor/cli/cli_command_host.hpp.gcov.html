@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
@@ -126,7 +126,7 @@
 <span id="L48"><span class="lineNum">      48</span>                 :             : /// whether they run on a local daemon or a remote client.</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : class ICliCommandHost {</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :   public:</span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC tlaBgGNC">           9 :     virtual ~ICliCommandHost() = default;</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC tlaBgGNC">          38 :     virtual ~ICliCommandHost() = default;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     /// \brief Inspect an actor and return its full state.</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     virtual std::optional&lt;InspectStateReply&gt;</span>
@@ -156,7 +156,7 @@
 <span id="L78"><span class="lineNum">      78</span>                 :             : /// branch on local vs. remote.</span>
 <span id="L79"><span class="lineNum">      79</span>                 :             : class ISystemCliHost {</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             :   public:</span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC tlaBgGNC">           8 :     virtual ~ISystemCliHost() = default;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC tlaBgGNC">          37 :     virtual ~ISystemCliHost() = default;</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     /// \brief Execute a path-based command on the host.</span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     ///</span>
@@ -184,7 +184,7 @@
 <span id="L106"><span class="lineNum">     106</span>                 :             : /// \brief Interface for lifecycle CLI operations (drain, shutdown).</span>
 <span id="L107"><span class="lineNum">     107</span>                 :             : class ILifecycleCliHost {</span>
 <span id="L108"><span class="lineNum">     108</span>                 :             :   public:</span>
-<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">           8 :     virtual ~ILifecycleCliHost() = default;</span></span>
+<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">          37 :     virtual ~ILifecycleCliHost() = default;</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : </span>
 <span id="L111"><span class="lineNum">     111</span>                 :             :     /// \brief Drain in-flight messages without accepting new work.</span>
 <span id="L112"><span class="lineNum">     112</span>                 :             :     ///</span>

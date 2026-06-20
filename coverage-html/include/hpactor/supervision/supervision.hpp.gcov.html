@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
@@ -127,7 +127,7 @@
 <span id="L49"><span class="lineNum">      49</span>                 :             :     enum class Strategy { OneForOne, AllForOne, OneForAll };</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :     Strategy strategy = Strategy::OneForOne;</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :     uint32_t max_restarts = 10;</span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC tlaBgGNC">          13 :     std::chrono::milliseconds restart_interval{5000};</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC tlaBgGNC">          17 :     std::chrono::milliseconds restart_interval{5000};</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     /// \brief Optional quarantine escalation policy.</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     ///</span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     /// When \c enabled and the child exceeds \c max_restarts within</span>
@@ -140,7 +140,7 @@
 <span id="L62"><span class="lineNum">      62</span>                 :             : // Supervisor - interface for supervision strategy</span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : class Supervisor {</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :   public:</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           9 :     virtual ~Supervisor() = default;</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">          22 :     virtual ~Supervisor() = default;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     virtual SupervisionDirective on_child_failure(const ChildFailure&amp; failure) = 0;</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     virtual void on_child_stopped(ActorId child_id);</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : };</span>
@@ -201,8 +201,8 @@
 <span id="L123"><span class="lineNum">     123</span>                 :             :     bool has_remote_child(const ActorAddress&amp; addr) const;</span>
 <span id="L124"><span class="lineNum">     124</span>                 :             :     ActorRef get_remote_child(const ActorAddress&amp; addr) const;</span>
 <span id="L125"><span class="lineNum">     125</span>                 :             :     void remove_remote_child(const ActorAddress&amp; addr);</span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           6 :     const ActorRefVec&amp; remote_children() const {</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           6 :         return remote_children_;</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">          11 :     const ActorRefVec&amp; remote_children() const {</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">          11 :         return remote_children_;</span></span>
 <span id="L128"><span class="lineNum">     128</span>                 :             :     }</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             : </span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :   protected:</span>

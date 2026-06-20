@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -140,9 +140,9 @@
 <span id="L62"><span class="lineNum">      62</span>                 :             :     // Server mode: called when a complete HTTP request is parsed.</span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     // First argument is the connection itself (for send_response).</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     using RequestHandler = std::function&lt;void(HTTPConnection*, HttpRequest&amp;&amp;)&gt;;</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC tlaBgGNC">           3 :     void set_request_handler(RequestHandler handler) {</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">           3 :         request_handler_ = std::move(handler);</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           3 :     }</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC tlaBgGNC">          26 :     void set_request_handler(RequestHandler handler) {</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">          26 :         request_handler_ = std::move(handler);</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          26 :     }</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     // Client mode: called when a complete HTTP response is parsed.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     using ResponseHandler =</span>
@@ -154,9 +154,9 @@
 <span id="L76"><span class="lineNum">      76</span>                 :             : </span>
 <span id="L77"><span class="lineNum">      77</span>                 :             :     // Called on HTTP parse errors.</span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     using ErrorHandler = std::function&lt;void(HTTPConnection*, const error&amp;)&gt;;</span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">           1 :     void set_error_handler(ErrorHandler handler) {</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">           1 :         error_handler_ = std::move(handler);</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">           1 :     }</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">          24 :     void set_error_handler(ErrorHandler handler) {</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">          24 :         error_handler_ = std::move(handler);</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">          24 :     }</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     // ---- Send ----</span>
 <span id="L84"><span class="lineNum">      84</span>                 :             : </span>

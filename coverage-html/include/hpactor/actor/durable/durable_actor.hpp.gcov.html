@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">20.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">60.0&nbsp;%</td>
             <td class="headerCovTableEntry">5</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">3</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">25.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
             <td class="headerCovTableEntry">4</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">2</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -104,7 +104,7 @@
 <span id="L26"><span class="lineNum">      26</span>                 :             : ///        across process restarts.</span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : class IDurableActor {</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :   public:</span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC tlaBgGNC">           6 :     virtual ~IDurableActor() = default;</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC tlaBgGNC">          11 :     virtual ~IDurableActor() = default;</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     /// \brief Stable identity across passivation and restart cycles.</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             :     virtual std::string_view persistence_id() const = 0;</span>
@@ -123,9 +123,9 @@
 <span id="L45"><span class="lineNum">      45</span>                 :             : </span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     /// \brief Migrate a snapshot from an older schema version.</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :     virtual result&lt;StreamBuffer&gt;</span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaUNC">           0 :     migrate_snapshot(uint32_t /*from_version*/, const StreamBuffer&amp; /*data*/) {</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     migrate_snapshot(uint32_t /*from_version*/, const StreamBuffer&amp; /*data*/) {</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :         return result&lt;StreamBuffer&gt;::make(</span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaUNC">           0 :             error(static_cast&lt;uint32_t&gt;(FailureReason::SchemaVersionMismatch)));</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           1 :             error(static_cast&lt;uint32_t&gt;(FailureReason::SchemaVersionMismatch)));</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :     }</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : };</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             : </span>

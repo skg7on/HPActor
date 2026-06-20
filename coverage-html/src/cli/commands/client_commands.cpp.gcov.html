@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">36.0&nbsp;%</td>
@@ -148,14 +148,14 @@
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :             : class ClientListCommand final : public ICommand {</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :   public:</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC tlaBgGNC">          23 :     std::string_view path() const noexcept override {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          23 :         return &quot;client/list&quot;;</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC tlaBgGNC">          93 :     std::string_view path() const noexcept override {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          93 :         return &quot;client/list&quot;;</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           6 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           6 :         return &quot;List connected CLI clients&quot;;</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">          38 :         return &quot;List connected CLI clients&quot;;</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     }</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">          68 :     int order() const noexcept override {</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">          68 :         return 600;</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">         296 :     int order() const noexcept override {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">         296 :         return 600;</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     }</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
 <span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -178,14 +178,14 @@
 <span id="L98"><span class="lineNum">      98</span>                 :             : </span>
 <span id="L99"><span class="lineNum">      99</span>                 :             : class ClientCloseCommand final : public ICommand {</span>
 <span id="L100"><span class="lineNum">     100</span>                 :             :   public:</span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC tlaBgGNC">          13 :     std::string_view path() const noexcept override {</span></span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">          13 :         return &quot;client/&lt;seqno&gt;/close&quot;;</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC tlaBgGNC">          64 :     std::string_view path() const noexcept override {</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">          64 :         return &quot;client/&lt;seqno&gt;/close&quot;;</span></span>
 <span id="L103"><span class="lineNum">     103</span>                 :             :     }</span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">           6 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">           6 :         return &quot;Disconnect a client by seqno&quot;;</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">          38 :         return &quot;Disconnect a client by seqno&quot;;</span></span>
 <span id="L106"><span class="lineNum">     106</span>                 :             :     }</span>
-<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">          66 :     int order() const noexcept override {</span></span>
-<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">          66 :         return 610;</span></span>
+<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">         275 :     int order() const noexcept override {</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">         275 :         return 610;</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :             :     }</span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : </span>
 <span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -227,14 +227,14 @@
 <span id="L147"><span class="lineNum">     147</span>                 :             : </span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : class ClientHistoryCommand final : public ICommand {</span>
 <span id="L149"><span class="lineNum">     149</span>                 :             :   public:</span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     std::string_view path() const noexcept override {</span></span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">           7 :         return &quot;client/&lt;seqno&gt;/history&quot;;</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC tlaBgGNC">          39 :     std::string_view path() const noexcept override {</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          39 :         return &quot;client/&lt;seqno&gt;/history&quot;;</span></span>
 <span id="L152"><span class="lineNum">     152</span>                 :             :     }</span>
-<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">           6 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">           6 :         return &quot;Show command history for a client&quot;;</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">          38 :         return &quot;Show command history for a client&quot;;</span></span>
 <span id="L155"><span class="lineNum">     155</span>                 :             :     }</span>
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">          52 :     int order() const noexcept override {</span></span>
-<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">          52 :         return 620;</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">         242 :     int order() const noexcept override {</span></span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">         242 :         return 620;</span></span>
 <span id="L158"><span class="lineNum">     158</span>                 :             :     }</span>
 <span id="L159"><span class="lineNum">     159</span>                 :             : </span>
 <span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>

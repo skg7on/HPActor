@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">33.3&nbsp;%</td>
@@ -108,19 +108,19 @@
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     }</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">          53 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">          85 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          53 :         auto ct = system.table(&quot;cli&quot;);</span></span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 52 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          53 :         if (!ct.valid())</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          52 :             return result&lt;void&gt;::make();</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          85 :         auto ct = system.table(&quot;cli&quot;);</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 82 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">          85 :         if (!ct.valid())</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          82 :             return result&lt;void&gt;::make();</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           1 :         out.cli.enabled = ct.read_bool(&quot;enabled&quot;, true);</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           1 :         out.cli.listen_path = ct.read_string(&quot;listen_path&quot;, &quot;&quot;);</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           1 :         out.cli.tcp_port = static_cast&lt;uint16_t&gt;(ct.read_uint32(&quot;tcp_port&quot;, 0));</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           1 :         out.cli.default_format = ct.read_string(&quot;default_format&quot;, &quot;pretty&quot;);</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           1 :         out.cli.page_size = ct.read_uint32(&quot;page_size&quot;, 50);</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           3 :         out.cli.enabled = ct.read_bool(&quot;enabled&quot;, true);</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           3 :         out.cli.listen_path = ct.read_string(&quot;listen_path&quot;, &quot;&quot;);</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           3 :         out.cli.tcp_port = static_cast&lt;uint16_t&gt;(ct.read_uint32(&quot;tcp_port&quot;, 0));</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           3 :         out.cli.default_format = ct.read_string(&quot;default_format&quot;, &quot;pretty&quot;);</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           3 :         out.cli.page_size = ct.read_uint32(&quot;page_size&quot;, 50);</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : </span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           1 :         return result&lt;void&gt;::make();</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           3 :         return result&lt;void&gt;::make();</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     }</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : };</span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : </span>

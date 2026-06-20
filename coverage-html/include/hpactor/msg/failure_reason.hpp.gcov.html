@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -194,9 +194,9 @@
 <span id="L116"><span class="lineNum">     116</span>                 :             : /// \param[in] reason The failure reason to check.</span>
 <span id="L117"><span class="lineNum">     117</span>                 :             : /// \return true if the reason represents a transient condition likely to</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : ///         resolve without application-level intervention.</span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC tlaBgGNC">         150 : constexpr bool retryable(FailureReason reason) noexcept {</span></span>
-<span id="L120"><span class="lineNum">     120</span>      [<span class="tlaGBC" title="Branch 0 was taken 67 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 83 times"> + </span>]:<span class="tlaGNC">         150 :     switch (reason) {</span></span>
-<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">          67 :         case FailureReason::NoRoute:</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC tlaBgGNC">         158 : constexpr bool retryable(FailureReason reason) noexcept {</span></span>
+<span id="L120"><span class="lineNum">     120</span>      [<span class="tlaGBC" title="Branch 0 was taken 71 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 87 times"> + </span>]:<span class="tlaGNC">         158 :     switch (reason) {</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">          71 :         case FailureReason::NoRoute:</span></span>
 <span id="L122"><span class="lineNum">     122</span>                 :             :         case FailureReason::NodeUnavailable:</span>
 <span id="L123"><span class="lineNum">     123</span>                 :             :         case FailureReason::ActorNotReady:</span>
 <span id="L124"><span class="lineNum">     124</span>                 :             :         case FailureReason::CircuitOpen:</span>
@@ -213,11 +213,11 @@
 <span id="L135"><span class="lineNum">     135</span>                 :             :         case FailureReason::PassivationSnapshotFailed:</span>
 <span id="L136"><span class="lineNum">     136</span>                 :             :         case FailureReason::ReactivationFailed:</span>
 <span id="L137"><span class="lineNum">     137</span>                 :             :         case FailureReason::PassivationQueueFull:</span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">          67 :             return true;</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">          71 :             return true;</span></span>
 <span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case FailureReason::SchemaVersionMismatch:</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaUNC">           0 :             return false;</span></span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC tlaBgGNC">          83 :         default:</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">          83 :             return false;</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC tlaBgGNC">          87 :         default:</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">          87 :             return false;</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :     }</span>
 <span id="L144"><span class="lineNum">     144</span>                 :             : }</span>
 <span id="L145"><span class="lineNum">     145</span>                 :             : </span>

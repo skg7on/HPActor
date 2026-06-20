@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">33.3&nbsp;%</td>
@@ -108,21 +108,21 @@
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 :         return kOrder;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     }</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">          53 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC tlaBgGNC">          85 :     result&lt;void&gt; parse(const TomlTableView&amp; system, SystemDef&amp; out,</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :                        TomlParseContext&amp; /*ctx*/) const override {</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          53 :         auto st = system.table(&quot;shutdown&quot;);</span></span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 52 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          53 :         if (!st.valid())</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          52 :             return result&lt;void&gt;::make();</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">          85 :         auto st = system.table(&quot;shutdown&quot;);</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 71 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">          85 :         if (!st.valid())</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          71 :             return result&lt;void&gt;::make();</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           1 :         out.default_drain_policy = st.read_string(&quot;drain_policy&quot;, &quot;Drain&quot;);</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           1 :         out.default_drain_timeout_ms = st.read_uint32(&quot;drain_timeout_ms&quot;, 30000);</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           1 :         out.shutdown_ingress_timeout_ms =</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           1 :             st.read_uint32(&quot;ingress_timeout_ms&quot;, 5000);</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           1 :         out.shutdown_cluster_leave_timeout_ms =</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           1 :             st.read_uint32(&quot;cluster_leave_timeout_ms&quot;, 10000);</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           1 :         out.shutdown_force_after_timeout =</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">           1 :             st.read_bool(&quot;force_after_timeout&quot;, true);</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           1 :         return result&lt;void&gt;::make();</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          14 :         out.default_drain_policy = st.read_string(&quot;drain_policy&quot;, &quot;Drain&quot;);</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">          14 :         out.default_drain_timeout_ms = st.read_uint32(&quot;drain_timeout_ms&quot;, 30000);</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">          14 :         out.shutdown_ingress_timeout_ms =</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">          14 :             st.read_uint32(&quot;ingress_timeout_ms&quot;, 5000);</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">          14 :         out.shutdown_cluster_leave_timeout_ms =</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">          14 :             st.read_uint32(&quot;cluster_leave_timeout_ms&quot;, 10000);</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">          14 :         out.shutdown_force_after_timeout =</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">          14 :             st.read_bool(&quot;force_after_timeout&quot;, true);</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          14 :         return result&lt;void&gt;::make();</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             :     }</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : };</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : </span>

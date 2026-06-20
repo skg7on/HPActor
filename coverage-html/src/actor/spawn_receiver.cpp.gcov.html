@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
@@ -100,12 +100,12 @@
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : namespace hpactor {</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">          74 : SpawnReceiver::SpawnReceiver(ActorSystem&amp; sys, ActorTypeRegistry&amp; registry,</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          74 :                              net::Transport* transport)</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          74 :     : EventBasedActor(nullptr, sys), registry_(registry), transport_(transport) {}</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">         100 : SpawnReceiver::SpawnReceiver(ActorSystem&amp; sys, ActorTypeRegistry&amp; registry,</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         100 :                              net::Transport* transport)</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         100 :     : EventBasedActor(nullptr, sys), registry_(registry), transport_(transport) {}</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           2 : Behavior SpawnReceiver::make_behavior() {</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           4 :     return Behavior{[this](TypedMessage&amp; msg) {</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           4 : Behavior SpawnReceiver::make_behavior() {</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           8 :     return Behavior{[this](TypedMessage&amp; msg) {</span></span>
 <span id="L31"><span class="lineNum">      31</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :         if (msg.type_id() == TypeTag::SpawnRequestTag) {</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             :             // Deserialize the protobuf spawn request</span>
 <span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaUNC">           0 :             auto pb_req = msg.as&lt;::hpactor::SpawnRequestMessage&gt;();</span></span>
@@ -119,7 +119,7 @@
 <span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaUNC">           0 :                 handle_spawn_request(req, net::WireFrame{});</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaUNC">           0 :             }</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC">           0 :         }</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC tlaBgGNC">           2 :     }};</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     }};</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : }</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : </span>
 <span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void SpawnReceiver::handle_spawn_request(const SpawnRequest&amp; req,</span></span>

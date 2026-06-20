@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntryHi">93.8&nbsp;%</td>
+            <td class="headerCovTableEntry">32</td>
+            <td class="headerCovTableEntry">30</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">21</td>
+            <td class="headerCovTableEntry">21</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryHi">-</td>
-            <td class="headerCovTableEntry">0</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">2</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -287,7 +287,7 @@
 <span id="L209"><span class="lineNum">     209</span>                 :             : </span>
 <span id="L210"><span class="lineNum">     210</span>                 :             :     /// \brief Default constructible. No handlers are registered until</span>
 <span id="L211"><span class="lineNum">     211</span>                 :             :     ///        \c on() is called.</span>
-<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     TypedBehavior() = default;</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     TypedBehavior() = default;</span></span>
 <span id="L213"><span class="lineNum">     213</span>                 :             : </span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :     /// \brief Register a handler for a message type inferred from the</span>
 <span id="L215"><span class="lineNum">     215</span>                 :             :     ///        handler's argument type.</span>
@@ -301,11 +301,11 @@
 <span id="L223"><span class="lineNum">     223</span>                 :             :     /// \return Reference to \c *this for fluent registration.</span>
 <span id="L224"><span class="lineNum">     224</span>                 :             :     // Register a handler for message type Msg.</span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     // The handler signature F(Msg) -&gt; R must match one of Signatures.</span>
-<span id="L226"><span class="lineNum">     226</span>                 :             :     template &lt;typename F&gt; TypedBehavior&amp; on(F&amp;&amp; handler) {</span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">           3 :     template &lt;typename F&gt; TypedBehavior&amp; on(F&amp;&amp; handler) {</span></span>
 <span id="L227"><span class="lineNum">     227</span>                 :             :         using decayed = std::decay_t&lt;F&gt;;</span>
 <span id="L228"><span class="lineNum">     228</span>                 :             :         // Extract Msg from the handler's argument type</span>
-<span id="L229"><span class="lineNum">     229</span>                 :             :         register_handler&lt;decayed&gt;(std::forward&lt;F&gt;(handler));</span>
-<span id="L230"><span class="lineNum">     230</span>                 :             :         return *this;</span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">           3 :         register_handler&lt;decayed&gt;(std::forward&lt;F&gt;(handler));</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">           3 :         return *this;</span></span>
 <span id="L231"><span class="lineNum">     231</span>                 :             :     }</span>
 <span id="L232"><span class="lineNum">     232</span>                 :             : </span>
 <span id="L233"><span class="lineNum">     233</span>                 :             :     /// \brief Dispatch a message to the matching handler by compile-time</span>
@@ -323,10 +323,10 @@
 <span id="L245"><span class="lineNum">     245</span>                 :             :     // Dispatch a message to the matching handler.</span>
 <span id="L246"><span class="lineNum">     246</span>                 :             :     template &lt;typename Msg&gt;</span>
 <span id="L247"><span class="lineNum">     247</span>                 :             :     result&lt;typename matching_handler_type&lt;std::decay_t&lt;Msg&gt;, Signatures...&gt;::result&gt;</span>
-<span id="L248"><span class="lineNum">     248</span>                 :             :     invoke_msg(Msg&amp;&amp; msg) {</span>
-<span id="L249"><span class="lineNum">     249</span>                 :             :         constexpr size_t idx = signature_index_v&lt;std::decay_t&lt;Msg&gt;, Signatures...&gt;;</span>
-<span id="L250"><span class="lineNum">     250</span>                 :             :         auto&amp; handler = std::get&lt;idx&gt;(handlers_);</span>
-<span id="L251"><span class="lineNum">     251</span>                 :             :         return handler(std::forward&lt;Msg&gt;(msg));</span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">           3 :     invoke_msg(Msg&amp;&amp; msg) {</span></span>
+<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">           3 :         constexpr size_t idx = signature_index_v&lt;std::decay_t&lt;Msg&gt;, Signatures...&gt;;</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :<span class="tlaGNC">           3 :         auto&amp; handler = std::get&lt;idx&gt;(handlers_);</span></span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC">           3 :         return handler(std::forward&lt;Msg&gt;(msg));</span></span>
 <span id="L252"><span class="lineNum">     252</span>                 :             :     }</span>
 <span id="L253"><span class="lineNum">     253</span>                 :             : </span>
 <span id="L254"><span class="lineNum">     254</span>                 :             :   private:</span>
@@ -336,20 +336,20 @@
 <span id="L258"><span class="lineNum">     258</span>                 :             :     /// \tparam Msg The message type to register for.</span>
 <span id="L259"><span class="lineNum">     259</span>                 :             :     /// \param[in] handler The handler function (forwarded).</span>
 <span id="L260"><span class="lineNum">     260</span>                 :             :     template &lt;typename F, typename Msg&gt;</span>
-<span id="L261"><span class="lineNum">     261</span>                 :             :     void register_handler_impl(F&amp;&amp; handler) {</span>
-<span id="L262"><span class="lineNum">     262</span>                 :             :         constexpr size_t idx = signature_index_v&lt;std::decay_t&lt;Msg&gt;, Signatures...&gt;;</span>
-<span id="L263"><span class="lineNum">     263</span>                 :             :         std::get&lt;idx&gt;(handlers_).assign(std::forward&lt;F&gt;(handler));</span>
-<span id="L264"><span class="lineNum">     264</span>                 :             :     }</span>
+<span id="L261"><span class="lineNum">     261</span>                 :<span class="tlaGNC">           3 :     void register_handler_impl(F&amp;&amp; handler) {</span></span>
+<span id="L262"><span class="lineNum">     262</span>                 :<span class="tlaGNC">           3 :         constexpr size_t idx = signature_index_v&lt;std::decay_t&lt;Msg&gt;, Signatures...&gt;;</span></span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">           3 :         std::get&lt;idx&gt;(handlers_).assign(std::forward&lt;F&gt;(handler));</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">           3 :     }</span></span>
 <span id="L265"><span class="lineNum">     265</span>                 :             : </span>
 <span id="L266"><span class="lineNum">     266</span>                 :             :     /// \brief Extract the message type from the handler and delegate to</span>
 <span id="L267"><span class="lineNum">     267</span>                 :             :     ///        \c register_handler_impl.</span>
 <span id="L268"><span class="lineNum">     268</span>                 :             :     ///</span>
 <span id="L269"><span class="lineNum">     269</span>                 :             :     /// \tparam F The handler callable type.</span>
 <span id="L270"><span class="lineNum">     270</span>                 :             :     /// \param[in] handler The handler function.</span>
-<span id="L271"><span class="lineNum">     271</span>                 :             :     template &lt;typename F&gt; void register_handler(F&amp;&amp; handler) {</span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">           3 :     template &lt;typename F&gt; void register_handler(F&amp;&amp; handler) {</span></span>
 <span id="L272"><span class="lineNum">     272</span>                 :             :         using arg_t = typename lambda_traits&lt;std::decay_t&lt;F&gt;&gt;::argument_type;</span>
-<span id="L273"><span class="lineNum">     273</span>                 :             :         register_handler_impl&lt;F, arg_t&gt;(std::forward&lt;F&gt;(handler));</span>
-<span id="L274"><span class="lineNum">     274</span>                 :             :     }</span>
+<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">           3 :         register_handler_impl&lt;F, arg_t&gt;(std::forward&lt;F&gt;(handler));</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">           3 :     }</span></span>
 <span id="L275"><span class="lineNum">     275</span>                 :             : </span>
 <span id="L276"><span class="lineNum">     276</span>                 :             :     /// \brief Tuple of message handlers, one per signature.</span>
 <span id="L277"><span class="lineNum">     277</span>                 :             :     ///</span>
@@ -379,25 +379,25 @@
 <span id="L301"><span class="lineNum">     301</span>                 :             : </span>
 <span id="L302"><span class="lineNum">     302</span>                 :             :     /// \brief Default constructible. No handler assigned; calls return</span>
 <span id="L303"><span class="lineNum">     303</span>                 :             :     ///        an error result.</span>
-<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">           1 :     message_handler() = default;</span></span>
+<span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">           4 :     message_handler() = default;</span></span>
 <span id="L305"><span class="lineNum">     305</span>                 :             : </span>
 <span id="L306"><span class="lineNum">     306</span>                 :             :     /// \brief Assign a function to this handler slot.</span>
 <span id="L307"><span class="lineNum">     307</span>                 :             :     ///</span>
 <span id="L308"><span class="lineNum">     308</span>                 :             :     /// \param[in] fn The handler function (moved into the slot).</span>
-<span id="L309"><span class="lineNum">     309</span>                 :             :     void assign(function_type fn) {</span>
-<span id="L310"><span class="lineNum">     310</span>                 :             :         fn_ = std::move(fn);</span>
-<span id="L311"><span class="lineNum">     311</span>                 :             :     }</span>
+<span id="L309"><span class="lineNum">     309</span>                 :<span class="tlaGNC">           2 :     void assign(function_type fn) {</span></span>
+<span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaGNC">           2 :         fn_ = std::move(fn);</span></span>
+<span id="L311"><span class="lineNum">     311</span>                 :<span class="tlaGNC">           2 :     }</span></span>
 <span id="L312"><span class="lineNum">     312</span>                 :             : </span>
 <span id="L313"><span class="lineNum">     313</span>                 :             :     /// \brief Invoke the handler with a message.</span>
 <span id="L314"><span class="lineNum">     314</span>                 :             :     ///</span>
 <span id="L315"><span class="lineNum">     315</span>                 :             :     /// \param[in] msg The message to pass (moved).</span>
 <span id="L316"><span class="lineNum">     316</span>                 :             :     /// \return \c result&lt;R&gt; containing the handler's return value, or</span>
 <span id="L317"><span class="lineNum">     317</span>                 :             :     ///         \c result&lt;R&gt;::make(error{}) if no handler is assigned.</span>
-<span id="L318"><span class="lineNum">     318</span>                 :             :     result&lt;R&gt; operator()(Msg&amp;&amp; msg) {</span>
-<span id="L319"><span class="lineNum">     319</span>                 :             :         if (fn_) {</span>
-<span id="L320"><span class="lineNum">     320</span>                 :             :             return result&lt;R&gt;::make(fn_(std::move(msg)));</span>
+<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">           2 :     result&lt;R&gt; operator()(Msg&amp;&amp; msg) {</span></span>
+<span id="L319"><span class="lineNum">     319</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           2 :         if (fn_) {</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">           2 :             return result&lt;R&gt;::make(fn_(std::move(msg)));</span></span>
 <span id="L321"><span class="lineNum">     321</span>                 :             :         }</span>
-<span id="L322"><span class="lineNum">     322</span>                 :             :         return result&lt;R&gt;::make(error{});</span>
+<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return result&lt;R&gt;::make(error{});</span></span>
 <span id="L323"><span class="lineNum">     323</span>                 :             :     }</span>
 <span id="L324"><span class="lineNum">     324</span>                 :             : </span>
 <span id="L325"><span class="lineNum">     325</span>                 :             :   private:</span>
@@ -421,26 +421,26 @@
 <span id="L343"><span class="lineNum">     343</span>                 :             :     using function_type = std::function&lt;void(Msg)&gt;;</span>
 <span id="L344"><span class="lineNum">     344</span>                 :             : </span>
 <span id="L345"><span class="lineNum">     345</span>                 :             :     /// \brief Default constructible.</span>
-<span id="L346"><span class="lineNum">     346</span>                 :             :     message_handler() = default;</span>
+<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC tlaBgGNC">           2 :     message_handler() = default;</span></span>
 <span id="L347"><span class="lineNum">     347</span>                 :             : </span>
 <span id="L348"><span class="lineNum">     348</span>                 :             :     /// \brief Assign a function to this handler slot.</span>
 <span id="L349"><span class="lineNum">     349</span>                 :             :     ///</span>
 <span id="L350"><span class="lineNum">     350</span>                 :             :     /// \param[in] fn The handler function (moved into the slot).</span>
-<span id="L351"><span class="lineNum">     351</span>                 :             :     void assign(function_type fn) {</span>
-<span id="L352"><span class="lineNum">     352</span>                 :             :         fn_ = std::move(fn);</span>
-<span id="L353"><span class="lineNum">     353</span>                 :             :     }</span>
+<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">           1 :     void assign(function_type fn) {</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">           1 :         fn_ = std::move(fn);</span></span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L354"><span class="lineNum">     354</span>                 :             : </span>
 <span id="L355"><span class="lineNum">     355</span>                 :             :     /// \brief Invoke the handler with a message.</span>
 <span id="L356"><span class="lineNum">     356</span>                 :             :     ///</span>
 <span id="L357"><span class="lineNum">     357</span>                 :             :     /// \param[in] msg The message to pass (moved).</span>
 <span id="L358"><span class="lineNum">     358</span>                 :             :     /// \return \c result&lt;void&gt;::make() on success, or</span>
 <span id="L359"><span class="lineNum">     359</span>                 :             :     ///         \c result&lt;void&gt;::make(error{}) if no handler is assigned.</span>
-<span id="L360"><span class="lineNum">     360</span>                 :             :     result&lt;void&gt; operator()(Msg&amp;&amp; msg) {</span>
-<span id="L361"><span class="lineNum">     361</span>                 :             :         if (fn_) {</span>
-<span id="L362"><span class="lineNum">     362</span>                 :             :             fn_(std::move(msg));</span>
-<span id="L363"><span class="lineNum">     363</span>                 :             :             return result&lt;void&gt;::make();</span>
+<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">           1 :     result&lt;void&gt; operator()(Msg&amp;&amp; msg) {</span></span>
+<span id="L361"><span class="lineNum">     361</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :         if (fn_) {</span></span>
+<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">           1 :             fn_(std::move(msg));</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">           1 :             return result&lt;void&gt;::make();</span></span>
 <span id="L364"><span class="lineNum">     364</span>                 :             :         }</span>
-<span id="L365"><span class="lineNum">     365</span>                 :             :         return result&lt;void&gt;::make(error{});</span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return result&lt;void&gt;::make(error{});</span></span>
 <span id="L366"><span class="lineNum">     366</span>                 :             :     }</span>
 <span id="L367"><span class="lineNum">     367</span>                 :             : </span>
 <span id="L368"><span class="lineNum">     368</span>                 :             :   private:</span>

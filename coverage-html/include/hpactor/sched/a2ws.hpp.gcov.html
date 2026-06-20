@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -141,16 +141,16 @@
 <span id="L63"><span class="lineNum">      63</span>                 :             :     void get_victim_pool(uint32_t worker, uint32_t&amp; start, uint32_t&amp; end) const;</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : </span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     // Number of workers</span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     uint32_t num_workers() const {</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           1 :         return num_workers_;</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     uint32_t num_workers() const {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           4 :         return num_workers_;</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     }</span>
 <span id="L69"><span class="lineNum">      69</span>                 :             : </span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     // Check if two workers are in the same local pool</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :     bool same_pool(uint32_t a, uint32_t b) const;</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             : </span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     // Stats access</span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           7 :     const WorkerStats&amp; stats(uint32_t worker) const {</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           7 :         return workers_[worker];</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           8 :     const WorkerStats&amp; stats(uint32_t worker) const {</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           8 :         return workers_[worker];</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     }</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :   private:</span>

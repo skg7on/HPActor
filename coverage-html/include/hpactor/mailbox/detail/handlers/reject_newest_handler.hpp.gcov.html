@@ -37,11 +37,11 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryMed">87.5&nbsp;%</td>
-            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntryLo">58.3&nbsp;%</td>
+            <td class="headerCovTableEntry">12</td>
             <td class="headerCovTableEntry">7</td>
           </tr>
           <tr>
@@ -117,13 +117,13 @@
 <span id="L39"><span class="lineNum">      39</span>                 :             :     /// \return \c Rejected with current mailbox state and pressure</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     /// classification.</span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     EnqueueResult</span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC tlaBgGNC">       39759 :     handle(OverflowContext&lt;T&gt;&amp; ctx, ReservationResult reason) override {</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">       39759 :         ctx.total_rejected.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">       39759 :         emit_metric(ctx, metrics::MetricEventType::kMailboxRejected);</span></span>
-<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 39756 times"> + </span>]:<span class="tlaGNC">       39759 :         return build_result(ctx, EnqueueResultCode::Rejected,</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC tlaBgGNC">       39761 :     handle(OverflowContext&lt;T&gt;&amp; ctx, ReservationResult reason) override {</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">       39761 :         ctx.total_rejected.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">       39761 :         emit_metric(ctx, metrics::MetricEventType::kMailboxRejected);</span></span>
+<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 39758 times"> + </span>]:<span class="tlaGNC">       39761 :         return build_result(ctx, EnqueueResultCode::Rejected,</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :                             reason == ReservationResult::ByteCapacity</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :                                 ? BackpressureReason::ByteCapacity</span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">       39759 :                                 : BackpressureReason::HardCapacity);</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">       39761 :                                 : BackpressureReason::HardCapacity);</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     }</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : </span>
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           3 :     OverflowPolicy policy() const override {</span></span>
@@ -132,28 +132,28 @@
 <span id="L54"><span class="lineNum">      54</span>                 :             : </span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :   private:</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     static void</span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">       39759 :     emit_metric(OverflowContext&lt;T&gt;&amp; ctx, metrics::MetricEventType type) {</span></span>
-<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 39755 times"> + </span>]:<span class="tlaGNC">       39759 :         if (ctx.metrics_buf) [[unlikely]] {</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           4 :             metrics::MetricEvent evt{};</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           4 :             evt.actor_id = ctx.actor_id;</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           4 :             evt.event_type = type;</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           4 :             evt.value_hi = 1;</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           4 :             ctx.metrics_buf-&gt;try_push(evt);</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">       39761 :     emit_metric(OverflowContext&lt;T&gt;&amp; ctx, metrics::MetricEventType type) {</span></span>
+<span id="L58"><span class="lineNum">      58</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 39755 times"> + </span>]:<span class="tlaGNC">       39761 :         if (ctx.metrics_buf) [[unlikely]] {</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           6 :             metrics::MetricEvent evt{};</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           6 :             evt.actor_id = ctx.actor_id;</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           6 :             evt.event_type = type;</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           6 :             evt.value_hi = 1;</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           6 :             ctx.metrics_buf-&gt;try_push(evt);</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :         }</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">       39759 :     }</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">       39761 :     }</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     static EnqueueResult</span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">       39759 :     build_result(OverflowContext&lt;T&gt;&amp; ctx, EnqueueResultCode code,</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">       39761 :     build_result(OverflowContext&lt;T&gt;&amp; ctx, EnqueueResultCode code,</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :                  BackpressureReason reason) {</span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">       39759 :         EnqueueResult r;</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">       39759 :         r.code = code;</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">       39759 :         r.target = ctx.actor_id;</span></span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">       39759 :         r.depth = ctx.current_depth;</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">       39759 :         r.capacity = ctx.config.capacity.max_messages;</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">       39759 :         r.bytes = ctx.current_bytes;</span></span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">       39759 :         r.byte_capacity = ctx.config.capacity.max_bytes;</span></span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">       39759 :         r.pressure_reason = reason;</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">       39759 :         return r;</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">       39761 :         EnqueueResult r;</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">       39761 :         r.code = code;</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">       39761 :         r.target = ctx.actor_id;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">       39761 :         r.depth = ctx.current_depth;</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">       39761 :         r.capacity = ctx.config.capacity.max_messages;</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">       39761 :         r.bytes = ctx.current_bytes;</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">       39761 :         r.byte_capacity = ctx.config.capacity.max_bytes;</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">       39761 :         r.pressure_reason = reason;</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">       39761 :         return r;</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     }</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : };</span>
 <span id="L81"><span class="lineNum">      81</span>                 :             : </span>

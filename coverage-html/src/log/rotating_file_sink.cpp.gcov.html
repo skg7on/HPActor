@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -100,57 +100,57 @@
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : class RotatingFileSink : public ILogSink {</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             :   public:</span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     explicit RotatingFileSink(const RotatingFileConfig&amp; cfg)</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           4 :         : cfg_(cfg), file_(cfg.path, std::ios::app | std::ios::out) {</span></span>
-<span id="L27"><span class="lineNum">      27</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :         if (file_.is_open()) {</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           4 :             file_.seekp(0, std::ios::end);</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           4 :             bytes_written_ = static_cast&lt;uint64_t&gt;(file_.tellp());</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">           5 :     explicit RotatingFileSink(const RotatingFileConfig&amp; cfg)</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           5 :         : cfg_(cfg), file_(cfg.path, std::ios::app | std::ios::out) {</span></span>
+<span id="L27"><span class="lineNum">      27</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           5 :         if (file_.is_open()) {</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           5 :             file_.seekp(0, std::ios::end);</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           5 :             bytes_written_ = static_cast&lt;uint64_t&gt;(file_.tellp());</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             :         }</span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           4 :     }</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           5 :     }</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           4 :     result&lt;void&gt; write(std::string_view line) noexcept override {</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           4 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :         if (!file_.is_open())</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           7 :     result&lt;void&gt; write(std::string_view line) noexcept override {</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           7 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :         if (!file_.is_open())</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return result&lt;void&gt;::make(error(errors::unknown, &quot;rotating file &quot;</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaUNC">           0 :                                                              &quot;sink not open&quot;));</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         file_.write(line.data(), static_cast&lt;std::streamsize&gt;(line.size()));</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           4 :         file_.put('\n');</span></span>
-<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :         if (file_.fail())</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">           7 :         file_.write(line.data(), static_cast&lt;std::streamsize&gt;(line.size()));</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           7 :         file_.put('\n');</span></span>
+<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           7 :         if (file_.fail())</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return result&lt;void&gt;::make(error(errors::unknown, &quot;rotating file &quot;</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :                                                              &quot;sink write &quot;</span>
 <span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC">           0 :                                                              &quot;failed&quot;));</span></span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         bytes_written_ += line.size() + 1;</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC tlaBgGNC">           7 :         bytes_written_ += line.size() + 1;</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : </span>
-<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :         if (bytes_written_ &gt;= cfg_.max_bytes) {</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           1 :             rotate();</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           7 :         if (bytes_written_ &gt;= cfg_.max_bytes) {</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           2 :             rotate();</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             :         }</span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           4 :         return result&lt;void&gt;::make();</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           4 :     }</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           7 :         return result&lt;void&gt;::make();</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           7 :     }</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; flush() noexcept override {</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           3 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           3 :         if (file_.is_open())</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           3 :             file_.flush();</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           3 :         return result&lt;void&gt;::make();</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           3 :     }</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           6 :     result&lt;void&gt; flush() noexcept override {</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           6 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           6 :         if (file_.is_open())</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           6 :             file_.flush();</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           6 :         return result&lt;void&gt;::make();</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           6 :     }</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : </span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :   private:</span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           1 :     void rotate() {</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           1 :         file_.close();</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           2 :     void rotate() {</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           2 :         file_.close();</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :         // Remove oldest file</span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           1 :         std::string oldest = cfg_.path + &quot;.&quot; + std::to_string(cfg_.max_files);</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           1 :         std::remove(oldest.c_str());</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           2 :         std::string oldest = cfg_.path + &quot;.&quot; + std::to_string(cfg_.max_files);</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           2 :         std::remove(oldest.c_str());</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :         // Rotate: file.log.N -&gt; file.log.(N+1), file.log -&gt; file.log.1</span>
-<span id="L66"><span class="lineNum">      66</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :         for (int i = static_cast&lt;int&gt;(cfg_.max_files) - 1; i &gt;= 1; --i) {</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           1 :             std::string from = cfg_.path + &quot;.&quot; + std::to_string(i);</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           1 :             std::string to = cfg_.path + &quot;.&quot; + std::to_string(i + 1);</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           1 :             std::rename(from.c_str(), to.c_str());</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           1 :         }</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           1 :         std::rename(cfg_.path.c_str(), (cfg_.path + &quot;.1&quot;).c_str());</span></span>
+<span id="L66"><span class="lineNum">      66</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           4 :         for (int i = static_cast&lt;int&gt;(cfg_.max_files) - 1; i &gt;= 1; --i) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           2 :             std::string from = cfg_.path + &quot;.&quot; + std::to_string(i);</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           2 :             std::string to = cfg_.path + &quot;.&quot; + std::to_string(i + 1);</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           2 :             std::rename(from.c_str(), to.c_str());</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           2 :         }</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">           2 :         std::rename(cfg_.path.c_str(), (cfg_.path + &quot;.1&quot;).c_str());</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :         // Open fresh file</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           1 :         file_.open(cfg_.path, std::ios::out | std::ios::trunc);</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           1 :         bytes_written_ = 0;</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           1 :     }</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           2 :         file_.open(cfg_.path, std::ios::out | std::ios::trunc);</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           2 :         bytes_written_ = 0;</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           2 :     }</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : </span>
 <span id="L77"><span class="lineNum">      77</span>                 :             :     RotatingFileConfig cfg_;</span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     std::ofstream file_;</span>
@@ -158,8 +158,8 @@
 <span id="L80"><span class="lineNum">      80</span>                 :             :     uint64_t bytes_written_ = 0;</span>
 <span id="L81"><span class="lineNum">      81</span>                 :             : };</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">           4 : std::unique_ptr&lt;ILogSink&gt; make_rotating_file_sink(const RotatingFileConfig&amp; cfg) {</span></span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">           4 :     return std::make_unique&lt;RotatingFileSink&gt;(cfg);</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">           5 : std::unique_ptr&lt;ILogSink&gt; make_rotating_file_sink(const RotatingFileConfig&amp; cfg) {</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">           5 :     return std::make_unique&lt;RotatingFileSink&gt;(cfg);</span></span>
 <span id="L85"><span class="lineNum">      85</span>                 :             : }</span>
 <span id="L86"><span class="lineNum">      86</span>                 :             : </span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : } // namespace hpactor::log</span>

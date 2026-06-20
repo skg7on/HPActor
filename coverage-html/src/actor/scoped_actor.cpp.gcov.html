@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
@@ -95,7 +95,7 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : </span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : namespace hpactor {</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">           1 : ScopedActor::ScopedActor(ActorSystem&amp; sys) : BlockingActor(nullptr, sys) {</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">           2 : ScopedActor::ScopedActor(ActorSystem&amp; sys) : BlockingActor(nullptr, sys) {</span></span>
 <span id="L21"><span class="lineNum">      21</span>                 :             :     // ScopedActor is used outside the normal spawn path (e.g., from main()).</span>
 <span id="L22"><span class="lineNum">      22</span>                 :             :     // The ActorSystem may not be fully started, so we only set up the</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             :     // blocking actor infrastructure here.  Full registration with mailbox,</span>
@@ -104,11 +104,11 @@
 <span id="L26"><span class="lineNum">      26</span>                 :             :     // For MVP: the actor is usable as a blocking receiver.  Messages sent</span>
 <span id="L27"><span class="lineNum">      27</span>                 :             :     // to it from spawned actors will be delivered through its mailbox once</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :     // the system is running.</span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           1 : ScopedActor::~ScopedActor() {</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           1 :     on_deactivate();</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           1 : }</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           2 : ScopedActor::~ScopedActor() {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           2 :     on_deactivate();</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           2 : }</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : } // namespace hpactor</span>
         </pre>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -95,17 +95,17 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : namespace cli {</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">       99603 : CommandRegistry&amp; CommandRegistry::instance() {</span></span>
-<span id="L21"><span class="lineNum">      21</span>   [<span class="tlaGBC" title="Branch 0 was taken 2067 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 97536 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2067 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">       99603 :     static CommandRegistry reg;</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">       99603 :     return reg;</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">      138811 : CommandRegistry&amp; CommandRegistry::instance() {</span></span>
+<span id="L21"><span class="lineNum">      21</span>   [<span class="tlaGBC" title="Branch 0 was taken 2883 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 135928 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2883 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      138811 :     static CommandRegistry reg;</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">      138811 :     return reg;</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : }</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">       99496 : void CommandRegistry::add(std::unique_ptr&lt;ICommand&gt; cmd) {</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">       99496 :     commands_.push_back(std::move(cmd));</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">       99496 : }</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">      138664 : void CommandRegistry::add(std::unique_ptr&lt;ICommand&gt; cmd) {</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      138664 :     commands_.push_back(std::move(cmd));</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">      138664 : }</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">         108 : const std::vector&lt;std::unique_ptr&lt;ICommand&gt;&gt;&amp; CommandRegistry::commands() const {</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         108 :     return commands_;</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">         146 : const std::vector&lt;std::unique_ptr&lt;ICommand&gt;&gt;&amp; CommandRegistry::commands() const {</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">         146 :     return commands_;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : }</span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : </span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : } // namespace cli</span>

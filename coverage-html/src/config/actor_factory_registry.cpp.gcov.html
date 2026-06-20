@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -94,30 +94,30 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::config {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">        1319 : ActorFactoryRegistry&amp; ActorFactoryRegistry::instance() {</span></span>
-<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 158 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1161 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 158 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        1319 :     static ActorFactoryRegistry registry;</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">        1319 :     return registry;</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">       12460 : ActorFactoryRegistry&amp; ActorFactoryRegistry::instance() {</span></span>
+<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 390 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12070 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 390 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">       12460 :     static ActorFactoryRegistry registry;</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">       12460 :     return registry;</span></span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : }</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          22 : ActorFactory ActorFactoryRegistry::get_factory(const std::string&amp; name) const {</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          22 :     auto it = factories_.find(name);</span></span>
-<span id="L26"><span class="lineNum">      26</span>         [<span class="tlaGBC" title="Branch 0 was taken 21 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          22 :     if (it != factories_.end()) {</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          21 :         return it-&gt;second;</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          24 : ActorFactory ActorFactoryRegistry::get_factory(const std::string&amp; name) const {</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          24 :     auto it = factories_.find(name);</span></span>
+<span id="L26"><span class="lineNum">      26</span>         [<span class="tlaGBC" title="Branch 0 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          24 :     if (it != factories_.end()) {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          23 :         return it-&gt;second;</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :     }</span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           1 :     return nullptr;</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : }</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          23 : bool ActorFactoryRegistry::has(const std::string&amp; name) const {</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          23 :     return factories_.find(name) != factories_.end();</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">          26 : bool ActorFactoryRegistry::has(const std::string&amp; name) const {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          26 :     return factories_.find(name) != factories_.end();</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : }</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           1 : std::vector&lt;std::string&gt; ActorFactoryRegistry::known_names() const {</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           1 :     std::vector&lt;std::string&gt; names;</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           1 :     names.reserve(factories_.size());</span></span>
-<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           3 :     for (const auto&amp; [name, _] : factories_) {</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           2 :         names.push_back(name);</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           2 : std::vector&lt;std::string&gt; ActorFactoryRegistry::known_names() const {</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           2 :     std::vector&lt;std::string&gt; names;</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           2 :     names.reserve(factories_.size());</span></span>
+<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           8 :     for (const auto&amp; [name, _] : factories_) {</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           6 :         names.push_back(name);</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     }</span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           1 :     return names;</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           2 :     return names;</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : }</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : </span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : } // namespace hpactor::config</span>

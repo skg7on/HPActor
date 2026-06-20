@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -123,23 +123,23 @@
 <span id="L45"><span class="lineNum">      45</span>                 :             : /// \return The canonical FailureReason. \c spawn_errors::success maps to</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             : ///         \c FailureReason::Unknown (not a failure).</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : [[nodiscard]] constexpr FailureReason</span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC tlaBgGNC">           7 : failure_reason(uint32_t spawn_error_code) noexcept {</span></span>
-<span id="L49"><span class="lineNum">      49</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">           7 :     switch (spawn_error_code) {</span></span>
-<span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 6 was taken 1 time"> + </span>]
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           1 :         case spawn_errors::success:</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           1 :             return FailureReason::Unknown;</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           1 :         case spawn_errors::unknown_type:</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           1 :             return FailureReason::NoRoute;</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           1 :         case spawn_errors::deserialization_failed:</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           1 :             return FailureReason::SerializationError;</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           1 :         case spawn_errors::node_unreachable:</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           1 :             return FailureReason::NodeUnavailable;</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           1 :         case spawn_errors::timeout:</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           1 :             return FailureReason::Timeout;</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           1 :         case spawn_errors::spawn_receiver_not_running:</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           1 :             return FailureReason::ActorNotReady;</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           1 :         default:</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           1 :             return FailureReason::SpawnFailed;</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC tlaBgGNC">          14 : failure_reason(uint32_t spawn_error_code) noexcept {</span></span>
+<span id="L49"><span class="lineNum">      49</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">          14 :     switch (spawn_error_code) {</span></span>
+<span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 2 times"> + </span>]
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           2 :         case spawn_errors::success:</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           2 :             return FailureReason::Unknown;</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           2 :         case spawn_errors::unknown_type:</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           2 :             return FailureReason::NoRoute;</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           2 :         case spawn_errors::deserialization_failed:</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           2 :             return FailureReason::SerializationError;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           2 :         case spawn_errors::node_unreachable:</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           2 :             return FailureReason::NodeUnavailable;</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           2 :         case spawn_errors::timeout:</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           2 :             return FailureReason::Timeout;</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           2 :         case spawn_errors::spawn_receiver_not_running:</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           2 :             return FailureReason::ActorNotReady;</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           2 :         default:</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           2 :             return FailureReason::SpawnFailed;</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     }</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : }</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : </span>

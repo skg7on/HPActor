@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
-            <td class="headerCovTableEntry">13</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntryMed">82.4&nbsp;%</td>
+            <td class="headerCovTableEntry">17</td>
+            <td class="headerCovTableEntry">14</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
-            <td class="headerCovTableEntry">3</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">5</td>
+            <td class="headerCovTableEntry">5</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
             <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">1</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -125,32 +125,32 @@
 <span id="L47"><span class="lineNum">      47</span>                 :             :   public:</span>
 <span id="L48"><span class="lineNum">      48</span>                 :             :     static constexpr const char* kActorTypeName = &quot;CliActor&quot;;</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     cli::ActorMeta to_metadata() const override {</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaUNC">           0 :         cli::ActorMeta m;</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaUNC">           0 :         m.actor_id = id().value();</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC">           0 :         m.actor_type = std::string(type_name());</span></span>
-<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         m.state = running_ ? &quot;Running&quot; : &quot;Stopped&quot;;</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC">           0 :         return m;</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     cli::ActorMeta to_metadata() const override {</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           1 :         cli::ActorMeta m;</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           1 :         m.actor_id = id().value();</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           1 :         m.actor_type = std::string(type_name());</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :         m.state = running_ ? &quot;Running&quot; : &quot;Stopped&quot;;</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           1 :         return m;</span></span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     }</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     CliActor(ActorContext* ctx, ActorSystem&amp; system, const CliConfig&amp; config);</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     ~CliActor() override;</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     // CliActor-specific accessors</span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaUNC">           0 :     const CliConfig&amp; config() const {</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaUNC">           0 :         return config_;</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           3 :     const CliConfig&amp; config() const {</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           3 :         return config_;</span></span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     }</span>
-<span id="L65"><span class="lineNum">      65</span>                 :             :     OutputFormatter* formatter() {</span>
-<span id="L66"><span class="lineNum">      66</span>                 :             :         return formatter_.get();</span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           1 :     OutputFormatter* formatter() {</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">           1 :         return formatter_.get();</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     }</span>
-<span id="L68"><span class="lineNum">      68</span>                 :             :     Pager* pager() {</span>
-<span id="L69"><span class="lineNum">      69</span>                 :             :         return pager_.get();</span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           2 :     Pager* pager() {</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           2 :         return pager_.get();</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     }</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : </span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :     // ICliCommandHost — local dispatch via try_deliver_local + mailbox poll</span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     std::optional&lt;InspectStateReply&gt;</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             :     inspect(ActorId target, const InspectStateRequest&amp; req,</span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaUNC">           0 :             std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     std::optional&lt;KillReply&gt;</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             :     kill(ActorId target, const KillRequest&amp; req,</span>
 <span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaUNC">           0 :          std::chrono::milliseconds timeout = std::chrono::milliseconds(2000)) override;</span></span>
@@ -160,11 +160,11 @@
 <span id="L82"><span class="lineNum">      82</span>                 :             :     std::vector&lt;ActorMeta&gt; enumerate(std::string_view filter = &quot;&quot;) override;</span>
 <span id="L83"><span class="lineNum">      83</span>                 :             : </span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     // ISystemCliHost — render from local ActorSystem data</span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaUNC">           0 :     bool execute_path(std::string_view /*path*/,</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     bool execute_path(std::string_view /*path*/,</span></span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :                       const std::map&lt;std::string, std::string&gt;&amp; /*params*/,</span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :                       const std::vector&lt;std::string&gt;&amp; /*args*/,</span>
 <span id="L88"><span class="lineNum">      88</span>                 :             :                       OutputFormatter&amp; /*output*/) override {</span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaUNC">           0 :         return false; // never remote — command handler fallback runs locally</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">           1 :         return false; // never remote — command handler fallback runs locally</span></span>
 <span id="L90"><span class="lineNum">      90</span>                 :             :     }</span>
 <span id="L91"><span class="lineNum">      91</span>                 :             :     result&lt;void&gt; dlq_replay(uint32_t index, ActorId target) override;</span>
 <span id="L92"><span class="lineNum">      92</span>                 :             : </span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -107,14 +107,14 @@
 <span id="L29"><span class="lineNum">      29</span>                 :             :     enum class Kind : uint8_t { Duration, Deadline };</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     Kind kind = Kind::Duration;</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">          11 :     std::chrono::milliseconds value{0};</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">          12 :     std::chrono::milliseconds value{0};</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     /// \brief Create a relative-duration timeout.</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     ///</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     /// \param[in] ms Timeout in milliseconds. 0 means &quot;use default.&quot;</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     /// \return RequestTimeout with kind=Duration.</span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           5 :     static RequestTimeout from_ms(uint64_t ms) noexcept {</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           5 :         return {Kind::Duration, std::chrono::milliseconds{ms}};</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           6 :     static RequestTimeout from_ms(uint64_t ms) noexcept {</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           6 :         return {Kind::Duration, std::chrono::milliseconds{ms}};</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             :     }</span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : </span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     /// \brief Create an absolute-deadline timeout.</span>
@@ -122,17 +122,17 @@
 <span id="L44"><span class="lineNum">      44</span>                 :             :     /// \param[in] tp Absolute deadline in steady_clock time.</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :     /// \return RequestTimeout with kind=Deadline.</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     static RequestTimeout</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           2 :     from_deadline(std::chrono::steady_clock::time_point tp) noexcept {</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           2 :         auto d = std::chrono::duration_cast&lt;std::chrono::milliseconds&gt;(</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           2 :             tp.time_since_epoch());</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           2 :         return {Kind::Deadline, d};</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           3 :     from_deadline(std::chrono::steady_clock::time_point tp) noexcept {</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           3 :         auto d = std::chrono::duration_cast&lt;std::chrono::milliseconds&gt;(</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           3 :             tp.time_since_epoch());</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           3 :         return {Kind::Deadline, d};</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :     }</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     /// \brief Sentinel for &quot;use system default.&quot;</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     ///</span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     /// \return RequestTimeout with kind=Duration and value=0ms.</span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          11 :     static RequestTimeout use_default() noexcept {</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          11 :         return {};</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          12 :     static RequestTimeout use_default() noexcept {</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          12 :         return {};</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     }</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : </span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     /// \brief Compute the point in time when this request expires.</span>
@@ -142,19 +142,19 @@
 <span id="L64"><span class="lineNum">      64</span>                 :             :     /// returns time_point::max().</span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     ///</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :     /// \return Absolute deadline in steady_clock time.</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           3 :     std::chrono::steady_clock::time_point deadline() const noexcept {</span></span>
-<span id="L68"><span class="lineNum">      68</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :         if (is_default()) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           4 :     std::chrono::steady_clock::time_point deadline() const noexcept {</span></span>
+<span id="L68"><span class="lineNum">      68</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :         if (is_default()) {</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           1 :             return std::chrono::steady_clock::time_point::max();</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :         }</span>
-<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :         if (kind == Kind::Deadline) {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           1 :             return std::chrono::steady_clock::time_point(value);</span></span>
+<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           3 :         if (kind == Kind::Deadline) {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           2 :             return std::chrono::steady_clock::time_point(value);</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :         }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           1 :         return std::chrono::steady_clock::now() + value;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     }</span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : </span>
 <span id="L77"><span class="lineNum">      77</span>                 :             :     /// \brief Whether this is using the system default (value == 0ms).</span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">          15 :     bool is_default() const noexcept {</span></span>
-<span id="L79"><span class="lineNum">      79</span>   [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 11 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span>]:<span class="tlaGNC">          15 :         return kind == Kind::Duration &amp;&amp; value.count() == 0;</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">          18 :     bool is_default() const noexcept {</span></span>
+<span id="L79"><span class="lineNum">      79</span>   [<span class="tlaGBC" title="Branch 0 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 3 times"> + </span>]:<span class="tlaGNC">          18 :         return kind == Kind::Duration &amp;&amp; value.count() == 0;</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :             :     }</span>
 <span id="L81"><span class="lineNum">      81</span>                 :             : };</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>

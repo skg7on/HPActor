@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -107,9 +107,9 @@
 <span id="L29"><span class="lineNum">      29</span>                 :             : ///</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : /// \return A new \c MessageId with a monotonically increasing value.</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : /// \note Thread safety: Lock-free, safe to call from any thread.</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">          31 : inline MessageId generate_message_id() {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">          54 : inline MessageId generate_message_id() {</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :     static std::atomic&lt;uint64_t&gt; next_id_{1};</span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          31 :     return MessageId(next_id_.fetch_add(1));</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          54 :     return MessageId(next_id_.fetch_add(1));</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : }</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : } // namespace hpactor</span>

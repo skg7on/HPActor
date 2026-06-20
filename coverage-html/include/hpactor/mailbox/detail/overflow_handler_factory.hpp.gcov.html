@@ -37,12 +37,12 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">3</td>
+            <td class="headerCovTableEntry">3</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -121,26 +121,26 @@
 <span id="L43"><span class="lineNum">      43</span>                 :             : ///       heap-allocated instance with no shared state.</span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : template &lt;typename T&gt;</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : [[nodiscard]] std::unique_ptr&lt;IOverflowHandler&lt;T&gt;&gt;</span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC tlaBgGNC">        1149 : make_overflow_handler(OverflowPolicy policy) {</span></span>
-<span id="L47"><span class="lineNum">      47</span>   [<span class="tlaGBC" title="Branch 0 was taken 1088 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 38 times"> + </span> :<span class="tlaGNC">        1149 :     switch (policy) {</span></span>
-<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 1 time"> + </span>]
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">        1088 :         case OverflowPolicy::RejectNewest:</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">        1088 :             return std::make_unique&lt;RejectNewestHandler&lt;T&gt;&gt;();</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           5 :         case OverflowPolicy::DropNewest:</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           5 :             return std::make_unique&lt;DropNewestHandler&lt;T&gt;&gt;();</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           6 :         case OverflowPolicy::DropOldest:</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           6 :             return std::make_unique&lt;DropOldestHandler&lt;T&gt;&gt;();</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">          38 :         case OverflowPolicy::DeadLetter:</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">          38 :             return std::make_unique&lt;DeadLetterHandler&lt;T&gt;&gt;();</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           3 :         case OverflowPolicy::SignalOnly:</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           3 :             return std::make_unique&lt;SignalOnlyHandler&lt;T&gt;&gt;();</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           6 :         case OverflowPolicy::SpillToOverflowQueue:</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           6 :             return std::make_unique&lt;SpillToOverflowHandler&lt;T&gt;&gt;();</span></span>
-<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           2 :         case OverflowPolicy::DropLowestPriority:</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           2 :             return std::make_unique&lt;DropLowestPriorityHandler&lt;T&gt;&gt;();</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           1 :         case OverflowPolicy::BlockWhenAllowed:</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC tlaBgGNC">        1552 : make_overflow_handler(OverflowPolicy policy) {</span></span>
+<span id="L47"><span class="lineNum">      47</span>   [<span class="tlaGBC" title="Branch 0 was taken 1481 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 42 times"> + </span> :<span class="tlaGNC">        1552 :     switch (policy) {</span></span>
+<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 2 times"> + </span>]
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">        1481 :         case OverflowPolicy::RejectNewest:</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">        1481 :             return std::make_unique&lt;RejectNewestHandler&lt;T&gt;&gt;();</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           6 :         case OverflowPolicy::DropNewest:</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           6 :             return std::make_unique&lt;DropNewestHandler&lt;T&gt;&gt;();</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           7 :         case OverflowPolicy::DropOldest:</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           7 :             return std::make_unique&lt;DropOldestHandler&lt;T&gt;&gt;();</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">          42 :         case OverflowPolicy::DeadLetter:</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">          42 :             return std::make_unique&lt;DeadLetterHandler&lt;T&gt;&gt;();</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           4 :         case OverflowPolicy::SignalOnly:</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           4 :             return std::make_unique&lt;SignalOnlyHandler&lt;T&gt;&gt;();</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           7 :         case OverflowPolicy::SpillToOverflowQueue:</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           7 :             return std::make_unique&lt;SpillToOverflowHandler&lt;T&gt;&gt;();</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">           3 :         case OverflowPolicy::DropLowestPriority:</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           3 :             return std::make_unique&lt;DropLowestPriorityHandler&lt;T&gt;&gt;();</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           2 :         case OverflowPolicy::BlockWhenAllowed:</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :         default:</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           1 :             return std::make_unique&lt;RejectNewestHandler&lt;T&gt;&gt;();</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           2 :             return std::make_unique&lt;RejectNewestHandler&lt;T&gt;&gt;();</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :     }</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>

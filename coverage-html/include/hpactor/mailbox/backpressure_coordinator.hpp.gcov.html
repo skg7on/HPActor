@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -222,17 +222,17 @@
 <span id="L144"><span class="lineNum">     144</span>                 :             :     /// because there is exactly one metrics ring buffer type in the system.</span>
 <span id="L145"><span class="lineNum">     145</span>                 :             :     ///</span>
 <span id="L146"><span class="lineNum">     146</span>                 :             :     /// \param[in] metrics Pointer to the metrics ring buffer, or \c nullptr.</span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC tlaBgGNC">         464 :     void set_metrics_ring_buffer(void* metrics) noexcept {</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">         464 :         config_.metrics_ring_buffer = metrics;</span></span>
-<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">         464 :     }</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC tlaBgGNC">         670 :     void set_metrics_ring_buffer(void* metrics) noexcept {</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">         670 :         config_.metrics_ring_buffer = metrics;</span></span>
+<span id="L149"><span class="lineNum">     149</span>                 :<span class="tlaGNC">         670 :     }</span></span>
 <span id="L150"><span class="lineNum">     150</span>                 :             : </span>
 <span id="L151"><span class="lineNum">     151</span>                 :             :     /// \brief Update the transport pointer after construction.</span>
 <span id="L152"><span class="lineNum">     152</span>                 :             :     ///</span>
 <span id="L153"><span class="lineNum">     153</span>                 :             :     /// \param[in] transport Pointer to the TCP transport, or \c nullptr</span>
 <span id="L154"><span class="lineNum">     154</span>                 :             :     ///                      when networking is disabled.</span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">          72 :     void set_transport(net::TcpTransport* transport) noexcept {</span></span>
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">          72 :         config_.transport = transport;</span></span>
-<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">          72 :     }</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">          96 :     void set_transport(net::TcpTransport* transport) noexcept {</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">          96 :         config_.transport = transport;</span></span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">          96 :     }</span></span>
 <span id="L158"><span class="lineNum">     158</span>                 :             : </span>
 <span id="L159"><span class="lineNum">     159</span>                 :             :   private:</span>
 <span id="L160"><span class="lineNum">     160</span>                 :             :     Config config_;</span>

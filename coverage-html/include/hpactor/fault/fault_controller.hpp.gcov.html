@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -159,8 +159,8 @@
 <span id="L81"><span class="lineNum">      81</span>                 :             :     void disable();</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             : </span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :     /// \brief Return whether fault injection is currently enabled.</span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC tlaBgGNC">           4 :     bool is_enabled() const noexcept {</span></span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">           4 :         return enabled_.load(std::memory_order_acquire);</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC tlaBgGNC">           8 :     bool is_enabled() const noexcept {</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">           8 :         return enabled_.load(std::memory_order_acquire);</span></span>
 <span id="L86"><span class="lineNum">      86</span>                 :             :     }</span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : </span>
 <span id="L88"><span class="lineNum">      88</span>                 :             :     /// \brief Check whether a fault should fire at \p path for the calling</span>
@@ -199,21 +199,21 @@
 <span id="L121"><span class="lineNum">     121</span>                 :             :     void stall(FaultDomain domain, uint64_t delay_ticks);</span>
 <span id="L122"><span class="lineNum">     122</span>                 :             : </span>
 <span id="L123"><span class="lineNum">     123</span>                 :             :     /// \brief Set the replay seed for \c expand_random reproducibility.</span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           2 :     void set_replay_seed(uint64_t seed) {</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">           2 :         replay_seed_ = seed;</span></span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           2 :     }</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">           4 :     void set_replay_seed(uint64_t seed) {</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">           4 :         replay_seed_ = seed;</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           4 :     }</span></span>
 <span id="L127"><span class="lineNum">     127</span>                 :             :     /// \brief Return the current replay seed.</span>
-<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">           1 :     uint64_t replay_seed() const noexcept {</span></span>
-<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">           1 :         return replay_seed_;</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">           4 :     uint64_t replay_seed() const noexcept {</span></span>
+<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">           4 :         return replay_seed_;</span></span>
 <span id="L130"><span class="lineNum">     130</span>                 :             :     }</span>
 <span id="L131"><span class="lineNum">     131</span>                 :             : </span>
 <span id="L132"><span class="lineNum">     132</span>                 :             :     /// \brief Set the log manager for structured fault-event logging.</span>
 <span id="L133"><span class="lineNum">     133</span>                 :             :     ///</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             :     /// When set, each fired fault emits a structured log entry at</span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     /// \c LogLevel::kInfo with category \c LogCategory::kFault.</span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">         464 :     void set_log_manager(log::LogManager* lm) {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">         464 :         log_manager_ = lm;</span></span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">         464 :     }</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">         670 :     void set_log_manager(log::LogManager* lm) {</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">         670 :         log_manager_ = lm;</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">         670 :     }</span></span>
 <span id="L139"><span class="lineNum">     139</span>                 :             : </span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :     /// \brief Capture a point-in-time snapshot of this instance's state.</span>
 <span id="L141"><span class="lineNum">     141</span>                 :             :     FaultControllerSnapshot snapshot() const;</span>
@@ -226,8 +226,8 @@
 <span id="L148"><span class="lineNum">     148</span>                 :             : </span>
 <span id="L149"><span class="lineNum">     149</span>                 :             :     /// \brief Return the total faults fired by this instance since last \c</span>
 <span id="L150"><span class="lineNum">     150</span>                 :             :     /// load().</span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          13 :     uint64_t faults_fired() const noexcept {</span></span>
-<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">          26 :         return faults_fired_.load(std::memory_order_acquire);</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          19 :     uint64_t faults_fired() const noexcept {</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">          38 :         return faults_fired_.load(std::memory_order_acquire);</span></span>
 <span id="L153"><span class="lineNum">     153</span>                 :             :     }</span>
 <span id="L154"><span class="lineNum">     154</span>                 :             : </span>
 <span id="L155"><span class="lineNum">     155</span>                 :             :     /// \brief Register this controller on the calling thread.</span>

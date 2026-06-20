@@ -37,11 +37,11 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">23</td>
+            <td class="headerCovTableEntryHi">95.8&nbsp;%</td>
+            <td class="headerCovTableEntry">24</td>
             <td class="headerCovTableEntry">23</td>
           </tr>
           <tr>
@@ -130,8 +130,8 @@
 <span id="L52"><span class="lineNum">      52</span>                 :             :     /// \brief Construct an overflow queue with an optional depth limit.</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     ///</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     /// \param[in] max_depth Maximum number of elements (0 = unlimited).</span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC tlaBgGNC">        1147 :     explicit OverflowQueue(uint32_t max_depth = 0) noexcept</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">        1147 :         : max_depth_(max_depth) {}</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC tlaBgGNC">        1542 :     explicit OverflowQueue(uint32_t max_depth = 0) noexcept</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">        1542 :         : max_depth_(max_depth) {}</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
 <span id="L58"><span class="lineNum">      58</span>                 :             :     /// \brief Update the maximum depth at runtime.</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             :     ///</span>
@@ -139,10 +139,10 @@
 <span id="L61"><span class="lineNum">      61</span>                 :             :     /// next \c try_push().</span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :     ///</span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :     /// \param[in] max_depth New maximum depth (0 = unlimited).</span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        1143 :     void set_max_depth(uint32_t max_depth) noexcept {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        1143 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">        1143 :         max_depth_ = max_depth;</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">        1143 :     }</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        1538 :     void set_max_depth(uint32_t max_depth) noexcept {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        1538 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">        1538 :         max_depth_ = max_depth;</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">        1538 :     }</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     /// \brief Return the configured maximum depth.</span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     ///</span>
@@ -221,11 +221,11 @@
 <span id="L141"><span class="lineNum">     141</span>                 :             :     ///</span>
 <span id="L142"><span class="lineNum">     142</span>                 :             :     /// \return Snapshot with current depth, max_depth, and cumulative counters.</span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :     /// \note Thread safety: acquires internal mutex.</span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">          71 :     [[nodiscard]] OverflowQueueSnapshot snapshot() const noexcept {</span></span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">          71 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">          71 :         return {static_cast&lt;uint32_t&gt;(queue_.size()), max_depth_,</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         142 :                 total_pushed_, total_popped_, total_lost_};</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">          71 :     }</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">          87 :     [[nodiscard]] OverflowQueueSnapshot snapshot() const noexcept {</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">          87 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">          87 :         return {static_cast&lt;uint32_t&gt;(queue_.size()), max_depth_,</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         174 :                 total_pushed_, total_popped_, total_lost_};</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">          87 :     }</span></span>
 <span id="L149"><span class="lineNum">     149</span>                 :             : </span>
 <span id="L150"><span class="lineNum">     150</span>                 :             :   private:</span>
 <span id="L151"><span class="lineNum">     151</span>                 :             :     mutable std::mutex mutex_;</span>

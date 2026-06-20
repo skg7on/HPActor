@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">30.4&nbsp;%</td>
+            <td class="headerCovTableEntryHi">95.7&nbsp;%</td>
             <td class="headerCovTableEntry">23</td>
-            <td class="headerCovTableEntry">7</td>
+            <td class="headerCovTableEntry">22</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">33.3&nbsp;%</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
             <td class="headerCovTableEntry">3</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">3</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
             <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">1</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -98,19 +98,19 @@
 <span id="L20"><span class="lineNum">      20</span>                 :             :     static constexpr net::HttpMethod kMethod = net::HttpMethod::GET;</span>
 <span id="L21"><span class="lineNum">      21</span>                 :             :     static constexpr std::string_view kPath = &quot;/api/v1/faults&quot;;</span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     void handle(CliHttpServerActor&amp; actor, net::HTTPConnection&amp; conn,</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     void handle(CliHttpServerActor&amp; actor, net::HTTPConnection&amp; conn,</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :             :                 net::HttpRequest&amp;&amp; req) override {</span>
 <span id="L25"><span class="lineNum">      25</span>                 :             :         (void)req;</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaUNC">           0 :         auto&amp; fc = actor.system().fault_controller();</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC">           0 :         send_json_ok(&amp;conn, JsonBuilder::root_object()</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaUNC">           0 :                                 .object(&quot;data&quot;)</span></span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaUNC">           0 :                                 .field(&quot;enabled&quot;, fc.is_enabled())</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC">           0 :                                 .field(&quot;seed&quot;, fc.replay_seed())</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaUNC">           0 :                                 .field(&quot;hooks_triggered&quot;, fc.faults_fired())</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaUNC">           0 :                                 .end_object()</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaUNC">           0 :                                 .end_object()</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaUNC">           0 :                                 .build());</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaUNC">           0 :     }</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           1 :         auto&amp; fc = actor.system().fault_controller();</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           3 :         send_json_ok(&amp;conn, JsonBuilder::root_object()</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           1 :                                 .object(&quot;data&quot;)</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           1 :                                 .field(&quot;enabled&quot;, fc.is_enabled())</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           1 :                                 .field(&quot;seed&quot;, fc.replay_seed())</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           1 :                                 .field(&quot;hooks_triggered&quot;, fc.faults_fired())</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           1 :                                 .end_object()</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           1 :                                 .end_object()</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           2 :                                 .build());</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : };</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : class ClearFaultsHandler final : public IHttpHandler {</span>
@@ -118,22 +118,22 @@
 <span id="L40"><span class="lineNum">      40</span>                 :             :     static constexpr net::HttpMethod kMethod = net::HttpMethod::POST;</span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :     static constexpr std::string_view kPath = &quot;/api/v1/faults/clear&quot;;</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaUNC">           0 :     void handle(CliHttpServerActor&amp; actor, net::HTTPConnection&amp; conn,</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           1 :     void handle(CliHttpServerActor&amp; actor, net::HTTPConnection&amp; conn,</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :                 net::HttpRequest&amp;&amp; req) override {</span>
-<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!validate_json_content_type(&amp;conn, req))</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaUNC">           0 :             return;</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC">           0 :         actor.system().fault_controller().clear();</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaUNC">           0 :         send_success(&amp;conn);</span></span>
+<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (!validate_json_content_type(&amp;conn, req))</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC tlaBgGNC">           1 :         actor.system().fault_controller().clear();</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           1 :         send_success(&amp;conn);</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     }</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : };</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC tlaBgGNC">           2 : void register_fault_handlers() {</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           2 :     auto&amp; reg = HttpHandlerRegistry::instance();</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           6 :     reg.add(GetFaultsHandler::kMethod, std::string(GetFaultsHandler::kPath),</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           4 :             std::make_unique&lt;GetFaultsHandler&gt;());</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           6 :     reg.add(ClearFaultsHandler::kMethod, std::string(ClearFaultsHandler::kPath),</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           4 :             std::make_unique&lt;ClearFaultsHandler&gt;());</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           2 : }</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">          21 : void register_fault_handlers() {</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          21 :     auto&amp; reg = HttpHandlerRegistry::instance();</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">          63 :     reg.add(GetFaultsHandler::kMethod, std::string(GetFaultsHandler::kPath),</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">          42 :             std::make_unique&lt;GetFaultsHandler&gt;());</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">          63 :     reg.add(ClearFaultsHandler::kMethod, std::string(ClearFaultsHandler::kPath),</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">          42 :             std::make_unique&lt;ClearFaultsHandler&gt;());</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">          21 : }</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : </span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : } // namespace hpactor::cli::handlers</span>
         </pre>

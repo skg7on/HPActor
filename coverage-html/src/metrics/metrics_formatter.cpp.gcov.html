@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">94.4&nbsp;%</td>
+            <td class="headerCovTableEntryHi">96.7&nbsp;%</td>
             <td class="headerCovTableEntry">90</td>
-            <td class="headerCovTableEntry">85</td>
+            <td class="headerCovTableEntry">87</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryMed">76.7&nbsp;%</td>
+            <td class="headerCovTableEntryMed">86.7&nbsp;%</td>
             <td class="headerCovTableEntry">30</td>
-            <td class="headerCovTableEntry">23</td>
+            <td class="headerCovTableEntry">26</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -95,71 +95,71 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : </span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : namespace hpactor::metrics {</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">           6 : std::string OpenMetricsFormatter::escape_label_value(const std::string&amp; s) {</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">           6 :     std::string out;</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">           6 :     out.reserve(s.size());</span></span>
-<span id="L23"><span class="lineNum">      23</span>         [<span class="tlaGBC" title="Branch 0 was taken 30 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          36 :     for (char c : s) {</span></span>
-<span id="L24"><span class="lineNum">      24</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 30 times"> + </span>]:<span class="tlaGNC">          30 :         switch (c) {</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case '\\': out += &quot;\\\\&quot;; break;</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaUNC">           0 :         case '&quot;':  out += &quot;\\\&quot;&quot;; break;</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC">           0 :         case '\n': out += &quot;\\n&quot;; break;</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC tlaBgGNC">          30 :         default:   out += c;</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">           8 : std::string OpenMetricsFormatter::escape_label_value(const std::string&amp; s) {</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">           8 :     std::string out;</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">           8 :     out.reserve(s.size());</span></span>
+<span id="L23"><span class="lineNum">      23</span>         [<span class="tlaGBC" title="Branch 0 was taken 52 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          60 :     for (char c : s) {</span></span>
+<span id="L24"><span class="lineNum">      24</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 48 times"> + </span>]:<span class="tlaGNC">          52 :         switch (c) {</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           2 :         case '\\': out += &quot;\\\\&quot;; break;</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">           2 :         case '&quot;':  out += &quot;\\\&quot;&quot;; break;</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case '\n': out += &quot;\\n&quot;; break;</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC tlaBgGNC">          48 :         default:   out += c;</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             :         }</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             :     }</span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           6 :     return out;</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           8 :     return out;</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : }</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           3 : std::string OpenMetricsFormatter::format_labels(const LabelSet&amp; ls) {</span></span>
-<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :     if (ls.labels.empty()) return &quot;&quot;;</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           3 :     std::string out = &quot;{&quot;;</span></span>
-<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           9 :     for (size_t i = 0; i &lt; ls.labels.size(); ++i) {</span></span>
-<span id="L38"><span class="lineNum">      38</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           6 :         if (i &gt; 0) out += &quot;,&quot;;</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           6 :         out += ls.labels[i].first;</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           6 :         out += &quot;=\&quot;&quot;;</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           6 :         out += escape_label_value(ls.labels[i].second);</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           6 :         out += &quot;\&quot;&quot;;</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           6 : std::string OpenMetricsFormatter::format_labels(const LabelSet&amp; ls) {</span></span>
+<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          10 :     if (ls.labels.empty()) return &quot;&quot;;</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           4 :     std::string out = &quot;{&quot;;</span></span>
+<span id="L37"><span class="lineNum">      37</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          12 :     for (size_t i = 0; i &lt; ls.labels.size(); ++i) {</span></span>
+<span id="L38"><span class="lineNum">      38</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           8 :         if (i &gt; 0) out += &quot;,&quot;;</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           8 :         out += ls.labels[i].first;</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           8 :         out += &quot;=\&quot;&quot;;</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           8 :         out += escape_label_value(ls.labels[i].second);</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">           8 :         out += &quot;\&quot;&quot;;</span></span>
 <span id="L43"><span class="lineNum">      43</span>                 :             :     }</span>
-<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           3 :     out += &quot;}&quot;;</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           3 :     return out;</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">           3 : }</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           4 :     out += &quot;}&quot;;</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           4 :     return out;</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">           4 : }</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           1 : std::string OpenMetricsFormatter::format(const MetricRegistry::Snapshot&amp; snapshot) const {</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           1 :     std::string out;</span></span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           1 :     out.reserve(8192);</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">           5 : std::string OpenMetricsFormatter::format(const MetricRegistry::Snapshot&amp; snapshot) const {</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           5 :     std::string out;</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           5 :     out.reserve(8192);</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :     char buf[256];</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             : </span>
-<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           4 :     for (const auto&amp; fam : snapshot.families) {</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           3 :         out += &quot;# HELP &quot;;</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           3 :         out += fam.name;</span></span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           3 :         out += &quot; &quot;;</span></span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           3 :         out += fam.help;</span></span>
-<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           3 :         out += &quot;\n&quot;;</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">          11 :     for (const auto&amp; fam : snapshot.families) {</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           6 :         out += &quot;# HELP &quot;;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           6 :         out += fam.name;</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           6 :         out += &quot; &quot;;</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">           6 :         out += fam.help;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC">           6 :         out += &quot;\n&quot;;</span></span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
-<span id="L61"><span class="lineNum">      61</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           3 :         switch (fam.type) {</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           1 :         case MetricType::kCounter: {</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           1 :             out += &quot;# TYPE &quot;;</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           1 :             out += fam.name;</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           1 :             out += &quot; counter\n&quot;;</span></span>
-<span id="L66"><span class="lineNum">      66</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :             for (const auto&amp; [ls, val] : fam.counters) {</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           1 :                 int n = snprintf(buf, sizeof(buf), &quot;%s%s %llu\n&quot;,</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           2 :                                  fam.name.c_str(), format_labels(ls).c_str(),</span></span>
+<span id="L61"><span class="lineNum">      61</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">           6 :         switch (fam.type) {</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           3 :         case MetricType::kCounter: {</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">           3 :             out += &quot;# TYPE &quot;;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">           3 :             out += fam.name;</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">           3 :             out += &quot; counter\n&quot;;</span></span>
+<span id="L66"><span class="lineNum">      66</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           6 :             for (const auto&amp; [ls, val] : fam.counters) {</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">           3 :                 int n = snprintf(buf, sizeof(buf), &quot;%s%s %llu\n&quot;,</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           6 :                                  fam.name.c_str(), format_labels(ls).c_str(),</span></span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :                                  static_cast&lt;unsigned long long&gt;(val));</span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           1 :                 out.append(buf, static_cast&lt;size_t&gt;(n));</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">           3 :                 out.append(buf, static_cast&lt;size_t&gt;(n));</span></span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :             }</span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           1 :             break;</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           3 :             break;</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :         }</span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           1 :         case MetricType::kGauge: {</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           1 :             out += &quot;# TYPE &quot;;</span></span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">           1 :             out += fam.name;</span></span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">           1 :             out += &quot; gauge\n&quot;;</span></span>
-<span id="L78"><span class="lineNum">      78</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :             for (const auto&amp; [ls, val] : fam.gauges) {</span></span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">           1 :                 int n = snprintf(buf, sizeof(buf), &quot;%s%s %lld\n&quot;,</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">           2 :                                  fam.name.c_str(), format_labels(ls).c_str(),</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           2 :         case MetricType::kGauge: {</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           2 :             out += &quot;# TYPE &quot;;</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">           2 :             out += fam.name;</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">           2 :             out += &quot; gauge\n&quot;;</span></span>
+<span id="L78"><span class="lineNum">      78</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           4 :             for (const auto&amp; [ls, val] : fam.gauges) {</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">           2 :                 int n = snprintf(buf, sizeof(buf), &quot;%s%s %lld\n&quot;,</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">           4 :                                  fam.name.c_str(), format_labels(ls).c_str(),</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :                                  static_cast&lt;long long&gt;(val));</span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">           1 :                 out.append(buf, static_cast&lt;size_t&gt;(n));</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">           2 :                 out.append(buf, static_cast&lt;size_t&gt;(n));</span></span>
 <span id="L83"><span class="lineNum">      83</span>                 :             :             }</span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">           1 :             break;</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">           2 :             break;</span></span>
 <span id="L85"><span class="lineNum">      85</span>                 :             :         }</span>
 <span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">           1 :         case MetricType::kHistogram: {</span></span>
 <span id="L87"><span class="lineNum">      87</span>                 :<span class="tlaGNC">           1 :             out += &quot;# TYPE &quot;;</span></span>
@@ -217,10 +217,10 @@
 <span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">           1 :             break;</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :         }</span>
 <span id="L141"><span class="lineNum">     141</span>                 :             :         }</span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">           3 :         out += &quot;\n&quot;;</span></span>
+<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">           6 :         out += &quot;\n&quot;;</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :     }</span>
-<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">           1 :     out += &quot;# EOF\n&quot;;</span></span>
-<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">           1 :     return out;</span></span>
+<span id="L144"><span class="lineNum">     144</span>                 :<span class="tlaGNC">           5 :     out += &quot;# EOF\n&quot;;</span></span>
+<span id="L145"><span class="lineNum">     145</span>                 :<span class="tlaGNC">           5 :     return out;</span></span>
 <span id="L146"><span class="lineNum">     146</span>                 :             : }</span>
 <span id="L147"><span class="lineNum">     147</span>                 :             : </span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : } // namespace hpactor::metrics</span>

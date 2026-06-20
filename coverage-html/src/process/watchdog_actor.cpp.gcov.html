@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">8.6&nbsp;%</td>
             <td class="headerCovTableEntry">35</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">3</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">16.7&nbsp;%</td>
             <td class="headerCovTableEntry">6</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">1</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -98,11 +98,11 @@
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
 <span id="L21"><span class="lineNum">      21</span>                 :             : namespace hpactor::process {</span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaUNC tlaBgUNC">           0 : WatchdogActor::WatchdogActor(ActorContext* ctx, ActorSystem&amp; system,</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaUNC">           0 :                              std::chrono::milliseconds interval)</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaUNC">           0 :     : EventBasedActor(ctx, system), interval_(interval), system_(system) {}</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC tlaBgGNC">           1 : WatchdogActor::WatchdogActor(ActorContext* ctx, ActorSystem&amp; system,</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">           1 :                              std::chrono::milliseconds interval)</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">           1 :     : EventBasedActor(ctx, system), interval_(interval), system_(system) {}</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC">           0 : Behavior WatchdogActor::make_behavior() {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaUNC tlaBgUNC">           0 : Behavior WatchdogActor::make_behavior() {</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :     // Schedule the first watchdog check via scheduler timer</span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaUNC">           0 :     auto* sched = get_scheduler();</span></span>
 <span id="L30"><span class="lineNum">      30</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :     if (sched) {</span></span>

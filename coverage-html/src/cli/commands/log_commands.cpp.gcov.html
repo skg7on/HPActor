@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
@@ -95,14 +95,14 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : </span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : class LogLevelCommand final : public ICommand {</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             :   public:</span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     std::string_view path() const noexcept override {</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">           7 :         return &quot;log/level&quot;;</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">          39 :     std::string_view path() const noexcept override {</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">          39 :         return &quot;log/level&quot;;</span></span>
 <span id="L22"><span class="lineNum">      22</span>                 :             :     }</span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">           6 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">           6 :         return &quot;Show log subsystem status and level&quot;;</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          38 :         return &quot;Show log subsystem status and level&quot;;</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             :     }</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         104 :     int order() const noexcept override {</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         104 :         return 710;</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         256 :     int order() const noexcept override {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         256 :         return 710;</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :     }</span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>

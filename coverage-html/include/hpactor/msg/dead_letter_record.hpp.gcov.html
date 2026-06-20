@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -151,14 +151,14 @@
 <span id="L73"><span class="lineNum">      73</span>                 :             : /// \return The corresponding \c FailureReason enum value.</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : /// \note Thread safety: constexpr — safe to call from any context.</span>
 <span id="L75"><span class="lineNum">      75</span>                 :             : [[nodiscard]] constexpr FailureReason</span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC tlaBgGNC">          17 : failure_reason(DeadLetterReason reason) noexcept {</span></span>
-<span id="L77"><span class="lineNum">      77</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          17 :     switch (reason) {</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC tlaBgGNC">          18 : failure_reason(DeadLetterReason reason) noexcept {</span></span>
+<span id="L77"><span class="lineNum">      77</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          18 :     switch (reason) {</span></span>
 <span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 6 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 7 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 8 was taken 1 time"> + </span> 
 <span class="lineNum">        </span> <span class="tlaGBC" title="Branch 9 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 10 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 11 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 12 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 13 was not taken"> - </span> 
 <span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 14 was not taken"> - </span><span class="tlaUNC" title="Branch 15 was not taken"> - </span><span class="tlaUNC" title="Branch 16 was not taken"> - </span><span class="tlaUNC" title="Branch 17 was not taken"> - </span> 
 <span class="lineNum">        </span>             <span class="tlaUNC" title="Branch 18 was not taken"> - </span>]
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">           4 :         case DeadLetterReason::MailboxFull:</span></span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">           4 :             return FailureReason::MailboxFull;</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">           5 :         case DeadLetterReason::MailboxFull:</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">           5 :             return FailureReason::MailboxFull;</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">           1 :         case DeadLetterReason::MailboxClosed:</span></span>
 <span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">           1 :             return FailureReason::MailboxClosed;</span></span>
 <span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">           2 :         case DeadLetterReason::ActorNotFound:</span></span>
@@ -203,11 +203,11 @@
 <span id="L121"><span class="lineNum">     121</span>                 :             : /// \return The corresponding \c FailureSource enum value.</span>
 <span id="L122"><span class="lineNum">     122</span>                 :             : /// \note Thread safety: constexpr — safe to call from any context.</span>
 <span id="L123"><span class="lineNum">     123</span>                 :             : [[nodiscard]] constexpr FailureSource</span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC tlaBgGNC">           8 : failure_source(DeadLetterSource source) noexcept {</span></span>
-<span id="L125"><span class="lineNum">     125</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           8 :     switch (source) {</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC tlaBgGNC">           9 : failure_source(DeadLetterSource source) noexcept {</span></span>
+<span id="L125"><span class="lineNum">     125</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           9 :     switch (source) {</span></span>
 <span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           4 :         case DeadLetterSource::LocalDelivery:</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           4 :             return FailureSource::ActorRuntime;</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           5 :         case DeadLetterSource::LocalDelivery:</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">           5 :             return FailureSource::ActorRuntime;</span></span>
 <span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">           1 :         case DeadLetterSource::RemoteDelivery:</span></span>
 <span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">           1 :             return FailureSource::Transport;</span></span>
 <span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case DeadLetterSource::ActorProxy:</span></span>
@@ -228,14 +228,14 @@
 <span id="L145"><span class="lineNum">     145</span>                 :             : ///</span>
 <span id="L146"><span class="lineNum">     146</span>                 :             : /// \param[in] reason The dead-letter reason.</span>
 <span id="L147"><span class="lineNum">     147</span>                 :             : /// \return A null-terminated string literal. Never returns \c nullptr.</span>
-<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC tlaBgGNC">          20 : [[nodiscard]] inline const char* to_string(DeadLetterReason reason) noexcept {</span></span>
-<span id="L149"><span class="lineNum">     149</span>   [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          20 :     switch (reason) {</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC tlaBgGNC">          23 : [[nodiscard]] inline const char* to_string(DeadLetterReason reason) noexcept {</span></span>
+<span id="L149"><span class="lineNum">     149</span>   [<span class="tlaGBC" title="Branch 0 was taken 13 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          23 :     switch (reason) {</span></span>
 <span class="lineNum">        </span> <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaUNC" title="Branch 6 was not taken"> - </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span><span class="tlaUNC" title="Branch 8 was not taken"> - </span> 
-<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 9 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 10 was not taken"> - </span><span class="tlaGBC" title="Branch 11 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 12 was not taken"> - </span><span class="tlaGBC" title="Branch 13 was taken 6 times"> + </span> 
+<span class="lineNum">        </span> <span class="tlaGBC" title="Branch 9 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 10 was not taken"> - </span><span class="tlaGBC" title="Branch 11 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 12 was not taken"> - </span><span class="tlaGBC" title="Branch 13 was taken 7 times"> + </span> 
 <span class="lineNum">        </span>    <span class="tlaUNC" title="Branch 14 was not taken"> - </span><span class="tlaUNC" title="Branch 15 was not taken"> - </span><span class="tlaUNC" title="Branch 16 was not taken"> - </span><span class="tlaUNC" title="Branch 17 was not taken"> - </span> 
 <span class="lineNum">        </span>             <span class="tlaUNC" title="Branch 18 was not taken"> - </span>]
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">          11 :         case DeadLetterReason::MailboxFull:</span></span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          11 :             return &quot;MailboxFull&quot;;</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">          13 :         case DeadLetterReason::MailboxFull:</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          13 :             return &quot;MailboxFull&quot;;</span></span>
 <span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case DeadLetterReason::MailboxClosed:</span></span>
 <span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaUNC">           0 :             return &quot;MailboxClosed&quot;;</span></span>
 <span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC tlaBgGNC">           1 :         case DeadLetterReason::ActorNotFound:</span></span>
@@ -260,8 +260,8 @@
 <span id="L173"><span class="lineNum">     173</span>                 :<span class="tlaGNC">           1 :             return &quot;DrainTimeout&quot;;</span></span>
 <span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case DeadLetterReason::DrainPolicyDrop:</span></span>
 <span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaUNC">           0 :             return &quot;DrainPolicyDrop&quot;;</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC tlaBgGNC">           6 :         case DeadLetterReason::Expired:</span></span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">           6 :             return &quot;Expired&quot;;</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC tlaBgGNC">           7 :         case DeadLetterReason::Expired:</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">           7 :             return &quot;Expired&quot;;</span></span>
 <span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case DeadLetterReason::AskTimeout:</span></span>
 <span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaUNC">           0 :             return &quot;ask_timeout&quot;;</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaUNC">           0 :         case DeadLetterReason::RetryExhausted:</span></span>
@@ -278,11 +278,11 @@
 <span id="L191"><span class="lineNum">     191</span>                 :             : ///</span>
 <span id="L192"><span class="lineNum">     192</span>                 :             : /// \param[in] source The dead-letter source.</span>
 <span id="L193"><span class="lineNum">     193</span>                 :             : /// \return A null-terminated string literal. Never returns \c nullptr.</span>
-<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC tlaBgGNC">          20 : [[nodiscard]] inline const char* to_string(DeadLetterSource source) noexcept {</span></span>
-<span id="L195"><span class="lineNum">     195</span>   [<span class="tlaGBC" title="Branch 0 was taken 15 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          20 :     switch (source) {</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC tlaBgGNC">          23 : [[nodiscard]] inline const char* to_string(DeadLetterSource source) noexcept {</span></span>
+<span id="L195"><span class="lineNum">     195</span>   [<span class="tlaGBC" title="Branch 0 was taken 18 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">          23 :     switch (source) {</span></span>
 <span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
-<span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaGNC">          15 :         case DeadLetterSource::LocalDelivery:</span></span>
-<span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaGNC">          15 :             return &quot;LocalDelivery&quot;;</span></span>
+<span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaGNC">          18 :         case DeadLetterSource::LocalDelivery:</span></span>
+<span id="L197"><span class="lineNum">     197</span>                 :<span class="tlaGNC">          18 :             return &quot;LocalDelivery&quot;;</span></span>
 <span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case DeadLetterSource::RemoteDelivery:</span></span>
 <span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaUNC">           0 :             return &quot;RemoteDelivery&quot;;</span></span>
 <span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaUNC">           0 :         case DeadLetterSource::ActorProxy:</span></span>
@@ -381,11 +381,11 @@
 <span id="L292"><span class="lineNum">     292</span>                 :             : /// \return \c true if a \c DeadLetterRecord should be pushed.</span>
 <span id="L293"><span class="lineNum">     293</span>                 :             : /// \note Thread safety: constexpr — safe to call from any context.</span>
 <span id="L294"><span class="lineNum">     294</span>                 :             : [[nodiscard]] constexpr bool</span>
-<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaGNC">          67 : should_route_to_dlq(DeliveryMode mode, DeadLetterRoutingPolicy policy) noexcept {</span></span>
-<span id="L296"><span class="lineNum">     296</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 62 times"> + </span>]:<span class="tlaGNC">          67 :     if (policy == DeadLetterRoutingPolicy::Never)</span></span>
+<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaGNC">          72 : should_route_to_dlq(DeliveryMode mode, DeadLetterRoutingPolicy policy) noexcept {</span></span>
+<span id="L296"><span class="lineNum">     296</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 67 times"> + </span>]:<span class="tlaGNC">          72 :     if (policy == DeadLetterRoutingPolicy::Never)</span></span>
 <span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaGNC">           5 :         return false;</span></span>
-<span id="L298"><span class="lineNum">     298</span>         [<span class="tlaGBC" title="Branch 0 was taken 52 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">          62 :     if (policy == DeadLetterRoutingPolicy::Always)</span></span>
-<span id="L299"><span class="lineNum">     299</span>                 :<span class="tlaGNC">          52 :         return true;</span></span>
+<span id="L298"><span class="lineNum">     298</span>         [<span class="tlaGBC" title="Branch 0 was taken 57 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">          67 :     if (policy == DeadLetterRoutingPolicy::Always)</span></span>
+<span id="L299"><span class="lineNum">     299</span>                 :<span class="tlaGNC">          57 :         return true;</span></span>
 <span id="L300"><span class="lineNum">     300</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          10 :     if (policy == DeadLetterRoutingPolicy::TrackedOnly)</span></span>
 <span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">           6 :         return is_tracked_delivery(mode);</span></span>
 <span id="L302"><span class="lineNum">     302</span>                 :             :     // ObservableAndAbove</span>
@@ -442,19 +442,19 @@
 <span id="L353"><span class="lineNum">     353</span>                 :             :                                    ///&lt; created.</span>
 <span id="L354"><span class="lineNum">     354</span>                 :             : </span>
 <span id="L355"><span class="lineNum">     355</span>                 :             :     /// Build a FailureEnvelope from this dead-letter record's fields.</span>
-<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">           4 :     [[nodiscard]] FailureEnvelope to_failure_envelope() const noexcept {</span></span>
-<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">           4 :         FailureEnvelope env;</span></span>
-<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">           4 :         env.reason = failure_reason(reason);</span></span>
-<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">           4 :         env.actor_id = target.id;</span></span>
-<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">           4 :         env.sender = sender;</span></span>
-<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC">           4 :         env.receiver = target;</span></span>
-<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">           4 :         env.message_id = MessageId{message_id};</span></span>
-<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">           4 :         env.trace = TraceContext{}; // DLQ records don't yet carry full trace</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">           5 :     [[nodiscard]] FailureEnvelope to_failure_envelope() const noexcept {</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">           5 :         FailureEnvelope env;</span></span>
+<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">           5 :         env.reason = failure_reason(reason);</span></span>
+<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">           5 :         env.actor_id = target.id;</span></span>
+<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">           5 :         env.sender = sender;</span></span>
+<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC">           5 :         env.receiver = target;</span></span>
+<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">           5 :         env.message_id = MessageId{message_id};</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">           5 :         env.trace = TraceContext{}; // DLQ records don't yet carry full trace</span></span>
 <span id="L364"><span class="lineNum">     364</span>                 :             :                                     // context</span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">           4 :         env.retryable = ::hpactor::retryable(env.reason);</span></span>
-<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">           4 :         env.timestamp_ns = timestamp_ns;</span></span>
-<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaGNC">           4 :         env.source = failure_source(source);</span></span>
-<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">           4 :         return env;</span></span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">           5 :         env.retryable = ::hpactor::retryable(env.reason);</span></span>
+<span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">           5 :         env.timestamp_ns = timestamp_ns;</span></span>
+<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaGNC">           5 :         env.source = failure_source(source);</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">           5 :         return env;</span></span>
 <span id="L369"><span class="lineNum">     369</span>                 :             :     }</span>
 <span id="L370"><span class="lineNum">     370</span>                 :             : };</span>
 <span id="L371"><span class="lineNum">     371</span>                 :             : </span>
@@ -535,8 +535,8 @@
 <span id="L446"><span class="lineNum">     446</span>                 :             :     /// \note Thread safety: the returned reference may be invalidated by a</span>
 <span id="L447"><span class="lineNum">     447</span>                 :             :     ///       concurrent mutation. Read from the actor's own thread or during</span>
 <span id="L448"><span class="lineNum">     448</span>                 :             :     ///       a quiescent period.</span>
-<span id="L449"><span class="lineNum">     449</span>                 :<span class="tlaGNC">         109 :     const DeadLetterConfig&amp; config() const noexcept {</span></span>
-<span id="L450"><span class="lineNum">     450</span>                 :<span class="tlaGNC">         109 :         return config_;</span></span>
+<span id="L449"><span class="lineNum">     449</span>                 :<span class="tlaGNC">         120 :     const DeadLetterConfig&amp; config() const noexcept {</span></span>
+<span id="L450"><span class="lineNum">     450</span>                 :<span class="tlaGNC">         120 :         return config_;</span></span>
 <span id="L451"><span class="lineNum">     451</span>                 :             :     }</span>
 <span id="L452"><span class="lineNum">     452</span>                 :             : </span>
 <span id="L453"><span class="lineNum">     453</span>                 :             :     /// \brief Capture a point-in-time snapshot of all stored records.</span>

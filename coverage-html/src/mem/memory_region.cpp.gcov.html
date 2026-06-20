@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">86.2&nbsp;%</td>
+            <td class="headerCovTableEntryHi">91.2&nbsp;%</td>
             <td class="headerCovTableEntry">80</td>
-            <td class="headerCovTableEntry">69</td>
+            <td class="headerCovTableEntry">73</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">90.9&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">84.4&nbsp;%</td>
             <td class="headerCovTableEntry">32</td>
-            <td class="headerCovTableEntry">24</td>
+            <td class="headerCovTableEntry">27</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -95,72 +95,72 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : </span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : namespace hpactor::mem {</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">      177175 : MemoryRegionRegistry&amp; MemoryRegionRegistry::instance() {</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC tlaBgGNC">      178121 : MemoryRegionRegistry&amp; MemoryRegionRegistry::instance() {</span></span>
 <span id="L21"><span class="lineNum">      21</span>                 :             :     static MemoryRegionRegistry registry;</span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">      177175 :     return registry;</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">      178121 :     return registry;</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : }</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">      266295 : uint8_t MemoryRegionRegistry::index(RegionType region) noexcept {</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      266295 :     return static_cast&lt;uint8_t&gt;(region);</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">      267739 : uint8_t MemoryRegionRegistry::index(RegionType region) noexcept {</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      267739 :     return static_cast&lt;uint8_t&gt;(region);</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : }</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : MemoryPressureState</span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          27 : MemoryRegionRegistry::pressure_for(uint8_t idx, uint64_t active) const noexcept {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          27 :     const auto&amp; limit = limits_[idx];</span></span>
-<span id="L32"><span class="lineNum">      32</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 26 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">          27 :     if (limit.hard_limit_bytes != 0 &amp;&amp; active &gt;= limit.hard_limit_bytes) {</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           1 :         return MemoryPressureState::kHardLimit;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          49 : MemoryRegionRegistry::pressure_for(uint8_t idx, uint64_t active) const noexcept {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          49 :     const auto&amp; limit = limits_[idx];</span></span>
+<span id="L32"><span class="lineNum">      32</span>   [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 45 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span>]:<span class="tlaGNC">          49 :     if (limit.hard_limit_bytes != 0 &amp;&amp; active &gt;= limit.hard_limit_bytes) {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           3 :         return MemoryPressureState::kHardLimit;</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     }</span>
-<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 26 times"> + </span>]:<span class="tlaGNC">          26 :     if (limit.hard_limit_bytes != 0) {</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         uint64_t high_water =</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaUNC">           0 :             static_cast&lt;uint64_t&gt;(static_cast&lt;double&gt;(limit.hard_limit_bytes) *</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaUNC">           0 :                                   static_cast&lt;double&gt;(limit.high_watermark_ratio));</span></span>
-<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (active &gt;= high_water) {</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC">           0 :             return MemoryPressureState::kHigh;</span></span>
+<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 45 times"> + </span>]:<span class="tlaGNC">          46 :     if (limit.hard_limit_bytes != 0) {</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           1 :         uint64_t high_water =</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           1 :             static_cast&lt;uint64_t&gt;(static_cast&lt;double&gt;(limit.hard_limit_bytes) *</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           1 :                                   static_cast&lt;double&gt;(limit.high_watermark_ratio));</span></span>
+<span id="L39"><span class="lineNum">      39</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (active &gt;= high_water) {</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return MemoryPressureState::kHigh;</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :             :         }</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     }</span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC tlaBgGNC">          26 :     return MemoryPressureState::kNormal;</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC tlaBgGNC">          46 :     return MemoryPressureState::kNormal;</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             : }</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : </span>
-<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">       89097 : bool MemoryRegionRegistry::try_reserve(RegionType region,</span></span>
+<span id="L46"><span class="lineNum">      46</span>                 :<span class="tlaGNC">       89574 : bool MemoryRegionRegistry::try_reserve(RegionType region,</span></span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :                                        size_t charged_bytes) noexcept {</span>
-<span id="L48"><span class="lineNum">      48</span>   [<span class="tlaGBC" title="Branch 0 was taken 1934 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87163 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 1934 times"> + </span> :<span class="tlaGNC">       89097 :     FAULT_INJECT(&quot;hpactor.allocator.region.try_reserve.fail&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 89097 times"> + </span>]
+<span id="L48"><span class="lineNum">      48</span>   [<span class="tlaGBC" title="Branch 0 was taken 2164 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87410 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 2164 times"> + </span> :<span class="tlaGNC">       89574 :     FAULT_INJECT(&quot;hpactor.allocator.region.try_reserve.fail&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 89574 times"> + </span>]
 <span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :     }</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
-<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC tlaBgGNC">       89097 :     const uint8_t idx = index(region);</span></span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">       89097 :     auto&amp; stats = stats_[idx];</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">       89097 :     const auto limit_cfg = limits_[idx];</span></span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC tlaBgGNC">       89574 :     const uint8_t idx = index(region);</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">       89574 :     auto&amp; stats = stats_[idx];</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">       89574 :     const auto limit_cfg = limits_[idx];</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : </span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">      178194 :     uint64_t current = stats.active_bytes.load(std::memory_order_relaxed);</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">      179148 :     uint64_t current = stats.active_bytes.load(std::memory_order_relaxed);</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     for (;;) {</span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">       90217 :         const uint64_t projected = current + charged_bytes;</span></span>
-<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 90215 times"> + </span>]:<span class="tlaGNC">       90217 :         if (limit_cfg.hard_limit_bytes != 0 &amp;&amp;</span></span>
-<span id="L60"><span class="lineNum">      60</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :             projected &gt; limit_cfg.hard_limit_bytes) {</span></span>
-<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           1 :             stats.rejected_alloc_count.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           1 :             return false;</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">       90368 :         const uint64_t projected = current + charged_bytes;</span></span>
+<span id="L59"><span class="lineNum">      59</span>         [<span class="tlaGBC" title="Branch 0 was taken 104 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 90264 times"> + </span>]:<span class="tlaGNC">       90368 :         if (limit_cfg.hard_limit_bytes != 0 &amp;&amp;</span></span>
+<span id="L60"><span class="lineNum">      60</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 102 times"> + </span>]:<span class="tlaGNC">         104 :             projected &gt; limit_cfg.hard_limit_bytes) {</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">           2 :             stats.rejected_alloc_count.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">           2 :             return false;</span></span>
 <span id="L63"><span class="lineNum">      63</span>                 :             :         }</span>
-<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 89096 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1120 times"> + </span>]:<span class="tlaGNC">      180432 :         if (stats.active_bytes.compare_exchange_weak(current, projected,</span></span>
+<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 89572 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 794 times"> + </span>]:<span class="tlaGNC">      180732 :         if (stats.active_bytes.compare_exchange_weak(current, projected,</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             :                                                      std::memory_order_relaxed,</span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :                                                      std::memory_order_relaxed)) {</span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">       89096 :             uint64_t peak = stats.high_water_mark.load(std::memory_order_relaxed);</span></span>
-<span id="L68"><span class="lineNum">      68</span>   [<span class="tlaGBC" title="Branch 0 was taken 11061 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 78176 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 141 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 89096 times"> + </span>]:<span class="tlaGNC">      100298 :             while (projected &gt; peak &amp;&amp;</span></span>
-<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 141 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10920 times"> + </span>]:<span class="tlaGNC">       22122 :                    !stats.high_water_mark.compare_exchange_weak(</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">       89572 :             uint64_t peak = stats.high_water_mark.load(std::memory_order_relaxed);</span></span>
+<span id="L68"><span class="lineNum">      68</span>   [<span class="tlaGBC" title="Branch 0 was taken 15031 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 74563 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 89572 times"> + </span>]:<span class="tlaGNC">      104625 :             while (projected &gt; peak &amp;&amp;</span></span>
+<span id="L69"><span class="lineNum">      69</span>         [<span class="tlaGBC" title="Branch 0 was taken 22 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15009 times"> + </span>]:<span class="tlaGNC">       30062 :                    !stats.high_water_mark.compare_exchange_weak(</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :                        peak, projected, std::memory_order_relaxed,</span>
 <span id="L71"><span class="lineNum">      71</span>                 :             :                        std::memory_order_relaxed)) {</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             :             }</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">       89096 :             return true;</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">       89572 :             return true;</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :             :         }</span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">        1120 :     }</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">         794 :     }</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             : }</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">       89096 : void MemoryRegionRegistry::commit_alloc(RegionType region,</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">       89572 : void MemoryRegionRegistry::commit_alloc(RegionType region,</span></span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :                                         size_t charged_bytes) noexcept {</span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">       89096 :     const uint8_t idx = index(region);</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">       89096 :     auto&amp; stats = stats_[idx];</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">       89096 :     stats.total_allocated.fetch_add(charged_bytes, std::memory_order_relaxed);</span></span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">       89096 :     stats.alloc_count.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">       89096 : }</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">       89572 :     const uint8_t idx = index(region);</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">       89572 :     auto&amp; stats = stats_[idx];</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">       89572 :     stats.total_allocated.fetch_add(charged_bytes, std::memory_order_relaxed);</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">       89572 :     stats.alloc_count.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">       89572 : }</span></span>
 <span id="L85"><span class="lineNum">      85</span>                 :             : </span>
 <span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaUNC tlaBgUNC">           0 : void MemoryRegionRegistry::cancel_reservation(RegionType region,</span></span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :                                               size_t charged_bytes) noexcept {</span>
@@ -168,17 +168,17 @@
 <span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaUNC">           0 :     stats_[idx].active_bytes.fetch_sub(charged_bytes, std::memory_order_relaxed);</span></span>
 <span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L91"><span class="lineNum">      91</span>                 :             : </span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC tlaBgGNC">       88064 : void MemoryRegionRegistry::record_free(RegionType region,</span></span>
+<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC tlaBgGNC">       88523 : void MemoryRegionRegistry::record_free(RegionType region,</span></span>
 <span id="L93"><span class="lineNum">      93</span>                 :             :                                        size_t charged_bytes) noexcept {</span>
-<span id="L94"><span class="lineNum">      94</span>   [<span class="tlaGBC" title="Branch 0 was taken 545 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87519 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 545 times"> + </span> :<span class="tlaGNC">       88064 :     FAULT_INJECT(&quot;hpactor.allocator.region.record_free.skip&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 88064 times"> + </span>]
+<span id="L94"><span class="lineNum">      94</span>   [<span class="tlaGBC" title="Branch 0 was taken 579 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 87944 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 579 times"> + </span> :<span class="tlaGNC">       88523 :     FAULT_INJECT(&quot;hpactor.allocator.region.record_free.skip&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 88523 times"> + </span>]
 <span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
 <span id="L96"><span class="lineNum">      96</span>                 :             :     }</span>
-<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC tlaBgGNC">       88064 :     const uint8_t idx = index(region);</span></span>
-<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC">       88064 :     auto&amp; stats = stats_[idx];</span></span>
-<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">       88064 :     stats.active_bytes.fetch_sub(charged_bytes, std::memory_order_relaxed);</span></span>
-<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">       88064 :     stats.total_freed.fetch_add(charged_bytes, std::memory_order_relaxed);</span></span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">       88064 :     stats.free_count.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC tlaBgGNC">       88523 :     const uint8_t idx = index(region);</span></span>
+<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC">       88523 :     auto&amp; stats = stats_[idx];</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">       88523 :     stats.active_bytes.fetch_sub(charged_bytes, std::memory_order_relaxed);</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">       88523 :     stats.total_freed.fetch_add(charged_bytes, std::memory_order_relaxed);</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">       88523 :     stats.free_count.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L102"><span class="lineNum">     102</span>                 :             : }</span>
 <span id="L103"><span class="lineNum">     103</span>                 :             : </span>
 <span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">           1 : void MemoryRegionRegistry::record_corruption(RegionType region) noexcept {</span></span>
@@ -186,35 +186,35 @@
 <span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">           1 :     stats_[idx].corruption_events.fetch_add(1, std::memory_order_relaxed);</span></span>
 <span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">           1 : }</span></span>
 <span id="L108"><span class="lineNum">     108</span>                 :             : </span>
-<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">           8 : void MemoryRegionRegistry::configure_region(RegionType region,</span></span>
+<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">          18 : void MemoryRegionRegistry::configure_region(RegionType region,</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :             :                                             RegionLimit limit) noexcept {</span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">           8 :     const uint8_t idx = index(region);</span></span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">           8 :     limits_[idx] = limit;</span></span>
-<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">           8 : }</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">          18 :     const uint8_t idx = index(region);</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">          18 :     limits_[idx] = limit;</span></span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">          18 : }</span></span>
 <span id="L114"><span class="lineNum">     114</span>                 :             : </span>
 <span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           2 : RegionLimit MemoryRegionRegistry::limit(RegionType region) const noexcept {</span></span>
 <span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">           2 :     const uint8_t idx = index(region);</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">           2 :     return limits_[idx];</span></span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : }</span>
 <span id="L119"><span class="lineNum">     119</span>                 :             : </span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">          27 : RegionSnapshot MemoryRegionRegistry::snapshot(RegionType region) const noexcept {</span></span>
-<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">          27 :     const uint8_t idx = index(region);</span></span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">          27 :     const auto&amp; stats = stats_[idx];</span></span>
-<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">          27 :     const uint64_t active = stats.active_bytes.load(std::memory_order_relaxed);</span></span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">          27 :     RegionSnapshot snap;</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">          27 :     snap.total_allocated = stats.total_allocated.load(std::memory_order_relaxed);</span></span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">          27 :     snap.total_freed = stats.total_freed.load(std::memory_order_relaxed);</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">          27 :     snap.active_bytes = active;</span></span>
-<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">          27 :     snap.high_water_mark = stats.high_water_mark.load(std::memory_order_relaxed);</span></span>
-<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">          27 :     snap.alloc_count = stats.alloc_count.load(std::memory_order_relaxed);</span></span>
-<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">          27 :     snap.free_count = stats.free_count.load(std::memory_order_relaxed);</span></span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">          27 :     snap.corruption_events =</span></span>
-<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">          27 :         stats.corruption_events.load(std::memory_order_relaxed);</span></span>
-<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">          27 :     snap.rejected_alloc_count =</span></span>
-<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">          27 :         stats.rejected_alloc_count.load(std::memory_order_relaxed);</span></span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">          27 :     snap.limit = limits_[idx];</span></span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">          27 :     snap.pressure = pressure_for(idx, active);</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">          27 :     return snap;</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">          49 : RegionSnapshot MemoryRegionRegistry::snapshot(RegionType region) const noexcept {</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">          49 :     const uint8_t idx = index(region);</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">          49 :     const auto&amp; stats = stats_[idx];</span></span>
+<span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">          49 :     const uint64_t active = stats.active_bytes.load(std::memory_order_relaxed);</span></span>
+<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">          49 :     RegionSnapshot snap;</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">          49 :     snap.total_allocated = stats.total_allocated.load(std::memory_order_relaxed);</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">          49 :     snap.total_freed = stats.total_freed.load(std::memory_order_relaxed);</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">          49 :     snap.active_bytes = active;</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">          49 :     snap.high_water_mark = stats.high_water_mark.load(std::memory_order_relaxed);</span></span>
+<span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">          49 :     snap.alloc_count = stats.alloc_count.load(std::memory_order_relaxed);</span></span>
+<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">          49 :     snap.free_count = stats.free_count.load(std::memory_order_relaxed);</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC">          49 :     snap.corruption_events =</span></span>
+<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">          49 :         stats.corruption_events.load(std::memory_order_relaxed);</span></span>
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">          49 :     snap.rejected_alloc_count =</span></span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">          49 :         stats.rejected_alloc_count.load(std::memory_order_relaxed);</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">          49 :     snap.limit = limits_[idx];</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">          49 :     snap.pressure = pressure_for(idx, active);</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">          49 :     return snap;</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             : }</span>
 <span id="L139"><span class="lineNum">     139</span>                 :             : </span>
 <span id="L140"><span class="lineNum">     140</span>                 :             : } // namespace hpactor::mem</span>

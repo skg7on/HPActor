@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryHi">90.9&nbsp;%</td>
+            <td class="headerCovTableEntryHi">95.5&nbsp;%</td>
             <td class="headerCovTableEntry">22</td>
-            <td class="headerCovTableEntry">20</td>
+            <td class="headerCovTableEntry">21</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -94,45 +94,45 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::fault {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">      193873 : FaultPointRegistry&amp; FaultPointRegistry::instance() {</span></span>
-<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 2067 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 191806 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2067 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      193873 :     static FaultPointRegistry reg;</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">      193873 :     return reg;</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">      269767 : FaultPointRegistry&amp; FaultPointRegistry::instance() {</span></span>
+<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 2883 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 266884 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2883 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">      269767 :     static FaultPointRegistry reg;</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">      269767 :     return reg;</span></span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : }</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">      192233 : void FaultPointRegistry::register_point(std::string path, FaultDomain domain,</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">      268125 : void FaultPointRegistry::register_point(std::string path, FaultDomain domain,</span></span>
 <span id="L25"><span class="lineNum">      25</span>                 :             :                                          std::string description) {</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      192233 :     points_.push_back(FaultPoint{std::move(path), domain, std::move(description)});</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">      192233 : }</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">      268125 :     points_.push_back(FaultPoint{std::move(path), domain, std::move(description)});</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">      268125 : }</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">        1628 : const FaultPoint* FaultPointRegistry::lookup(std::string_view path) const {</span></span>
-<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 16579 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">       16580 :     for (const auto&amp; pt : points_) {</span></span>
-<span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 1627 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14952 times"> + </span>]:<span class="tlaGNC">       16579 :         if (pt.path == path) {</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">        1627 :             return &amp;pt;</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">        1633 : const FaultPoint* FaultPointRegistry::lookup(std::string_view path) const {</span></span>
+<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 16677 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">       16678 :     for (const auto&amp; pt : points_) {</span></span>
+<span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 1632 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15045 times"> + </span>]:<span class="tlaGNC">       16677 :         if (pt.path == path) {</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">        1632 :             return &amp;pt;</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :         }</span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     }</span>
 <span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">           1 :     return nullptr;</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : }</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">        2000 : bool FaultPointRegistry::matches_prefix(std::string_view path,</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">        2104 : bool FaultPointRegistry::matches_prefix(std::string_view path,</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :                                          std::string_view prefix_pattern) const {</span>
-<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 1621 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 379 times"> + </span>]:<span class="tlaGNC">        2000 :     if (prefix_pattern == &quot;*&quot;) return true;</span></span>
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 379 times"> + </span>]:<span class="tlaGNC">         379 :     if (prefix_pattern.size() &gt; path.size()) return false;</span></span>
+<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 1627 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 477 times"> + </span>]:<span class="tlaGNC">        2104 :     if (prefix_pattern == &quot;*&quot;) return true;</span></span>
+<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 476 times"> + </span>]:<span class="tlaGNC">         477 :     if (prefix_pattern.size() &gt; path.size()) return false;</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
-<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 3976 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">        3978 :     for (size_t i = 0; i &lt; prefix_pattern.size(); ++i) {</span></span>
-<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 44 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3932 times"> + </span>]:<span class="tlaGNC">        3976 :         if (prefix_pattern[i] == '*') return true;</span></span>
-<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 333 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3599 times"> + </span>]:<span class="tlaGNC">        3932 :         if (prefix_pattern[i] != path[i]) return false;</span></span>
+<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 4900 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">        4903 :     for (size_t i = 0; i &lt; prefix_pattern.size(); ++i) {</span></span>
+<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 46 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4854 times"> + </span>]:<span class="tlaGNC">        4900 :         if (prefix_pattern[i] == '*') return true;</span></span>
+<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 427 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4427 times"> + </span>]:<span class="tlaGNC">        4854 :         if (prefix_pattern[i] != path[i]) return false;</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     }</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           2 :     return prefix_pattern.size() == path.size();</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           3 :     return prefix_pattern.size() == path.size();</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : }</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           4 : void FaultPointRegistry::collect_prefix(std::string_view prefix_pattern,</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">           5 : void FaultPointRegistry::collect_prefix(std::string_view prefix_pattern,</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :                                          std::vector&lt;const FaultPoint*&gt;&amp; out) const {</span>
-<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 372 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">         376 :     for (const auto&amp; pt : points_) {</span></span>
-<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 42 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 330 times"> + </span>]:<span class="tlaGNC">         372 :         if (matches_prefix(pt.path, prefix_pattern)) {</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">          42 :             out.push_back(&amp;pt);</span></span>
+<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 468 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">         473 :     for (const auto&amp; pt : points_) {</span></span>
+<span id="L53"><span class="lineNum">      53</span>         [<span class="tlaGBC" title="Branch 0 was taken 44 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 424 times"> + </span>]:<span class="tlaGNC">         468 :         if (matches_prefix(pt.path, prefix_pattern)) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">          44 :             out.push_back(&amp;pt);</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :         }</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             :     }</span>
-<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           4 : }</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaGNC">           5 : }</span></span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : </span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : } // namespace hpactor::fault</span>
         </pre>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -94,17 +94,17 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::log {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">        1207 : [[nodiscard]] const char* to_string(LogLevel level) noexcept {</span></span>
-<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 17 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1185 times"> + </span> :<span class="tlaGNC">        1207 :     switch (level) {</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">        1695 : [[nodiscard]] const char* to_string(LogLevel level) noexcept {</span></span>
+<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 23 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1665 times"> + </span> :<span class="tlaGNC">        1695 :     switch (level) {</span></span>
 <span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 6 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 7 was not taken"> - </span>]
 <span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">           1 :         case LogLevel::kCritical:</span></span>
 <span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">           1 :             return &quot;critical&quot;;</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">           1 :         case LogLevel::kError:</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">           1 :             return &quot;error&quot;;</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          17 :         case LogLevel::kWarning:</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          17 :             return &quot;warning&quot;;</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">        1185 :         case LogLevel::kInfo:</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        1185 :             return &quot;info&quot;;</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">           3 :         case LogLevel::kError:</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">           3 :             return &quot;error&quot;;</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          23 :         case LogLevel::kWarning:</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          23 :             return &quot;warning&quot;;</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">        1665 :         case LogLevel::kInfo:</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">        1665 :             return &quot;info&quot;;</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           1 :         case LogLevel::kDebug:</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">           1 :             return &quot;debug&quot;;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           1 :         case LogLevel::kTrace:</span></span>
@@ -115,19 +115,19 @@
 <span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return &quot;unknown&quot;;</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : }</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC tlaBgGNC">          13 : [[nodiscard]] result&lt;LogLevel&gt; parse_level(std::string_view value) noexcept {</span></span>
-<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">          13 :     if (value == &quot;critical&quot;)</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC tlaBgGNC">          78 : [[nodiscard]] result&lt;LogLevel&gt; parse_level(std::string_view value) noexcept {</span></span>
+<span id="L40"><span class="lineNum">      40</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 76 times"> + </span>]:<span class="tlaGNC">          78 :     if (value == &quot;critical&quot;)</span></span>
 <span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">           2 :         return result&lt;LogLevel&gt;::make(LogLevel::kCritical);</span></span>
-<span id="L42"><span class="lineNum">      42</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">          11 :     if (value == &quot;error&quot;)</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">           2 :         return result&lt;LogLevel&gt;::make(LogLevel::kError);</span></span>
-<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">           9 :     if (value == &quot;warning&quot;)</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">           1 :         return result&lt;LogLevel&gt;::make(LogLevel::kWarning);</span></span>
-<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           8 :     if (value == &quot;info&quot;)</span></span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           1 :         return result&lt;LogLevel&gt;::make(LogLevel::kInfo);</span></span>
-<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           7 :     if (value == &quot;debug&quot;)</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">           2 :         return result&lt;LogLevel&gt;::make(LogLevel::kDebug);</span></span>
-<span id="L50"><span class="lineNum">      50</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           5 :     if (value == &quot;trace&quot;)</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">           2 :         return result&lt;LogLevel&gt;::make(LogLevel::kTrace);</span></span>
+<span id="L42"><span class="lineNum">      42</span>         [<span class="tlaGBC" title="Branch 0 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 61 times"> + </span>]:<span class="tlaGNC">          76 :     if (value == &quot;error&quot;)</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">          15 :         return result&lt;LogLevel&gt;::make(LogLevel::kError);</span></span>
+<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 47 times"> + </span>]:<span class="tlaGNC">          61 :     if (value == &quot;warning&quot;)</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">          14 :         return result&lt;LogLevel&gt;::make(LogLevel::kWarning);</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 33 times"> + </span>]:<span class="tlaGNC">          47 :     if (value == &quot;info&quot;)</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          14 :         return result&lt;LogLevel&gt;::make(LogLevel::kInfo);</span></span>
+<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18 times"> + </span>]:<span class="tlaGNC">          33 :     if (value == &quot;debug&quot;)</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">          15 :         return result&lt;LogLevel&gt;::make(LogLevel::kDebug);</span></span>
+<span id="L50"><span class="lineNum">      50</span>         [<span class="tlaGBC" title="Branch 0 was taken 15 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">          18 :     if (value == &quot;trace&quot;)</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          15 :         return result&lt;LogLevel&gt;::make(LogLevel::kTrace);</span></span>
 <span id="L52"><span class="lineNum">      52</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :     if (value == &quot;off&quot;)</span></span>
 <span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">           1 :         return result&lt;LogLevel&gt;::make(LogLevel::kOff);</span></span>
 <span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           4 :     return result&lt;LogLevel&gt;::make(error(errors::unknown, &quot;unknown log level&quot;));</span></span>

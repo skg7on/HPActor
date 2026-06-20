@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">88.9&nbsp;%</td>
@@ -105,14 +105,14 @@
 <span id="L27"><span class="lineNum">      27</span>                 :             : </span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : class MetricsShowCommand final : public ICommand {</span>
 <span id="L29"><span class="lineNum">      29</span>                 :             :   public:</span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC tlaBgGNC">          77 :     std::string_view path() const noexcept override {</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          77 :         return &quot;metrics/show&quot;;</span></span>
+<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC tlaBgGNC">         188 :     std::string_view path() const noexcept override {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">         188 :         return &quot;metrics/show&quot;;</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             :     }</span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           7 :         return &quot;Show current metrics snapshot&quot;;</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">          39 :         return &quot;Show current metrics snapshot&quot;;</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     }</span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">          81 :     int order() const noexcept override {</span></span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          81 :         return 100;</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">         309 :     int order() const noexcept override {</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">         309 :         return 100;</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     }</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : </span>
 <span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           1 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -141,14 +141,14 @@
 <span id="L62"><span class="lineNum">      62</span>                 :             : </span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : class TopologyShowCommand final : public ICommand {</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :   public:</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC tlaBgGNC">          69 :     std::string_view path() const noexcept override {</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">          69 :         return &quot;topology/show&quot;;</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC tlaBgGNC">         161 :     std::string_view path() const noexcept override {</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">         161 :         return &quot;topology/show&quot;;</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     }</span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">           7 :     std::string_view help_text() const noexcept override {</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">           7 :         return &quot;Show topology tree&quot;;</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">          39 :         return &quot;Show topology tree&quot;;</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     }</span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">          67 :     int order() const noexcept override {</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          67 :         return 100;</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">         276 :     int order() const noexcept override {</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">         276 :         return 100;</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">           1 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>

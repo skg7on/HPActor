@@ -37,12 +37,12 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">71.4&nbsp;%</td>
-            <td class="headerCovTableEntry">14</td>
-            <td class="headerCovTableEntry">10</td>
+            <td class="headerCovTableEntryLo">56.0&nbsp;%</td>
+            <td class="headerCovTableEntry">50</td>
+            <td class="headerCovTableEntry">28</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -148,11 +148,11 @@
 <span id="L70"><span class="lineNum">      70</span>                 :             : </span>
 <span id="L71"><span class="lineNum">      71</span>                 :             : // Template implementation</span>
 <span id="L72"><span class="lineNum">      72</span>                 :             : template &lt;typename T&gt;</span>
-<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC tlaBgGNC">        1310 : void ActorFactoryRegistry::register_factory(const std::string&amp; name) {</span></span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">        1319 :     factories_.emplace(name, [](ActorContext* ctx, ActorSystem&amp; sys) {</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC tlaBgGNC">       12450 : void ActorFactoryRegistry::register_factory(const std::string&amp; name) {</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">       12459 :     factories_.emplace(name, [](ActorContext* ctx, ActorSystem&amp; sys) {</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">          18 :         return std::make_shared&lt;T&gt;(ctx, sys);</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     });</span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">        1310 : }</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">       12450 : }</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :             : </span>
 <span id="L79"><span class="lineNum">      79</span>                 :             : } // namespace hpactor::config</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>

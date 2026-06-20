@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
             <td class="headerCovTableEntry">4</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">3</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-19 10:59:24</td>
+            <td class="headerValue">2026-06-20 01:44:05</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
             <td class="headerCovTableEntry">1</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">1</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">0.0&nbsp;%</td>
+            <td class="headerCovTableEntryLo">50.0&nbsp;%</td>
             <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntry">1</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -212,10 +212,10 @@
 <span id="L134"><span class="lineNum">     134</span>                 :             :     ///</span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     /// \return true if the future has been resolved (response arrived or</span>
 <span id="L136"><span class="lineNum">     136</span>                 :             :     /// error).</span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     bool ready() const {</span></span>
-<span id="L138"><span class="lineNum">     138</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (!inner_.valid())</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaUNC">           0 :             return true;</span></span>
-<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaUNC">           0 :         return inner_.wait_for(std::chrono::seconds(0)) == std::future_status::ready;</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC tlaBgGNC">          16 :     bool ready() const {</span></span>
+<span id="L138"><span class="lineNum">     138</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 16 times"> + </span>]:<span class="tlaGNC">          16 :         if (!inner_.valid())</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return true;</span></span>
+<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC tlaBgGNC">          16 :         return inner_.wait_for(std::chrono::seconds(0)) == std::future_status::ready;</span></span>
 <span id="L141"><span class="lineNum">     141</span>                 :             :     }</span>
 <span id="L142"><span class="lineNum">     142</span>                 :             : </span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :   private:</span>
