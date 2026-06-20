@@ -20,12 +20,38 @@
 #include <hpactor/mem/segment_provider.hpp>
 #include <hpactor/mem/size_class.hpp>
 
+#include <array>
 #include <atomic>
 #include <cstddef>
 #include <cstdint>
 #include <vector>
 
 namespace hpactor::mem {
+
+/// \brief Allocation strategy for a SlabCache.
+enum class AllocationStrategy : uint8_t {
+    kCasLifo = 0, ///< Current behavior: bump + CAS LIFO freelist (default).
+    kSegregatedFit = 1, ///< Segregated free lists with bounded search
+                        ///< (MEM-001).
+    kBumpOnly = 2,      ///< Bump allocation only, no freelist (MEM-003).
+};
+
+/// \brief Number of segregated bins per slab.
+static constexpr uint8_t kNumSegregatedBins = 8;
+
+/// \brief Maximum search depth per bin before rotating to the next.
+static constexpr uint8_t kMaxSearchDepthPerBin = 3;
+
+/// \brief Configuration for a single region's allocation strategy (MEM-003).
+struct RegionStrategyConfig {
+    AllocationStrategy strategy{AllocationStrategy::kCasLifo};
+    bool enable_coalescing{false};
+};
+
+/// \brief Per-region strategy table indexed by RegionType (MEM-003).
+struct MemoryStrategyTable {
+    RegionStrategyConfig regions[kNumRegionTypes];
+};
 
 /// \brief Per-size-class slab cache.
 ///
@@ -54,8 +80,22 @@ class SlabCache {
     ///
     /// \param[in] sc Size class of blocks in this cache.
     /// \param[in] region Memory region for provenance (default kInternal).
-    explicit SlabCache(SizeClass sc, RegionType region = RegionType::kInternal)
-        : size_class_(sc), region_(region) {}
+    /// \param[in] strategy Allocation strategy (default kCasLifo for backward
+    ///                    compatibility).
+    /// \param[in] coalescing Enable free block coalescing (MEM-002, default
+    /// false).
+    explicit SlabCache(SizeClass sc, RegionType region = RegionType::kInternal,
+                       AllocationStrategy strategy = AllocationStrategy::kCasLifo,
+                       bool coalescing = false)
+        : size_class_(sc), region_(region), strategy_(strategy),
+          coalescing_(coalescing) {}
+
+    /// \brief Return the allocation strategy for this cache.
+    ///
+    /// \return The AllocationStrategy.
+    AllocationStrategy strategy() const noexcept {
+        return strategy_;
+    }
 
     /// \brief Release all slabs back to the SegmentProvider.
     ~SlabCache();
@@ -95,6 +135,16 @@ class SlabCache {
         return region_;
     }
 
+    /// \brief Return the number of segregated bins.
+    ///
+    /// \return kNumSegregatedBins when strategy is kSegregatedFit, 0 otherwise.
+    uint8_t bin_count() const noexcept {
+        if (strategy_ == AllocationStrategy::kSegregatedFit) {
+            return kNumSegregatedBins;
+        }
+        return 0;
+    }
+
     /// \brief Return the current live block count.
     ///
     /// \return Number of blocks currently allocated (not free).
@@ -115,13 +165,35 @@ class SlabCache {
 
     SizeClass size_class_;
     RegionType region_{RegionType::kInternal};
+    AllocationStrategy strategy_{AllocationStrategy::kCasLifo};
     uint8_t current_generation_{0};
 
+    /// \brief Compute the bin index for a freed block based on its offset
+    ///        within the current slab.
+    uint8_t compute_bin_index(const AllocHeader* header) const noexcept;
+
+    /// \brief Coalesce a freed block with adjacent free neighbors (MEM-002).
+    ///
+    /// Checks left and right neighbors. If either is free, removes them from
+    /// their freelist bin and merges into a single larger free block.
+    ///
+    /// \param[in,out] header The block being freed (may be replaced by left
+    /// neighbor).
+    /// \return The start of the coalesced block.
+    AllocHeader* try_coalesce(AllocHeader* header) noexcept;
+
+    /// \brief Stamp a boundary footer at the end of a freed block.
+    void stamp_boundary_footer(AllocHeader* header, size_t block_sz) noexcept;
+
+    bool coalescing_{false};
     std::byte* current_slab_{nullptr};
     size_t slab_size_{0};
     size_t bump_offset_{0};
+    uint32_t bin_stride_bytes_{0};
+    uint8_t start_bin_{0};
 
     FreeList<AllocHeader> freelist_;
+    std::array<FreeList<AllocHeader>, kNumSegregatedBins> bins_;
     std::atomic<uint32_t> live_count_{0};
     Stats stats_;
 

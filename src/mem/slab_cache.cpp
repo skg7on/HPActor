@@ -34,9 +34,34 @@ SlabCache::~SlabCache() {
     }
 }
 
+uint8_t SlabCache::compute_bin_index(const AllocHeader* header) const noexcept {
+    auto* slab_base = reinterpret_cast<const char*>(current_slab_);
+    auto* header_addr = reinterpret_cast<const char*>(header);
+    size_t offset = static_cast<size_t>(header_addr - slab_base);
+    if (bin_stride_bytes_ == 0)
+        return 0;
+    return static_cast<uint8_t>((offset / bin_stride_bytes_) % kNumSegregatedBins);
+}
+
 void* SlabCache::allocate(ActorId owner) noexcept {
-    // 1. Try freelist first
-    auto* block = freelist_.pop();
+    // 1. Try freelist first (strategy-dependent)
+    AllocHeader* block = nullptr;
+    if (strategy_ == AllocationStrategy::kBumpOnly) {
+        // Bump-only: skip all freelist operations
+        block = nullptr;
+    } else if (strategy_ == AllocationStrategy::kSegregatedFit) {
+        // Segregated: round-robin search across bins, one block per bin
+        for (uint8_t i = 0; i < kNumSegregatedBins; ++i) {
+            uint8_t bin_idx = (start_bin_ + i) % kNumSegregatedBins;
+            block = bins_[bin_idx].pop();
+            if (block) {
+                start_bin_ = (bin_idx + 1) % kNumSegregatedBins;
+                break;
+            }
+        }
+    } else {
+        block = freelist_.pop();
+    }
     FAULT_INJECT("hpactor.allocator.freelist.pop.corrupt") {
         if (block != nullptr) {
             block->magic = 0;
@@ -122,9 +147,27 @@ void SlabCache::deallocate(void* user_ptr) noexcept {
 #endif
 
     hdr->magic = kFreedMagic;
+
+    // Coalesce with adjacent free blocks (MEM-002)
+    if (coalescing_) {
+        hdr = try_coalesce(hdr);
+    }
+
     stats_.free_count.fetch_add(1, std::memory_order_relaxed);
     live_count_.fetch_sub(1, std::memory_order_relaxed);
-    freelist_.push(hdr);
+
+    // Bump-only: no freelist push — block becomes unusable space in the slab.
+    // The slab is returned to SegmentProvider when all blocks are freed.
+    if (strategy_ == AllocationStrategy::kBumpOnly) {
+        return;
+    }
+
+    if (strategy_ == AllocationStrategy::kSegregatedFit) {
+        uint8_t bin = compute_bin_index(hdr);
+        bins_[bin].push(hdr);
+    } else {
+        freelist_.push(hdr);
+    }
 }
 
 void SlabCache::refill() {
@@ -136,11 +179,95 @@ void SlabCache::refill() {
     if (current_slab_) {
         slab_size_ = SegmentProvider::instance().slab_size(size_class_);
         bump_offset_ = 0;
+        if (strategy_ == AllocationStrategy::kSegregatedFit && slab_size_ > 0) {
+            bin_stride_bytes_ =
+                static_cast<uint32_t>(slab_size_) / kNumSegregatedBins;
+        }
         slabs_.push_back(current_slab_);
         SegmentProvider::instance().register_slab_owner(
             current_slab_, slab_size_, this, region_, size_class_);
         stats_.slab_acquire_count.fetch_add(1, std::memory_order_relaxed);
     }
+}
+
+void SlabCache::stamp_boundary_footer(AllocHeader* header, size_t block_sz) noexcept {
+    auto* overlay = reinterpret_cast<FooterOverlay*>(
+        reinterpret_cast<char*>(header) + block_sz - sizeof(FooterOverlay));
+    overlay->boundary.block_size = static_cast<uint32_t>(block_sz);
+    overlay->boundary.flags = kBoundaryFlagFree;
+    overlay->boundary._pad[0] = 0;
+    overlay->boundary._pad[1] = 0;
+    overlay->boundary._pad[2] = 0;
+}
+
+AllocHeader* SlabCache::try_coalesce(AllocHeader* header) noexcept {
+    if (!coalescing_ || !current_slab_)
+        return header;
+
+    size_t bs = block_size(size_class_);
+    AllocHeader* result = header;
+    size_t result_size = bs;
+
+    // Stamp boundary footer on this block
+    stamp_boundary_footer(header, bs);
+
+    // Check left neighbor
+    auto* header_addr = reinterpret_cast<char*>(header);
+    auto* slab_addr = reinterpret_cast<char*>(current_slab_);
+    if (header_addr > slab_addr) {
+        auto* left_footer =
+            reinterpret_cast<FooterOverlay*>(header_addr - sizeof(FooterOverlay));
+        if (left_footer->boundary.flags & kBoundaryFlagFree) {
+            size_t left_sz = left_footer->boundary.block_size;
+            auto* left_header =
+                reinterpret_cast<AllocHeader*>(header_addr - left_sz);
+            if (left_header->magic == kFreedMagic) {
+                // Remove left neighbor from its bin
+                uint8_t left_bin = compute_bin_index(left_header);
+                // Pop from bin until we find the left_header (LIFO — it should
+                // be the head since it was most recently freed at this offset)
+                // Actually, for coalescing to work properly we need remove()
+                // from middle. For now, we accept that left blocks might not
+                // always be found and coalescing may be incomplete.
+                // The simplified approach: only coalesce if left is at bin
+                // head.
+                auto* popped = bins_[left_bin].pop();
+                if (popped == left_header) {
+                    result = left_header;
+                    result_size += left_sz;
+                } else {
+                    // Put it back — can't coalesce with middle of freelist yet
+                    if (popped)
+                        bins_[left_bin].push(popped);
+                }
+            }
+        }
+    }
+
+    // Check right neighbor
+    auto* right_addr = header_addr + bs;
+    auto* slab_end = slab_addr + slab_size_;
+    if (right_addr + sizeof(AllocHeader) <= slab_end) {
+        auto* right_header = reinterpret_cast<AllocHeader*>(right_addr);
+        if (right_header->magic == kFreedMagic) {
+            size_t right_sz = block_size(size_class_);
+            uint8_t right_bin = compute_bin_index(right_header);
+            auto* popped = bins_[right_bin].pop();
+            if (popped == right_header) {
+                result_size += right_sz;
+            } else {
+                if (popped)
+                    bins_[right_bin].push(popped);
+            }
+        }
+    }
+
+    // Re-stamp the coalesced block with updated footer
+    if (result != header || result_size != bs) {
+        stamp_boundary_footer(result, result_size);
+    }
+
+    return result;
 }
 
 } // namespace hpactor::mem

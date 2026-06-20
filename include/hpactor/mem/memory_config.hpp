@@ -50,6 +50,35 @@ inline constexpr bool kMemoryDebugEnabled = false;
 inline constexpr uint32_t kDefaultSampleRate = 128;
 
 // =========================================================================
+// Default per-region strategy assignments (MEM-003, defined in slab_cache.hpp)
+// =========================================================================
+
+/// \brief Default strategy assignments (MEM-003 design spec Section 3.2).
+///
+/// - \c kMessage: bump-only (µs-lived, high churn, no freelist overhead)
+/// - \c kActor: segregated+coalescing (long-lived, fragmentation-critical)
+/// - \c kCoroutine: cas_lifo (mixed lifetimes, balanced)
+/// - \c kNetwork: bump-only (buffer lifetimes match I/O request lifetimes)
+/// - \c kInternal: cas_lifo (low allocation volume, balanced)
+/// - \c kHibernate: cas_lifo (infrequent alloc/free)
+inline constexpr MemoryStrategyTable kDefaultStrategies = [] {
+    MemoryStrategyTable t{};
+    t.regions[static_cast<uint8_t>(RegionType::kMessage)] = {
+        AllocationStrategy::kBumpOnly, false};
+    t.regions[static_cast<uint8_t>(RegionType::kActor)] = {
+        AllocationStrategy::kSegregatedFit, true};
+    t.regions[static_cast<uint8_t>(RegionType::kCoroutine)] = {
+        AllocationStrategy::kCasLifo, false};
+    t.regions[static_cast<uint8_t>(RegionType::kNetwork)] = {
+        AllocationStrategy::kBumpOnly, false};
+    t.regions[static_cast<uint8_t>(RegionType::kInternal)] = {
+        AllocationStrategy::kCasLifo, false};
+    t.regions[static_cast<uint8_t>(RegionType::kHibernate)] = {
+        AllocationStrategy::kCasLifo, false};
+    return t;
+}();
+
+// =========================================================================
 // Thread-local allocator pointer
 // =========================================================================
 

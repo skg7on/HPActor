@@ -95,6 +95,39 @@ struct alignas(8) CanaryFooter {
 };
 
 // ---------------------------------------------------------------------------
+// BoundaryFooter: coalescing metadata overlay on freed blocks (MEM-002)
+// ---------------------------------------------------------------------------
+
+/// \brief Flag indicating a block is free (for coalescing boundary tags).
+inline constexpr uint8_t kBoundaryFlagFree = 0x01;
+
+/// \brief 8-byte boundary footer stored in freed blocks' CanaryFooter slot.
+///
+/// When a block is freed and coalescing is enabled, the CanaryFooter slot is
+/// repurposed to store the block size and a free flag. This enables
+/// constant-time adjacent-free checks during deallocation (MEM-002).
+///
+/// \note \c sizeof(BoundaryFooter) == \c sizeof(CanaryFooter) by design — zero
+///       additional memory overhead per block.
+struct alignas(8) BoundaryFooter {
+    uint32_t block_size{0}; ///< Total block size (header + user + footer).
+    uint8_t flags{0};       ///< \c kBoundaryFlagFree when the block is free.
+    uint8_t _pad[3]{0};     ///< Padding to fill 8 bytes.
+};
+
+static_assert(sizeof(BoundaryFooter) == sizeof(CanaryFooter),
+              "BoundaryFooter must fit in CanaryFooter slot");
+
+/// \brief Union allowing the same 8-byte slot to be read as either a
+///        CanaryFooter (live block) or a BoundaryFooter (freed block).
+union FooterOverlay {
+    CanaryFooter canary;
+    BoundaryFooter boundary;
+};
+
+static_assert(sizeof(FooterOverlay) == 8, "FooterOverlay must be exactly 8 bytes");
+
+// ---------------------------------------------------------------------------
 // AllocHeader: 32-byte metadata prefix on every block
 // ---------------------------------------------------------------------------
 

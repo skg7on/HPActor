@@ -34,8 +34,14 @@ namespace hpactor::mem {
 ///       SegmentProvider slab lookup.
 class ThreadLocalAllocator {
   public:
-    /// \brief Construct all per-region, per-size-class caches.
+    /// \brief Construct all per-region, per-size-class caches with the default
+    ///        strategy (kCasLifo, no coalescing — backward compatible).
     ThreadLocalAllocator();
+
+    /// \brief Construct all caches using the given strategy table (MEM-003).
+    ///
+    /// \param[in] table Per-region strategy and coalescing configuration.
+    explicit ThreadLocalAllocator(const MemoryStrategyTable& table);
 
     /// \brief Release all caches and their slabs.
     ~ThreadLocalAllocator();
