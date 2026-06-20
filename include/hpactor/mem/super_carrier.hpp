@@ -145,9 +145,30 @@ class SuperCarrier {
                released_bytes_.load(std::memory_order_relaxed);
     }
 
+    /// \brief Cumulative bytes released back to the OS.
+    [[nodiscard]] size_t total_released() const noexcept {
+        return released_bytes_.load(std::memory_order_relaxed);
+    }
+
     /// \brief The base address of the carrier reservation.
     [[nodiscard]] const void* carrier_base() const noexcept {
         return carrier_base_;
+    }
+
+    /// \brief Attempt to grow the carrier via mremap (Linux only).
+    ///
+    /// \param[in] additional_bytes Number of bytes to add.
+    /// \return \c true if growth succeeded.
+    [[nodiscard]] bool grow(size_t additional_bytes) noexcept;
+
+    /// \brief Set the maximum carrier size for growth attempts.
+    void set_max_size(size_t max_bytes) noexcept {
+        max_carrier_size_ = max_bytes;
+    }
+
+    /// \brief Enable or disable carrier growth via mremap.
+    void set_can_grow(bool can) noexcept {
+        can_grow_ = can;
     }
 
   private:
@@ -164,6 +185,9 @@ class SuperCarrier {
     size_t carrier_size_{0};
     std::atomic<size_t> carve_offset_{0};
     std::atomic<size_t> released_bytes_{0};
+    size_t max_carrier_size_{0}; ///< Configurable growth cap (default:
+                                 ///< unlimited).
+    bool can_grow_{true};        ///< Allow mremap growth (Linux only).
 
     // MEM-007: NUMA per-node sub-regions
     uint32_t numa_node_count_{1};

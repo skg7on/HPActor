@@ -25,6 +25,8 @@
 
 namespace hpactor::mem {
 
+class SuperCarrier; // forward declaration
+
 /// \brief Tier-0 global segment provider.
 ///
 /// Acquires large mmap'd regions (2 MB segments) and carves them into slabs
@@ -118,6 +120,21 @@ class SegmentProvider {
     /// \return A snapshot of current segment provider stats.
     Stats stats() const;
 
+    /// \brief Set the super carrier for slab carving (MEM-004 §3.2).
+    ///
+    /// When set, \c acquire_slab() will attempt to carve from the carrier
+    /// before falling back to individual mmap segments.
+    ///
+    /// \param[in] carrier Pointer to an initialized SuperCarrier, or nullptr.
+    void set_super_carrier(SuperCarrier* carrier) noexcept {
+        super_carrier_ = carrier;
+    }
+
+    /// \brief Return the current super carrier, or nullptr if not set.
+    [[nodiscard]] SuperCarrier* super_carrier() const noexcept {
+        return super_carrier_;
+    }
+
   private:
     SegmentProvider() = default;
 
@@ -152,6 +169,7 @@ class SegmentProvider {
     mutable std::mutex mutex_;
     std::vector<Segment> segments_;
     std::unordered_map<void*, SlabRecord> slab_records_;
+    SuperCarrier* super_carrier_{nullptr}; ///< Optional carrier (MEM-004).
 };
 
 } // namespace hpactor::mem

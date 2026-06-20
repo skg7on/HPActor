@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mem/segment_provider.hpp>
-#include <hpactor/fault/fault_macros.hpp>
+#include <hpactor/mem/super_carrier.hpp>
 #include <hpactor/platform.hpp>
 
 #include <algorithm>
@@ -30,13 +31,23 @@ SegmentProvider& SegmentProvider::instance() {
 }
 
 void* SegmentProvider::acquire_slab(SizeClass sc) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    void* slab = carve_from_segment(sc);
-    if (slab) {
+    void* slab = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        slab = carve_from_segment(sc);
+    }
+    if (slab)
         return slab;
+
+    // MEM-004: Try super carrier before individual mmap
+    // (carrier carve is lock-free via atomic offset — no mutex needed)
+    if (super_carrier_ && super_carrier_->is_initialized()) {
+        slab = super_carrier_->carve(slab_size(sc));
+        if (slab)
+            return slab;
     }
 
+    std::lock_guard<std::mutex> lock(mutex_);
     return allocate_new_segment(slab_size(sc));
 }
 
