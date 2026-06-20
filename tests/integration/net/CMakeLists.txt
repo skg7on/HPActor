@@ -10,6 +10,10 @@ add_executable(test_integration_net
     test_uds_integration.cpp
     test_http_connection.cpp
     test_connection_pool_outbound.cpp
+    test_net_edge_cases.cpp
+    test_net_branches.cpp
+    test_transport_branches.cpp
+    test_tls_branches.cpp
 )
 target_link_libraries(test_integration_net hpactor pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_integration_net PROPERTIES TIMEOUT 30)
