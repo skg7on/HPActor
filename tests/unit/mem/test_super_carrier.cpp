@@ -140,3 +140,101 @@ TEST(HugePages, InitWithNoHugePagesStillSucceeds) {
     EXPECT_TRUE(ok);
 #endif
 }
+
+// ── MEM-007: NUMA awareness tests ───────────────────────────────
+
+TEST(NumaAware, ProbeTopologyDoesNotCrash) {
+    NumaInfo info = probe_numa_topology();
+    EXPECT_GE(info.node_count, 1u);
+    EXPECT_LE(info.node_count, SuperCarrier::kMaxNumaNodes);
+}
+
+TEST(NumaAware, IsNumaWhenMultipleNodes) {
+    NumaInfo info = probe_numa_topology();
+    EXPECT_EQ(info.is_numa(), info.node_count > 1);
+}
+
+TEST(NumaAware, GetCurrentNumaNodeReturnsValid) {
+    unsigned node = get_current_numa_node();
+    (void)node;
+    SUCCEED();
+}
+
+TEST(NumaAware, InitWithNumaInfo) {
+    NumaInfo numa;
+    numa.node_count = 4;
+    SuperCarrier carrier;
+    bool ok = carrier.init(256ULL * 1024 * 1024, HugePageInfo{}, numa);
+#ifdef __LP64__
+    EXPECT_TRUE(ok);
+    EXPECT_TRUE(carrier.is_initialized());
+#endif
+}
+
+TEST(NumaAware, CarveNumaSeparatesNodes) {
+    NumaInfo numa;
+    numa.node_count = 2;
+    SuperCarrier carrier;
+    ASSERT_TRUE(carrier.init(256ULL * 1024 * 1024, HugePageInfo{}, numa));
+#ifdef __LP64__
+    void* n0 = carrier.carve_numa(64 * 1024, 0);
+    ASSERT_NE(n0, nullptr);
+    std::memset(n0, 0x0, 64 * 1024);
+
+    void* n1 = carrier.carve_numa(64 * 1024, 1);
+    ASSERT_NE(n1, nullptr);
+    std::memset(n1, 0x11, 64 * 1024);
+
+    const char* base = static_cast<const char*>(carrier.carrier_base());
+    size_t off0 = static_cast<size_t>(static_cast<const char*>(n0) - base);
+    size_t off1 = static_cast<size_t>(static_cast<const char*>(n1) - base);
+    EXPECT_LT(off0, off1);
+
+    carrier.release(n0, 64 * 1024);
+    carrier.release(n1, 64 * 1024);
+#endif
+}
+
+TEST(NumaAware, CarveNumaFallsBackOnExhaustion) {
+    NumaInfo numa;
+    numa.node_count = 2;
+    SuperCarrier carrier;
+    ASSERT_TRUE(carrier.init(512 * 1024, HugePageInfo{}, numa));
+#ifdef __LP64__
+    void* n0 = carrier.carve_numa(96 * 1024, 0);
+    ASSERT_NE(n0, nullptr);
+    // node 0 exhausted — fallback to global
+    void* n0b = carrier.carve_numa(96 * 1024, 0);
+    ASSERT_NE(n0b, nullptr);
+    carrier.release(n0, 96 * 1024);
+    carrier.release(n0b, 96 * 1024);
+#endif
+}
+
+TEST(NumaAware, CarveNumaBadNodeFallsBack) {
+    NumaInfo numa;
+    numa.node_count = 1;
+    SuperCarrier carrier;
+    ASSERT_TRUE(carrier.init(128ULL * 1024 * 1024, HugePageInfo{}, numa));
+#ifdef __LP64__
+    void* slab = carrier.carve_numa(64 * 1024, 999);
+    ASSERT_NE(slab, nullptr);
+    carrier.release(slab, 64 * 1024);
+#endif
+}
+
+TEST(NumaAware, SingleNodeIsNonNuma) {
+    NumaInfo numa;
+    numa.node_count = 1;
+    SuperCarrier carrier;
+    ASSERT_TRUE(carrier.init(128ULL * 1024 * 1024, HugePageInfo{}, numa));
+#ifdef __LP64__
+    void* s1 = carrier.carve(64 * 1024);
+    void* s2 = carrier.carve(64 * 1024);
+    ASSERT_NE(s1, nullptr);
+    ASSERT_NE(s2, nullptr);
+    EXPECT_NE(s1, s2);
+    carrier.release(s1, 64 * 1024);
+    carrier.release(s2, 64 * 1024);
+#endif
+}

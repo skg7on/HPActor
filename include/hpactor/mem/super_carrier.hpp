@@ -35,6 +35,31 @@ struct HugePageInfo {
 /// \return HugePageInfo indicating what page sizes are available.
 HugePageInfo probe_huge_pages() noexcept;
 
+/// \brief NUMA topology information (MEM-007).
+struct NumaInfo {
+    /// Number of NUMA nodes detected (1 on UMA systems or if detection fails).
+    uint32_t node_count{1};
+    /// Whether the system is actually NUMA (node_count > 1).
+    [[nodiscard]] bool is_numa() const noexcept {
+        return node_count > 1;
+    }
+};
+
+/// \brief Probe the system for NUMA topology.
+///
+/// Uses \c getcpu() on Linux to determine the maximum NUMA node index.
+/// Returns \c NumaInfo{1} on non-Linux or UMA systems.
+///
+/// \return NumaInfo with the detected node count.
+NumaInfo probe_numa_topology() noexcept;
+
+/// \brief Return the NUMA node index of the calling thread.
+///
+/// Uses \c getcpu() on Linux. Returns 0 on non-Linux or if detection fails.
+///
+/// \return NUMA node index (0-based).
+unsigned get_current_numa_node() noexcept;
+
 /// \brief Contiguous virtual memory reservation used as primary slab source
 ///        (MEM-004).
 ///
@@ -48,6 +73,9 @@ HugePageInfo probe_huge_pages() noexcept;
 ///       concurrent calls from worker threads during refill.
 class SuperCarrier {
   public:
+    /// \brief Maximum supported NUMA nodes (MEM-007).
+    static constexpr uint32_t kMaxNumaNodes = 16;
+
     /// \brief Initialize the super carrier reservation.
     ///
     /// Calls \c mmap(PROT_NONE, MAP_NORESERVE) to reserve virtual address space
@@ -57,12 +85,16 @@ class SuperCarrier {
     /// \param[in] size_bytes Size of the virtual reservation.
     /// \param[in] huge_info Result from \c probe_huge_pages(). Pass a
     ///            default-constructed \c HugePageInfo to use standard pages.
+    /// \param[in] numa_info Result from \c probe_numa_topology(). When
+    /// node_count
+    ///            > 1, the carrier is partitioned into per-node sub-regions
+    ///            (MEM-007).
     /// \return \c true on success, \c false if \c mmap fails or carrier is
     ///         disabled on this platform.
-    bool init(size_t size_bytes,
-              const HugePageInfo& huge_info = HugePageInfo{}) noexcept;
+    bool init(size_t size_bytes, const HugePageInfo& huge_info = HugePageInfo{},
+              const NumaInfo& numa_info = NumaInfo{}) noexcept;
 
-    /// \brief Carve a slab from the carrier.
+    /// \brief Carve a slab from the carrier (node-agnostic — first available).
     ///
     /// \c mprotect's a slice from PROT_NONE to PROT_READ|PROT_WRITE.
     ///
@@ -70,6 +102,18 @@ class SuperCarrier {
     /// \return Pointer to the writable slab memory, or \c nullptr if the
     ///         carrier is exhausted.
     void* carve(size_t slab_size_bytes) noexcept;
+
+    /// \brief Carve a slab from a specific NUMA node's sub-region (MEM-007).
+    ///
+    /// On UMA systems or when \p numa_node is out of range, falls back to the
+    /// global carve region. Prefer this when the calling thread has known
+    /// NUMA affinity to avoid cross-node memory access penalties.
+    ///
+    /// \param[in] slab_size_bytes Size of the slab to carve.
+    /// \param[in] numa_node NUMA node to prefer (0-based).
+    /// \return Pointer to the writable slab memory, or \c nullptr if the
+    ///         carrier is exhausted.
+    void* carve_numa(size_t slab_size_bytes, unsigned numa_node) noexcept;
 
     /// \brief Release a slab's physical pages back to the OS.
     ///
@@ -107,10 +151,24 @@ class SuperCarrier {
     }
 
   private:
+    /// \brief Carve from an atomic offset with exhaustion check.
+    ///
+    /// \param[in,out] offset Atomic offset to advance.
+    /// \param[in] region_base Base offset within the carrier for this region.
+    /// \param[in] region_end End offset (region_base + region_size).
+    /// \param[in] slab_size_bytes Size of the slab to carve.
+    void* carve_from_offset(std::atomic<size_t>& offset, size_t region_base,
+                            size_t region_end, size_t slab_size_bytes) noexcept;
+
     void* carrier_base_{nullptr};
     size_t carrier_size_{0};
     std::atomic<size_t> carve_offset_{0};
     std::atomic<size_t> released_bytes_{0};
+
+    // MEM-007: NUMA per-node sub-regions
+    uint32_t numa_node_count_{1};
+    std::atomic<size_t> numa_carve_offsets_[kMaxNumaNodes]{};
+    size_t numa_node_size_{0}; ///< bytes per NUMA node sub-region
 };
 
 } // namespace hpactor::mem
