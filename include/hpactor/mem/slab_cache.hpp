@@ -63,8 +63,6 @@ struct FreeBlockLinkage {
 struct RegionStrategyConfig {
     AllocationStrategy strategy{AllocationStrategy::kCasLifo};
     bool enable_coalescing{false};
-    uint8_t max_coalesce_depth{2}; ///< Max neighbors to check (default: left +
-                                   ///< right).
 };
 
 /// \brief Per-region strategy table indexed by RegionType (MEM-003).
@@ -222,17 +220,11 @@ class SlabCache {
     static void dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexcept;
 
     bool coalescing_{false};
-    /// \brief Install an idle slab as the current bump slab.
-    void install_idle_slab(std::byte* slab) noexcept;
-
     std::byte* current_slab_{nullptr};
     size_t slab_size_{0};
     size_t bump_offset_{0};
     uint32_t bin_stride_bytes_{0};
     uint8_t start_bin_{0};
-    uint32_t current_slab_block_count_{0}; ///< Blocks allocated from the
-                                           ///< current slab (for bump-only idle
-                                           ///< tracking).
 
     FreeList<AllocHeader> freelist_;
     std::array<FreeList<AllocHeader>, kNumSegregatedBins> bins_;

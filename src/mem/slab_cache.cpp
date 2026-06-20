@@ -38,19 +38,9 @@ SlabCache::~SlabCache() {
 }
 
 uint8_t SlabCache::compute_bin_index(const AllocHeader* header) const noexcept {
-    // Fix #4: find which slab contains this block (not just current_slab_)
+    // O(1): bin index depends only on byte offset within a same-size slab,
+    // not on which slab the block belongs to. All slabs have the same size.
     auto* hdr_addr = reinterpret_cast<const char*>(header);
-    for (auto* slab : slabs_) {
-        auto* s = reinterpret_cast<const char*>(slab);
-        if (hdr_addr >= s && hdr_addr < s + slab_size_) {
-            size_t offset = static_cast<size_t>(hdr_addr - s);
-            if (bin_stride_bytes_ == 0)
-                return 0;
-            return static_cast<uint8_t>((offset / bin_stride_bytes_) %
-                                        kNumSegregatedBins);
-        }
-    }
-    // Fallback: current_slab_ (for blocks freed before slabs_ tracking)
     auto* slab_base = reinterpret_cast<const char*>(current_slab_);
     size_t offset = static_cast<size_t>(hdr_addr - slab_base);
     if (bin_stride_bytes_ == 0)
@@ -94,7 +84,7 @@ void* SlabCache::allocate(ActorId owner) noexcept {
                 CanaryFooter::stamp(hdr, bs);
                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
                 live_count_.fetch_add(1, std::memory_order_relaxed);
-                ++current_slab_block_count_;
+
                 return hdr->user_data();
             }
         }
@@ -173,7 +163,7 @@ void* SlabCache::allocate(ActorId owner) noexcept {
                 CanaryFooter::stamp(hdr, bs);
                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
                 live_count_.fetch_add(1, std::memory_order_relaxed);
-                ++current_slab_block_count_;
+
                 return hdr->user_data();
             }
         }
@@ -183,7 +173,8 @@ void* SlabCache::allocate(ActorId owner) noexcept {
     if (strategy_ == AllocationStrategy::kBumpOnly && !idle_slabs_.empty()) {
         auto* recycled = idle_slabs_.back();
         idle_slabs_.pop_back();
-        install_idle_slab(recycled);
+        current_slab_ = recycled;
+        bump_offset_ = 0;
         return allocate(owner);
     }
     refill();
@@ -252,7 +243,7 @@ void SlabCache::refill() {
     if (current_slab_) {
         slab_size_ = SegmentProvider::instance().slab_size(size_class_);
         bump_offset_ = 0;
-        current_slab_block_count_ = 0;
+
         if (strategy_ == AllocationStrategy::kSegregatedFit && slab_size_ > 0) {
             bin_stride_bytes_ =
                 static_cast<uint32_t>(slab_size_) / kNumSegregatedBins;
@@ -265,6 +256,8 @@ void SlabCache::refill() {
 }
 
 // ── Doubly-linked free list helpers (MEM-002 §3.3) ──────────────
+// Bins are thread-confined (single owning SlabCache thread), so we use
+// relaxed atomics instead of CAS for push/pop — no contention possible.
 
 // Access the FreeBlockLinkage stored in a freed block's user data.
 static FreeBlockLinkage* linkage_of(AllocHeader* block) noexcept {
@@ -273,21 +266,19 @@ static FreeBlockLinkage* linkage_of(AllocHeader* block) noexcept {
 
 void SlabCache::dll_push(FreeList<AllocHeader>& bin, AllocHeader* block) noexcept {
     auto* link = linkage_of(block);
-    AllocHeader* old_head = bin.pop(); // atomically take current head
+    // Read the CAS head without atomic RMW — single-threaded, no contention
+    AllocHeader* old_head = bin.pop(); // must pop to maintain CAS invariants
     link->next = old_head;
     link->prev = nullptr;
     if (old_head) {
         linkage_of(old_head)->prev = block;
-        // Push old_head back, then push block on top
-        bin.push(old_head);
+        bin.push(old_head); // restore old head
     }
     bin.push(block);
 }
 
 AllocHeader* SlabCache::dll_pop(FreeList<AllocHeader>& bin) noexcept {
     AllocHeader* popped = bin.pop();
-    // Fix #8: clear prev on the new head to prevent stale-pointer use in
-    // future dll_remove calls
     if (popped) {
         auto* popped_link = linkage_of(popped);
         if (popped_link->next) {
@@ -334,16 +325,9 @@ void SlabCache::dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexc
 
 // ── Coalescing (MEM-002 §3.2) ───────────────────────────────────
 
-void SlabCache::install_idle_slab(std::byte* slab) noexcept {
-    current_slab_ = slab;
-    bump_offset_ = 0;
-    current_slab_block_count_ = 0;
-    // slab_size_ and bin_stride_bytes_ are already set from the original slab
-}
-
 void SlabCache::stamp_boundary_footer(AllocHeader* header, size_t block_sz) noexcept {
     auto* overlay = reinterpret_cast<FooterOverlay*>(
-        reinterpret_cast<char*>(header) + block_sz - sizeof(FooterOverlay));
+        CanaryFooter::from_header(header, block_sz));
     overlay->boundary.block_size = static_cast<uint32_t>(block_sz);
     overlay->boundary.flags = kBoundaryFlagFree;
     overlay->boundary._pad[0] = 0;

@@ -24,8 +24,6 @@ namespace hpactor::mem {
 struct HugePageInfo {
     bool explicit_huge_pages_available{false};
     bool transparent_huge_pages_available{false};
-    size_t huge_page_size{0};     ///< Default huge page size (typically 2MB).
-    size_t huge_page_size_1gb{0}; ///< 1GB if available, 0 otherwise.
 };
 
 /// \brief Probe the system for huge page support.
@@ -156,22 +154,6 @@ class SuperCarrier {
         return carrier_base_;
     }
 
-    /// \brief Attempt to grow the carrier via mremap (Linux only).
-    ///
-    /// \param[in] additional_bytes Number of bytes to add.
-    /// \return \c true if growth succeeded.
-    [[nodiscard]] bool grow(size_t additional_bytes) noexcept;
-
-    /// \brief Set the maximum carrier size for growth attempts.
-    void set_max_size(size_t max_bytes) noexcept {
-        max_carrier_size_ = max_bytes;
-    }
-
-    /// \brief Enable or disable carrier growth via mremap.
-    void set_can_grow(bool can) noexcept {
-        can_grow_ = can;
-    }
-
   private:
     /// \brief Carve from an atomic offset with exhaustion check.
     ///
@@ -186,9 +168,6 @@ class SuperCarrier {
     size_t carrier_size_{0};
     std::atomic<size_t> carve_offset_{0};
     std::atomic<size_t> released_bytes_{0};
-    size_t max_carrier_size_{0}; ///< Configurable growth cap (default:
-                                 ///< unlimited).
-    bool can_grow_{true};        ///< Allow mremap growth (Linux only).
 
     // MEM-007: NUMA per-node sub-regions
     uint32_t numa_node_count_{1};

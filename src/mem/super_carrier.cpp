@@ -38,19 +38,8 @@ HugePageInfo probe_huge_pages() noexcept {
                        MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB, -1, 0);
     if (probe != MAP_FAILED) {
         info.explicit_huge_pages_available = true;
-        info.huge_page_size = 2 * 1024 * 1024;
         munmap(probe, 2 * 1024 * 1024);
     }
-
-    // Probe 1GB pages
-#    ifdef MAP_HUGE_1GB
-    probe = mmap(nullptr, 1024ULL * 1024 * 1024, PROT_NONE,
-                 MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_1GB, -1, 0);
-    if (probe != MAP_FAILED) {
-        info.huge_page_size_1gb = 1024ULL * 1024 * 1024;
-        munmap(probe, 1024ULL * 1024 * 1024);
-    }
-#    endif
 
     FILE* f = fopen("/sys/kernel/mm/transparent_hugepage/enabled", "r");
     if (f) {
@@ -233,26 +222,6 @@ void* SuperCarrier::carve_numa(size_t slab_size_bytes, unsigned numa_node) noexc
     (void)numa_node;
     return nullptr;
 #endif
-}
-
-bool SuperCarrier::grow(size_t additional_bytes) noexcept {
-    (void)additional_bytes;
-#ifdef __LP64__
-#    if defined(__linux__) && defined(MREMAP_MAYMOVE)
-    if (!can_grow_ || !carrier_base_)
-        return false;
-    size_t new_size = carrier_size_ + additional_bytes;
-    if (max_carrier_size_ > 0 && new_size > max_carrier_size_)
-        return false;
-    void* new_base = mremap(carrier_base_, carrier_size_, new_size, MREMAP_MAYMOVE);
-    if (new_base == MAP_FAILED)
-        return false;
-    carrier_base_ = new_base;
-    carrier_size_ = new_size;
-    return true;
-#    endif
-#endif
-    return false;
 }
 
 void SuperCarrier::release(void* slab_addr, size_t slab_size_bytes) noexcept {
