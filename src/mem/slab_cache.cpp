@@ -52,10 +52,12 @@ void* SlabCache::allocate(ActorId owner) noexcept {
     } else if (strategy_ == AllocationStrategy::kSegregatedFit) {
         // Segregated: round-robin search across bins, one block per bin
         for (uint8_t i = 0; i < kNumSegregatedBins; ++i) {
-            uint8_t bin_idx = (start_bin_ + i) % kNumSegregatedBins;
+            uint8_t bin_idx =
+                static_cast<uint8_t>((start_bin_ + i) % kNumSegregatedBins);
             block = bins_[bin_idx].pop();
             if (block) {
-                start_bin_ = (bin_idx + 1) % kNumSegregatedBins;
+                start_bin_ =
+                    static_cast<uint8_t>((bin_idx + 1) % kNumSegregatedBins);
                 break;
             }
         }
