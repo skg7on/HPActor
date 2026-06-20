@@ -45,22 +45,27 @@ those specs depend on.
 
 ### 1.3 Current State Summary
 
-HPActor's memory subsystem (M1–M8, completed 2026-05-03) provides:
+HPActor's memory subsystem (M1–M8, completed 2026-05-03, evolved 2026-06-20) provides:
 
 | Layer | Component | Status |
 |-------|-----------|--------|
-| Foundation | `AllocHeader` (32B) + `CanaryFooter` (8B), 8 size classes (32B–4KB), 6 region types | ✅ Production |
-| Tier 0 | `SegmentProvider` — 2MB `mmap` on demand, mutex-protected, per-slab ref-counting | ✅ Production |
-| Tier 1 | `ThreadLocalAllocator` — per-thread `SlabCache` matrix (6×8), bump + CAS LIFO freelist | ✅ Production |
+| Foundation | `AllocHeader` (32B) + `CanaryFooter` (8B) + `BoundaryFooter`, 8 size classes (32B–4KB), 6 region types | ✅ Production |
+| Virtual Memory | `SuperCarrier` — contiguous 8–64GB reservation, mprotect carving, NUMA-aware, MAP_HUGETLB | ✅ Implemented |
+| Tier 0 | `SegmentProvider` — 2MB mmap on demand OR carrier carve, mutex-protected, slab_records_ routing | ✅ Production |
+| Tier 1 | `ThreadLocalAllocator` — per-thread `SlabCache` matrix (6×8), 3 allocation strategies | ✅ Production |
+| Strategies | `kCasLifo`, `kSegregatedFit` (8-bin, bump-first), `kBumpOnly` (idle recycling) | ✅ Implemented |
+| Coalescing | `BoundaryFooter` + `try_coalesce()` — immediate adjacent-free merging, DLL for O(1) removal | ✅ Implemented |
 | Accounting | `MemoryRegionRegistry` — lock-free per-region counters, `try_reserve()` admission | ✅ Production |
 | Tracking | `MemoryTracker` — 1M-actor flat atomic array, per-actor peak/current tracking | ✅ Production |
 | Telemetry | `MemoryTelemetry` — sampled (1/128) MPSC ring buffer, allocation event streaming | ✅ Production |
 | Debug | Memory poisoning (0xAA), canary verification, guard pages, SIGSEGV handler | ✅ Production |
 | Hibernation | `HibernationRegistry`, `Hibernatable` interface, `ZramManager` (MADV_PAGEOUT) | ✅ Production |
 | Compaction | `CompactionManager` — 25% threshold, 5% fragmentation budget, actor relocation | ✅ Production |
+| NUMA | `NumaInfo` + `probe_numa_topology()` + `get_current_numa_node()` + per-node carve | ✅ Implemented |
+| Inlining | `TypedMessage::create_inline()` — zero-allocation for payloads ≤32B | ✅ Implemented |
 | Fault injection | 6 FAULT_INJECT sites in allocator paths, seed-replayable | ✅ Production |
 
-**Total:** 16 public headers, 11 source files, 19 unit test files.
+**Total:** 18 public headers, 13 source files, 22 unit test files, 152 tests passing.
 
 ---
 
@@ -178,7 +183,12 @@ HPActor's memory subsystem (M1–M8, completed 2026-05-03) provides:
 
 ## 3. Key Architectural Gaps
 
-### Gap 1 — No Super Carrier (P1, Phase 2.1)
+**Implementation status (2026-06-20):** Gaps 1, 2, 4, 5, 6, 7, 8 are addressed
+by MEM-001 through MEM-007 on branch `feature/mem-erlang-gap-optimizations`
+(PR #343). Gap 3 (carrier migration) and Gap 9 (tiny-block metadata) remain
+for Phase 3–4.
+
+### Gap 1 — No Super Carrier (P1, Phase 2.1) — ✅ Implemented (MEM-004/005)
 
 Erlang reserves a single contiguous virtual address region (configurable via
 `+MMscs`, e.g., 64GB) at VM startup. All carrier allocations carve from this
@@ -197,7 +207,7 @@ HPActor's `SegmentProvider` calls `mmap` for each 2MB segment individually — a
 million-actor scale, this means potentially thousands of discontinuous mappings,
 each consuming TLB entries.
 
-### Gap 2 — No Free Block Coalescing (P0, Phase 1.2)
+### Gap 2 — No Free Block Coalescing (P0, Phase 1.2) — ✅ Implemented (MEM-002)
 
 Erlang's boundary tags (header + footer on every free block) enable immediate
 coalescing: when freeing block B, if neighbor A is free they merge into AB, and
@@ -213,7 +223,7 @@ remain separate. The consequence:
   pointers) is the **sole** mechanism for recovering contiguous free space.
 - Under steady-state churn, fragmentation oscillates rather than converging.
 
-### Gap 3 — No Carrier Migration (P3, Phase 3.1)
+### Gap 3 — No Carrier Migration (P3, Phase 3.1) — ⬜ Phase 3–4
 
 Erlang's abandoned carrier pool allows under-utilized carriers to move between
 scheduler-specific allocator instances via a lock-free circular doubly-linked
@@ -229,70 +239,43 @@ HPActor's slabs are permanently bound to their creating
   reassigned.
 - Thread 2 cannot benefit from thread 1's unused capacity.
 
-### Gap 4 — Single Allocation Strategy for All Regions (P1, Phase 1.3)
+### Gap 4 — Single Allocation Strategy for All Regions (P1, Phase 1.3) — ✅ Implemented (MEM-003)
 
-All HPActor regions use identical bump + CAS freelist. Erlang allows
-per-allocator strategy selection:
+All HPActor regions now support per-region strategy selection via
+`AllocationStrategy` enum and `MemoryStrategyTable`. Default assignments:
+`kMessage`/`kNetwork` → bump-only, `kActor` → segregated+coalescing,
+others → cas_lifo (backward compatible).
 
-- `gf` (Good Fit) for general-purpose — constant-time, bounded search depth.
-- `af` (A Fit) for `temp_alloc` — check only the first block, create new
-  carrier otherwise (fastest).
-- `aoffcaobf` for NUMA-sensitive workloads with carrier migration.
-- `bf` (Best Fit) for fragmentation-sensitive workloads.
+### Gap 5 — No Segregated Free Lists / Good Fit (P0, Phase 1.1) — ✅ Implemented (MEM-001)
 
-Different HPActor regions have radically different lifetime patterns:
+8-bin address-segregated free lists with round-robin start bin, bump-first
+allocation order, and depth-bounded search (kMaxSearchDepthPerBin=3).
+Default kCasLifo preserved for backward compatibility.
 
-| Region | Lifetime Pattern | Optimal Strategy | Rationale |
-|--------|-----------------|------------------|-----------|
-| `kMessage` | Microsecond-scale, high churn | Bump-only, no freelist | Freelist overhead wasted on µs-lived blocks; bump is 2× faster |
-| `kActor` | Process-lifetime scale | Good Fit + coalescing | Fragmentation matters over 7-day uptime |
-| `kCoroutine` | Mixed lifetimes | Bump + freelist (current) | Balanced approach is reasonable |
-| `kNetwork` | I/O request lifetimes | Bump-only | Buffers match request lifetimes, low fragmentation risk |
-| `kInternal` | Indefinite, low churn | Current (balanced default) | Low allocation volume |
-| `kHibernate` | Infrequent alloc/free | Current strategy | Infrequent operations |
+### Gap 6 — No Huge Page Support in Implementation (P1, Phase 2.2) — ✅ Implemented (MEM-005)
 
-### Gap 5 — No Segregated Free Lists / Good Fit (P0, Phase 1.1)
+`SuperCarrier::init()` and `SegmentProvider::allocate_new_segment()` now
+use MAP_HUGETLB when available, with MADV_HUGEPAGE fallback. Runtime
+detection via `probe_huge_pages()`. Page type stats tracked in
+`SegmentProvider::Stats`.
 
-Erlang's default `gf` strategy places free blocks in segregated size-range
-lists. When allocating N bytes, only the corresponding list is searched, bounded
-to depth 3. This approximates best-fit quality at constant cost.
+### Gap 7 — No NUMA Awareness (P3, Phase 3.2) — ✅ Implemented (MEM-007)
 
-HPActor's CAS freelist is pure LIFO — no size awareness. Since each `SlabCache`
-handles one size class, there's partial mitigation (all blocks are the same
-size), but the LIFO ordering means a block freed from position X will be
-reallocated at position X regardless of whether a block at position Y (closer
-to other live blocks) would yield better locality.
+`NumaInfo` struct + `probe_numa_topology()` + `get_current_numa_node()`.
+`SuperCarrier` partitions reservation into per-node sub-regions.
+`carve_numa(size, node)` prefers local-node memory with global fallback.
+Comma-separated and range-format node lists both handled.
 
-### Gap 6 — No Huge Page Support in Implementation (P1, Phase 2.2)
+### Gap 8 — No Message Inlining for Tiny Payloads (P1, Phase 2.3) — ✅ Implemented (MEM-006)
 
-The design doc mentions `MAP_HUGETLB` but the current
-`SegmentProvider::allocate_new_segment()` does not use it:
+`TypedMessage` inline storage (32B buffer), `create_inline()` factory,
+`kCanInlinePayload<T>` constexpr trait. Payloads ≤32B bypass the memory
+allocator entirely. Move semantics preserve inline data.
 
-```cpp
-void* base = mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
-                  MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
-```
+### Gap 9 — Tiny-Block Optimization from Design Not Implemented (P2, Phase 3.4) — ⬜ Phase 3–4
 
-At scale, TLB misses on allocator metadata access become a measurable cost.
-
-### Gap 7 — No NUMA Awareness (P3, Phase 3.2)
-
-All segments are allocated from whatever physical memory the kernel provides,
-with no NUMA node preference. On multi-socket systems, a thread on socket 0 may
-frequently access slabs backed by socket 1's memory.
-
-### Gap 8 — No Message Inlining for Tiny Payloads (P1, Phase 2.3)
-
-Every message, regardless of size, goes through the full allocation path:
-admission check → region reserve → bump/freelist → header stamp → canary stamp.
-For messages ≤ 32 bytes (ActorId-sized commands, simple signals), the allocator
-overhead (40 bytes header+footer) exceeds the payload.
-
-### Gap 9 — Tiny-Block Optimization from Design Not Implemented (P2, Phase 3.4)
-
-The design doc Section 5.2 describes packing 32B block metadata out-of-band
-(bitmap + owner array, reducing overhead from 125% to 25%). This is spec'd but
-not built.
+Not yet implemented. Near-term mitigation: MEM-006 (message inlining) eliminates
+allocations entirely for messages ≤32B, bypassing the 125% overhead.
 
 ---
 
@@ -522,8 +505,8 @@ Phase 4: Polish                                         │
 ### HPActor Internal
 
 - **Parent design doc:** `docs/architecture/memory/memory-management-architecture-design.md`
-- **Implementation:** `src/mem/` (11 source files), `include/hpactor/mem/` (16 headers)
-- **Tests:** `tests/unit/mem/` (19 test files)
+- **Implementation:** `src/mem/` (13 source files), `include/hpactor/mem/` (18 headers)
+- **Tests:** `tests/unit/mem/` (22 test files), 152 tests passing
 - **CLAUDE_MEMORY.md** — Memory Management section
 - **Build config:** `ENABLE_MEMORY_TRACKING`, `ENABLE_MEMORY_DEBUG` CMake options
 
@@ -535,6 +518,20 @@ Phase 4: Polish                                         │
 - `docs/superpowers/specs/2026-06-20-mem-04-super-carrier-design.md`
 - `docs/superpowers/specs/2026-06-20-mem-05-huge-pages-design.md`
 - `docs/superpowers/specs/2026-06-20-mem-06-message-inlining-design.md`
+
+### Implementation Plans
+
+- `docs/superpowers/plans/2026-06-20-mem-01-segregated-free-lists-impl.md`
+- `docs/superpowers/plans/2026-06-20-mem-02-free-block-coalescing-impl.md`
+- `docs/superpowers/plans/2026-06-20-mem-03-per-region-strategy-impl.md`
+- `docs/superpowers/plans/2026-06-20-mem-04-super-carrier-impl.md`
+- `docs/superpowers/plans/2026-06-20-mem-05-huge-pages-impl.md`
+- `docs/superpowers/plans/2026-06-20-mem-06-message-inlining-impl.md`
+
+### Implementation (PRs)
+
+- **PR #342:** Design specs and implementation plans (merged)
+- **PR #343:** Implementation of MEM-001 through MEM-007 (this branch)
 
 ### Erlang / BEAM References
 
@@ -557,15 +554,13 @@ Phase 4: Polish                                         │
 
 ## Next Steps
 
-1. **Review & Prioritize** — Team reviews this roadmap; adjust priorities based
-   on production workload profiles.
-2. **Deep-Dive Design Specs** — Each P0/P1 item has a detailed design spec in
-   `docs/superpowers/specs/`. Review each before implementation.
-3. **Benchmark Harness** — Build a memory subsystem micro-benchmark
-   (`tests/perf/mem/`) that measures allocation throughput, fragmentation over
-   time, and TLB miss rates under simulated workloads.
-4. **Incremental Delivery** — Implement Phase 1 items one at a time, each with
-   TDDFlow (RED → GREEN → REFACTOR) and the narrowest verification first.
+1. ~~**Review & Prioritize**~~ ✅ Team reviewed; Phase 1–2 implemented (MEM-001 through 007).
+2. ~~**Deep-Dive Design Specs**~~ ✅ Design specs written for all P0/P1 items.
+3. ~~**Benchmark Harness**~~ Not yet built — deferred to follow-up PR.
+4. ~~**Incremental Delivery**~~ ✅ MEM-001 through 007 implemented via TDDFlow on `feature/mem-erlang-gap-optimizations` (PR #343).
 5. **Production Validation** — Run under `ENABLE_MEMORY_DEBUG` + ASAN + TSAN;
    validate with the EdgeOps telemetry app and order platform app as integration
-   workloads.
+   workloads. Pending PR merge.
+6. **Phase 3–4** — Carrier Migration (3.1), Tiny-Block Metadata (3.4), Constant
+   Region (4.1), Slab Prefetch (4.2), Actor-Affined Slabs (4.3) remain for
+   future work.
