@@ -270,6 +270,29 @@ class Behavior {
     /// \return A \c Behavior that lazily initializes from \p factory.
     static Behavior setup(std::function<Behavior()> factory);
 
+    /// \brief Create a message adapter combinator.
+    ///
+    /// Messages of type \c From are translated to type \c To via
+    /// \p adapter_fn before being dispatched to \p inner. All other
+    /// message types pass through unchanged.
+    template <typename From, typename To>
+    static Behavior
+    message_adapter(std::function<To(const From&)> adapter_fn, Behavior inner) {
+        Behavior result;
+        auto state = std::make_shared<ComposeState>();
+        state->type = ComposeState::Type::MessageAdapter;
+        state->inner = std::make_shared<Behavior>(std::move(inner));
+        state->adapter_from_tag = From::kTypeTag;
+        state->adapter_fn = [fn = std::move(adapter_fn)](
+                                const TypedMessage& msg) -> TypedMessage {
+            auto proto = msg.as<From>();
+            To to = fn(*proto);
+            return TypedMessage(To::kTypeTag, to);
+        };
+        result.compose_ = std::move(state);
+        return result;
+    }
+
   private:
     using typed_handler_type = std::function<void(TypedMessage&)>;
     std::unordered_map<TypeTag, typed_handler_type> typed_handlers_;
@@ -284,7 +307,13 @@ class Behavior {
     /// typed-handler → fallback path.  This allows combinators to
     /// intercept every message before any dispatch.
     struct ComposeState {
-        enum class Type : uint8_t { Intercept, Compose, OnSignal, Setup };
+        enum class Type : uint8_t {
+            Intercept,
+            Compose,
+            OnSignal,
+            Setup,
+            MessageAdapter
+        };
 
         Type type;
         /// Inner behavior — the wrapped/decorated behavior.
@@ -303,12 +332,18 @@ class Behavior {
         bool initialized = false;
         /// For \c Setup: the factory function.
         std::function<Behavior()> factory;
+        /// For \c MessageAdapter: translate From → To messages.
+        std::function<TypedMessage(const TypedMessage&)> adapter_fn;
+        /// For \c MessageAdapter: the source TypeTag to match.
+        TypeTag adapter_from_tag = TypeTag::Invalid;
 
         /// \brief Entry point for combinator dispatch.
         ///
         /// Dispatches according to \c type:
         /// - \c Intercept: calls \c interceptor(msg, next) where
         ///   \c next delegates to \c inner.
+        /// - \c MessageAdapter: translates matching messages, passes
+        ///   through others.
         /// - \c Compose: calls \c inner then \c second.
         /// - \c OnSignal: routes matching tags to \c signal_handler,
         ///   others to \c inner.

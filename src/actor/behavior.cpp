@@ -57,6 +57,15 @@ void Behavior::ComposeState::invoke(TypedMessage& msg, const Behavior& /*self*/)
             if (inner)
                 (*inner)(msg);
             break;
+        case Type::MessageAdapter:
+            if (msg.type_id() == adapter_from_tag && adapter_fn && inner) {
+                auto translated = adapter_fn(msg);
+                translated.set_trace_context(msg.trace_context());
+                (*inner)(translated);
+            } else if (inner) {
+                (*inner)(msg);
+            }
+            break;
     }
 }
 
