@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/core/actor_ref_cache.hpp>
+#include <hpactor/actor/actor_ref_cache.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 #include <hpactor/types/types.hpp>

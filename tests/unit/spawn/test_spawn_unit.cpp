@@ -1,10 +1,10 @@
 // Copyright 2026 HPActor Contributors
 // Licensed under the Apache License, Version 2.0
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/spawn.hpp>
-#include <hpactor/core/actor_system.hpp>
-#include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/msg/request_handle.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>

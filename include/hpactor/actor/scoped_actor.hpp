@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/blocking_actor.hpp>
-#include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 
 namespace hpactor {
 

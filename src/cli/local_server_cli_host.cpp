@@ -3,11 +3,11 @@
 
 #include <hpactor/cli/local_server_cli_host.hpp>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/command_registry.hpp>
 #include <hpactor/cli/command_tree_builder.hpp>
 #include <hpactor/cli_messages.pb.h>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>

@@ -237,6 +237,18 @@ using ActorType = uint32_t;
 constexpr ActorType InvalidActorType = 0;
 
 // -----------------------------------------------------------------------------
+// Well-known system actor identifiers
+// -----------------------------------------------------------------------------
+
+/// Actor ID of the SpawnReceiver system actor.
+/// Handles remote spawn requests and routes SpawnRequest / SpawnResponse
+/// messages.
+constexpr ActorId SpawnReceiverId = ActorId(0xFFFF0001);
+
+/// Type tag used in ActorAddress for system actors.
+constexpr ActorType SystemActorType = 0xFFFF0000;
+
+// -----------------------------------------------------------------------------
 // incarnation_type - version counter for actor lifecycle
 // -----------------------------------------------------------------------------
 using incarnation_type = uint64_t;

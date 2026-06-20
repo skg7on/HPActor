@@ -8,7 +8,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/net/static_discovery.hpp>
 #include <hpactor/net/transport.hpp>
 

@@ -14,9 +14,9 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/local_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
 #include <hpactor/msg/frame.hpp>
 

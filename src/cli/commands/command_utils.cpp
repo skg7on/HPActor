@@ -3,8 +3,8 @@
 
 #include "command_utils.hpp"
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/output_formatter.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/metrics/metrics_actor.hpp>
 #include <hpactor/sched/scheduler.hpp>
 

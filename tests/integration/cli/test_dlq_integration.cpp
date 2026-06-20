@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/pretty_formatter.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/types/types.hpp>
 

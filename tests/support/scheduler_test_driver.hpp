@@ -16,7 +16,7 @@
 
 #pragma once
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <cassert>

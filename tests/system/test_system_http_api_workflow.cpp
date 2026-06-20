@@ -5,11 +5,11 @@
 
 #include "../support/system_test_fixture.hpp"
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/cli/cli_http_server_actor.hpp>
 #include <hpactor/cli/cli_http_server_config.hpp>
 #include <hpactor/cli/http_handler.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/http_types.hpp>
 
 #include <arpa/inet.h>

@@ -15,8 +15,8 @@
 #include <hpactor/sched/actor_ready_gate.hpp>
 
 #include <hpactor/actor/actor_state.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 
 namespace hpactor::sched {
 

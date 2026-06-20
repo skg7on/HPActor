@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli/command_node.hpp>
@@ -20,7 +21,6 @@
 #include <hpactor/cli/interactive_cli_actor.hpp>
 #include <hpactor/cli/line_editor.hpp>
 #include <hpactor/cli/output_formatter.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 
 #include <cstdio>

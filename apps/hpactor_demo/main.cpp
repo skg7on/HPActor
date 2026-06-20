@@ -25,8 +25,8 @@
 #include "daemon_runner.hpp"
 #include "foreground_runner.hpp"
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_config.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/process/process_config.hpp>
 
 #include <cerrno>

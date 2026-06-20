@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/net/event_loop.hpp>
 #include <hpactor/net/proactor_dispatcher.hpp>

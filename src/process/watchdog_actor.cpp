@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <hpactor/actor/actor_context.hpp>
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/process/process_manager.hpp>
 #include <hpactor/process/watchdog_actor.hpp>
 #include <hpactor/sched/scheduler.hpp>

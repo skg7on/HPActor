@@ -14,11 +14,10 @@
 
 #pragma once
 
-#include <hpactor/core/actor_system.hpp>
-#include <hpactor/core/actor_system_ids.hpp>
+#include <hpactor/actor/actor_system.hpp>
+#include <hpactor/actor/spawn.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/ref/actor_ref.hpp>
-#include <hpactor/actor/spawn.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <functional>

@@ -14,8 +14,8 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/ask_manager.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/request_timeout.hpp>
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>

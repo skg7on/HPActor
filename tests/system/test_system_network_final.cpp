@@ -19,9 +19,9 @@
 
 #include "system_test_fixture.hpp"
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/net/actor_location_cache.hpp>
 #include <hpactor/net/connection_pool.hpp>

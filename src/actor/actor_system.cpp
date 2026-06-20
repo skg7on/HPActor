@@ -12,6 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/actor_type_registry.hpp>
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/durable/in_memory_state_store.hpp>
@@ -24,7 +25,6 @@
 #include <hpactor/actor/spawn_receiver.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/mailbox/backpressure_coordinator.hpp>
@@ -40,7 +40,6 @@
 #include <hpactor/actor/receptionist/receptionist.hpp>
 #include <hpactor/actor/spawn.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
-#include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/log/log_manager.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>
@@ -51,32 +50,12 @@
 #include <hpactor/net/async_io_fwd.hpp>
 #include <hpactor/net/tcp_transport.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/types/types.hpp>
 
 #include <hpactor/common.pb.h>
 #include <hpactor/messages.pb.h>
 
 namespace hpactor {
-
-// -----------------------------------------------------------------------------
-// actor_registry implementation
-// -----------------------------------------------------------------------------
-actor_registry::actor_registry(EndPoint endpoint) : endpoint_(endpoint) {}
-
-void actor_registry::put(const std::string& name, ActorAddress addr) {
-    actors_[name] = addr;
-}
-
-ActorAddress actor_registry::get(const std::string& name) const {
-    auto it = actors_.find(name);
-    if (it != actors_.end()) {
-        return it->second;
-    }
-    return invalid_actor_addr;
-}
-
-void actor_registry::erase(const std::string& name) {
-    actors_.erase(name);
-}
 
 // -----------------------------------------------------------------------------
 // ActorSystem implementation

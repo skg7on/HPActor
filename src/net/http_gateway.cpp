@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/net/http_gateway.hpp>
 
 #include <unistd.h>
@@ -29,19 +29,22 @@ namespace net {
 
 static std::vector<PatternSegment> parse_pattern(const std::string& pattern) {
     std::vector<PatternSegment> segments;
-    if (pattern.empty() || pattern[0] != '/') return segments;
+    if (pattern.empty() || pattern[0] != '/')
+        return segments;
 
     size_t pos = 1;
     while (pos < pattern.size()) {
         size_t end = pattern.find('/', pos);
-        std::string seg = pattern.substr(pos, end == std::string::npos ? end : end - pos);
+        std::string seg =
+            pattern.substr(pos, end == std::string::npos ? end : end - pos);
         if (seg.empty()) {
             pos = end == std::string::npos ? pattern.size() : end + 1;
             continue;
         }
         if (seg[0] == '*') {
             if (seg.size() > 1) {
-                segments.push_back({PatternSegmentType::MultiWildcard, seg.substr(1)});
+                segments.push_back(
+                    {PatternSegmentType::MultiWildcard, seg.substr(1)});
             } else {
                 segments.push_back({PatternSegmentType::SingleWildcard, ""});
             }
@@ -56,7 +59,7 @@ static std::vector<PatternSegment> parse_pattern(const std::string& pattern) {
 }
 
 static bool match_pattern(const std::vector<PatternSegment>& segments,
-                           const std::string& path, HttpRequest& req) {
+                          const std::string& path, HttpRequest& req) {
     std::vector<std::string> path_segs;
     if (!path.empty() && path[0] == '/') {
         size_t pos = 1;
@@ -73,46 +76,50 @@ static bool match_pattern(const std::vector<PatternSegment>& segments,
     while (si < segments.size() && pi < path_segs.size()) {
         const auto& seg = segments[si];
         switch (seg.type) {
-        case PatternSegmentType::Literal:
-            if (path_segs[pi] != seg.name) return false;
-            ++pi; ++si;
-            break;
-        case PatternSegmentType::NamedParam:
-            req.path_params[seg.name] = path_segs[pi];
-            ++pi; ++si;
-            break;
-        case PatternSegmentType::SingleWildcard:
-            ++pi; ++si;
-            break;
-        case PatternSegmentType::MultiWildcard: {
-            std::string remaining;
-            for (size_t i = pi; i < path_segs.size(); ++i) {
-                if (i > pi) remaining += '/';
-                remaining += path_segs[i];
+            case PatternSegmentType::Literal:
+                if (path_segs[pi] != seg.name)
+                    return false;
+                ++pi;
+                ++si;
+                break;
+            case PatternSegmentType::NamedParam:
+                req.path_params[seg.name] = path_segs[pi];
+                ++pi;
+                ++si;
+                break;
+            case PatternSegmentType::SingleWildcard:
+                ++pi;
+                ++si;
+                break;
+            case PatternSegmentType::MultiWildcard: {
+                std::string remaining;
+                for (size_t i = pi; i < path_segs.size(); ++i) {
+                    if (i > pi)
+                        remaining += '/';
+                    remaining += path_segs[i];
+                }
+                req.path_params[seg.name] = remaining;
+                return true;
             }
-            req.path_params[seg.name] = remaining;
-            return true;
-        }
         }
     }
     return si == segments.size() && pi == path_segs.size();
 }
 
 void RouteRegistry::add(HttpMethod method, std::string pattern,
-                         MessageBuilder builder, int priority) {
-    routes_.push_back(
-        {method, parse_pattern(pattern), std::move(builder), priority});
-    std::sort(routes_.begin(), routes_.end(),
-              [](const Route& a, const Route& b) {
-                  return a.priority < b.priority;
-              });
+                        MessageBuilder builder, int priority) {
+    routes_.push_back({method, parse_pattern(pattern), std::move(builder), priority});
+    std::sort(routes_.begin(), routes_.end(), [](const Route& a, const Route& b) {
+        return a.priority < b.priority;
+    });
 }
 
 const RouteRegistry::MessageBuilder*
 RouteRegistry::match(HttpMethod method, const std::string& path,
-                      HttpRequest& req) const {
+                     HttpRequest& req) const {
     for (const auto& route : routes_) {
-        if (route.method != method) continue;
+        if (route.method != method)
+            continue;
         if (match_pattern(route.segments, path, req)) {
             return &route.builder;
         }
@@ -184,16 +191,15 @@ void HTTPGateway::set_error_handler(ErrorHandler handler) {
 }
 
 void HTTPGateway::send_response(HTTPConnection* conn, HttpStatusCode code,
-                                 std::vector<HttpHeader> headers, StreamBuffer body) {
+                                std::vector<HttpHeader> headers, StreamBuffer body) {
     conn->send_response(code, std::move(headers), std::move(body));
 }
 
 void HTTPGateway::close_connection(HTTPConnection* conn) {
     std::lock_guard<std::mutex> lock(conn_mutex_);
-    auto it = std::find_if(connections_.begin(), connections_.end(),
-                           [conn](const HTTPConnectionPtr& p) {
-                               return p.get() == conn;
-                           });
+    auto it = std::find_if(
+        connections_.begin(), connections_.end(),
+        [conn](const HTTPConnectionPtr& p) { return p.get() == conn; });
     if (it != connections_.end()) {
         (*it)->close();
         connections_.erase(it);
@@ -217,8 +223,8 @@ void HTTPGateway::on_accept(int client_fd, EndPoint remote_endpoint) {
         }
     }
 
-    auto conn = HTTPConnection::create(client_fd, LocalEndpoint,
-        remote_endpoint, &loop_, HTTPConnectionMode::Server);
+    auto conn = HTTPConnection::create(client_fd, LocalEndpoint, remote_endpoint,
+                                       &loop_, HTTPConnectionMode::Server);
 
     conn->set_request_handler([this](HTTPConnection* c, HttpRequest&& req) {
         if (request_handler_) {

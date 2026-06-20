@@ -18,6 +18,7 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/blocking_actor.hpp>
 #include <hpactor/actor/daemon_actor.hpp>
@@ -31,7 +32,6 @@
 #include <hpactor/actor/typed_actor.hpp>
 #include <hpactor/actor/typed_behavior.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
 #include "system_test_fixture.hpp"

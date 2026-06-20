@@ -3,10 +3,10 @@
 
 #include "cli_http_handler_helpers.hpp"
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/adt/json_helpers.hpp>
 #include <hpactor/cli/cli_http_server_actor.hpp>
 #include <hpactor/cli/http_handler.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_types.hpp>

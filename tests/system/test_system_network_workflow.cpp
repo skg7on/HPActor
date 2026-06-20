@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/net/acceptor.hpp>
 #include <hpactor/net/actor_location_cache.hpp>
 #include <hpactor/net/connection_pool.hpp>

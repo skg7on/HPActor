@@ -3,7 +3,7 @@
 
 #include <hpactor/ai/ai_type_tags.hpp>
 #include <hpactor/ai_resource.pb.h>
-#include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 
 namespace hpactor::ai {
 namespace {
