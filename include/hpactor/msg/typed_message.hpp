@@ -11,9 +11,18 @@
 
 #include <atomic>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace hpactor {
+
+/// \brief Maximum payload size eligible for inlining (MEM-006).
+inline constexpr size_t kMaxInlinePayload = 32;
+
+/// \brief Compile-time trait: true when T can be inlined in the envelope.
+template <typename T>
+inline constexpr bool kCanInlinePayload =
+    sizeof(T) <= kMaxInlinePayload && std::is_trivially_copyable_v<T>;
 
 /// \brief Universal message carrier for all actor communication.
 ///
@@ -21,6 +30,10 @@ namespace hpactor {
 /// wire transfer, and an optional \c shared_ptr<Message> for zero-copy local
 /// delivery. The \c mpsc_next field provides the intrusive link for lock-free
 /// MPSC mailboxes.
+///
+/// For payloads ≤ \c kMaxInlinePayload bytes, \c StreamBuffer::from_data()
+/// provides exact-capacity allocation (no 64KB minimum), significantly reducing
+/// allocation overhead for small messages (MEM-006).
 ///
 /// Lifecycle:
 /// - Local send: \c TypedMessage(tag, parsed_msg, serialized_bytes)
