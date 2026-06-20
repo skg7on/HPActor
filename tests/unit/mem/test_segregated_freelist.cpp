@@ -54,15 +54,18 @@ TEST(SegregatedFreelist, SegregatedAllocateAndFree) {
     cache.deallocate(b1);
     cache.deallocate(b2);
 
-    // Re-allocate — should come from bins (recycled)
+    // Re-allocate — with bump-first (MEM-001 §3.2), virgin memory is preferred.
+    // New allocations come from bump, not from recycled bins.
     void* b3 = cache.allocate(hpactor::ActorId{3});
     void* b4 = cache.allocate(hpactor::ActorId{4});
     ASSERT_NE(b3, nullptr);
     ASSERT_NE(b4, nullptr);
 
-    // Both should be recycled from the original blocks
-    EXPECT_TRUE(b3 == b1 || b3 == b2);
-    EXPECT_TRUE(b4 == b1 || b4 == b2);
+    // Bump-first: new allocations from virgin memory, not recycled
+    EXPECT_NE(b3, b1);
+    EXPECT_NE(b3, b2);
+    EXPECT_NE(b4, b1);
+    EXPECT_NE(b4, b2);
     EXPECT_NE(b3, b4);
 
     EXPECT_EQ(cache.live_count(), 2U);

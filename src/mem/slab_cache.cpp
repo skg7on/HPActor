@@ -43,87 +43,100 @@ uint8_t SlabCache::compute_bin_index(const AllocHeader* header) const noexcept {
     return static_cast<uint8_t>((offset / bin_stride_bytes_) % kNumSegregatedBins);
 }
 
-void* SlabCache::allocate(ActorId owner) noexcept {
-    // 1. Try freelist first (strategy-dependent)
-    AllocHeader* block = nullptr;
-    if (strategy_ == AllocationStrategy::kBumpOnly) {
-        // Bump-only: skip all freelist operations
-        block = nullptr;
-    } else if (strategy_ == AllocationStrategy::kSegregatedFit) {
-        // Segregated: round-robin search across bins, one block per bin
-        for (uint8_t i = 0; i < kNumSegregatedBins; ++i) {
-            uint8_t bin_idx =
-                static_cast<uint8_t>((start_bin_ + i) % kNumSegregatedBins);
-            block = bins_[bin_idx].pop();
-            if (block) {
-                start_bin_ =
-                    static_cast<uint8_t>((bin_idx + 1) % kNumSegregatedBins);
-                break;
-            }
-        }
-    } else {
-        block = freelist_.pop();
-    }
+// Shared tail: stamp and return a block popped from any freelist.
+static void*
+stamp_freelist_block(AllocHeader* block, ActorId owner, uint8_t generation,
+                     std::atomic<uint64_t>& alloc_cnt,
+                     std::atomic<uint32_t>& live_cnt) noexcept {
     FAULT_INJECT("hpactor.allocator.freelist.pop.corrupt") {
         if (block != nullptr) {
             block->magic = 0;
         }
     }
-    if (block) {
-#if HPACTOR_ENABLE_MEMORY_DEBUG
-        // Verify canary was not corrupted while block was freed
-        size_t bs = block_size(size_class_);
-        if (!CanaryFooter::verify(block, bs)) {
-            HPACTOR_LOG_ERROR(
-                log::LogCategory::kMemory, ActorId{0},
-                static_cast<uint32_t>(log::LogEventId::kMemoryCorruption),
-                "memory corruption detected (canary mismatch in allocate)",
-                log::field_ptr("block", block));
-            stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
-            live_count_.fetch_add(1, std::memory_order_relaxed);
-            return nullptr; // corruption detected, refuse allocation
-        }
-        // Check poison pattern — first bytes should be 0xAA
-        auto* user = static_cast<uint8_t*>(block->user_data());
-        size_t usz = size_for_class(size_class_);
-        for (size_t i = 0; i < usz && i < 16; ++i) {
-            if (user[i] != kPoisonByte) {
-                // use-after-free detected
-                HPACTOR_LOG_ERROR(
-                    log::LogCategory::kMemory, ActorId{0},
-                    static_cast<uint32_t>(log::LogEventId::kMemoryCorruption),
-                    "use-after-free detected (poison byte violated)",
-                    log::field_ptr("block", block));
+    block->owner_id = owner.value();
+    block->magic = kAllocMagic;
+    block->generation = generation;
+    alloc_cnt.fetch_add(1, std::memory_order_relaxed);
+    live_cnt.fetch_add(1, std::memory_order_relaxed);
+    return block->user_data();
+}
+
+void* SlabCache::allocate(ActorId owner) noexcept {
+    // kSegregatedFit: bump-first for best locality (MEM-001 §3.2).
+    // Virgin memory provides contiguous allocation — the segregated bins
+    // are only used when the current slab is exhausted.
+    if (strategy_ == AllocationStrategy::kSegregatedFit) {
+        if (current_slab_) {
+            size_t bs = block_size(size_class_);
+            if (bump_offset_ + bs <= slab_size_) {
+                auto* raw = current_slab_ + bump_offset_;
+                bump_offset_ += bs;
+                auto* hdr = AllocHeader::stamp(raw, size_class_, owner, region_);
+                hdr->generation = current_generation_;
+                CanaryFooter::stamp(hdr, bs);
                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
                 live_count_.fetch_add(1, std::memory_order_relaxed);
-                return nullptr;
+                return hdr->user_data();
             }
         }
+        // Bump exhausted — try segregated bins (depth-bounded per bin)
+        for (uint8_t i = 0; i < kNumSegregatedBins; ++i) {
+            uint8_t bin_idx =
+                static_cast<uint8_t>((start_bin_ + i) % kNumSegregatedBins);
+            uint8_t depth = 0;
+            while (depth < kMaxSearchDepthPerBin) {
+                AllocHeader* block = bins_[bin_idx].pop();
+                if (!block)
+                    break;
+                ++depth;
+#if HPACTOR_ENABLE_MEMORY_DEBUG
+                size_t cbs = block_size(size_class_);
+                if (!CanaryFooter::verify(block, cbs))
+                    continue;
+                auto* cuser = static_cast<uint8_t*>(block->user_data());
+                size_t cusz = size_for_class(size_class_);
+                bool poisoned = true;
+                for (size_t j = 0; j < cusz && j < 16; ++j) {
+                    if (cuser[j] != kPoisonByte) {
+                        poisoned = false;
+                        break;
+                    }
+                }
+                if (!poisoned)
+                    continue;
 #endif
-        block->owner_id = owner.value();
-        block->magic = kAllocMagic;
-        block->generation = current_generation_;
-        stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
-        live_count_.fetch_add(1, std::memory_order_relaxed);
-        return block->user_data();
-    }
-
-    // 2. Bump allocate from current slab
-    if (current_slab_) {
-        size_t bs = block_size(size_class_);
-        if (bump_offset_ + bs <= slab_size_) {
-            auto* raw = current_slab_ + bump_offset_;
-            bump_offset_ += bs;
-            auto* hdr = AllocHeader::stamp(raw, size_class_, owner, region_);
-            hdr->generation = current_generation_;
-            CanaryFooter::stamp(hdr, bs);
-            stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
-            live_count_.fetch_add(1, std::memory_order_relaxed);
-            return hdr->user_data();
+                start_bin_ =
+                    static_cast<uint8_t>((bin_idx + 1) % kNumSegregatedBins);
+                return stamp_freelist_block(block, owner, current_generation_,
+                                            stats_.alloc_count, live_count_);
+            }
+        }
+    } else {
+        // kCasLifo (default) and kBumpOnly: keep existing behavior
+        if (strategy_ != AllocationStrategy::kBumpOnly) {
+            auto* block = freelist_.pop();
+            if (block) {
+                return stamp_freelist_block(block, owner, current_generation_,
+                                            stats_.alloc_count, live_count_);
+            }
+        }
+        // Try bump allocate (all strategies including kBumpOnly)
+        if (current_slab_) {
+            size_t bs = block_size(size_class_);
+            if (bump_offset_ + bs <= slab_size_) {
+                auto* raw = current_slab_ + bump_offset_;
+                bump_offset_ += bs;
+                auto* hdr = AllocHeader::stamp(raw, size_class_, owner, region_);
+                hdr->generation = current_generation_;
+                CanaryFooter::stamp(hdr, bs);
+                stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
+                live_count_.fetch_add(1, std::memory_order_relaxed);
+                return hdr->user_data();
+            }
         }
     }
 
-    // 3. Need a new slab
+    // Refill from SegmentProvider
     refill();
     if (current_slab_) {
         return allocate(owner);
