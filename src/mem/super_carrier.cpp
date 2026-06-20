@@ -12,6 +12,12 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+// Required for MAP_HUGETLB, MADV_HUGEPAGE, MAP_NORESERVE on Linux with
+// -std=c++20 (CMAKE_CXX_EXTENSIONS OFF suppresses the implicit _GNU_SOURCE).
+#ifndef _GNU_SOURCE
+#    define _GNU_SOURCE
+#endif
+
 #include <hpactor/mem/super_carrier.hpp>
 
 #include <cstdio>
@@ -49,7 +55,10 @@ HugePageInfo probe_huge_pages() noexcept {
 bool SuperCarrier::init(size_t size_bytes, const HugePageInfo& huge_info) noexcept {
     (void)huge_info;
 #ifdef __LP64__
-    int flags = MAP_PRIVATE | MAP_ANONYMOUS | MAP_NORESERVE;
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+#    ifdef MAP_NORESERVE
+    flags |= MAP_NORESERVE;
+#    endif
 
     // MEM-005: Use huge pages when available (fallback hierarchy)
 #    if defined(__linux__)
