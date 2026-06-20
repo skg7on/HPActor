@@ -17,40 +17,45 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/receptionist/receptionist_messages.hpp>
 
+#include <mutex>
 #include <unordered_map>
 #include <unordered_set>
 
 namespace hpactor::receptionist {
 
 /// System actor that provides publish/subscribe actor lookup by
-/// ServiceKey. Actors register themselves under a key; other actors
-/// subscribe to receive Listing notifications when the key's
-/// membership set changes.
+/// ServiceKey. All methods are thread-safe (protected by internal
+/// mutex). Uses direct function calls rather than TypedMessage dispatch.
 class Receptionist : public EventBasedActor {
   public:
     Receptionist(ActorContext* ctx, ActorSystem& sys);
 
     Behavior make_behavior() override;
 
-    /// Thread-safe queries for testing and CLI introspection.
+    /// Register an actor address under a ServiceKey.
+    void register_actor(const ServiceKey& key, const ActorAddress& addr);
+
+    /// Unregister an actor address from a ServiceKey.
+    void unregister_actor(const ServiceKey& key, const ActorAddress& addr);
+
+    /// Subscribe to membership changes for a ServiceKey.
+    void add_subscriber(const ServiceKey& key, const ActorAddress& subscriber);
+
+    /// Unsubscribe from a ServiceKey.
+    void remove_subscriber(const ServiceKey& key, const ActorAddress& subscriber);
+
+    /// Get the current listing for a key.
+    Listing get_listing(const ServiceKey& key) const;
+
+    /// Query counts (for testing and CLI introspection).
     size_t registration_count() const;
-    size_t subscription_count() const;
-
-    /// Direct handler access for testing with injected messages.
-    void handle_register(const Register& msg);
-    void handle_subscribe(const Subscribe& msg);
-    void handle_unregister(const Unregister& msg);
-    void handle_unsubscribe(const Unsubscribe& msg);
-
-    /// Build a Listing for a key (for testing).
-    Listing build_listing(const ServiceKey& key);
+    size_t subscriber_count() const;
 
   private:
-    /// Broadcast a Listing to all subscribers of `key`.
-    void broadcast_listing(const ServiceKey& key);
-
-    std::unordered_map<ServiceKey, std::unordered_set<ActorId>> registry_;
-    std::unordered_map<ServiceKey, std::unordered_set<ActorId>> subscribers_;
+    mutable std::mutex mutex_;
+    using AddrSet = std::unordered_set<ActorAddress>;
+    std::unordered_map<ServiceKey, AddrSet> registry_;
+    std::unordered_map<ServiceKey, AddrSet> subscribers_;
 };
 
 } // namespace hpactor::receptionist
