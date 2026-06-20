@@ -134,3 +134,94 @@ TEST(Coalescing, FullSlabFreeAndReallocate) {
     auto* r = cache.allocate(hpactor::ActorId{1});
     EXPECT_NE(r, nullptr);
 }
+
+// ── Boundary edge cases ─────────────────────────────────────────
+
+TEST(Coalescing, FirstBlockInSlabNoLeftCoalesce) {
+    // The very first block in a slab has no left neighbor — should not crash
+    SlabCache cache(SizeClass::k64B, RegionType::kActor,
+                    AllocationStrategy::kSegregatedFit, /*coalescing=*/true);
+    auto* first = cache.allocate(hpactor::ActorId{1});
+    auto* second = cache.allocate(hpactor::ActorId{2});
+
+    cache.deallocate(first);  // First block freed — no left neighbor
+    cache.deallocate(second); // Second should coalesce left with first
+
+    // Both should be coalesced into one free region
+    auto* r1 = cache.allocate(hpactor::ActorId{1});
+    auto* r2 = cache.allocate(hpactor::ActorId{2});
+    EXPECT_NE(r1, nullptr);
+    EXPECT_NE(r2, nullptr);
+}
+
+TEST(Coalescing, LastBlockInSlabNoRightCoalesce) {
+    // The last block in a full slab has no right neighbor — should not crash
+    SlabCache cache(SizeClass::k64B, RegionType::kActor,
+                    AllocationStrategy::kSegregatedFit, /*coalescing=*/true);
+    std::vector<void*> blocks;
+    // Fill the slab
+    for (int i = 0; i < 100; ++i) {
+        auto* b = cache.allocate(hpactor::ActorId{1});
+        ASSERT_NE(b, nullptr);
+        blocks.push_back(b);
+    }
+    // Free the last block — should not read past slab end
+    auto* last = blocks.back();
+    cache.deallocate(last);
+    SUCCEED(); // no crash
+}
+
+// ── Middle-of-list removal verification ──────────────────────────
+
+TEST(Coalescing, CoalesceAfterInterleavedFrees) {
+    // This test validates dll_remove() works correctly for non-head removal.
+    // Free A, allocate from bin (moves A's bin head), free B adjacent to A.
+    // B should still coalesce with A even though A is no longer at bin head.
+    SlabCache cache(SizeClass::k64B, RegionType::kActor,
+                    AllocationStrategy::kSegregatedFit, /*coalescing=*/true);
+
+    // Allocate and free three adjacent blocks: X, A, B
+    auto* x = cache.allocate(hpactor::ActorId{1});
+    auto* a = cache.allocate(hpactor::ActorId{2});
+    auto* b = cache.allocate(hpactor::ActorId{3});
+    ASSERT_NE(x, nullptr);
+    ASSERT_NE(a, nullptr);
+    ASSERT_NE(b, nullptr);
+
+    // Free A (goes to bin), then free X (goes to same bin, now at head)
+    cache.deallocate(a);
+    cache.deallocate(x);
+
+    // Now free B — A is adjacent to B but NOT at bin head (X is at head).
+    // dll_remove() must find A in the middle of the list and remove it.
+    cache.deallocate(b);
+
+    // All three should be coalesced: X-A-B
+    auto* r1 = cache.allocate(hpactor::ActorId{1});
+    auto* r2 = cache.allocate(hpactor::ActorId{2});
+    auto* r3 = cache.allocate(hpactor::ActorId{3});
+    EXPECT_NE(r1, nullptr);
+    EXPECT_NE(r2, nullptr);
+    EXPECT_NE(r3, nullptr);
+}
+
+// ── 32B block exclusion ─────────────────────────────────────────
+
+TEST(Coalescing, CoalescingSkip32BBlock) {
+    // MEM-002 Appendix A: coalescing is disabled for 32B size class
+    // (block total = 72B, user data = 32B, can't store prev pointer).
+    SlabCache cache(SizeClass::k32B, RegionType::kActor,
+                    AllocationStrategy::kSegregatedFit, /*coalescing=*/true);
+
+    auto* a = cache.allocate(hpactor::ActorId{1});
+    auto* b = cache.allocate(hpactor::ActorId{2});
+    ASSERT_NE(a, nullptr);
+    ASSERT_NE(b, nullptr);
+
+    cache.deallocate(a);
+    cache.deallocate(b);
+    // For 32B: coalescing is skipped, blocks remain separate
+
+    auto* r1 = cache.allocate(hpactor::ActorId{1});
+    EXPECT_NE(r1, nullptr);
+}

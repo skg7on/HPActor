@@ -42,10 +42,29 @@ static constexpr uint8_t kNumSegregatedBins = 8;
 /// \brief Maximum search depth per bin before rotating to the next.
 static constexpr uint8_t kMaxSearchDepthPerBin = 3;
 
+/// \brief Minimum block size eligible for coalescing.
+///
+/// Blocks smaller than this (32B user data) cannot store the \c prev pointer
+/// needed for doubly-linked free list removal (MEM-002 Appendix A).
+static constexpr size_t kMinCoalesceBlockSize = 64; // 64B block = 32B user data
+
+/// \brief Intrusive doubly-linked list linkage stored in freed block user data.
+///
+/// \c next reuses \c AllocHeader::next (in union with \c owner_id).
+/// \c prev is stored in the first 8 bytes of the freed block's user data
+/// region, which is unused and poisoned anyway — zero additional memory
+/// overhead.
+struct FreeBlockLinkage {
+    AllocHeader* next; ///< Next free block (reuses AllocHeader::next).
+    AllocHeader* prev; ///< Previous free block (stored in user data).
+};
+
 /// \brief Configuration for a single region's allocation strategy (MEM-003).
 struct RegionStrategyConfig {
     AllocationStrategy strategy{AllocationStrategy::kCasLifo};
     bool enable_coalescing{false};
+    uint8_t max_coalesce_depth{2}; ///< Max neighbors to check (default: left +
+                                   ///< right).
 };
 
 /// \brief Per-region strategy table indexed by RegionType (MEM-003).
@@ -184,6 +203,23 @@ class SlabCache {
 
     /// \brief Stamp a boundary footer at the end of a freed block.
     void stamp_boundary_footer(AllocHeader* header, size_t block_sz) noexcept;
+
+    // ── Doubly-linked free list helpers (MEM-002 §3.3) ────────────
+    //
+    // Each segregated bin is a doubly-linked intrusive list threaded
+    // through freed blocks. next reuses AllocHeader::next (union with
+    // owner_id). prev is stored in the first 8 bytes of user data.
+    // These are single-threaded: only the owning SlabCache thread
+    // calls them. Cross-thread frees are routed via slab lookup.
+
+    /// \brief Push a block to the front of a bin's free list.
+    static void dll_push(FreeList<AllocHeader>& bin, AllocHeader* block) noexcept;
+
+    /// \brief Pop a block from the front of a bin's free list.
+    static AllocHeader* dll_pop(FreeList<AllocHeader>& bin) noexcept;
+
+    /// \brief Remove a specific block from anywhere in a bin's free list.
+    static void dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexcept;
 
     bool coalescing_{false};
     std::byte* current_slab_{nullptr};

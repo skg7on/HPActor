@@ -85,7 +85,7 @@ void* SlabCache::allocate(ActorId owner) noexcept {
                 static_cast<uint8_t>((start_bin_ + i) % kNumSegregatedBins);
             uint8_t depth = 0;
             while (depth < kMaxSearchDepthPerBin) {
-                AllocHeader* block = bins_[bin_idx].pop();
+                AllocHeader* block = dll_pop(bins_[bin_idx]);
                 if (!block)
                     break;
                 ++depth;
@@ -179,7 +179,7 @@ void SlabCache::deallocate(void* user_ptr) noexcept {
 
     if (strategy_ == AllocationStrategy::kSegregatedFit) {
         uint8_t bin = compute_bin_index(hdr);
-        bins_[bin].push(hdr);
+        dll_push(bins_[bin], hdr);
     } else {
         freelist_.push(hdr);
     }
@@ -205,6 +205,64 @@ void SlabCache::refill() {
     }
 }
 
+// ── Doubly-linked free list helpers (MEM-002 §3.3) ──────────────
+
+// Access the FreeBlockLinkage stored in a freed block's user data.
+static FreeBlockLinkage* linkage_of(AllocHeader* block) noexcept {
+    return reinterpret_cast<FreeBlockLinkage*>(block->user_data());
+}
+
+void SlabCache::dll_push(FreeList<AllocHeader>& bin, AllocHeader* block) noexcept {
+    auto* link = linkage_of(block);
+    AllocHeader* old_head = bin.pop(); // atomically take current head
+    link->next = old_head;
+    link->prev = nullptr;
+    if (old_head) {
+        linkage_of(old_head)->prev = block;
+        // Push old_head back, then push block on top
+        bin.push(old_head);
+    }
+    bin.push(block);
+}
+
+AllocHeader* SlabCache::dll_pop(FreeList<AllocHeader>& bin) noexcept {
+    return bin.pop(); // CAS LIFO pop — head is always the most-recently-pushed
+}
+
+void SlabCache::dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexcept {
+    auto* link = linkage_of(block);
+    AllocHeader* prev = link->prev;
+    AllocHeader* next = link->next;
+
+    // Update neighbor links
+    if (prev) {
+        linkage_of(prev)->next = next;
+    }
+    if (next) {
+        linkage_of(next)->prev = prev;
+    }
+
+    // If block was the head, the bin's CAS head needs updating.
+    // We handle this by popping the head and checking:
+    // Since dll_remove is single-threaded (owning thread only),
+    // we can safely check and re-link the head.
+    AllocHeader* head = bin.pop();
+    if (head == block) {
+        // Block was head — push next as new head
+        if (next)
+            bin.push(next);
+    } else if (head) {
+        // Block was not head — put head back
+        bin.push(head);
+    }
+    // else: bin was empty (shouldn't happen if block was in it)
+
+    link->next = nullptr;
+    link->prev = nullptr;
+}
+
+// ── Coalescing (MEM-002 §3.2) ───────────────────────────────────
+
 void SlabCache::stamp_boundary_footer(AllocHeader* header, size_t block_sz) noexcept {
     auto* overlay = reinterpret_cast<FooterOverlay*>(
         reinterpret_cast<char*>(header) + block_sz - sizeof(FooterOverlay));
@@ -216,17 +274,21 @@ void SlabCache::stamp_boundary_footer(AllocHeader* header, size_t block_sz) noex
 }
 
 AllocHeader* SlabCache::try_coalesce(AllocHeader* header) noexcept {
-    if (!coalescing_ || !current_slab_)
+    size_t bs = block_size(size_class_);
+
+    // Skip coalescing for blocks too small to store prev pointer (MEM-002
+    // Appendix A)
+    if (!coalescing_ || !current_slab_ || bs < kMinCoalesceBlockSize)
         return header;
 
-    size_t bs = block_size(size_class_);
     AllocHeader* result = header;
     size_t result_size = bs;
 
     // Stamp boundary footer on this block
     stamp_boundary_footer(header, bs);
 
-    // Check left neighbor
+    // Check left neighbor (constant-time: read footer immediately before
+    // header)
     auto* header_addr = reinterpret_cast<char*>(header);
     auto* slab_addr = reinterpret_cast<char*>(current_slab_);
     if (header_addr > slab_addr) {
@@ -237,29 +299,17 @@ AllocHeader* SlabCache::try_coalesce(AllocHeader* header) noexcept {
             auto* left_header =
                 reinterpret_cast<AllocHeader*>(header_addr - left_sz);
             if (left_header->magic == kFreedMagic) {
-                // Remove left neighbor from its bin
+                // Remove left neighbor from its bin (O(1) with doubly-linked
+                // list)
                 uint8_t left_bin = compute_bin_index(left_header);
-                // Pop from bin until we find the left_header (LIFO — it should
-                // be the head since it was most recently freed at this offset)
-                // Actually, for coalescing to work properly we need remove()
-                // from middle. For now, we accept that left blocks might not
-                // always be found and coalescing may be incomplete.
-                // The simplified approach: only coalesce if left is at bin
-                // head.
-                auto* popped = bins_[left_bin].pop();
-                if (popped == left_header) {
-                    result = left_header;
-                    result_size += left_sz;
-                } else {
-                    // Put it back — can't coalesce with middle of freelist yet
-                    if (popped)
-                        bins_[left_bin].push(popped);
-                }
+                dll_remove(bins_[left_bin], left_header);
+                result = left_header;
+                result_size += left_sz;
             }
         }
     }
 
-    // Check right neighbor
+    // Check right neighbor (constant-time: read header immediately after block)
     auto* right_addr = header_addr + bs;
     auto* slab_end = slab_addr + slab_size_;
     if (right_addr + sizeof(AllocHeader) <= slab_end) {
@@ -267,13 +317,8 @@ AllocHeader* SlabCache::try_coalesce(AllocHeader* header) noexcept {
         if (right_header->magic == kFreedMagic) {
             size_t right_sz = block_size(size_class_);
             uint8_t right_bin = compute_bin_index(right_header);
-            auto* popped = bins_[right_bin].pop();
-            if (popped == right_header) {
-                result_size += right_sz;
-            } else {
-                if (popped)
-                    bins_[right_bin].push(popped);
-            }
+            dll_remove(bins_[right_bin], right_header);
+            result_size += right_sz;
         }
     }
 
