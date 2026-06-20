@@ -222,17 +222,31 @@ class SlabCache {
     static void dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexcept;
 
     bool coalescing_{false};
+    /// \brief Install an idle slab as the current bump slab.
+    void install_idle_slab(std::byte* slab) noexcept;
+
     std::byte* current_slab_{nullptr};
     size_t slab_size_{0};
     size_t bump_offset_{0};
     uint32_t bin_stride_bytes_{0};
     uint8_t start_bin_{0};
+    uint32_t current_slab_block_count_{0}; ///< Blocks allocated from the
+                                           ///< current slab (for bump-only idle
+                                           ///< tracking).
 
     FreeList<AllocHeader> freelist_;
     std::array<FreeList<AllocHeader>, kNumSegregatedBins> bins_;
     std::atomic<uint32_t> live_count_{0};
     Stats stats_;
 
+    /// \brief Fully-freed slabs available for reuse (bump-only idle recycling).
+    ///
+    /// When a bump-only slab's live_count reaches 0, the slab is moved here
+    /// instead of being leaked. On next allocation exhaustion, these slabs are
+    /// reused before calling SegmentProvider (MEM-003 §3.3).
+    std::vector<std::byte*> idle_slabs_;
+
+    /// \brief All slabs currently owned (active, idle, and bump-in-progress).
     std::vector<std::byte*> slabs_;
 };
 

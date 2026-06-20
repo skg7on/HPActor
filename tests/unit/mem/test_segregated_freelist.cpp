@@ -13,6 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <hpactor/mem/memory_config.hpp>
 #include <hpactor/mem/size_class.hpp>
 #include <hpactor/mem/slab_cache.hpp>
 
@@ -187,4 +188,68 @@ TEST(SegregatedFreelist, BumpOnlyRefill) {
     EXPECT_GE(s2.slab_acquire_count.load(), 1u);
     for (auto* b : blocks)
         cache.deallocate(b);
+}
+
+// ── Idle slab recycling tests (MEM-003 §3.3) ────────────────────
+
+TEST(SegregatedFreelist, BumpOnlySlabRecycle) {
+    SlabCache cache(SizeClass::k64B, RegionType::kMessage,
+                    AllocationStrategy::kBumpOnly);
+
+    // Fill one slab
+    std::vector<void*> blocks;
+    for (int i = 0; i < 200; ++i) {
+        void* b = cache.allocate(hpactor::ActorId{1});
+        ASSERT_NE(b, nullptr);
+        blocks.push_back(b);
+    }
+
+    const auto& stats_before = cache.stats();
+    size_t slabs_before = stats_before.slab_acquire_count.load();
+
+    // Free all blocks — slab should be recycled to idle list
+    for (auto* b : blocks)
+        cache.deallocate(b);
+
+    // Allocate again — should reuse the idle slab, not call SegmentProvider
+    std::vector<void*> recycled;
+    for (int i = 0; i < 200; ++i) {
+        void* b = cache.allocate(hpactor::ActorId{2});
+        ASSERT_NE(b, nullptr);
+        recycled.push_back(b);
+    }
+
+    const auto& stats_after = cache.stats();
+    // No new slab acquired — idle slab was reused
+    EXPECT_EQ(stats_after.slab_acquire_count.load(), slabs_before);
+
+    for (auto* b : recycled)
+        cache.deallocate(b);
+}
+
+// ── Strategy dispatch tests (MEM-003 §5.1) ──────────────────────
+
+TEST(SegregatedFreelist, StrategyDispatchCorrectness) {
+    // Use ThreadLocalAllocator with default strategy table
+    MemoryStrategyTable table = kDefaultStrategies;
+
+    // kMessage → bump-only
+    EXPECT_EQ(table.regions[static_cast<uint8_t>(RegionType::kMessage)].strategy,
+              AllocationStrategy::kBumpOnly);
+    EXPECT_FALSE(
+        table.regions[static_cast<uint8_t>(RegionType::kMessage)].enable_coalescing);
+
+    // kActor → segregated + coalescing
+    EXPECT_EQ(table.regions[static_cast<uint8_t>(RegionType::kActor)].strategy,
+              AllocationStrategy::kSegregatedFit);
+    EXPECT_TRUE(
+        table.regions[static_cast<uint8_t>(RegionType::kActor)].enable_coalescing);
+
+    // kNetwork → bump-only
+    EXPECT_EQ(table.regions[static_cast<uint8_t>(RegionType::kNetwork)].strategy,
+              AllocationStrategy::kBumpOnly);
+
+    // kCoroutine → cas_lifo (default)
+    EXPECT_EQ(table.regions[static_cast<uint8_t>(RegionType::kCoroutine)].strategy,
+              AllocationStrategy::kCasLifo);
 }

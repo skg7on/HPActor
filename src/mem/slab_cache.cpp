@@ -29,6 +29,9 @@ inline constexpr uint8_t kPoisonByte = 0xAA;
 #endif
 
 SlabCache::~SlabCache() {
+    for (auto* slab : idle_slabs_) {
+        SegmentProvider::instance().release_slab(slab, size_class_);
+    }
     for (auto* slab : slabs_) {
         SegmentProvider::instance().release_slab(slab, size_class_);
     }
@@ -76,6 +79,7 @@ void* SlabCache::allocate(ActorId owner) noexcept {
                 CanaryFooter::stamp(hdr, bs);
                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
                 live_count_.fetch_add(1, std::memory_order_relaxed);
+                ++current_slab_block_count_;
                 return hdr->user_data();
             }
         }
@@ -131,12 +135,19 @@ void* SlabCache::allocate(ActorId owner) noexcept {
                 CanaryFooter::stamp(hdr, bs);
                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);
                 live_count_.fetch_add(1, std::memory_order_relaxed);
+                ++current_slab_block_count_;
                 return hdr->user_data();
             }
         }
     }
 
-    // Refill from SegmentProvider
+    // Refill from SegmentProvider (or recycle idle slab for bump-only)
+    if (strategy_ == AllocationStrategy::kBumpOnly && !idle_slabs_.empty()) {
+        auto* recycled = idle_slabs_.back();
+        idle_slabs_.pop_back();
+        install_idle_slab(recycled);
+        return allocate(owner);
+    }
     refill();
     if (current_slab_) {
         return allocate(owner);
@@ -171,9 +182,20 @@ void SlabCache::deallocate(void* user_ptr) noexcept {
     stats_.free_count.fetch_add(1, std::memory_order_relaxed);
     live_count_.fetch_sub(1, std::memory_order_relaxed);
 
-    // Bump-only: no freelist push — block becomes unusable space in the slab.
-    // The slab is returned to SegmentProvider when all blocks are freed.
+    // Bump-only: no freelist push — track per-slab block count for idle
+    // recycling (MEM-003 §3.3). When all blocks on the current slab are
+    // freed, the slab is recycled for future allocations.
     if (strategy_ == AllocationStrategy::kBumpOnly) {
+        if (current_slab_block_count_ > 0) {
+            --current_slab_block_count_;
+        }
+        // If all blocks freed and slab is fully exhausted, recycle it
+        if (current_slab_block_count_ == 0 && bump_offset_ >= slab_size_) {
+            idle_slabs_.push_back(current_slab_);
+            current_slab_ = nullptr;
+            slab_size_ = 0;
+            bump_offset_ = 0;
+        }
         return;
     }
 
@@ -194,6 +216,7 @@ void SlabCache::refill() {
     if (current_slab_) {
         slab_size_ = SegmentProvider::instance().slab_size(size_class_);
         bump_offset_ = 0;
+        current_slab_block_count_ = 0;
         if (strategy_ == AllocationStrategy::kSegregatedFit && slab_size_ > 0) {
             bin_stride_bytes_ =
                 static_cast<uint32_t>(slab_size_) / kNumSegregatedBins;
@@ -262,6 +285,13 @@ void SlabCache::dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexc
 }
 
 // ── Coalescing (MEM-002 §3.2) ───────────────────────────────────
+
+void SlabCache::install_idle_slab(std::byte* slab) noexcept {
+    current_slab_ = slab;
+    bump_offset_ = 0;
+    current_slab_block_count_ = 0;
+    // slab_size_ and bin_stride_bytes_ are already set from the original slab
+}
 
 void SlabCache::stamp_boundary_footer(AllocHeader* header, size_t block_sz) noexcept {
     auto* overlay = reinterpret_cast<FooterOverlay*>(
