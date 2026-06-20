@@ -23,16 +23,19 @@
 namespace hpactor {
 namespace adt {
 
-// StreamBuffer — contiguous byte buffer with O(1) consume and arena allocation.
-//
-// Combines ring-buffer semantics (read_pos_ offset tracks consumed prefix,
-// consume() only advances a pointer) with pre-allocated arena backing
-// (geometric growth from an initial capacity). Lazy compaction means
-// memmove is amortized to near-zero: it only triggers when read_pos_ exceeds
-// half the live data, or when capacity must grow.
-//
-// Provides a std::vector<uint8_t>-compatible API so it can serve as the
-// concrete type behind the `bytes` typedef.
+/// \brief Contiguous byte buffer with O(1) consume and arena allocation.
+///
+/// Combines ring-buffer semantics (\c read_pos_ offset tracks consumed prefix,
+/// \c consume() only advances a pointer) with pre-allocated arena backing
+/// (geometric growth from an initial capacity). Lazy compaction means
+/// \c memmove is amortized to near-zero: it only triggers when \c read_pos_
+/// exceeds half the live data, or when capacity must grow.
+///
+/// Provides a \c std::vector<uint8_t>-compatible API so it can serve as the
+/// concrete type behind the \c bytes typedef.
+///
+/// \note Thread safety: Not internally synchronized. A \c StreamBuffer must
+///       not be accessed concurrently from multiple threads.
 class StreamBuffer {
   public:
     using value_type = uint8_t;
@@ -63,7 +66,13 @@ class StreamBuffer {
 
     ~StreamBuffer() = default;
 
-    // Create a buffer with pre-allocated capacity but size() == 0.
+    /// \brief Create a buffer with pre-allocated capacity but \c size() == 0.
+    ///
+    /// \param[in] cap Minimum capacity to reserve. The actual capacity may be
+    ///                larger due to the 64 KB default minimum.
+    /// \return An empty \c StreamBuffer with at least \p cap bytes reserved.
+    /// \note Prefer \c from_data() when the exact payload size is known — it
+    ///       avoids the 64 KB default minimum for small buffers.
     static StreamBuffer with_capacity(size_t cap);
 
     /// \brief Create a buffer from raw data with exact-fit capacity.
