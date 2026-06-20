@@ -15,6 +15,7 @@
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/receptionist/receptionist.hpp>
 #include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
@@ -295,6 +296,46 @@ void ActorContext::passivate() {
     // This method sets a flag that the actor runner checks after
     // the current activation completes.
     passivation_requested_ = true;
+}
+
+void ActorContext::receptionist_register(receptionist::ServiceKey key) {
+    auto* sys = owner_ ? &owner_.get()->system() : system_;
+    if (!sys)
+        return;
+    auto* rec = sys->receptionist();
+    if (!rec)
+        return;
+    rec->register_actor(key, owner_.address());
+}
+
+void ActorContext::receptionist_unregister(receptionist::ServiceKey key) {
+    auto* sys = owner_ ? &owner_.get()->system() : system_;
+    if (!sys)
+        return;
+    auto* rec = sys->receptionist();
+    if (!rec)
+        return;
+    rec->unregister_actor(key, owner_.address());
+}
+
+void ActorContext::receptionist_subscribe(receptionist::ServiceKey key) {
+    auto* sys = owner_ ? &owner_.get()->system() : system_;
+    if (!sys)
+        return;
+    auto* rec = sys->receptionist();
+    if (!rec)
+        return;
+    rec->add_subscriber(key, owner_.address());
+}
+
+void ActorContext::receptionist_unsubscribe(receptionist::ServiceKey key) {
+    auto* sys = owner_ ? &owner_.get()->system() : system_;
+    if (!sys)
+        return;
+    auto* rec = sys->receptionist();
+    if (!rec)
+        return;
+    rec->remove_subscriber(key, owner_.address());
 }
 
 std::vector<Actor> ActorContext::children() const {

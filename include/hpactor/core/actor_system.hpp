@@ -92,6 +92,10 @@ namespace metrics {
 class MetricsActor;
 } // namespace metrics
 
+namespace receptionist {
+class Receptionist;
+} // namespace receptionist
+
 // Scheduler interface forward declaration
 namespace sched {
 class IScheduler;
@@ -451,6 +455,13 @@ class ActorSystem {
     ///
     /// Returns \c nullptr if CLI is disabled or not yet spawned.
     cli::CliActor* cli_actor() const;
+
+    /// \brief Access the Receptionist system actor for service-key-based
+    ///        actor discovery.
+    ///
+    /// \return Pointer to the Receptionist, or \c nullptr if not yet
+    ///         spawned.
+    receptionist::Receptionist* receptionist() const;
 
     // ── Mailbox ───────────────────────────────────────────────────────────
 
@@ -855,6 +866,9 @@ class ActorSystem {
 
     // CLI actor (DaemonActor, spawned when cli.enabled = true)
     std::shared_ptr<cli::CliActor> cli_actor_;
+
+    // Receptionist system actor (service-key-based actor discovery)
+    std::shared_ptr<receptionist::Receptionist> receptionist_;
 
     // Metrics configuration, ring buffer, and actor
     metrics::MetricsConfig metrics_config_;

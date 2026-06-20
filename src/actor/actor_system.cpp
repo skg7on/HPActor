@@ -37,6 +37,7 @@
 #include <mutex>
 #include <thread>
 
+#include <hpactor/actor/receptionist/receptionist.hpp>
 #include <hpactor/actor/spawn.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/core/actor_system_ids.hpp>
@@ -314,6 +315,14 @@ ActorSystem::ActorSystem(const Config& config)
         cli_actor_ = std::static_pointer_cast<cli::CliActor>(spawned.get());
     }
 
+    // Spawn the Receptionist system actor for service-key-based actor
+    // discovery.
+    {
+        auto spawned = spawn<receptionist::Receptionist>();
+        receptionist_ =
+            std::static_pointer_cast<receptionist::Receptionist>(spawned.get());
+    }
+
     fault_controller_.install();
 
     shutdown_coordinator_ =
@@ -540,6 +549,10 @@ cli::CliActor* ActorSystem::cli_actor() const {
 
 metrics::MetricsActor* ActorSystem::metrics_actor() const {
     return metrics_actor_;
+}
+
+receptionist::Receptionist* ActorSystem::receptionist() const {
+    return receptionist_.get();
 }
 
 // ── Dead-letter queue ───────────────────────────────────────────────────────

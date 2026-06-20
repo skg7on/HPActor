@@ -15,6 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/abstract_actor.hpp>
+#include <hpactor/actor/receptionist/service_key.hpp>
 #include <hpactor/core/actor_ref_cache.hpp>
 #include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
@@ -248,6 +249,20 @@ class ActorContext {
     ///
     /// \note Callable only from within an actor handler.
     void passivate();
+
+    // ── Receptionist ─────────────────────────────────────────────────────
+
+    /// \brief Register this actor under a ServiceKey with the Receptionist.
+    void receptionist_register(receptionist::ServiceKey key);
+
+    /// \brief Unregister this actor from a ServiceKey.
+    void receptionist_unregister(receptionist::ServiceKey key);
+
+    /// \brief Subscribe to membership changes for a ServiceKey.
+    void receptionist_subscribe(receptionist::ServiceKey key);
+
+    /// \brief Unsubscribe from a ServiceKey.
+    void receptionist_unsubscribe(receptionist::ServiceKey key);
 
     // ── Children management ───────────────────────────────────────────────
 
