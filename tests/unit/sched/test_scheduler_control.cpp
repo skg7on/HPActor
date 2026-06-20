@@ -57,6 +57,7 @@ class SchedulerControlTest : public ::testing::Test {
     void SetUp() override {
         cfg.scheduler_start_paused = true;
         cfg.enable_network = false;
+        cfg.enable_receptionist = false;
     }
 
     Config cfg;

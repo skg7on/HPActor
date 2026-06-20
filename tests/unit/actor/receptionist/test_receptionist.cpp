@@ -63,6 +63,7 @@ class ReceptionistTest : public ::testing::Test {
   protected:
     void SetUp() override {
         auto cfg = test::config_with_scheduler(1);
+        cfg.enable_receptionist = true;
         system_ = std::make_unique<ActorSystem>(cfg);
         rec_ = system_->receptionist();
         ASSERT_NE(rec_, nullptr);

@@ -141,6 +141,11 @@ struct Config {
     ///        Requires \c enable_network = true.
     bool enable_http_client = false;
 
+    /// \brief Enable the Receptionist subsystem for service-key-based
+    ///        actor discovery. When \c false, the Receptionist actor is
+    ///        not spawned and \c receptionist() returns \c nullptr.
+    bool enable_receptionist = true;
+
     /// \brief Enable coroutine-based actor execution.
     ///
     /// Requires \c HPACTOR_SUPPORT_COROUTINES=1 at compile time.

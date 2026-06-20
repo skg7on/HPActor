@@ -316,8 +316,8 @@ ActorSystem::ActorSystem(const Config& config)
     }
 
     // Spawn the Receptionist system actor for service-key-based actor
-    // discovery.
-    {
+    // discovery. Can be disabled via Config::enable_receptionist.
+    if (config_.enable_receptionist) {
         auto spawned = spawn<receptionist::Receptionist>();
         receptionist_ =
             std::static_pointer_cast<receptionist::Receptionist>(spawned.get());

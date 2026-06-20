@@ -40,6 +40,7 @@ TEST(EdfIntegrationTest, NotifyReadyEdfSmoke) {
     cfg.scheduler_threads = 1;
     cfg.scheduler_start_paused = true;
     cfg.enable_network = false;
+    cfg.enable_receptionist = false;
     ActorSystem system(cfg);
 
     auto a = system.spawn<NoopActor>();
@@ -66,6 +67,7 @@ TEST(EdfIntegrationTest, EdfNextDeadlineReflectsEdfQueue) {
     cfg.scheduler_threads = 1;
     cfg.scheduler_start_paused = true;
     cfg.enable_network = false;
+    cfg.enable_receptionist = false;
     ActorSystem system(cfg);
 
     auto a = system.spawn<NoopActor>();
@@ -101,6 +103,7 @@ TEST(EdfIntegrationTest, EdfAndPriorityItemsBothDrainable) {
     cfg.scheduler_threads = 1;
     cfg.scheduler_start_paused = true;
     cfg.enable_network = false;
+    cfg.enable_receptionist = false;
     ActorSystem system(cfg);
 
     auto a = system.spawn<NoopActor>();
