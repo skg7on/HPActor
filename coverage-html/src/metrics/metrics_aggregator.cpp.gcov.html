@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 13:35:38</td>
+            <td class="headerValue">2026-06-20 14:39:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
@@ -102,8 +102,8 @@
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : namespace hpactor::metrics {</span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC tlaBgGNC">         698 : Aggregator::Aggregator(MetricRegistry&amp; registry, ActorSystem&amp; system)</span></span>
-<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">         698 :     : registry_(registry), system_(system) {}</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC tlaBgGNC">         727 : Aggregator::Aggregator(MetricRegistry&amp; registry, ActorSystem&amp; system)</span></span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">         727 :     : registry_(registry), system_(system) {}</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          36 : void Aggregator::ensure_families_registered() {</span></span>
 <span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 24 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 12 times"> + </span>]:<span class="tlaGNC">          36 :     if (mailbox_depth_family_)</span></span>
@@ -248,8 +248,8 @@
 <span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">           8 :         type_name = it-&gt;second;</span></span>
 <span id="L171"><span class="lineNum">     171</span>                 :             :     } else {</span>
 <span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaGNC">           8 :         auto actor = system_.get_actor(id);</span></span>
-<span id="L173"><span class="lineNum">     173</span>   [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">          23 :         type_name = actor ? std::string(actor-&gt;type_name()) : &quot;unknown&quot;;</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 5 was taken 7 times"> + </span>]
+<span id="L173"><span class="lineNum">     173</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">          22 :         type_name = actor ? std::string(actor-&gt;type_name()) : &quot;unknown&quot;;</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span>]
 <span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC">           8 :         actor_type_cache_[id] = type_name;</span></span>
 <span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC">           8 :     }</span></span>
 <span id="L176"><span class="lineNum">     176</span>                 :             : </span>

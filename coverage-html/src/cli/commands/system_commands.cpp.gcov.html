@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 13:35:38</td>
+            <td class="headerValue">2026-06-20 14:39:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">93.3&nbsp;%</td>
@@ -211,15 +211,15 @@
 <span id="L131"><span class="lineNum">     131</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :             if (sys) {</span></span>
 <span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaGNC">           1 :                 auto&amp; tracker = mem::MemoryTracker::instance();</span></span>
 <span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">           1 :                 sys-&gt;for_each_actor([&amp;](ActorId actor_id, AbstractActor&amp; actor) {</span></span>
-<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">           1 :                     mem::ActorMemoryStats stats;</span></span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           1 :                     tracker.snapshot(actor_id, stats);</span></span>
+<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">           2 :                     mem::ActorMemoryStats stats;</span></span>
+<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">           2 :                     tracker.snapshot(actor_id, stats);</span></span>
 <span id="L136"><span class="lineNum">     136</span>                 :             : </span>
 <span id="L137"><span class="lineNum">     137</span>                 :             :                     char id_buf[32];</span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">           1 :                     snprintf(id_buf, sizeof(id_buf), &quot;0x%04llX&quot;,</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">           1 :                              static_cast&lt;unsigned long long&gt;(actor_id.value()));</span></span>
+<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">           2 :                     snprintf(id_buf, sizeof(id_buf), &quot;0x%04llX&quot;,</span></span>
+<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">           2 :                              static_cast&lt;unsigned long long&gt;(actor_id.value()));</span></span>
 <span id="L140"><span class="lineNum">     140</span>                 :             : </span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">           1 :                     auto meta = actor.to_metadata();</span></span>
-<span id="L142"><span class="lineNum">     142</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">          10 :                     mem_rows.push_back({</span></span>
+<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">           2 :                     auto meta = actor.to_metadata();</span></span>
+<span id="L142"><span class="lineNum">     142</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">          20 :                     mem_rows.push_back({</span></span>
 <span id="L143"><span class="lineNum">     143</span>                 :             :                         id_buf,</span>
 <span id="L144"><span class="lineNum">     144</span>                 :             :                         meta.actor_type,</span>
 <span id="L145"><span class="lineNum">     145</span>                 :             :                         format_bytes(stats.current_bytes),</span>
@@ -227,7 +227,7 @@
 <span id="L147"><span class="lineNum">     147</span>                 :             :                         std::to_string(stats.alloc_count),</span>
 <span id="L148"><span class="lineNum">     148</span>                 :             :                         std::to_string(stats.free_count),</span>
 <span id="L149"><span class="lineNum">     149</span>                 :             :                     });</span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           1 :                 });</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">           2 :                 });</span></span>
 <span id="L151"><span class="lineNum">     151</span>                 :             :             }</span>
 <span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">           3 :             ctx.output-&gt;table(mem_cols, mem_rows);</span></span>
 <span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">           3 :         } else {</span></span>

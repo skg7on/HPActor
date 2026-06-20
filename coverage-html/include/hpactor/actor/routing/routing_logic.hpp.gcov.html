@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">54.3&nbsp;%</td>
+            <td class="headerCovTableEntryLo">60.0&nbsp;%</td>
             <td class="headerCovTableEntry">35</td>
-            <td class="headerCovTableEntry">19</td>
+            <td class="headerCovTableEntry">21</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 13:35:38</td>
+            <td class="headerValue">2026-06-20 14:39:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryLo">66.7&nbsp;%</td>
+            <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
             <td class="headerCovTableEntry">12</td>
-            <td class="headerCovTableEntry">8</td>
+            <td class="headerCovTableEntry">9</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -155,7 +155,7 @@
 <span id="L76"><span class="lineNum">      76</span>                 :             : /// scheduler thread per actor).</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : class IRoutingLogic {</span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :   public:</span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">          41 :     virtual ~IRoutingLogic() = default;</span></span>
+<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">          43 :     virtual ~IRoutingLogic() = default;</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
 <span id="L81"><span class="lineNum">      81</span>                 :             :     /// \brief Select a routee index from the available routees.</span>
 <span id="L82"><span class="lineNum">      82</span>                 :             :     ///</span>
@@ -185,8 +185,8 @@
 <span id="L106"><span class="lineNum">     106</span>                 :             :     /// \c select_routee() reads from \c routee_states (e.g.,</span>
 <span id="L107"><span class="lineNum">     107</span>                 :             :     /// \c SmallestMailboxLogic). Routers skip snapshot collection when</span>
 <span id="L108"><span class="lineNum">     108</span>                 :             :     /// this returns \c false, avoiding per-message allocations.</span>
-<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">          19 :     [[nodiscard]] virtual bool needs_mailbox_snapshots() const {</span></span>
-<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">          19 :         return false;</span></span>
+<span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">          20 :     [[nodiscard]] virtual bool needs_mailbox_snapshots() const {</span></span>
+<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">          20 :         return false;</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :             :     }</span>
 <span id="L112"><span class="lineNum">     112</span>                 :             : };</span>
 <span id="L113"><span class="lineNum">     113</span>                 :             : </span>
@@ -313,8 +313,8 @@
 <span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">           1 :         return &quot;smallest-mailbox&quot;;</span></span>
 <span id="L235"><span class="lineNum">     235</span>                 :             :     }</span>
 <span id="L236"><span class="lineNum">     236</span>                 :             : </span>
-<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     [[nodiscard]] bool needs_mailbox_snapshots() const override {</span></span>
-<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaUNC">           0 :         return true;</span></span>
+<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC">           1 :     [[nodiscard]] bool needs_mailbox_snapshots() const override {</span></span>
+<span id="L238"><span class="lineNum">     238</span>                 :<span class="tlaGNC">           1 :         return true;</span></span>
 <span id="L239"><span class="lineNum">     239</span>                 :             :     }</span>
 <span id="L240"><span class="lineNum">     240</span>                 :             : };</span>
 <span id="L241"><span class="lineNum">     241</span>                 :             : </span>

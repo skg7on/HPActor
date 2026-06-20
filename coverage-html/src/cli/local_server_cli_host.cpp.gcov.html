@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 13:35:38</td>
+            <td class="headerValue">2026-06-20 14:39:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">83.3&nbsp;%</td>
@@ -244,12 +244,12 @@
 <span id="L166"><span class="lineNum">     166</span>                 :<span class="tlaGNC">           1 : std::vector&lt;ActorMeta&gt; LocalServerCliHost::enumerate(std::string_view filter) {</span></span>
 <span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">           1 :     std::vector&lt;ActorMeta&gt; result;</span></span>
 <span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">           1 :     system_.for_each_actor([&amp;](ActorId /*id*/, AbstractActor&amp; actor) {</span></span>
-<span id="L169"><span class="lineNum">     169</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :         if (!filter.empty()) {</span></span>
+<span id="L169"><span class="lineNum">     169</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           5 :         if (!filter.empty()) {</span></span>
 <span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             std::string tn(actor.type_name().data(), actor.type_name().size());</span></span>
 <span id="L171"><span class="lineNum">     171</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (tn.find(filter) == std::string::npos)</span></span>
 <span id="L172"><span class="lineNum">     172</span>                 :<span class="tlaUNC">           0 :                 return;</span></span>
 <span id="L173"><span class="lineNum">     173</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         }</span></span>
-<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         result.push_back(actor.to_metadata());</span></span>
+<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaGNC tlaBgGNC">           5 :         result.push_back(actor.to_metadata());</span></span>
 <span id="L175"><span class="lineNum">     175</span>                 :             :     });</span>
 <span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">           1 :     return result;</span></span>
 <span id="L177"><span class="lineNum">     177</span>                 :             : }</span>

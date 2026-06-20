@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 13:35:38</td>
+            <td class="headerValue">2026-06-20 14:39:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -96,11 +96,11 @@
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor::mailbox {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">         712 : DeadLetterQueue::DeadLetterQueue(DeadLetterConfig config) : config_(config) {</span></span>
-<span id="L22"><span class="lineNum">      22</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 711 times"> + </span>]:<span class="tlaGNC">         712 :     if (config_.capacity == 0) {</span></span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">         741 : DeadLetterQueue::DeadLetterQueue(DeadLetterConfig config) : config_(config) {</span></span>
+<span id="L22"><span class="lineNum">      22</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 740 times"> + </span>]:<span class="tlaGNC">         741 :     if (config_.capacity == 0) {</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">           1 :         config_.capacity = 4096;</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :             :     }</span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">         712 : }</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">         741 : }</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
 <span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         142 : void DeadLetterQueue::trim_payload(DeadLetterRecord&amp; record) const {</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">         142 :     record.payload_size = static_cast&lt;uint32_t&gt;(record.payload_sample.size());</span></span>

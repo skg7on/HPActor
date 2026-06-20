@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 13:35:38</td>
+            <td class="headerValue">2026-06-20 14:39:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -106,10 +106,10 @@
 <span id="L28"><span class="lineNum">      28</span>                 :             : static constexpr const char* kBranch = &quot;\xe2\x94\x9c\xe2\x94\x80&quot;; // ├─</span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : static constexpr const char* kLast = &quot;\xe2\x94\x94\xe2\x94\x80&quot;;   // └─</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC tlaBgGNC">         678 : std::string PrettyFormatter::pad_right(const std::string&amp; s, size_t width) {</span></span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 89 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 589 times"> + </span>]:<span class="tlaGNC">         678 :     if (s.size() &gt;= width)</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC tlaBgGNC">         684 : std::string PrettyFormatter::pad_right(const std::string&amp; s, size_t width) {</span></span>
+<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 89 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 595 times"> + </span>]:<span class="tlaGNC">         684 :     if (s.size() &gt;= width)</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">          89 :         return s.substr(0, width);</span></span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        1178 :     return s + std::string(width - s.size(), ' ');</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        1190 :     return s + std::string(width - s.size(), ' ');</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : }</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
 <span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">         133 : std::string PrettyFormatter::horizontal_rule(size_t width) {</span></span>
@@ -137,10 +137,10 @@
 <span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaGNC tlaBgGNC">          17 :     std::vector&lt;size_t&gt; widths(cols.size());</span></span>
 <span id="L60"><span class="lineNum">      60</span>         [<span class="tlaGBC" title="Branch 0 was taken 89 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">         106 :     for (size_t i = 0; i &lt; cols.size(); ++i)</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          89 :         widths[i] = cols[i].size();</span></span>
-<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 101 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">         118 :     for (const auto&amp; row : rows)</span></span>
-<span id="L63"><span class="lineNum">      63</span>   [<span class="tlaGBC" title="Branch 0 was taken 403 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 101 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 403 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         504 :         for (size_t i = 0; i &lt; row.size() &amp;&amp; i &lt; widths.size(); ++i)</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 403 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 101 times"> + </span>]
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">         403 :             widths[i] = std::max(widths[i], row[i].size());</span></span>
+<span id="L62"><span class="lineNum">      62</span>         [<span class="tlaGBC" title="Branch 0 was taken 102 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">         119 :     for (const auto&amp; row : rows)</span></span>
+<span id="L63"><span class="lineNum">      63</span>   [<span class="tlaGBC" title="Branch 0 was taken 409 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 102 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 409 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         511 :         for (size_t i = 0; i &lt; row.size() &amp;&amp; i &lt; widths.size(); ++i)</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 409 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 102 times"> + </span>]
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">         409 :             widths[i] = std::max(widths[i], row[i].size());</span></span>
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
 <span id="L66"><span class="lineNum">      66</span>         [<span class="tlaGBC" title="Branch 0 was taken 89 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">         106 :     for (size_t i = 0; i &lt; cols.size(); ++i)</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          89 :         buffer_ += bold(pad_right(cols[i], widths[i] + 2));</span></span>
@@ -150,10 +150,10 @@
 <span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">          89 :         buffer_ += dim(pad_right(horizontal_rule(widths[i]), widths[i] + 2));</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          17 :     buffer_ += &quot;\n&quot;;</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             : </span>
-<span id="L74"><span class="lineNum">      74</span>         [<span class="tlaGBC" title="Branch 0 was taken 101 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">         118 :     for (const auto&amp; row : rows) {</span></span>
-<span id="L75"><span class="lineNum">      75</span>         [<span class="tlaGBC" title="Branch 0 was taken 403 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 101 times"> + </span>]:<span class="tlaGNC">         504 :         for (size_t i = 0; i &lt; cols.size(); ++i)</span></span>
-<span id="L76"><span class="lineNum">      76</span>   [<span class="tlaGBC" title="Branch 0 was taken 403 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 403 times"> + </span>]:<span class="tlaGNC">         403 :             buffer_ += pad_right(i &lt; row.size() ? row[i] : &quot;-&quot;, widths[i] + 2);</span></span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">         101 :         buffer_ += &quot;\n&quot;;</span></span>
+<span id="L74"><span class="lineNum">      74</span>         [<span class="tlaGBC" title="Branch 0 was taken 102 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">         119 :     for (const auto&amp; row : rows) {</span></span>
+<span id="L75"><span class="lineNum">      75</span>         [<span class="tlaGBC" title="Branch 0 was taken 409 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 102 times"> + </span>]:<span class="tlaGNC">         511 :         for (size_t i = 0; i &lt; cols.size(); ++i)</span></span>
+<span id="L76"><span class="lineNum">      76</span>   [<span class="tlaGBC" title="Branch 0 was taken 409 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 409 times"> + </span>]:<span class="tlaGNC">         409 :             buffer_ += pad_right(i &lt; row.size() ? row[i] : &quot;-&quot;, widths[i] + 2);</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">         102 :         buffer_ += &quot;\n&quot;;</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     }</span>
 <span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">          17 : }</span></span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 13:35:38</td>
+            <td class="headerValue">2026-06-20 14:39:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -99,8 +99,8 @@
 <span id="L21"><span class="lineNum">      21</span>                 :             : </span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : namespace hpactor {</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC tlaBgGNC">        1530 : AbstractActor::AbstractActor(ActorId id, ActorType type, ActorSystem&amp; sys)</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        1530 :     : id_(id), type_(type), system_(sys) {}</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC tlaBgGNC">        2030 : AbstractActor::AbstractActor(ActorId id, ActorType type, ActorSystem&amp; sys)</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        2030 :     : id_(id), type_(type), system_(sys) {}</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : </span>
 <span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">           8 : void AbstractActor::link_to(const ActorAddr&amp; other) {</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           8 :     auto* ctx = actor_context();</span></span>
@@ -174,18 +174,18 @@
 <span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     ctx-&gt;send(target, TypedMessage(TypeTag::DemonitorMsg, StreamBuffer{}));</span></span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : }</span>
 <span id="L98"><span class="lineNum">      98</span>                 :             : </span>
-<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">           9 : cli::ActorMeta AbstractActor::to_metadata() const {</span></span>
-<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">           9 :     cli::ActorMeta m;</span></span>
-<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">           9 :     m.actor_id = id().value();</span></span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">           9 :     m.actor_type = std::string(type_name());</span></span>
-<span id="L103"><span class="lineNum">     103</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 7 times"> + </span>]:<span class="tlaGNC">           9 :     if (auto* lc = as_lifecycle()) {</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">          12 : cli::ActorMeta AbstractActor::to_metadata() const {</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">          12 :     cli::ActorMeta m;</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">          12 :     m.actor_id = id().value();</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">          12 :     m.actor_type = std::string(type_name());</span></span>
+<span id="L103"><span class="lineNum">     103</span>         [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 10 times"> + </span>]:<span class="tlaGNC">          12 :     if (auto* lc = as_lifecycle()) {</span></span>
 <span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">           2 :         m.state = lc-&gt;state_string();</span></span>
 <span id="L105"><span class="lineNum">     105</span>                 :<span class="tlaGNC">           2 :         m.incarnation = lc-&gt;incarnation();</span></span>
 <span id="L106"><span class="lineNum">     106</span>                 :             :     } else {</span>
-<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">           7 :         m.state = &quot;unknown&quot;;</span></span>
-<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           7 :         m.incarnation = address().incarnation;</span></span>
+<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">          10 :         m.state = &quot;unknown&quot;;</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">          10 :         m.incarnation = address().incarnation;</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :             :     }</span>
-<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">           9 :     return m;</span></span>
+<span id="L110"><span class="lineNum">     110</span>                 :<span class="tlaGNC">          12 :     return m;</span></span>
 <span id="L111"><span class="lineNum">     111</span>                 :             : }</span>
 <span id="L112"><span class="lineNum">     112</span>                 :             : </span>
 <span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">           1 : void AbstractActor::set_scheduler(sched::IScheduler* /*scheduler*/) {</span></span>
