@@ -38,9 +38,21 @@ SlabCache::~SlabCache() {
 }
 
 uint8_t SlabCache::compute_bin_index(const AllocHeader* header) const noexcept {
+    // Fix #4: find which slab contains this block (not just current_slab_)
+    auto* hdr_addr = reinterpret_cast<const char*>(header);
+    for (auto* slab : slabs_) {
+        auto* s = reinterpret_cast<const char*>(slab);
+        if (hdr_addr >= s && hdr_addr < s + slab_size_) {
+            size_t offset = static_cast<size_t>(hdr_addr - s);
+            if (bin_stride_bytes_ == 0)
+                return 0;
+            return static_cast<uint8_t>((offset / bin_stride_bytes_) %
+                                        kNumSegregatedBins);
+        }
+    }
+    // Fallback: current_slab_ (for blocks freed before slabs_ tracking)
     auto* slab_base = reinterpret_cast<const char*>(current_slab_);
-    auto* header_addr = reinterpret_cast<const char*>(header);
-    size_t offset = static_cast<size_t>(header_addr - slab_base);
+    size_t offset = static_cast<size_t>(hdr_addr - slab_base);
     if (bin_stride_bytes_ == 0)
         return 0;
     return static_cast<uint8_t>((offset / bin_stride_bytes_) % kNumSegregatedBins);
@@ -49,7 +61,7 @@ uint8_t SlabCache::compute_bin_index(const AllocHeader* header) const noexcept {
 // Shared tail: stamp and return a block popped from any freelist.
 static void*
 stamp_freelist_block(AllocHeader* block, ActorId owner, uint8_t generation,
-                     std::atomic<uint64_t>& alloc_cnt,
+                     SizeClass sc, std::atomic<uint64_t>& alloc_cnt,
                      std::atomic<uint32_t>& live_cnt) noexcept {
     FAULT_INJECT("hpactor.allocator.freelist.pop.corrupt") {
         if (block != nullptr) {
@@ -59,6 +71,9 @@ stamp_freelist_block(AllocHeader* block, ActorId owner, uint8_t generation,
     block->owner_id = owner.value();
     block->magic = kAllocMagic;
     block->generation = generation;
+    // Fix #7: re-stamp canary footer on recycled blocks (was missing, causing
+    // false-positive corruption on coalesced blocks later deallocated)
+    CanaryFooter::stamp(block, block_size(sc));
     alloc_cnt.fetch_add(1, std::memory_order_relaxed);
     live_cnt.fetch_add(1, std::memory_order_relaxed);
     return block->user_data();
@@ -112,16 +127,39 @@ void* SlabCache::allocate(ActorId owner) noexcept {
                 start_bin_ =
                     static_cast<uint8_t>((bin_idx + 1) % kNumSegregatedBins);
                 return stamp_freelist_block(block, owner, current_generation_,
-                                            stats_.alloc_count, live_count_);
+                                            size_class_, stats_.alloc_count,
+                                            live_count_);
             }
         }
     } else {
         // kCasLifo (default) and kBumpOnly: keep existing behavior
         if (strategy_ != AllocationStrategy::kBumpOnly) {
             auto* block = freelist_.pop();
+            // Fix #10: restore debug checks for kCasLifo path
+#if HPACTOR_ENABLE_MEMORY_DEBUG
+            if (block) {
+                size_t cbs = block_size(size_class_);
+                if (CanaryFooter::verify(block, cbs)) {
+                    auto* cuser = static_cast<uint8_t*>(block->user_data());
+                    size_t cusz = size_for_class(size_class_);
+                    bool ok = true;
+                    for (size_t j = 0; j < cusz && j < 16; ++j) {
+                        if (cuser[j] != kPoisonByte) {
+                            ok = false;
+                            break;
+                        }
+                    }
+                    if (!ok)
+                        block = nullptr;
+                } else {
+                    block = nullptr;
+                }
+            }
+#endif
             if (block) {
                 return stamp_freelist_block(block, owner, current_generation_,
-                                            stats_.alloc_count, live_count_);
+                                            size_class_, stats_.alloc_count,
+                                            live_count_);
             }
         }
         // Try bump allocate (all strategies including kBumpOnly)
@@ -182,15 +220,13 @@ void SlabCache::deallocate(void* user_ptr) noexcept {
     stats_.free_count.fetch_add(1, std::memory_order_relaxed);
     live_count_.fetch_sub(1, std::memory_order_relaxed);
 
-    // Bump-only: no freelist push — track per-slab block count for idle
-    // recycling (MEM-003 §3.3). When all blocks on the current slab are
-    // freed, the slab is recycled for future allocations.
+    // Bump-only: no freelist push. Recycle slab when ALL blocks across all
+    // slabs are freed (uses per-cache live_count_ instead of per-slab counter
+    // to avoid cross-slab accounting bugs — fixes code review finding #1).
     if (strategy_ == AllocationStrategy::kBumpOnly) {
-        if (current_slab_block_count_ > 0) {
-            --current_slab_block_count_;
-        }
-        // If all blocks freed and slab is fully exhausted, recycle it
-        if (current_slab_block_count_ == 0 && bump_offset_ >= slab_size_) {
+        // When no blocks are live anywhere in this cache, all slabs are idle
+        if (live_count_.load(std::memory_order_relaxed) == 0 && current_slab_ &&
+            bump_offset_ >= slab_size_) {
             idle_slabs_.push_back(current_slab_);
             current_slab_ = nullptr;
             slab_size_ = 0;
@@ -249,7 +285,16 @@ void SlabCache::dll_push(FreeList<AllocHeader>& bin, AllocHeader* block) noexcep
 }
 
 AllocHeader* SlabCache::dll_pop(FreeList<AllocHeader>& bin) noexcept {
-    return bin.pop(); // CAS LIFO pop — head is always the most-recently-pushed
+    AllocHeader* popped = bin.pop();
+    // Fix #8: clear prev on the new head to prevent stale-pointer use in
+    // future dll_remove calls
+    if (popped) {
+        auto* popped_link = linkage_of(popped);
+        if (popped_link->next) {
+            linkage_of(popped_link->next)->prev = nullptr;
+        }
+    }
+    return popped;
 }
 
 void SlabCache::dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexcept {
@@ -257,7 +302,7 @@ void SlabCache::dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexc
     AllocHeader* prev = link->prev;
     AllocHeader* next = link->next;
 
-    // Update neighbor links
+    // Update neighbor DLL links
     if (prev) {
         linkage_of(prev)->next = next;
     }
@@ -265,20 +310,23 @@ void SlabCache::dll_remove(FreeList<AllocHeader>& bin, AllocHeader* block) noexc
         linkage_of(next)->prev = prev;
     }
 
-    // If block was the head, the bin's CAS head needs updating.
-    // We handle this by popping the head and checking:
-    // Since dll_remove is single-threaded (owning thread only),
-    // we can safely check and re-link the head.
+    // Update CAS head.  We must pop the head to check then re-establish
+    // the correct top without creating a self-loop (code review finding #3).
+    // Since dll_remove is single-threaded (owning thread only), we can
+    // directly compute what the new head should be rather than pop-then-push.
     AllocHeader* head = bin.pop();
     if (head == block) {
-        // Block was head — push next as new head
-        if (next)
+        // Block was the head — next becomes the new head (may be null)
+        if (next) {
+            // Push next directly: its next is already correct from the DLL.
+            // The bin was empty after pop, so push(next) just stores it.
             bin.push(next);
+        }
+        // else: bin becomes empty (no push needed)
     } else if (head) {
-        // Block was not head — put head back
+        // Block was not the head — put the original head back unchanged
         bin.push(head);
     }
-    // else: bin was empty (shouldn't happen if block was in it)
 
     link->next = nullptr;
     link->prev = nullptr;
@@ -317,20 +365,38 @@ AllocHeader* SlabCache::try_coalesce(AllocHeader* header) noexcept {
     // Stamp boundary footer on this block
     stamp_boundary_footer(header, bs);
 
+    // Find which slab this block belongs to (fix #4: avoid cross-slab UB)
+    auto* header_addr = reinterpret_cast<char*>(header);
+    const char* slab_base = nullptr;
+    size_t slab_sz = 0;
+    for (auto* s : slabs_) {
+        auto* sb = reinterpret_cast<const char*>(s);
+        if (header_addr >= sb && header_addr < sb + slab_size_) {
+            slab_base = sb;
+            slab_sz = slab_size_;
+            break;
+        }
+    }
+    if (!slab_base) {
+        // Fallback to current_slab_ (should not happen for properly tracked
+        // blocks)
+        slab_base = reinterpret_cast<const char*>(current_slab_);
+        slab_sz = slab_size_;
+    }
+
     // Check left neighbor (constant-time: read footer immediately before
     // header)
-    auto* header_addr = reinterpret_cast<char*>(header);
-    auto* slab_addr = reinterpret_cast<char*>(current_slab_);
-    if (header_addr > slab_addr) {
+    if (header_addr > slab_base) {
         auto* left_footer =
             reinterpret_cast<FooterOverlay*>(header_addr - sizeof(FooterOverlay));
         if (left_footer->boundary.flags & kBoundaryFlagFree) {
             size_t left_sz = left_footer->boundary.block_size;
             auto* left_header =
                 reinterpret_cast<AllocHeader*>(header_addr - left_sz);
-            if (left_header->magic == kFreedMagic) {
-                // Remove left neighbor from its bin (O(1) with doubly-linked
-                // list)
+            // Validate left_header is within the same slab
+            auto* left_hdr_addr = reinterpret_cast<const char*>(left_header);
+            if (left_hdr_addr >= slab_base && left_hdr_addr < slab_base + slab_sz &&
+                left_header->magic == kFreedMagic) {
                 uint8_t left_bin = compute_bin_index(left_header);
                 dll_remove(bins_[left_bin], left_header);
                 result = left_header;
@@ -341,7 +407,7 @@ AllocHeader* SlabCache::try_coalesce(AllocHeader* header) noexcept {
 
     // Check right neighbor (constant-time: read header immediately after block)
     auto* right_addr = header_addr + bs;
-    auto* slab_end = slab_addr + slab_size_;
+    auto* slab_end = slab_base + slab_sz;
     if (right_addr + sizeof(AllocHeader) <= slab_end) {
         auto* right_header = reinterpret_cast<AllocHeader*>(right_addr);
         if (right_header->magic == kFreedMagic) {

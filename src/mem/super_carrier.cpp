@@ -21,6 +21,7 @@
 #include <hpactor/mem/super_carrier.hpp>
 
 #include <cstdio>
+#include <cstring>
 #include <sys/mman.h>
 #include <unistd.h>
 
@@ -55,7 +56,17 @@ HugePageInfo probe_huge_pages() noexcept {
     if (f) {
         char buf[64] = {};
         if (fgets(buf, sizeof(buf), f)) {
-            info.transparent_huge_pages_available = (buf[1] == 'a');
+            // Fix #5: detect active THP mode by finding brackets.
+            // Format: "always [madvise] never" or "[always] madvise never"
+            // THP is available if the file exists and contains bracket-enclosed
+            // text (always, madvise, or never). We look for '[' to confirm
+            // support, then check if the active mode is madvise or always.
+            const char* bracket = strchr(buf, '[');
+            if (bracket) {
+                char mode = bracket[1];
+                info.transparent_huge_pages_available =
+                    (mode == 'a' || mode == 'm');
+            }
         }
         fclose(f);
     }
@@ -72,27 +83,33 @@ NumaInfo probe_numa_topology() noexcept {
     // A simpler approach: read /sys/devices/system/node/online.
     FILE* f = fopen("/sys/devices/system/node/online", "r");
     if (f) {
-        // Format: "0" or "0-3" or "0,2,4"
-        unsigned max_node = 0;
-        unsigned start = 0;
-        unsigned end = 0;
-        int n = 0;
-        // parse "0-3\n" → max_node = 3, node_count = 4
-        if (fscanf(f, "%u-%u%n", &start, &end, &n) >= 2 && n > 0) {
-            max_node = end;
-        } else {
-            rewind(f);
-            // single node: "0\n"
-            if (fscanf(f, "%u", &max_node) >= 1) {
-                // max_node already set
+        // Format: "0" or "0-3" or "0,2,4". Fix #6: handle comma-separated.
+        char buf[256] = {};
+        if (fgets(buf, sizeof(buf), f)) {
+            unsigned max_node = 0;
+            // Scan for all integers in the string (handles "0", "0-3", "0,2,4")
+            const char* p = buf;
+            while (*p) {
+                // Skip non-digits
+                while (*p && (*p < '0' || *p > '9'))
+                    ++p;
+                if (!*p)
+                    break;
+                unsigned v = 0;
+                while (*p >= '0' && *p <= '9') {
+                    v = v * 10 + static_cast<unsigned>(*p - '0');
+                    ++p;
+                }
+                if (v > max_node)
+                    max_node = v;
             }
+            info.node_count = max_node + 1;
+            if (info.node_count < 1)
+                info.node_count = 1;
+            if (info.node_count > SuperCarrier::kMaxNumaNodes)
+                info.node_count = SuperCarrier::kMaxNumaNodes;
         }
         fclose(f);
-        info.node_count = max_node + 1;
-        if (info.node_count < 1)
-            info.node_count = 1;
-        if (info.node_count > SuperCarrier::kMaxNumaNodes)
-            info.node_count = SuperCarrier::kMaxNumaNodes;
     }
 #endif
     return info;

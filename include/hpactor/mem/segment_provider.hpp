@@ -184,11 +184,15 @@ class SegmentProvider {
     mutable std::mutex mutex_;
     std::vector<Segment> segments_;
     std::unordered_map<void*, SlabRecord> slab_records_;
-    SuperCarrier* super_carrier_{nullptr}; ///< Optional carrier (MEM-004).
-    HugePageInfo huge_info_{};             ///< Huge page config (MEM-005).
-    mutable uint64_t huge_page_count_{0};  ///< MAP_HUGETLB segments (MEM-005).
-    mutable uint64_t thp_count_{0};     ///< MADV_HUGEPAGE segments (MEM-005).
-    mutable uint64_t regular_count_{0}; ///< 4KB segments (MEM-005).
+    std::atomic<SuperCarrier*> super_carrier_{nullptr}; ///< Optional carrier
+                                                        ///< (MEM-004). Fix #9:
+                                                        ///< atomic for
+                                                        ///< lock-free read in
+                                                        ///< acquire_slab.
+    HugePageInfo huge_info_{};            ///< Huge page config (MEM-005).
+    mutable uint64_t huge_page_count_{0}; ///< MAP_HUGETLB segments (MEM-005).
+    mutable uint64_t thp_count_{0};       ///< MADV_HUGEPAGE segments (MEM-005).
+    mutable uint64_t regular_count_{0};   ///< 4KB segments (MEM-005).
 };
 
 } // namespace hpactor::mem

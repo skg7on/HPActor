@@ -41,28 +41,51 @@ void* SegmentProvider::acquire_slab(SizeClass sc) {
 
     // MEM-004: Try super carrier before individual mmap
     // (carrier carve is lock-free via atomic offset — no mutex needed)
-    if (super_carrier_ && super_carrier_->is_initialized()) {
-        slab = super_carrier_->carve(slab_size(sc));
-        if (slab)
+    auto* carrier = super_carrier_.load(std::memory_order_acquire); // Fix #9:
+                                                                    // atomic
+                                                                    // read
+    if (carrier && carrier->is_initialized()) {
+        slab = carrier->carve(slab_size(sc));
+        if (slab) {
+            // Fix #2: register carrier slab so it's visible to lookup_slab,
+            // release_slab, and cross-thread free routing
+            std::lock_guard<std::mutex> lock(mutex_);
+            SlabRecord rec;
+            rec.slab_size_bytes = slab_size(sc);
+            rec.region = RegionType::kInternal;
+            rec.size_class = sc;
+            slab_records_[slab] = rec;
             return slab;
+        }
     }
 
     std::lock_guard<std::mutex> lock(mutex_);
     return allocate_new_segment(slab_size(sc));
 }
 
-void SegmentProvider::release_slab(void* slab, SizeClass /*sc*/) {
+void SegmentProvider::release_slab(void* slab, SizeClass sc) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto it = slab_records_.find(slab);
     if (it == slab_records_.end()) {
+        // Fix #2: try carrier release for slabs not in segment tracking
+        auto* carrier = super_carrier_.load(std::memory_order_acquire);
+        if (carrier && carrier->is_initialized()) {
+            carrier->release(slab, slab_size(sc));
+        }
         return;
     }
 
     uint32_t idx = it->second.segment_index;
     slab_records_.erase(it);
 
+    // Carrier slabs have no segment (segment_index stays 0, segments_ may
+    // be empty). Skip segment refcounting for carrier slabs.
     if (idx >= segments_.size()) {
+        auto* carrier = super_carrier_.load(std::memory_order_acquire);
+        if (carrier && carrier->is_initialized()) {
+            carrier->release(slab, slab_size(sc));
+        }
         return;
     }
 
@@ -155,6 +178,9 @@ void SegmentProvider::register_slab_owner(void* slab, size_t slab_size,
         it->second.size_class = sc;
         it->second.slab_size_bytes = slab_size;
     }
+    // Fix #2: carrier slabs may not have a record yet (created in acquire_slab
+    // without owner_cache). Update the record if it exists; if not, the slab
+    // was already registered in acquire_slab with a minimal record.
 }
 
 SegmentProvider::SlabInfo SegmentProvider::lookup_slab(void* ptr) const {
