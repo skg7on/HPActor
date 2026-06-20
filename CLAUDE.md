@@ -127,8 +127,10 @@ AbstractActor (interface base)
 | `TypedBehavior` | `actor/typed_actor.hpp` | Statically typed handlers |
 | `Supervision` | `supervision/*.hpp` | Fault-tolerance (OneForOne, AllForOne, self-supervising) |
 | `HybridScheduler` | `sched/hybrid_scheduler.hpp` | Work-stealing scheduler with A2WS victim selection |
-| `MPSCActorMailbox` | `mailbox/mpsc_actor_mailbox.hpp` | Lock-free MPSC envelope with edge-triggered CAS wakeup |
+| `MPSCActorMailbox` | `mailbox/mpsc_actor_mailbox.hpp` | Lock-free MPSC envelope with edge-triggered CAS wakeup, `try_push_batch()` for batch enqueue |
 | `MultiLaneQueue` | `mailbox/multi_lane_queue.hpp` | Lock-free multi-lane queue with dedicated system lane, priority-aware routing |
+| `ObjectPool<T,N>` | `mem/object_pool.hpp` | Lock-free bounded object pool with prefill/acquire/release for per-actor reuse |
+| `StreamBuffer` | `adt/stream_buffer.hpp` | Contiguous byte buffer with `from_data()` exact-capacity factory for small payloads |
 | `SlabCache` / `SegmentProvider` | `mem/*.hpp` | Two-tier slab allocator (thread-local caches + mmap segments) |
 | `EventLoop` | `net/event_loop.hpp` | kqueue/epoll edge-triggered event loop |
 | `TomlParser` | `config/toml_parser.hpp` | TOML topology parser: coordinator that delegates to self-registered subsystem parsers |
@@ -198,6 +200,11 @@ Proto actors register handlers declaratively:
 - `on<T>(handler)` — fire-and-forget proto handler
 - `on_request<ReqT, ResT>(handler)` — request-response proto handler
 
+**Performance optimizations (opt-in):**
+- `ActorSystem::try_deliver_local_fast(target, msg)` — enqueue directly to mailbox, bypassing DeliveryPipeline (circuit breaker, TTL, dedup, backpressure). Use when those checks are known unnecessary.
+- `EventBasedActor::add_fast_tag(tag)` — register a TypeTag for fast-path dispatch. Messages with registered fast tags skip drain/lifecycle/CLI gates in `receive()` and go directly to `dispatch_user_message()`.
+- `MPSCActorMailbox::try_push_batch(begin, end, meta)` — batch-enqueue N messages with a single reservation check and edge-triggered CAS wakeup. Use when multiple messages share the same target mailbox and metadata.
+
 ### Topology Configuration
 
 The TOML config topology system bootstraps actor trees from declarative config:
@@ -229,7 +236,8 @@ Subsystem parsers self-register via file-scope static registrar objects (`TomlSy
 
 - `include/hpactor/` — public headers (actor, cli, config, core, fault, mailbox, metrics, mem, net, ref, rpc, sched, spawn, supervision, types)
 - `src/` — implementation files (linked into hpactor_lib)
-- `tests/` — 219 test source files in three-tier structure (unit, integration, system) using Google Test; 32 GTest binaries are discovered through CTest
+- `tests/` — 230+ test source files in three-tier structure (unit, integration, system) using Google Test; 32 GTest binaries are discovered through CTest (2105+ GTest cases)
+- `apps/bench_saturate/` — actor system saturation benchmark (presets: quick-saturate, deep-saturate, alloc-stress, mixed-load, fan-in-extreme, fan-out-burst)
 - `examples/` — simple API usage examples
 - `apps/` — complex demo applications that exercise multiple HPActor subsystems
 - `tools/toml-compiler/` — AOT TOML-to-binary compiler
@@ -237,5 +245,8 @@ Subsystem parsers self-register via file-scope static registrar objects (`TomlSy
 - `cmake/` — CMake modules (gtest, protobuf codegen, toml++ interface target)
 - `docs/architecture/production/` — production reliability plane, missing design docs, and refined requirement backlog
 - `docs/superpowers/tutorials/actor-framework-tutorial.md` — usage guide
+- `docs/superpowers/specs/2026-06-19-bench-saturate-perf-optimize-design.md` — bench saturate Round 1 design (5 optimizations)
+- `docs/superpowers/specs/2026-06-19-bench-saturate-perf-optimize-round2-design.md` — Round 2 design (fast-tag receive, object pool)
+- `docs/superpowers/specs/2026-06-19-bench-saturate-perf-optimize-round3-design.md` — Round 3 design (batch enqueue, deferred items)
 - `.claude/projects/*/memory/` — persistent project memory
 - `.claude/rules` — authoritative behavioral rules for Claude Code sessions
