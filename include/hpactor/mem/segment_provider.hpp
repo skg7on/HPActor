@@ -16,6 +16,7 @@
 
 #include <hpactor/mem/memory_region.hpp>
 #include <hpactor/mem/size_class.hpp>
+#include <hpactor/mem/super_carrier.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -61,8 +62,12 @@ class SegmentProvider {
 
     /// \brief Aggregate segment provider statistics.
     struct Stats {
-        size_t total_allocated{0}; ///< Total bytes mmap'd.
-        size_t active_segments{0}; ///< Number of live segments.
+        size_t total_allocated{0};      ///< Total bytes mmap'd.
+        size_t active_segments{0};      ///< Number of live segments.
+        uint64_t huge_page_segments{0}; ///< Segments with MAP_HUGETLB
+                                        ///< (MEM-005).
+        uint64_t thp_segments{0};       ///< Segments with MADV_HUGEPAGE hint.
+        uint64_t regular_segments{0};   ///< Segments with 4KB pages.
     };
 
     /// \brief Return the singleton instance.
@@ -135,6 +140,16 @@ class SegmentProvider {
         return super_carrier_;
     }
 
+    /// \brief Set huge page info for legacy segment allocation (MEM-005 §3.4).
+    ///
+    /// When huge pages are available, \c allocate_new_segment() will attempt
+    /// \c MAP_HUGETLB before falling back to standard pages.
+    ///
+    /// \param[in] info Result from \c probe_huge_pages().
+    void set_huge_page_info(const HugePageInfo& info) noexcept {
+        huge_info_ = info;
+    }
+
   private:
     SegmentProvider() = default;
 
@@ -170,6 +185,10 @@ class SegmentProvider {
     std::vector<Segment> segments_;
     std::unordered_map<void*, SlabRecord> slab_records_;
     SuperCarrier* super_carrier_{nullptr}; ///< Optional carrier (MEM-004).
+    HugePageInfo huge_info_{};             ///< Huge page config (MEM-005).
+    mutable uint64_t huge_page_count_{0};  ///< MAP_HUGETLB segments (MEM-005).
+    mutable uint64_t thp_count_{0};     ///< MADV_HUGEPAGE segments (MEM-005).
+    mutable uint64_t regular_count_{0}; ///< 4KB segments (MEM-005).
 };
 
 } // namespace hpactor::mem

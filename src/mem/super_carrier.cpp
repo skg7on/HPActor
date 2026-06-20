@@ -40,6 +40,17 @@ HugePageInfo probe_huge_pages() noexcept {
         info.huge_page_size = 2 * 1024 * 1024;
         munmap(probe, 2 * 1024 * 1024);
     }
+
+    // Probe 1GB pages
+#    ifdef MAP_HUGE_1GB
+    probe = mmap(nullptr, 1024ULL * 1024 * 1024, PROT_NONE,
+                 MAP_PRIVATE | MAP_ANONYMOUS | MAP_HUGETLB | MAP_HUGE_1GB, -1, 0);
+    if (probe != MAP_FAILED) {
+        info.huge_page_size_1gb = 1024ULL * 1024 * 1024;
+        munmap(probe, 1024ULL * 1024 * 1024);
+    }
+#    endif
+
     FILE* f = fopen("/sys/kernel/mm/transparent_hugepage/enabled", "r");
     if (f) {
         char buf[64] = {};

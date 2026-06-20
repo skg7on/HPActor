@@ -120,6 +120,9 @@ SegmentProvider::Stats SegmentProvider::stats() const {
     for (const auto& seg : segments_) {
         s.total_allocated += seg.size;
     }
+    s.huge_page_segments = huge_page_count_;
+    s.thp_segments = thp_count_;
+    s.regular_segments = regular_count_;
     return s;
 }
 
@@ -181,8 +184,35 @@ void* SegmentProvider::allocate_new_segment(size_t size) {
         return nullptr;
     }
 
-    void* base = mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    bool used_huge = false;
+    bool used_thp = false;
+
+    // MEM-005: Try huge pages for legacy segments
+#ifdef MAP_HUGETLB
+    if (huge_info_.explicit_huge_pages_available) {
+        void* probe = mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
+                           flags | MAP_HUGETLB, -1, 0);
+        if (probe != MAP_FAILED) {
+            huge_page_count_++;
+            Segment seg;
+            seg.base = probe;
+            seg.size = alloc_size;
+            seg.offset = size;
+            seg.ref_count = 1;
+            segments_.push_back(seg);
+            uint32_t idx = static_cast<uint32_t>(segments_.size() - 1);
+            SlabRecord rec;
+            rec.segment_index = idx;
+            rec.slab_size_bytes = size;
+            slab_records_[probe] = rec;
+            return probe;
+        }
+        // Fall through to standard pages with THP hint
+    }
+#endif
+
+    void* base = mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE, flags, -1, 0);
 
     if (base == MAP_FAILED) {
         HPACTOR_LOG_WARNING(log::LogCategory::kMemory, ActorId{0},
@@ -192,10 +222,24 @@ void* SegmentProvider::allocate_new_segment(size_t size) {
         return nullptr;
     }
 
+#ifdef MADV_HUGEPAGE
+    if (huge_info_.transparent_huge_pages_available) {
+        madvise(base, alloc_size, MADV_HUGEPAGE);
+        used_thp = true;
+    }
+#endif
+
+    if (used_huge)
+        huge_page_count_++;
+    else if (used_thp)
+        thp_count_++;
+    else
+        regular_count_++;
+
     Segment seg;
     seg.base = base;
     seg.size = alloc_size;
-    seg.offset = size; // first `size` bytes are the returned slab
+    seg.offset = size;
     seg.ref_count = 1;
 
     segments_.push_back(seg);

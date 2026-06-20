@@ -24,7 +24,8 @@ namespace hpactor::mem {
 struct HugePageInfo {
     bool explicit_huge_pages_available{false};
     bool transparent_huge_pages_available{false};
-    size_t huge_page_size{0};
+    size_t huge_page_size{0};     ///< Default huge page size (typically 2MB).
+    size_t huge_page_size_1gb{0}; ///< 1GB if available, 0 otherwise.
 };
 
 /// \brief Probe the system for huge page support.
