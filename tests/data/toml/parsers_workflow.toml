@@ -1,0 +1,134 @@
+# Test data file for test_config_parsers_workflow.cpp
+# Contains all subsystem config sections for comprehensive parser validation.
+
+[system]
+version = "1.0"
+scheduler_threads = 4
+max_queue_depth = 2048
+enable_network = true
+
+# ── Delivery ────────────────────────────────────────────────────────────
+[system.delivery]
+default_mode = "at_least_once"
+max_retries = 7
+retry_backoff_ms = 200
+retry_backoff_max_ms = 30000
+dedup_window_ms = 600000
+dedup_max_entries = 131072
+default_message_ttl_ms = 120000
+
+# ── Quarantine ──────────────────────────────────────────────────────────
+[system.quarantine]
+default_enabled = true
+default_escalate_on_max_restarts = false
+default_failure_rate_threshold = 5
+default_timeout_rate_threshold = 10
+default_mailbox_pressure_threshold = 0.85
+default_cooldown_period_ms = 60000
+default_observation_window_ms = 20000
+default_max_circuit_trips = 5
+
+# ── Passivation ─────────────────────────────────────────────────────────
+[system.passivation]
+enabled = true
+default_idle_timeout_ms = 300000
+memory_pressure_enabled = true
+memory_pressure_high_threshold_pct = 85
+memory_pressure_poll_interval_ms = 5000
+max_reactivation_queue_depth = 128
+drain_timeout_ms = 10000
+
+[system.passivation.store]
+type = "in_memory"
+directory = "/tmp/hpactor-passivation"
+
+# ── Process ─────────────────────────────────────────────────────────────
+[system.process]
+mode = "foreground"
+pidfile = "/var/run/hpactor.pid"
+redirect_stdio = true
+log_file = "/var/log/hpactor.log"
+working_directory = "/opt/hpactor"
+watchdog_interval_ms = 5000
+
+# ── Discovery ───────────────────────────────────────────────────────────
+[system.discovery]
+backend = "gossip"
+
+# ── Mailbox ─────────────────────────────────────────────────────────────
+[system.mailbox]
+default_capacity = 2048
+default_byte_capacity = 65536
+default_policy = "dead_letter"
+high_watermark = 0.85
+low_watermark = 0.40
+critical_watermark = 1.00
+priority_aware = true
+priority_levels = 8
+protected_system_messages = 64
+backpressure = "local_and_remote"
+max_overflow_depth = 16
+signal_min_interval_ms = 50
+
+# ── Metrics ─────────────────────────────────────────────────────────────
+[system.metrics]
+enabled = true
+ring_buffer_capacity = 131072
+metrics_path = "/custom/metrics"
+
+# ── Shutdown ────────────────────────────────────────────────────────────
+[system.shutdown]
+drain_policy = "DropUserMessages"
+drain_timeout_ms = 15000
+ingress_timeout_ms = 10000
+cluster_leave_timeout_ms = 20000
+force_after_timeout = false
+
+# ── Tracing ─────────────────────────────────────────────────────────────
+[system.tracing]
+enabled = true
+service_name = "hpactor-test"
+propagate_unsampled = false
+ring_buffer_capacity = 32768
+sampler = "always_on"
+exporter = "json_file"
+otlp_endpoint = "http://10.0.0.1:4318/v1/traces"
+json_file_path = "/tmp/traces.json"
+export_interval_ms = 1000
+max_export_batch_size = 256
+max_tracestate_len = 128
+record_actor_receive_spans = false
+record_remote_producer_spans = false
+record_local_producer_spans = true
+record_payload_size = false
+create_roots_for_actor_context_sends = true
+create_roots_for_rpc = false
+create_roots_for_http_ingress = false
+sample_ratio = 0.5
+
+# ── Logging ─────────────────────────────────────────────────────────────
+[system.logging]
+enabled = true
+default_level = "debug"
+format = "text"
+ring_buffer_capacity = 8192
+flush_on_level = "error"
+file_path = "/tmp/hpactor-test.log"
+drop_policy = "drop_newest"
+sinks = ["stderr", "file"]
+
+[system.logging.levels]
+config = "trace"
+network = "warning"
+scheduler = "info"
+
+[system.logging.rotating_file]
+path = "/tmp/hpactor-test-rotating.log"
+max_bytes = 52428800
+max_files = 10
+
+# ── Actor definition (required for minimal valid topology) ──────────────
+[[actor]]
+id = "test_actor"
+behavior = "EchoActor"
+mailbox_capacity = 128

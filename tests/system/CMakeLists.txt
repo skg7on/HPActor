@@ -8,6 +8,7 @@ set(TEST_SYSTEM_SOURCES
     test_system_runtime_workflow.cpp
     test_system_supervision.cpp
     test_system_supervision_directives.cpp
+    test_system_supervision_workflow.cpp
     test_system_backpressure.cpp
     test_system_graceful_shutdown.cpp
     test_system_observability.cpp
@@ -19,6 +20,18 @@ set(TEST_SYSTEM_SOURCES
     test_system_udp_registrar.cpp
     test_system_gossip.cpp
     test_dlq_handoff.cpp
+    test_system_network_workflow.cpp
+    test_system_rpc_workflow.cpp
+    test_system_http_api_workflow.cpp
+    test_system_actor_lifecycle_workflow.cpp
+    test_system_mailbox_scheduler_workflow.cpp
+    test_system_network_deep_workflow.cpp
+    test_system_actor_deep_workflow.cpp
+    test_system_supervision_deep_workflow.cpp
+    test_system_scheduler_deep_workflow.cpp
+    test_system_edge_cases.cpp
+    test_system_network_final.cpp
+    test_system_actor_final.cpp
 )
 
 if(ENABLE_APPS)
