@@ -16,6 +16,7 @@
 
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/receptionist/receptionist.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
 
 #include <algorithm>
@@ -30,6 +31,21 @@ GroupRouter::GroupRouter(ActorContext* ctx, ActorSystem& sys,
       service_key_(std::move(service_key)),
       needs_snapshots_(routing_logic_->needs_mailbox_snapshots()) {
     become(make_behavior());
+}
+
+GroupRouter::GroupRouter(ActorContext* ctx, ActorSystem& sys,
+                         receptionist::ServiceKey service_key,
+                         std::unique_ptr<IRoutingLogic> logic)
+    : EventBasedActor(ctx, sys), routing_logic_(std::move(logic)),
+      service_key_(service_key.name), receptionist_key_(std::move(service_key)),
+      needs_snapshots_(routing_logic_->needs_mailbox_snapshots()) {
+    become(make_behavior());
+    // Subscribe to Receptionist for dynamic routee discovery.
+    if (receptionist_key_) {
+        auto* rec = sys.receptionist();
+        if (rec)
+            rec->add_subscriber(*receptionist_key_, address());
+    }
 }
 
 Behavior GroupRouter::make_behavior() {

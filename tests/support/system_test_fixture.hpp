@@ -39,6 +39,7 @@ inline Config minimal_config() {
     Config cfg;
     cfg.scheduler_threads = 0;
     cfg.enable_network = false;
+    cfg.enable_receptionist = false;
     cfg.cli.enabled = false;
     cfg.tracing.enabled = false;
     return cfg;
@@ -48,6 +49,7 @@ inline Config config_with_scheduler(size_t threads = 1) {
     Config cfg;
     cfg.scheduler_threads = threads;
     cfg.enable_network = false;
+    cfg.enable_receptionist = false;
     cfg.cli.enabled = false;
     cfg.tracing.enabled = false;
     return cfg;

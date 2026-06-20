@@ -365,7 +365,26 @@ class EventBasedActor : public LocalActor {
     ///       thread (same thread as \c receive()).
     void check_mailbox_pressure();
 
+    // ── Message adapter ──────────────────────────────────────────────────
+
+    /// Metadata for a registered message adapter.
+    struct MessageAdapterEntry {
+        TypeTag from_tag;
+        std::function<TypedMessage(const TypedMessage&)> adapter_fn;
+    };
+
+    /// Register a message adapter that translates messages matching
+    /// \p from_tag via \p fn.  The adapter is consulted in \c receive()
+    /// before the normal dispatch path.
+    void add_message_adapter(std::function<TypedMessage(const TypedMessage&)> fn,
+                             TypeTag from_tag);
+
   private:
+    /// Pre-process \p msg through registered message adapters.
+    /// If any adapter matches, the message is translated in-place.
+    void apply_message_adapters(TypedMessage& msg);
+
+    std::vector<MessageAdapterEntry> adapters_;
     /// \brief Transition the circuit to \c kOpen and emit a metric.
     ///
     /// \param[in] now Current steady_clock timestamp.

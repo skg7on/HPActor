@@ -22,9 +22,20 @@
 #include <hpactor/types/types.hpp>
 
 #include <memory>
+#include <string>
+#include <string_view>
 #include <vector>
 
 namespace hpactor {
+
+/// Definition of a user-defined shutdown phase.
+struct UserPhaseDef {
+    std::string name;
+    ShutdownPhase after_phase{ShutdownPhase::Running};
+    std::string after_user_name;
+    std::chrono::milliseconds timeout{5'000};
+    std::function<void()> callback;
+};
 
 /// \brief Callback bundle injected into \c ShutdownCoordinator by \c
 /// ActorSystem.
@@ -102,6 +113,20 @@ class ShutdownCoordinator {
     /// \return \c true if the current phase is \c ShutdownPhase::Running.
     bool accepting_ingress() const noexcept;
 
+    /// Register a user phase after a built-in phase.
+    bool add_user_phase(std::string_view phase_name, ShutdownPhase after_phase,
+                        std::chrono::milliseconds timeout,
+                        std::function<void()> callback);
+
+    /// Register a user phase after another user-defined phase.
+    bool add_user_phase_after(std::string_view phase_name,
+                              std::string_view after_phase_name,
+                              std::chrono::milliseconds timeout,
+                              std::function<void()> callback);
+
+    /// Get user-defined phase names in registration order.
+    std::vector<std::string_view> user_phase_names() const;
+
   private:
     void set_phase(ShutdownPhase phase) noexcept;
     void initiate_actor_drain(ActorId id);
@@ -109,6 +134,7 @@ class ShutdownCoordinator {
                              std::chrono::steady_clock::time_point deadline);
 
     ShutdownCoordinatorDependencies deps_;
+    std::vector<UserPhaseDef> user_phases_;
 };
 
 } // namespace hpactor

@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/receptionist/service_key.hpp>
 #include <hpactor/actor/routing/group_router.hpp>
 #include <hpactor/actor/routing/routing_logic.hpp>
 #include <hpactor/core/actor_system.hpp>
@@ -148,6 +149,26 @@ TEST_F(GroupRouterTest, Broadcast) {
 TEST_F(GroupRouterTest, ServiceKey) {
     auto* router = spawn_router("image-processor");
     EXPECT_EQ(router->service_key(), "image-processor");
+}
+
+TEST_F(GroupRouterTest, ConstructWithReceptionistServiceKey) {
+    receptionist::ServiceKey key{"workers"};
+    auto actor =
+        system_->spawn<GroupRouter>(key, std::make_unique<RoundRobinLogic>());
+    driver_->drain(10);
+    auto* router = as_router(actor);
+    EXPECT_EQ(router->routee_count(), 0u);
+    EXPECT_EQ(router->service_key(), "workers");
+}
+
+TEST_F(GroupRouterTest, ServiceKeyRouterStartsWithEmptyRoutees) {
+    receptionist::ServiceKey key{"processors"};
+    auto actor =
+        system_->spawn<GroupRouter>(key, std::make_unique<SmallestMailboxLogic>());
+    driver_->drain(10);
+    auto* router = as_router(actor);
+    // Starts empty; routees populated via Receptionist subscription.
+    EXPECT_EQ(router->routee_count(), 0u);
 }
 
 // ── Routing Logic Swap ────────────────────────────────────────────────────

@@ -92,6 +92,10 @@ namespace metrics {
 class MetricsActor;
 } // namespace metrics
 
+namespace receptionist {
+class Receptionist;
+} // namespace receptionist
+
 // Scheduler interface forward declaration
 namespace sched {
 class IScheduler;
@@ -136,6 +140,11 @@ struct Config {
     /// \brief Enable the HTTP client subsystem.
     ///        Requires \c enable_network = true.
     bool enable_http_client = false;
+
+    /// \brief Enable the Receptionist subsystem for service-key-based
+    ///        actor discovery. When \c false, the Receptionist actor is
+    ///        not spawned and \c receptionist() returns \c nullptr.
+    bool enable_receptionist = true;
 
     /// \brief Enable coroutine-based actor execution.
     ///
@@ -451,6 +460,13 @@ class ActorSystem {
     ///
     /// Returns \c nullptr if CLI is disabled or not yet spawned.
     cli::CliActor* cli_actor() const;
+
+    /// \brief Access the Receptionist system actor for service-key-based
+    ///        actor discovery.
+    ///
+    /// \return Pointer to the Receptionist, or \c nullptr if not yet
+    ///         spawned.
+    receptionist::Receptionist* receptionist() const;
 
     // ── Mailbox ───────────────────────────────────────────────────────────
 
@@ -776,6 +792,12 @@ class ActorSystem {
     /// \brief Current phase of the shutdown state machine.
     ShutdownPhase shutdown_phase() const noexcept;
 
+    /// \brief Access the ShutdownCoordinator for registering user-defined
+    ///        shutdown phases.
+    ShutdownCoordinator* shutdown_coordinator() const {
+        return shutdown_coordinator_.get();
+    }
+
     // ── Health/readiness ──────────────────────────────────────────────────
 
     /// \brief Returns \c true when the system is ready to serve traffic.
@@ -855,6 +877,9 @@ class ActorSystem {
 
     // CLI actor (DaemonActor, spawned when cli.enabled = true)
     std::shared_ptr<cli::CliActor> cli_actor_;
+
+    // Receptionist system actor (service-key-based actor discovery)
+    std::shared_ptr<receptionist::Receptionist> receptionist_;
 
     // Metrics configuration, ring buffer, and actor
     metrics::MetricsConfig metrics_config_;

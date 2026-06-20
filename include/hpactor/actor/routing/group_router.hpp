@@ -16,11 +16,13 @@
 
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
+#include <hpactor/actor/receptionist/service_key.hpp>
 #include <hpactor/actor/routing/routing_logic.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_ref.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -53,6 +55,11 @@ class GroupRouter final : public EventBasedActor {
     /// identification.
     GroupRouter(ActorContext* ctx, ActorSystem& sys,
                 std::unique_ptr<IRoutingLogic> logic, std::string service_key);
+
+    /// Construct a GroupRouter that discovers routees via the Receptionist.
+    GroupRouter(ActorContext* ctx, ActorSystem& sys,
+                receptionist::ServiceKey service_key,
+                std::unique_ptr<IRoutingLogic> logic);
 
     /// \brief Intercept all incoming messages and forward to a selected
     ///        routee.
@@ -112,6 +119,7 @@ class GroupRouter final : public EventBasedActor {
   private:
     std::unique_ptr<IRoutingLogic> routing_logic_;
     std::string service_key_;
+    std::optional<receptionist::ServiceKey> receptionist_key_;
     bool needs_snapshots_{false};
     std::vector<ActorRef> routees_;
 };

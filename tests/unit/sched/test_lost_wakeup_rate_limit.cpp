@@ -64,6 +64,7 @@ class LostWakeupRateLimitTest : public ::testing::Test {
         cfg_.scheduler_threads = 1;
         cfg_.scheduler_start_paused = true;
         cfg_.enable_network = false;
+        cfg_.enable_receptionist = false;
     }
 
     Config cfg_;

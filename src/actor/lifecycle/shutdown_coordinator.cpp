@@ -117,12 +117,22 @@ void ShutdownCoordinator::execute(const ShutdownOptions& opts) {
         return true;
     };
 
+    auto run_user_phases = [&](ShutdownPhase after) {
+        for (auto& up : user_phases_) {
+            if (up.after_phase == after && up.after_user_name.empty()) {
+                if (up.callback)
+                    up.callback();
+            }
+        }
+    };
+
     set_phase(ShutdownPhase::DrainingIngress);
     if (deps_.set_ready)
         deps_.set_ready(false);
     auto ingress_deadline = std::chrono::steady_clock::now() + opts.ingress_timeout;
     if (check_force(ingress_deadline))
         return;
+    run_user_phases(ShutdownPhase::DrainingIngress);
 
     set_phase(ShutdownPhase::DrainingActors);
     auto actor_deadline =
@@ -173,6 +183,7 @@ void ShutdownCoordinator::execute(const ShutdownOptions& opts) {
     }
     if (check_force(actor_deadline))
         return;
+    run_user_phases(ShutdownPhase::DrainingActors);
 
     set_phase(ShutdownPhase::LeavingCluster);
     auto leave_deadline =
@@ -183,14 +194,51 @@ void ShutdownCoordinator::execute(const ShutdownOptions& opts) {
         deps_.stop_remote_runtime();
     if (check_force(leave_deadline))
         return;
+    run_user_phases(ShutdownPhase::LeavingCluster);
 
     set_phase(ShutdownPhase::FlushingTelemetry);
     if (deps_.flush_telemetry)
         deps_.flush_telemetry();
+    run_user_phases(ShutdownPhase::FlushingTelemetry);
 
     set_phase(ShutdownPhase::Stopped);
     if (deps_.running)
         deps_.running->store(false, std::memory_order_release);
+}
+
+bool ShutdownCoordinator::add_user_phase(std::string_view phase_name,
+                                         ShutdownPhase after_phase,
+                                         std::chrono::milliseconds timeout,
+                                         std::function<void()> callback) {
+    for (auto& p : user_phases_) {
+        if (p.name == phase_name)
+            return false;
+    }
+    user_phases_.push_back(
+        {std::string(phase_name), after_phase, {}, timeout, std::move(callback)});
+    return true;
+}
+
+bool ShutdownCoordinator::add_user_phase_after(std::string_view phase_name,
+                                               std::string_view after_phase_name,
+                                               std::chrono::milliseconds timeout,
+                                               std::function<void()> callback) {
+    for (auto& p : user_phases_) {
+        if (p.name == phase_name)
+            return false;
+    }
+    user_phases_.push_back({std::string(phase_name), ShutdownPhase::Running,
+                            std::string(after_phase_name), timeout,
+                            std::move(callback)});
+    return true;
+}
+
+std::vector<std::string_view> ShutdownCoordinator::user_phase_names() const {
+    std::vector<std::string_view> names;
+    names.reserve(user_phases_.size());
+    for (auto& p : user_phases_)
+        names.push_back(p.name);
+    return names;
 }
 
 } // namespace hpactor

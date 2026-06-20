@@ -26,6 +26,7 @@ add_library(hpactor_lib SHARED
     actor/routing/routing_logic.cpp
     actor/routing/pool_router.cpp
     actor/routing/group_router.cpp
+    actor/receptionist/receptionist.cpp
     mailbox/memory_pressure_monitor.cpp
     actor/lifecycle/passivation_manager.cpp
     actor/scoped_actor.cpp
