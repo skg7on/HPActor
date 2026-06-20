@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 06:19:38</td>
+            <td class="headerValue">2026-06-20 08:58:21</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">63.6&nbsp;%</td>
@@ -186,22 +186,22 @@
 <span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">           1 : }</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : </span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">           5 : bool HTTPGatewayActor::run_once() {</span></span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">           5 :     gateway_.run_once();</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">           6 : bool HTTPGatewayActor::run_once() {</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">           6 :     gateway_.run_once();</span></span>
 <span id="L113"><span class="lineNum">     113</span>                 :             : </span>
 <span id="L114"><span class="lineNum">     114</span>                 :             :     for (;;) {</span>
-<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           6 :         TypedMessage msg;</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           7 :         TypedMessage msg;</span></span>
 <span id="L116"><span class="lineNum">     116</span>                 :             :         {</span>
-<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">           6 :             std::lock_guard&lt;std::mutex&gt; lock(reply_queue_mutex_);</span></span>
-<span id="L118"><span class="lineNum">     118</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           6 :             if (reply_queue_.empty())</span></span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           5 :                 break;</span></span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaGNC">           7 :             std::lock_guard&lt;std::mutex&gt; lock(reply_queue_mutex_);</span></span>
+<span id="L118"><span class="lineNum">     118</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           7 :             if (reply_queue_.empty())</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">           6 :                 break;</span></span>
 <span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">           1 :             msg = std::move(reply_queue_.front());</span></span>
 <span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">           1 :             reply_queue_.pop();</span></span>
-<span id="L122"><span class="lineNum">     122</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           6 :         }</span></span>
+<span id="L122"><span class="lineNum">     122</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           7 :         }</span></span>
 <span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">           1 :         on_reply(std::move(msg));</span></span>
-<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">           7 :     }</span></span>
+<span id="L124"><span class="lineNum">     124</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           8 :     }</span></span>
 <span id="L125"><span class="lineNum">     125</span>                 :             : </span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           5 :     return true;</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">           6 :     return true;</span></span>
 <span id="L127"><span class="lineNum">     127</span>                 :             : }</span>
 <span id="L128"><span class="lineNum">     128</span>                 :             : </span>
 <span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">           1 : void HTTPGatewayActor::on_deactivate() {</span></span>

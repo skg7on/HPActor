@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 06:19:38</td>
+            <td class="headerValue">2026-06-20 08:58:21</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -291,18 +291,18 @@
 <span id="L213"><span class="lineNum">     213</span>                 :             :         return current_sender_;</span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :     }</span>
 <span id="L215"><span class="lineNum">     215</span>                 :             :     /// \brief Set the current sender address (called by message dispatch).</span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC tlaBgGNC">        1054 :     void set_current_sender(const ActorAddress&amp; sender) {</span></span>
-<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC">        1054 :         current_sender_ = sender;</span></span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">        1054 :     }</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC tlaBgGNC">        1053 :     void set_current_sender(const ActorAddress&amp; sender) {</span></span>
+<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC">        1053 :         current_sender_ = sender;</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">        1053 :     }</span></span>
 <span id="L219"><span class="lineNum">     219</span>                 :             : </span>
 <span id="L220"><span class="lineNum">     220</span>                 :             :     /// \brief Current ask message ID for reply routing through AskManager.</span>
 <span id="L221"><span class="lineNum">     221</span>                 :             :     uint64_t current_ask_message_id() const {</span>
 <span id="L222"><span class="lineNum">     222</span>                 :             :         return current_ask_message_id_;</span>
 <span id="L223"><span class="lineNum">     223</span>                 :             :     }</span>
 <span id="L224"><span class="lineNum">     224</span>                 :             :     /// \brief Set the ask message ID (called by message dispatch).</span>
-<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">        2102 :     void set_current_ask_message_id(uint64_t id) {</span></span>
-<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">        2102 :         current_ask_message_id_ = id;</span></span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">        2102 :     }</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">        2100 :     void set_current_ask_message_id(uint64_t id) {</span></span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC">        2100 :         current_ask_message_id_ = id;</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">        2100 :     }</span></span>
 <span id="L228"><span class="lineNum">     228</span>                 :             : </span>
 <span id="L229"><span class="lineNum">     229</span>                 :             :     // ── Scheduled delivery ────────────────────────────────────────────────</span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : </span>
@@ -348,11 +348,11 @@
 <span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">          19 :     void add_linked(const ActorAddress&amp; addr) {</span></span>
 <span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">          19 :         linked_.push_back(addr);</span></span>
 <span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaGNC">          19 :     }</span></span>
-<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">          15 :     void remove_linked(const ActorAddress&amp; addr) {</span></span>
-<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">          15 :         auto it = std::find(linked_.begin(), linked_.end(), addr);</span></span>
-<span id="L275"><span class="lineNum">     275</span>         [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          15 :         if (it != linked_.end())</span></span>
-<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">          11 :             linked_.erase(it);</span></span>
-<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">          15 :     }</span></span>
+<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">          16 :     void remove_linked(const ActorAddress&amp; addr) {</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">          16 :         auto it = std::find(linked_.begin(), linked_.end(), addr);</span></span>
+<span id="L275"><span class="lineNum">     275</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          16 :         if (it != linked_.end())</span></span>
+<span id="L276"><span class="lineNum">     276</span>                 :<span class="tlaGNC">          12 :             linked_.erase(it);</span></span>
+<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">          16 :     }</span></span>
 <span id="L278"><span class="lineNum">     278</span>                 :             : </span>
 <span id="L279"><span class="lineNum">     279</span>                 :             :     // ── Monitoring ────────────────────────────────────────────────────────</span>
 <span id="L280"><span class="lineNum">     280</span>                 :             : </span>
@@ -365,14 +365,14 @@
 <span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">           7 :     void add_monitored(const ActorAddress&amp; addr) {</span></span>
 <span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC">           7 :         monitored_.push_back(addr);</span></span>
 <span id="L289"><span class="lineNum">     289</span>                 :<span class="tlaGNC">           7 :     }</span></span>
-<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">          11 :     void remove_monitored(const ActorAddress&amp; addr) {</span></span>
-<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">          11 :         auto it = std::find(monitored_.begin(), monitored_.end(), addr);</span></span>
-<span id="L292"><span class="lineNum">     292</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          11 :         if (it != monitored_.end())</span></span>
+<span id="L290"><span class="lineNum">     290</span>                 :<span class="tlaGNC">          12 :     void remove_monitored(const ActorAddress&amp; addr) {</span></span>
+<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">          12 :         auto it = std::find(monitored_.begin(), monitored_.end(), addr);</span></span>
+<span id="L292"><span class="lineNum">     292</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">          12 :         if (it != monitored_.end())</span></span>
 <span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">           3 :             monitored_.erase(it);</span></span>
-<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">          11 :     }</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">          12 :     }</span></span>
 <span id="L295"><span class="lineNum">     295</span>                 :             :     /// \brief List of currently monitored actor addresses.</span>
-<span id="L296"><span class="lineNum">     296</span>                 :<span class="tlaGNC">         609 :     const std::vector&lt;ActorAddress&gt;&amp; monitored_actors() const {</span></span>
-<span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaGNC">         609 :         return monitored_;</span></span>
+<span id="L296"><span class="lineNum">     296</span>                 :<span class="tlaGNC">         611 :     const std::vector&lt;ActorAddress&gt;&amp; monitored_actors() const {</span></span>
+<span id="L297"><span class="lineNum">     297</span>                 :<span class="tlaGNC">         611 :         return monitored_;</span></span>
 <span id="L298"><span class="lineNum">     298</span>                 :             :     }</span>
 <span id="L299"><span class="lineNum">     299</span>                 :             : </span>
 <span id="L300"><span class="lineNum">     300</span>                 :             :     // ── Actor resolution ──────────────────────────────────────────────────</span>
