@@ -264,6 +264,35 @@ class ActorContext {
     /// \brief Unsubscribe from a ServiceKey.
     void receptionist_unsubscribe(receptionist::ServiceKey key);
 
+    // ── Message adapter ─────────────────────────────────────────────────
+
+    /// \brief Create a message adapter that translates From→To and
+    ///        self-delivers the translated message.
+    ///
+    /// Returns an ActorRef. Messages of type \c From sent to the
+    /// returned ref are translated via \p adapter_fn and
+    /// self-delivered as type \c To.
+    ///
+    /// The adapter is stored on the owning EventBasedActor and
+    /// checked in \c receive() before normal dispatch.
+    template <typename From, typename To>
+    ActorRef message_adapter(std::function<To(const From&)> adapter_fn) {
+        auto fn = [afn = std::move(adapter_fn)](const TypedMessage& msg) -> TypedMessage {
+            auto parsed = msg.as<From>();
+            To to = afn(*parsed);
+            return TypedMessage(To::kTypeTag, to);
+        };
+        return register_message_adapter(std::move(fn), From::kTypeTag);
+    }
+
+  private:
+    /// Register a type-erased adapter function on the owning actor.
+    /// Returns a self-ref; messages sent to it will be translated.
+    ActorRef
+    register_message_adapter(std::function<TypedMessage(const TypedMessage&)> fn,
+                             TypeTag from_tag);
+
+  public:
     // ── Children management ───────────────────────────────────────────────
 
     /// \brief List of direct child actors.

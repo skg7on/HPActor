@@ -84,6 +84,11 @@ void EventBasedActor::receive(TypedMessage& msg) {
         return;
     }
 
+    // Pre-process: message adapters may translate the message before
+    // normal dispatch. The translated message flows through the
+    // standard dispatch path below.
+    apply_message_adapters(msg);
+
     // Fast-tag dispatch: system messages (tag < TypeTag::User) never
     // take the fast path — they must go through dispatch_system_message().
     // User messages with a registered fast tag skip all pipeline gates.
@@ -894,6 +899,22 @@ bool EventBasedActor::is_fast_tag(TypeTag tag) const noexcept {
     uint32_t word = idx / 64;
     uint32_t bit = idx % 64;
     return (fast_tag_bitset_[word] & (uint64_t{1} << bit)) != 0;
+}
+
+void EventBasedActor::add_message_adapter(
+    std::function<TypedMessage(const TypedMessage&)> fn, TypeTag from_tag) {
+    adapters_.push_back({from_tag, std::move(fn)});
+}
+
+void EventBasedActor::apply_message_adapters(TypedMessage& msg) {
+    for (auto& entry : adapters_) {
+        if (msg.type_id() == entry.from_tag) {
+            auto translated = entry.adapter_fn(msg);
+            translated.set_trace_context(msg.trace_context());
+            msg = std::move(translated);
+            return;
+        }
+    }
 }
 
 } // namespace hpactor

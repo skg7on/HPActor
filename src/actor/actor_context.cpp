@@ -338,6 +338,19 @@ void ActorContext::receptionist_unsubscribe(receptionist::ServiceKey key) {
     rec->remove_subscriber(key, owner_.address());
 }
 
+ActorRef ActorContext::register_message_adapter(
+    std::function<TypedMessage(const TypedMessage&)> fn, TypeTag from_tag) {
+    if (!owner_)
+        return ActorRef{};
+    auto* raw = owner_.get().get();
+    if (!raw || !raw->is_event_based_actor())
+        return ActorRef{};
+    auto* eba = static_cast<EventBasedActor*>(raw);
+    eba->add_message_adapter(std::move(fn), from_tag);
+    // Return a self-ref — adapted messages arrive at this actor.
+    return ActorRef(owner_);
+}
+
 std::vector<Actor> ActorContext::children() const {
     return children_;
 }
