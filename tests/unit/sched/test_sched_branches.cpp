@@ -653,15 +653,16 @@ TEST(WorkerThreadBranchesTest, DonationCount) {
     sched::WorkerThread::Config cfg;
     cfg.worker_index = 0;
     sched::WorkerThread worker(cfg);
-    worker.start();
+    // Don't start the worker thread — donation_count_ is a bare atomic,
+    // and the idle loop would race with these assertions.  The neighbouring
+    // DiagnosticCountersInitiallyZero test uses EXPECT_LE for the same
+    // reason (counters may be non-zero before we observe them).
 
     EXPECT_EQ(worker.donation_count(), 0U);
     worker.increment_donations();
     EXPECT_EQ(worker.donation_count(), 1U);
     worker.increment_donations();
     EXPECT_EQ(worker.donation_count(), 2U);
-
-    worker.stop();
 }
 
 TEST(WorkerThreadBranchesTest, WorkProcessorReceivesItem) {
