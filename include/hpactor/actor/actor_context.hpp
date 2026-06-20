@@ -17,6 +17,7 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/receptionist/service_key.hpp>
 #include <hpactor/core/actor_ref_cache.hpp>
+#include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/request_handle.hpp>
@@ -280,9 +281,9 @@ class ActorContext {
         auto fn = [afn = std::move(adapter_fn)](const TypedMessage& msg) -> TypedMessage {
             auto parsed = msg.as<From>();
             To to = afn(*parsed);
-            return TypedMessage(To::kTypeTag, to);
+            return TypedMessage(MessageTraits<To>::tag(), to);
         };
-        return register_message_adapter(std::move(fn), From::kTypeTag);
+        return register_message_adapter(std::move(fn), MessageTraits<From>::tag());
     }
 
   private:

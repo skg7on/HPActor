@@ -282,12 +282,12 @@ class Behavior {
         auto state = std::make_shared<ComposeState>();
         state->type = ComposeState::Type::MessageAdapter;
         state->inner = std::make_shared<Behavior>(std::move(inner));
-        state->adapter_from_tag = From::kTypeTag;
+        state->adapter_from_tag = MessageTraits<From>::tag();
         state->adapter_fn = [fn = std::move(adapter_fn)](
                                 const TypedMessage& msg) -> TypedMessage {
             auto proto = msg.as<From>();
             To to = fn(*proto);
-            return TypedMessage(To::kTypeTag, to);
+            return TypedMessage(MessageTraits<To>::tag(), to);
         };
         result.compose_ = std::move(state);
         return result;

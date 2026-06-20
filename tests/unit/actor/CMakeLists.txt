@@ -18,6 +18,9 @@ add_executable(test_unit_actor
     routing/test_pool_router.cpp
     routing/test_group_router.cpp
     receptionist/test_receptionist.cpp
+    behavior_test_kit_test.cpp
+    test_probe_test.cpp
+    test_behavior_message_adapter.cpp
 )
 target_link_libraries(test_unit_actor hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_actor)
