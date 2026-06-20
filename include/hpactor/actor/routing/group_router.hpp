@@ -22,6 +22,7 @@
 #include <hpactor/ref/actor_ref.hpp>
 
 #include <memory>
+#include <optional>
 #include <string>
 #include <vector>
 
