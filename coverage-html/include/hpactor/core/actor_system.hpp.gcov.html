@@ -37,12 +37,12 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 01:44:05</td>
+            <td class="headerValue">2026-06-20 06:19:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
-            <td class="headerCovTableEntryHi">93.3&nbsp;%</td>
-            <td class="headerCovTableEntry">120</td>
-            <td class="headerCovTableEntry">112</td>
+            <td class="headerCovTableEntryHi">93.4&nbsp;%</td>
+            <td class="headerCovTableEntry">121</td>
+            <td class="headerCovTableEntry">113</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -369,8 +369,8 @@
 <span id="L291"><span class="lineNum">     291</span>                 :             :     // ── Clock ─────────────────────────────────────────────────────────────</span>
 <span id="L292"><span class="lineNum">     292</span>                 :             : </span>
 <span id="L293"><span class="lineNum">     293</span>                 :             :     /// \brief Reference to the system monotonic clock.</span>
-<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">          34 :     Clock&amp; clock() {</span></span>
-<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaGNC">          34 :         return clock_;</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">          33 :     Clock&amp; clock() {</span></span>
+<span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaGNC">          33 :         return clock_;</span></span>
 <span id="L296"><span class="lineNum">     296</span>                 :             :     }</span>
 <span id="L297"><span class="lineNum">     297</span>                 :             : </span>
 <span id="L298"><span class="lineNum">     298</span>                 :             :     // ── System actor ──────────────────────────────────────────────────────</span>
@@ -400,15 +400,15 @@
 <span id="L322"><span class="lineNum">     322</span>                 :             :     // ── Node identity ─────────────────────────────────────────────────────</span>
 <span id="L323"><span class="lineNum">     323</span>                 :             : </span>
 <span id="L324"><span class="lineNum">     324</span>                 :             :     /// \brief Network endpoint of this node.</span>
-<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC tlaBgGNC">         166 :     EndPoint endpoint() const {</span></span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">         166 :         return endpoint_;</span></span>
+<span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC tlaBgGNC">         167 :     EndPoint endpoint() const {</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">         167 :         return endpoint_;</span></span>
 <span id="L327"><span class="lineNum">     327</span>                 :             :     }</span>
 <span id="L328"><span class="lineNum">     328</span>                 :             : </span>
 <span id="L329"><span class="lineNum">     329</span>                 :             :     // ── Running state ─────────────────────────────────────────────────────</span>
 <span id="L330"><span class="lineNum">     330</span>                 :             : </span>
 <span id="L331"><span class="lineNum">     331</span>                 :             :     /// \brief Returns \c true while the system is accepting messages.</span>
-<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">         198 :     bool is_running() const {</span></span>
-<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">         198 :         return running_.load(std::memory_order_acquire);</span></span>
+<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">         186 :     bool is_running() const {</span></span>
+<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">         186 :         return running_.load(std::memory_order_acquire);</span></span>
 <span id="L334"><span class="lineNum">     334</span>                 :             :     }</span>
 <span id="L335"><span class="lineNum">     335</span>                 :             : </span>
 <span id="L336"><span class="lineNum">     336</span>                 :             :     /// \brief System uptime since construction.</span>
@@ -434,8 +434,8 @@
 <span id="L356"><span class="lineNum">     356</span>                 :             :     /// \brief Returns \c true if coroutine-based execution is configured.</span>
 <span id="L357"><span class="lineNum">     357</span>                 :             :     ///</span>
 <span id="L358"><span class="lineNum">     358</span>                 :             :     /// Requires \c HPACTOR_SUPPORT_COROUTINES=1 at compile time.</span>
-<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">        1328 :     bool use_coroutines() const {</span></span>
-<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">        1328 :         return config_.use_coroutines;</span></span>
+<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">        1327 :     bool use_coroutines() const {</span></span>
+<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">        1327 :         return config_.use_coroutines;</span></span>
 <span id="L361"><span class="lineNum">     361</span>                 :             :     }</span>
 <span id="L362"><span class="lineNum">     362</span>                 :             : </span>
 <span id="L363"><span class="lineNum">     363</span>                 :             :     // ── RPC ───────────────────────────────────────────────────────────────</span>
@@ -473,8 +473,8 @@
 <span id="L395"><span class="lineNum">     395</span>                 :             :     // ── Distributed tracing ───────────────────────────────────────────────</span>
 <span id="L396"><span class="lineNum">     396</span>                 :             : </span>
 <span id="L397"><span class="lineNum">     397</span>                 :             :     /// \brief Trace manager (nullptr if tracing is disabled).</span>
-<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC tlaBgGNC">        1870 :     tracing::TraceManager* trace_manager() noexcept {</span></span>
-<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">        1870 :         return trace_manager_.get();</span></span>
+<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC tlaBgGNC">        1873 :     tracing::TraceManager* trace_manager() noexcept {</span></span>
+<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">        1873 :         return trace_manager_.get();</span></span>
 <span id="L400"><span class="lineNum">     400</span>                 :             :     }</span>
 <span id="L401"><span class="lineNum">     401</span>                 :             :     const tracing::TraceManager* trace_manager() const noexcept {</span>
 <span id="L402"><span class="lineNum">     402</span>                 :             :         return trace_manager_.get();</span>
@@ -601,432 +601,447 @@
 <span id="L523"><span class="lineNum">     523</span>                 :             :                       int64_t deadline_ns = INT64_MAX,</span>
 <span id="L524"><span class="lineNum">     524</span>                 :             :                       mailbox::DeliveryOptions options = {});</span>
 <span id="L525"><span class="lineNum">     525</span>                 :             : </span>
-<span id="L526"><span class="lineNum">     526</span>                 :             :     /// \brief Deliver with a user-facing \c DeliveryResult.</span>
+<span id="L526"><span class="lineNum">     526</span>                 :             :     /// \brief Fast local delivery that bypasses the full DeliveryPipeline.</span>
 <span id="L527"><span class="lineNum">     527</span>                 :             :     ///</span>
-<span id="L528"><span class="lineNum">     528</span>                 :             :     /// Wraps \c try_deliver_local() and converts the internal</span>
-<span id="L529"><span class="lineNum">     529</span>                 :             :     /// \c EnqueueResult to \c DeliveryResult for caller convenience.</span>
-<span id="L530"><span class="lineNum">     530</span>                 :             :     ///</span>
-<span id="L531"><span class="lineNum">     531</span>                 :             :     /// \param[in] target Actor ID.</span>
-<span id="L532"><span class="lineNum">     532</span>                 :             :     /// \param[in] msg Message to deliver.</span>
-<span id="L533"><span class="lineNum">     533</span>                 :             :     /// \param[in] priority 0–3 (0 = highest).</span>
-<span id="L534"><span class="lineNum">     534</span>                 :             :     /// \param[in] deadline_ns Absolute delivery deadline.</span>
-<span id="L535"><span class="lineNum">     535</span>                 :             :     /// \param[in] options Delivery options.</span>
-<span id="L536"><span class="lineNum">     536</span>                 :             :     /// \return \c DeliveryResult describing the delivery outcome.</span>
-<span id="L537"><span class="lineNum">     537</span>                 :             :     mailbox::DeliveryResult</span>
-<span id="L538"><span class="lineNum">     538</span>                 :             :     deliver_with_result(ActorId target, TypedMessage msg, uint8_t priority = 0,</span>
-<span id="L539"><span class="lineNum">     539</span>                 :             :                         int64_t deadline_ns = INT64_MAX,</span>
-<span id="L540"><span class="lineNum">     540</span>                 :             :                         mailbox::DeliveryOptions options = {});</span>
-<span id="L541"><span class="lineNum">     541</span>                 :             : </span>
-<span id="L542"><span class="lineNum">     542</span>                 :             :     /// \brief Record a timeout against an actor for circuit breaker tracking.</span>
-<span id="L543"><span class="lineNum">     543</span>                 :             :     ///</span>
-<span id="L544"><span class="lineNum">     544</span>                 :             :     /// Callers should invoke this when a request to \p target times out</span>
-<span id="L545"><span class="lineNum">     545</span>                 :             :     /// (e.g., from ask/request timeout paths). If the target actor has</span>
-<span id="L546"><span class="lineNum">     546</span>                 :             :     /// quarantine enabled with a non-zero \c timeout_rate_threshold,</span>
-<span id="L547"><span class="lineNum">     547</span>                 :             :     /// the timeout is recorded in the failure-rate tracker and may trip</span>
-<span id="L548"><span class="lineNum">     548</span>                 :             :     /// the circuit breaker.</span>
-<span id="L549"><span class="lineNum">     549</span>                 :             :     ///</span>
-<span id="L550"><span class="lineNum">     550</span>                 :             :     /// \param[in] target The actor that timed out.</span>
-<span id="L551"><span class="lineNum">     551</span>                 :             :     /// \note Thread safety: safe to call from any thread. The target</span>
-<span id="L552"><span class="lineNum">     552</span>                 :             :     ///       actor's circuit breaker is accessed through the actor</span>
-<span id="L553"><span class="lineNum">     553</span>                 :             :     ///       registry; the timeout recording itself is single-writer</span>
-<span id="L554"><span class="lineNum">     554</span>                 :             :     ///       (scheduler thread only).</span>
-<span id="L555"><span class="lineNum">     555</span>                 :             :     void record_actor_timeout(ActorId target);</span>
+<span id="L528"><span class="lineNum">     528</span>                 :             :     /// Enqueues directly to the target mailbox without circuit breaker,</span>
+<span id="L529"><span class="lineNum">     529</span>                 :             :     /// TTL, dedup, or backpressure checks. Intended for internal benchmarks</span>
+<span id="L530"><span class="lineNum">     530</span>                 :             :     /// and hot paths where those checks are known to be unnecessary.</span>
+<span id="L531"><span class="lineNum">     531</span>                 :             :     ///</span>
+<span id="L532"><span class="lineNum">     532</span>                 :             :     /// \pre The target actor exists.</span>
+<span id="L533"><span class="lineNum">     533</span>                 :             :     /// \pre No circuit breaker, TTL, or dedup is needed.</span>
+<span id="L534"><span class="lineNum">     534</span>                 :             :     /// \param[in] target Actor ID to deliver to.</span>
+<span id="L535"><span class="lineNum">     535</span>                 :             :     /// \param[in] msg    Message to deliver (moved).</span>
+<span id="L536"><span class="lineNum">     536</span>                 :             :     /// \return \c EnqueueResult describing acceptance or rejection.</span>
+<span id="L537"><span class="lineNum">     537</span>                 :             :     /// \retval Accepted        Message was enqueued.</span>
+<span id="L538"><span class="lineNum">     538</span>                 :             :     /// \retval ActorNotFound   Target actor does not exist.</span>
+<span id="L539"><span class="lineNum">     539</span>                 :             :     mailbox::EnqueueResult try_deliver_local_fast(ActorId target, TypedMessage msg);</span>
+<span id="L540"><span class="lineNum">     540</span>                 :             : </span>
+<span id="L541"><span class="lineNum">     541</span>                 :             :     /// \brief Deliver with a user-facing \c DeliveryResult.</span>
+<span id="L542"><span class="lineNum">     542</span>                 :             :     ///</span>
+<span id="L543"><span class="lineNum">     543</span>                 :             :     /// Wraps \c try_deliver_local() and converts the internal</span>
+<span id="L544"><span class="lineNum">     544</span>                 :             :     /// \c EnqueueResult to \c DeliveryResult for caller convenience.</span>
+<span id="L545"><span class="lineNum">     545</span>                 :             :     ///</span>
+<span id="L546"><span class="lineNum">     546</span>                 :             :     /// \param[in] target Actor ID.</span>
+<span id="L547"><span class="lineNum">     547</span>                 :             :     /// \param[in] msg Message to deliver.</span>
+<span id="L548"><span class="lineNum">     548</span>                 :             :     /// \param[in] priority 0–3 (0 = highest).</span>
+<span id="L549"><span class="lineNum">     549</span>                 :             :     /// \param[in] deadline_ns Absolute delivery deadline.</span>
+<span id="L550"><span class="lineNum">     550</span>                 :             :     /// \param[in] options Delivery options.</span>
+<span id="L551"><span class="lineNum">     551</span>                 :             :     /// \return \c DeliveryResult describing the delivery outcome.</span>
+<span id="L552"><span class="lineNum">     552</span>                 :             :     mailbox::DeliveryResult</span>
+<span id="L553"><span class="lineNum">     553</span>                 :             :     deliver_with_result(ActorId target, TypedMessage msg, uint8_t priority = 0,</span>
+<span id="L554"><span class="lineNum">     554</span>                 :             :                         int64_t deadline_ns = INT64_MAX,</span>
+<span id="L555"><span class="lineNum">     555</span>                 :             :                         mailbox::DeliveryOptions options = {});</span>
 <span id="L556"><span class="lineNum">     556</span>                 :             : </span>
-<span id="L557"><span class="lineNum">     557</span>                 :             :     // ── Dead-letter queue ─────────────────────────────────────────────────</span>
-<span id="L558"><span class="lineNum">     558</span>                 :             : </span>
-<span id="L559"><span class="lineNum">     559</span>                 :             :     /// \brief Enqueue a dead-letter record.</span>
-<span id="L560"><span class="lineNum">     560</span>                 :             :     ///</span>
-<span id="L561"><span class="lineNum">     561</span>                 :             :     /// \param[in] record Dead-letter record to store.</span>
-<span id="L562"><span class="lineNum">     562</span>                 :             :     /// \return \c true if the record was accepted.</span>
-<span id="L563"><span class="lineNum">     563</span>                 :             :     bool dead_letter(mailbox::DeadLetterRecord record) noexcept;</span>
-<span id="L564"><span class="lineNum">     564</span>                 :             : </span>
-<span id="L565"><span class="lineNum">     565</span>                 :             :     /// \brief Snapshot of current dead-letter queue contents.</span>
-<span id="L566"><span class="lineNum">     566</span>                 :             :     mailbox::DeadLetterQueueSnapshot dead_letter_snapshot() const noexcept;</span>
-<span id="L567"><span class="lineNum">     567</span>                 :             : </span>
-<span id="L568"><span class="lineNum">     568</span>                 :             :     /// \brief Pop the oldest dead-letter record.</span>
-<span id="L569"><span class="lineNum">     569</span>                 :             :     ///</span>
-<span id="L570"><span class="lineNum">     570</span>                 :             :     /// \param[out] out Set to the popped record on success.</span>
-<span id="L571"><span class="lineNum">     571</span>                 :             :     /// \return \c true if a record was available.</span>
-<span id="L572"><span class="lineNum">     572</span>                 :             :     bool pop_dead_letter(mailbox::DeadLetterRecord&amp; out) noexcept;</span>
+<span id="L557"><span class="lineNum">     557</span>                 :             :     /// \brief Record a timeout against an actor for circuit breaker tracking.</span>
+<span id="L558"><span class="lineNum">     558</span>                 :             :     ///</span>
+<span id="L559"><span class="lineNum">     559</span>                 :             :     /// Callers should invoke this when a request to \p target times out</span>
+<span id="L560"><span class="lineNum">     560</span>                 :             :     /// (e.g., from ask/request timeout paths). If the target actor has</span>
+<span id="L561"><span class="lineNum">     561</span>                 :             :     /// quarantine enabled with a non-zero \c timeout_rate_threshold,</span>
+<span id="L562"><span class="lineNum">     562</span>                 :             :     /// the timeout is recorded in the failure-rate tracker and may trip</span>
+<span id="L563"><span class="lineNum">     563</span>                 :             :     /// the circuit breaker.</span>
+<span id="L564"><span class="lineNum">     564</span>                 :             :     ///</span>
+<span id="L565"><span class="lineNum">     565</span>                 :             :     /// \param[in] target The actor that timed out.</span>
+<span id="L566"><span class="lineNum">     566</span>                 :             :     /// \note Thread safety: safe to call from any thread. The target</span>
+<span id="L567"><span class="lineNum">     567</span>                 :             :     ///       actor's circuit breaker is accessed through the actor</span>
+<span id="L568"><span class="lineNum">     568</span>                 :             :     ///       registry; the timeout recording itself is single-writer</span>
+<span id="L569"><span class="lineNum">     569</span>                 :             :     ///       (scheduler thread only).</span>
+<span id="L570"><span class="lineNum">     570</span>                 :             :     void record_actor_timeout(ActorId target);</span>
+<span id="L571"><span class="lineNum">     571</span>                 :             : </span>
+<span id="L572"><span class="lineNum">     572</span>                 :             :     // ── Dead-letter queue ─────────────────────────────────────────────────</span>
 <span id="L573"><span class="lineNum">     573</span>                 :             : </span>
-<span id="L574"><span class="lineNum">     574</span>                 :             :     /// \brief Direct access to the dead-letter queue.</span>
+<span id="L574"><span class="lineNum">     574</span>                 :             :     /// \brief Enqueue a dead-letter record.</span>
 <span id="L575"><span class="lineNum">     575</span>                 :             :     ///</span>
-<span id="L576"><span class="lineNum">     576</span>                 :             :     /// Returns nullptr if dead-letter queue is not initialized.</span>
-<span id="L577"><span class="lineNum">     577</span>                 :<span class="tlaGNC">          77 :     mailbox::DeadLetterQueue* dead_letter_queue() noexcept {</span></span>
-<span id="L578"><span class="lineNum">     578</span>                 :<span class="tlaGNC">          77 :         return dead_letters_.get();</span></span>
-<span id="L579"><span class="lineNum">     579</span>                 :             :     }</span>
-<span id="L580"><span class="lineNum">     580</span>                 :             :     const mailbox::DeadLetterQueue* dead_letter_queue() const noexcept {</span>
-<span id="L581"><span class="lineNum">     581</span>                 :             :         return dead_letters_.get();</span>
-<span id="L582"><span class="lineNum">     582</span>                 :             :     }</span>
-<span id="L583"><span class="lineNum">     583</span>                 :             : </span>
-<span id="L584"><span class="lineNum">     584</span>                 :             :     /// \brief Access the outbound delivery tracker for at-least-once delivery.</span>
-<span id="L585"><span class="lineNum">     585</span>                 :             :     ///</span>
-<span id="L586"><span class="lineNum">     586</span>                 :             :     /// \return A pointer to the \c OutboundDeliveryTracker, or \c nullptr</span>
-<span id="L587"><span class="lineNum">     587</span>                 :             :     ///         if the tracker has not been initialized. The tracker is</span>
-<span id="L588"><span class="lineNum">     588</span>                 :             :     ///         always initialized when the \c ActorSystem is constructed.</span>
-<span id="L589"><span class="lineNum">     589</span>                 :             :     /// \note Thread safety: The returned pointer is stable for the lifetime</span>
-<span id="L590"><span class="lineNum">     590</span>                 :             :     ///       of the \c ActorSystem. Callers may cache it.</span>
-<span id="L591"><span class="lineNum">     591</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     msg::OutboundDeliveryTracker* outbound_tracker() noexcept {</span></span>
-<span id="L592"><span class="lineNum">     592</span>                 :<span class="tlaUNC">           0 :         return outbound_tracker_.get();</span></span>
-<span id="L593"><span class="lineNum">     593</span>                 :             :     }</span>
-<span id="L594"><span class="lineNum">     594</span>                 :             : </span>
-<span id="L595"><span class="lineNum">     595</span>                 :             :     // Receiver dedup cache for at-least-once delivery</span>
-<span id="L596"><span class="lineNum">     596</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     adt::DedupCache* dedup_cache() {</span></span>
-<span id="L597"><span class="lineNum">     597</span>                 :<span class="tlaGNC">           1 :         return dedup_cache_.get();</span></span>
-<span id="L598"><span class="lineNum">     598</span>                 :             :     }</span>
-<span id="L599"><span class="lineNum">     599</span>                 :             :     const adt::DedupCache* dedup_cache() const {</span>
-<span id="L600"><span class="lineNum">     600</span>                 :             :         return dedup_cache_.get();</span>
-<span id="L601"><span class="lineNum">     601</span>                 :             :     }</span>
-<span id="L602"><span class="lineNum">     602</span>                 :             : </span>
-<span id="L603"><span class="lineNum">     603</span>                 :             :     // Build a MailboxConfig from system-wide defaults in Config::mailbox.</span>
-<span id="L604"><span class="lineNum">     604</span>                 :             :     // ── Mailbox configuration ─────────────────────────────────────────────</span>
-<span id="L605"><span class="lineNum">     605</span>                 :             : </span>
-<span id="L606"><span class="lineNum">     606</span>                 :             :     /// \brief Build a \c MailboxConfig from system-wide defaults.</span>
-<span id="L607"><span class="lineNum">     607</span>                 :             :     mailbox::MailboxConfig mailbox_config_for_spawn() const;</span>
-<span id="L608"><span class="lineNum">     608</span>                 :             : </span>
-<span id="L609"><span class="lineNum">     609</span>                 :             :     /// \brief Build a \c MailboxConfig for an actor definition.</span>
-<span id="L610"><span class="lineNum">     610</span>                 :             :     ///</span>
-<span id="L611"><span class="lineNum">     611</span>                 :             :     /// Falls back to system defaults when \c ActorDef fields are zero.</span>
-<span id="L612"><span class="lineNum">     612</span>                 :             :     /// \param[in] def Actor definition from topology config.</span>
-<span id="L613"><span class="lineNum">     613</span>                 :             :     /// \return Merged mailbox configuration.</span>
-<span id="L614"><span class="lineNum">     614</span>                 :             :     mailbox::MailboxConfig</span>
-<span id="L615"><span class="lineNum">     615</span>                 :             :     mailbox_config_for_actor_def(const config::ActorDef&amp; def) const;</span>
-<span id="L616"><span class="lineNum">     616</span>                 :             : </span>
-<span id="L617"><span class="lineNum">     617</span>                 :             :     // ── Remote delivery ───────────────────────────────────────────────────</span>
-<span id="L618"><span class="lineNum">     618</span>                 :             : </span>
-<span id="L619"><span class="lineNum">     619</span>                 :             :     /// \brief Deliver a remote message to the target actor's mailbox.</span>
-<span id="L620"><span class="lineNum">     620</span>                 :             :     ///</span>
-<span id="L621"><span class="lineNum">     621</span>                 :             :     /// Bridges the transport layer to the unified \c deliver_local() sink.</span>
-<span id="L622"><span class="lineNum">     622</span>                 :             :     /// \param[in] frame WireFrame containing the remote message.</span>
-<span id="L623"><span class="lineNum">     623</span>                 :             :     void deliver_remote(const net::WireFrame&amp; frame);</span>
-<span id="L624"><span class="lineNum">     624</span>                 :             : </span>
-<span id="L625"><span class="lineNum">     625</span>                 :             :     // ── Node death ────────────────────────────────────────────────────────</span>
-<span id="L626"><span class="lineNum">     626</span>                 :             : </span>
-<span id="L627"><span class="lineNum">     627</span>                 :             :     /// \brief Handle a remote node becoming unreachable.</span>
-<span id="L628"><span class="lineNum">     628</span>                 :             :     ///</span>
-<span id="L629"><span class="lineNum">     629</span>                 :             :     /// Called by \c IServiceDiscovery. Finds all actors linked to the dead</span>
-<span id="L630"><span class="lineNum">     630</span>                 :             :     /// endpoint and delivers \c DownMsg.</span>
-<span id="L631"><span class="lineNum">     631</span>                 :             :     /// \param[in] dead_ep Endpoint of the unreachable node.</span>
-<span id="L632"><span class="lineNum">     632</span>                 :             :     void on_node_dead(EndPoint dead_ep);</span>
+<span id="L576"><span class="lineNum">     576</span>                 :             :     /// \param[in] record Dead-letter record to store.</span>
+<span id="L577"><span class="lineNum">     577</span>                 :             :     /// \return \c true if the record was accepted.</span>
+<span id="L578"><span class="lineNum">     578</span>                 :             :     bool dead_letter(mailbox::DeadLetterRecord record) noexcept;</span>
+<span id="L579"><span class="lineNum">     579</span>                 :             : </span>
+<span id="L580"><span class="lineNum">     580</span>                 :             :     /// \brief Snapshot of current dead-letter queue contents.</span>
+<span id="L581"><span class="lineNum">     581</span>                 :             :     mailbox::DeadLetterQueueSnapshot dead_letter_snapshot() const noexcept;</span>
+<span id="L582"><span class="lineNum">     582</span>                 :             : </span>
+<span id="L583"><span class="lineNum">     583</span>                 :             :     /// \brief Pop the oldest dead-letter record.</span>
+<span id="L584"><span class="lineNum">     584</span>                 :             :     ///</span>
+<span id="L585"><span class="lineNum">     585</span>                 :             :     /// \param[out] out Set to the popped record on success.</span>
+<span id="L586"><span class="lineNum">     586</span>                 :             :     /// \return \c true if a record was available.</span>
+<span id="L587"><span class="lineNum">     587</span>                 :             :     bool pop_dead_letter(mailbox::DeadLetterRecord&amp; out) noexcept;</span>
+<span id="L588"><span class="lineNum">     588</span>                 :             : </span>
+<span id="L589"><span class="lineNum">     589</span>                 :             :     /// \brief Direct access to the dead-letter queue.</span>
+<span id="L590"><span class="lineNum">     590</span>                 :             :     ///</span>
+<span id="L591"><span class="lineNum">     591</span>                 :             :     /// Returns nullptr if dead-letter queue is not initialized.</span>
+<span id="L592"><span class="lineNum">     592</span>                 :<span class="tlaGNC">          77 :     mailbox::DeadLetterQueue* dead_letter_queue() noexcept {</span></span>
+<span id="L593"><span class="lineNum">     593</span>                 :<span class="tlaGNC">          77 :         return dead_letters_.get();</span></span>
+<span id="L594"><span class="lineNum">     594</span>                 :             :     }</span>
+<span id="L595"><span class="lineNum">     595</span>                 :             :     const mailbox::DeadLetterQueue* dead_letter_queue() const noexcept {</span>
+<span id="L596"><span class="lineNum">     596</span>                 :             :         return dead_letters_.get();</span>
+<span id="L597"><span class="lineNum">     597</span>                 :             :     }</span>
+<span id="L598"><span class="lineNum">     598</span>                 :             : </span>
+<span id="L599"><span class="lineNum">     599</span>                 :             :     /// \brief Access the outbound delivery tracker for at-least-once delivery.</span>
+<span id="L600"><span class="lineNum">     600</span>                 :             :     ///</span>
+<span id="L601"><span class="lineNum">     601</span>                 :             :     /// \return A pointer to the \c OutboundDeliveryTracker, or \c nullptr</span>
+<span id="L602"><span class="lineNum">     602</span>                 :             :     ///         if the tracker has not been initialized. The tracker is</span>
+<span id="L603"><span class="lineNum">     603</span>                 :             :     ///         always initialized when the \c ActorSystem is constructed.</span>
+<span id="L604"><span class="lineNum">     604</span>                 :             :     /// \note Thread safety: The returned pointer is stable for the lifetime</span>
+<span id="L605"><span class="lineNum">     605</span>                 :             :     ///       of the \c ActorSystem. Callers may cache it.</span>
+<span id="L606"><span class="lineNum">     606</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     msg::OutboundDeliveryTracker* outbound_tracker() noexcept {</span></span>
+<span id="L607"><span class="lineNum">     607</span>                 :<span class="tlaUNC">           0 :         return outbound_tracker_.get();</span></span>
+<span id="L608"><span class="lineNum">     608</span>                 :             :     }</span>
+<span id="L609"><span class="lineNum">     609</span>                 :             : </span>
+<span id="L610"><span class="lineNum">     610</span>                 :             :     // Receiver dedup cache for at-least-once delivery</span>
+<span id="L611"><span class="lineNum">     611</span>                 :<span class="tlaGNC tlaBgGNC">           1 :     adt::DedupCache* dedup_cache() {</span></span>
+<span id="L612"><span class="lineNum">     612</span>                 :<span class="tlaGNC">           1 :         return dedup_cache_.get();</span></span>
+<span id="L613"><span class="lineNum">     613</span>                 :             :     }</span>
+<span id="L614"><span class="lineNum">     614</span>                 :             :     const adt::DedupCache* dedup_cache() const {</span>
+<span id="L615"><span class="lineNum">     615</span>                 :             :         return dedup_cache_.get();</span>
+<span id="L616"><span class="lineNum">     616</span>                 :             :     }</span>
+<span id="L617"><span class="lineNum">     617</span>                 :             : </span>
+<span id="L618"><span class="lineNum">     618</span>                 :             :     // Build a MailboxConfig from system-wide defaults in Config::mailbox.</span>
+<span id="L619"><span class="lineNum">     619</span>                 :             :     // ── Mailbox configuration ─────────────────────────────────────────────</span>
+<span id="L620"><span class="lineNum">     620</span>                 :             : </span>
+<span id="L621"><span class="lineNum">     621</span>                 :             :     /// \brief Build a \c MailboxConfig from system-wide defaults.</span>
+<span id="L622"><span class="lineNum">     622</span>                 :             :     mailbox::MailboxConfig mailbox_config_for_spawn() const;</span>
+<span id="L623"><span class="lineNum">     623</span>                 :             : </span>
+<span id="L624"><span class="lineNum">     624</span>                 :             :     /// \brief Build a \c MailboxConfig for an actor definition.</span>
+<span id="L625"><span class="lineNum">     625</span>                 :             :     ///</span>
+<span id="L626"><span class="lineNum">     626</span>                 :             :     /// Falls back to system defaults when \c ActorDef fields are zero.</span>
+<span id="L627"><span class="lineNum">     627</span>                 :             :     /// \param[in] def Actor definition from topology config.</span>
+<span id="L628"><span class="lineNum">     628</span>                 :             :     /// \return Merged mailbox configuration.</span>
+<span id="L629"><span class="lineNum">     629</span>                 :             :     mailbox::MailboxConfig</span>
+<span id="L630"><span class="lineNum">     630</span>                 :             :     mailbox_config_for_actor_def(const config::ActorDef&amp; def) const;</span>
+<span id="L631"><span class="lineNum">     631</span>                 :             : </span>
+<span id="L632"><span class="lineNum">     632</span>                 :             :     // ── Remote delivery ───────────────────────────────────────────────────</span>
 <span id="L633"><span class="lineNum">     633</span>                 :             : </span>
-<span id="L634"><span class="lineNum">     634</span>                 :             :     // ── Backpressure ──────────────────────────────────────────────────────</span>
-<span id="L635"><span class="lineNum">     635</span>                 :             : </span>
-<span id="L636"><span class="lineNum">     636</span>                 :             :     /// \brief Emit a backpressure signal to the sender actor.</span>
-<span id="L637"><span class="lineNum">     637</span>                 :             :     ///</span>
-<span id="L638"><span class="lineNum">     638</span>                 :             :     /// Delivered through the sender's \c ActorContext::handle_backpressure()</span>
-<span id="L639"><span class="lineNum">     639</span>                 :             :     /// handler.</span>
-<span id="L640"><span class="lineNum">     640</span>                 :             :     /// \param[in] signal Backpressure signal from a downstream mailbox.</span>
-<span id="L641"><span class="lineNum">     641</span>                 :             :     void signal_backpressure(const mailbox::BackpressureSignal&amp; signal);</span>
-<span id="L642"><span class="lineNum">     642</span>                 :             : </span>
-<span id="L643"><span class="lineNum">     643</span>                 :             :     void</span>
-<span id="L644"><span class="lineNum">     644</span>                 :             :     maybe_emit_backpressure_signal(mailbox::MPSCActorMailbox&lt;TypedMessage&gt;* mailbox,</span>
-<span id="L645"><span class="lineNum">     645</span>                 :             :                                    const mailbox::EnqueueResult&amp; result,</span>
-<span id="L646"><span class="lineNum">     646</span>                 :             :                                    const mailbox::MailboxEnvelopeMeta&amp; meta,</span>
-<span id="L647"><span class="lineNum">     647</span>                 :             :                                    bool emit_requested,</span>
-<span id="L648"><span class="lineNum">     648</span>                 :             :                                    mailbox::BackpressureMode backpressure_mode);</span>
-<span id="L649"><span class="lineNum">     649</span>                 :             : </span>
-<span id="L650"><span class="lineNum">     650</span>                 :             :     void emit_local_backpressure_signal(const mailbox::BackpressureSignal&amp; signal,</span>
-<span id="L651"><span class="lineNum">     651</span>                 :             :                                         mailbox::MailboxPressureState state);</span>
-<span id="L652"><span class="lineNum">     652</span>                 :             : </span>
-<span id="L653"><span class="lineNum">     653</span>                 :             :     void emit_remote_backpressure_signal(const mailbox::BackpressureSignal&amp; signal,</span>
-<span id="L654"><span class="lineNum">     654</span>                 :             :                                          mailbox::MailboxPressureState state);</span>
-<span id="L655"><span class="lineNum">     655</span>                 :             : </span>
-<span id="L656"><span class="lineNum">     656</span>                 :             :     bool handle_remote_backpressure_signal(const net::WireFrame&amp; frame);</span>
+<span id="L634"><span class="lineNum">     634</span>                 :             :     /// \brief Deliver a remote message to the target actor's mailbox.</span>
+<span id="L635"><span class="lineNum">     635</span>                 :             :     ///</span>
+<span id="L636"><span class="lineNum">     636</span>                 :             :     /// Bridges the transport layer to the unified \c deliver_local() sink.</span>
+<span id="L637"><span class="lineNum">     637</span>                 :             :     /// \param[in] frame WireFrame containing the remote message.</span>
+<span id="L638"><span class="lineNum">     638</span>                 :             :     void deliver_remote(const net::WireFrame&amp; frame);</span>
+<span id="L639"><span class="lineNum">     639</span>                 :             : </span>
+<span id="L640"><span class="lineNum">     640</span>                 :             :     // ── Node death ────────────────────────────────────────────────────────</span>
+<span id="L641"><span class="lineNum">     641</span>                 :             : </span>
+<span id="L642"><span class="lineNum">     642</span>                 :             :     /// \brief Handle a remote node becoming unreachable.</span>
+<span id="L643"><span class="lineNum">     643</span>                 :             :     ///</span>
+<span id="L644"><span class="lineNum">     644</span>                 :             :     /// Called by \c IServiceDiscovery. Finds all actors linked to the dead</span>
+<span id="L645"><span class="lineNum">     645</span>                 :             :     /// endpoint and delivers \c DownMsg.</span>
+<span id="L646"><span class="lineNum">     646</span>                 :             :     /// \param[in] dead_ep Endpoint of the unreachable node.</span>
+<span id="L647"><span class="lineNum">     647</span>                 :             :     void on_node_dead(EndPoint dead_ep);</span>
+<span id="L648"><span class="lineNum">     648</span>                 :             : </span>
+<span id="L649"><span class="lineNum">     649</span>                 :             :     // ── Backpressure ──────────────────────────────────────────────────────</span>
+<span id="L650"><span class="lineNum">     650</span>                 :             : </span>
+<span id="L651"><span class="lineNum">     651</span>                 :             :     /// \brief Emit a backpressure signal to the sender actor.</span>
+<span id="L652"><span class="lineNum">     652</span>                 :             :     ///</span>
+<span id="L653"><span class="lineNum">     653</span>                 :             :     /// Delivered through the sender's \c ActorContext::handle_backpressure()</span>
+<span id="L654"><span class="lineNum">     654</span>                 :             :     /// handler.</span>
+<span id="L655"><span class="lineNum">     655</span>                 :             :     /// \param[in] signal Backpressure signal from a downstream mailbox.</span>
+<span id="L656"><span class="lineNum">     656</span>                 :             :     void signal_backpressure(const mailbox::BackpressureSignal&amp; signal);</span>
 <span id="L657"><span class="lineNum">     657</span>                 :             : </span>
-<span id="L658"><span class="lineNum">     658</span>                 :             :     using BackpressureSignalWireSink =</span>
-<span id="L659"><span class="lineNum">     659</span>                 :             :         std::function&lt;bool(const ActorAddress&amp;, const StreamBuffer&amp;)&gt;;</span>
-<span id="L660"><span class="lineNum">     660</span>                 :             :     void</span>
-<span id="L661"><span class="lineNum">     661</span>                 :             :     set_backpressure_signal_wire_sink_for_test(BackpressureSignalWireSink sink);</span>
-<span id="L662"><span class="lineNum">     662</span>                 :             : </span>
-<span id="L663"><span class="lineNum">     663</span>                 :             :     // ── I/O completion ────────────────────────────────────────────────────</span>
+<span id="L658"><span class="lineNum">     658</span>                 :             :     void</span>
+<span id="L659"><span class="lineNum">     659</span>                 :             :     maybe_emit_backpressure_signal(mailbox::MPSCActorMailbox&lt;TypedMessage&gt;* mailbox,</span>
+<span id="L660"><span class="lineNum">     660</span>                 :             :                                    const mailbox::EnqueueResult&amp; result,</span>
+<span id="L661"><span class="lineNum">     661</span>                 :             :                                    const mailbox::MailboxEnvelopeMeta&amp; meta,</span>
+<span id="L662"><span class="lineNum">     662</span>                 :             :                                    bool emit_requested,</span>
+<span id="L663"><span class="lineNum">     663</span>                 :             :                                    mailbox::BackpressureMode backpressure_mode);</span>
 <span id="L664"><span class="lineNum">     664</span>                 :             : </span>
-<span id="L665"><span class="lineNum">     665</span>                 :             :     /// \brief Enqueue an I/O completion for delivery to an actor.</span>
-<span id="L666"><span class="lineNum">     666</span>                 :             :     ///</span>
-<span id="L667"><span class="lineNum">     667</span>                 :             :     /// Called by \c EventLoop when async I/O operations complete.</span>
-<span id="L668"><span class="lineNum">     668</span>                 :             :     /// \param[in] completion Completion event with actor target and result.</span>
-<span id="L669"><span class="lineNum">     669</span>                 :             :     void enqueue_completion(net::OpCompletion completion);</span>
+<span id="L665"><span class="lineNum">     665</span>                 :             :     void emit_local_backpressure_signal(const mailbox::BackpressureSignal&amp; signal,</span>
+<span id="L666"><span class="lineNum">     666</span>                 :             :                                         mailbox::MailboxPressureState state);</span>
+<span id="L667"><span class="lineNum">     667</span>                 :             : </span>
+<span id="L668"><span class="lineNum">     668</span>                 :             :     void emit_remote_backpressure_signal(const mailbox::BackpressureSignal&amp; signal,</span>
+<span id="L669"><span class="lineNum">     669</span>                 :             :                                          mailbox::MailboxPressureState state);</span>
 <span id="L670"><span class="lineNum">     670</span>                 :             : </span>
-<span id="L671"><span class="lineNum">     671</span>                 :             :     // ── Network access ────────────────────────────────────────────────────</span>
+<span id="L671"><span class="lineNum">     671</span>                 :             :     bool handle_remote_backpressure_signal(const net::WireFrame&amp; frame);</span>
 <span id="L672"><span class="lineNum">     672</span>                 :             : </span>
-<span id="L673"><span class="lineNum">     673</span>                 :             :     /// \brief Access the network event loop.</span>
-<span id="L674"><span class="lineNum">     674</span>                 :             :     ///</span>
-<span id="L675"><span class="lineNum">     675</span>                 :             :     /// Returns \c nullptr if networking is not enabled.</span>
-<span id="L676"><span class="lineNum">     676</span>                 :<span class="tlaGNC">           5 :     net::EventLoop* event_loop() {</span></span>
-<span id="L677"><span class="lineNum">     677</span>                 :<span class="tlaGNC">           5 :         return network_loop_.get();</span></span>
-<span id="L678"><span class="lineNum">     678</span>                 :             :     }</span>
+<span id="L673"><span class="lineNum">     673</span>                 :             :     using BackpressureSignalWireSink =</span>
+<span id="L674"><span class="lineNum">     674</span>                 :             :         std::function&lt;bool(const ActorAddress&amp;, const StreamBuffer&amp;)&gt;;</span>
+<span id="L675"><span class="lineNum">     675</span>                 :             :     void</span>
+<span id="L676"><span class="lineNum">     676</span>                 :             :     set_backpressure_signal_wire_sink_for_test(BackpressureSignalWireSink sink);</span>
+<span id="L677"><span class="lineNum">     677</span>                 :             : </span>
+<span id="L678"><span class="lineNum">     678</span>                 :             :     // ── I/O completion ────────────────────────────────────────────────────</span>
 <span id="L679"><span class="lineNum">     679</span>                 :             : </span>
-<span id="L680"><span class="lineNum">     680</span>                 :             :     /// \brief Primary transport for remote messaging.</span>
+<span id="L680"><span class="lineNum">     680</span>                 :             :     /// \brief Enqueue an I/O completion for delivery to an actor.</span>
 <span id="L681"><span class="lineNum">     681</span>                 :             :     ///</span>
-<span id="L682"><span class="lineNum">     682</span>                 :             :     /// Returns \c nullptr if networking is not enabled.</span>
-<span id="L683"><span class="lineNum">     683</span>                 :<span class="tlaGNC">          53 :     net::Transport* transport() {</span></span>
-<span id="L684"><span class="lineNum">     684</span>                 :<span class="tlaGNC">          53 :         return transport_.get();</span></span>
-<span id="L685"><span class="lineNum">     685</span>                 :             :     }</span>
-<span id="L686"><span class="lineNum">     686</span>                 :             : </span>
-<span id="L687"><span class="lineNum">     687</span>                 :             :     /// \brief Get transport for a specific remote endpoint.</span>
-<span id="L688"><span class="lineNum">     688</span>                 :             :     ///</span>
-<span id="L689"><span class="lineNum">     689</span>                 :             :     /// Currently returns the single \c transport_ for all endpoints since</span>
-<span id="L690"><span class="lineNum">     690</span>                 :             :     /// \c TcpTransport handles per-endpoint routing internally via its</span>
-<span id="L691"><span class="lineNum">     691</span>                 :             :     /// pools map. The parameter is reserved for future multi-transport</span>
-<span id="L692"><span class="lineNum">     692</span>                 :             :     /// scenarios.</span>
-<span id="L693"><span class="lineNum">     693</span>                 :             :     /// \param[in] endpoint Remote endpoint (reserved).</span>
-<span id="L694"><span class="lineNum">     694</span>                 :             :     /// \return Transport instance, or \c nullptr if networking is disabled.</span>
-<span id="L695"><span class="lineNum">     695</span>                 :             :     net::Transport* get_transport_for(const EndPoint&amp; endpoint);</span>
-<span id="L696"><span class="lineNum">     696</span>                 :             : </span>
-<span id="L697"><span class="lineNum">     697</span>                 :             :     /// \brief UDP registrar for same-host service discovery.</span>
-<span id="L698"><span class="lineNum">     698</span>                 :<span class="tlaGNC">          17 :     net::UdpRegistrar* registrar() {</span></span>
-<span id="L699"><span class="lineNum">     699</span>                 :<span class="tlaGNC">          17 :         return registrar_.get();</span></span>
+<span id="L682"><span class="lineNum">     682</span>                 :             :     /// Called by \c EventLoop when async I/O operations complete.</span>
+<span id="L683"><span class="lineNum">     683</span>                 :             :     /// \param[in] completion Completion event with actor target and result.</span>
+<span id="L684"><span class="lineNum">     684</span>                 :             :     void enqueue_completion(net::OpCompletion completion);</span>
+<span id="L685"><span class="lineNum">     685</span>                 :             : </span>
+<span id="L686"><span class="lineNum">     686</span>                 :             :     // ── Network access ────────────────────────────────────────────────────</span>
+<span id="L687"><span class="lineNum">     687</span>                 :             : </span>
+<span id="L688"><span class="lineNum">     688</span>                 :             :     /// \brief Access the network event loop.</span>
+<span id="L689"><span class="lineNum">     689</span>                 :             :     ///</span>
+<span id="L690"><span class="lineNum">     690</span>                 :             :     /// Returns \c nullptr if networking is not enabled.</span>
+<span id="L691"><span class="lineNum">     691</span>                 :<span class="tlaGNC">           5 :     net::EventLoop* event_loop() {</span></span>
+<span id="L692"><span class="lineNum">     692</span>                 :<span class="tlaGNC">           5 :         return network_loop_.get();</span></span>
+<span id="L693"><span class="lineNum">     693</span>                 :             :     }</span>
+<span id="L694"><span class="lineNum">     694</span>                 :             : </span>
+<span id="L695"><span class="lineNum">     695</span>                 :             :     /// \brief Primary transport for remote messaging.</span>
+<span id="L696"><span class="lineNum">     696</span>                 :             :     ///</span>
+<span id="L697"><span class="lineNum">     697</span>                 :             :     /// Returns \c nullptr if networking is not enabled.</span>
+<span id="L698"><span class="lineNum">     698</span>                 :<span class="tlaGNC">          53 :     net::Transport* transport() {</span></span>
+<span id="L699"><span class="lineNum">     699</span>                 :<span class="tlaGNC">          53 :         return transport_.get();</span></span>
 <span id="L700"><span class="lineNum">     700</span>                 :             :     }</span>
 <span id="L701"><span class="lineNum">     701</span>                 :             : </span>
-<span id="L702"><span class="lineNum">     702</span>                 :             :     // ── Remote spawn ──────────────────────────────────────────────────────</span>
-<span id="L703"><span class="lineNum">     703</span>                 :             : </span>
-<span id="L704"><span class="lineNum">     704</span>                 :             :     /// \brief Synchronously spawn an actor on a remote node.</span>
-<span id="L705"><span class="lineNum">     705</span>                 :             :     ///</span>
-<span id="L706"><span class="lineNum">     706</span>                 :             :     /// Blocks until the remote spawn completes or fails.</span>
-<span id="L707"><span class="lineNum">     707</span>                 :             :     /// \param[in] node_name Remote node name.</span>
-<span id="L708"><span class="lineNum">     708</span>                 :             :     /// \param[in] actor_type Registered actor type name.</span>
-<span id="L709"><span class="lineNum">     709</span>                 :             :     /// \param[in] args Serialized constructor arguments.</span>
-<span id="L710"><span class="lineNum">     710</span>                 :             :     /// \param[in] timeout_override Per-call timeout override; uses system</span>
-<span id="L711"><span class="lineNum">     711</span>                 :             :     ///            default \c spawn_timeout_ms when default or zero.</span>
-<span id="L712"><span class="lineNum">     712</span>                 :             :     /// \return \c result&lt;ActorRef&gt; with the remote actor reference on</span>
-<span id="L713"><span class="lineNum">     713</span>                 :             :     ///         success, or an error.</span>
-<span id="L714"><span class="lineNum">     714</span>                 :             :     /// \note Thread safety: Safe from non-actor threads.</span>
-<span id="L715"><span class="lineNum">     715</span>                 :             :     result&lt;ActorRef&gt;</span>
-<span id="L716"><span class="lineNum">     716</span>                 :             :     spawn_remote(const std::string&amp; node_name, const std::string&amp; actor_type,</span>
-<span id="L717"><span class="lineNum">     717</span>                 :             :                  const StreamBuffer&amp; args,</span>
-<span id="L718"><span class="lineNum">     718</span>                 :             :                  RequestTimeout timeout_override = RequestTimeout::use_default());</span>
-<span id="L719"><span class="lineNum">     719</span>                 :             : </span>
-<span id="L720"><span class="lineNum">     720</span>                 :             :     /// \brief Asynchronously spawn an actor on a remote node.</span>
-<span id="L721"><span class="lineNum">     721</span>                 :             :     ///</span>
-<span id="L722"><span class="lineNum">     722</span>                 :             :     /// Returns immediately with a \c RequestHandle&lt;ActorRef&gt; that can be polled</span>
-<span id="L723"><span class="lineNum">     723</span>                 :             :     /// or blocked on. The spawn request is routed through \c RpcChannel for</span>
-<span id="L724"><span class="lineNum">     724</span>                 :             :     /// reliable delivery with retry and timeout.</span>
-<span id="L725"><span class="lineNum">     725</span>                 :             :     ///</span>
-<span id="L726"><span class="lineNum">     726</span>                 :             :     /// \param[in] node_name Remote node name.</span>
-<span id="L727"><span class="lineNum">     727</span>                 :             :     /// \param[in] actor_type Registered actor type name.</span>
-<span id="L728"><span class="lineNum">     728</span>                 :             :     /// \param[in] args Serialized constructor arguments.</span>
-<span id="L729"><span class="lineNum">     729</span>                 :             :     /// \param[in] timeout_override Per-call timeout override; uses system</span>
-<span id="L730"><span class="lineNum">     730</span>                 :             :     ///            default \c spawn_timeout_ms when default or zero.</span>
-<span id="L731"><span class="lineNum">     731</span>                 :             :     /// \return \c RequestHandle&lt;ActorRef&gt; handle for polling completion.</span>
-<span id="L732"><span class="lineNum">     732</span>                 :             :     RequestHandle&lt;ActorRef&gt; spawn_remote_async(</span>
-<span id="L733"><span class="lineNum">     733</span>                 :             :         const std::string&amp; node_name, const std::string&amp; actor_type,</span>
-<span id="L734"><span class="lineNum">     734</span>                 :             :         const StreamBuffer&amp; args,</span>
-<span id="L735"><span class="lineNum">     735</span>                 :             :         RequestTimeout timeout_override = RequestTimeout::use_default());</span>
-<span id="L736"><span class="lineNum">     736</span>                 :             : </span>
-<span id="L737"><span class="lineNum">     737</span>                 :             :     // ── Actor type registry ───────────────────────────────────────────────</span>
-<span id="L738"><span class="lineNum">     738</span>                 :             : </span>
-<span id="L739"><span class="lineNum">     739</span>                 :             :     /// \brief Registry of spawnable actor types for remote spawning.</span>
-<span id="L740"><span class="lineNum">     740</span>                 :             :     ActorTypeRegistry&amp; actor_type_registry() {</span>
-<span id="L741"><span class="lineNum">     741</span>                 :             :         return *actor_type_registry_;</span>
-<span id="L742"><span class="lineNum">     742</span>                 :             :     }</span>
-<span id="L743"><span class="lineNum">     743</span>                 :             :     const ActorTypeRegistry&amp; actor_type_registry() const {</span>
-<span id="L744"><span class="lineNum">     744</span>                 :             :         return *actor_type_registry_;</span>
-<span id="L745"><span class="lineNum">     745</span>                 :             :     }</span>
-<span id="L746"><span class="lineNum">     746</span>                 :             : </span>
-<span id="L747"><span class="lineNum">     747</span>                 :             :     // ── Shutdown ──────────────────────────────────────────────────────────</span>
-<span id="L748"><span class="lineNum">     748</span>                 :             : </span>
-<span id="L749"><span class="lineNum">     749</span>                 :             :     /// \brief Initiate node shutdown with default options.</span>
-<span id="L750"><span class="lineNum">     750</span>                 :             :     ///</span>
-<span id="L751"><span class="lineNum">     751</span>                 :             :     /// Drives the full phase machine: drains ingress, drains actors,</span>
-<span id="L752"><span class="lineNum">     752</span>                 :             :     /// leaves the cluster, flushes telemetry.</span>
-<span id="L753"><span class="lineNum">     753</span>                 :             :     /// \return \c result&lt;void&gt; with error detail on timeout.</span>
-<span id="L754"><span class="lineNum">     754</span>                 :             :     result&lt;void&gt; shutdown();</span>
-<span id="L755"><span class="lineNum">     755</span>                 :             : </span>
-<span id="L756"><span class="lineNum">     756</span>                 :             :     /// \brief Initiate node shutdown with custom options.</span>
-<span id="L757"><span class="lineNum">     757</span>                 :             :     /// \param[in] opts Shutdown timeout and behavior options.</span>
-<span id="L758"><span class="lineNum">     758</span>                 :             :     /// \return \c result&lt;void&gt; with error detail on timeout.</span>
-<span id="L759"><span class="lineNum">     759</span>                 :             :     result&lt;void&gt; shutdown(const ShutdownOptions&amp; opts);</span>
-<span id="L760"><span class="lineNum">     760</span>                 :             : </span>
-<span id="L761"><span class="lineNum">     761</span>                 :             :     /// \brief Current phase of the shutdown state machine.</span>
-<span id="L762"><span class="lineNum">     762</span>                 :             :     ShutdownPhase shutdown_phase() const noexcept;</span>
+<span id="L702"><span class="lineNum">     702</span>                 :             :     /// \brief Get transport for a specific remote endpoint.</span>
+<span id="L703"><span class="lineNum">     703</span>                 :             :     ///</span>
+<span id="L704"><span class="lineNum">     704</span>                 :             :     /// Currently returns the single \c transport_ for all endpoints since</span>
+<span id="L705"><span class="lineNum">     705</span>                 :             :     /// \c TcpTransport handles per-endpoint routing internally via its</span>
+<span id="L706"><span class="lineNum">     706</span>                 :             :     /// pools map. The parameter is reserved for future multi-transport</span>
+<span id="L707"><span class="lineNum">     707</span>                 :             :     /// scenarios.</span>
+<span id="L708"><span class="lineNum">     708</span>                 :             :     /// \param[in] endpoint Remote endpoint (reserved).</span>
+<span id="L709"><span class="lineNum">     709</span>                 :             :     /// \return Transport instance, or \c nullptr if networking is disabled.</span>
+<span id="L710"><span class="lineNum">     710</span>                 :             :     net::Transport* get_transport_for(const EndPoint&amp; endpoint);</span>
+<span id="L711"><span class="lineNum">     711</span>                 :             : </span>
+<span id="L712"><span class="lineNum">     712</span>                 :             :     /// \brief UDP registrar for same-host service discovery.</span>
+<span id="L713"><span class="lineNum">     713</span>                 :<span class="tlaGNC">          17 :     net::UdpRegistrar* registrar() {</span></span>
+<span id="L714"><span class="lineNum">     714</span>                 :<span class="tlaGNC">          17 :         return registrar_.get();</span></span>
+<span id="L715"><span class="lineNum">     715</span>                 :             :     }</span>
+<span id="L716"><span class="lineNum">     716</span>                 :             : </span>
+<span id="L717"><span class="lineNum">     717</span>                 :             :     // ── Remote spawn ──────────────────────────────────────────────────────</span>
+<span id="L718"><span class="lineNum">     718</span>                 :             : </span>
+<span id="L719"><span class="lineNum">     719</span>                 :             :     /// \brief Synchronously spawn an actor on a remote node.</span>
+<span id="L720"><span class="lineNum">     720</span>                 :             :     ///</span>
+<span id="L721"><span class="lineNum">     721</span>                 :             :     /// Blocks until the remote spawn completes or fails.</span>
+<span id="L722"><span class="lineNum">     722</span>                 :             :     /// \param[in] node_name Remote node name.</span>
+<span id="L723"><span class="lineNum">     723</span>                 :             :     /// \param[in] actor_type Registered actor type name.</span>
+<span id="L724"><span class="lineNum">     724</span>                 :             :     /// \param[in] args Serialized constructor arguments.</span>
+<span id="L725"><span class="lineNum">     725</span>                 :             :     /// \param[in] timeout_override Per-call timeout override; uses system</span>
+<span id="L726"><span class="lineNum">     726</span>                 :             :     ///            default \c spawn_timeout_ms when default or zero.</span>
+<span id="L727"><span class="lineNum">     727</span>                 :             :     /// \return \c result&lt;ActorRef&gt; with the remote actor reference on</span>
+<span id="L728"><span class="lineNum">     728</span>                 :             :     ///         success, or an error.</span>
+<span id="L729"><span class="lineNum">     729</span>                 :             :     /// \note Thread safety: Safe from non-actor threads.</span>
+<span id="L730"><span class="lineNum">     730</span>                 :             :     result&lt;ActorRef&gt;</span>
+<span id="L731"><span class="lineNum">     731</span>                 :             :     spawn_remote(const std::string&amp; node_name, const std::string&amp; actor_type,</span>
+<span id="L732"><span class="lineNum">     732</span>                 :             :                  const StreamBuffer&amp; args,</span>
+<span id="L733"><span class="lineNum">     733</span>                 :             :                  RequestTimeout timeout_override = RequestTimeout::use_default());</span>
+<span id="L734"><span class="lineNum">     734</span>                 :             : </span>
+<span id="L735"><span class="lineNum">     735</span>                 :             :     /// \brief Asynchronously spawn an actor on a remote node.</span>
+<span id="L736"><span class="lineNum">     736</span>                 :             :     ///</span>
+<span id="L737"><span class="lineNum">     737</span>                 :             :     /// Returns immediately with a \c RequestHandle&lt;ActorRef&gt; that can be polled</span>
+<span id="L738"><span class="lineNum">     738</span>                 :             :     /// or blocked on. The spawn request is routed through \c RpcChannel for</span>
+<span id="L739"><span class="lineNum">     739</span>                 :             :     /// reliable delivery with retry and timeout.</span>
+<span id="L740"><span class="lineNum">     740</span>                 :             :     ///</span>
+<span id="L741"><span class="lineNum">     741</span>                 :             :     /// \param[in] node_name Remote node name.</span>
+<span id="L742"><span class="lineNum">     742</span>                 :             :     /// \param[in] actor_type Registered actor type name.</span>
+<span id="L743"><span class="lineNum">     743</span>                 :             :     /// \param[in] args Serialized constructor arguments.</span>
+<span id="L744"><span class="lineNum">     744</span>                 :             :     /// \param[in] timeout_override Per-call timeout override; uses system</span>
+<span id="L745"><span class="lineNum">     745</span>                 :             :     ///            default \c spawn_timeout_ms when default or zero.</span>
+<span id="L746"><span class="lineNum">     746</span>                 :             :     /// \return \c RequestHandle&lt;ActorRef&gt; handle for polling completion.</span>
+<span id="L747"><span class="lineNum">     747</span>                 :             :     RequestHandle&lt;ActorRef&gt; spawn_remote_async(</span>
+<span id="L748"><span class="lineNum">     748</span>                 :             :         const std::string&amp; node_name, const std::string&amp; actor_type,</span>
+<span id="L749"><span class="lineNum">     749</span>                 :             :         const StreamBuffer&amp; args,</span>
+<span id="L750"><span class="lineNum">     750</span>                 :             :         RequestTimeout timeout_override = RequestTimeout::use_default());</span>
+<span id="L751"><span class="lineNum">     751</span>                 :             : </span>
+<span id="L752"><span class="lineNum">     752</span>                 :             :     // ── Actor type registry ───────────────────────────────────────────────</span>
+<span id="L753"><span class="lineNum">     753</span>                 :             : </span>
+<span id="L754"><span class="lineNum">     754</span>                 :             :     /// \brief Registry of spawnable actor types for remote spawning.</span>
+<span id="L755"><span class="lineNum">     755</span>                 :             :     ActorTypeRegistry&amp; actor_type_registry() {</span>
+<span id="L756"><span class="lineNum">     756</span>                 :             :         return *actor_type_registry_;</span>
+<span id="L757"><span class="lineNum">     757</span>                 :             :     }</span>
+<span id="L758"><span class="lineNum">     758</span>                 :             :     const ActorTypeRegistry&amp; actor_type_registry() const {</span>
+<span id="L759"><span class="lineNum">     759</span>                 :             :         return *actor_type_registry_;</span>
+<span id="L760"><span class="lineNum">     760</span>                 :             :     }</span>
+<span id="L761"><span class="lineNum">     761</span>                 :             : </span>
+<span id="L762"><span class="lineNum">     762</span>                 :             :     // ── Shutdown ──────────────────────────────────────────────────────────</span>
 <span id="L763"><span class="lineNum">     763</span>                 :             : </span>
-<span id="L764"><span class="lineNum">     764</span>                 :             :     // ── Health/readiness ──────────────────────────────────────────────────</span>
-<span id="L765"><span class="lineNum">     765</span>                 :             : </span>
-<span id="L766"><span class="lineNum">     766</span>                 :             :     /// \brief Returns \c true when the system is ready to serve traffic.</span>
-<span id="L767"><span class="lineNum">     767</span>                 :             :     ///</span>
-<span id="L768"><span class="lineNum">     768</span>                 :             :     /// \c false during shutdown and before \c SystemInitTag is broadcast.</span>
-<span id="L769"><span class="lineNum">     769</span>                 :             :     bool is_ready() const noexcept;</span>
+<span id="L764"><span class="lineNum">     764</span>                 :             :     /// \brief Initiate node shutdown with default options.</span>
+<span id="L765"><span class="lineNum">     765</span>                 :             :     ///</span>
+<span id="L766"><span class="lineNum">     766</span>                 :             :     /// Drives the full phase machine: drains ingress, drains actors,</span>
+<span id="L767"><span class="lineNum">     767</span>                 :             :     /// leaves the cluster, flushes telemetry.</span>
+<span id="L768"><span class="lineNum">     768</span>                 :             :     /// \return \c result&lt;void&gt; with error detail on timeout.</span>
+<span id="L769"><span class="lineNum">     769</span>                 :             :     result&lt;void&gt; shutdown();</span>
 <span id="L770"><span class="lineNum">     770</span>                 :             : </span>
-<span id="L771"><span class="lineNum">     771</span>                 :             :     /// \brief Returns \c true while the system is draining.</span>
-<span id="L772"><span class="lineNum">     772</span>                 :             :     bool is_draining() const noexcept;</span>
-<span id="L773"><span class="lineNum">     773</span>                 :             : </span>
-<span id="L774"><span class="lineNum">     774</span>                 :             :     // ── Per-actor drain config ────────────────────────────────────────────</span>
+<span id="L771"><span class="lineNum">     771</span>                 :             :     /// \brief Initiate node shutdown with custom options.</span>
+<span id="L772"><span class="lineNum">     772</span>                 :             :     /// \param[in] opts Shutdown timeout and behavior options.</span>
+<span id="L773"><span class="lineNum">     773</span>                 :             :     /// \return \c result&lt;void&gt; with error detail on timeout.</span>
+<span id="L774"><span class="lineNum">     774</span>                 :             :     result&lt;void&gt; shutdown(const ShutdownOptions&amp; opts);</span>
 <span id="L775"><span class="lineNum">     775</span>                 :             : </span>
-<span id="L776"><span class="lineNum">     776</span>                 :             :     /// \brief Override the drain configuration for a specific actor.</span>
-<span id="L777"><span class="lineNum">     777</span>                 :             :     ///</span>
-<span id="L778"><span class="lineNum">     778</span>                 :             :     /// Used by CLI admin commands and runtime configuration reloads.</span>
-<span id="L779"><span class="lineNum">     779</span>                 :             :     /// \param[in] target Actor ID.</span>
-<span id="L780"><span class="lineNum">     780</span>                 :             :     /// \param[in] cfg New drain configuration.</span>
-<span id="L781"><span class="lineNum">     781</span>                 :             :     void set_drain_config(ActorId target, DrainConfig cfg);</span>
-<span id="L782"><span class="lineNum">     782</span>                 :             : </span>
-<span id="L783"><span class="lineNum">     783</span>                 :             :   private:</span>
-<span id="L784"><span class="lineNum">     784</span>                 :             :     Config config_;</span>
-<span id="L785"><span class="lineNum">     785</span>                 :             :     EndPoint endpoint_;</span>
-<span id="L786"><span class="lineNum">     786</span>                 :             :     Clock clock_;</span>
-<span id="L787"><span class="lineNum">     787</span>                 :             :     actor_registry registry_;</span>
-<span id="L788"><span class="lineNum">     788</span>                 :             :     ActorDirectory actor_directory_;</span>
-<span id="L789"><span class="lineNum">     789</span>                 :             :     std::unique_ptr&lt;LocalDeliveryEngine&gt; local_delivery_engine_;</span>
-<span id="L790"><span class="lineNum">     790</span>                 :             :     std::unique_ptr&lt;mailbox::DeliveryPipeline&gt; delivery_pipeline_;</span>
-<span id="L791"><span class="lineNum">     791</span>                 :             :     std::unique_ptr&lt;BackpressureCoordinator&gt; backpressure_coordinator_;</span>
-<span id="L792"><span class="lineNum">     792</span>                 :             :     std::unique_ptr&lt;ShutdownCoordinator&gt; shutdown_coordinator_;</span>
-<span id="L793"><span class="lineNum">     793</span>                 :             :     std::unordered_map&lt;ActorType, ActorTypeDef&gt; actor_types_;</span>
-<span id="L794"><span class="lineNum">     794</span>                 :             :     Actor system_actor_;</span>
-<span id="L795"><span class="lineNum">     795</span>                 :             : </span>
-<span id="L796"><span class="lineNum">     796</span>                 :             :     // Actor storage consolidated into actor_directory_ above.</span>
-<span id="L797"><span class="lineNum">     797</span>                 :             :     // Use actor_directory_.find() / find_actor() / find_mailbox() /</span>
-<span id="L798"><span class="lineNum">     798</span>                 :             :     // find_context() / insert() / snapshot() / size() / erase()</span>
-<span id="L799"><span class="lineNum">     799</span>                 :             :     // instead of the previous separate maps + mutexes + ID generator.</span>
-<span id="L800"><span class="lineNum">     800</span>                 :             : </span>
-<span id="L801"><span class="lineNum">     801</span>                 :             :     // System start time for uptime tracking</span>
-<span id="L802"><span class="lineNum">     802</span>                 :             :     std::chrono::steady_clock::time_point start_time_;</span>
-<span id="L803"><span class="lineNum">     803</span>                 :             : </span>
-<span id="L804"><span class="lineNum">     804</span>                 :             :     // Running flag for network thread loop</span>
-<span id="L805"><span class="lineNum">     805</span>                 :             :     std::atomic&lt;bool&gt; running_{true};</span>
-<span id="L806"><span class="lineNum">     806</span>                 :             : </span>
-<span id="L807"><span class="lineNum">     807</span>                 :             :     // Shutdown state</span>
-<span id="L808"><span class="lineNum">     808</span>                 :             :     std::atomic&lt;ShutdownPhase&gt; shutdown_phase_{ShutdownPhase::Running};</span>
-<span id="L809"><span class="lineNum">     809</span>                 :             :     std::atomic&lt;bool&gt; is_ready_{true};</span>
+<span id="L776"><span class="lineNum">     776</span>                 :             :     /// \brief Current phase of the shutdown state machine.</span>
+<span id="L777"><span class="lineNum">     777</span>                 :             :     ShutdownPhase shutdown_phase() const noexcept;</span>
+<span id="L778"><span class="lineNum">     778</span>                 :             : </span>
+<span id="L779"><span class="lineNum">     779</span>                 :             :     // ── Health/readiness ──────────────────────────────────────────────────</span>
+<span id="L780"><span class="lineNum">     780</span>                 :             : </span>
+<span id="L781"><span class="lineNum">     781</span>                 :             :     /// \brief Returns \c true when the system is ready to serve traffic.</span>
+<span id="L782"><span class="lineNum">     782</span>                 :             :     ///</span>
+<span id="L783"><span class="lineNum">     783</span>                 :             :     /// \c false during shutdown and before \c SystemInitTag is broadcast.</span>
+<span id="L784"><span class="lineNum">     784</span>                 :             :     bool is_ready() const noexcept;</span>
+<span id="L785"><span class="lineNum">     785</span>                 :             : </span>
+<span id="L786"><span class="lineNum">     786</span>                 :             :     /// \brief Returns \c true while the system is draining.</span>
+<span id="L787"><span class="lineNum">     787</span>                 :             :     bool is_draining() const noexcept;</span>
+<span id="L788"><span class="lineNum">     788</span>                 :             : </span>
+<span id="L789"><span class="lineNum">     789</span>                 :             :     // ── Per-actor drain config ────────────────────────────────────────────</span>
+<span id="L790"><span class="lineNum">     790</span>                 :             : </span>
+<span id="L791"><span class="lineNum">     791</span>                 :             :     /// \brief Override the drain configuration for a specific actor.</span>
+<span id="L792"><span class="lineNum">     792</span>                 :             :     ///</span>
+<span id="L793"><span class="lineNum">     793</span>                 :             :     /// Used by CLI admin commands and runtime configuration reloads.</span>
+<span id="L794"><span class="lineNum">     794</span>                 :             :     /// \param[in] target Actor ID.</span>
+<span id="L795"><span class="lineNum">     795</span>                 :             :     /// \param[in] cfg New drain configuration.</span>
+<span id="L796"><span class="lineNum">     796</span>                 :             :     void set_drain_config(ActorId target, DrainConfig cfg);</span>
+<span id="L797"><span class="lineNum">     797</span>                 :             : </span>
+<span id="L798"><span class="lineNum">     798</span>                 :             :   private:</span>
+<span id="L799"><span class="lineNum">     799</span>                 :             :     Config config_;</span>
+<span id="L800"><span class="lineNum">     800</span>                 :             :     EndPoint endpoint_;</span>
+<span id="L801"><span class="lineNum">     801</span>                 :             :     Clock clock_;</span>
+<span id="L802"><span class="lineNum">     802</span>                 :             :     actor_registry registry_;</span>
+<span id="L803"><span class="lineNum">     803</span>                 :             :     ActorDirectory actor_directory_;</span>
+<span id="L804"><span class="lineNum">     804</span>                 :             :     std::unique_ptr&lt;LocalDeliveryEngine&gt; local_delivery_engine_;</span>
+<span id="L805"><span class="lineNum">     805</span>                 :             :     std::unique_ptr&lt;mailbox::DeliveryPipeline&gt; delivery_pipeline_;</span>
+<span id="L806"><span class="lineNum">     806</span>                 :             :     std::unique_ptr&lt;BackpressureCoordinator&gt; backpressure_coordinator_;</span>
+<span id="L807"><span class="lineNum">     807</span>                 :             :     std::unique_ptr&lt;ShutdownCoordinator&gt; shutdown_coordinator_;</span>
+<span id="L808"><span class="lineNum">     808</span>                 :             :     std::unordered_map&lt;ActorType, ActorTypeDef&gt; actor_types_;</span>
+<span id="L809"><span class="lineNum">     809</span>                 :             :     Actor system_actor_;</span>
 <span id="L810"><span class="lineNum">     810</span>                 :             : </span>
-<span id="L811"><span class="lineNum">     811</span>                 :             :     // Scheduler</span>
-<span id="L812"><span class="lineNum">     812</span>                 :             :     std::unique_ptr&lt;sched::IScheduler&gt; scheduler_;</span>
-<span id="L813"><span class="lineNum">     813</span>                 :             : </span>
-<span id="L814"><span class="lineNum">     814</span>                 :             :     // Network components (owned)</span>
-<span id="L815"><span class="lineNum">     815</span>                 :             :     std::unique_ptr&lt;net::TcpTransport&gt; transport_;</span>
-<span id="L816"><span class="lineNum">     816</span>                 :             :     BackpressureSignalWireSink backpressure_signal_wire_sink_for_test_;</span>
-<span id="L817"><span class="lineNum">     817</span>                 :             :     std::shared_ptr&lt;net::UdpRegistrar&gt; registrar_;</span>
-<span id="L818"><span class="lineNum">     818</span>                 :             :     std::shared_ptr&lt;net::IServiceDiscovery&gt; discovery_;</span>
-<span id="L819"><span class="lineNum">     819</span>                 :             :     std::shared_ptr&lt;net::ActorLocationCache&gt; location_cache_;</span>
-<span id="L820"><span class="lineNum">     820</span>                 :             :     uint64_t cache_purge_timer_ = 0;</span>
-<span id="L821"><span class="lineNum">     821</span>                 :             :     uint64_t retry_timer_ = 0;</span>
-<span id="L822"><span class="lineNum">     822</span>                 :             :     std::unique_ptr&lt;net::EventLoop&gt; network_loop_;</span>
-<span id="L823"><span class="lineNum">     823</span>                 :             :     std::thread network_thread_;</span>
-<span id="L824"><span class="lineNum">     824</span>                 :             : </span>
-<span id="L825"><span class="lineNum">     825</span>                 :             :     // Actor type registry for remote spawning (owned via pointer to avoid</span>
-<span id="L826"><span class="lineNum">     826</span>                 :             :     // circular dep)</span>
-<span id="L827"><span class="lineNum">     827</span>                 :             :     std::unique_ptr&lt;ActorTypeRegistry&gt; actor_type_registry_;</span>
+<span id="L811"><span class="lineNum">     811</span>                 :             :     // Actor storage consolidated into actor_directory_ above.</span>
+<span id="L812"><span class="lineNum">     812</span>                 :             :     // Use actor_directory_.find() / find_actor() / find_mailbox() /</span>
+<span id="L813"><span class="lineNum">     813</span>                 :             :     // find_context() / insert() / snapshot() / size() / erase()</span>
+<span id="L814"><span class="lineNum">     814</span>                 :             :     // instead of the previous separate maps + mutexes + ID generator.</span>
+<span id="L815"><span class="lineNum">     815</span>                 :             : </span>
+<span id="L816"><span class="lineNum">     816</span>                 :             :     // System start time for uptime tracking</span>
+<span id="L817"><span class="lineNum">     817</span>                 :             :     std::chrono::steady_clock::time_point start_time_;</span>
+<span id="L818"><span class="lineNum">     818</span>                 :             : </span>
+<span id="L819"><span class="lineNum">     819</span>                 :             :     // Running flag for network thread loop</span>
+<span id="L820"><span class="lineNum">     820</span>                 :             :     std::atomic&lt;bool&gt; running_{true};</span>
+<span id="L821"><span class="lineNum">     821</span>                 :             : </span>
+<span id="L822"><span class="lineNum">     822</span>                 :             :     // Shutdown state</span>
+<span id="L823"><span class="lineNum">     823</span>                 :             :     std::atomic&lt;ShutdownPhase&gt; shutdown_phase_{ShutdownPhase::Running};</span>
+<span id="L824"><span class="lineNum">     824</span>                 :             :     std::atomic&lt;bool&gt; is_ready_{true};</span>
+<span id="L825"><span class="lineNum">     825</span>                 :             : </span>
+<span id="L826"><span class="lineNum">     826</span>                 :             :     // Scheduler</span>
+<span id="L827"><span class="lineNum">     827</span>                 :             :     std::unique_ptr&lt;sched::IScheduler&gt; scheduler_;</span>
 <span id="L828"><span class="lineNum">     828</span>                 :             : </span>
-<span id="L829"><span class="lineNum">     829</span>                 :             :     // RPC channel for remote calls (after transport_ creation)</span>
-<span id="L830"><span class="lineNum">     830</span>                 :             :     std::unique_ptr&lt;RpcChannel&gt; rpc_channel_;</span>
-<span id="L831"><span class="lineNum">     831</span>                 :             :     // Ask manager for local ask() request tracking</span>
-<span id="L832"><span class="lineNum">     832</span>                 :             :     std::unique_ptr&lt;AskManager&gt; ask_manager_;</span>
-<span id="L833"><span class="lineNum">     833</span>                 :             :     // Passivation manager for actor passivation and reactivation</span>
-<span id="L834"><span class="lineNum">     834</span>                 :             :     std::unique_ptr&lt;PassivationManager&gt; passivation_manager_;</span>
-<span id="L835"><span class="lineNum">     835</span>                 :             :     // HTTP client for outbound HTTP calls</span>
-<span id="L836"><span class="lineNum">     836</span>                 :             :     std::unique_ptr&lt;net::HttpClient&gt; http_client_;</span>
-<span id="L837"><span class="lineNum">     837</span>                 :             : </span>
-<span id="L838"><span class="lineNum">     838</span>                 :             :     // HTTP gateway actor (DaemonActor, spawned when enable_http_gateway = true)</span>
-<span id="L839"><span class="lineNum">     839</span>                 :             :     Actor http_gateway_actor_{nullptr};</span>
-<span id="L840"><span class="lineNum">     840</span>                 :             : </span>
-<span id="L841"><span class="lineNum">     841</span>                 :             :     // CLI actor (DaemonActor, spawned when cli.enabled = true)</span>
-<span id="L842"><span class="lineNum">     842</span>                 :             :     std::shared_ptr&lt;cli::CliActor&gt; cli_actor_;</span>
+<span id="L829"><span class="lineNum">     829</span>                 :             :     // Network components (owned)</span>
+<span id="L830"><span class="lineNum">     830</span>                 :             :     std::unique_ptr&lt;net::TcpTransport&gt; transport_;</span>
+<span id="L831"><span class="lineNum">     831</span>                 :             :     BackpressureSignalWireSink backpressure_signal_wire_sink_for_test_;</span>
+<span id="L832"><span class="lineNum">     832</span>                 :             :     std::shared_ptr&lt;net::UdpRegistrar&gt; registrar_;</span>
+<span id="L833"><span class="lineNum">     833</span>                 :             :     std::shared_ptr&lt;net::IServiceDiscovery&gt; discovery_;</span>
+<span id="L834"><span class="lineNum">     834</span>                 :             :     std::shared_ptr&lt;net::ActorLocationCache&gt; location_cache_;</span>
+<span id="L835"><span class="lineNum">     835</span>                 :             :     uint64_t cache_purge_timer_ = 0;</span>
+<span id="L836"><span class="lineNum">     836</span>                 :             :     uint64_t retry_timer_ = 0;</span>
+<span id="L837"><span class="lineNum">     837</span>                 :             :     std::unique_ptr&lt;net::EventLoop&gt; network_loop_;</span>
+<span id="L838"><span class="lineNum">     838</span>                 :             :     std::thread network_thread_;</span>
+<span id="L839"><span class="lineNum">     839</span>                 :             : </span>
+<span id="L840"><span class="lineNum">     840</span>                 :             :     // Actor type registry for remote spawning (owned via pointer to avoid</span>
+<span id="L841"><span class="lineNum">     841</span>                 :             :     // circular dep)</span>
+<span id="L842"><span class="lineNum">     842</span>                 :             :     std::unique_ptr&lt;ActorTypeRegistry&gt; actor_type_registry_;</span>
 <span id="L843"><span class="lineNum">     843</span>                 :             : </span>
-<span id="L844"><span class="lineNum">     844</span>                 :             :     // Metrics configuration, ring buffer, and actor</span>
-<span id="L845"><span class="lineNum">     845</span>                 :             :     metrics::MetricsConfig metrics_config_;</span>
-<span id="L846"><span class="lineNum">     846</span>                 :             :     std::shared_ptr&lt;metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;&gt; metrics_ring_buffer_;</span>
-<span id="L847"><span class="lineNum">     847</span>                 :             :     metrics::MetricsActor* metrics_actor_{nullptr};</span>
-<span id="L848"><span class="lineNum">     848</span>                 :             : </span>
-<span id="L849"><span class="lineNum">     849</span>                 :             :     // Logging subsystem</span>
-<span id="L850"><span class="lineNum">     850</span>                 :             :     log::LogConfig logging_config_;</span>
-<span id="L851"><span class="lineNum">     851</span>                 :             :     std::unique_ptr&lt;log::LogManager&gt; log_manager_;</span>
-<span id="L852"><span class="lineNum">     852</span>                 :             :     log::Logger* logger_ = nullptr;</span>
-<span id="L853"><span class="lineNum">     853</span>                 :             : </span>
-<span id="L854"><span class="lineNum">     854</span>                 :             :     // Dead-letter queue</span>
-<span id="L855"><span class="lineNum">     855</span>                 :             :     std::unique_ptr&lt;mailbox::DeadLetterQueue&gt; dead_letters_;</span>
-<span id="L856"><span class="lineNum">     856</span>                 :             : </span>
-<span id="L857"><span class="lineNum">     857</span>                 :             :     // Outbound delivery tracker for at-least-once delivery</span>
-<span id="L858"><span class="lineNum">     858</span>                 :             :     std::unique_ptr&lt;msg::OutboundDeliveryTracker&gt; outbound_tracker_;</span>
-<span id="L859"><span class="lineNum">     859</span>                 :             : </span>
-<span id="L860"><span class="lineNum">     860</span>                 :             :     // Receiver dedup cache for at-least-once delivery</span>
-<span id="L861"><span class="lineNum">     861</span>                 :             :     std::unique_ptr&lt;adt::DedupCache&gt; dedup_cache_;</span>
-<span id="L862"><span class="lineNum">     862</span>                 :             : </span>
-<span id="L863"><span class="lineNum">     863</span>                 :             :     // Tracing subsystem</span>
-<span id="L864"><span class="lineNum">     864</span>                 :             :     tracing::TraceConfig tracing_config_;</span>
-<span id="L865"><span class="lineNum">     865</span>                 :             :     std::unique_ptr&lt;tracing::TraceManager&gt; trace_manager_;</span>
-<span id="L866"><span class="lineNum">     866</span>                 :             : </span>
-<span id="L867"><span class="lineNum">     867</span>                 :             :     // Fault injection</span>
-<span id="L868"><span class="lineNum">     868</span>                 :             :     fault::FaultController fault_controller_;</span>
-<span id="L869"><span class="lineNum">     869</span>                 :             : </span>
-<span id="L870"><span class="lineNum">     870</span>                 :             :     // Proto type registry for protobuf message serialization</span>
-<span id="L871"><span class="lineNum">     871</span>                 :             :     ProtoTypeRegistry proto_registry_;</span>
-<span id="L872"><span class="lineNum">     872</span>                 :             : };</span>
-<span id="L873"><span class="lineNum">     873</span>                 :             : </span>
-<span id="L874"><span class="lineNum">     874</span>                 :             : // -----------------------------------------------------------------------------</span>
-<span id="L875"><span class="lineNum">     875</span>                 :             : // Template implementations</span>
-<span id="L876"><span class="lineNum">     876</span>                 :             : // -----------------------------------------------------------------------------</span>
+<span id="L844"><span class="lineNum">     844</span>                 :             :     // RPC channel for remote calls (after transport_ creation)</span>
+<span id="L845"><span class="lineNum">     845</span>                 :             :     std::unique_ptr&lt;RpcChannel&gt; rpc_channel_;</span>
+<span id="L846"><span class="lineNum">     846</span>                 :             :     // Ask manager for local ask() request tracking</span>
+<span id="L847"><span class="lineNum">     847</span>                 :             :     std::unique_ptr&lt;AskManager&gt; ask_manager_;</span>
+<span id="L848"><span class="lineNum">     848</span>                 :             :     // Passivation manager for actor passivation and reactivation</span>
+<span id="L849"><span class="lineNum">     849</span>                 :             :     std::unique_ptr&lt;PassivationManager&gt; passivation_manager_;</span>
+<span id="L850"><span class="lineNum">     850</span>                 :             :     // HTTP client for outbound HTTP calls</span>
+<span id="L851"><span class="lineNum">     851</span>                 :             :     std::unique_ptr&lt;net::HttpClient&gt; http_client_;</span>
+<span id="L852"><span class="lineNum">     852</span>                 :             : </span>
+<span id="L853"><span class="lineNum">     853</span>                 :             :     // HTTP gateway actor (DaemonActor, spawned when enable_http_gateway = true)</span>
+<span id="L854"><span class="lineNum">     854</span>                 :             :     Actor http_gateway_actor_{nullptr};</span>
+<span id="L855"><span class="lineNum">     855</span>                 :             : </span>
+<span id="L856"><span class="lineNum">     856</span>                 :             :     // CLI actor (DaemonActor, spawned when cli.enabled = true)</span>
+<span id="L857"><span class="lineNum">     857</span>                 :             :     std::shared_ptr&lt;cli::CliActor&gt; cli_actor_;</span>
+<span id="L858"><span class="lineNum">     858</span>                 :             : </span>
+<span id="L859"><span class="lineNum">     859</span>                 :             :     // Metrics configuration, ring buffer, and actor</span>
+<span id="L860"><span class="lineNum">     860</span>                 :             :     metrics::MetricsConfig metrics_config_;</span>
+<span id="L861"><span class="lineNum">     861</span>                 :             :     std::shared_ptr&lt;metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;&gt; metrics_ring_buffer_;</span>
+<span id="L862"><span class="lineNum">     862</span>                 :             :     metrics::MetricsActor* metrics_actor_{nullptr};</span>
+<span id="L863"><span class="lineNum">     863</span>                 :             : </span>
+<span id="L864"><span class="lineNum">     864</span>                 :             :     // Logging subsystem</span>
+<span id="L865"><span class="lineNum">     865</span>                 :             :     log::LogConfig logging_config_;</span>
+<span id="L866"><span class="lineNum">     866</span>                 :             :     std::unique_ptr&lt;log::LogManager&gt; log_manager_;</span>
+<span id="L867"><span class="lineNum">     867</span>                 :             :     log::Logger* logger_ = nullptr;</span>
+<span id="L868"><span class="lineNum">     868</span>                 :             : </span>
+<span id="L869"><span class="lineNum">     869</span>                 :             :     // Dead-letter queue</span>
+<span id="L870"><span class="lineNum">     870</span>                 :             :     std::unique_ptr&lt;mailbox::DeadLetterQueue&gt; dead_letters_;</span>
+<span id="L871"><span class="lineNum">     871</span>                 :             : </span>
+<span id="L872"><span class="lineNum">     872</span>                 :             :     // Outbound delivery tracker for at-least-once delivery</span>
+<span id="L873"><span class="lineNum">     873</span>                 :             :     std::unique_ptr&lt;msg::OutboundDeliveryTracker&gt; outbound_tracker_;</span>
+<span id="L874"><span class="lineNum">     874</span>                 :             : </span>
+<span id="L875"><span class="lineNum">     875</span>                 :             :     // Receiver dedup cache for at-least-once delivery</span>
+<span id="L876"><span class="lineNum">     876</span>                 :             :     std::unique_ptr&lt;adt::DedupCache&gt; dedup_cache_;</span>
 <span id="L877"><span class="lineNum">     877</span>                 :             : </span>
-<span id="L878"><span class="lineNum">     878</span>                 :             : template &lt;typename T, typename... Args&gt;</span>
-<span id="L879"><span class="lineNum">     879</span>                 :<span class="tlaGNC">        1305 : Actor ActorSystem::spawn(Args&amp;&amp;... args) {</span></span>
-<span id="L880"><span class="lineNum">     880</span>                 :<span class="tlaGNC">        1305 :     ActorId id = actor_directory_.allocate_id();</span></span>
-<span id="L881"><span class="lineNum">     881</span>                 :<span class="tlaGNC">        1305 :     auto actor = std::make_shared&lt;T&gt;(nullptr, *this, std::forward&lt;Args&gt;(args)...);</span></span>
-<span id="L882"><span class="lineNum">     882</span>                 :<span class="tlaGNC">        1305 :     actor-&gt;set_address(ActorAddress(endpoint_, actor-&gt;type(), id, 0));</span></span>
-<span id="L883"><span class="lineNum">     883</span>                 :             :     if constexpr (requires { T::kActorTypeName; }) {</span>
-<span id="L884"><span class="lineNum">     884</span>                 :<span class="tlaGNC">        1408 :         actor-&gt;set_type_name(T::kActorTypeName);</span></span>
-<span id="L885"><span class="lineNum">     885</span>                 :             :     } else {</span>
-<span id="L886"><span class="lineNum">     886</span>                 :<span class="tlaGNC">        1202 :         actor-&gt;set_type_name(&quot;unknown&quot;);</span></span>
-<span id="L887"><span class="lineNum">     887</span>                 :             :     }</span>
+<span id="L878"><span class="lineNum">     878</span>                 :             :     // Tracing subsystem</span>
+<span id="L879"><span class="lineNum">     879</span>                 :             :     tracing::TraceConfig tracing_config_;</span>
+<span id="L880"><span class="lineNum">     880</span>                 :             :     std::unique_ptr&lt;tracing::TraceManager&gt; trace_manager_;</span>
+<span id="L881"><span class="lineNum">     881</span>                 :             : </span>
+<span id="L882"><span class="lineNum">     882</span>                 :             :     // Fault injection</span>
+<span id="L883"><span class="lineNum">     883</span>                 :             :     fault::FaultController fault_controller_;</span>
+<span id="L884"><span class="lineNum">     884</span>                 :             : </span>
+<span id="L885"><span class="lineNum">     885</span>                 :             :     // Proto type registry for protobuf message serialization</span>
+<span id="L886"><span class="lineNum">     886</span>                 :             :     ProtoTypeRegistry proto_registry_;</span>
+<span id="L887"><span class="lineNum">     887</span>                 :             : };</span>
 <span id="L888"><span class="lineNum">     888</span>                 :             : </span>
-<span id="L889"><span class="lineNum">     889</span>                 :<span class="tlaGNC">        1305 :     auto mailbox_ptr = std::make_shared&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;&gt;(</span></span>
-<span id="L890"><span class="lineNum">     890</span>                 :<span class="tlaGNC">        1305 :         id, scheduler_.get(), mailbox_config_for_spawn());</span></span>
-<span id="L891"><span class="lineNum">     891</span>                 :<span class="tlaGNC">        1305 :     auto* mbox = mailbox_ptr.get();</span></span>
+<span id="L889"><span class="lineNum">     889</span>                 :             : // -----------------------------------------------------------------------------</span>
+<span id="L890"><span class="lineNum">     890</span>                 :             : // Template implementations</span>
+<span id="L891"><span class="lineNum">     891</span>                 :             : // -----------------------------------------------------------------------------</span>
 <span id="L892"><span class="lineNum">     892</span>                 :             : </span>
-<span id="L893"><span class="lineNum">     893</span>                 :<span class="tlaGNC">        1305 :     auto actor_ctx = std::make_shared&lt;ActorContext&gt;(Actor(actor), this);</span></span>
-<span id="L894"><span class="lineNum">     894</span>                 :<span class="tlaGNC">        1305 :     actor-&gt;set_context(actor_ctx.get());</span></span>
-<span id="L895"><span class="lineNum">     895</span>                 :             : </span>
-<span id="L896"><span class="lineNum">     896</span>                 :<span class="tlaGNC">        1305 :     ActorDirectoryEntry entry;</span></span>
-<span id="L897"><span class="lineNum">     897</span>                 :<span class="tlaGNC">        1305 :     entry.actor = Actor(actor);</span></span>
-<span id="L898"><span class="lineNum">     898</span>                 :<span class="tlaGNC">        1305 :     entry.instance = actor;</span></span>
-<span id="L899"><span class="lineNum">     899</span>                 :<span class="tlaGNC">        1305 :     entry.mailbox = mailbox_ptr;</span></span>
-<span id="L900"><span class="lineNum">     900</span>                 :<span class="tlaGNC">        1305 :     entry.context = actor_ctx;</span></span>
-<span id="L901"><span class="lineNum">     901</span>                 :<span class="tlaGNC">        1305 :     actor_directory_.insert(std::move(entry));</span></span>
-<span id="L902"><span class="lineNum">     902</span>                 :             : </span>
-<span id="L903"><span class="lineNum">     903</span>                 :<span class="tlaGNC">        1305 :     actor-&gt;set_scheduler(scheduler_.get());</span></span>
-<span id="L904"><span class="lineNum">     904</span>                 :<span class="tlaGNC">        1305 :     actor-&gt;set_mailbox(mbox);</span></span>
-<span id="L905"><span class="lineNum">     905</span>                 :             : </span>
-<span id="L906"><span class="lineNum">     906</span>         [<span class="tlaGBC" title="Branch 0 was taken 1305 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1305 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
-<span id="L907"><span class="lineNum">     907</span>                 :<span class="tlaGNC">        1305 :         mbox-&gt;set_metrics_ring_buffer(metrics_ring_buffer_.get());</span></span>
-<span id="L908"><span class="lineNum">     908</span>                 :<span class="tlaGNC">        1305 :         actor-&gt;set_metrics_ring_buffer(metrics_ring_buffer_.get());</span></span>
-<span id="L909"><span class="lineNum">     909</span>                 :             :     }</span>
+<span id="L893"><span class="lineNum">     893</span>                 :             : template &lt;typename T, typename... Args&gt;</span>
+<span id="L894"><span class="lineNum">     894</span>                 :<span class="tlaGNC">        1337 : Actor ActorSystem::spawn(Args&amp;&amp;... args) {</span></span>
+<span id="L895"><span class="lineNum">     895</span>                 :<span class="tlaGNC">        1337 :     ActorId id = actor_directory_.allocate_id();</span></span>
+<span id="L896"><span class="lineNum">     896</span>                 :<span class="tlaGNC">        1337 :     auto actor = std::make_shared&lt;T&gt;(nullptr, *this, std::forward&lt;Args&gt;(args)...);</span></span>
+<span id="L897"><span class="lineNum">     897</span>                 :<span class="tlaGNC">        1337 :     actor-&gt;set_address(ActorAddress(endpoint_, actor-&gt;type(), id, 0));</span></span>
+<span id="L898"><span class="lineNum">     898</span>                 :             :     if constexpr (requires { T::kActorTypeName; }) {</span>
+<span id="L899"><span class="lineNum">     899</span>                 :<span class="tlaGNC">        1440 :         actor-&gt;set_type_name(T::kActorTypeName);</span></span>
+<span id="L900"><span class="lineNum">     900</span>                 :             :     } else {</span>
+<span id="L901"><span class="lineNum">     901</span>                 :<span class="tlaGNC">        1234 :         actor-&gt;set_type_name(&quot;unknown&quot;);</span></span>
+<span id="L902"><span class="lineNum">     902</span>                 :             :     }</span>
+<span id="L903"><span class="lineNum">     903</span>                 :             : </span>
+<span id="L904"><span class="lineNum">     904</span>                 :<span class="tlaGNC">        1337 :     auto mailbox_ptr = std::make_shared&lt;mailbox::MPSCActorMailbox&lt;TypedMessage&gt;&gt;(</span></span>
+<span id="L905"><span class="lineNum">     905</span>                 :<span class="tlaGNC">        1337 :         id, scheduler_.get(), mailbox_config_for_spawn());</span></span>
+<span id="L906"><span class="lineNum">     906</span>                 :<span class="tlaGNC">        1337 :     auto* mbox = mailbox_ptr.get();</span></span>
+<span id="L907"><span class="lineNum">     907</span>                 :             : </span>
+<span id="L908"><span class="lineNum">     908</span>                 :<span class="tlaGNC">        1337 :     auto actor_ctx = std::make_shared&lt;ActorContext&gt;(Actor(actor), this);</span></span>
+<span id="L909"><span class="lineNum">     909</span>                 :<span class="tlaGNC">        1337 :     actor-&gt;set_context(actor_ctx.get());</span></span>
 <span id="L910"><span class="lineNum">     910</span>                 :             : </span>
-<span id="L911"><span class="lineNum">     911</span>         [<span class="tlaGBC" title="Branch 0 was taken 635 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 670 times"> + </span>]:<span class="tlaGNC">        1305 :     if (logger_) [[unlikely]] {</span></span>
-<span id="L912"><span class="lineNum">     912</span>                 :<span class="tlaGNC">         635 :         mbox-&gt;set_logger(logger_);</span></span>
-<span id="L913"><span class="lineNum">     913</span>                 :<span class="tlaGNC">         635 :         actor-&gt;set_logger(logger_);</span></span>
-<span id="L914"><span class="lineNum">     914</span>                 :             :     }</span>
-<span id="L915"><span class="lineNum">     915</span>                 :             : </span>
-<span id="L916"><span class="lineNum">     916</span>   [<span class="tlaGBC" title="Branch 0 was taken 1265 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 37 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        1305 :     switch (actor-&gt;dispatch_policy()) {</span></span>
-<span id="L917"><span class="lineNum">     917</span>                 :<span class="tlaGNC">        1265 :         case sched::DispatchPolicy::Cooperative:</span></span>
-<span id="L918"><span class="lineNum">     918</span>                 :<span class="tlaGNC">        1265 :             scheduler_-&gt;notify_ready(id, 0, INT64_MAX);</span></span>
-<span id="L919"><span class="lineNum">     919</span>                 :<span class="tlaGNC">        1265 :             break;</span></span>
-<span id="L920"><span class="lineNum">     920</span>                 :<span class="tlaGNC">          37 :         case sched::DispatchPolicy::DedicatedThread:</span></span>
-<span id="L921"><span class="lineNum">     921</span>                 :<span class="tlaGNC">          74 :             scheduler_-&gt;register_dedicated_thread(</span></span>
-<span id="L922"><span class="lineNum">     922</span>                 :<span class="tlaGNC">          37 :                 id, actor-&gt;dispatch_hints().cpu_affinity);</span></span>
-<span id="L923"><span class="lineNum">     923</span>                 :<span class="tlaGNC">          37 :             break;</span></span>
-<span id="L924"><span class="lineNum">     924</span>                 :<span class="tlaGNC">           3 :         case sched::DispatchPolicy::DedicatedPool:</span></span>
-<span id="L925"><span class="lineNum">     925</span>                 :<span class="tlaGNC">           3 :             scheduler_-&gt;register_dedicated_pool(id, actor-&gt;dispatch_hints().pool_size);</span></span>
-<span id="L926"><span class="lineNum">     926</span>                 :<span class="tlaGNC">           3 :             break;</span></span>
-<span id="L927"><span class="lineNum">     927</span>                 :             :     }</span>
-<span id="L928"><span class="lineNum">     928</span>                 :             : </span>
-<span id="L929"><span class="lineNum">     929</span>                 :<span class="tlaGNC">        1305 :     actor-&gt;on_activate();</span></span>
+<span id="L911"><span class="lineNum">     911</span>                 :<span class="tlaGNC">        1337 :     ActorDirectoryEntry entry;</span></span>
+<span id="L912"><span class="lineNum">     912</span>                 :<span class="tlaGNC">        1337 :     entry.actor = Actor(actor);</span></span>
+<span id="L913"><span class="lineNum">     913</span>                 :<span class="tlaGNC">        1337 :     entry.instance = actor;</span></span>
+<span id="L914"><span class="lineNum">     914</span>                 :<span class="tlaGNC">        1337 :     entry.mailbox = mailbox_ptr;</span></span>
+<span id="L915"><span class="lineNum">     915</span>                 :<span class="tlaGNC">        1337 :     entry.context = actor_ctx;</span></span>
+<span id="L916"><span class="lineNum">     916</span>                 :<span class="tlaGNC">        1337 :     actor_directory_.insert(std::move(entry));</span></span>
+<span id="L917"><span class="lineNum">     917</span>                 :             : </span>
+<span id="L918"><span class="lineNum">     918</span>                 :<span class="tlaGNC">        1337 :     actor-&gt;set_scheduler(scheduler_.get());</span></span>
+<span id="L919"><span class="lineNum">     919</span>                 :<span class="tlaGNC">        1337 :     actor-&gt;set_mailbox(mbox);</span></span>
+<span id="L920"><span class="lineNum">     920</span>                 :             : </span>
+<span id="L921"><span class="lineNum">     921</span>         [<span class="tlaGBC" title="Branch 0 was taken 1337 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1337 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L922"><span class="lineNum">     922</span>                 :<span class="tlaGNC">        1337 :         mbox-&gt;set_metrics_ring_buffer(metrics_ring_buffer_.get());</span></span>
+<span id="L923"><span class="lineNum">     923</span>                 :<span class="tlaGNC">        1337 :         actor-&gt;set_metrics_ring_buffer(metrics_ring_buffer_.get());</span></span>
+<span id="L924"><span class="lineNum">     924</span>                 :             :     }</span>
+<span id="L925"><span class="lineNum">     925</span>                 :             : </span>
+<span id="L926"><span class="lineNum">     926</span>         [<span class="tlaGBC" title="Branch 0 was taken 651 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 686 times"> + </span>]:<span class="tlaGNC">        1337 :     if (logger_) [[unlikely]] {</span></span>
+<span id="L927"><span class="lineNum">     927</span>                 :<span class="tlaGNC">         651 :         mbox-&gt;set_logger(logger_);</span></span>
+<span id="L928"><span class="lineNum">     928</span>                 :<span class="tlaGNC">         651 :         actor-&gt;set_logger(logger_);</span></span>
+<span id="L929"><span class="lineNum">     929</span>                 :             :     }</span>
 <span id="L930"><span class="lineNum">     930</span>                 :             : </span>
-<span id="L931"><span class="lineNum">     931</span>         [<span class="tlaGBC" title="Branch 0 was taken 268 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1037 times"> + </span>]:<span class="tlaGNC">        1305 :     if (auto* lc = actor-&gt;as_lifecycle()) {</span></span>
-<span id="L932"><span class="lineNum">     932</span>                 :<span class="tlaGNC">         268 :         lc-&gt;transition(LifecycleState::kActive);</span></span>
-<span id="L933"><span class="lineNum">     933</span>                 :             :     }</span>
-<span id="L934"><span class="lineNum">     934</span>                 :             : </span>
-<span id="L935"><span class="lineNum">     935</span>         [<span class="tlaGBC" title="Branch 0 was taken 660 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 645 times"> + </span>]:<span class="tlaGNC">        1305 :     HPACTOR_LOG_INFO(log::LogCategory::kActor, id,</span></span>
-<span id="L936"><span class="lineNum">     936</span>                 :             :                      static_cast&lt;uint32_t&gt;(log::LogEventId::kActorSpawned),</span>
-<span id="L937"><span class="lineNum">     937</span>                 :             :                      &quot;actor spawned&quot;,</span>
-<span id="L938"><span class="lineNum">     938</span>                 :             :                      log::field_lit(&quot;type&quot;, actor-&gt;type_name().data()));</span>
-<span id="L939"><span class="lineNum">     939</span>                 :             : </span>
-<span id="L940"><span class="lineNum">     940</span>         [<span class="tlaGBC" title="Branch 0 was taken 1305 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1305 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
-<span id="L941"><span class="lineNum">     941</span>                 :<span class="tlaGNC">        1305 :         metrics::MetricEvent evt{};</span></span>
-<span id="L942"><span class="lineNum">     942</span>                 :<span class="tlaGNC">        1305 :         evt.actor_id = id;</span></span>
-<span id="L943"><span class="lineNum">     943</span>                 :<span class="tlaGNC">        1305 :         evt.event_type = metrics::MetricEventType::kActorSpawned;</span></span>
-<span id="L944"><span class="lineNum">     944</span>                 :<span class="tlaGNC">        1305 :         evt.value_hi = 1;</span></span>
-<span id="L945"><span class="lineNum">     945</span>                 :<span class="tlaGNC">        1305 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
-<span id="L946"><span class="lineNum">     946</span>                 :             :     }</span>
-<span id="L947"><span class="lineNum">     947</span>                 :             : </span>
-<span id="L948"><span class="lineNum">     948</span>                 :<span class="tlaGNC">        1305 :     return Actor(actor);</span></span>
-<span id="L949"><span class="lineNum">     949</span>                 :<span class="tlaGNC">        1305 : }</span></span>
-<span id="L950"><span class="lineNum">     950</span>                 :             : </span>
-<span id="L951"><span class="lineNum">     951</span>                 :             : } // namespace hpactor</span>
+<span id="L931"><span class="lineNum">     931</span>   [<span class="tlaGBC" title="Branch 0 was taken 1297 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 37 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">        1337 :     switch (actor-&gt;dispatch_policy()) {</span></span>
+<span id="L932"><span class="lineNum">     932</span>                 :<span class="tlaGNC">        1297 :         case sched::DispatchPolicy::Cooperative:</span></span>
+<span id="L933"><span class="lineNum">     933</span>                 :<span class="tlaGNC">        1297 :             scheduler_-&gt;notify_ready(id, 0, INT64_MAX);</span></span>
+<span id="L934"><span class="lineNum">     934</span>                 :<span class="tlaGNC">        1297 :             break;</span></span>
+<span id="L935"><span class="lineNum">     935</span>                 :<span class="tlaGNC">          37 :         case sched::DispatchPolicy::DedicatedThread:</span></span>
+<span id="L936"><span class="lineNum">     936</span>                 :<span class="tlaGNC">          74 :             scheduler_-&gt;register_dedicated_thread(</span></span>
+<span id="L937"><span class="lineNum">     937</span>                 :<span class="tlaGNC">          37 :                 id, actor-&gt;dispatch_hints().cpu_affinity);</span></span>
+<span id="L938"><span class="lineNum">     938</span>                 :<span class="tlaGNC">          37 :             break;</span></span>
+<span id="L939"><span class="lineNum">     939</span>                 :<span class="tlaGNC">           3 :         case sched::DispatchPolicy::DedicatedPool:</span></span>
+<span id="L940"><span class="lineNum">     940</span>                 :<span class="tlaGNC">           3 :             scheduler_-&gt;register_dedicated_pool(id, actor-&gt;dispatch_hints().pool_size);</span></span>
+<span id="L941"><span class="lineNum">     941</span>                 :<span class="tlaGNC">           3 :             break;</span></span>
+<span id="L942"><span class="lineNum">     942</span>                 :             :     }</span>
+<span id="L943"><span class="lineNum">     943</span>                 :             : </span>
+<span id="L944"><span class="lineNum">     944</span>                 :<span class="tlaGNC">        1337 :     actor-&gt;on_activate();</span></span>
+<span id="L945"><span class="lineNum">     945</span>                 :             : </span>
+<span id="L946"><span class="lineNum">     946</span>         [<span class="tlaGBC" title="Branch 0 was taken 268 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1069 times"> + </span>]:<span class="tlaGNC">        1337 :     if (auto* lc = actor-&gt;as_lifecycle()) {</span></span>
+<span id="L947"><span class="lineNum">     947</span>                 :<span class="tlaGNC">         268 :         lc-&gt;transition(LifecycleState::kActive);</span></span>
+<span id="L948"><span class="lineNum">     948</span>                 :             :     }</span>
+<span id="L949"><span class="lineNum">     949</span>                 :             : </span>
+<span id="L950"><span class="lineNum">     950</span>         [<span class="tlaGBC" title="Branch 0 was taken 676 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 661 times"> + </span>]:<span class="tlaGNC">        1337 :     HPACTOR_LOG_INFO(log::LogCategory::kActor, id,</span></span>
+<span id="L951"><span class="lineNum">     951</span>                 :             :                      static_cast&lt;uint32_t&gt;(log::LogEventId::kActorSpawned),</span>
+<span id="L952"><span class="lineNum">     952</span>                 :             :                      &quot;actor spawned&quot;,</span>
+<span id="L953"><span class="lineNum">     953</span>                 :             :                      log::field_lit(&quot;type&quot;, actor-&gt;type_name().data()));</span>
+<span id="L954"><span class="lineNum">     954</span>                 :             : </span>
+<span id="L955"><span class="lineNum">     955</span>         [<span class="tlaGBC" title="Branch 0 was taken 1337 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">        1337 :     if (metrics_ring_buffer_) [[unlikely]] {</span></span>
+<span id="L956"><span class="lineNum">     956</span>                 :<span class="tlaGNC">        1337 :         metrics::MetricEvent evt{};</span></span>
+<span id="L957"><span class="lineNum">     957</span>                 :<span class="tlaGNC">        1337 :         evt.actor_id = id;</span></span>
+<span id="L958"><span class="lineNum">     958</span>                 :<span class="tlaGNC">        1337 :         evt.event_type = metrics::MetricEventType::kActorSpawned;</span></span>
+<span id="L959"><span class="lineNum">     959</span>                 :<span class="tlaGNC">        1337 :         evt.value_hi = 1;</span></span>
+<span id="L960"><span class="lineNum">     960</span>                 :<span class="tlaGNC">        1337 :         metrics_ring_buffer_-&gt;try_push(evt);</span></span>
+<span id="L961"><span class="lineNum">     961</span>                 :             :     }</span>
+<span id="L962"><span class="lineNum">     962</span>                 :             : </span>
+<span id="L963"><span class="lineNum">     963</span>                 :<span class="tlaGNC">        1337 :     return Actor(actor);</span></span>
+<span id="L964"><span class="lineNum">     964</span>                 :<span class="tlaGNC">        1337 : }</span></span>
+<span id="L965"><span class="lineNum">     965</span>                 :             : </span>
+<span id="L966"><span class="lineNum">     966</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

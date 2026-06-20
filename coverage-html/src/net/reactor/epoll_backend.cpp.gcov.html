@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 01:44:05</td>
+            <td class="headerValue">2026-06-20 06:19:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">65.9&nbsp;%</td>
@@ -234,37 +234,37 @@
 <span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaUNC">           0 :     op_type = static_cast&lt;uint32_t&gt;((ud &gt;&gt; 56) &amp; 0xFFULL);</span></span>
 <span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaUNC">           0 : }</span></span>
 <span id="L158"><span class="lineNum">     158</span>                 :             : </span>
-<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC tlaBgGNC">          53 : int EpollBackend::process_timers() {</span></span>
-<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">          53 :     int triggered = 0;</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC tlaBgGNC">          41 : int EpollBackend::process_timers() {</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">          41 :     int triggered = 0;</span></span>
 <span id="L161"><span class="lineNum">     161</span>                 :             : </span>
 <span id="L162"><span class="lineNum">     162</span>                 :             :     // Read expired timerfd events</span>
 <span id="L163"><span class="lineNum">     163</span>                 :             :     uint64_t expirations;</span>
-<span id="L164"><span class="lineNum">     164</span>         [<span class="tlaGBC" title="Branch 0 was taken 53 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span>]:<span class="tlaGNC">         106 :     while (read(timerfd_, &amp;expirations, sizeof(expirations)) &gt; 0) {</span></span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">          53 :         triggered++;</span></span>
+<span id="L164"><span class="lineNum">     164</span>         [<span class="tlaGBC" title="Branch 0 was taken 41 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 41 times"> + </span>]:<span class="tlaGNC">          82 :     while (read(timerfd_, &amp;expirations, sizeof(expirations)) &gt; 0) {</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">          41 :         triggered++;</span></span>
 <span id="L166"><span class="lineNum">     166</span>                 :             :     }</span>
 <span id="L167"><span class="lineNum">     167</span>                 :             : </span>
 <span id="L168"><span class="lineNum">     168</span>                 :             :     // Calculate current time</span>
 <span id="L169"><span class="lineNum">     169</span>                 :             :     struct timespec ts;</span>
-<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">          53 :     clock_gettime(CLOCK_MONOTONIC, &amp;ts);</span></span>
-<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">          53 :     int64_t now_ms = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;</span></span>
+<span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">          41 :     clock_gettime(CLOCK_MONOTONIC, &amp;ts);</span></span>
+<span id="L171"><span class="lineNum">     171</span>                 :<span class="tlaGNC">          41 :     int64_t now_ms = ts.tv_sec * 1000 + ts.tv_nsec / 1000000;</span></span>
 <span id="L172"><span class="lineNum">     172</span>                 :             : </span>
 <span id="L173"><span class="lineNum">     173</span>                 :             :     // Process expired timers</span>
-<span id="L174"><span class="lineNum">     174</span>         [<span class="tlaGBC" title="Branch 0 was taken 122 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 53 times"> + </span>]:<span class="tlaGNC">         175 :     for (auto&amp; timer : timers_) {</span></span>
-<span id="L175"><span class="lineNum">     175</span>         [<span class="tlaGBC" title="Branch 0 was taken 72 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 50 times"> + </span>]:<span class="tlaGNC">         122 :         if (timer.expires_at_ms &lt;= now_ms) {</span></span>
-<span id="L176"><span class="lineNum">     176</span>         [<span class="tlaGBC" title="Branch 0 was taken 66 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          72 :             if (cancelled_timers_.count(timer.handle) == 0) {</span></span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">          66 :                 OpCompletion completion{</span></span>
+<span id="L174"><span class="lineNum">     174</span>         [<span class="tlaGBC" title="Branch 0 was taken 98 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 41 times"> + </span>]:<span class="tlaGNC">         139 :     for (auto&amp; timer : timers_) {</span></span>
+<span id="L175"><span class="lineNum">     175</span>         [<span class="tlaGBC" title="Branch 0 was taken 60 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 38 times"> + </span>]:<span class="tlaGNC">          98 :         if (timer.expires_at_ms &lt;= now_ms) {</span></span>
+<span id="L176"><span class="lineNum">     176</span>         [<span class="tlaGBC" title="Branch 0 was taken 54 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          60 :             if (cancelled_timers_.count(timer.handle) == 0) {</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">          54 :                 OpCompletion completion{</span></span>
 <span id="L178"><span class="lineNum">     178</span>                 :             :                     .actor = timer.actor,</span>
 <span id="L179"><span class="lineNum">     179</span>                 :             :                     .type = OpType::TimerFired,</span>
 <span id="L180"><span class="lineNum">     180</span>                 :             :                     .fd = -1,</span>
 <span id="L181"><span class="lineNum">     181</span>                 :             :                     .result = 0,</span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">          66 :                     .user_data = timer.handle,</span></span>
-<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">          66 :                 };</span></span>
-<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">          66 :                 deliver_completion(completion);</span></span>
-<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">          66 :                 triggered++;</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">          54 :                     .user_data = timer.handle,</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">          54 :                 };</span></span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaGNC">          54 :                 deliver_completion(completion);</span></span>
+<span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">          54 :                 triggered++;</span></span>
 <span id="L186"><span class="lineNum">     186</span>                 :             : </span>
 <span id="L187"><span class="lineNum">     187</span>                 :             :                 // Reschedule if repeating</span>
-<span id="L188"><span class="lineNum">     188</span>         [<span class="tlaGBC" title="Branch 0 was taken 37 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 29 times"> + </span>]:<span class="tlaGNC">          66 :                 if (timer.interval_ms &gt; 0) {</span></span>
-<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">          37 :                     timer.expires_at_ms = now_ms + timer.interval_ms;</span></span>
+<span id="L188"><span class="lineNum">     188</span>         [<span class="tlaGBC" title="Branch 0 was taken 25 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 29 times"> + </span>]:<span class="tlaGNC">          54 :                 if (timer.interval_ms &gt; 0) {</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :<span class="tlaGNC">          25 :                     timer.expires_at_ms = now_ms + timer.interval_ms;</span></span>
 <span id="L190"><span class="lineNum">     190</span>                 :             :                 } else {</span>
 <span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">          29 :                     timer.expires_at_ms = -1; // Mark for removal</span></span>
 <span id="L192"><span class="lineNum">     192</span>                 :             :                 }</span>
@@ -273,36 +273,36 @@
 <span id="L195"><span class="lineNum">     195</span>                 :             :     }</span>
 <span id="L196"><span class="lineNum">     196</span>                 :             : </span>
 <span id="L197"><span class="lineNum">     197</span>                 :             :     // Remove expired one-shot timers</span>
-<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">         106 :     timers_.erase(</span></span>
-<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">          53 :         std::remove_if(timers_.begin(), timers_.end(),</span></span>
-<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">         122 :                        [](const TimerEntry&amp; t) { return t.expires_at_ms &lt; 0; }),</span></span>
-<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">          53 :         timers_.end());</span></span>
+<span id="L198"><span class="lineNum">     198</span>                 :<span class="tlaGNC">          82 :     timers_.erase(</span></span>
+<span id="L199"><span class="lineNum">     199</span>                 :<span class="tlaGNC">          41 :         std::remove_if(timers_.begin(), timers_.end(),</span></span>
+<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">          98 :                        [](const TimerEntry&amp; t) { return t.expires_at_ms &lt; 0; }),</span></span>
+<span id="L201"><span class="lineNum">     201</span>                 :<span class="tlaGNC">          41 :         timers_.end());</span></span>
 <span id="L202"><span class="lineNum">     202</span>                 :             : </span>
 <span id="L203"><span class="lineNum">     203</span>                 :             :     // Sort remaining timers by expiry</span>
-<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">          53 :     std::sort(timers_.begin(), timers_.end(),</span></span>
-<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">          88 :               [](const TimerEntry&amp; a, const TimerEntry&amp; b) {</span></span>
-<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">          88 :                   return a.expires_at_ms &lt; b.expires_at_ms;</span></span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">          41 :     std::sort(timers_.begin(), timers_.end(),</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :<span class="tlaGNC">          64 :               [](const TimerEntry&amp; a, const TimerEntry&amp; b) {</span></span>
+<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">          64 :                   return a.expires_at_ms &lt; b.expires_at_ms;</span></span>
 <span id="L207"><span class="lineNum">     207</span>                 :             :               });</span>
 <span id="L208"><span class="lineNum">     208</span>                 :             : </span>
 <span id="L209"><span class="lineNum">     209</span>                 :             :     // Update timerfd to next expiry if we have timers</span>
-<span id="L210"><span class="lineNum">     210</span>         [<span class="tlaGBC" title="Branch 0 was taken 49 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          53 :     if (!timers_.empty()) {</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">          49 :         int64_t nextExpiry = timers_.front().expires_at_ms;</span></span>
+<span id="L210"><span class="lineNum">     210</span>         [<span class="tlaGBC" title="Branch 0 was taken 37 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          41 :     if (!timers_.empty()) {</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">          37 :         int64_t nextExpiry = timers_.front().expires_at_ms;</span></span>
 <span id="L212"><span class="lineNum">     212</span>                 :             :         struct timespec now_ts;</span>
-<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">          49 :         clock_gettime(CLOCK_MONOTONIC, &amp;now_ts);</span></span>
-<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">          49 :         int64_t now_abs_ms = now_ts.tv_sec * 1000 + now_ts.tv_nsec / 1000000;</span></span>
-<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">          49 :         int64_t delay_ms = nextExpiry - now_abs_ms;</span></span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">          49 :         delay_ms = std::max&lt;int64_t&gt;(delay_ms, 1);</span></span>
-<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC">          49 :         struct itimerspec new_val{};</span></span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">          49 :         new_val.it_value.tv_sec = delay_ms / 1000;</span></span>
-<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">          49 :         new_val.it_value.tv_nsec = (delay_ms % 1000) * 1000000;</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">          49 :         timerfd_settime(timerfd_, 0, &amp;new_val, nullptr);</span></span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">          37 :         clock_gettime(CLOCK_MONOTONIC, &amp;now_ts);</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">          37 :         int64_t now_abs_ms = now_ts.tv_sec * 1000 + now_ts.tv_nsec / 1000000;</span></span>
+<span id="L215"><span class="lineNum">     215</span>                 :<span class="tlaGNC">          37 :         int64_t delay_ms = nextExpiry - now_abs_ms;</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">          37 :         delay_ms = std::max&lt;int64_t&gt;(delay_ms, 1);</span></span>
+<span id="L217"><span class="lineNum">     217</span>                 :<span class="tlaGNC">          37 :         struct itimerspec new_val{};</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">          37 :         new_val.it_value.tv_sec = delay_ms / 1000;</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">          37 :         new_val.it_value.tv_nsec = (delay_ms % 1000) * 1000000;</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">          37 :         timerfd_settime(timerfd_, 0, &amp;new_val, nullptr);</span></span>
 <span id="L221"><span class="lineNum">     221</span>                 :             :     } else {</span>
 <span id="L222"><span class="lineNum">     222</span>                 :             :         // No timers, disarm</span>
 <span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaGNC">           4 :         struct itimerspec new_val{};</span></span>
 <span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">           4 :         timerfd_settime(timerfd_, 0, &amp;new_val, nullptr);</span></span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     }</span>
 <span id="L226"><span class="lineNum">     226</span>                 :             : </span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">          53 :     return triggered;</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">          41 :     return triggered;</span></span>
 <span id="L228"><span class="lineNum">     228</span>                 :             : }</span>
 <span id="L229"><span class="lineNum">     229</span>                 :             : </span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : // --- Sub-methods extracted from process_pending_op ---</span>
@@ -469,22 +469,22 @@
 <span id="L390"><span class="lineNum">     390</span>                 :             : </span>
 <span id="L391"><span class="lineNum">     391</span>                 :             : // --- Event dispatch ---</span>
 <span id="L392"><span class="lineNum">     392</span>                 :             : </span>
-<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC tlaBgGNC">         151 : void EpollBackend::dispatch_event(int fd, uint32_t events) {</span></span>
-<span id="L394"><span class="lineNum">     394</span>         [<span class="tlaGBC" title="Branch 0 was taken 53 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 98 times"> + </span>]:<span class="tlaGNC">         151 :     if (fd == timerfd_) {</span></span>
-<span id="L395"><span class="lineNum">     395</span>                 :<span class="tlaGNC">          53 :         process_timers();</span></span>
-<span id="L396"><span class="lineNum">     396</span>         [<span class="tlaGBC" title="Branch 0 was taken 98 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          98 :     } else if (fd &gt;= 0) {</span></span>
-<span id="L397"><span class="lineNum">     397</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 98 times"> + </span>]:<span class="tlaGNC">          98 :         if (pending_ops_.find(fd) != pending_ops_.end()) {</span></span>
+<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC tlaBgGNC">         137 : void EpollBackend::dispatch_event(int fd, uint32_t events) {</span></span>
+<span id="L394"><span class="lineNum">     394</span>         [<span class="tlaGBC" title="Branch 0 was taken 41 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 96 times"> + </span>]:<span class="tlaGNC">         137 :     if (fd == timerfd_) {</span></span>
+<span id="L395"><span class="lineNum">     395</span>                 :<span class="tlaGNC">          41 :         process_timers();</span></span>
+<span id="L396"><span class="lineNum">     396</span>         [<span class="tlaGBC" title="Branch 0 was taken 96 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          96 :     } else if (fd &gt;= 0) {</span></span>
+<span id="L397"><span class="lineNum">     397</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 96 times"> + </span>]:<span class="tlaGNC">          96 :         if (pending_ops_.find(fd) != pending_ops_.end()) {</span></span>
 <span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             process_pending_op(fd, events);</span></span>
 <span id="L399"><span class="lineNum">     399</span>                 :             :         } else {</span>
-<span id="L400"><span class="lineNum">     400</span>         [<span class="tlaGBC" title="Branch 0 was taken 98 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">          98 :             if (events &amp; EPOLLIN) {</span></span>
-<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">          98 :                 service_read_handler(fd);</span></span>
+<span id="L400"><span class="lineNum">     400</span>         [<span class="tlaGBC" title="Branch 0 was taken 96 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">          96 :             if (events &amp; EPOLLIN) {</span></span>
+<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">          96 :                 service_read_handler(fd);</span></span>
 <span id="L402"><span class="lineNum">     402</span>                 :             :             }</span>
-<span id="L403"><span class="lineNum">     403</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 97 times"> + </span>]:<span class="tlaGNC">          98 :             if (events &amp; EPOLLOUT) {</span></span>
+<span id="L403"><span class="lineNum">     403</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 95 times"> + </span>]:<span class="tlaGNC">          96 :             if (events &amp; EPOLLOUT) {</span></span>
 <span id="L404"><span class="lineNum">     404</span>                 :<span class="tlaGNC">           1 :                 service_write_handler(fd);</span></span>
 <span id="L405"><span class="lineNum">     405</span>                 :             :             }</span>
 <span id="L406"><span class="lineNum">     406</span>                 :             :         }</span>
 <span id="L407"><span class="lineNum">     407</span>                 :             :     }</span>
-<span id="L408"><span class="lineNum">     408</span>                 :<span class="tlaGNC">         151 : }</span></span>
+<span id="L408"><span class="lineNum">     408</span>                 :<span class="tlaGNC">         137 : }</span></span>
 <span id="L409"><span class="lineNum">     409</span>                 :             : </span>
 <span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">          54 : uint64_t EpollBackend::run_after(ActorId actor, int delay_ms) {</span></span>
 <span id="L411"><span class="lineNum">     411</span>                 :<span class="tlaGNC">          54 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
@@ -921,21 +921,21 @@
 <span id="L842"><span class="lineNum">     842</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L843"><span class="lineNum">     843</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 : }</span></span>
 <span id="L844"><span class="lineNum">     844</span>                 :             : </span>
-<span id="L845"><span class="lineNum">     845</span>                 :<span class="tlaGNC">         373 : int EpollBackend::wait(int timeout_ms) {</span></span>
+<span id="L845"><span class="lineNum">     845</span>                 :<span class="tlaGNC">         360 : int EpollBackend::wait(int timeout_ms) {</span></span>
 <span id="L846"><span class="lineNum">     846</span>                 :             :     struct epoll_event events[16];</span>
-<span id="L847"><span class="lineNum">     847</span>                 :<span class="tlaGNC">         373 :     int num_events = epoll_wait(epoll_fd_, events, 16, timeout_ms);</span></span>
+<span id="L847"><span class="lineNum">     847</span>                 :<span class="tlaGNC">         360 :     int num_events = epoll_wait(epoll_fd_, events, 16, timeout_ms);</span></span>
 <span id="L848"><span class="lineNum">     848</span>                 :             : </span>
-<span id="L849"><span class="lineNum">     849</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 367 times"> + </span>]:<span class="tlaGNC">         373 :     if (num_events &lt; 0) {</span></span>
-<span id="L850"><span class="lineNum">     850</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">           6 :         if (errno == EINTR)</span></span>
+<span id="L849"><span class="lineNum">     849</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 356 times"> + </span>]:<span class="tlaGNC">         360 :     if (num_events &lt; 0) {</span></span>
+<span id="L850"><span class="lineNum">     850</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :         if (errno == EINTR)</span></span>
 <span id="L851"><span class="lineNum">     851</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return 0;</span></span>
-<span id="L852"><span class="lineNum">     852</span>                 :<span class="tlaGNC tlaBgGNC">           6 :         return -1;</span></span>
+<span id="L852"><span class="lineNum">     852</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         return -1;</span></span>
 <span id="L853"><span class="lineNum">     853</span>                 :             :     }</span>
 <span id="L854"><span class="lineNum">     854</span>                 :             : </span>
-<span id="L855"><span class="lineNum">     855</span>         [<span class="tlaGBC" title="Branch 0 was taken 151 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 367 times"> + </span>]:<span class="tlaGNC">         518 :     for (int i = 0; i &lt; num_events; ++i) {</span></span>
-<span id="L856"><span class="lineNum">     856</span>                 :<span class="tlaGNC">         151 :         dispatch_event(events[i].data.fd, events[i].events);</span></span>
+<span id="L855"><span class="lineNum">     855</span>         [<span class="tlaGBC" title="Branch 0 was taken 137 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 356 times"> + </span>]:<span class="tlaGNC">         493 :     for (int i = 0; i &lt; num_events; ++i) {</span></span>
+<span id="L856"><span class="lineNum">     856</span>                 :<span class="tlaGNC">         137 :         dispatch_event(events[i].data.fd, events[i].events);</span></span>
 <span id="L857"><span class="lineNum">     857</span>                 :             :     }</span>
 <span id="L858"><span class="lineNum">     858</span>                 :             : </span>
-<span id="L859"><span class="lineNum">     859</span>                 :<span class="tlaGNC">         367 :     return num_events;</span></span>
+<span id="L859"><span class="lineNum">     859</span>                 :<span class="tlaGNC">         356 :     return num_events;</span></span>
 <span id="L860"><span class="lineNum">     860</span>                 :             : }</span>
 <span id="L861"><span class="lineNum">     861</span>                 :             : </span>
 <span id="L862"><span class="lineNum">     862</span>                 :<span class="tlaGNC">         189 : void EpollBackend::set_read_handler(int fd, read_callback handler) {</span></span>
@@ -952,17 +952,17 @@
 <span id="L873"><span class="lineNum">     873</span>                 :<span class="tlaGNC">         183 :     read_handlers_.erase(fd);</span></span>
 <span id="L874"><span class="lineNum">     874</span>                 :<span class="tlaGNC">         183 : }</span></span>
 <span id="L875"><span class="lineNum">     875</span>                 :             : </span>
-<span id="L876"><span class="lineNum">     876</span>                 :<span class="tlaGNC">          98 : void EpollBackend::service_read_handler(int fd) {</span></span>
-<span id="L877"><span class="lineNum">     877</span>                 :<span class="tlaGNC">          98 :     read_callback cb;</span></span>
+<span id="L876"><span class="lineNum">     876</span>                 :<span class="tlaGNC">          96 : void EpollBackend::service_read_handler(int fd) {</span></span>
+<span id="L877"><span class="lineNum">     877</span>                 :<span class="tlaGNC">          96 :     read_callback cb;</span></span>
 <span id="L878"><span class="lineNum">     878</span>                 :             :     {</span>
-<span id="L879"><span class="lineNum">     879</span>                 :<span class="tlaGNC">          98 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
-<span id="L880"><span class="lineNum">     880</span>                 :<span class="tlaGNC">          98 :         auto it = read_handlers_.find(fd);</span></span>
-<span id="L881"><span class="lineNum">     881</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 92 times"> + </span>]:<span class="tlaGNC">          98 :         if (it == read_handlers_.end())</span></span>
-<span id="L882"><span class="lineNum">     882</span>                 :<span class="tlaGNC">           6 :             return;</span></span>
+<span id="L879"><span class="lineNum">     879</span>                 :<span class="tlaGNC">          96 :         std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
+<span id="L880"><span class="lineNum">     880</span>                 :<span class="tlaGNC">          96 :         auto it = read_handlers_.find(fd);</span></span>
+<span id="L881"><span class="lineNum">     881</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 92 times"> + </span>]:<span class="tlaGNC">          96 :         if (it == read_handlers_.end())</span></span>
+<span id="L882"><span class="lineNum">     882</span>                 :<span class="tlaGNC">           4 :             return;</span></span>
 <span id="L883"><span class="lineNum">     883</span>                 :<span class="tlaGNC">          92 :         cb = it-&gt;second;</span></span>
-<span id="L884"><span class="lineNum">     884</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          98 :     }</span></span>
+<span id="L884"><span class="lineNum">     884</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          96 :     }</span></span>
 <span id="L885"><span class="lineNum">     885</span>                 :<span class="tlaGNC">          92 :     cb(fd);</span></span>
-<span id="L886"><span class="lineNum">     886</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span>]:<span class="tlaGNC">          98 : }</span></span>
+<span id="L886"><span class="lineNum">     886</span>         [<span class="tlaGBC" title="Branch 0 was taken 92 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          96 : }</span></span>
 <span id="L887"><span class="lineNum">     887</span>                 :             : </span>
 <span id="L888"><span class="lineNum">     888</span>                 :<span class="tlaGNC">           2 : void EpollBackend::set_write_handler(int fd, write_callback handler) {</span></span>
 <span id="L889"><span class="lineNum">     889</span>                 :<span class="tlaGNC">           2 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
@@ -990,23 +990,23 @@
 <span id="L911"><span class="lineNum">     911</span>                 :<span class="tlaGNC">           1 :     cb(fd);</span></span>
 <span id="L912"><span class="lineNum">     912</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 : }</span></span>
 <span id="L913"><span class="lineNum">     913</span>                 :             : </span>
-<span id="L914"><span class="lineNum">     914</span>                 :<span class="tlaGNC">         369 : void EpollBackend::process_events() {</span></span>
-<span id="L915"><span class="lineNum">     915</span>                 :<span class="tlaGNC">         369 :     std::vector&lt;OpCompletion&gt; completions;</span></span>
+<span id="L914"><span class="lineNum">     914</span>                 :<span class="tlaGNC">         358 : void EpollBackend::process_events() {</span></span>
+<span id="L915"><span class="lineNum">     915</span>                 :<span class="tlaGNC">         358 :     std::vector&lt;OpCompletion&gt; completions;</span></span>
 <span id="L916"><span class="lineNum">     916</span>                 :             :     {</span>
-<span id="L917"><span class="lineNum">     917</span>                 :<span class="tlaGNC">         369 :         std::lock_guard&lt;std::mutex&gt; lock(completions_mutex_);</span></span>
-<span id="L918"><span class="lineNum">     918</span>                 :<span class="tlaGNC">         369 :         completions = std::move(pending_completions_);</span></span>
-<span id="L919"><span class="lineNum">     919</span>                 :<span class="tlaGNC">         369 :         pending_completions_.clear();</span></span>
-<span id="L920"><span class="lineNum">     920</span>                 :<span class="tlaGNC">         369 :     }</span></span>
-<span id="L921"><span class="lineNum">     921</span>         [<span class="tlaGBC" title="Branch 0 was taken 36 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 369 times"> + </span>]:<span class="tlaGNC">         405 :     for (auto&amp; completion : completions) {</span></span>
+<span id="L917"><span class="lineNum">     917</span>                 :<span class="tlaGNC">         358 :         std::lock_guard&lt;std::mutex&gt; lock(completions_mutex_);</span></span>
+<span id="L918"><span class="lineNum">     918</span>                 :<span class="tlaGNC">         358 :         completions = std::move(pending_completions_);</span></span>
+<span id="L919"><span class="lineNum">     919</span>                 :<span class="tlaGNC">         358 :         pending_completions_.clear();</span></span>
+<span id="L920"><span class="lineNum">     920</span>                 :<span class="tlaGNC">         358 :     }</span></span>
+<span id="L921"><span class="lineNum">     921</span>         [<span class="tlaGBC" title="Branch 0 was taken 36 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 358 times"> + </span>]:<span class="tlaGNC">         394 :     for (auto&amp; completion : completions) {</span></span>
 <span id="L922"><span class="lineNum">     922</span>                 :<span class="tlaGNC">          36 :         deliver_completion(completion);</span></span>
 <span id="L923"><span class="lineNum">     923</span>                 :             :     }</span>
-<span id="L924"><span class="lineNum">     924</span>                 :<span class="tlaGNC">         369 : }</span></span>
+<span id="L924"><span class="lineNum">     924</span>                 :<span class="tlaGNC">         358 : }</span></span>
 <span id="L925"><span class="lineNum">     925</span>                 :             : </span>
-<span id="L926"><span class="lineNum">     926</span>                 :<span class="tlaGNC">         102 : void EpollBackend::deliver_completion(OpCompletion completion) {</span></span>
-<span id="L927"><span class="lineNum">     927</span>         [<span class="tlaGBC" title="Branch 0 was taken 102 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         102 :     if (loop_) {</span></span>
-<span id="L928"><span class="lineNum">     928</span>                 :<span class="tlaGNC">         102 :         loop_-&gt;enqueue_completion(completion);</span></span>
+<span id="L926"><span class="lineNum">     926</span>                 :<span class="tlaGNC">          90 : void EpollBackend::deliver_completion(OpCompletion completion) {</span></span>
+<span id="L927"><span class="lineNum">     927</span>         [<span class="tlaGBC" title="Branch 0 was taken 90 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          90 :     if (loop_) {</span></span>
+<span id="L928"><span class="lineNum">     928</span>                 :<span class="tlaGNC">          90 :         loop_-&gt;enqueue_completion(completion);</span></span>
 <span id="L929"><span class="lineNum">     929</span>                 :             :     }</span>
-<span id="L930"><span class="lineNum">     930</span>                 :<span class="tlaGNC">         102 : }</span></span>
+<span id="L930"><span class="lineNum">     930</span>                 :<span class="tlaGNC">          90 : }</span></span>
 <span id="L931"><span class="lineNum">     931</span>                 :             : </span>
 <span id="L932"><span class="lineNum">     932</span>                 :             : #else // !defined(__linux__)</span>
 <span id="L933"><span class="lineNum">     933</span>                 :             : </span>

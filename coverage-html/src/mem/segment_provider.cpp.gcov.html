@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 01:44:05</td>
+            <td class="headerValue">2026-06-20 06:19:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -138,9 +138,9 @@
 <span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">          66 :         munmap(segments_[idx].base, segments_[idx].size);</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          66 :         segments_.erase(segments_.begin() + idx);</span></span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :         // Update indices for slabs in segments that shifted</span>
-<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaGBC" title="Branch 0 was taken 882 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span>]:<span class="tlaGNC">         948 :         for (auto&amp; [ptr, rec] : slab_records_) {</span></span>
-<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 856 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 26 times"> + </span>]:<span class="tlaGNC">         882 :             if (rec.segment_index &gt; idx) {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">         856 :                 --rec.segment_index;</span></span>
+<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaGBC" title="Branch 0 was taken 975 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span>]:<span class="tlaGNC">        1041 :         for (auto&amp; [ptr, rec] : slab_records_) {</span></span>
+<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 913 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 62 times"> + </span>]:<span class="tlaGNC">         975 :             if (rec.segment_index &gt; idx) {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">         913 :                 --rec.segment_index;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :             }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :         }</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     }</span>
@@ -192,9 +192,9 @@
 <span id="L114"><span class="lineNum">     114</span>                 :             : </span>
 <span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">         485 : void* SegmentProvider::carve_from_segment(SizeClass sc) {</span></span>
 <span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">         485 :     size_t needed = slab_size(sc);</span></span>
-<span id="L117"><span class="lineNum">     117</span>         [<span class="tlaGBC" title="Branch 0 was taken 1428 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span>]:<span class="tlaGNC">        1494 :     for (size_t i = 0; i &lt; segments_.size(); ++i) {</span></span>
-<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">        1428 :         auto&amp; seg = segments_[i];</span></span>
-<span id="L119"><span class="lineNum">     119</span>         [<span class="tlaGBC" title="Branch 0 was taken 419 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1009 times"> + </span>]:<span class="tlaGNC">        1428 :         if (seg.size - seg.offset &gt;= needed) {</span></span>
+<span id="L117"><span class="lineNum">     117</span>         [<span class="tlaGBC" title="Branch 0 was taken 1447 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 66 times"> + </span>]:<span class="tlaGNC">        1513 :     for (size_t i = 0; i &lt; segments_.size(); ++i) {</span></span>
+<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaGNC">        1447 :         auto&amp; seg = segments_[i];</span></span>
+<span id="L119"><span class="lineNum">     119</span>         [<span class="tlaGBC" title="Branch 0 was taken 419 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1028 times"> + </span>]:<span class="tlaGNC">        1447 :         if (seg.size - seg.offset &gt;= needed) {</span></span>
 <span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">         419 :             void* slab = static_cast&lt;std::byte*&gt;(seg.base) + seg.offset;</span></span>
 <span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">         419 :             seg.offset += needed;</span></span>
 <span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">         419 :             seg.inc_ref();</span></span>
@@ -224,11 +224,11 @@
 <span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">      162729 : SegmentProvider::SlabInfo SegmentProvider::lookup_slab(void* ptr) const {</span></span>
 <span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">      162729 :     std::lock_guard&lt;std::mutex&gt; lock(mutex_);</span></span>
 <span id="L148"><span class="lineNum">     148</span>                 :             : </span>
-<span id="L149"><span class="lineNum">     149</span>         [<span class="tlaGBC" title="Branch 0 was taken 4017271 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 158 times"> + </span>]:<span class="tlaGNC">     4017429 :     for (const auto&amp; [slab_base, rec] : slab_records_) {</span></span>
-<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">     4017271 :         auto* begin = static_cast&lt;std::byte*&gt;(slab_base);</span></span>
-<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">     4017271 :         auto* end = begin + rec.slab_size_bytes;</span></span>
-<span id="L152"><span class="lineNum">     152</span>   [<span class="tlaGBC" title="Branch 0 was taken 1920606 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2096665 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 162571 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1758035 times"> + </span> :<span class="tlaGNC">     4017271 :         if (ptr &gt;= begin &amp;&amp; ptr &lt; end &amp;&amp; rec.segment_index &lt; segments_.size()) {</span></span>
-<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 162571 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 162571 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 3854700 times"> + </span>]
+<span id="L149"><span class="lineNum">     149</span>         [<span class="tlaGBC" title="Branch 0 was taken 3950951 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 158 times"> + </span>]:<span class="tlaGNC">     3951109 :     for (const auto&amp; [slab_base, rec] : slab_records_) {</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">     3950951 :         auto* begin = static_cast&lt;std::byte*&gt;(slab_base);</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">     3950951 :         auto* end = begin + rec.slab_size_bytes;</span></span>
+<span id="L152"><span class="lineNum">     152</span>   [<span class="tlaGBC" title="Branch 0 was taken 1877846 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2073105 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 162571 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1715275 times"> + </span> :<span class="tlaGNC">     3950951 :         if (ptr &gt;= begin &amp;&amp; ptr &lt; end &amp;&amp; rec.segment_index &lt; segments_.size()) {</span></span>
+<span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 162571 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span><span class="tlaGBC" title="Branch 6 was taken 162571 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 3788380 times"> + </span>]
 <span id="L153"><span class="lineNum">     153</span>                 :<span class="tlaGNC">      162571 :             return SlabInfo{segments_[rec.segment_index].base,</span></span>
 <span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">      162571 :                             slab_base,</span></span>
 <span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">      325142 :                             segments_[rec.segment_index].size,</span></span>
