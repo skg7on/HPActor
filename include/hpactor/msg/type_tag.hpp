@@ -84,6 +84,13 @@ enum class TypeTag : uint32_t {
     // ── Backpressure control (0x70–0x7F) ─────────────────────────────────
     BackpressureSignalTag = 0x70, ///< Backpressure signal (local or remote).
 
+    // ── Receptionist (0x71–0x75) ───────────────────────────────────────────
+    ReceptionistRegisterTag = 0x71,    ///< Register actor under a ServiceKey.
+    ReceptionistSubscribeTag = 0x72,   ///< Subscribe to ServiceKey changes.
+    ReceptionistUnregisterTag = 0x73,  ///< Unregister actor from a ServiceKey.
+    ReceptionistUnsubscribeTag = 0x74, ///< Unsubscribe from a ServiceKey.
+    ReceptionistListingTag = 0x75,     ///< ServiceKey membership listing.
+
     // ── Subsystem extension range (0x80–0xFF) ────────────────────────────
     // 256 slots reserved for subsystem-defined TypeTags.
     //
