@@ -25,7 +25,8 @@ namespace fs = std::filesystem;
 
 FileStateStore::FileStateStore(std::string root_dir)
     : root_dir_(std::move(root_dir)) {
-    fs::create_directories(root_dir_);
+    std::error_code ec;
+    fs::create_directories(root_dir_, ec);
 }
 
 std::string FileStateStore::actor_dir(std::string_view persistence_id) const {
@@ -49,7 +50,12 @@ FileStateStore::write_snapshot(std::string_view persistence_id,
     std::lock_guard<std::mutex> lock(mutex_);
     std::string key(persistence_id);
     std::string dir = actor_dir(persistence_id);
-    fs::create_directories(dir);
+    std::error_code ec;
+    fs::create_directories(dir, ec);
+    if (ec) {
+        return result<SnapshotRecord>::make(error(
+            static_cast<uint32_t>(FailureReason::PassivationSnapshotFailed)));
+    }
 
     uint64_t seq = next_sequences_[key]++;
 
@@ -81,12 +87,16 @@ FileStateStore::write_snapshot(std::string_view persistence_id,
         ofs.write(reinterpret_cast<const char*>(data.data()),
                   static_cast<std::streamsize>(data.size()));
         if (!ofs) {
-            fs::remove(tmp_path);
+            fs::remove(tmp_path, ec);
             return result<SnapshotRecord>::make(error(
                 static_cast<uint32_t>(FailureReason::PassivationSnapshotFailed)));
         }
     }
-    fs::rename(tmp_path, final_path);
+    fs::rename(tmp_path, final_path, ec);
+    if (ec) {
+        return result<SnapshotRecord>::make(error(
+            static_cast<uint32_t>(FailureReason::PassivationSnapshotFailed)));
+    }
     return result<SnapshotRecord>::make(std::move(rec));
 }
 
@@ -143,12 +153,12 @@ FileStateStore::append_event(std::string_view /*persistence_id*/,
     // Event journaling to disk is not yet implemented for FileStateStore.
     // Callers should use InMemoryStateStore for event-sourced actors until
     // disk-backed event persistence is added in a follow-on change.
-    return result<void>::make(
-        error(static_cast<uint32_t>(FailureReason::Unknown), "FileStateStore "
-                                                             "event "
-                                                             "persistence not "
-                                                             "yet "
-                                                             "implemented"));
+    return result<void>::make(error(static_cast<uint32_t>(FailureReason::Unknown),
+                                    "FileStateStore "
+                                    "event "
+                                    "persistence not "
+                                    "yet "
+                                    "implemented"));
 }
 
 result<std::vector<EventRecord>>
