@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 08:58:21</td>
+            <td class="headerValue">2026-06-20 13:35:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">97.1&nbsp;%</td>
@@ -290,13 +290,13 @@
 <span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">           2 :     return true;</span></span>
 <span id="L208"><span class="lineNum">     208</span>                 :             : }</span>
 <span id="L209"><span class="lineNum">     209</span>                 :             : </span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">           8 : void EventBasedActor::handle_down_msg(const TypedMessage&amp; msg) {</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">           8 :     auto* ctx = context();</span></span>
-<span id="L212"><span class="lineNum">     212</span>         [<span class="tlaGBC" title="Branch 0 was taken 8 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           8 :     if (ctx != nullptr) {</span></span>
-<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">           8 :         ctx-&gt;remove_linked(msg.sender_address());</span></span>
-<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">           8 :         ctx-&gt;remove_monitored(msg.sender_address());</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">           7 : void EventBasedActor::handle_down_msg(const TypedMessage&amp; msg) {</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">           7 :     auto* ctx = context();</span></span>
+<span id="L212"><span class="lineNum">     212</span>         [<span class="tlaGBC" title="Branch 0 was taken 7 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           7 :     if (ctx != nullptr) {</span></span>
+<span id="L213"><span class="lineNum">     213</span>                 :<span class="tlaGNC">           7 :         ctx-&gt;remove_linked(msg.sender_address());</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">           7 :         ctx-&gt;remove_monitored(msg.sender_address());</span></span>
 <span id="L215"><span class="lineNum">     215</span>                 :             :     }</span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">           8 : }</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC">           7 : }</span></span>
 <span id="L217"><span class="lineNum">     217</span>                 :             : </span>
 <span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC">         438 : void EventBasedActor::become(Behavior bh) {</span></span>
 <span id="L219"><span class="lineNum">     219</span>   [<span class="tlaGBC" title="Branch 0 was taken 438 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 438 times"> + </span> :<span class="tlaGNC">         438 :     FAULT_INJECT(&quot;hpactor.actor.become.drop&quot;) {</span></span>
@@ -382,10 +382,10 @@
 <span id="L295"><span class="lineNum">     295</span>                 :<span class="tlaGNC">         601 :     (void)pb.SerializeToArray(payload.data(), static_cast&lt;int&gt;(payload.size()));</span></span>
 <span id="L296"><span class="lineNum">     296</span>                 :             : </span>
 <span id="L297"><span class="lineNum">     297</span>                 :             :     // Send DownMsg to all linked actors</span>
-<span id="L298"><span class="lineNum">     298</span>         [<span class="tlaGBC" title="Branch 0 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 601 times"> + </span>]:<span class="tlaGNC">         607 :     for (const auto&amp; addr : ctx-&gt;linked_actors()) {</span></span>
-<span id="L299"><span class="lineNum">     299</span>                 :<span class="tlaGNC">           6 :         TypedMessage down_msg(TypeTag::DownMsg, StreamBuffer(payload));</span></span>
-<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">           6 :         ctx-&gt;send(addr, std::move(down_msg));</span></span>
-<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">         607 :     }</span></span>
+<span id="L298"><span class="lineNum">     298</span>         [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 601 times"> + </span>]:<span class="tlaGNC">         606 :     for (const auto&amp; addr : ctx-&gt;linked_actors()) {</span></span>
+<span id="L299"><span class="lineNum">     299</span>                 :<span class="tlaGNC">           5 :         TypedMessage down_msg(TypeTag::DownMsg, StreamBuffer(payload));</span></span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">           5 :         ctx-&gt;send(addr, std::move(down_msg));</span></span>
+<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">         606 :     }</span></span>
 <span id="L302"><span class="lineNum">     302</span>                 :             : </span>
 <span id="L303"><span class="lineNum">     303</span>                 :             :     // Send DownMsg to all monitored actors</span>
 <span id="L304"><span class="lineNum">     304</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 601 times"> + </span>]:<span class="tlaGNC">         604 :     for (const auto&amp; addr : ctx-&gt;monitored_actors()) {</span></span>
@@ -399,7 +399,7 @@
 <span id="L312"><span class="lineNum">     312</span>                 :             : </span>
 <span id="L313"><span class="lineNum">     313</span>                 :<span class="tlaGNC">        1076 : bool EventBasedActor::apply_drain_gate(TypedMessage&amp; msg) {</span></span>
 <span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaGNC">        1076 :     auto* lc = as_lifecycle();</span></span>
-<span id="L315"><span class="lineNum">     315</span>   [<span class="tlaGBC" title="Branch 0 was taken 192 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 884 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 174 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 18 times"> + </span> :<span class="tlaGNC">        1076 :     if (!lc || lc-&gt;state() != LifecycleState::kDraining)</span></span>
+<span id="L315"><span class="lineNum">     315</span>   [<span class="tlaGBC" title="Branch 0 was taken 193 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 883 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 175 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 18 times"> + </span> :<span class="tlaGNC">        1076 :     if (!lc || lc-&gt;state() != LifecycleState::kDraining)</span></span>
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1058 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 18 times"> + </span>]
 <span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">        1058 :         return true;</span></span>
 <span id="L317"><span class="lineNum">     317</span>                 :             : </span>
@@ -412,7 +412,7 @@
 <span id="L324"><span class="lineNum">     324</span>                 :             : </span>
 <span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC">        1043 : void EventBasedActor::try_drain_completion() {</span></span>
 <span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">        1043 :     auto* lc = as_lifecycle();</span></span>
-<span id="L327"><span class="lineNum">     327</span>   [<span class="tlaGBC" title="Branch 0 was taken 175 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 868 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 157 times"> + </span> :<span class="tlaGNC">        1043 :     if (!lc || lc-&gt;state() != LifecycleState::kDraining || !mailbox_is_empty())</span></span>
+<span id="L327"><span class="lineNum">     327</span>   [<span class="tlaGBC" title="Branch 0 was taken 176 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 867 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 18 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 158 times"> + </span> :<span class="tlaGNC">        1043 :     if (!lc || lc-&gt;state() != LifecycleState::kDraining || !mailbox_is_empty())</span></span>
 <span class="lineNum">        </span>    <span class="tlaGBC" title="Branch 4 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 1035 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 8 times"> + </span>]
 <span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">        1035 :         return;</span></span>
 <span id="L329"><span class="lineNum">     329</span>                 :             : </span>
@@ -425,7 +425,7 @@
 <span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">        1072 : bool EventBasedActor::dispatch_system_message(const TypedMessage&amp; msg) {</span></span>
 <span id="L337"><span class="lineNum">     337</span>                 :<span class="tlaGNC">        1072 :     bool handled = false;</span></span>
 <span id="L338"><span class="lineNum">     338</span>   [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 2 times"> + </span> :<span class="tlaGNC">        1072 :     switch (msg.type_id()) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 8 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 1044 times"> + </span>]
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 7 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 1045 times"> + </span>]
 <span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">          11 :         case TypeTag::LinkMsg:</span></span>
 <span id="L340"><span class="lineNum">     340</span>                 :<span class="tlaGNC">          11 :             handled = handle_link_msg(msg);</span></span>
 <span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">          11 :             break;</span></span>
@@ -438,11 +438,11 @@
 <span id="L348"><span class="lineNum">     348</span>                 :<span class="tlaGNC">           2 :         case TypeTag::DemonitorMsg:</span></span>
 <span id="L349"><span class="lineNum">     349</span>                 :<span class="tlaGNC">           2 :             handled = handle_demonitor_msg(msg);</span></span>
 <span id="L350"><span class="lineNum">     350</span>                 :<span class="tlaGNC">           2 :             break;</span></span>
-<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">           8 :         case TypeTag::DownMsg:</span></span>
-<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">           8 :             handle_down_msg(msg);</span></span>
-<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">           8 :             break;</span></span>
-<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">        1044 :         default:</span></span>
-<span id="L355"><span class="lineNum">     355</span>                 :<span class="tlaGNC">        1044 :             break;</span></span>
+<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">           7 :         case TypeTag::DownMsg:</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">           7 :             handle_down_msg(msg);</span></span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">           7 :             break;</span></span>
+<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">        1045 :         default:</span></span>
+<span id="L355"><span class="lineNum">     355</span>                 :<span class="tlaGNC">        1045 :             break;</span></span>
 <span id="L356"><span class="lineNum">     356</span>                 :             :     }</span>
 <span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">        1072 :     return handled;</span></span>
 <span id="L358"><span class="lineNum">     358</span>                 :             : }</span>
@@ -841,10 +841,10 @@
 <span id="L743"><span class="lineNum">     743</span>                 :<span class="tlaGNC">          64 : }</span></span>
 <span id="L744"><span class="lineNum">     744</span>                 :             : </span>
 <span id="L745"><span class="lineNum">     745</span>                 :<span class="tlaGNC">           8 : void EventBasedActor::cancel_drain_timer() {</span></span>
-<span id="L746"><span class="lineNum">     746</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           8 :     if (drain_timer_handle_.valid() &amp;&amp; scheduler_) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 5 times"> + </span>]
-<span id="L747"><span class="lineNum">     747</span>                 :<span class="tlaGNC">           3 :         scheduler_-&gt;cancel_timer(drain_timer_handle_);</span></span>
-<span id="L748"><span class="lineNum">     748</span>                 :<span class="tlaGNC">           3 :         drain_timer_handle_ = sched::TimerHandle{};</span></span>
+<span id="L746"><span class="lineNum">     746</span>   [<span class="tlaGBC" title="Branch 0 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 6 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">           8 :     if (drain_timer_handle_.valid() &amp;&amp; scheduler_) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 6 times"> + </span>]
+<span id="L747"><span class="lineNum">     747</span>                 :<span class="tlaGNC">           2 :         scheduler_-&gt;cancel_timer(drain_timer_handle_);</span></span>
+<span id="L748"><span class="lineNum">     748</span>                 :<span class="tlaGNC">           2 :         drain_timer_handle_ = sched::TimerHandle{};</span></span>
 <span id="L749"><span class="lineNum">     749</span>                 :             :     }</span>
 <span id="L750"><span class="lineNum">     750</span>                 :<span class="tlaGNC">           8 : }</span></span>
 <span id="L751"><span class="lineNum">     751</span>                 :             : </span>

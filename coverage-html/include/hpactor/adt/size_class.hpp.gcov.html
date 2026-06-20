@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 08:58:21</td>
+            <td class="headerValue">2026-06-20 13:35:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -113,14 +113,14 @@
 <span id="L35"><span class="lineNum">      35</span>                 :             : inline constexpr size_t kSizeClassTable[kNumSizeClasses] = {</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     32, 64, 128, 256, 512, 1024, 2048, 4096};</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">      463726 : constexpr size_t size_for_class(SizeClass sc) noexcept {</span></span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      463726 :     return kSizeClassTable[static_cast&lt;uint8_t&gt;(sc)];</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">      608114 : constexpr size_t size_for_class(SizeClass sc) noexcept {</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      608114 :     return kSizeClassTable[static_cast&lt;uint8_t&gt;(sc)];</span></span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : }</span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : </span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">       91936 : inline SizeClass class_for_size(size_t user_bytes) noexcept {</span></span>
-<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 434956 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      434956 :     for (uint8_t i = 0; i &lt; kNumSizeClasses; ++i) {</span></span>
-<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 91936 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 343020 times"> + </span>]:<span class="tlaGNC">      434956 :         if (user_bytes &lt;= kSizeClassTable[i]) {</span></span>
-<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">       91936 :             return static_cast&lt;SizeClass&gt;(i);</span></span>
+<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaGNC">       91412 : inline SizeClass class_for_size(size_t user_bytes) noexcept {</span></span>
+<span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 432336 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">      432336 :     for (uint8_t i = 0; i &lt; kNumSizeClasses; ++i) {</span></span>
+<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 91412 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 340924 times"> + </span>]:<span class="tlaGNC">      432336 :         if (user_bytes &lt;= kSizeClassTable[i]) {</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">       91412 :             return static_cast&lt;SizeClass&gt;(i);</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :         }</span>
 <span id="L47"><span class="lineNum">      47</span>                 :             :     }</span>
 <span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return SizeClass::k4KB;</span></span>

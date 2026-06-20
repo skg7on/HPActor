@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 08:58:21</td>
+            <td class="headerValue">2026-06-20 13:35:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">95.8&nbsp;%</td>
@@ -100,8 +100,8 @@
 <span id="L22"><span class="lineNum">      22</span>                 :             : </span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : // ---- Constructors ----</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">         725 : StreamBuffer::StreamBuffer(size_t count)</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        1450 :     : buf_(count, uint8_t{0}), read_pos_(0) {}</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">         723 : StreamBuffer::StreamBuffer(size_t count)</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">        1446 :     : buf_(count, uint8_t{0}), read_pos_(0) {}</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : </span>
 <span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">     1222824 : StreamBuffer::StreamBuffer(std::initializer_list&lt;uint8_t&gt; ilist)</span></span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">     2445648 :     : buf_(ilist), read_pos_(0) {}</span></span>
@@ -125,15 +125,15 @@
 <span id="L47"><span class="lineNum">      47</span>                 :             : </span>
 <span id="L48"><span class="lineNum">      48</span>                 :             : // ---- Copy ----</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">        1937 : StreamBuffer::StreamBuffer(const StreamBuffer&amp; other)</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">        1937 :     : buf_(other.buf_), read_pos_(other.read_pos_) {}</span></span>
+<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">        1936 : StreamBuffer::StreamBuffer(const StreamBuffer&amp; other)</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">        1936 :     : buf_(other.buf_), read_pos_(other.read_pos_) {}</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">         389 : StreamBuffer&amp; StreamBuffer::operator=(const StreamBuffer&amp; other) {</span></span>
-<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 389 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         389 :     if (this != &amp;other) {</span></span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">         389 :         buf_ = other.buf_;</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">         389 :         read_pos_ = other.read_pos_;</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">         388 : StreamBuffer&amp; StreamBuffer::operator=(const StreamBuffer&amp; other) {</span></span>
+<span id="L54"><span class="lineNum">      54</span>         [<span class="tlaGBC" title="Branch 0 was taken 388 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         388 :     if (this != &amp;other) {</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">         388 :         buf_ = other.buf_;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">         388 :         read_pos_ = other.read_pos_;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     }</span>
-<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         389 :     return *this;</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaGNC">         388 :     return *this;</span></span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : }</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             : </span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : // ---- Capacity ----</span>
@@ -144,10 +144,10 @@
 <span id="L66"><span class="lineNum">      66</span>                 :             :     }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">         224 : }</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         766 : void StreamBuffer::resize(size_t n) {</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">         766 :     compact();</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">         766 :     buf_.resize(n);</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">         766 : }</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         765 : void StreamBuffer::resize(size_t n) {</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">         765 :     compact();</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">         765 :     buf_.resize(n);</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">         765 : }</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             : </span>
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">          80 : void StreamBuffer::resize(size_t n, uint8_t value) {</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">          80 :     compact();</span></span>
@@ -156,12 +156,12 @@
 <span id="L78"><span class="lineNum">      78</span>                 :             : </span>
 <span id="L79"><span class="lineNum">      79</span>                 :             : // ---- Reserve + Write (direct I/O) ----</span>
 <span id="L80"><span class="lineNum">      80</span>                 :             : </span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">         215 : uint8_t* StreamBuffer::reserve_tail(size_t n) {</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">         215 :     ensure_capacity(n);</span></span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">         215 :     size_t old_size = buf_.size();</span></span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">         215 :     buf_.resize(old_size + n);</span></span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">         215 :     reserve_tail_amount_ = n;</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">         215 :     return buf_.data() + old_size;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">         216 : uint8_t* StreamBuffer::reserve_tail(size_t n) {</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">         216 :     ensure_capacity(n);</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">         216 :     size_t old_size = buf_.size();</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">         216 :     buf_.resize(old_size + n);</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">         216 :     reserve_tail_amount_ = n;</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">         216 :     return buf_.data() + old_size;</span></span>
 <span id="L87"><span class="lineNum">      87</span>                 :             : }</span>
 <span id="L88"><span class="lineNum">      88</span>                 :             : </span>
 <span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">         205 : void StreamBuffer::commit_tail(size_t n) {</span></span>
@@ -229,10 +229,10 @@
 <span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">           1 :     return buf_.data() + static_cast&lt;size_t&gt;(it - buf_.begin());</span></span>
 <span id="L152"><span class="lineNum">     152</span>                 :             : }</span>
 <span id="L153"><span class="lineNum">     153</span>                 :             : </span>
-<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">         161 : void StreamBuffer::clear() noexcept {</span></span>
-<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">         161 :     buf_.clear();</span></span>
-<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">         161 :     read_pos_ = 0;</span></span>
-<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">         161 : }</span></span>
+<span id="L154"><span class="lineNum">     154</span>                 :<span class="tlaGNC">         162 : void StreamBuffer::clear() noexcept {</span></span>
+<span id="L155"><span class="lineNum">     155</span>                 :<span class="tlaGNC">         162 :     buf_.clear();</span></span>
+<span id="L156"><span class="lineNum">     156</span>                 :<span class="tlaGNC">         162 :     read_pos_ = 0;</span></span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">         162 : }</span></span>
 <span id="L158"><span class="lineNum">     158</span>                 :             : </span>
 <span id="L159"><span class="lineNum">     159</span>                 :             : // ---- Consume ----</span>
 <span id="L160"><span class="lineNum">     160</span>                 :             : </span>
@@ -240,9 +240,9 @@
 <span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">         154 :     read_pos_ += n;</span></span>
 <span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">         154 : }</span></span>
 <span id="L164"><span class="lineNum">     164</span>                 :             : </span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">        2855 : void StreamBuffer::compact() {</span></span>
-<span id="L166"><span class="lineNum">     166</span>         [<span class="tlaGBC" title="Branch 0 was taken 2793 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 62 times"> + </span>]:<span class="tlaGNC">        2855 :     if (read_pos_ == 0)</span></span>
-<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">        2793 :         return;</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">        2854 : void StreamBuffer::compact() {</span></span>
+<span id="L166"><span class="lineNum">     166</span>         [<span class="tlaGBC" title="Branch 0 was taken 2792 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 62 times"> + </span>]:<span class="tlaGNC">        2854 :     if (read_pos_ == 0)</span></span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">        2792 :         return;</span></span>
 <span id="L168"><span class="lineNum">     168</span>                 :<span class="tlaGNC">          62 :     size_t readable = buf_.size() - read_pos_;</span></span>
 <span id="L169"><span class="lineNum">     169</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 61 times"> + </span>]:<span class="tlaGNC">          62 :     if (readable == 0) {</span></span>
 <span id="L170"><span class="lineNum">     170</span>                 :<span class="tlaGNC">           1 :         buf_.clear();</span></span>
@@ -256,40 +256,40 @@
 <span id="L178"><span class="lineNum">     178</span>                 :             : </span>
 <span id="L179"><span class="lineNum">     179</span>                 :             : // ---- Comparison ----</span>
 <span id="L180"><span class="lineNum">     180</span>                 :             : </span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">          34 : bool StreamBuffer::operator==(const StreamBuffer&amp; other) const {</span></span>
-<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 33 times"> + </span>]:<span class="tlaGNC">          34 :     if (size() != other.size())</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">          32 : bool StreamBuffer::operator==(const StreamBuffer&amp; other) const {</span></span>
+<span id="L182"><span class="lineNum">     182</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 31 times"> + </span>]:<span class="tlaGNC">          32 :     if (size() != other.size())</span></span>
 <span id="L183"><span class="lineNum">     183</span>                 :<span class="tlaGNC">           1 :         return false;</span></span>
-<span id="L184"><span class="lineNum">     184</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 33 times"> + </span>]:<span class="tlaGNC">          33 :     if (size() == 0)</span></span>
+<span id="L184"><span class="lineNum">     184</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 31 times"> + </span>]:<span class="tlaGNC">          31 :     if (size() == 0)</span></span>
 <span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return true;</span></span>
-<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC tlaBgGNC">          33 :     return std::memcmp(data(), other.data(), size()) == 0;</span></span>
+<span id="L186"><span class="lineNum">     186</span>                 :<span class="tlaGNC tlaBgGNC">          31 :     return std::memcmp(data(), other.data(), size()) == 0;</span></span>
 <span id="L187"><span class="lineNum">     187</span>                 :             : }</span>
 <span id="L188"><span class="lineNum">     188</span>                 :             : </span>
 <span id="L189"><span class="lineNum">     189</span>                 :             : // ---- Private ----</span>
 <span id="L190"><span class="lineNum">     190</span>                 :             : </span>
-<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">        5048 : void StreamBuffer::maybe_compact() {</span></span>
-<span id="L192"><span class="lineNum">     192</span>         [<span class="tlaGBC" title="Branch 0 was taken 4958 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 90 times"> + </span>]:<span class="tlaGNC">        5048 :     if (read_pos_ == 0)</span></span>
-<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">        4958 :         return;</span></span>
+<span id="L191"><span class="lineNum">     191</span>                 :<span class="tlaGNC">        5041 : void StreamBuffer::maybe_compact() {</span></span>
+<span id="L192"><span class="lineNum">     192</span>         [<span class="tlaGBC" title="Branch 0 was taken 4951 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 90 times"> + </span>]:<span class="tlaGNC">        5041 :     if (read_pos_ == 0)</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">        4951 :         return;</span></span>
 <span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">          90 :     size_t readable = buf_.size() - read_pos_;</span></span>
 <span id="L195"><span class="lineNum">     195</span>   [<span class="tlaGBC" title="Branch 0 was taken 30 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 60 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 30 times"> + </span>]:<span class="tlaGNC">          90 :     if (read_pos_ &gt; readable || read_pos_ &gt; kCompactThreshold) {</span></span>
 <span id="L196"><span class="lineNum">     196</span>                 :<span class="tlaGNC">          60 :         compact();</span></span>
 <span id="L197"><span class="lineNum">     197</span>                 :             :     }</span>
 <span id="L198"><span class="lineNum">     198</span>                 :             : }</span>
 <span id="L199"><span class="lineNum">     199</span>                 :             : </span>
-<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">       19100 : void StreamBuffer::ensure_capacity(size_t additional_bytes) {</span></span>
-<span id="L201"><span class="lineNum">     201</span>         [<span class="tlaGBC" title="Branch 0 was taken 110 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18990 times"> + </span>]:<span class="tlaGNC">       19100 :     if (read_pos_ &gt; 0) {</span></span>
-<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">         110 :         size_t usable = buf_.capacity() - buf_.size();</span></span>
-<span id="L203"><span class="lineNum">     203</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 110 times"> + </span>]:<span class="tlaGNC">         110 :         if (usable &lt; additional_bytes) {</span></span>
+<span id="L200"><span class="lineNum">     200</span>                 :<span class="tlaGNC">       19101 : void StreamBuffer::ensure_capacity(size_t additional_bytes) {</span></span>
+<span id="L201"><span class="lineNum">     201</span>         [<span class="tlaGBC" title="Branch 0 was taken 111 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18990 times"> + </span>]:<span class="tlaGNC">       19101 :     if (read_pos_ &gt; 0) {</span></span>
+<span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">         111 :         size_t usable = buf_.capacity() - buf_.size();</span></span>
+<span id="L203"><span class="lineNum">     203</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 111 times"> + </span>]:<span class="tlaGNC">         111 :         if (usable &lt; additional_bytes) {</span></span>
 <span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             compact();</span></span>
 <span id="L205"><span class="lineNum">     205</span>                 :             :         }</span>
 <span id="L206"><span class="lineNum">     206</span>                 :             :     }</span>
-<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC tlaBgGNC">       19100 :     size_t usable = buf_.capacity() - buf_.size();</span></span>
-<span id="L208"><span class="lineNum">     208</span>         [<span class="tlaGBC" title="Branch 0 was taken 902 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18198 times"> + </span>]:<span class="tlaGNC">       19100 :     if (usable &lt; additional_bytes) {</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC tlaBgGNC">       19101 :     size_t usable = buf_.capacity() - buf_.size();</span></span>
+<span id="L208"><span class="lineNum">     208</span>         [<span class="tlaGBC" title="Branch 0 was taken 902 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 18199 times"> + </span>]:<span class="tlaGNC">       19101 :     if (usable &lt; additional_bytes) {</span></span>
 <span id="L209"><span class="lineNum">     209</span>                 :             :         size_t new_cap =</span>
 <span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         902 :             std::max(buf_.capacity() * 2, buf_.size() + additional_bytes);</span></span>
 <span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">         902 :         new_cap = std::max(new_cap, kDefaultInitialCapacity);</span></span>
 <span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">         902 :         buf_.reserve(new_cap);</span></span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :     }</span>
-<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">       19100 : }</span></span>
+<span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaGNC">       19101 : }</span></span>
 <span id="L215"><span class="lineNum">     215</span>                 :             : </span>
 <span id="L216"><span class="lineNum">     216</span>                 :             : } // namespace adt</span>
 <span id="L217"><span class="lineNum">     217</span>                 :             : } // namespace hpactor</span>

@@ -31,18 +31,18 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryHi">92.0&nbsp;%</td>
-            <td class="headerCovTableEntry">50</td>
-            <td class="headerCovTableEntry">46</td>
+            <td class="headerCovTableEntryMed">85.5&nbsp;%</td>
+            <td class="headerCovTableEntry">200</td>
+            <td class="headerCovTableEntry">171</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 08:58:21</td>
+            <td class="headerValue">2026-06-20 13:35:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">4</td>
-            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">12</td>
+            <td class="headerCovTableEntry">12</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">53.8&nbsp;%</td>
-            <td class="headerCovTableEntry">26</td>
-            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntryLo">66.4&nbsp;%</td>
+            <td class="headerCovTableEntry">116</td>
+            <td class="headerCovTableEntry">77</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -106,124 +106,394 @@
 <span id="L28"><span class="lineNum">      28</span>                 :             : } // namespace</span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : #endif</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : </span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC tlaBgGNC">        3849 : SlabCache::~SlabCache() {</span></span>
-<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaGBC" title="Branch 0 was taken 479 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3849 times"> + </span>]:<span class="tlaGNC">        4328 :     for (auto* slab : slabs_) {</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         479 :         SegmentProvider::instance().release_slab(slab, size_class_);</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC tlaBgGNC">        3872 : SlabCache::~SlabCache() {</span></span>
+<span id="L32"><span class="lineNum">      32</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3872 times"> + </span>]:<span class="tlaGNC">        3872 :     for (auto* slab : idle_slabs_) {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         SegmentProvider::instance().release_slab(slab, size_class_);</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     }</span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        3849 : }</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :             : </span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">      265312 : void* SlabCache::allocate(ActorId owner) noexcept {</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :             :     // 1. Try freelist first</span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">      265312 :     auto* block = freelist_.pop();</span></span>
-<span id="L40"><span class="lineNum">      40</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 265312 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">      265312 :     FAULT_INJECT(&quot;hpactor.allocator.freelist.pop.corrupt&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 265312 times"> + </span>]
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :         if (block != nullptr) {</span></span>
-<span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaUNC">           0 :             block-&gt;magic = 0;</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :             :         }</span>
-<span id="L44"><span class="lineNum">      44</span>                 :             :     }</span>
-<span id="L45"><span class="lineNum">      45</span>         [<span class="tlaGBC" title="Branch 0 was taken 100123 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 165189 times"> + </span>]:<span class="tlaGNC tlaBgGNC">      265312 :     if (block) {</span></span>
-<span id="L46"><span class="lineNum">      46</span>                 :             : #if HPACTOR_ENABLE_MEMORY_DEBUG</span>
-<span id="L47"><span class="lineNum">      47</span>                 :             :         // Verify canary was not corrupted while block was freed</span>
-<span id="L48"><span class="lineNum">      48</span>                 :             :         size_t bs = block_size(size_class_);</span>
-<span id="L49"><span class="lineNum">      49</span>                 :             :         if (!CanaryFooter::verify(block, bs)) {</span>
-<span id="L50"><span class="lineNum">      50</span>                 :             :             HPACTOR_LOG_ERROR(</span>
-<span id="L51"><span class="lineNum">      51</span>                 :             :                 log::LogCategory::kMemory, ActorId{0},</span>
-<span id="L52"><span class="lineNum">      52</span>                 :             :                 static_cast&lt;uint32_t&gt;(log::LogEventId::kMemoryCorruption),</span>
-<span id="L53"><span class="lineNum">      53</span>                 :             :                 &quot;memory corruption detected (canary mismatch in allocate)&quot;,</span>
-<span id="L54"><span class="lineNum">      54</span>                 :             :                 log::field_ptr(&quot;block&quot;, block));</span>
-<span id="L55"><span class="lineNum">      55</span>                 :             :             stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);</span>
-<span id="L56"><span class="lineNum">      56</span>                 :             :             live_count_.fetch_add(1, std::memory_order_relaxed);</span>
-<span id="L57"><span class="lineNum">      57</span>                 :             :             return nullptr; // corruption detected, refuse allocation</span>
-<span id="L58"><span class="lineNum">      58</span>                 :             :         }</span>
-<span id="L59"><span class="lineNum">      59</span>                 :             :         // Check poison pattern — first bytes should be 0xAA</span>
-<span id="L60"><span class="lineNum">      60</span>                 :             :         auto* user = static_cast&lt;uint8_t*&gt;(block-&gt;user_data());</span>
-<span id="L61"><span class="lineNum">      61</span>                 :             :         size_t usz = size_for_class(size_class_);</span>
-<span id="L62"><span class="lineNum">      62</span>                 :             :         for (size_t i = 0; i &lt; usz &amp;&amp; i &lt; 16; ++i) {</span>
-<span id="L63"><span class="lineNum">      63</span>                 :             :             if (user[i] != kPoisonByte) {</span>
-<span id="L64"><span class="lineNum">      64</span>                 :             :                 // use-after-free detected</span>
-<span id="L65"><span class="lineNum">      65</span>                 :             :                 HPACTOR_LOG_ERROR(</span>
-<span id="L66"><span class="lineNum">      66</span>                 :             :                     log::LogCategory::kMemory, ActorId{0},</span>
-<span id="L67"><span class="lineNum">      67</span>                 :             :                     static_cast&lt;uint32_t&gt;(log::LogEventId::kMemoryCorruption),</span>
-<span id="L68"><span class="lineNum">      68</span>                 :             :                     &quot;use-after-free detected (poison byte violated)&quot;,</span>
-<span id="L69"><span class="lineNum">      69</span>                 :             :                     log::field_ptr(&quot;block&quot;, block));</span>
-<span id="L70"><span class="lineNum">      70</span>                 :             :                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);</span>
-<span id="L71"><span class="lineNum">      71</span>                 :             :                 live_count_.fetch_add(1, std::memory_order_relaxed);</span>
-<span id="L72"><span class="lineNum">      72</span>                 :             :                 return nullptr;</span>
-<span id="L73"><span class="lineNum">      73</span>                 :             :             }</span>
-<span id="L74"><span class="lineNum">      74</span>                 :             :         }</span>
-<span id="L75"><span class="lineNum">      75</span>                 :             : #endif</span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">      100123 :         block-&gt;owner_id = owner.value();</span></span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">      100123 :         block-&gt;magic = kAllocMagic;</span></span>
-<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">      100123 :         block-&gt;generation = current_generation_;</span></span>
-<span id="L79"><span class="lineNum">      79</span>                 :<span class="tlaGNC">      100123 :         stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">      100123 :         live_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">      100123 :         return block-&gt;user_data();</span></span>
-<span id="L82"><span class="lineNum">      82</span>                 :             :     }</span>
-<span id="L83"><span class="lineNum">      83</span>                 :             : </span>
-<span id="L84"><span class="lineNum">      84</span>                 :             :     // 2. Bump allocate from current slab</span>
-<span id="L85"><span class="lineNum">      85</span>         [<span class="tlaGBC" title="Branch 0 was taken 165067 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 122 times"> + </span>]:<span class="tlaGNC">      165189 :     if (current_slab_) {</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">      165067 :         size_t bs = block_size(size_class_);</span></span>
-<span id="L87"><span class="lineNum">      87</span>         [<span class="tlaGBC" title="Branch 0 was taken 164710 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 357 times"> + </span>]:<span class="tlaGNC">      165067 :         if (bump_offset_ + bs &lt;= slab_size_) {</span></span>
-<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">      164710 :             auto* raw = current_slab_ + bump_offset_;</span></span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">      164710 :             bump_offset_ += bs;</span></span>
-<span id="L90"><span class="lineNum">      90</span>                 :<span class="tlaGNC">      164710 :             auto* hdr = AllocHeader::stamp(raw, size_class_, owner, region_);</span></span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">      164710 :             hdr-&gt;generation = current_generation_;</span></span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">      164710 :             CanaryFooter::stamp(hdr, bs);</span></span>
-<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">      164710 :             stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">      164710 :             live_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">      164710 :             return hdr-&gt;user_data();</span></span>
-<span id="L96"><span class="lineNum">      96</span>                 :             :         }</span>
-<span id="L97"><span class="lineNum">      97</span>                 :             :     }</span>
-<span id="L98"><span class="lineNum">      98</span>                 :             : </span>
-<span id="L99"><span class="lineNum">      99</span>                 :             :     // 3. Need a new slab</span>
-<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">         479 :     refill();</span></span>
-<span id="L101"><span class="lineNum">     101</span>         [<span class="tlaGBC" title="Branch 0 was taken 479 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         479 :     if (current_slab_) {</span></span>
-<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">         479 :         return allocate(owner);</span></span>
-<span id="L103"><span class="lineNum">     103</span>                 :             :     }</span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return nullptr;</span></span>
-<span id="L105"><span class="lineNum">     105</span>                 :             : }</span>
-<span id="L106"><span class="lineNum">     106</span>                 :             : </span>
-<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC tlaBgGNC">      164683 : void SlabCache::deallocate(void* user_ptr) noexcept {</span></span>
-<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">      164683 :     auto* hdr = AllocHeader::from_user_data(user_ptr);</span></span>
-<span id="L109"><span class="lineNum">     109</span>                 :             : </span>
-<span id="L110"><span class="lineNum">     110</span>                 :             : #if HPACTOR_ENABLE_MEMORY_DEBUG</span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :     size_t bs = block_size(size_class_);</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             :     // Verify canary before freeing (catch buffer overflow)</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             :     if (!CanaryFooter::verify(hdr, bs)) {</span>
-<span id="L114"><span class="lineNum">     114</span>                 :             :         HPACTOR_LOG_ERROR(log::LogCategory::kMemory, ActorId{0},</span>
-<span id="L115"><span class="lineNum">     115</span>                 :             :                           static_cast&lt;uint32_t&gt;(log::LogEventId::kMemoryCorruption),</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             :                           &quot;memory corruption detected (canary mismatch in &quot;</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :                           &quot;deallocate)&quot;,</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             :                           log::field_ptr(&quot;ptr&quot;, user_ptr));</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             :     }</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             :     // Poison user data to catch use-after-free</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             :     std::memset(user_ptr, kPoisonByte, size_for_class(size_class_));</span>
-<span id="L122"><span class="lineNum">     122</span>                 :             : #endif</span>
-<span id="L123"><span class="lineNum">     123</span>                 :             : </span>
-<span id="L124"><span class="lineNum">     124</span>                 :<span class="tlaGNC">      164683 :     hdr-&gt;magic = kFreedMagic;</span></span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">      164683 :     stats_.free_count.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">      164683 :     live_count_.fetch_sub(1, std::memory_order_relaxed);</span></span>
-<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">      164683 :     freelist_.push(hdr);</span></span>
-<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">      164683 : }</span></span>
-<span id="L129"><span class="lineNum">     129</span>                 :             : </span>
-<span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">         479 : void SlabCache::refill() {</span></span>
-<span id="L131"><span class="lineNum">     131</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 479 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         479 :     FAULT_INJECT(&quot;hpactor.allocator.slab_cache.refill_fail&quot;) {</span></span>
-<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 479 times"> + </span>]
-<span id="L132"><span class="lineNum">     132</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
-<span id="L133"><span class="lineNum">     133</span>                 :             :     }</span>
-<span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC tlaBgGNC">         479 :     current_slab_ = static_cast&lt;std::byte*&gt;(</span></span>
-<span id="L135"><span class="lineNum">     135</span>                 :<span class="tlaGNC">         479 :         SegmentProvider::instance().acquire_slab(size_class_));</span></span>
-<span id="L136"><span class="lineNum">     136</span>         [<span class="tlaGBC" title="Branch 0 was taken 479 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         479 :     if (current_slab_) {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">         479 :         slab_size_ = SegmentProvider::instance().slab_size(size_class_);</span></span>
-<span id="L138"><span class="lineNum">     138</span>                 :<span class="tlaGNC">         479 :         bump_offset_ = 0;</span></span>
-<span id="L139"><span class="lineNum">     139</span>                 :<span class="tlaGNC">         479 :         slabs_.push_back(current_slab_);</span></span>
-<span id="L140"><span class="lineNum">     140</span>                 :<span class="tlaGNC">         479 :         SegmentProvider::instance().register_slab_owner(</span></span>
-<span id="L141"><span class="lineNum">     141</span>                 :<span class="tlaGNC">         479 :             current_slab_, slab_size_, this, region_, size_class_);</span></span>
-<span id="L142"><span class="lineNum">     142</span>                 :<span class="tlaGNC">         479 :         stats_.slab_acquire_count.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :     }</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             : }</span>
-<span id="L145"><span class="lineNum">     145</span>                 :             : </span>
-<span id="L146"><span class="lineNum">     146</span>                 :             : } // namespace hpactor::mem</span>
+<span id="L35"><span class="lineNum">      35</span>         [<span class="tlaGBC" title="Branch 0 was taken 580 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3872 times"> + </span>]:<span class="tlaGNC tlaBgGNC">        4452 :     for (auto* slab : slabs_) {</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">         580 :         SegmentProvider::instance().release_slab(slab, size_class_);</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :             :     }</span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">        3872 : }</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :             : </span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">       43225 : uint8_t SlabCache::compute_bin_index(const AllocHeader* header) const noexcept {</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :     // O(1): bin index depends only on byte offset within a same-size slab,</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             :     // not on which slab the block belongs to. All slabs have the same size.</span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC">       43225 :     auto* hdr_addr = reinterpret_cast&lt;const char*&gt;(header);</span></span>
+<span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">       43225 :     auto* slab_base = reinterpret_cast&lt;const char*&gt;(current_slab_);</span></span>
+<span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">       43225 :     size_t offset = static_cast&lt;size_t&gt;(hdr_addr - slab_base);</span></span>
+<span id="L46"><span class="lineNum">      46</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 43225 times"> + </span>]:<span class="tlaGNC">       43225 :     if (bin_stride_bytes_ == 0)</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return 0;</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC tlaBgGNC">       43225 :     return static_cast&lt;uint8_t&gt;((offset / bin_stride_bytes_) % kNumSegregatedBins);</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :             : }</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : </span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : // Shared tail: stamp and return a block popped from any freelist.</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : static void*</span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">      100123 : stamp_freelist_block(AllocHeader* block, ActorId owner, uint8_t generation,</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :                      SizeClass sc, std::atomic&lt;uint64_t&gt;&amp; alloc_cnt,</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             :                      std::atomic&lt;uint32_t&gt;&amp; live_cnt) noexcept {</span>
+<span id="L56"><span class="lineNum">      56</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 100123 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">      100123 :     FAULT_INJECT(&quot;hpactor.allocator.freelist.pop.corrupt&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 100123 times"> + </span>]
+<span id="L57"><span class="lineNum">      57</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :         if (block != nullptr) {</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaUNC">           0 :             block-&gt;magic = 0;</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :         }</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     }</span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC tlaBgGNC">      100123 :     block-&gt;owner_id = owner.value();</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">      100123 :     block-&gt;magic = kAllocMagic;</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">      100123 :     block-&gt;generation = generation;</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :             :     // Fix #7: re-stamp canary footer on recycled blocks (was missing, causing</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :     // false-positive corruption on coalesced blocks later deallocated)</span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">      100123 :     CanaryFooter::stamp(block, block_size(sc));</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">      100123 :     alloc_cnt.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">      100123 :     live_cnt.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">      100123 :     return block-&gt;user_data();</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :             : }</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             : </span>
+<span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">      311050 : void* SlabCache::allocate(ActorId owner) noexcept {</span></span>
+<span id="L73"><span class="lineNum">      73</span>                 :             :     // kSegregatedFit: bump-first for best locality (MEM-001 §3.2).</span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :     // Virgin memory provides contiguous allocation — the segregated bins</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             :     // are only used when the current slab is exhausted.</span>
+<span id="L76"><span class="lineNum">      76</span>         [<span class="tlaGBC" title="Branch 0 was taken 43330 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 267720 times"> + </span>]:<span class="tlaGNC">      311050 :     if (strategy_ == AllocationStrategy::kSegregatedFit) {</span></span>
+<span id="L77"><span class="lineNum">      77</span>         [<span class="tlaGBC" title="Branch 0 was taken 43313 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 17 times"> + </span>]:<span class="tlaGNC">       43330 :         if (current_slab_) {</span></span>
+<span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaGNC">       43313 :             size_t bs = block_size(size_class_);</span></span>
+<span id="L79"><span class="lineNum">      79</span>         [<span class="tlaGBC" title="Branch 0 was taken 43234 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 79 times"> + </span>]:<span class="tlaGNC">       43313 :             if (bump_offset_ + bs &lt;= slab_size_) {</span></span>
+<span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">       43234 :                 auto* raw = current_slab_ + bump_offset_;</span></span>
+<span id="L81"><span class="lineNum">      81</span>                 :<span class="tlaGNC">       43234 :                 bump_offset_ += bs;</span></span>
+<span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">       43234 :                 auto* hdr = AllocHeader::stamp(raw, size_class_, owner, region_);</span></span>
+<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC">       43234 :                 hdr-&gt;generation = current_generation_;</span></span>
+<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">       43234 :                 CanaryFooter::stamp(hdr, bs);</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">       43234 :                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">       43234 :                 live_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L87"><span class="lineNum">      87</span>                 :             : </span>
+<span id="L88"><span class="lineNum">      88</span>                 :<span class="tlaGNC">       43234 :                 return hdr-&gt;user_data();</span></span>
+<span id="L89"><span class="lineNum">      89</span>                 :             :             }</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             :         }</span>
+<span id="L91"><span class="lineNum">      91</span>                 :             :         // Bump exhausted — try segregated bins (depth-bounded per bin)</span>
+<span id="L92"><span class="lineNum">      92</span>         [<span class="tlaGBC" title="Branch 0 was taken 768 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 96 times"> + </span>]:<span class="tlaGNC">         864 :         for (uint8_t i = 0; i &lt; kNumSegregatedBins; ++i) {</span></span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">         768 :             uint8_t bin_idx =</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">         768 :                 static_cast&lt;uint8_t&gt;((start_bin_ + i) % kNumSegregatedBins);</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :<span class="tlaGNC">         768 :             uint8_t depth = 0;</span></span>
+<span id="L96"><span class="lineNum">      96</span>         [<span class="tlaGBC" title="Branch 0 was taken 768 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         768 :             while (depth &lt; kMaxSearchDepthPerBin) {</span></span>
+<span id="L97"><span class="lineNum">      97</span>                 :<span class="tlaGNC">         768 :                 AllocHeader* block = dll_pop(bins_[bin_idx]);</span></span>
+<span id="L98"><span class="lineNum">      98</span>         [<span class="tlaGBC" title="Branch 0 was taken 768 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         768 :                 if (!block)</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">         768 :                     break;</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 ++depth;</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :             : #if HPACTOR_ENABLE_MEMORY_DEBUG</span>
+<span id="L102"><span class="lineNum">     102</span>                 :             :                 size_t cbs = block_size(size_class_);</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             :                 if (!CanaryFooter::verify(block, cbs))</span>
+<span id="L104"><span class="lineNum">     104</span>                 :             :                     continue;</span>
+<span id="L105"><span class="lineNum">     105</span>                 :             :                 auto* cuser = static_cast&lt;uint8_t*&gt;(block-&gt;user_data());</span>
+<span id="L106"><span class="lineNum">     106</span>                 :             :                 size_t cusz = size_for_class(size_class_);</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             :                 bool poisoned = true;</span>
+<span id="L108"><span class="lineNum">     108</span>                 :             :                 for (size_t j = 0; j &lt; cusz &amp;&amp; j &lt; 16; ++j) {</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             :                     if (cuser[j] != kPoisonByte) {</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :                         poisoned = false;</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             :                         break;</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :                     }</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :                 }</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :                 if (!poisoned)</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             :                     continue;</span>
+<span id="L116"><span class="lineNum">     116</span>                 :             : #endif</span>
+<span id="L117"><span class="lineNum">     117</span>                 :<span class="tlaUNC">           0 :                 start_bin_ =</span></span>
+<span id="L118"><span class="lineNum">     118</span>                 :<span class="tlaUNC">           0 :                     static_cast&lt;uint8_t&gt;((bin_idx + 1) % kNumSegregatedBins);</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaUNC">           0 :                 return stamp_freelist_block(block, owner, current_generation_,</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaUNC">           0 :                                             size_class_, stats_.alloc_count,</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaUNC">           0 :                                             live_count_);</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :             }</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :         }</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     } else {</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             :         // kCasLifo (default) and kBumpOnly: keep existing behavior</span>
+<span id="L126"><span class="lineNum">     126</span>         [<span class="tlaGBC" title="Branch 0 was taken 265312 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2408 times"> + </span>]:<span class="tlaGNC tlaBgGNC">      267720 :         if (strategy_ != AllocationStrategy::kBumpOnly) {</span></span>
+<span id="L127"><span class="lineNum">     127</span>                 :<span class="tlaGNC">      265312 :             auto* block = freelist_.pop();</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :             // Fix #10: restore debug checks for kCasLifo path</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             : #if HPACTOR_ENABLE_MEMORY_DEBUG</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             :             if (block) {</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             :                 size_t cbs = block_size(size_class_);</span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :                 if (CanaryFooter::verify(block, cbs)) {</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :                     auto* cuser = static_cast&lt;uint8_t*&gt;(block-&gt;user_data());</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             :                     size_t cusz = size_for_class(size_class_);</span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :                     bool ok = true;</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :                     for (size_t j = 0; j &lt; cusz &amp;&amp; j &lt; 16; ++j) {</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :                         if (cuser[j] != kPoisonByte) {</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :                             ok = false;</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             :                             break;</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :                         }</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :                     }</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :                     if (!ok)</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :                         block = nullptr;</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :                 } else {</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :                     block = nullptr;</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             :                 }</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :             }</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             : #endif</span>
+<span id="L149"><span class="lineNum">     149</span>         [<span class="tlaGBC" title="Branch 0 was taken 100123 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 165189 times"> + </span>]:<span class="tlaGNC">      265312 :             if (block) {</span></span>
+<span id="L150"><span class="lineNum">     150</span>                 :<span class="tlaGNC">      100123 :                 return stamp_freelist_block(block, owner, current_generation_,</span></span>
+<span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">      100123 :                                             size_class_, stats_.alloc_count,</span></span>
+<span id="L152"><span class="lineNum">     152</span>                 :<span class="tlaGNC">      100123 :                                             live_count_);</span></span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :             }</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             :         }</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :         // Try bump allocate (all strategies including kBumpOnly)</span>
+<span id="L156"><span class="lineNum">     156</span>         [<span class="tlaGBC" title="Branch 0 was taken 167472 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 125 times"> + </span>]:<span class="tlaGNC">      167597 :         if (current_slab_) {</span></span>
+<span id="L157"><span class="lineNum">     157</span>                 :<span class="tlaGNC">      167472 :             size_t bs = block_size(size_class_);</span></span>
+<span id="L158"><span class="lineNum">     158</span>         [<span class="tlaGBC" title="Branch 0 was taken 167113 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 359 times"> + </span>]:<span class="tlaGNC">      167472 :             if (bump_offset_ + bs &lt;= slab_size_) {</span></span>
+<span id="L159"><span class="lineNum">     159</span>                 :<span class="tlaGNC">      167113 :                 auto* raw = current_slab_ + bump_offset_;</span></span>
+<span id="L160"><span class="lineNum">     160</span>                 :<span class="tlaGNC">      167113 :                 bump_offset_ += bs;</span></span>
+<span id="L161"><span class="lineNum">     161</span>                 :<span class="tlaGNC">      167113 :                 auto* hdr = AllocHeader::stamp(raw, size_class_, owner, region_);</span></span>
+<span id="L162"><span class="lineNum">     162</span>                 :<span class="tlaGNC">      167113 :                 hdr-&gt;generation = current_generation_;</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">      167113 :                 CanaryFooter::stamp(hdr, bs);</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :<span class="tlaGNC">      167113 :                 stats_.alloc_count.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">      167113 :                 live_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L166"><span class="lineNum">     166</span>                 :             : </span>
+<span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">      167113 :                 return hdr-&gt;user_data();</span></span>
+<span id="L168"><span class="lineNum">     168</span>                 :             :             }</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             :         }</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             :     }</span>
+<span id="L171"><span class="lineNum">     171</span>                 :             : </span>
+<span id="L172"><span class="lineNum">     172</span>                 :             :     // Refill from SegmentProvider (or recycle idle slab for bump-only)</span>
+<span id="L173"><span class="lineNum">     173</span>   [<span class="tlaGBC" title="Branch 0 was taken 5 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 575 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 5 times"> + </span> :<span class="tlaGNC">         580 :     if (strategy_ == AllocationStrategy::kBumpOnly &amp;&amp; !idle_slabs_.empty()) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 580 times"> + </span>]
+<span id="L174"><span class="lineNum">     174</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         auto* recycled = idle_slabs_.back();</span></span>
+<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaUNC">           0 :         idle_slabs_.pop_back();</span></span>
+<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaUNC">           0 :         current_slab_ = recycled;</span></span>
+<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaUNC">           0 :         bump_offset_ = 0;</span></span>
+<span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaUNC">           0 :         return allocate(owner);</span></span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :     }</span>
+<span id="L180"><span class="lineNum">     180</span>                 :<span class="tlaGNC tlaBgGNC">         580 :     refill();</span></span>
+<span id="L181"><span class="lineNum">     181</span>         [<span class="tlaGBC" title="Branch 0 was taken 580 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         580 :     if (current_slab_) {</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">         580 :         return allocate(owner);</span></span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :     }</span>
+<span id="L184"><span class="lineNum">     184</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     return nullptr;</span></span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : }</span>
+<span id="L186"><span class="lineNum">     186</span>                 :             : </span>
+<span id="L187"><span class="lineNum">     187</span>                 :<span class="tlaGNC tlaBgGNC">      210202 : void SlabCache::deallocate(void* user_ptr) noexcept {</span></span>
+<span id="L188"><span class="lineNum">     188</span>                 :<span class="tlaGNC">      210202 :     auto* hdr = AllocHeader::from_user_data(user_ptr);</span></span>
+<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
+<span id="L190"><span class="lineNum">     190</span>                 :             : #if HPACTOR_ENABLE_MEMORY_DEBUG</span>
+<span id="L191"><span class="lineNum">     191</span>                 :             :     size_t bs = block_size(size_class_);</span>
+<span id="L192"><span class="lineNum">     192</span>                 :             :     // Verify canary before freeing (catch buffer overflow)</span>
+<span id="L193"><span class="lineNum">     193</span>                 :             :     if (!CanaryFooter::verify(hdr, bs)) {</span>
+<span id="L194"><span class="lineNum">     194</span>                 :             :         HPACTOR_LOG_ERROR(log::LogCategory::kMemory, ActorId{0},</span>
+<span id="L195"><span class="lineNum">     195</span>                 :             :                           static_cast&lt;uint32_t&gt;(log::LogEventId::kMemoryCorruption),</span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :                           &quot;memory corruption detected (canary mismatch in &quot;</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             :                           &quot;deallocate)&quot;,</span>
+<span id="L198"><span class="lineNum">     198</span>                 :             :                           log::field_ptr(&quot;ptr&quot;, user_ptr));</span>
+<span id="L199"><span class="lineNum">     199</span>                 :             :     }</span>
+<span id="L200"><span class="lineNum">     200</span>                 :             :     // Poison user data to catch use-after-free</span>
+<span id="L201"><span class="lineNum">     201</span>                 :             :     std::memset(user_ptr, kPoisonByte, size_for_class(size_class_));</span>
+<span id="L202"><span class="lineNum">     202</span>                 :             : #endif</span>
+<span id="L203"><span class="lineNum">     203</span>                 :             : </span>
+<span id="L204"><span class="lineNum">     204</span>                 :<span class="tlaGNC">      210202 :     hdr-&gt;magic = kFreedMagic;</span></span>
+<span id="L205"><span class="lineNum">     205</span>                 :             : </span>
+<span id="L206"><span class="lineNum">     206</span>                 :             :     // Coalesce with adjacent free blocks (MEM-002)</span>
+<span id="L207"><span class="lineNum">     207</span>         [<span class="tlaGBC" title="Branch 0 was taken 116 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 210086 times"> + </span>]:<span class="tlaGNC">      210202 :     if (coalescing_) {</span></span>
+<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">         116 :         hdr = try_coalesce(hdr);</span></span>
+<span id="L209"><span class="lineNum">     209</span>                 :             :     }</span>
+<span id="L210"><span class="lineNum">     210</span>                 :             : </span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">      210202 :     stats_.free_count.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L212"><span class="lineNum">     212</span>                 :<span class="tlaGNC">      210202 :     live_count_.fetch_sub(1, std::memory_order_relaxed);</span></span>
+<span id="L213"><span class="lineNum">     213</span>                 :             : </span>
+<span id="L214"><span class="lineNum">     214</span>                 :             :     // Bump-only: no freelist push. Recycle slab when ALL blocks across all</span>
+<span id="L215"><span class="lineNum">     215</span>                 :             :     // slabs are freed (uses per-cache live_count_ instead of per-slab counter</span>
+<span id="L216"><span class="lineNum">     216</span>                 :             :     // to avoid cross-slab accounting bugs — fixes code review finding #1).</span>
+<span id="L217"><span class="lineNum">     217</span>         [<span class="tlaGBC" title="Branch 0 was taken 2401 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 207801 times"> + </span>]:<span class="tlaGNC">      210202 :     if (strategy_ == AllocationStrategy::kBumpOnly) {</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :             :         // When no blocks are live anywhere in this cache, all slabs are idle</span>
+<span id="L219"><span class="lineNum">     219</span>   [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 2398 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 3 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">        4805 :         if (live_count_.load(std::memory_order_relaxed) == 0 &amp;&amp; current_slab_ &amp;&amp;</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 2401 times"> + </span>]
+<span id="L220"><span class="lineNum">     220</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :             bump_offset_ &gt;= slab_size_) {</span></span>
+<span id="L221"><span class="lineNum">     221</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             idle_slabs_.push_back(current_slab_);</span></span>
+<span id="L222"><span class="lineNum">     222</span>                 :<span class="tlaUNC">           0 :             current_slab_ = nullptr;</span></span>
+<span id="L223"><span class="lineNum">     223</span>                 :<span class="tlaUNC">           0 :             slab_size_ = 0;</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaUNC">           0 :             bump_offset_ = 0;</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :             :         }</span>
+<span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC tlaBgGNC">        2401 :         return;</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :             :     }</span>
+<span id="L228"><span class="lineNum">     228</span>                 :             : </span>
+<span id="L229"><span class="lineNum">     229</span>         [<span class="tlaGBC" title="Branch 0 was taken 43118 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 164683 times"> + </span>]:<span class="tlaGNC">      207801 :     if (strategy_ == AllocationStrategy::kSegregatedFit) {</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">       43118 :         uint8_t bin = compute_bin_index(hdr);</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">       43118 :         dll_push(bins_[bin], hdr);</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :             :     } else {</span>
+<span id="L233"><span class="lineNum">     233</span>                 :<span class="tlaGNC">      164683 :         freelist_.push(hdr);</span></span>
+<span id="L234"><span class="lineNum">     234</span>                 :             :     }</span>
+<span id="L235"><span class="lineNum">     235</span>                 :             : }</span>
+<span id="L236"><span class="lineNum">     236</span>                 :             : </span>
+<span id="L237"><span class="lineNum">     237</span>                 :<span class="tlaGNC">         580 : void SlabCache::refill() {</span></span>
+<span id="L238"><span class="lineNum">     238</span>   [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 580 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         580 :     FAULT_INJECT(&quot;hpactor.allocator.slab_cache.refill_fail&quot;) {</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 580 times"> + </span>]
+<span id="L239"><span class="lineNum">     239</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return;</span></span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :     }</span>
+<span id="L241"><span class="lineNum">     241</span>                 :<span class="tlaGNC tlaBgGNC">         580 :     current_slab_ = static_cast&lt;std::byte*&gt;(</span></span>
+<span id="L242"><span class="lineNum">     242</span>                 :<span class="tlaGNC">         580 :         SegmentProvider::instance().acquire_slab(size_class_));</span></span>
+<span id="L243"><span class="lineNum">     243</span>         [<span class="tlaGBC" title="Branch 0 was taken 580 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         580 :     if (current_slab_) {</span></span>
+<span id="L244"><span class="lineNum">     244</span>                 :<span class="tlaGNC">         580 :         slab_size_ = SegmentProvider::instance().slab_size(size_class_);</span></span>
+<span id="L245"><span class="lineNum">     245</span>                 :<span class="tlaGNC">         580 :         bump_offset_ = 0;</span></span>
+<span id="L246"><span class="lineNum">     246</span>                 :             : </span>
+<span id="L247"><span class="lineNum">     247</span>   [<span class="tlaGBC" title="Branch 0 was taken 96 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 484 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 96 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         580 :         if (strategy_ == AllocationStrategy::kSegregatedFit &amp;&amp; slab_size_ &gt; 0) {</span></span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">          96 :             bin_stride_bytes_ =</span></span>
+<span id="L249"><span class="lineNum">     249</span>                 :<span class="tlaGNC">          96 :                 static_cast&lt;uint32_t&gt;(slab_size_) / kNumSegregatedBins;</span></span>
+<span id="L250"><span class="lineNum">     250</span>                 :             :         }</span>
+<span id="L251"><span class="lineNum">     251</span>                 :<span class="tlaGNC">         580 :         slabs_.push_back(current_slab_);</span></span>
+<span id="L252"><span class="lineNum">     252</span>                 :<span class="tlaGNC">         580 :         SegmentProvider::instance().register_slab_owner(</span></span>
+<span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaGNC">         580 :             current_slab_, slab_size_, this, region_, size_class_);</span></span>
+<span id="L254"><span class="lineNum">     254</span>                 :<span class="tlaGNC">         580 :         stats_.slab_acquire_count.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L255"><span class="lineNum">     255</span>                 :             :     }</span>
+<span id="L256"><span class="lineNum">     256</span>                 :             : }</span>
+<span id="L257"><span class="lineNum">     257</span>                 :             : </span>
+<span id="L258"><span class="lineNum">     258</span>                 :             : // ── Doubly-linked free list helpers (MEM-002 §3.3) ──────────────</span>
+<span id="L259"><span class="lineNum">     259</span>                 :             : // Bins are thread-confined (single owning SlabCache thread), so we use</span>
+<span id="L260"><span class="lineNum">     260</span>                 :             : // relaxed atomics instead of CAS for push/pop — no contention possible.</span>
+<span id="L261"><span class="lineNum">     261</span>                 :             : </span>
+<span id="L262"><span class="lineNum">     262</span>                 :             : // Access the FreeBlockLinkage stored in a freed block's user data.</span>
+<span id="L263"><span class="lineNum">     263</span>                 :<span class="tlaGNC">       86181 : static FreeBlockLinkage* linkage_of(AllocHeader* block) noexcept {</span></span>
+<span id="L264"><span class="lineNum">     264</span>                 :<span class="tlaGNC">       86181 :     return reinterpret_cast&lt;FreeBlockLinkage*&gt;(block-&gt;user_data());</span></span>
+<span id="L265"><span class="lineNum">     265</span>                 :             : }</span>
+<span id="L266"><span class="lineNum">     266</span>                 :             : </span>
+<span id="L267"><span class="lineNum">     267</span>                 :<span class="tlaGNC">       43118 : void SlabCache::dll_push(FreeList&lt;AllocHeader&gt;&amp; bin, AllocHeader* block) noexcept {</span></span>
+<span id="L268"><span class="lineNum">     268</span>                 :<span class="tlaGNC">       43118 :     auto* link = linkage_of(block);</span></span>
+<span id="L269"><span class="lineNum">     269</span>                 :             :     // Read the CAS head without atomic RMW — single-threaded, no contention</span>
+<span id="L270"><span class="lineNum">     270</span>                 :<span class="tlaGNC">       43118 :     AllocHeader* old_head = bin.pop(); // must pop to maintain CAS invariants</span></span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">       43118 :     link-&gt;next = old_head;</span></span>
+<span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaGNC">       43118 :     link-&gt;prev = nullptr;</span></span>
+<span id="L273"><span class="lineNum">     273</span>         [<span class="tlaGBC" title="Branch 0 was taken 42955 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 163 times"> + </span>]:<span class="tlaGNC">       43118 :     if (old_head) {</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">       42955 :         linkage_of(old_head)-&gt;prev = block;</span></span>
+<span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaGNC">       42955 :         bin.push(old_head); // restore old head</span></span>
+<span id="L276"><span class="lineNum">     276</span>                 :             :     }</span>
+<span id="L277"><span class="lineNum">     277</span>                 :<span class="tlaGNC">       43118 :     bin.push(block);</span></span>
+<span id="L278"><span class="lineNum">     278</span>                 :<span class="tlaGNC">       43118 : }</span></span>
+<span id="L279"><span class="lineNum">     279</span>                 :             : </span>
+<span id="L280"><span class="lineNum">     280</span>                 :<span class="tlaGNC">         768 : AllocHeader* SlabCache::dll_pop(FreeList&lt;AllocHeader&gt;&amp; bin) noexcept {</span></span>
+<span id="L281"><span class="lineNum">     281</span>                 :<span class="tlaGNC">         768 :     AllocHeader* popped = bin.pop();</span></span>
+<span id="L282"><span class="lineNum">     282</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 768 times"> + </span>]:<span class="tlaGNC">         768 :     if (popped) {</span></span>
+<span id="L283"><span class="lineNum">     283</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         auto* popped_link = linkage_of(popped);</span></span>
+<span id="L284"><span class="lineNum">     284</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :         if (popped_link-&gt;next) {</span></span>
+<span id="L285"><span class="lineNum">     285</span>                 :<span class="tlaUNC">           0 :             linkage_of(popped_link-&gt;next)-&gt;prev = nullptr;</span></span>
+<span id="L286"><span class="lineNum">     286</span>                 :             :         }</span>
+<span id="L287"><span class="lineNum">     287</span>                 :             :     }</span>
+<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC tlaBgGNC">         768 :     return popped;</span></span>
+<span id="L289"><span class="lineNum">     289</span>                 :             : }</span>
+<span id="L290"><span class="lineNum">     290</span>                 :             : </span>
+<span id="L291"><span class="lineNum">     291</span>                 :<span class="tlaGNC">         107 : void SlabCache::dll_remove(FreeList&lt;AllocHeader&gt;&amp; bin, AllocHeader* block) noexcept {</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">         107 :     auto* link = linkage_of(block);</span></span>
+<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">         107 :     AllocHeader* prev = link-&gt;prev;</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">         107 :     AllocHeader* next = link-&gt;next;</span></span>
+<span id="L295"><span class="lineNum">     295</span>                 :             : </span>
+<span id="L296"><span class="lineNum">     296</span>                 :             :     // Update neighbor DLL links</span>
+<span id="L297"><span class="lineNum">     297</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 106 times"> + </span>]:<span class="tlaGNC">         107 :     if (prev) {</span></span>
+<span id="L298"><span class="lineNum">     298</span>                 :<span class="tlaGNC">           1 :         linkage_of(prev)-&gt;next = next;</span></span>
+<span id="L299"><span class="lineNum">     299</span>                 :             :     }</span>
+<span id="L300"><span class="lineNum">     300</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 107 times"> + </span>]:<span class="tlaGNC">         107 :     if (next) {</span></span>
+<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         linkage_of(next)-&gt;prev = prev;</span></span>
+<span id="L302"><span class="lineNum">     302</span>                 :             :     }</span>
+<span id="L303"><span class="lineNum">     303</span>                 :             : </span>
+<span id="L304"><span class="lineNum">     304</span>                 :             :     // Update CAS head.  We must pop the head to check then re-establish</span>
+<span id="L305"><span class="lineNum">     305</span>                 :             :     // the correct top without creating a self-loop (code review finding #3).</span>
+<span id="L306"><span class="lineNum">     306</span>                 :             :     // Since dll_remove is single-threaded (owning thread only), we can</span>
+<span id="L307"><span class="lineNum">     307</span>                 :             :     // directly compute what the new head should be rather than pop-then-push.</span>
+<span id="L308"><span class="lineNum">     308</span>                 :<span class="tlaGNC tlaBgGNC">         107 :     AllocHeader* head = bin.pop();</span></span>
+<span id="L309"><span class="lineNum">     309</span>         [<span class="tlaGBC" title="Branch 0 was taken 106 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">         107 :     if (head == block) {</span></span>
+<span id="L310"><span class="lineNum">     310</span>                 :             :         // Block was the head — next becomes the new head (may be null)</span>
+<span id="L311"><span class="lineNum">     311</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 106 times"> + </span>]:<span class="tlaGNC">         106 :         if (next) {</span></span>
+<span id="L312"><span class="lineNum">     312</span>                 :             :             // Push next directly: its next is already correct from the DLL.</span>
+<span id="L313"><span class="lineNum">     313</span>                 :             :             // The bin was empty after pop, so push(next) just stores it.</span>
+<span id="L314"><span class="lineNum">     314</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             bin.push(next);</span></span>
+<span id="L315"><span class="lineNum">     315</span>                 :             :         }</span>
+<span id="L316"><span class="lineNum">     316</span>                 :             :         // else: bin becomes empty (no push needed)</span>
+<span id="L317"><span class="lineNum">     317</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC tlaBgGNC">           1 :     } else if (head) {</span></span>
+<span id="L318"><span class="lineNum">     318</span>                 :             :         // Block was not the head — put the original head back unchanged</span>
+<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">           1 :         bin.push(head);</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :             :     }</span>
+<span id="L321"><span class="lineNum">     321</span>                 :             : </span>
+<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">         107 :     link-&gt;next = nullptr;</span></span>
+<span id="L323"><span class="lineNum">     323</span>                 :<span class="tlaGNC">         107 :     link-&gt;prev = nullptr;</span></span>
+<span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">         107 : }</span></span>
+<span id="L325"><span class="lineNum">     325</span>                 :             : </span>
+<span id="L326"><span class="lineNum">     326</span>                 :             : // ── Coalescing (MEM-002 §3.2) ───────────────────────────────────</span>
+<span id="L327"><span class="lineNum">     327</span>                 :             : </span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         222 : void SlabCache::stamp_boundary_footer(AllocHeader* header, size_t block_sz) noexcept {</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :             :     auto* overlay = reinterpret_cast&lt;FooterOverlay*&gt;(</span>
+<span id="L330"><span class="lineNum">     330</span>                 :<span class="tlaGNC">         222 :         CanaryFooter::from_header(header, block_sz));</span></span>
+<span id="L331"><span class="lineNum">     331</span>                 :<span class="tlaGNC">         222 :     overlay-&gt;boundary.block_size = static_cast&lt;uint32_t&gt;(block_sz);</span></span>
+<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">         222 :     overlay-&gt;boundary.flags = kBoundaryFlagFree;</span></span>
+<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">         222 :     overlay-&gt;boundary._pad[0] = 0;</span></span>
+<span id="L334"><span class="lineNum">     334</span>                 :<span class="tlaGNC">         222 :     overlay-&gt;boundary._pad[1] = 0;</span></span>
+<span id="L335"><span class="lineNum">     335</span>                 :<span class="tlaGNC">         222 :     overlay-&gt;boundary._pad[2] = 0;</span></span>
+<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">         222 : }</span></span>
+<span id="L337"><span class="lineNum">     337</span>                 :             : </span>
+<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">         116 : AllocHeader* SlabCache::try_coalesce(AllocHeader* header) noexcept {</span></span>
+<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">         116 :     size_t bs = block_size(size_class_);</span></span>
+<span id="L340"><span class="lineNum">     340</span>                 :             : </span>
+<span id="L341"><span class="lineNum">     341</span>                 :             :     // Skip coalescing for blocks too small to store prev pointer (MEM-002</span>
+<span id="L342"><span class="lineNum">     342</span>                 :             :     // Appendix A)</span>
+<span id="L343"><span class="lineNum">     343</span>   [<span class="tlaGBC" title="Branch 0 was taken 116 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 116 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span> :<span class="tlaGNC">         116 :     if (!coalescing_ || !current_slab_ || bs &lt; kMinCoalesceBlockSize)</span></span>
+<span class="lineNum">        </span>          <span class="tlaUNC" title="Branch 4 was not taken"> - </span><span class="tlaGBC" title="Branch 5 was taken 116 times"> + </span>]
+<span id="L344"><span class="lineNum">     344</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return header;</span></span>
+<span id="L345"><span class="lineNum">     345</span>                 :             : </span>
+<span id="L346"><span class="lineNum">     346</span>                 :<span class="tlaGNC tlaBgGNC">         116 :     AllocHeader* result = header;</span></span>
+<span id="L347"><span class="lineNum">     347</span>                 :<span class="tlaGNC">         116 :     size_t result_size = bs;</span></span>
+<span id="L348"><span class="lineNum">     348</span>                 :             : </span>
+<span id="L349"><span class="lineNum">     349</span>                 :             :     // Stamp boundary footer on this block</span>
+<span id="L350"><span class="lineNum">     350</span>                 :<span class="tlaGNC">         116 :     stamp_boundary_footer(header, bs);</span></span>
+<span id="L351"><span class="lineNum">     351</span>                 :             : </span>
+<span id="L352"><span class="lineNum">     352</span>                 :             :     // Find which slab this block belongs to (fix #4: avoid cross-slab UB)</span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">         116 :     auto* header_addr = reinterpret_cast&lt;char*&gt;(header);</span></span>
+<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">         116 :     const char* slab_base = nullptr;</span></span>
+<span id="L355"><span class="lineNum">     355</span>                 :<span class="tlaGNC">         116 :     size_t slab_sz = 0;</span></span>
+<span id="L356"><span class="lineNum">     356</span>         [<span class="tlaGBC" title="Branch 0 was taken 116 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         116 :     for (auto* s : slabs_) {</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">         116 :         auto* sb = reinterpret_cast&lt;const char*&gt;(s);</span></span>
+<span id="L358"><span class="lineNum">     358</span>   [<span class="tlaGBC" title="Branch 0 was taken 116 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 116 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         116 :         if (header_addr &gt;= sb &amp;&amp; header_addr &lt; sb + slab_size_) {</span></span>
+<span id="L359"><span class="lineNum">     359</span>                 :<span class="tlaGNC">         116 :             slab_base = sb;</span></span>
+<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">         116 :             slab_sz = slab_size_;</span></span>
+<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC">         116 :             break;</span></span>
+<span id="L362"><span class="lineNum">     362</span>                 :             :         }</span>
+<span id="L363"><span class="lineNum">     363</span>                 :             :     }</span>
+<span id="L364"><span class="lineNum">     364</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 116 times"> + </span>]:<span class="tlaGNC">         116 :     if (!slab_base) {</span></span>
+<span id="L365"><span class="lineNum">     365</span>                 :             :         // Fallback to current_slab_ (should not happen for properly tracked</span>
+<span id="L366"><span class="lineNum">     366</span>                 :             :         // blocks)</span>
+<span id="L367"><span class="lineNum">     367</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         slab_base = reinterpret_cast&lt;const char*&gt;(current_slab_);</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaUNC">           0 :         slab_sz = slab_size_;</span></span>
+<span id="L369"><span class="lineNum">     369</span>                 :             :     }</span>
+<span id="L370"><span class="lineNum">     370</span>                 :             : </span>
+<span id="L371"><span class="lineNum">     371</span>                 :             :     // Check left neighbor (constant-time: read footer immediately before</span>
+<span id="L372"><span class="lineNum">     372</span>                 :             :     // header)</span>
+<span id="L373"><span class="lineNum">     373</span>         [<span class="tlaGBC" title="Branch 0 was taken 108 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC tlaBgGNC">         116 :     if (header_addr &gt; slab_base) {</span></span>
+<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">         108 :         auto* left_footer =</span></span>
+<span id="L375"><span class="lineNum">     375</span>                 :             :             reinterpret_cast&lt;FooterOverlay*&gt;(header_addr - sizeof(FooterOverlay));</span>
+<span id="L376"><span class="lineNum">     376</span>         [<span class="tlaGBC" title="Branch 0 was taken 104 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">         108 :         if (left_footer-&gt;boundary.flags &amp; kBoundaryFlagFree) {</span></span>
+<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">         104 :             size_t left_sz = left_footer-&gt;boundary.block_size;</span></span>
+<span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaGNC">         104 :             auto* left_header =</span></span>
+<span id="L379"><span class="lineNum">     379</span>                 :<span class="tlaGNC">         104 :                 reinterpret_cast&lt;AllocHeader*&gt;(header_addr - left_sz);</span></span>
+<span id="L380"><span class="lineNum">     380</span>                 :             :             // Validate left_header is within the same slab</span>
+<span id="L381"><span class="lineNum">     381</span>                 :<span class="tlaGNC">         104 :             auto* left_hdr_addr = reinterpret_cast&lt;const char*&gt;(left_header);</span></span>
+<span id="L382"><span class="lineNum">     382</span>   [<span class="tlaGBC" title="Branch 0 was taken 104 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaGBC" title="Branch 2 was taken 104 times"> + </span><span class="tlaUNC" title="Branch 3 was not taken"> - </span>]:<span class="tlaGNC">         104 :             if (left_hdr_addr &gt;= slab_base &amp;&amp; left_hdr_addr &lt; slab_base + slab_sz &amp;&amp;</span></span>
+<span id="L383"><span class="lineNum">     383</span>         [<span class="tlaGBC" title="Branch 0 was taken 104 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         104 :                 left_header-&gt;magic == kFreedMagic) {</span></span>
+<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">         104 :                 uint8_t left_bin = compute_bin_index(left_header);</span></span>
+<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaGNC">         104 :                 dll_remove(bins_[left_bin], left_header);</span></span>
+<span id="L386"><span class="lineNum">     386</span>                 :<span class="tlaGNC">         104 :                 result = left_header;</span></span>
+<span id="L387"><span class="lineNum">     387</span>                 :<span class="tlaGNC">         104 :                 result_size += left_sz;</span></span>
+<span id="L388"><span class="lineNum">     388</span>                 :             :             }</span>
+<span id="L389"><span class="lineNum">     389</span>                 :             :         }</span>
+<span id="L390"><span class="lineNum">     390</span>                 :             :     }</span>
+<span id="L391"><span class="lineNum">     391</span>                 :             : </span>
+<span id="L392"><span class="lineNum">     392</span>                 :             :     // Check right neighbor (constant-time: read header immediately after block)</span>
+<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">         116 :     auto* right_addr = header_addr + bs;</span></span>
+<span id="L394"><span class="lineNum">     394</span>                 :<span class="tlaGNC">         116 :     auto* slab_end = slab_base + slab_sz;</span></span>
+<span id="L395"><span class="lineNum">     395</span>         [<span class="tlaGBC" title="Branch 0 was taken 116 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">         116 :     if (right_addr + sizeof(AllocHeader) &lt;= slab_end) {</span></span>
+<span id="L396"><span class="lineNum">     396</span>                 :<span class="tlaGNC">         116 :         auto* right_header = reinterpret_cast&lt;AllocHeader*&gt;(right_addr);</span></span>
+<span id="L397"><span class="lineNum">     397</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 113 times"> + </span>]:<span class="tlaGNC">         116 :         if (right_header-&gt;magic == kFreedMagic) {</span></span>
+<span id="L398"><span class="lineNum">     398</span>                 :<span class="tlaGNC">           3 :             size_t right_sz = block_size(size_class_);</span></span>
+<span id="L399"><span class="lineNum">     399</span>                 :<span class="tlaGNC">           3 :             uint8_t right_bin = compute_bin_index(right_header);</span></span>
+<span id="L400"><span class="lineNum">     400</span>                 :<span class="tlaGNC">           3 :             dll_remove(bins_[right_bin], right_header);</span></span>
+<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">           3 :             result_size += right_sz;</span></span>
+<span id="L402"><span class="lineNum">     402</span>                 :             :         }</span>
+<span id="L403"><span class="lineNum">     403</span>                 :             :     }</span>
+<span id="L404"><span class="lineNum">     404</span>                 :             : </span>
+<span id="L405"><span class="lineNum">     405</span>                 :             :     // Re-stamp the coalesced block with updated footer</span>
+<span id="L406"><span class="lineNum">     406</span>   [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 104 times"> + </span><span class="tlaGBC" title="Branch 2 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 10 times"> + </span>]:<span class="tlaGNC">         116 :     if (result != header || result_size != bs) {</span></span>
+<span id="L407"><span class="lineNum">     407</span>                 :<span class="tlaGNC">         106 :         stamp_boundary_footer(result, result_size);</span></span>
+<span id="L408"><span class="lineNum">     408</span>                 :             :     }</span>
+<span id="L409"><span class="lineNum">     409</span>                 :             : </span>
+<span id="L410"><span class="lineNum">     410</span>                 :<span class="tlaGNC">         116 :     return result;</span></span>
+<span id="L411"><span class="lineNum">     411</span>                 :             : }</span>
+<span id="L412"><span class="lineNum">     412</span>                 :             : </span>
+<span id="L413"><span class="lineNum">     413</span>                 :             : } // namespace hpactor::mem</span>
         </pre>
               </td>
             </tr>

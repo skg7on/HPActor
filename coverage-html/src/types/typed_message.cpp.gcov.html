@@ -32,17 +32,17 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">6</td>
-            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">16</td>
+            <td class="headerCovTableEntry">16</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 08:58:21</td>
+            <td class="headerValue">2026-06-20 13:35:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">1</td>
-            <td class="headerCovTableEntry">1</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">2</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryHi">-</td>
-            <td class="headerCovTableEntry">0</td>
-            <td class="headerCovTableEntry">0</td>
+            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
+            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntry">2</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -92,16 +92,32 @@
 <span id="L14"><span class="lineNum">      14</span>                 :             : </span>
 <span id="L15"><span class="lineNum">      15</span>                 :             : #include &lt;hpactor/msg/typed_message.hpp&gt;</span>
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
-<span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor {</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;cstring&gt;</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">          27 : TypedMessage::TypedMessage(TypeTag tag, const google::protobuf::Message&amp; msg)</span></span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">          27 :     : tag_(tag) {</span></span>
-<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC">          27 :     auto size = msg.ByteSizeLong();</span></span>
-<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">          27 :     payload_.resize(size);</span></span>
-<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">          27 :     (void)msg.SerializeToArray(payload_.data(), static_cast&lt;int&gt;(size));</span></span>
-<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          27 : }</span></span>
-<span id="L25"><span class="lineNum">      25</span>                 :             : </span>
-<span id="L26"><span class="lineNum">      26</span>                 :             : } // namespace hpactor</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor {</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : </span>
+<span id="L21"><span class="lineNum">      21</span>                 :<span class="tlaGNC tlaBgGNC">          27 : TypedMessage::TypedMessage(TypeTag tag, const google::protobuf::Message&amp; msg)</span></span>
+<span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">          27 :     : tag_(tag) {</span></span>
+<span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">          27 :     auto size = msg.ByteSizeLong();</span></span>
+<span id="L24"><span class="lineNum">      24</span>                 :<span class="tlaGNC">          27 :     payload_.resize(size);</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">          27 :     (void)msg.SerializeToArray(payload_.data(), static_cast&lt;int&gt;(size));</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          27 : }</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : </span>
+<span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaGNC">           4 : TypedMessage TypedMessage::create_inline(TypeTag tag, const uint8_t* data,</span></span>
+<span id="L29"><span class="lineNum">      29</span>                 :             :                                          size_t data_len) noexcept {</span>
+<span id="L30"><span class="lineNum">      30</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           4 :     if (data_len &lt;= kMaxInlinePayload) {</span></span>
+<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">           3 :         TypedMessage msg;</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">           3 :         msg.tag_ = tag;</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">           3 :         std::memcpy(msg.inline_payload_, data, data_len);</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">           3 :         msg.inline_size_ = static_cast&lt;uint8_t&gt;(data_len);</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">           3 :         msg.is_inline_ = true;</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           3 :         return msg;</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           3 :     }</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :     // Fall back to heap-allocated StreamBuffer</span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">           1 :     return TypedMessage(tag, StreamBuffer(data, data + data_len));</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :             : }</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             : </span>
+<span id="L42"><span class="lineNum">      42</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

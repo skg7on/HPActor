@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 08:58:21</td>
+            <td class="headerValue">2026-06-20 13:35:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -140,8 +140,8 @@
 <span id="L62"><span class="lineNum">      62</span>                 :             :     void stop();</span>
 <span id="L63"><span class="lineNum">      63</span>                 :             : </span>
 <span id="L64"><span class="lineNum">      64</span>                 :             :     // Check if the backend is running</span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC tlaBgGNC">          34 :     bool is_running() const {</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">          34 :         return running_.load();</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC tlaBgGNC">          33 :     bool is_running() const {</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">          33 :         return running_.load();</span></span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :     }</span>
 <span id="L68"><span class="lineNum">      68</span>                 :             : </span>
 <span id="L69"><span class="lineNum">      69</span>                 :             :     // Get the backend name for debugging</span>
@@ -221,9 +221,9 @@
 <span id="L143"><span class="lineNum">     143</span>                 :             : </span>
 <span id="L144"><span class="lineNum">     144</span>                 :             :     // Set callback for test verification (test-only API)</span>
 <span id="L145"><span class="lineNum">     145</span>                 :             :     using completion_callback = std::function&lt;void(OpCompletion)&gt;;</span>
-<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">         153 :     void set_completion_callback(completion_callback cb) {</span></span>
-<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         153 :         completion_callback_ = std::move(cb);</span></span>
-<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">         153 :     }</span></span>
+<span id="L146"><span class="lineNum">     146</span>                 :<span class="tlaGNC">         152 :     void set_completion_callback(completion_callback cb) {</span></span>
+<span id="L147"><span class="lineNum">     147</span>                 :<span class="tlaGNC">         152 :         completion_callback_ = std::move(cb);</span></span>
+<span id="L148"><span class="lineNum">     148</span>                 :<span class="tlaGNC">         152 :     }</span></span>
 <span id="L149"><span class="lineNum">     149</span>                 :             : </span>
 <span id="L150"><span class="lineNum">     150</span>                 :             :     // Get the underlying backend for direct async operations</span>
 <span id="L151"><span class="lineNum">     151</span>                 :<span class="tlaGNC">          45 :     IReactorBackend* backend() {</span></span>

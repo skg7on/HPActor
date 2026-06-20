@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 08:58:21</td>
+            <td class="headerValue">2026-06-20 13:35:38</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -128,89 +128,118 @@
 <span id="L50"><span class="lineNum">      50</span>                 :             : inline constexpr uint32_t kDefaultSampleRate = 128;</span>
 <span id="L51"><span class="lineNum">      51</span>                 :             : </span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : // =========================================================================</span>
-<span id="L53"><span class="lineNum">      53</span>                 :             : // Thread-local allocator pointer</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             : // Default per-region strategy assignments (MEM-003, defined in slab_cache.hpp)</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             : // =========================================================================</span>
 <span id="L55"><span class="lineNum">      55</span>                 :             : </span>
-<span id="L56"><span class="lineNum">      56</span>                 :             : /// \brief Thread-local pointer to the current thread's allocator.</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : /// \brief Default strategy assignments (MEM-003 design spec Section 3.2).</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : ///</span>
-<span id="L58"><span class="lineNum">      58</span>                 :             : /// Set by WorkerThread during initialization and used by global convenience</span>
-<span id="L59"><span class="lineNum">      59</span>                 :             : /// functions.</span>
-<span id="L60"><span class="lineNum">      60</span>                 :             : extern thread_local ThreadLocalAllocator* t_tla;</span>
-<span id="L61"><span class="lineNum">      61</span>                 :             : </span>
-<span id="L62"><span class="lineNum">      62</span>                 :             : /// \brief Thread-local current actor ID, set by the scheduler before</span>
-<span id="L63"><span class="lineNum">      63</span>                 :             : /// dispatching actor work.</span>
-<span id="L64"><span class="lineNum">      64</span>                 :             : extern thread_local ActorId t_current_actor_id;</span>
-<span id="L65"><span class="lineNum">      65</span>                 :             : </span>
-<span id="L66"><span class="lineNum">      66</span>                 :             : /// \brief Set the thread-local allocator pointer.</span>
-<span id="L67"><span class="lineNum">      67</span>                 :             : ///</span>
-<span id="L68"><span class="lineNum">      68</span>                 :             : /// \param[in] tla Pointer to the ThreadLocalAllocator for the calling thread.</span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC tlaBgGNC">          75 : inline void set_thread_allocator(ThreadLocalAllocator* tla) {</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">          75 :     t_tla = tla;</span></span>
-<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">          75 : }</span></span>
-<span id="L72"><span class="lineNum">      72</span>                 :             : </span>
-<span id="L73"><span class="lineNum">      73</span>                 :             : /// \brief Return the thread-local allocator pointer.</span>
-<span id="L74"><span class="lineNum">      74</span>                 :             : ///</span>
-<span id="L75"><span class="lineNum">      75</span>                 :             : /// \return The current thread's ThreadLocalAllocator, or \c nullptr if not set.</span>
-<span id="L76"><span class="lineNum">      76</span>                 :             : inline ThreadLocalAllocator* thread_allocator() {</span>
-<span id="L77"><span class="lineNum">      77</span>                 :             :     return t_tla;</span>
-<span id="L78"><span class="lineNum">      78</span>                 :             : }</span>
-<span id="L79"><span class="lineNum">      79</span>                 :             : </span>
-<span id="L80"><span class="lineNum">      80</span>                 :             : /// \brief Set the current actor ID for the calling thread.</span>
-<span id="L81"><span class="lineNum">      81</span>                 :             : ///</span>
-<span id="L82"><span class="lineNum">      82</span>                 :             : /// \param[in] id ActorId to associate with subsequent allocations on this</span>
-<span id="L83"><span class="lineNum">      83</span>                 :             : /// thread.</span>
-<span id="L84"><span class="lineNum">      84</span>                 :<span class="tlaGNC">        1333 : inline void set_current_actor_id(ActorId id) {</span></span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">        1333 :     t_current_actor_id = id;</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">        1333 : }</span></span>
-<span id="L87"><span class="lineNum">      87</span>                 :             : </span>
-<span id="L88"><span class="lineNum">      88</span>                 :             : /// \brief Return the current actor ID for the calling thread.</span>
-<span id="L89"><span class="lineNum">      89</span>                 :             : ///</span>
-<span id="L90"><span class="lineNum">      90</span>                 :             : /// \return The ActorId set by the scheduler.</span>
-<span id="L91"><span class="lineNum">      91</span>                 :<span class="tlaGNC">          31 : inline ActorId current_actor_id() {</span></span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">          31 :     return t_current_actor_id;</span></span>
-<span id="L93"><span class="lineNum">      93</span>                 :             : }</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             : /// - \c kMessage: bump-only (µs-lived, high churn, no freelist overhead)</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             : /// - \c kActor: segregated+coalescing (long-lived, fragmentation-critical)</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             : /// - \c kCoroutine: cas_lifo (mixed lifetimes, balanced)</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             : /// - \c kNetwork: bump-only (buffer lifetimes match I/O request lifetimes)</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             : /// - \c kInternal: cas_lifo (low allocation volume, balanced)</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             : /// - \c kHibernate: cas_lifo (infrequent alloc/free)</span>
+<span id="L64"><span class="lineNum">      64</span>                 :             : inline constexpr MemoryStrategyTable kDefaultStrategies = [] {</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :     MemoryStrategyTable t{};</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :     t.regions[static_cast&lt;uint8_t&gt;(RegionType::kMessage)] = {</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :         AllocationStrategy::kBumpOnly, false};</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             :     t.regions[static_cast&lt;uint8_t&gt;(RegionType::kActor)] = {</span>
+<span id="L69"><span class="lineNum">      69</span>                 :             :         AllocationStrategy::kSegregatedFit, true};</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             :     t.regions[static_cast&lt;uint8_t&gt;(RegionType::kCoroutine)] = {</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             :         AllocationStrategy::kCasLifo, false};</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :     t.regions[static_cast&lt;uint8_t&gt;(RegionType::kNetwork)] = {</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             :         AllocationStrategy::kBumpOnly, false};</span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :     t.regions[static_cast&lt;uint8_t&gt;(RegionType::kInternal)] = {</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             :         AllocationStrategy::kCasLifo, false};</span>
+<span id="L76"><span class="lineNum">      76</span>                 :             :     t.regions[static_cast&lt;uint8_t&gt;(RegionType::kHibernate)] = {</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :         AllocationStrategy::kCasLifo, false};</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     return t;</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             : }();</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             : </span>
+<span id="L81"><span class="lineNum">      81</span>                 :             : // =========================================================================</span>
+<span id="L82"><span class="lineNum">      82</span>                 :             : // Thread-local allocator pointer</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             : // =========================================================================</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             : </span>
+<span id="L85"><span class="lineNum">      85</span>                 :             : /// \brief Thread-local pointer to the current thread's allocator.</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             : ///</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             : /// Set by WorkerThread during initialization and used by global convenience</span>
+<span id="L88"><span class="lineNum">      88</span>                 :             : /// functions.</span>
+<span id="L89"><span class="lineNum">      89</span>                 :             : extern thread_local ThreadLocalAllocator* t_tla;</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             : </span>
+<span id="L91"><span class="lineNum">      91</span>                 :             : /// \brief Thread-local current actor ID, set by the scheduler before</span>
+<span id="L92"><span class="lineNum">      92</span>                 :             : /// dispatching actor work.</span>
+<span id="L93"><span class="lineNum">      93</span>                 :             : extern thread_local ActorId t_current_actor_id;</span>
 <span id="L94"><span class="lineNum">      94</span>                 :             : </span>
-<span id="L95"><span class="lineNum">      95</span>                 :             : // =========================================================================</span>
-<span id="L96"><span class="lineNum">      96</span>                 :             : // Global convenience API (implemented in memory_config.cpp)</span>
-<span id="L97"><span class="lineNum">      97</span>                 :             : // =========================================================================</span>
-<span id="L98"><span class="lineNum">      98</span>                 :             : </span>
-<span id="L99"><span class="lineNum">      99</span>                 :             : /// \brief Allocate memory from a typed region.</span>
-<span id="L100"><span class="lineNum">     100</span>                 :             : ///</span>
-<span id="L101"><span class="lineNum">     101</span>                 :             : /// The single admission point for all managed allocations. Reserves region</span>
-<span id="L102"><span class="lineNum">     102</span>                 :             : /// capacity, allocates via the thread-local allocator or fallback, and commits</span>
-<span id="L103"><span class="lineNum">     103</span>                 :             : /// to the region registry and memory tracker on success.</span>
-<span id="L104"><span class="lineNum">     104</span>                 :             : ///</span>
-<span id="L105"><span class="lineNum">     105</span>                 :             : /// \param[in] region The memory region to charge against.</span>
-<span id="L106"><span class="lineNum">     106</span>                 :             : /// \param[in] user_bytes Number of bytes requested by the caller.</span>
-<span id="L107"><span class="lineNum">     107</span>                 :             : /// \param[in] owner The owning actor.</span>
-<span id="L108"><span class="lineNum">     108</span>                 :             : /// \return Pointer to user data, or \c nullptr if region pressure rejects the</span>
-<span id="L109"><span class="lineNum">     109</span>                 :             : ///         allocation or the allocator is exhausted.</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             : /// \note Must be called from a thread with a valid \c t_tla set. The scheduler</span>
-<span id="L111"><span class="lineNum">     111</span>                 :             : ///       guarantees this for actor threads.</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             : void* allocate(RegionType region, size_t user_bytes, ActorId owner) noexcept;</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             : </span>
-<span id="L114"><span class="lineNum">     114</span>                 :             : /// \brief Allocate from a specific size class (defaults to kInternal region).</span>
-<span id="L115"><span class="lineNum">     115</span>                 :             : ///</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             : /// Convenience wrapper around \c allocate() that maps the size class to a byte</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             : /// count.</span>
+<span id="L95"><span class="lineNum">      95</span>                 :             : /// \brief Set the thread-local allocator pointer.</span>
+<span id="L96"><span class="lineNum">      96</span>                 :             : ///</span>
+<span id="L97"><span class="lineNum">      97</span>                 :             : /// \param[in] tla Pointer to the ThreadLocalAllocator for the calling thread.</span>
+<span id="L98"><span class="lineNum">      98</span>                 :<span class="tlaGNC tlaBgGNC">          75 : inline void set_thread_allocator(ThreadLocalAllocator* tla) {</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">          75 :     t_tla = tla;</span></span>
+<span id="L100"><span class="lineNum">     100</span>                 :<span class="tlaGNC">          75 : }</span></span>
+<span id="L101"><span class="lineNum">     101</span>                 :             : </span>
+<span id="L102"><span class="lineNum">     102</span>                 :             : /// \brief Return the thread-local allocator pointer.</span>
+<span id="L103"><span class="lineNum">     103</span>                 :             : ///</span>
+<span id="L104"><span class="lineNum">     104</span>                 :             : /// \return The current thread's ThreadLocalAllocator, or \c nullptr if not set.</span>
+<span id="L105"><span class="lineNum">     105</span>                 :             : inline ThreadLocalAllocator* thread_allocator() {</span>
+<span id="L106"><span class="lineNum">     106</span>                 :             :     return t_tla;</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             : }</span>
+<span id="L108"><span class="lineNum">     108</span>                 :             : </span>
+<span id="L109"><span class="lineNum">     109</span>                 :             : /// \brief Set the current actor ID for the calling thread.</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             : ///</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             : /// \param[in] id ActorId to associate with subsequent allocations on this</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             : /// thread.</span>
+<span id="L113"><span class="lineNum">     113</span>                 :<span class="tlaGNC">        1329 : inline void set_current_actor_id(ActorId id) {</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">        1329 :     t_current_actor_id = id;</span></span>
+<span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">        1329 : }</span></span>
+<span id="L116"><span class="lineNum">     116</span>                 :             : </span>
+<span id="L117"><span class="lineNum">     117</span>                 :             : /// \brief Return the current actor ID for the calling thread.</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             : ///</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             : /// \param[in] sc The size class to allocate from.</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             : /// \param[in] owner The owning actor.</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             : /// \return Pointer to user data, or \c nullptr on failure.</span>
-<span id="L122"><span class="lineNum">     122</span>                 :             : void* allocate_class(SizeClass sc, ActorId owner) noexcept;</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             : /// \return The ActorId set by the scheduler.</span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">          31 : inline ActorId current_actor_id() {</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">          31 :     return t_current_actor_id;</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :             : }</span>
 <span id="L123"><span class="lineNum">     123</span>                 :             : </span>
-<span id="L124"><span class="lineNum">     124</span>                 :             : /// \brief Deallocate memory previously returned by \c allocate() or</span>
-<span id="L125"><span class="lineNum">     125</span>                 :             : /// \c allocate_class().</span>
-<span id="L126"><span class="lineNum">     126</span>                 :             : ///</span>
-<span id="L127"><span class="lineNum">     127</span>                 :             : /// Records the region free, routes to the origin SlabCache for cross-thread</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             : /// frees, and safely handles fallback (std::malloc) deallocations.</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             : // =========================================================================</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             : // Global convenience API (implemented in memory_config.cpp)</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             : // =========================================================================</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             : </span>
+<span id="L128"><span class="lineNum">     128</span>                 :             : /// \brief Allocate memory from a typed region.</span>
 <span id="L129"><span class="lineNum">     129</span>                 :             : ///</span>
-<span id="L130"><span class="lineNum">     130</span>                 :             : /// \param[in] user_ptr Pointer previously returned by an allocation function.</span>
-<span id="L131"><span class="lineNum">     131</span>                 :             : /// \note Safe to call from any thread. Cross-thread frees are routed to the</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             : ///       origin cache via slab lookup.</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             : void deallocate(void* user_ptr) noexcept;</span>
-<span id="L134"><span class="lineNum">     134</span>                 :             : </span>
-<span id="L135"><span class="lineNum">     135</span>                 :             : } // namespace hpactor::mem</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             : /// The single admission point for all managed allocations. Reserves region</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             : /// capacity, allocates via the thread-local allocator or fallback, and commits</span>
+<span id="L132"><span class="lineNum">     132</span>                 :             : /// to the region registry and memory tracker on success.</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             : ///</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             : /// \param[in] region The memory region to charge against.</span>
+<span id="L135"><span class="lineNum">     135</span>                 :             : /// \param[in] user_bytes Number of bytes requested by the caller.</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             : /// \param[in] owner The owning actor.</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             : /// \return Pointer to user data, or \c nullptr if region pressure rejects the</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             : ///         allocation or the allocator is exhausted.</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             : /// \note Must be called from a thread with a valid \c t_tla set. The scheduler</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             : ///       guarantees this for actor threads.</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             : void* allocate(RegionType region, size_t user_bytes, ActorId owner) noexcept;</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             : </span>
+<span id="L143"><span class="lineNum">     143</span>                 :             : /// \brief Allocate from a specific size class (defaults to kInternal region).</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             : ///</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             : /// Convenience wrapper around \c allocate() that maps the size class to a byte</span>
+<span id="L146"><span class="lineNum">     146</span>                 :             : /// count.</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             : ///</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             : /// \param[in] sc The size class to allocate from.</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             : /// \param[in] owner The owning actor.</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             : /// \return Pointer to user data, or \c nullptr on failure.</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             : void* allocate_class(SizeClass sc, ActorId owner) noexcept;</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             : </span>
+<span id="L153"><span class="lineNum">     153</span>                 :             : /// \brief Deallocate memory previously returned by \c allocate() or</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             : /// \c allocate_class().</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             : ///</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             : /// Records the region free, routes to the origin SlabCache for cross-thread</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             : /// frees, and safely handles fallback (std::malloc) deallocations.</span>
+<span id="L158"><span class="lineNum">     158</span>                 :             : ///</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             : /// \param[in] user_ptr Pointer previously returned by an allocation function.</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             : /// \note Safe to call from any thread. Cross-thread frees are routed to the</span>
+<span id="L161"><span class="lineNum">     161</span>                 :             : ///       origin cache via slab lookup.</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             : void deallocate(void* user_ptr) noexcept;</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             : </span>
+<span id="L164"><span class="lineNum">     164</span>                 :             : } // namespace hpactor::mem</span>
         </pre>
               </td>
             </tr>
