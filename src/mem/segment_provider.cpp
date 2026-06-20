@@ -12,10 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/log/log_field.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mem/segment_provider.hpp>
-#include <hpactor/fault/fault_macros.hpp>
+#include <hpactor/mem/super_carrier.hpp>
 #include <hpactor/platform.hpp>
 
 #include <algorithm>
@@ -30,28 +31,61 @@ SegmentProvider& SegmentProvider::instance() {
 }
 
 void* SegmentProvider::acquire_slab(SizeClass sc) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    void* slab = carve_from_segment(sc);
-    if (slab) {
+    void* slab = nullptr;
+    {
+        std::lock_guard<std::mutex> lock(mutex_);
+        slab = carve_from_segment(sc);
+    }
+    if (slab)
         return slab;
+
+    // MEM-004: Try super carrier before individual mmap
+    // (carrier carve is lock-free via atomic offset — no mutex needed)
+    auto* carrier = super_carrier_.load(std::memory_order_acquire); // Fix #9:
+                                                                    // atomic
+                                                                    // read
+    if (carrier && carrier->is_initialized()) {
+        slab = carrier->carve(slab_size(sc));
+        if (slab) {
+            // Fix #2: register carrier slab so it's visible to lookup_slab,
+            // release_slab, and cross-thread free routing
+            std::lock_guard<std::mutex> lock(mutex_);
+            SlabRecord rec;
+            rec.slab_size_bytes = slab_size(sc);
+            rec.region = RegionType::kInternal;
+            rec.size_class = sc;
+            slab_records_[slab] = rec;
+            return slab;
+        }
     }
 
+    std::lock_guard<std::mutex> lock(mutex_);
     return allocate_new_segment(slab_size(sc));
 }
 
-void SegmentProvider::release_slab(void* slab, SizeClass /*sc*/) {
+void SegmentProvider::release_slab(void* slab, SizeClass sc) {
     std::lock_guard<std::mutex> lock(mutex_);
 
     auto it = slab_records_.find(slab);
     if (it == slab_records_.end()) {
+        // Fix #2: try carrier release for slabs not in segment tracking
+        auto* carrier = super_carrier_.load(std::memory_order_acquire);
+        if (carrier && carrier->is_initialized()) {
+            carrier->release(slab, slab_size(sc));
+        }
         return;
     }
 
     uint32_t idx = it->second.segment_index;
     slab_records_.erase(it);
 
+    // Carrier slabs have no segment (segment_index stays 0, segments_ may
+    // be empty). Skip segment refcounting for carrier slabs.
     if (idx >= segments_.size()) {
+        auto* carrier = super_carrier_.load(std::memory_order_acquire);
+        if (carrier && carrier->is_initialized()) {
+            carrier->release(slab, slab_size(sc));
+        }
         return;
     }
 
@@ -109,6 +143,9 @@ SegmentProvider::Stats SegmentProvider::stats() const {
     for (const auto& seg : segments_) {
         s.total_allocated += seg.size;
     }
+    s.huge_page_segments = huge_page_count_;
+    s.thp_segments = thp_count_;
+    s.regular_segments = regular_count_;
     return s;
 }
 
@@ -141,6 +178,9 @@ void SegmentProvider::register_slab_owner(void* slab, size_t slab_size,
         it->second.size_class = sc;
         it->second.slab_size_bytes = slab_size;
     }
+    // Fix #2: carrier slabs may not have a record yet (created in acquire_slab
+    // without owner_cache). Update the record if it exists; if not, the slab
+    // was already registered in acquire_slab with a minimal record.
 }
 
 SegmentProvider::SlabInfo SegmentProvider::lookup_slab(void* ptr) const {
@@ -170,8 +210,35 @@ void* SegmentProvider::allocate_new_segment(size_t size) {
         return nullptr;
     }
 
-    void* base = mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
-                      MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+    int flags = MAP_PRIVATE | MAP_ANONYMOUS;
+    bool used_huge = false;
+    bool used_thp = false;
+
+    // MEM-005: Try huge pages for legacy segments
+#ifdef MAP_HUGETLB
+    if (huge_info_.explicit_huge_pages_available) {
+        void* probe = mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE,
+                           flags | MAP_HUGETLB, -1, 0);
+        if (probe != MAP_FAILED) {
+            huge_page_count_++;
+            Segment seg;
+            seg.base = probe;
+            seg.size = alloc_size;
+            seg.offset = size;
+            seg.ref_count = 1;
+            segments_.push_back(seg);
+            uint32_t idx = static_cast<uint32_t>(segments_.size() - 1);
+            SlabRecord rec;
+            rec.segment_index = idx;
+            rec.slab_size_bytes = size;
+            slab_records_[probe] = rec;
+            return probe;
+        }
+        // Fall through to standard pages with THP hint
+    }
+#endif
+
+    void* base = mmap(nullptr, alloc_size, PROT_READ | PROT_WRITE, flags, -1, 0);
 
     if (base == MAP_FAILED) {
         HPACTOR_LOG_WARNING(log::LogCategory::kMemory, ActorId{0},
@@ -181,10 +248,24 @@ void* SegmentProvider::allocate_new_segment(size_t size) {
         return nullptr;
     }
 
+#ifdef MADV_HUGEPAGE
+    if (huge_info_.transparent_huge_pages_available) {
+        madvise(base, alloc_size, MADV_HUGEPAGE);
+        used_thp = true;
+    }
+#endif
+
+    if (used_huge)
+        huge_page_count_++;
+    else if (used_thp)
+        thp_count_++;
+    else
+        regular_count_++;
+
     Segment seg;
     seg.base = base;
     seg.size = alloc_size;
-    seg.offset = size; // first `size` bytes are the returned slab
+    seg.offset = size;
     seg.ref_count = 1;
 
     segments_.push_back(seg);

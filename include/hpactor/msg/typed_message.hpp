@@ -10,10 +10,20 @@
 #include <google/protobuf/message.h>
 
 #include <atomic>
+#include <cstring>
 #include <memory>
+#include <type_traits>
 #include <utility>
 
 namespace hpactor {
+
+/// \brief Maximum payload size eligible for inlining (MEM-006).
+inline constexpr size_t kMaxInlinePayload = 32;
+
+/// \brief Compile-time trait: true when T can be inlined in the envelope.
+template <typename T>
+inline constexpr bool kCanInlinePayload =
+    sizeof(T) <= kMaxInlinePayload && std::is_trivially_copyable_v<T>;
 
 /// \brief Universal message carrier for all actor communication.
 ///
@@ -21,6 +31,10 @@ namespace hpactor {
 /// wire transfer, and an optional \c shared_ptr<Message> for zero-copy local
 /// delivery. The \c mpsc_next field provides the intrusive link for lock-free
 /// MPSC mailboxes.
+///
+/// For payloads ≤ \c kMaxInlinePayload bytes, \c StreamBuffer::from_data()
+/// provides exact-capacity allocation (no 64KB minimum), significantly reducing
+/// allocation overhead for small messages (MEM-006).
 ///
 /// Lifecycle:
 /// - Local send: \c TypedMessage(tag, parsed_msg, serialized_bytes)
@@ -47,12 +61,19 @@ class TypedMessage {
     /// \c mpsc_next is left default-initialized.
     TypedMessage(TypedMessage&& other) noexcept
         : tag_(other.tag_), payload_(std::move(other.payload_)),
+          inline_size_(other.inline_size_), is_inline_(other.is_inline_),
           parsed_(std::move(other.parsed_)),
           sender_address_(other.sender_address_),
           trace_context_(other.trace_context_),
           has_trace_context_(other.has_trace_context_),
           deadline_ns_(other.deadline_ns_),
-          ask_message_id_(other.ask_message_id_) {}
+          ask_message_id_(other.ask_message_id_) {
+        if (other.is_inline_) {
+            std::memcpy(inline_payload_, other.inline_payload_, other.inline_size_);
+            other.is_inline_ = false;
+            other.inline_size_ = 0;
+        }
+    }
 
     /// \brief Move assignment.
     ///
@@ -61,6 +82,13 @@ class TypedMessage {
     TypedMessage& operator=(TypedMessage&& other) noexcept {
         tag_ = other.tag_;
         payload_ = std::move(other.payload_);
+        is_inline_ = other.is_inline_;
+        inline_size_ = other.inline_size_;
+        if (other.is_inline_) {
+            std::memcpy(inline_payload_, other.inline_payload_, other.inline_size_);
+            other.is_inline_ = false;
+            other.inline_size_ = 0;
+        }
         parsed_ = std::move(other.parsed_);
         sender_address_ = other.sender_address_;
         trace_context_ = other.trace_context_;
@@ -202,6 +230,40 @@ class TypedMessage {
         ask_message_id_ = id;
     }
 
+    // ── MEM-006: Inline payload support ──────────────────────────
+
+    /// \brief Whether this message's payload is stored inline rather than in
+    ///        the heap-allocated StreamBuffer.
+    [[nodiscard]] bool is_inline() const noexcept {
+        return is_inline_;
+    }
+
+    /// \brief Pointer to the inline payload data.
+    /// \pre \c is_inline() returns true.
+    [[nodiscard]] const uint8_t* inline_data() const noexcept {
+        return inline_payload_;
+    }
+
+    /// \brief Size of the inline payload in bytes.
+    /// \pre \c is_inline() returns true.
+    [[nodiscard]] uint8_t inline_size() const noexcept {
+        return inline_size_;
+    }
+
+    /// \brief Create a TypedMessage with inline storage for small payloads
+    ///        (MEM-006 §3.1).
+    ///
+    /// When \p data_len ≤ \c kMaxInlinePayload, the serialized bytes are copied
+    /// into inline storage, eliminating a separate heap allocation. For larger
+    /// payloads, falls back to the standard StreamBuffer constructor.
+    ///
+    /// \param[in] tag Message type tag for dispatch.
+    /// \param[in] data Serialized payload bytes.
+    /// \param[in] data_len Number of bytes in \p data.
+    /// \return A TypedMessage with inline or external storage as appropriate.
+    [[nodiscard]] static TypedMessage
+    create_inline(TypeTag tag, const uint8_t* data, size_t data_len) noexcept;
+
     /// \brief MPSC mailbox intrusive link pointer.
     ///
     /// Must be named \c mpsc_next for \c MPSCMailbox<T> compatibility.
@@ -215,6 +277,9 @@ class TypedMessage {
   private:
     TypeTag tag_ = TypeTag::Invalid;
     StreamBuffer payload_;
+    uint8_t inline_payload_[kMaxInlinePayload]{};
+    uint8_t inline_size_{0};
+    bool is_inline_{false};
     mutable std::shared_ptr<google::protobuf::Message> parsed_;
     ActorAddress sender_address_;
     TraceContext trace_context_;

@@ -14,6 +14,8 @@
 
 #include <hpactor/msg/typed_message.hpp>
 
+#include <cstring>
+
 namespace hpactor {
 
 TypedMessage::TypedMessage(TypeTag tag, const google::protobuf::Message& msg)
@@ -21,6 +23,20 @@ TypedMessage::TypedMessage(TypeTag tag, const google::protobuf::Message& msg)
     auto size = msg.ByteSizeLong();
     payload_.resize(size);
     (void)msg.SerializeToArray(payload_.data(), static_cast<int>(size));
+}
+
+TypedMessage TypedMessage::create_inline(TypeTag tag, const uint8_t* data,
+                                         size_t data_len) noexcept {
+    if (data_len <= kMaxInlinePayload) {
+        TypedMessage msg;
+        msg.tag_ = tag;
+        std::memcpy(msg.inline_payload_, data, data_len);
+        msg.inline_size_ = static_cast<uint8_t>(data_len);
+        msg.is_inline_ = true;
+        return msg;
+    }
+    // Fall back to heap-allocated StreamBuffer
+    return TypedMessage(tag, StreamBuffer(data, data + data_len));
 }
 
 } // namespace hpactor

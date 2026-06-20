@@ -25,6 +25,17 @@ ThreadLocalAllocator::ThreadLocalAllocator() {
     }
 }
 
+ThreadLocalAllocator::ThreadLocalAllocator(const MemoryStrategyTable& table) {
+    for (uint8_t r = 0; r < kNumRegionTypes; ++r) {
+        const auto& cfg = table.regions[r];
+        for (uint8_t s = 0; s < kNumSizeClasses; ++s) {
+            caches_[r][s] = new SlabCache(static_cast<SizeClass>(s),
+                                          static_cast<RegionType>(r),
+                                          cfg.strategy, cfg.enable_coalescing);
+        }
+    }
+}
+
 ThreadLocalAllocator::~ThreadLocalAllocator() {
     for (uint8_t r = 0; r < kNumRegionTypes; ++r) {
         for (uint8_t s = 0; s < kNumSizeClasses; ++s) {

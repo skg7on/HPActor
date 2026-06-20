@@ -1,11 +1,13 @@
 # HPActor Memory Management Architecture Design
 
 **Date:** 2026-05-03 (original), updated 2026-06-20
-**Status:** Implemented (M1–M8 complete), Evolution Phase (see companion docs)
-**Scope:** Custom allocator, observability, debugging, hibernation, memory compression, fragmentation control
+**Status:** Implemented (M1–M8 complete), Evolution Phase 1–2 implemented (MEM-001 through MEM-007)
+**Scope:** Custom allocator, observability, debugging, hibernation, memory compression, fragmentation control, NUMA-aware allocation
 **Companion Docs:**
 - `docs/architecture/memory/memory-management-erlang-gap-analysis.md` — Erlang BEAM comparison & optimization roadmap
 - `docs/superpowers/specs/2026-06-20-mem-01` through `mem-06` — detailed design specs for Phase 1–2 optimizations
+- `docs/superpowers/plans/2026-06-20-mem-01` through `mem-06` — implementation plans
+- PR #343 — implementation
 
 ## Table of Contents
 
@@ -62,59 +64,60 @@ At million-actor scale, general-purpose allocators (`malloc`, `new`) become the 
 ### 1.4 Current Implementation Status (as of 2026-06-20)
 
 All 8 implementation phases (M1–M8) described in Section 12 are complete.
-The memory subsystem is production-deployed with:
+Phase 1–2 evolution optimizations (MEM-001 through MEM-007) have been
+implemented on branch `feature/mem-erlang-gap-optimizations` (PR #343).
 
-- **16 public headers** under `include/hpactor/mem/`
-- **11 source files** under `src/mem/`
-- **19 unit test files** under `tests/unit/mem/` (plus 1 CLI test)
+The memory subsystem now has:
+
+- **18 public headers** under `include/hpactor/mem/` (added `super_carrier.hpp`)
+- **13 source files** under `src/mem/` (added `super_carrier.cpp`)
+- **22 unit test files** under `tests/unit/mem/` (added `test_segregated_freelist.cpp`,
+  `test_free_block_coalescing.cpp`, `test_super_carrier.cpp`)
+- **152 total memory tests passing** (up from 110 baseline)
 - **6 fault injection sites** in allocator paths
 
-The current architecture is a **two-tier slab allocator** with:
+The current architecture has been extended with:
 
-```
-┌──────────────────────────────────────────────────────────────────┐
-│                     HPActor Memory Subsystem (current)            │
-├──────────────────────────────────────────────────────────────────┤
-│  Layer 5: Hibernation & Compression                              │
-│    HibernationRegistry │ Hibernatable │ ZramManager │ Compaction │
-├──────────────────────────────────────────────────────────────────┤
-│  Layer 4: Debugging & Integrity                                  │
-│    Poisoning (0xAA) │ CanaryFooters (8B) │ Guard Pages │ SIGSEGV  │
-│    Fault Injection: 6 sites in allocator paths                   │
-├──────────────────────────────────────────────────────────────────┤
-│  Layer 3: Accounting & Admission                                 │
-│    MemoryRegionRegistry │ MemoryTracker (1M actors) │ Telemetry  │
-│    Per-region hard limits │ Per-actor peak tracking │ 1/128 sampling │
-├──────────────────────────────────────────────────────────────────┤
-│  Layer 2: Slab Allocator                                         │
-│    ThreadLocalAllocator: 6 RegionType × 8 SizeClass matrix       │
-│    SlabCache: bump pointer (virgin) + CAS LIFO freelist (recycled)│
-├──────────────────────────────────────────────────────────────────┤
-│  Layer 1: Foundation                                             │
-│    SegmentProvider (2MB mmap) │ AllocHeader (32B) │ SizeClass (8) │
-│    RegionType (6) │ CanaryFooter (8B) │ FreeList │ ObjectPool     │
-└──────────────────────────────────────────────────────────────────┘
-```
+**Layer 0 (new): Virtual Memory Management**
+- `SuperCarrier` — contiguous virtual reservation (8–64GB), mprotect-based slab carving
+- NUMA-aware per-node sub-regions via `carve_numa()`
+- Huge page support: MAP_HUGETLB with THP fallback for both carrier and legacy segments
+- SegmentProvider now prioritizes carrier carve over individual mmap
 
-### 1.5 Evolution Roadmap
+**Layer 2 (updated): Slab Allocator**
+- `AllocationStrategy` enum: `kCasLifo` (default), `kSegregatedFit`, `kBumpOnly`
+- `kSegregatedFit`: bump-first allocation + 8-bin address-segregated free lists with
+  doubly-linked intrusive list for O(1) middle removal (enables coalescing)
+- `kBumpOnly`: bump-only allocation with idle slab recycling for `kMessage`/`kNetwork`
+- `MemoryStrategyTable` + `kDefaultStrategies`: per-region compile-time configuration
 
-An Erlang BEAM `erts_alloc` comparison (issue #339) identified 9 architectural
-gaps between HPActor's current implementation and production-hardened memory
-systems. A prioritized 4-phase optimization roadmap is documented in:
+**Layer 2.5 (new): Fragmentation Control**
+- `BoundaryFooter` — zero-overhead coalescing metadata in freed block's CanaryFooter slot
+- `try_coalesce()`: immediate left+right neighbor merging on every deallocate
+- Doubly-linked free list (`FreeBlockLinkage`) for O(1) block removal from any bin position
 
-- **Gap analysis & roadmap:** `docs/architecture/memory/memory-management-erlang-gap-analysis.md`
-- **Phase 1 specs (P0/P1):** `docs/superpowers/specs/2026-06-20-mem-0[1-6]-*.md`
+**Message Layer (new):**
+- `TypedMessage::create_inline()` — zero-allocation message factory for payloads ≤32B
+- `kCanInlinePayload<T>` constexpr trait for compile-time inline dispatch
 
-Key optimizations in the near-term pipeline:
-- **MEM-001:** Segregated Free Lists (Good Fit strategy) — replace single CAS LIFO with address-binned freelists
-- **MEM-002:** Free Block Coalescing — boundary tags for immediate adjacent-free merging
-- **MEM-003:** Per-Region Allocation Strategy — bump-only for `kMessage`/`kNetwork`, segregated+coalescing for `kActor`
-- **MEM-004:** Super Carrier — contiguous virtual address reservation at startup
-- **MEM-005:** Huge Page Support — MAP_HUGETLB with THP fallback
-- **MEM-006:** Message Inlining — inline payloads ≤32B into mailbox envelopes
+### 1.5 Evolution Status
 
-All optimizations are designed to preserve backward compatibility, zero-CAS hot
-paths where possible, and the existing hibernation/tracking/debugging strengths.
+Phase 1–2 optimizations (MEM-001 through MEM-007) are **implemented** on branch
+`feature/mem-erlang-gap-optimizations` (PR #343).
+
+| MEM | Priority | Feature | Status |
+|-----|----------|---------|--------|
+| 001 | P0 | Segregated Free Lists (8-bin, round-robin, bump-first) | ✅ Implemented |
+| 002 | P0 | Free Block Coalescing (boundary tags, doubly-linked freelist) | ✅ Implemented |
+| 003 | P1 | Per-Region Strategy Selection (bump-only, segregated+coalescing) | ✅ Implemented |
+| 004 | P1 | Super Carrier (contiguous virtual reservation, mprotect carving) | ✅ Implemented |
+| 005 | P1 | Huge Page Support (MAP_HUGETLB, THP fallback, legacy segment path) | ✅ Implemented |
+| 006 | P1 | Message Inlining (TypedMessage inline storage, constexpr trait) | ✅ Implemented |
+| 007 | P3 | NUMA-Aware Memory Manager (per-node carve, topology detection) | ✅ Implemented |
+
+All optimizations preserve backward compatibility with opt-in defaults. The
+existing hibernation, tracking, debugging, and compaction subsystems are
+unchanged.
 
 ---
 

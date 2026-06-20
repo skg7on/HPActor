@@ -16,6 +16,7 @@
 
 #include <hpactor/mem/memory_region.hpp>
 #include <hpactor/mem/size_class.hpp>
+#include <hpactor/mem/super_carrier.hpp>
 
 #include <cstddef>
 #include <cstdint>
@@ -24,6 +25,8 @@
 #include <vector>
 
 namespace hpactor::mem {
+
+class SuperCarrier; // forward declaration
 
 /// \brief Tier-0 global segment provider.
 ///
@@ -59,8 +62,12 @@ class SegmentProvider {
 
     /// \brief Aggregate segment provider statistics.
     struct Stats {
-        size_t total_allocated{0}; ///< Total bytes mmap'd.
-        size_t active_segments{0}; ///< Number of live segments.
+        size_t total_allocated{0};      ///< Total bytes mmap'd.
+        size_t active_segments{0};      ///< Number of live segments.
+        uint64_t huge_page_segments{0}; ///< Segments with MAP_HUGETLB
+                                        ///< (MEM-005).
+        uint64_t thp_segments{0};       ///< Segments with MADV_HUGEPAGE hint.
+        uint64_t regular_segments{0};   ///< Segments with 4KB pages.
     };
 
     /// \brief Return the singleton instance.
@@ -118,6 +125,31 @@ class SegmentProvider {
     /// \return A snapshot of current segment provider stats.
     Stats stats() const;
 
+    /// \brief Set the super carrier for slab carving (MEM-004 §3.2).
+    ///
+    /// When set, \c acquire_slab() will attempt to carve from the carrier
+    /// before falling back to individual mmap segments.
+    ///
+    /// \param[in] carrier Pointer to an initialized SuperCarrier, or nullptr.
+    void set_super_carrier(SuperCarrier* carrier) noexcept {
+        super_carrier_ = carrier;
+    }
+
+    /// \brief Return the current super carrier, or nullptr if not set.
+    [[nodiscard]] SuperCarrier* super_carrier() const noexcept {
+        return super_carrier_;
+    }
+
+    /// \brief Set huge page info for legacy segment allocation (MEM-005 §3.4).
+    ///
+    /// When huge pages are available, \c allocate_new_segment() will attempt
+    /// \c MAP_HUGETLB before falling back to standard pages.
+    ///
+    /// \param[in] info Result from \c probe_huge_pages().
+    void set_huge_page_info(const HugePageInfo& info) noexcept {
+        huge_info_ = info;
+    }
+
   private:
     SegmentProvider() = default;
 
@@ -152,6 +184,15 @@ class SegmentProvider {
     mutable std::mutex mutex_;
     std::vector<Segment> segments_;
     std::unordered_map<void*, SlabRecord> slab_records_;
+    std::atomic<SuperCarrier*> super_carrier_{nullptr}; ///< Optional carrier
+                                                        ///< (MEM-004). Fix #9:
+                                                        ///< atomic for
+                                                        ///< lock-free read in
+                                                        ///< acquire_slab.
+    HugePageInfo huge_info_{};            ///< Huge page config (MEM-005).
+    mutable uint64_t huge_page_count_{0}; ///< MAP_HUGETLB segments (MEM-005).
+    mutable uint64_t thp_count_{0};       ///< MADV_HUGEPAGE segments (MEM-005).
+    mutable uint64_t regular_count_{0};   ///< 4KB segments (MEM-005).
 };
 
 } // namespace hpactor::mem
