@@ -95,7 +95,7 @@ struct SaturateStartPayload {
         off += 4;
         std::memcpy(buf + off, &duration_max_ms, 4);
         off += 4;
-        return StreamBuffer(buf, buf + sizeof(buf));
+        return StreamBuffer::from_data(buf, sizeof(buf));
     }
 
     static SaturateStartPayload decode(const StreamBuffer& buf) {
@@ -160,7 +160,7 @@ struct RateChangePayload {
         off += 2;
         std::memcpy(buf + off, &step_interval_ms, 2);
         off += 2;
-        return StreamBuffer(buf, buf + sizeof(buf));
+        return StreamBuffer::from_data(buf, sizeof(buf));
     }
 
     static RateChangePayload decode(const StreamBuffer& buf) {
@@ -207,7 +207,7 @@ struct LoadMessagePayload {
         off += 8;
         std::memcpy(buf + off, &send_timestamp_us, 8);
         off += 8;
-        return StreamBuffer(buf, buf + sizeof(buf));
+        return StreamBuffer::from_data(buf, sizeof(buf));
     }
 
     /// \brief Encode header + junk fill to \p total_size bytes.
@@ -265,7 +265,7 @@ struct LatencySamplePayload {
         off += 8;
         std::memcpy(buf + off, &latency_us, 4);
         off += 4;
-        return StreamBuffer(buf, buf + sizeof(buf));
+        return StreamBuffer::from_data(buf, sizeof(buf));
     }
 
     static LatencySamplePayload decode(const StreamBuffer& buf) {
@@ -302,7 +302,7 @@ struct DropReportPayload {
         off += 8;
         std::memcpy(buf + off, &total_dropped, 8);
         off += 8;
-        return StreamBuffer(buf, buf + sizeof(buf));
+        return StreamBuffer::from_data(buf, sizeof(buf));
     }
 
     static DropReportPayload decode(const StreamBuffer& buf) {
@@ -335,7 +335,7 @@ struct ThroughputSamplePayload {
         std::memcpy(buf, &sender_id, 4);
         std::memcpy(buf + 4, &total_sent, 8);
         std::memcpy(buf + 12, &send_dropped, 8);
-        return StreamBuffer(buf, buf + sizeof(buf));
+        return StreamBuffer::from_data(buf, sizeof(buf));
     }
 
     static ThroughputSamplePayload decode(const StreamBuffer& buf) {

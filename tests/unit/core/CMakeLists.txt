@@ -6,6 +6,7 @@ add_executable(test_unit_core
     test_circuit_breaker_delivery.cpp
     test_deadline_config.cpp
     test_deadline_enforcement.cpp
+    test_fast_tag_receive.cpp
 )
 target_link_libraries(test_unit_core hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_core)

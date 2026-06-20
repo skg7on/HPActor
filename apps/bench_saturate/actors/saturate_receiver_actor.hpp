@@ -44,6 +44,7 @@ class SaturateReceiverActor : public EventBasedActor {
         : EventBasedActor(ctx, sys), collector_addr_(collector_addr),
           receiver_index_(receiver_index),
           epoch_start_(std::chrono::steady_clock::now()) {
+        add_fast_tag(LoadMessageTag);
         become(make_behavior());
     }
 
@@ -110,26 +111,30 @@ class SaturateReceiverActor : public EventBasedActor {
             return;
 
         received_count_.fetch_add(1, std::memory_order_relaxed);
+        uint64_t rcvd = received_count_.load(std::memory_order_relaxed);
 
-        const auto& p = msg.payload();
-        if (p.size() >= LoadMessagePayload::kHeaderSize) {
-            auto decoded = LoadMessagePayload::decode(p);
-            auto now = std::chrono::steady_clock::now();
-            auto send_time = std::chrono::steady_clock::time_point(
-                std::chrono::microseconds(decoded.send_timestamp_us));
-            uint32_t latency_us = static_cast<uint32_t>(
-                std::chrono::duration_cast<std::chrono::microseconds>(now - send_time)
-                    .count());
+        // Sample 1% of messages for latency (statistically sufficient
+        // at scale and avoids overwhelming the collector).
+        if (rcvd % 100 == 0) {
+            const auto& p = msg.payload();
+            if (p.size() >= LoadMessagePayload::kHeaderSize) {
+                auto decoded = LoadMessagePayload::decode(p);
+                auto now = std::chrono::steady_clock::now();
+                auto send_time = std::chrono::steady_clock::time_point(
+                    std::chrono::microseconds(decoded.send_timestamp_us));
+                uint32_t latency_us = static_cast<uint32_t>(
+                    std::chrono::duration_cast<std::chrono::microseconds>(now - send_time)
+                        .count());
 
-            LatencySamplePayload sample;
-            sample.sender_id = decoded.sender_id;
-            sample.seq_no = decoded.seq_no;
-            sample.latency_us = latency_us;
-            context()->send(collector_addr_,
-                            make_msg(LatencySampleTag, sample.encode()));
+                LatencySamplePayload sample;
+                sample.sender_id = decoded.sender_id;
+                sample.seq_no = decoded.seq_no;
+                sample.latency_us = latency_us;
+                context()->send(collector_addr_,
+                                make_msg(LatencySampleTag, sample.encode()));
+            }
         }
 
-        uint64_t rcvd = received_count_.load();
         if (rcvd % 1000 == 0) {
             send_drop_report();
         }

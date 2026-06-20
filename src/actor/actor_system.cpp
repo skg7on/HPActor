@@ -630,6 +630,23 @@ ActorSystem::deliver_with_result(ActorId target, TypedMessage msg,
         target, std::move(msg), priority, deadline_ns, options);
 }
 
+mailbox::EnqueueResult
+ActorSystem::try_deliver_local_fast(ActorId target, TypedMessage msg) {
+    auto* mailbox = get_mailbox(target);
+    if (!mailbox) {
+        mailbox::EnqueueResult r;
+        r.code = mailbox::EnqueueResultCode::ActorNotFound;
+        r.target = target;
+        return r;
+    }
+    mailbox::MailboxEnvelopeMeta meta;
+    meta.sender = msg.sender_address();
+    meta.type_tag = msg.type_id();
+    meta.priority = 0;
+    meta.deadline_ns = INT64_MAX;
+    return mailbox->try_push(std::move(msg), meta);
+}
+
 void ActorSystem::deliver_local(ActorId target, TypedMessage msg) {
     if (!delivery_pipeline_)
         return;

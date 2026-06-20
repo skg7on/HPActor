@@ -23,18 +23,21 @@
 namespace hpactor {
 namespace adt {
 
-// StreamBuffer — contiguous byte buffer with O(1) consume and arena allocation.
-//
-// Combines ring-buffer semantics (read_pos_ offset tracks consumed prefix,
-// consume() only advances a pointer) with pre-allocated arena backing
-// (geometric growth from an initial capacity). Lazy compaction means
-// memmove is amortized to near-zero: it only triggers when read_pos_ exceeds
-// half the live data, or when capacity must grow.
-//
-// Provides a std::vector<uint8_t>-compatible API so it can serve as the
-// concrete type behind the `bytes` typedef.
+/// \brief Contiguous byte buffer with O(1) consume and arena allocation.
+///
+/// Combines ring-buffer semantics (\c read_pos_ offset tracks consumed prefix,
+/// \c consume() only advances a pointer) with pre-allocated arena backing
+/// (geometric growth from an initial capacity). Lazy compaction means
+/// \c memmove is amortized to near-zero: it only triggers when \c read_pos_
+/// exceeds half the live data, or when capacity must grow.
+///
+/// Provides a \c std::vector<uint8_t>-compatible API so it can serve as the
+/// concrete type behind the \c bytes typedef.
+///
+/// \note Thread safety: Not internally synchronized. A \c StreamBuffer must
+///       not be accessed concurrently from multiple threads.
 class StreamBuffer {
-public:
+  public:
     using value_type = uint8_t;
     using size_type = std::size_t;
     using difference_type = std::ptrdiff_t;
@@ -63,8 +66,27 @@ public:
 
     ~StreamBuffer() = default;
 
-    // Create a buffer with pre-allocated capacity but size() == 0.
+    /// \brief Create a buffer with pre-allocated capacity but \c size() == 0.
+    ///
+    /// \param[in] cap Minimum capacity to reserve. The actual capacity may be
+    ///                larger due to the 64 KB default minimum.
+    /// \return An empty \c StreamBuffer with at least \p cap bytes reserved.
+    /// \note Prefer \c from_data() when the exact payload size is known — it
+    ///       avoids the 64 KB default minimum for small buffers.
     static StreamBuffer with_capacity(size_t cap);
+
+    /// \brief Create a buffer from raw data with exact-fit capacity.
+    ///
+    /// Unlike the iterator-pair constructor, this factory creates a buffer
+    /// whose initial capacity matches the data size, avoiding the 64 KB
+    /// default minimum. The data is copied into the buffer.
+    ///
+    /// \param[in] data Pointer to the source bytes. May be \c nullptr when
+    ///                 \p len is 0.
+    /// \param[in] len  Number of bytes to copy.
+    /// \return A \c StreamBuffer containing a copy of \p data with capacity
+    ///         sized to \p len.
+    static StreamBuffer from_data(const uint8_t* data, size_t len);
 
     // ---- Copy ----
 
@@ -78,9 +100,15 @@ public:
 
     // ---- Capacity ----
 
-    size_t size() const noexcept { return buf_.size() - read_pos_; }
-    bool empty() const noexcept { return size() == 0; }
-    size_t capacity() const noexcept { return buf_.capacity(); }
+    size_t size() const noexcept {
+        return buf_.size() - read_pos_;
+    }
+    bool empty() const noexcept {
+        return size() == 0;
+    }
+    size_t capacity() const noexcept {
+        return buf_.capacity();
+    }
     void reserve(size_t n);
     void resize(size_t n);
     void resize(size_t n, uint8_t value);
@@ -91,27 +119,51 @@ public:
         maybe_compact();
         return buf_.data() + read_pos_;
     }
-    const_iterator begin() const noexcept { return buf_.data() + read_pos_; }
-    const_iterator cbegin() const noexcept { return begin(); }
-    iterator end() noexcept { return begin() + size(); }
-    const_iterator end() const noexcept { return begin() + size(); }
-    const_iterator cend() const noexcept { return end(); }
+    const_iterator begin() const noexcept {
+        return buf_.data() + read_pos_;
+    }
+    const_iterator cbegin() const noexcept {
+        return begin();
+    }
+    iterator end() noexcept {
+        return begin() + size();
+    }
+    const_iterator end() const noexcept {
+        return begin() + size();
+    }
+    const_iterator cend() const noexcept {
+        return end();
+    }
 
     // ---- Element access ----
 
-    uint8_t& front() { return operator[](0); }
-    const uint8_t& front() const { return operator[](0); }
-    uint8_t& back() { return operator[](size() - 1); }
-    const uint8_t& back() const { return operator[](size() - 1); }
+    uint8_t& front() {
+        return operator[](0);
+    }
+    const uint8_t& front() const {
+        return operator[](0);
+    }
+    uint8_t& back() {
+        return operator[](size() - 1);
+    }
+    const uint8_t& back() const {
+        return operator[](size() - 1);
+    }
 
-    uint8_t& operator[](size_t i) { return buf_[read_pos_ + i]; }
-    const uint8_t& operator[](size_t i) const { return buf_[read_pos_ + i]; }
+    uint8_t& operator[](size_t i) {
+        return buf_[read_pos_ + i];
+    }
+    const uint8_t& operator[](size_t i) const {
+        return buf_[read_pos_ + i];
+    }
 
     uint8_t* data() noexcept {
         maybe_compact();
         return buf_.data() + read_pos_;
     }
-    const uint8_t* data() const noexcept { return buf_.data() + read_pos_; }
+    const uint8_t* data() const noexcept {
+        return buf_.data() + read_pos_;
+    }
 
     // ---- Reserve + Write (direct I/O) ----
 
@@ -127,8 +179,7 @@ public:
     void push_back(uint8_t value);
 
     void assign(size_t count, uint8_t value);
-    template <typename InputIt>
-    void assign(InputIt first, InputIt last);
+    template <typename InputIt> void assign(InputIt first, InputIt last);
     void assign(std::initializer_list<uint8_t> ilist);
 
     template <typename InputIt>
@@ -148,9 +199,11 @@ public:
     // ---- Comparison ----
 
     bool operator==(const StreamBuffer& other) const;
-    bool operator!=(const StreamBuffer& other) const { return !(*this == other); }
+    bool operator!=(const StreamBuffer& other) const {
+        return !(*this == other);
+    }
 
-private:
+  private:
     void ensure_capacity(size_t additional_bytes);
     void maybe_compact();
 
@@ -173,10 +226,12 @@ void StreamBuffer::assign(InputIt first, InputIt last) {
 }
 
 template <typename InputIt>
-auto StreamBuffer::insert(const_iterator pos, InputIt first, InputIt last) -> iterator {
+auto StreamBuffer::insert(const_iterator pos, InputIt first, InputIt last)
+    -> iterator {
     size_t offset = static_cast<size_t>(pos - (buf_.data() + read_pos_));
     compact();
-    auto it = buf_.insert(buf_.begin() + static_cast<std::ptrdiff_t>(offset), first, last);
+    auto it = buf_.insert(buf_.begin() + static_cast<std::ptrdiff_t>(offset),
+                          first, last);
     return buf_.data() + static_cast<size_t>(it - buf_.begin());
 }
 

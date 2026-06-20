@@ -32,7 +32,16 @@
 namespace hpactor::apps::bench_saturate {
 
 // =============================================================================
-// SaturateSenderActor — rate-directed self-scheduling load generator
+// SaturateSenderActor — rate-directed load generator (cooperative loop)
+//
+// Instead of timer-driven per-batch scheduling, the sender uses the
+// scheduler's built-in RequeueReady mechanism for continuous operation.
+// After each batch, the handler returns and the scheduler re-invokes
+// it up to kRequeueBudget=64 times.  When ahead of the target rate,
+// a short-duration timer yields the CPU.  When behind, the sender runs
+// continuously until the requeue budget is exhausted, at which point
+// the next enqueued message triggers a new activation cycle via
+// notify_ready.
 // =============================================================================
 
 class SaturateSenderActor : public EventBasedActor {
@@ -46,6 +55,7 @@ class SaturateSenderActor : public EventBasedActor {
         : EventBasedActor(ctx, sys), collector_addr_(collector_addr),
           receiver_addrs_(receiver_addrs), sender_index_(sender_index),
           epoch_start_(std::chrono::steady_clock::now()) {
+        add_fast_tag(SendTickTag);
         become(make_behavior());
     }
 
@@ -109,6 +119,7 @@ class SaturateSenderActor : public EventBasedActor {
 
   private:
     static constexpr TypeTag SendTickTag{0x00010210};
+    static constexpr uint32_t kBatchSize = 10;
 
     void handle_rate_change(TypedMessage& msg) {
         auto rc = RateChangePayload::decode(msg.payload());
@@ -117,8 +128,8 @@ class SaturateSenderActor : public EventBasedActor {
         payload_size_min_ = rc.payload_size_min;
         payload_size_max_ = rc.payload_size_max;
         step_interval_ms_ = rc.step_interval_ms;
-        if (running_)
-            schedule_next();
+        // No explicit schedule — do_tick() handles its own pacing via
+        // the scheduler's requeue budget.
     }
 
     void handle_start(TypedMessage& msg) {
@@ -137,78 +148,126 @@ class SaturateSenderActor : public EventBasedActor {
 
         running_ = true;
         start_time_ = std::chrono::steady_clock::now();
-        schedule_next();
-    }
-
-    void schedule_next() {
-        if (!running_)
-            return;
-
-        // Cancel any pending tick so rate changes don't spawn overlapping
-        // tick streams that flood the mailbox pipeline.
-        if (pending_tick_.valid())
-            context()->cancel_schedule(pending_tick_);
-
-        constexpr uint32_t kBatchSize = 10;
-        // Clamp the target rate to what the scheduling timer can achieve.
-        // Minimum interval is 1 ms → at most 1 000 ticks/s → 10 000 msg/s
-        // per sender regardless of how high current_rate_msgps_ is set.
-        uint32_t effective_rate = std::min(current_rate_msgps_, kBatchSize * 1000u);
-        uint32_t ticks_per_sec = (effective_rate + kBatchSize - 1) / kBatchSize;
-        if (ticks_per_sec == 0)
-            ticks_per_sec = 1;
-        uint32_t interval_ms = 1000 / ticks_per_sec;
-        if (interval_ms == 0)
-            interval_ms = 1;
-        pending_tick_ = context()->schedule(
-            std::chrono::milliseconds(interval_ms), make_msg(SendTickTag));
+        // Kick off the send loop via zero-delay self-message so the first
+        // batch runs from the scheduler (not a recursive call from start).
+        pending_tick_ = context()->schedule(std::chrono::milliseconds(0),
+                                            make_msg(SendTickTag));
     }
 
     void do_tick() {
-        if (receiver_addrs_.empty()) {
-            schedule_next();
+        if (!running_ || receiver_addrs_.empty())
             return;
+
+        auto now = std::chrono::steady_clock::now();
+
+        // ── Rate throttling ──────────────────────────────────────────
+        // If we're significantly ahead of the target rate, yield via a
+        // short timer rather than spinning.  The scheduler will re-invoke
+        // us when the timer fires.
+        uint64_t sent = sent_count_.load(std::memory_order_relaxed);
+        uint64_t elapsed_us = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::microseconds>(now - start_time_)
+                .count());
+        if (elapsed_us > 0 && current_rate_msgps_ > 0) {
+            uint64_t expected_us = sent * 1'000'000ULL / current_rate_msgps_;
+            if (expected_us > elapsed_us + 500) {
+                // Ahead of schedule — sleep until we catch up.
+                uint64_t sleep_us = expected_us - elapsed_us;
+                if (sleep_us > 10000)
+                    sleep_us = 10000; // cap at 10ms
+                auto sleep_ms = std::chrono::milliseconds(
+                    std::max<uint64_t>(1, sleep_us / 1000));
+                pending_tick_ =
+                    context()->schedule(sleep_ms, make_msg(SendTickTag));
+                return;
+            }
         }
 
-        constexpr uint32_t kBatchSize = 10;
-        auto now = std::chrono::steady_clock::now();
+        // ── Send batch ───────────────────────────────────────────────
         uint64_t now_us = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::microseconds>(
                 now.time_since_epoch())
                 .count());
 
-        for (uint32_t i = 0; i < kBatchSize; ++i) {
-            PayloadMode mode = payload_mode_;
-            if (mode == PayloadMode::Mixed) {
-                mode = (seq_no_ % 5 == 0) ? PayloadMode::Junk : PayloadMode::Small;
+        // When all messages in the batch go to the same receiver
+        // (single active receiver or round-robin with 1 receiver),
+        // use batch enqueue for lower per-message overhead.
+        if (num_active_receivers_ == 1) {
+            // Build all messages for the single receiver.
+            std::vector<TypedMessage> batch;
+            batch.reserve(kBatchSize);
+            for (uint32_t i = 0; i < kBatchSize; ++i) {
+                PayloadMode mode = payload_mode_;
+                if (mode == PayloadMode::Mixed) {
+                    mode = (seq_no_ % 5 == 0) ? PayloadMode::Junk
+                                              : PayloadMode::Small;
+                }
+                LoadMessagePayload load;
+                load.sender_id = sender_index_;
+                load.seq_no = seq_no_++;
+                load.send_timestamp_us = now_us;
+
+                StreamBuffer payload;
+                if (mode == PayloadMode::Small) {
+                    payload = load.encode_header();
+                } else {
+                    size_t junk_size = random_payload_size(
+                        payload_size_min_, payload_size_max_, seq_no_seed_);
+                    payload = load.encode_with_junk(junk_size, seq_no_seed_);
+                }
+                batch.push_back(make_msg(LoadMessageTag, std::move(payload)));
             }
 
-            LoadMessagePayload load;
-            load.sender_id = sender_index_;
-            load.seq_no = seq_no_++;
-            load.send_timestamp_us = now_us;
-
-            StreamBuffer payload;
-            if (mode == PayloadMode::Small) {
-                payload = load.encode_header();
-            } else {
-                size_t junk_size = random_payload_size(
-                    payload_size_min_, payload_size_max_, seq_no_seed_);
-                payload = load.encode_with_junk(junk_size, seq_no_seed_);
+            // Batch-enqueue to the single receiver.
+            auto* mbox = home_system().get_mailbox(receiver_addrs_[0].id);
+            if (mbox) {
+                mailbox::MailboxEnvelopeMeta meta;
+                meta.type_tag = LoadMessageTag;
+                meta.priority = 0;
+                meta.deadline_ns = INT64_MAX;
+                auto result =
+                    mbox->try_push_batch(batch.begin(), batch.end(), meta);
+                sent_count_.fetch_add(kBatchSize, std::memory_order_relaxed);
+                if (!result.accepted())
+                    send_dropped_.fetch_add(kBatchSize, std::memory_order_relaxed);
             }
+        } else {
+            // Multiple receivers — round-robin with individual enqueues.
+            for (uint32_t i = 0; i < kBatchSize; ++i) {
+                PayloadMode mode = payload_mode_;
+                if (mode == PayloadMode::Mixed) {
+                    mode = (seq_no_ % 5 == 0) ? PayloadMode::Junk
+                                              : PayloadMode::Small;
+                }
 
-            auto& target = receiver_addrs_[next_receiver_idx_];
-            next_receiver_idx_ = static_cast<uint32_t>((next_receiver_idx_ + 1) %
-                                                       num_active_receivers_);
+                LoadMessagePayload load;
+                load.sender_id = sender_index_;
+                load.seq_no = seq_no_++;
+                load.send_timestamp_us = now_us;
 
-            auto result = home_system().try_deliver_local(
-                target.id, make_msg(LoadMessageTag, std::move(payload)));
-            sent_count_.fetch_add(1, std::memory_order_relaxed);
-            if (!result.accepted())
-                send_dropped_.fetch_add(1, std::memory_order_relaxed);
+                StreamBuffer payload;
+                if (mode == PayloadMode::Small) {
+                    payload = load.encode_header();
+                } else {
+                    size_t junk_size = random_payload_size(
+                        payload_size_min_, payload_size_max_, seq_no_seed_);
+                    payload = load.encode_with_junk(junk_size, seq_no_seed_);
+                }
+
+                auto& target = receiver_addrs_[next_receiver_idx_];
+                next_receiver_idx_ = static_cast<uint32_t>(
+                    (next_receiver_idx_ + 1) % num_active_receivers_);
+
+                auto result = home_system().try_deliver_local_fast(
+                    target.id, make_msg(LoadMessageTag, std::move(payload)));
+                sent_count_.fetch_add(1, std::memory_order_relaxed);
+                if (!result.accepted())
+                    send_dropped_.fetch_add(1, std::memory_order_relaxed);
+            }
         }
 
-        uint64_t sent = sent_count_.load();
+        // ── Periodic throughput sampling ─────────────────────────────
+        sent = sent_count_.load(std::memory_order_relaxed);
         if (sent % 100 == 0) {
             ThroughputSamplePayload tsp;
             tsp.sender_id = sender_index_;
@@ -218,7 +277,12 @@ class SaturateSenderActor : public EventBasedActor {
                             make_msg(ThroughputSampleTag, tsp.encode()));
         }
 
-        schedule_next();
+        // Schedule the next tick.  When not rate-throttling, use a
+        // zero-delay timer that fires on the next scheduler iteration
+        // (equivalent to the RequeueReady path but works even when the
+        // actor's own mailbox is empty after consuming the current tick).
+        pending_tick_ = context()->schedule(std::chrono::milliseconds(0),
+                                            make_msg(SendTickTag));
     }
 
     uint64_t elapsed_ms() const {

@@ -18,6 +18,7 @@ add_executable(test_unit_mailbox
     test_backpressure_signal_serialization.cpp
     test_reservation_manager.cpp
     test_pressure_state_machine.cpp
+    test_batch_enqueue.cpp
     test_backpressure_signal_gate.cpp
     test_overflow_handlers.cpp
     test_overflow_handler_factory.cpp
