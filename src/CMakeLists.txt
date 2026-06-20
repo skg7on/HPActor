@@ -103,6 +103,7 @@ add_library(hpactor_lib SHARED
     sched/dedicated_thread_pool.cpp
     mem/segment_provider.cpp
     mem/slab_cache.cpp
+    mem/super_carrier.cpp
     mem/thread_local_allocator.cpp
     mem/memory_config.cpp
     mem/memory_region.cpp
