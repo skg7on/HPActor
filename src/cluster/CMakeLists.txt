@@ -8,6 +8,7 @@ add_library(hpactor_cluster STATIC
     partition_policy.cpp
     route_invalidation.cpp
     sharding/shard_resolver.cpp
+    sharding/shard_table.cpp
 )
 target_link_libraries(hpactor_cluster PUBLIC hpactor)
 target_include_directories(hpactor_cluster PUBLIC
