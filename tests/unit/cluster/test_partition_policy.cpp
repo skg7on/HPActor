@@ -13,9 +13,44 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/cluster/cluster_node_state.hpp>
+#include <hpactor/cluster/partition_policy.hpp>
 
-// Placeholder — real tests added in CLU-001 Task 4.
-TEST(PartitionPolicy, Placeholder) {
-    SUCCEED();
+namespace hpactor::cluster {
+
+TEST(PartitionPolicyTest, AllPoliciesDefined) {
+    EXPECT_NE(static_cast<uint8_t>(PartitionPolicy::FailOpen),
+              static_cast<uint8_t>(PartitionPolicy::FailClosed));
+    EXPECT_NE(static_cast<uint8_t>(PartitionPolicy::FailClosed),
+              static_cast<uint8_t>(PartitionPolicy::StaticMajority));
 }
+
+TEST(PartitionPolicyTest, FailOpenAllowsDelivery) {
+    EXPECT_TRUE(allow_user_delivery(PartitionPolicy::FailOpen, false));
+    EXPECT_TRUE(allow_user_delivery(PartitionPolicy::FailOpen, true));
+}
+
+TEST(PartitionPolicyTest, FailClosedBlocksWithoutQuorum) {
+    EXPECT_FALSE(allow_user_delivery(PartitionPolicy::FailClosed, false));
+    EXPECT_TRUE(allow_user_delivery(PartitionPolicy::FailClosed, true));
+}
+
+TEST(PartitionPolicyTest, FailClosedBlocksSingletonOwnershipWithoutQuorum) {
+    EXPECT_FALSE(allow_ownership_change(PartitionPolicy::FailClosed, false));
+}
+
+TEST(PartitionPolicyTest, FailOpenAllowsOwnershipWithQuorum) {
+    EXPECT_TRUE(allow_ownership_change(PartitionPolicy::FailOpen, true));
+}
+
+TEST(PartitionPolicyTest, StaticMajorityRequiresConfiguredMajority) {
+    EXPECT_TRUE(allow_ownership_change(PartitionPolicy::StaticMajority, true));
+    EXPECT_FALSE(allow_ownership_change(PartitionPolicy::StaticMajority, false));
+}
+
+TEST(PartitionPolicyTest, ToStringReturnsExpected) {
+    EXPECT_STREQ(to_string(PartitionPolicy::FailOpen), "fail_open");
+    EXPECT_STREQ(to_string(PartitionPolicy::FailClosed), "fail_closed");
+    EXPECT_STREQ(to_string(PartitionPolicy::StaticMajority), "static_majority");
+}
+
+} // namespace hpactor::cluster
