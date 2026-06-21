@@ -13,6 +13,7 @@ add_executable(test_unit_cluster
     sharding/test_shard_handoff.cpp
     sharding/test_shard_coordinator.cpp
     singleton/test_singleton_identity.cpp
+    singleton/test_singleton_election.cpp
 )
 target_link_libraries(test_unit_cluster hpactor hpactor_proto hpactor_cluster pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_cluster)
