@@ -1,7 +1,7 @@
 // Copyright 2026 HPActor Contributors
 // Licensed under the Apache License, Version 2.0
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/fault/fault_point.hpp>

@@ -19,11 +19,11 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/lifecycle/drain_config.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_state.hpp>
 #include <hpactor/actor/scoped_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/typed_message.hpp>
 
 #include "scheduler_test_driver.hpp"

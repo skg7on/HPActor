@@ -23,9 +23,9 @@
 #include <gtest/gtest.h>
 
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/actor_rate_limiter.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/sched/scheduler.hpp>

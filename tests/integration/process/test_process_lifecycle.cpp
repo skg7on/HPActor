@@ -3,7 +3,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/net/http_client.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <hpactor/process/health_http_server.hpp>

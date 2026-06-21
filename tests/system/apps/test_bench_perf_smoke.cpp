@@ -18,7 +18,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 
 #include <apps/bench_perf/actors/bench_collector_actor.hpp>
 #include <apps/bench_perf/actors/bench_coordinator_actor.hpp>

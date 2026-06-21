@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 
 #include "apps/cli_demo/actors/aggregator_actor.hpp"
 #include "apps/cli_demo/actors/broadcast_actor.hpp"

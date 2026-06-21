@@ -18,7 +18,7 @@
 #include <memory>
 #include <unordered_map>
 
-#include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/msg/typed_message.hpp>
 

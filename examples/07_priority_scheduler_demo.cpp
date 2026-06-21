@@ -32,7 +32,7 @@
 // scheduling API directly to demonstrate priority scheduling behavior.
 // =============================================================================
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <cassert>

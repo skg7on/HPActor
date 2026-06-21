@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <hpactor/common.pb.h>
-#include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 
 using namespace hpactor;
 

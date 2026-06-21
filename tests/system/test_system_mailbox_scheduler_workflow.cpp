@@ -18,8 +18,8 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/mailbox/multi_lane_queue.hpp>
 #include <hpactor/msg/enqueue_result.hpp>

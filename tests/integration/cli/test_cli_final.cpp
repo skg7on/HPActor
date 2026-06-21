@@ -17,6 +17,7 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/cli/cli_session.hpp>
@@ -33,7 +34,6 @@
 #include <hpactor/cli/tabular_formatter.hpp>
 #include <hpactor/cli/token.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
-#include <hpactor/core/actor_system.hpp>
 
 #include "cli_test_helpers.hpp"
 #include "system_test_fixture.hpp"

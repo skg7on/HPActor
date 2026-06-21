@@ -8,9 +8,9 @@
 /// to a remote CliProtoServerActor via UDS or TCP using the HPAC Frame
 /// CliCommand/CliResponse wire protocol.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_client_actor.hpp>
 #include <hpactor/cli/cli_client_config.hpp>
-#include <hpactor/core/actor_system.hpp>
 
 #include <cstdio>
 #include <cstdlib>

@@ -20,7 +20,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 
 #include <apps/order_platform/messages.hpp>
 

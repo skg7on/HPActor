@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/daemon_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 
 namespace hpactor {
 

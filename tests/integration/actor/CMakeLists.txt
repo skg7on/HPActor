@@ -3,7 +3,6 @@ add_executable(test_integration_actor
     test_actor_context.cpp
     test_actor_context_schedule.cpp
     test_actor_context_try_send.cpp
-    test_actor_mailbox.cpp
     test_actor_system_backpressure.cpp
     test_event_based_actor.cpp
     test_blocking_actor.cpp

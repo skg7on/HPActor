@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/msg/failure_reason.hpp>
 #include <hpactor/msg/request_handle.hpp>
 #include <hpactor/ref/actor_address.hpp>

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/http_gateway_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/net/http_client.hpp>
 #include <hpactor/net/http_types.hpp>

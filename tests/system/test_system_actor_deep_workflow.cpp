@@ -16,8 +16,8 @@
 // Targets src/actor and src/actor/lifecycle code paths including spawn,
 // context send/reply/schedule, lifecycle transitions, and message routing.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/msg/type_tag.hpp>
 
 #include "scheduler_test_driver.hpp"

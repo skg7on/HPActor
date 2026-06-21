@@ -60,7 +60,7 @@ add_library(hpactor_lib SHARED
     config/parsers/process_config_parser.cpp
     config/binary_serializer.cpp
     config/binary_loader.cpp
-    core/proto_type_registry.cpp
+    msg/proto_type_registry.cpp
     types/typed_message.cpp
     types/failure_reason.cpp
     actor/lifecycle/quarantine_reason.cpp

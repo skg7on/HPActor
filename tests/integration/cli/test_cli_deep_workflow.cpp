@@ -21,6 +21,7 @@
 //   3. CLI session operations
 //   4. Server actors
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/cli/cli_proto_server_actor.hpp>
@@ -39,7 +40,6 @@
 #include <hpactor/cli/pretty_formatter.hpp>
 #include <hpactor/cli/tabular_formatter.hpp>
 #include <hpactor/cli/token.hpp>
-#include <hpactor/core/actor_system.hpp>
 
 #include <gtest/gtest.h>
 

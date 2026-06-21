@@ -3,8 +3,8 @@
 // Licensed under the Apache License, Version 2.0 (the "License");
 // ...
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 
 #include <gtest/gtest.h>

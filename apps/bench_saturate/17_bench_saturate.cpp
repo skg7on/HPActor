@@ -21,9 +21,9 @@
 #include "actors/saturate_receiver_actor.hpp"
 #include "actors/saturate_sender_actor.hpp"
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 
 #include <chrono>
 #include <cstdlib>

@@ -18,8 +18,8 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/spawn.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/actor_location_cache.hpp>
 #include <hpactor/net/connection_pool.hpp>
 #include <hpactor/net/endpoint_circuit_breaker.hpp>

@@ -13,10 +13,10 @@
 // limitations under the License.
 
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/ask_manager.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/receptionist/receptionist.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/ref/actor_proxy.hpp>

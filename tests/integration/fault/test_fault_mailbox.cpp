@@ -1,6 +1,6 @@
 // Copyright 2026 HPActor Contributors
 // Licensed under the Apache License, Version 2.0
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/fault/fault_macros.hpp>
 #include <hpactor/fault/fault_point.hpp>
@@ -47,10 +47,8 @@ TEST(FaultMailboxIntegration, EnqueueFailFiresWithSchedule) {
     ::hpactor::ActorSystem system(cfg);
 
     FaultSchedule schedule;
-    schedule.add_entry({FaultDomain::kMailbox, 1,
-                        "hpactor.mailbox.enqueue.fail",
-                        FaultAction::kFail, std::nullopt,
-                        FailPayload{-1}});
+    schedule.add_entry({FaultDomain::kMailbox, 1, "hpactor.mailbox.enqueue.fail",
+                        FaultAction::kFail, std::nullopt, FailPayload{-1}});
 
     auto& fc = system.fault_controller();
     fc.load(schedule);
@@ -71,10 +69,8 @@ TEST(FaultMailboxIntegration, DequeueDropFiresWithSchedule) {
     ::hpactor::ActorSystem system(cfg);
 
     FaultSchedule schedule;
-    schedule.add_entry({FaultDomain::kMailbox, 1,
-                        "hpactor.mailbox.dequeue.drop",
-                        FaultAction::kDrop, std::nullopt,
-                        std::monostate{}});
+    schedule.add_entry({FaultDomain::kMailbox, 1, "hpactor.mailbox.dequeue.drop",
+                        FaultAction::kDrop, std::nullopt, std::monostate{}});
 
     auto& fc = system.fault_controller();
     fc.load(schedule);
@@ -94,14 +90,12 @@ TEST(FaultMailboxIntegration, ScopeFiltersFaultPath) {
     ::hpactor::ActorSystem system(cfg);
 
     FaultSchedule schedule;
-    schedule.add_entry({FaultDomain::kMailbox, 1,
-                        "hpactor.mailbox.enqueue.fail",
-                        FaultAction::kFail, std::nullopt,
-                        FailPayload{-1}});
+    schedule.add_entry({FaultDomain::kMailbox, 1, "hpactor.mailbox.enqueue.fail",
+                        FaultAction::kFail, std::nullopt, FailPayload{-1}});
 
     auto& fc = system.fault_controller();
     fc.load(schedule);
-    fc.enable("hpactor.transport.*");  // wrong scope
+    fc.enable("hpactor.transport.*"); // wrong scope
 
     bool injected = false;
     FAULT_INJECT("hpactor.mailbox.enqueue.fail") {
@@ -117,10 +111,8 @@ TEST(FaultMailboxIntegration, ClearStopsInjection) {
     ::hpactor::ActorSystem system(cfg);
 
     FaultSchedule schedule;
-    schedule.add_entry({FaultDomain::kMailbox, 1,
-                        "hpactor.mailbox.enqueue.fail",
-                        FaultAction::kFail, std::nullopt,
-                        FailPayload{-1}});
+    schedule.add_entry({FaultDomain::kMailbox, 1, "hpactor.mailbox.enqueue.fail",
+                        FaultAction::kFail, std::nullopt, FailPayload{-1}});
 
     auto& fc = system.fault_controller();
     fc.load(schedule);
@@ -141,10 +133,8 @@ TEST(FaultMailboxIntegration, TransportSendDropFiresWithSchedule) {
     ::hpactor::ActorSystem system(cfg);
 
     FaultSchedule schedule;
-    schedule.add_entry({FaultDomain::kTransport, 1,
-                        "hpactor.transport.send.drop",
-                        FaultAction::kDrop, std::nullopt,
-                        std::monostate{}});
+    schedule.add_entry({FaultDomain::kTransport, 1, "hpactor.transport.send.drop",
+                        FaultAction::kDrop, std::nullopt, std::monostate{}});
 
     auto& fc = system.fault_controller();
     fc.load(schedule);

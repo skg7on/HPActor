@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_http_server_actor.hpp>
 #include <hpactor/cli/cli_http_server_config.hpp>
-#include <hpactor/core/actor_system.hpp>
 
 #include <chrono>
 #include <thread>

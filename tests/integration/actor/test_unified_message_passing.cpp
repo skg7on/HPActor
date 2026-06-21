@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/actor_ref_cache.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/core/actor_ref_cache.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/msg/frame.hpp>
 #include <hpactor/ref/actor_ref.hpp>

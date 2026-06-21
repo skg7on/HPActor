@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <hpactor/actor/spawn.hpp>
-#include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <hpactor/common.pb.h>

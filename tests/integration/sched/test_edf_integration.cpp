@@ -16,8 +16,8 @@
 // Test: EDF Queue Integration — end-to-end EDF dispatch ordering.
 // =============================================================================
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
 #include <gtest/gtest.h>

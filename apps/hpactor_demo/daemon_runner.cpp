@@ -14,9 +14,9 @@
 
 #include "daemon_runner.hpp"
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_proto_server_actor.hpp>
 #include <hpactor/cli/cli_proto_server_config.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/process/health_http_server.hpp>
 #include <hpactor/process/process_manager.hpp>
 #include <hpactor/process/watchdog_actor.hpp>

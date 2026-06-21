@@ -8,11 +8,11 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_actor.hpp>
 #include <hpactor/actor/lifecycle/lifecycle_state.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/supervision/supervision.hpp>
 
 #include "scheduler_test_driver.hpp"

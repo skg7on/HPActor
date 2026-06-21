@@ -2,7 +2,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/net/gossip_membership.hpp>
 #include <hpactor/net/udp_transport.hpp>
 

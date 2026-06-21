@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/receptionist/receptionist.hpp>
 #include <hpactor/actor/receptionist/receptionist_messages.hpp>
 #include <hpactor/actor/receptionist/service_key.hpp>
-#include <hpactor/core/actor_system.hpp>
 
 #include <gtest/gtest.h>
 

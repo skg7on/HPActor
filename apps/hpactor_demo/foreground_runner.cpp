@@ -14,11 +14,11 @@
 
 #include "foreground_runner.hpp"
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/cli/cli_proto_server_actor.hpp>
 #include <hpactor/cli/cli_proto_server_config.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/process/process_manager.hpp>
 
 #include <chrono>

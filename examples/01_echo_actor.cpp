@@ -36,9 +36,9 @@
 // =============================================================================
 
 #include <hpactor/actor/actor_context.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/behavior.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/msg/typed_message.hpp>
 

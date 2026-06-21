@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli.pb.h>
 #include <hpactor/cli/cli_client_actor.hpp>
 #include <hpactor/cli/cli_connector.hpp>
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/output_formatter.hpp>
 #include <hpactor/cli_messages.pb.h>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <chrono>

@@ -21,7 +21,7 @@
 #include <gtest/gtest.h>
 
 #include <hpactor/actor/abstract_actor.hpp>
-#include <hpactor/core/actor_ref_cache.hpp>
+#include <hpactor/actor/actor_ref_cache.hpp>
 #include <hpactor/msg/delivery_result.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
 #include <hpactor/msg/typed_message.hpp>

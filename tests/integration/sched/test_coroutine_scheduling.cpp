@@ -15,8 +15,8 @@
 // tests/integration/sched/test_coroutine_scheduling.cpp
 // Integration test: spawn -> deliver message -> actor wakes -> processes
 #include <gtest/gtest.h>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/coroutine/coroutine_awaiters.hpp>
 #include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 

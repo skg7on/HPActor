@@ -14,7 +14,7 @@
 
 #include <gtest/gtest.h>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/process/process_config.hpp>
 
 #include "apps/hpactor_demo/cli_demo_actor_factory.hpp"

@@ -16,7 +16,7 @@
 
 #include <apps/edgeops_telemetry/scenario.hpp>
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 
 #include <atomic>
 #include <csignal>

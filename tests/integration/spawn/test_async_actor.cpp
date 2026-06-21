@@ -15,8 +15,8 @@
 #include <gtest/gtest.h>
 
 #include <hpactor/actor/spawn.hpp>
-#include <hpactor/core/actor_system_ids.hpp>
 #include <hpactor/ref/actor_ref.hpp>
+#include <hpactor/types/types.hpp>
 
 using namespace hpactor;
 

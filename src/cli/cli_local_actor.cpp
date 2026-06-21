@@ -12,11 +12,11 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_local_actor.hpp>
 #include <hpactor/cli/cli_session.hpp>
 #include <hpactor/cli/command_context.hpp>
 #include <hpactor/cli_messages.pb.h>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/mailbox/dead_letter_queue.hpp>
 #include <hpactor/mem/memory_region.hpp>

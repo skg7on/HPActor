@@ -2,6 +2,7 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include "cli_http_handler_helpers.hpp"
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/adt/json_helpers.hpp>
 #include <hpactor/cli.pb.h>
 #include <hpactor/cli/cli_http_server_actor.hpp>
@@ -9,7 +10,6 @@
 #include <hpactor/cli/command_node.hpp>
 #include <hpactor/cli/http_handler.hpp>
 #include <hpactor/cli/output_formatter.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_types.hpp>
 #include <string>

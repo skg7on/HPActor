@@ -24,7 +24,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/fsm/fsm_directive.hpp>
 #include <hpactor/actor/fsm/fsm_runtime.hpp>
-#include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 
 namespace hpactor {
 

@@ -26,9 +26,7 @@
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
-#include <hpactor/core/actor_registry.hpp>
-#include <hpactor/core/mailbox.hpp>
-#include <hpactor/core/proto_type_registry.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/hpactor_config.hpp>
 #if HPACTOR_ENABLE_AI_ACCELERATORS
@@ -313,8 +311,26 @@ class ActorSystem {
 
     // ── Registry access ───────────────────────────────────────────────────
 
+    /// \brief Inline name→address registry (was a separate header; zero external consumers).
+    class ActorRegistry {
+      public:
+        explicit ActorRegistry(EndPoint endpoint) : endpoint_(endpoint) {}
+        void put(const std::string& name, ActorAddress addr) {
+            actors_[name] = std::move(addr);
+        }
+        ActorAddress get(const std::string& name) const {
+            auto it = actors_.find(name);
+            if (it != actors_.end()) return it->second;
+            return {};
+        }
+        void erase(const std::string& name) { actors_.erase(name); }
+      private:
+        [[maybe_unused]] EndPoint endpoint_;
+        std::unordered_map<std::string, ActorAddress> actors_;
+    };
+
     /// \brief Mutable access to the actor registry.
-    actor_registry& registry() {
+    ActorRegistry& registry() {
         return registry_;
     }
 
@@ -821,7 +837,7 @@ class ActorSystem {
     Config config_;
     EndPoint endpoint_;
     Clock clock_;
-    actor_registry registry_;
+    ActorRegistry registry_;
     ActorDirectory actor_directory_;
     std::unique_ptr<LocalDeliveryEngine> local_delivery_engine_;
     std::unique_ptr<mailbox::DeliveryPipeline> delivery_pipeline_;

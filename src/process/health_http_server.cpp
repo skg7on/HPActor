@@ -12,7 +12,7 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/core/actor_system.hpp>
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_types.hpp>

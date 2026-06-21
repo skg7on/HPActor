@@ -1,13 +1,13 @@
 // Copyright 2026 HPActor Contributors
 // Licensed under the Apache License, Version 2.0
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
-#include <hpactor/core/actor_system.hpp>
-#include <hpactor/core/proto_type_registry.hpp>
 #include <hpactor/msg/delivery_mode.hpp>
 #include <hpactor/msg/failure_envelope.hpp>
 #include <hpactor/msg/message_id.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/msg/type_tag.hpp>
 #include <hpactor/msg/typed_message.hpp>
 #include <hpactor/ref/actor_address.hpp>

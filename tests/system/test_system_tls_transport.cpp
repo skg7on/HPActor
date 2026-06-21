@@ -6,8 +6,8 @@
 
 #include <gtest/gtest.h>
 
+#include <hpactor/actor/actor_system.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
-#include <hpactor/core/actor_system.hpp>
 #include <hpactor/net/static_discovery.hpp>
 #include <hpactor/net/transport.hpp>
 
