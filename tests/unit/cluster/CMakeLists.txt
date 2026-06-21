@@ -7,6 +7,7 @@ add_executable(test_unit_cluster
     test_cluster_fencing.cpp
     test_cluster_route_invalidation.cpp
     test_partition_policy.cpp
+    sharding/test_shard_resolver.cpp
 )
 target_link_libraries(test_unit_cluster hpactor hpactor_proto hpactor_cluster pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_cluster)
