@@ -25,6 +25,10 @@ const char* to_string(FailureReason reason) noexcept {
             return "no_route";
         case FailureReason::NodeUnavailable:
             return "node_unavailable";
+        case FailureReason::NodeQuarantined:
+            return "node_quarantined";
+        case FailureReason::NodeReplaced:
+            return "node_replaced";
         case FailureReason::ActorDead:
             return "actor_dead";
         case FailureReason::ActorNotReady:
@@ -59,6 +63,8 @@ const char* to_string(FailureReason reason) noexcept {
             return "transport_error";
         case FailureReason::FrameRejected:
             return "frame_rejected";
+        case FailureReason::FencingTokenStale:
+            return "fencing_token_stale";
         case FailureReason::Duplicate:
             return "duplicate";
         case FailureReason::Draining:

@@ -33,6 +33,10 @@ enum class FailureReason : uint8_t {
                            ///< down).
     RemoteUnavailable = 2, ///< Remote endpoint or service is unavailable
                            ///< (circuit breaker open, refused connection).
+    NodeQuarantined = 3,   ///< Remote node is quarantined (identity/epoch
+                           ///< conflict).
+    NodeReplaced = 4,      ///< Remote node was replaced by a higher-incarnation
+                           ///< peer.
 
     // ── Actor lifecycle (10-19) ─────────────────────────────────
     ActorDead = 10,     ///< Target actor has terminated.
@@ -67,6 +71,8 @@ enum class FailureReason : uint8_t {
                          ///< reset).
     FrameRejected = 52,  ///< Frame validation failure (size, malformed,
                          ///< corrupt).
+    FencingTokenStale = 53, ///< Singleton or shard fencing token is stale;
+                            ///< write rejected.
 
     // ── Deduplication (60-69) ───────────────────────────────────
     Duplicate = 60, ///< Duplicate message suppressed by receiver dedup cache.
@@ -135,8 +141,11 @@ constexpr bool retryable(FailureReason reason) noexcept {
         case FailureReason::PassivationSnapshotFailed:
         case FailureReason::ReactivationFailed:
         case FailureReason::PassivationQueueFull:
+        case FailureReason::NodeReplaced:
+        case FailureReason::FencingTokenStale:
             return true;
         case FailureReason::SchemaVersionMismatch:
+        case FailureReason::NodeQuarantined:
             return false;
         default:
             return false;
