@@ -11,6 +11,7 @@ add_library(hpactor_cluster STATIC
     sharding/shard_table.cpp
     sharding/static_placement.cpp
     sharding/rendezvous_hash.cpp
+    sharding/shard_handoff.cpp
 )
 target_link_libraries(hpactor_cluster PUBLIC hpactor)
 target_include_directories(hpactor_cluster PUBLIC
