@@ -12,4 +12,20 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cluster/cluster_node_state.hpp>
+#include <hpactor/cluster/route_invalidation.hpp>
+
+namespace hpactor::cluster {
+
+void RouteInvalidation::process(const std::vector<std::string>& node_ids) {
+    for (const auto& node_id : node_ids) {
+        for (const auto& cb : callbacks_) {
+            cb(node_id);
+        }
+    }
+}
+
+void RouteInvalidation::register_callback(std::function<void(const std::string&)> callback) {
+    callbacks_.push_back(std::move(callback));
+}
+
+} // namespace hpactor::cluster

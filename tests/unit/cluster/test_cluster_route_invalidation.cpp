@@ -14,6 +14,7 @@
 
 #include <gtest/gtest.h>
 #include <hpactor/cluster/cluster_failure_model.hpp>
+#include <hpactor/cluster/route_invalidation.hpp>
 
 namespace hpactor::cluster {
 
@@ -142,6 +143,38 @@ TEST_F(ClusterFailureModelTest, DefaultPolicyIsFailOpen) {
 TEST_F(ClusterFailureModelTest, SetPartitionPolicy) {
     model_.set_partition_policy(PartitionPolicy::FailClosed);
     EXPECT_EQ(model_.get_partition_policy(), PartitionPolicy::FailClosed);
+}
+
+TEST(RouteInvalidationTest, InvalidateTriggersOnDown) {
+    EXPECT_TRUE(should_invalidate_routes(ClusterNodeState::Down));
+}
+
+TEST(RouteInvalidationTest, InvalidateTriggersOnQuarantined) {
+    EXPECT_TRUE(should_invalidate_routes(ClusterNodeState::Quarantined));
+}
+
+TEST(RouteInvalidationTest, InvalidateTriggersOnRemoved) {
+    EXPECT_TRUE(should_invalidate_routes(ClusterNodeState::Removed));
+}
+
+TEST(RouteInvalidationTest, NoInvalidateOnAlive) {
+    EXPECT_FALSE(should_invalidate_routes(ClusterNodeState::Alive));
+}
+
+TEST(RouteInvalidationTest, NoInvalidateOnSuspect) {
+    EXPECT_FALSE(should_invalidate_routes(ClusterNodeState::Suspect));
+}
+
+TEST(RouteInvalidationTest, NoInvalidateOnJoining) {
+    EXPECT_FALSE(should_invalidate_routes(ClusterNodeState::Joining));
+}
+
+TEST(RouteInvalidationTest, NoInvalidateOnLeaving) {
+    EXPECT_FALSE(should_invalidate_routes(ClusterNodeState::Leaving));
+}
+
+TEST(RouteInvalidationTest, NoInvalidateOnUnreachable) {
+    EXPECT_FALSE(should_invalidate_routes(ClusterNodeState::Unreachable));
 }
 
 } // namespace hpactor::cluster
