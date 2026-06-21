@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-20 14:39:29</td>
+            <td class="headerValue">2026-06-21 00:51:59</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -94,16 +94,16 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : namespace hpactor::log {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">        2514 : [[nodiscard]] const char* to_string(LogCategory category) noexcept {</span></span>
-<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 2025 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">        2514 :     switch (category) {</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">        2507 : [[nodiscard]] const char* to_string(LogCategory category) noexcept {</span></span>
+<span id="L20"><span class="lineNum">      20</span>   [<span class="tlaGBC" title="Branch 0 was taken 2027 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 2 was taken 20 times"> + </span><span class="tlaGBC" title="Branch 3 was taken 1 time"> + </span> :<span class="tlaGNC">        2507 :     switch (category) {</span></span>
 <span class="lineNum">        </span> <span class="tlaGBC" title="Branch 4 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 58 times"> + </span><span class="tlaGBC" title="Branch 6 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 7 was taken 2 times"> + </span><span class="tlaGBC" title="Branch 8 was taken 1 time"> + </span> 
 <span class="lineNum">        </span> <span class="tlaGBC" title="Branch 9 was taken 24 times"> + </span><span class="tlaGBC" title="Branch 10 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 11 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 12 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 13 was not taken"> - </span> 
-<span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 14 was taken 374 times"> + </span><span class="tlaUNC" title="Branch 15 was not taken"> - </span><span class="tlaUNC" title="Branch 16 was not taken"> - </span>]
+<span class="lineNum">        </span>       <span class="tlaGBC" title="Branch 14 was taken 365 times"> + </span><span class="tlaUNC" title="Branch 15 was not taken"> - </span><span class="tlaUNC" title="Branch 16 was not taken"> - </span>]
 <span id="L21"><span class="lineNum">      21</span>                 :             :         // NOLINTBEGIN(cppcoreguidelines-macro-usage)</span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : #define HPACTOR_LOG_CATEGORY_TO_STRING(name, str)                              \</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             :     case LogCategory::name:                                                    \</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             :         return str;</span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        2514 :         HPACTOR_LOG_CATEGORIES(HPACTOR_LOG_CATEGORY_TO_STRING)</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">        2507 :         HPACTOR_LOG_CATEGORIES(HPACTOR_LOG_CATEGORY_TO_STRING)</span></span>
 <span id="L26"><span class="lineNum">      26</span>                 :             : #undef HPACTOR_LOG_CATEGORY_TO_STRING</span>
 <span id="L27"><span class="lineNum">      27</span>                 :             :         // NOLINTEND(cppcoreguidelines-macro-usage)</span>
 <span id="L28"><span class="lineNum">      28</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         case LogCategory::kCount:</span></span>
