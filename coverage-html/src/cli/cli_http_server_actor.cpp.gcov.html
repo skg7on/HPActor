@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-21 00:51:59</td>
+            <td class="headerValue">2026-06-21 01:34:28</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">82.4&nbsp;%</td>
@@ -95,13 +95,13 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/adt/json_helpers.hpp&gt;</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;hpactor/cli.pb.h&gt;</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
-<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/cli/cli_session.hpp&gt;</span>
-<span id="L21"><span class="lineNum">      21</span>                 :             : #include &lt;hpactor/cli/command_node.hpp&gt;</span>
-<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/cli/command_tree_builder.hpp&gt;</span>
-<span id="L23"><span class="lineNum">      23</span>                 :             : #include &lt;hpactor/cli/http_handler.hpp&gt;</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;hpactor/cli/output_formatter.hpp&gt;</span>
-<span id="L25"><span class="lineNum">      25</span>                 :             : #include &lt;hpactor/cli_messages.pb.h&gt;</span>
-<span id="L26"><span class="lineNum">      26</span>                 :             : #include &lt;hpactor/core/actor_system.hpp&gt;</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/actor/actor_system.hpp&gt;</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : #include &lt;hpactor/cli/cli_session.hpp&gt;</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/cli/command_node.hpp&gt;</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : #include &lt;hpactor/cli/command_tree_builder.hpp&gt;</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;hpactor/cli/http_handler.hpp&gt;</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : #include &lt;hpactor/cli/output_formatter.hpp&gt;</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : #include &lt;hpactor/cli_messages.pb.h&gt;</span>
 <span id="L27"><span class="lineNum">      27</span>                 :             : #include &lt;hpactor/fault/fault_controller.hpp&gt;</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : #include &lt;hpactor/mailbox/dead_letter_queue.hpp&gt;</span>
 <span id="L29"><span class="lineNum">      29</span>                 :             : #include &lt;hpactor/mem/memory_region.hpp&gt;</span>
@@ -174,12 +174,12 @@
 <span id="L96"><span class="lineNum">      96</span>                 :<span class="tlaGNC">          20 :     gateway_-&gt;set_max_connections(config_.max_connections);</span></span>
 <span id="L97"><span class="lineNum">      97</span>                 :             : }</span>
 <span id="L98"><span class="lineNum">      98</span>                 :             : </span>
-<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">         123 : bool CliHttpServerActor::run_once() {</span></span>
-<span id="L100"><span class="lineNum">     100</span>   [<span class="tlaGBC" title="Branch 0 was taken 123 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 123 times"> + </span>]:<span class="tlaGNC">         123 :     if (!listen_ok_ || !running_)</span></span>
+<span id="L99"><span class="lineNum">      99</span>                 :<span class="tlaGNC">         124 : bool CliHttpServerActor::run_once() {</span></span>
+<span id="L100"><span class="lineNum">     100</span>   [<span class="tlaGBC" title="Branch 0 was taken 124 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 124 times"> + </span>]:<span class="tlaGNC">         124 :     if (!listen_ok_ || !running_)</span></span>
 <span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return false;</span></span>
 <span id="L102"><span class="lineNum">     102</span>                 :             : </span>
-<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC tlaBgGNC">         123 :     gateway_-&gt;run_once();</span></span>
-<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">         123 :     return running_;</span></span>
+<span id="L103"><span class="lineNum">     103</span>                 :<span class="tlaGNC tlaBgGNC">         124 :     gateway_-&gt;run_once();</span></span>
+<span id="L104"><span class="lineNum">     104</span>                 :<span class="tlaGNC">         124 :     return running_;</span></span>
 <span id="L105"><span class="lineNum">     105</span>                 :             : }</span>
 <span id="L106"><span class="lineNum">     106</span>                 :             : </span>
 <span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">          20 : void CliHttpServerActor::on_daemon_stop() {</span></span>

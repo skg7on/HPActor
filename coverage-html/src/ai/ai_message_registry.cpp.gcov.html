@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-21 00:51:59</td>
+            <td class="headerValue">2026-06-21 01:34:28</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -81,7 +81,7 @@
 <span id="L3"><span class="lineNum">       3</span>                 :             : </span>
 <span id="L4"><span class="lineNum">       4</span>                 :             : #include &lt;hpactor/ai/ai_type_tags.hpp&gt;</span>
 <span id="L5"><span class="lineNum">       5</span>                 :             : #include &lt;hpactor/ai_resource.pb.h&gt;</span>
-<span id="L6"><span class="lineNum">       6</span>                 :             : #include &lt;hpactor/core/proto_type_registry.hpp&gt;</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : #include &lt;hpactor/msg/proto_type_registry.hpp&gt;</span>
 <span id="L7"><span class="lineNum">       7</span>                 :             : </span>
 <span id="L8"><span class="lineNum">       8</span>                 :             : namespace hpactor::ai {</span>
 <span id="L9"><span class="lineNum">       9</span>                 :             : namespace {</span>
@@ -109,9 +109,9 @@
 <span id="L31"><span class="lineNum">      31</span>                 :             :                                              &quot;hpactor.PbNodeResourceSummary&quot;);</span>
 <span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         724 : }</span></span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        3005 : const bool kAiTypesRegistered = [] {</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        3005 :     ProtoTypeRegistry::register_subsystem(&amp;register_ai_message_types);</span></span>
-<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">        3005 :     return true;</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        3033 : const bool kAiTypesRegistered = [] {</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        3033 :     ProtoTypeRegistry::register_subsystem(&amp;register_ai_message_types);</span></span>
+<span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">        3033 :     return true;</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : }();</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             : </span>
 <span id="L39"><span class="lineNum">      39</span>                 :             : } // namespace</span>

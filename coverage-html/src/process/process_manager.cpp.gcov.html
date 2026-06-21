@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryLo">73.9&nbsp;%</td>
+            <td class="headerCovTableEntryLo">73.2&nbsp;%</td>
             <td class="headerCovTableEntry">153</td>
-            <td class="headerCovTableEntry">113</td>
+            <td class="headerCovTableEntry">112</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-21 00:51:59</td>
+            <td class="headerValue">2026-06-21 01:34:28</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">93.3&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryLo">51.7&nbsp;%</td>
+            <td class="headerCovTableEntryLo">49.4&nbsp;%</td>
             <td class="headerCovTableEntry">89</td>
-            <td class="headerCovTableEntry">46</td>
+            <td class="headerCovTableEntry">44</td>
           </tr>
                   <tr><td><img src="../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -303,11 +303,11 @@
 <span id="L225"><span class="lineNum">     225</span>                 :             :         }</span>
 <span id="L226"><span class="lineNum">     226</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         ofs &lt;&lt; getpid() &lt;&lt; &quot;\n&quot; &lt;&lt; std::flush;</span></span>
 <span id="L227"><span class="lineNum">     227</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           4 :     }</span></span>
-<span id="L228"><span class="lineNum">     228</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :     if (rename(tmp.c_str(), config_.pidfile_path.c_str()) != 0) {</span></span>
+<span id="L228"><span class="lineNum">     228</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :     if (rename(tmp.c_str(), config_.pidfile_path.c_str()) != 0) {</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :             :         // If tmp is on a different filesystem (EXDEV), atomic rename is</span>
 <span id="L230"><span class="lineNum">     230</span>                 :             :         // impossible — fall back to writing the pidfile directly.</span>
-<span id="L231"><span class="lineNum">     231</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           1 :         if (errno == EXDEV) {</span></span>
-<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             std::ofstream ofs_direct(config_.pidfile_path);</span></span>
+<span id="L231"><span class="lineNum">     231</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC tlaBgUNC">           0 :         if (errno == EXDEV) {</span></span>
+<span id="L232"><span class="lineNum">     232</span>                 :<span class="tlaUNC">           0 :             std::ofstream ofs_direct(config_.pidfile_path);</span></span>
 <span id="L233"><span class="lineNum">     233</span>         [<span class="tlaUNC" title="Branch 0 was not executed"> # </span><span class="tlaUNC" title="Branch 1 was not executed"> # </span>]:<span class="tlaUNC">           0 :             if (ofs_direct) {</span></span>
 <span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaUNC">           0 :                 ofs_direct &lt;&lt; getpid() &lt;&lt; &quot;\n&quot; &lt;&lt; std::flush;</span></span>
 <span id="L235"><span class="lineNum">     235</span>                 :             :             }</span>
