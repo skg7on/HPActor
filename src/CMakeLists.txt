@@ -38,6 +38,8 @@ add_library(hpactor_lib SHARED
     mailbox/dead_letter_queue.cpp
     mailbox/delivery_result.cpp
     mailbox/outbound_tracker.cpp
+    mailbox/in_memory_delivery_store.cpp
+    mailbox/file_delivery_store.cpp
     adt/dedup_cache.cpp
     adt/json_helpers.cpp
     mailbox/backpressure_signal_serialization.cpp
