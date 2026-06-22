@@ -145,6 +145,7 @@ add_library(hpactor_lib SHARED
         process/process_manager.cpp
         process/watchdog_actor.cpp
         process/health_http_server.cpp
+        process/health_check.cpp
 )
 
 target_include_directories(hpactor_lib
