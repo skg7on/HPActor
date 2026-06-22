@@ -67,7 +67,7 @@ FileStateStore::write_snapshot(std::string_view persistence_id,
     rec.timestamp_ms = static_cast<uint64_t>(
         std::chrono::steady_clock::now().time_since_epoch().count());
     rec.data = data;
-    rec.checksum = crc32c(data.data(), data.size());
+    rec.checksum = data.size() > 0 ? crc32c(data.data(), data.size()) : 0;
 
     std::string tmp_path = dir + "/snapshot.tmp";
     std::string final_path = dir + "/snapshot.bin";
@@ -84,8 +84,10 @@ FileStateStore::write_snapshot(std::string_view persistence_id,
         write_le(rec.schema_version);
         write_le(rec.checksum);
         write_le(data.size());
-        ofs.write(reinterpret_cast<const char*>(data.data()),
-                  static_cast<std::streamsize>(data.size()));
+        if (data.size() > 0) {
+            ofs.write(reinterpret_cast<const char*>(data.data()),
+                      static_cast<std::streamsize>(data.size()));
+        }
         if (!ofs) {
             fs::remove(tmp_path, ec);
             return result<SnapshotRecord>::make(error(
@@ -130,14 +132,16 @@ FileStateStore::load_latest_snapshot(std::string_view persistence_id) {
     uint64_t data_len = read_le();
 
     StreamBuffer data(data_len);
-    ifs.read(reinterpret_cast<char*>(data.data()),
-             static_cast<std::streamsize>(data_len));
+    if (data_len > 0) {
+        ifs.read(reinterpret_cast<char*>(data.data()),
+                 static_cast<std::streamsize>(data_len));
+    }
     if (!ifs) {
         return result<SnapshotRecord>::make(
             error(static_cast<uint32_t>(FailureReason::ReactivationFailed)));
     }
 
-    uint32_t computed = crc32c(data.data(), data.size());
+    uint32_t computed = data.size() > 0 ? crc32c(data.data(), data.size()) : 0;
     if (computed != rec.checksum) {
         return result<SnapshotRecord>::make(
             error(static_cast<uint32_t>(FailureReason::SchemaVersionMismatch)));
