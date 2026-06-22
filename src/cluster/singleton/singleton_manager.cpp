@@ -99,4 +99,13 @@ size_t SingletonManagerCore::singleton_count() const {
     return singletons_.size();
 }
 
+std::vector<SingletonIdentity> SingletonManagerCore::get_registered() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<SingletonIdentity> result;
+    for (const auto& [name, record] : singletons_) {
+        result.push_back(record.identity);
+    }
+    return result;
+}
+
 } // namespace hpactor::cluster::singleton
