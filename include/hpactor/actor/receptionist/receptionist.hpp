@@ -24,8 +24,14 @@
 namespace hpactor::receptionist {
 
 /// System actor that provides publish/subscribe actor lookup by
-/// ServiceKey. All methods are thread-safe (protected by internal
-/// mutex). Uses direct function calls rather than TypedMessage dispatch.
+/// ServiceKey.
+///
+/// All methods are thread-safe (protected by internal mutex).
+/// Uses direct function calls rather than TypedMessage dispatch
+/// because ServiceKey/ActorAddress are structs, not protobuf-compatible
+/// TypedMessage types. This is a pragmatic choice for developer-facing
+/// convenience APIs — future evolution should route operations through
+/// the mailbox as TypedMessage sends for full actor boundary isolation.
 class Receptionist : public EventBasedActor {
   public:
     Receptionist(ActorContext* ctx, ActorSystem& sys);
