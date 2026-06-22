@@ -14,7 +14,6 @@
 
 #pragma once
 
-#include <hpactor/adt/result.hpp>
 #include <hpactor/types/types.hpp>
 
 #include <cstdint>
@@ -22,8 +21,14 @@
 
 namespace hpactor::msg {
 
-// Forward declaration — defined in outbound_delivery_tracker.hpp.
-struct PendingSend;
+/// \brief Simple record for durable persistent send tracking.
+///
+/// Stored in the outbox before the network send and removed after
+/// the remote side acknowledges. Survives process restart so pending
+/// sends can be replayed.
+struct PendingSend {
+    MessageId message_id; ///< Unique message identifier.
+};
 
 /// \brief Persistence adapter for durable at-least-once delivery.
 ///

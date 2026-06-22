@@ -23,3 +23,5 @@ add_executable(test_unit_actor
 )
 target_link_libraries(test_unit_actor hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_actor)
+
+add_subdirectory(durable)

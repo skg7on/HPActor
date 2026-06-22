@@ -18,6 +18,7 @@
 #include <hpactor/cluster/cluster_node_state.hpp>
 #include <hpactor/cluster/partition_policy.hpp>
 
+#include <functional>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -74,6 +75,16 @@ class ClusterFailureModel {
     std::vector<std::string> alive_nodes() const;
     std::vector<std::string> drain_invalidation_queue();
 
+    /// \brief Observer callback type for node state change notifications.
+    using StateChangeObserver =
+        std::function<void(const std::vector<std::string>& alive_nodes)>;
+
+    /// \brief Register an observer for node state change notifications.
+    ///
+    /// Observers are called after every successful transition while the
+    /// internal mutex is held. Observers must not call back into the model.
+    void register_observer(StateChangeObserver observer);
+
   private:
     struct NodeRecord {
         ClusterNodeIdentity identity;
@@ -83,6 +94,7 @@ class ClusterFailureModel {
     std::unordered_map<std::string, NodeRecord> nodes_;
     PartitionPolicy partition_policy_ = PartitionPolicy::FailOpen;
     std::vector<std::string> invalidation_queue_;
+    std::vector<StateChangeObserver> observers_;
     mutable std::mutex mutex_;
 };
 

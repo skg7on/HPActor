@@ -102,6 +102,23 @@ class DeliveryPipeline {
         /// When non-null and delivery_mode >= AtLeastOnce with an enabled
         /// retry policy, accepted deliveries are also tracked for retry.
         msg::OutboundDeliveryTracker* outbound_tracker = nullptr;
+
+        /// \brief Callback to emit a reliable ACK/NACK frame back to the
+        ///        sender when \c AckRequested is set on the incoming frame.
+        ///
+        /// Called by the pipeline when dedup detects a duplicate (AcKStatus
+        /// Duplicate) or when admission is rejected (AcKStatus Rejected).
+        /// The ACK(Accepted) path is emitted by \c EventBasedActor after
+        /// successful handler dispatch, not by this callback.
+        ///
+        /// \param[in] sender   Original sender to route the ACK back to.
+        /// \param[in] msg_id   Message ID being acknowledged.
+        /// \param[in] status   AcK status code (\c 0=Accepted,
+        ///                     \c 1=Rejected, \c 2=Duplicate).
+        /// \param[in] retry_after_ms Suggested retry delay for NACK.
+        std::function<void(const ActorAddress& sender, uint64_t msg_id,
+                           uint8_t status, uint32_t retry_after_ms)>
+            emit_ack;
     };
 
     /// \brief Construct the delivery pipeline with injected dependencies.

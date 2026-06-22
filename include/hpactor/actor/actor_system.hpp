@@ -26,9 +26,9 @@
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
-#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 #if HPACTOR_ENABLE_AI_ACCELERATORS
 #    include <hpactor/ai/accelerator_config.hpp>
 #endif
@@ -76,6 +76,9 @@ class ShutdownCoordinator;
 namespace msg {
 class OutboundDeliveryTracker;
 }
+namespace mailbox {
+class OutboundTracker;
+}
 
 namespace log {
 class LogManager;
@@ -85,6 +88,13 @@ class Logger;
 namespace cli {
 class CliActor;
 } // namespace cli
+
+namespace cluster {
+class ClusterFailureModel;
+} // namespace cluster
+namespace cluster::singleton {
+class SingletonManagerActor;
+} // namespace cluster::singleton
 
 namespace metrics {
 class MetricsActor;
@@ -311,7 +321,8 @@ class ActorSystem {
 
     // ── Registry access ───────────────────────────────────────────────────
 
-    /// \brief Inline name→address registry (was a separate header; zero external consumers).
+    /// \brief Inline name→address registry (was a separate header; zero
+    /// external consumers).
     class ActorRegistry {
       public:
         explicit ActorRegistry(EndPoint endpoint) : endpoint_(endpoint) {}
@@ -320,10 +331,14 @@ class ActorSystem {
         }
         ActorAddress get(const std::string& name) const {
             auto it = actors_.find(name);
-            if (it != actors_.end()) return it->second;
+            if (it != actors_.end())
+                return it->second;
             return {};
         }
-        void erase(const std::string& name) { actors_.erase(name); }
+        void erase(const std::string& name) {
+            actors_.erase(name);
+        }
+
       private:
         [[maybe_unused]] EndPoint endpoint_;
         std::unordered_map<std::string, ActorAddress> actors_;
@@ -484,6 +499,33 @@ class ActorSystem {
     ///         spawned.
     receptionist::Receptionist* receptionist() const;
 
+    // ── Cluster subsystem ──────────────────────────────────────────────────
+
+    /// \brief Enable the cluster subsystem for this node.
+    ///
+    /// Creates ClusterFailureModel, SingletonManagerActor, and registers
+    /// shard-coordinator as the first managed singleton. Wires observer
+    /// callback for node state change to election re-run.
+    /// \param[in] node_id This node's identifier in the cluster.
+    void enable_cluster(const std::string& node_id);
+
+    /// \brief Returns \c true when the cluster subsystem is enabled.
+    bool cluster_enabled() const {
+        return cluster_enabled_;
+    }
+
+    /// \brief Cluster failure model (nullptr when cluster is disabled).
+    cluster::ClusterFailureModel* cluster_failure_model() {
+        return static_cast<cluster::ClusterFailureModel*>(
+            cluster_failure_model_.get());
+    }
+
+    /// \brief Singleton manager actor wrapper (nullptr when cluster disabled).
+    cluster::singleton::SingletonManagerActor* singleton_manager() {
+        return static_cast<cluster::singleton::SingletonManagerActor*>(
+            singleton_manager_.get());
+    }
+
     // ── Mailbox ───────────────────────────────────────────────────────────
 
     /// \brief Get the mailbox for a specific actor.
@@ -638,6 +680,34 @@ class ActorSystem {
     msg::OutboundDeliveryTracker* outbound_tracker() noexcept {
         return outbound_tracker_.get();
     }
+
+    /// \brief Access the reliable messaging OutboundTracker.
+    ///
+    /// Tracks pending outbound messages with ACK/NACK/retry/expiry support.
+    /// \return Pointer to the \c mailbox::OutboundTracker, or \c nullptr
+    ///         if not yet initialized.
+    mailbox::OutboundTracker* reliable_tracker() noexcept {
+        return reliable_tracker_.get();
+    }
+    const mailbox::OutboundTracker* reliable_tracker() const noexcept {
+        return reliable_tracker_.get();
+    }
+
+    /// \brief Send a reliable ACK/NACK frame back to a message sender.
+    ///
+    /// Constructs a \c WireFrame with the appropriate flags (\c AckRequested
+    /// for ACK, \c AckResponse for NACK) and sends it via the transport.
+    /// No-op when networking is disabled or transport is unavailable.
+    ///
+    /// \param[in] target The original sender to route the ACK back to.
+    /// \param[in] acker  The local actor that is acknowledging.
+    /// \param[in] msg_id The message ID being acknowledged.
+    /// \param[in] status ACK status code (\c 0=Accepted, 1=Rejected,
+    ///                   \c 2=Duplicate).
+    /// \param[in] retry_after_ms Suggested retry delay for NACK (\c 0 for ACK).
+    void
+    send_reliable_ack(const ActorAddress& target, const ActorAddress& acker,
+                      uint64_t msg_id, uint8_t status, uint32_t retry_after_ms);
 
     // Receiver dedup cache for at-least-once delivery
     adt::DedupCache* dedup_cache() {
@@ -913,6 +983,9 @@ class ActorSystem {
     // Outbound delivery tracker for at-least-once delivery
     std::unique_ptr<msg::OutboundDeliveryTracker> outbound_tracker_;
 
+    // Reliable messaging outbound tracker (ACK/NACK/retry/expiry)
+    std::unique_ptr<mailbox::OutboundTracker> reliable_tracker_;
+
     // Receiver dedup cache for at-least-once delivery
     std::unique_ptr<adt::DedupCache> dedup_cache_;
 
@@ -925,6 +998,15 @@ class ActorSystem {
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
+
+    // Cluster subsystem (type-erased to avoid link cycle between
+    // hpactor_lib ↔ hpactor_cluster).
+    using cluster_cleanup_fn = void (*)(void*);
+    bool cluster_enabled_ = false;
+    std::unique_ptr<void, cluster_cleanup_fn> cluster_failure_model_{
+        nullptr, +[](void*) {}};
+    std::unique_ptr<void, cluster_cleanup_fn> singleton_manager_{nullptr,
+                                                                 +[](void*) {}};
 };
 
 // -----------------------------------------------------------------------------

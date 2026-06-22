@@ -22,6 +22,7 @@ add_library(hpactor_lib SHARED
     actor/blocking_actor.cpp
     actor/durable/in_memory_state_store.cpp
     actor/durable/file_state_store.cpp
+    actor/durable/passivation_manager.cpp
     actor/actor_route.cpp
     actor/routing/routing_logic.cpp
     actor/routing/pool_router.cpp
@@ -37,6 +38,9 @@ add_library(hpactor_lib SHARED
     supervision/supervision.cpp
     mailbox/dead_letter_queue.cpp
     mailbox/delivery_result.cpp
+    mailbox/outbound_tracker.cpp
+    mailbox/in_memory_delivery_store.cpp
+    mailbox/file_delivery_store.cpp
     adt/dedup_cache.cpp
     adt/json_helpers.cpp
     mailbox/backpressure_signal_serialization.cpp
@@ -91,6 +95,7 @@ add_library(hpactor_lib SHARED
     net/http_connection.cpp
     net/endpoint_outbound_queue.cpp
     net/endpoint_circuit_breaker.cpp
+    net/reliable_ack.cpp
     sched/actor_ready_gate.cpp
     sched/actor_execution_engine.cpp
     sched/work_placement_scheduler.cpp

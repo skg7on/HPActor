@@ -29,6 +29,9 @@ add_executable(test_unit_mailbox
     test_prearm_race.cpp
     test_stash_buffer.cpp
     test_mailbox_edge_cases.cpp
+    test_reliable_retry_policy.cpp
+    test_outbound_tracker.cpp
+    test_delivery_store.cpp
 )
 target_link_libraries(test_unit_mailbox hpactor hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_mailbox)

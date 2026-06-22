@@ -72,6 +72,10 @@ struct WireFrame {
                                                       ///< receiver should
                                                       ///< deduplicate by
                                                       ///< \c MessageId.
+    static constexpr uint32_t AckRequested = 1 << 5;  ///< Sender requests
+                                                      ///< ACK/NACK.
+    static constexpr uint32_t AckResponse = 1 << 6; ///< This frame is an ACK or
+                                                    ///< NACK.
 };
 
 // ── Address conversion helpers ─────────────────────────────────────────────

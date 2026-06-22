@@ -57,6 +57,21 @@ ClusterFailureModel::transition(const std::string& node_id, ClusterNodeState to,
         invalidation_queue_.push_back(node_id);
     }
 
+    // Notify observers of the updated alive set.
+    // Observers must not call back into the model (lock held).
+    {
+        std::vector<std::string> alive;
+        for (const auto& [id, record] : nodes_) {
+            if (record.state == ClusterNodeState::Alive) {
+                alive.push_back(id);
+            }
+        }
+        for (const auto& obs : observers_) {
+            if (obs)
+                obs(alive);
+        }
+    }
+
     return {true, invalidated, ""};
 }
 
@@ -136,6 +151,11 @@ std::vector<std::string> ClusterFailureModel::drain_invalidation_queue() {
     std::vector<std::string> drained;
     drained.swap(invalidation_queue_);
     return drained;
+}
+
+void ClusterFailureModel::register_observer(StateChangeObserver observer) {
+    std::lock_guard<std::mutex> lock(mutex_);
+    observers_.push_back(std::move(observer));
 }
 
 } // namespace hpactor::cluster

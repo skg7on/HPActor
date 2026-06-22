@@ -62,6 +62,9 @@ class SingletonManagerCore {
     /// \brief Number of registered singletons.
     size_t singleton_count() const;
 
+    /// \brief Get all registered singleton identities.
+    std::vector<SingletonIdentity> get_registered() const;
+
   private:
     struct SingletonRecord {
         SingletonIdentity identity;

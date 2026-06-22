@@ -67,7 +67,8 @@ class TypedMessage {
           trace_context_(other.trace_context_),
           has_trace_context_(other.has_trace_context_),
           deadline_ns_(other.deadline_ns_),
-          ask_message_id_(other.ask_message_id_) {
+          ask_message_id_(other.ask_message_id_),
+          ack_requested_(other.ack_requested_), message_id_(other.message_id_) {
         if (other.is_inline_) {
             std::memcpy(inline_payload_, other.inline_payload_, other.inline_size_);
             other.is_inline_ = false;
@@ -95,6 +96,8 @@ class TypedMessage {
         has_trace_context_ = other.has_trace_context_;
         deadline_ns_ = other.deadline_ns_;
         ask_message_id_ = other.ask_message_id_;
+        ack_requested_ = other.ack_requested_;
+        message_id_ = other.message_id_;
         return *this;
     }
 
@@ -230,6 +233,28 @@ class TypedMessage {
         ask_message_id_ = id;
     }
 
+    /// \brief Whether the sender requested reliable ACK/NACK for this message.
+    ///
+    /// Set from the WireFrame \c AckRequested flag in \c deliver_remote().
+    /// Best-effort messages (no flag) return \c false.
+    [[nodiscard]] bool ack_requested() const noexcept {
+        return ack_requested_;
+    }
+    void set_ack_requested(bool v) noexcept {
+        ack_requested_ = v;
+    }
+
+    /// \brief Sender-assigned message identifier for reliable messaging.
+    ///
+    /// Set from \c ActorMsgFrame.message_id in \c deliver_remote(). Zero
+    /// means not a tracked message.
+    [[nodiscard]] uint64_t message_id() const noexcept {
+        return message_id_;
+    }
+    void set_message_id(uint64_t id) noexcept {
+        message_id_ = id;
+    }
+
     // ── MEM-006: Inline payload support ──────────────────────────
 
     /// \brief Whether this message's payload is stored inline rather than in
@@ -286,6 +311,8 @@ class TypedMessage {
     bool has_trace_context_ = false;
     int64_t deadline_ns_ = INT64_MAX;
     uint64_t ask_message_id_ = 0;
+    bool ack_requested_ = false;
+    uint64_t message_id_ = 0;
 };
 
 } // namespace hpactor

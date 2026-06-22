@@ -151,6 +151,16 @@ void EventBasedActor::receive(TypedMessage& msg) {
     }
 
     dispatch_user_message(msg);
+
+    // ── Auto-ACK: message was accepted by the handler → emit ACK(Accepted) ──
+    if (msg.ack_requested()) {
+        auto& sys = system();
+        ActorAddress acker = address();
+        sys.send_reliable_ack(msg.sender_address(), acker, msg.message_id(),
+                              static_cast<uint8_t>(0), // AckStatus::Accepted
+                              0);
+    }
+
     try_drain_completion();
     check_mailbox_pressure();
 
