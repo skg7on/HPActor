@@ -32,12 +32,12 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">5</td>
-            <td class="headerCovTableEntry">5</td>
+            <td class="headerCovTableEntry">7</td>
+            <td class="headerCovTableEntry">7</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 04:35:37</td>
+            <td class="headerValue">2026-06-22 09:28:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -118,159 +118,173 @@
 <span id="L40"><span class="lineNum">      40</span>                 :             : // Forward declaration to avoid circular include</span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : class EventLoop;</span>
 <span id="L42"><span class="lineNum">      42</span>                 :             : </span>
-<span id="L43"><span class="lineNum">      43</span>                 :             : class EpollBackend : public IReactorBackend {</span>
-<span id="L44"><span class="lineNum">      44</span>                 :             :   public:</span>
-<span id="L45"><span class="lineNum">      45</span>                 :             :     EpollBackend();</span>
-<span id="L46"><span class="lineNum">      46</span>                 :             :     ~EpollBackend() override;</span>
-<span id="L47"><span class="lineNum">      47</span>                 :             : </span>
-<span id="L48"><span class="lineNum">      48</span>                 :             :     bool start() override;</span>
-<span id="L49"><span class="lineNum">      49</span>                 :             :     void stop() override;</span>
-<span id="L50"><span class="lineNum">      50</span>                 :             : </span>
-<span id="L51"><span class="lineNum">      51</span>                 :             :     bool add_fd(int fd, IoEvent events) override;</span>
-<span id="L52"><span class="lineNum">      52</span>                 :             :     bool update_fd(int fd, IoEvent events) override;</span>
-<span id="L53"><span class="lineNum">      53</span>                 :             :     bool remove_fd(int fd) override;</span>
-<span id="L54"><span class="lineNum">      54</span>                 :             : </span>
-<span id="L55"><span class="lineNum">      55</span>                 :             :     int register_buffer(const void* addr, size_t len) override;</span>
-<span id="L56"><span class="lineNum">      56</span>                 :             :     bool unregister_buffer(int buffer_id) override;</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             : /// \brief Linux epoll-based reactor backend.</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : ///</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : /// Uses \c epoll(7) for edge-triggered I/O readiness notification and</span>
+<span id="L46"><span class="lineNum">      46</span>                 :             : /// \c timerfd_create(2) for timer support. Performs synchronous I/O in</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             : /// the event loop thread. Supports both read/write handler dispatch</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             : /// (reactor mode) and simulated async I/O via \c async_send() etc.</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             : /// (proactor mode emulation).</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : ///</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : /// \note Thread safety: All public methods are called from the event loop</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             : ///       thread.</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             : class EpollBackend : public IReactorBackend {</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :   public:</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             :     EpollBackend();</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             :     ~EpollBackend() override;</span>
 <span id="L57"><span class="lineNum">      57</span>                 :             : </span>
-<span id="L58"><span class="lineNum">      58</span>                 :             :     uint64_t run_after(ActorId actor, int delay_ms) override;</span>
-<span id="L59"><span class="lineNum">      59</span>                 :             :     uint64_t run_every(ActorId actor, int interval_ms) override;</span>
-<span id="L60"><span class="lineNum">      60</span>                 :             :     void cancel_timer(uint64_t handle) override;</span>
-<span id="L61"><span class="lineNum">      61</span>                 :             : </span>
-<span id="L62"><span class="lineNum">      62</span>                 :             :     int wait(int timeout_ms) override;</span>
-<span id="L63"><span class="lineNum">      63</span>                 :             :     void process_events() override;</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             :     bool start() override;</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :     void stop() override;</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             : </span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :     bool add_fd(int fd, IoEvent events) override;</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :     bool update_fd(int fd, IoEvent events) override;</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             :     bool remove_fd(int fd) override;</span>
 <span id="L64"><span class="lineNum">      64</span>                 :             : </span>
-<span id="L65"><span class="lineNum">      65</span>                 :             :     // Proactor methods</span>
-<span id="L66"><span class="lineNum">      66</span>                 :             :     void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,</span>
-<span id="L67"><span class="lineNum">      67</span>                 :             :                     uint32_t op_type) override;</span>
-<span id="L68"><span class="lineNum">      68</span>                 :             :     void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,</span>
-<span id="L69"><span class="lineNum">      69</span>                 :             :                     uint32_t op_type) override;</span>
-<span id="L70"><span class="lineNum">      70</span>                 :             :     void async_accept(int fd, ActorId actor) override;</span>
-<span id="L71"><span class="lineNum">      71</span>                 :             :     void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,</span>
-<span id="L72"><span class="lineNum">      72</span>                 :             :                        ActorId actor) override;</span>
-<span id="L73"><span class="lineNum">      73</span>                 :             :     void async_sendto(int fd, const iovec* bufs, int buf_count,</span>
-<span id="L74"><span class="lineNum">      74</span>                 :             :                        const sockaddr* addr, socklen_t addrlen, ActorId actor,</span>
-<span id="L75"><span class="lineNum">      75</span>                 :             :                        uint32_t op_type) override;</span>
-<span id="L76"><span class="lineNum">      76</span>                 :             :     void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,</span>
-<span id="L77"><span class="lineNum">      77</span>                 :             :                         uint32_t op_type) override;</span>
-<span id="L78"><span class="lineNum">      78</span>                 :             : </span>
-<span id="L79"><span class="lineNum">      79</span>                 :             :     // Read handler management — epoll reads data in wait() and dispatches</span>
-<span id="L80"><span class="lineNum">      80</span>                 :             :     void set_read_handler(int fd, read_callback handler) override;</span>
-<span id="L81"><span class="lineNum">      81</span>                 :             :     void clear_read_handler(int fd) override;</span>
-<span id="L82"><span class="lineNum">      82</span>                 :             : </span>
-<span id="L83"><span class="lineNum">      83</span>                 :<span class="tlaGNC tlaBgGNC">          50 :     bool supports_read_handler() const override { return true; }</span></span>
-<span id="L84"><span class="lineNum">      84</span>                 :             : </span>
-<span id="L85"><span class="lineNum">      85</span>                 :             :     // Write handler management — epoll dispatches writable events via callback</span>
-<span id="L86"><span class="lineNum">      86</span>                 :             :     void set_write_handler(int fd, write_callback handler) override;</span>
-<span id="L87"><span class="lineNum">      87</span>                 :             :     void clear_write_handler(int fd) override;</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :     int register_buffer(const void* addr, size_t len) override;</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :     bool unregister_buffer(int buffer_id) override;</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             : </span>
+<span id="L68"><span class="lineNum">      68</span>                 :             :     uint64_t run_after(ActorId actor, int delay_ms) override;</span>
+<span id="L69"><span class="lineNum">      69</span>                 :             :     uint64_t run_every(ActorId actor, int interval_ms) override;</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             :     void cancel_timer(uint64_t handle) override;</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             : </span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :     int wait(int timeout_ms) override;</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             :     void process_events() override;</span>
+<span id="L74"><span class="lineNum">      74</span>                 :             : </span>
+<span id="L75"><span class="lineNum">      75</span>                 :             :     // Proactor methods</span>
+<span id="L76"><span class="lineNum">      76</span>                 :             :     void async_send(int fd, const iovec* bufs, int buf_count, ActorId actor,</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :                     uint32_t op_type) override;</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             :     void async_recv(int fd, const iovec* bufs, int buf_count, ActorId actor,</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             :                     uint32_t op_type) override;</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             :     void async_accept(int fd, ActorId actor) override;</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             :     void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,</span>
+<span id="L82"><span class="lineNum">      82</span>                 :             :                        ActorId actor) override;</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :     void</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :     async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :                  socklen_t addrlen, ActorId actor, uint32_t op_type) override;</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             :     void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             :                         uint32_t op_type) override;</span>
 <span id="L88"><span class="lineNum">      88</span>                 :             : </span>
-<span id="L89"><span class="lineNum">      89</span>                 :<span class="tlaGNC">           2 :     bool supports_write_handler() const override { return true; }</span></span>
-<span id="L90"><span class="lineNum">      90</span>                 :             : </span>
-<span id="L91"><span class="lineNum">      91</span>                 :             :     // Set the EventLoop pointer for routing completions</span>
-<span id="L92"><span class="lineNum">      92</span>                 :<span class="tlaGNC">         343 :     void set_loop(net::EventLoop* loop) {</span></span>
-<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC">         343 :         loop_ = loop;</span></span>
-<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">         343 :     }</span></span>
-<span id="L95"><span class="lineNum">      95</span>                 :             : </span>
-<span id="L96"><span class="lineNum">      96</span>                 :             :     // Called by completions to deliver to actor</span>
-<span id="L97"><span class="lineNum">      97</span>                 :             :     void deliver_completion(OpCompletion completion);</span>
-<span id="L98"><span class="lineNum">      98</span>                 :             : </span>
-<span id="L99"><span class="lineNum">      99</span>                 :             :     // --- Extended proactor methods (not in IReactorBackend) ---</span>
-<span id="L100"><span class="lineNum">     100</span>                 :             :     void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,</span>
-<span id="L101"><span class="lineNum">     101</span>                 :             :                           ActorId actor, uint32_t op_type);</span>
-<span id="L102"><span class="lineNum">     102</span>                 :             :     void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,</span>
-<span id="L103"><span class="lineNum">     103</span>                 :             :                           ActorId actor, uint32_t op_type);</span>
+<span id="L89"><span class="lineNum">      89</span>                 :             :     // Read handler management — epoll reads data in wait() and dispatches</span>
+<span id="L90"><span class="lineNum">      90</span>                 :             :     void set_read_handler(int fd, read_callback handler) override;</span>
+<span id="L91"><span class="lineNum">      91</span>                 :             :     void clear_read_handler(int fd) override;</span>
+<span id="L92"><span class="lineNum">      92</span>                 :             : </span>
+<span id="L93"><span class="lineNum">      93</span>                 :<span class="tlaGNC tlaBgGNC">          50 :     bool supports_read_handler() const override {</span></span>
+<span id="L94"><span class="lineNum">      94</span>                 :<span class="tlaGNC">          50 :         return true;</span></span>
+<span id="L95"><span class="lineNum">      95</span>                 :             :     }</span>
+<span id="L96"><span class="lineNum">      96</span>                 :             : </span>
+<span id="L97"><span class="lineNum">      97</span>                 :             :     // Write handler management — epoll dispatches writable events via callback</span>
+<span id="L98"><span class="lineNum">      98</span>                 :             :     void set_write_handler(int fd, write_callback handler) override;</span>
+<span id="L99"><span class="lineNum">      99</span>                 :             :     void clear_write_handler(int fd) override;</span>
+<span id="L100"><span class="lineNum">     100</span>                 :             : </span>
+<span id="L101"><span class="lineNum">     101</span>                 :<span class="tlaGNC">           2 :     bool supports_write_handler() const override {</span></span>
+<span id="L102"><span class="lineNum">     102</span>                 :<span class="tlaGNC">           2 :         return true;</span></span>
+<span id="L103"><span class="lineNum">     103</span>                 :             :     }</span>
 <span id="L104"><span class="lineNum">     104</span>                 :             : </span>
-<span id="L105"><span class="lineNum">     105</span>                 :             :   private:</span>
-<span id="L106"><span class="lineNum">     106</span>                 :             :     // Timer entry</span>
-<span id="L107"><span class="lineNum">     107</span>                 :             :     struct TimerEntry {</span>
-<span id="L108"><span class="lineNum">     108</span>                 :             :         int64_t expires_at_ms; // absolute time in ms</span>
-<span id="L109"><span class="lineNum">     109</span>                 :             :         ActorId actor;</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             :         int interval_ms; // 0 for one-shot, &gt;0 for repeating</span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :         uint64_t handle;</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             :     };</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             : </span>
-<span id="L114"><span class="lineNum">     114</span>                 :             :     // Pending I/O operation tracked per fd</span>
-<span id="L115"><span class="lineNum">     115</span>                 :             :     struct PendingOp {</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             :         ActorId actor;</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             :         uint32_t op_type;</span>
-<span id="L118"><span class="lineNum">     118</span>                 :             :         std::vector&lt;uint8_t&gt; data; // concatenated buffers for send</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             :         int buf_count = 0;</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             :         iovec saved_bufs[16];  // original buffers for recv</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             :         sockaddr_storage addr; // for connect/recvfrom/sendto</span>
-<span id="L122"><span class="lineNum">     122</span>                 :             :         socklen_t addrlen = sizeof(addr);</span>
-<span id="L123"><span class="lineNum">     123</span>                 :             :     };</span>
-<span id="L124"><span class="lineNum">     124</span>                 :             : </span>
-<span id="L125"><span class="lineNum">     125</span>                 :             :     // Encode fd+actor+op_type into user_data</span>
-<span id="L126"><span class="lineNum">     126</span>                 :             :     static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type);</span>
-<span id="L127"><span class="lineNum">     127</span>                 :             :     static void decode_user_data(uint64_t user_data, int&amp; fd, ActorId&amp; actor,</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :                                  uint32_t&amp; op_type);</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             : </span>
-<span id="L130"><span class="lineNum">     130</span>                 :             :     // Process expired timers, returns number of triggered timers</span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :     int process_timers();</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             : </span>
-<span id="L133"><span class="lineNum">     133</span>                 :             :     // Process a pending I/O operation for a socket event</span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :     void process_pending_op(int fd, uint32_t events);</span>
-<span id="L135"><span class="lineNum">     135</span>                 :             : </span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :     // Dispatch a single epoll event to the appropriate handler</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :     void dispatch_event(int fd, uint32_t events);</span>
+<span id="L105"><span class="lineNum">     105</span>                 :             :     // Set the EventLoop pointer for routing completions</span>
+<span id="L106"><span class="lineNum">     106</span>                 :<span class="tlaGNC">         343 :     void set_loop(net::EventLoop* loop) {</span></span>
+<span id="L107"><span class="lineNum">     107</span>                 :<span class="tlaGNC">         343 :         loop_ = loop;</span></span>
+<span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">         343 :     }</span></span>
+<span id="L109"><span class="lineNum">     109</span>                 :             : </span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     // Called by completions to deliver to actor</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             :     void deliver_completion(OpCompletion completion);</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             : </span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :     // --- Extended proactor methods (not in IReactorBackend) ---</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :     void async_send_fixed(int fd, int buffer_id, size_t offset, size_t len,</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             :                           ActorId actor, uint32_t op_type);</span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :     void async_recv_fixed(int fd, int buffer_id, size_t offset, size_t len,</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :                           ActorId actor, uint32_t op_type);</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             : </span>
+<span id="L119"><span class="lineNum">     119</span>                 :             :   private:</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             :     // Timer entry</span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :     struct TimerEntry {</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :         int64_t expires_at_ms; // absolute time in ms</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             :         ActorId actor;</span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :         int interval_ms; // 0 for one-shot, &gt;0 for repeating</span>
+<span id="L125"><span class="lineNum">     125</span>                 :             :         uint64_t handle;</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :     };</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             : </span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :     // Pending I/O operation tracked per fd</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             :     struct PendingOp {</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             :         ActorId actor;</span>
+<span id="L131"><span class="lineNum">     131</span>                 :             :         uint32_t op_type;</span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :         std::vector&lt;uint8_t&gt; data; // concatenated buffers for send</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :         int buf_count = 0;</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             :         iovec saved_bufs[16];  // original buffers for recv</span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :         sockaddr_storage addr; // for connect/recvfrom/sendto</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :         socklen_t addrlen = sizeof(addr);</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     };</span>
 <span id="L138"><span class="lineNum">     138</span>                 :             : </span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :     // Sub-methods for process_pending_op — each handles one op type</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :     void try_pending_accept(int fd, PendingOp&amp; op);</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             :     bool try_pending_connect(int fd, PendingOp&amp; op, uint32_t events, int&amp; error);</span>
-<span id="L142"><span class="lineNum">     142</span>                 :             :     bool try_pending_send(int fd, PendingOp&amp; op, uint32_t events,</span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :                           ssize_t&amp; total, int&amp; error);</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             :     bool try_pending_recv(int fd, PendingOp&amp; op, uint32_t events,</span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :                           ssize_t&amp; total, int&amp; error);</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             :     // Encode fd+actor+op_type into user_data</span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     static uint64_t encode_user_data(int fd, ActorId actor, uint32_t op_type);</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :     static void decode_user_data(uint64_t user_data, int&amp; fd, ActorId&amp; actor,</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :                                  uint32_t&amp; op_type);</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             : </span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :     // Process expired timers, returns number of triggered timers</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :     int process_timers();</span>
 <span id="L146"><span class="lineNum">     146</span>                 :             : </span>
-<span id="L147"><span class="lineNum">     147</span>                 :             :     // Enqueue an OpCompletion for a completed pending operation</span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :     void deliver_op_completion(const PendingOp&amp; op, OpType optype, int fd,</span>
-<span id="L149"><span class="lineNum">     149</span>                 :             :                                ssize_t total, int error);</span>
-<span id="L150"><span class="lineNum">     150</span>                 :             : </span>
-<span id="L151"><span class="lineNum">     151</span>                 :             :     int epoll_fd_ = -1;</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             :     int timerfd_ = -1;</span>
-<span id="L153"><span class="lineNum">     153</span>                 :             : </span>
-<span id="L154"><span class="lineNum">     154</span>                 :             :     // EventLoop pointer for routing completions</span>
-<span id="L155"><span class="lineNum">     155</span>                 :             :     net::EventLoop* loop_ = nullptr;</span>
-<span id="L156"><span class="lineNum">     156</span>                 :             : </span>
-<span id="L157"><span class="lineNum">     157</span>                 :             :     // Timer management</span>
-<span id="L158"><span class="lineNum">     158</span>                 :             :     std::vector&lt;TimerEntry&gt; timers_; // sorted by expires_at_ms</span>
-<span id="L159"><span class="lineNum">     159</span>                 :             :     std::unordered_set&lt;uint64_t&gt; cancelled_timers_;</span>
-<span id="L160"><span class="lineNum">     160</span>                 :             :     std::unordered_map&lt;uint64_t, size_t&gt; handle_to_timer_index_;</span>
-<span id="L161"><span class="lineNum">     161</span>                 :             :     std::atomic&lt;uint64_t&gt; next_timer_handle_{1};</span>
-<span id="L162"><span class="lineNum">     162</span>                 :             : </span>
-<span id="L163"><span class="lineNum">     163</span>                 :             :     // fd -&gt; registered events for update tracking</span>
-<span id="L164"><span class="lineNum">     164</span>                 :             :     std::unordered_map&lt;int, uint32_t&gt; fd_events_;</span>
-<span id="L165"><span class="lineNum">     165</span>                 :             : </span>
-<span id="L166"><span class="lineNum">     166</span>                 :             :     // fd -&gt; pending I/O operation for true async I/O</span>
-<span id="L167"><span class="lineNum">     167</span>                 :             :     std::unordered_map&lt;int, PendingOp&gt; pending_ops_;</span>
-<span id="L168"><span class="lineNum">     168</span>                 :             : </span>
-<span id="L169"><span class="lineNum">     169</span>                 :             :     // Registered buffers (not supported in epoll - always empty)</span>
-<span id="L170"><span class="lineNum">     170</span>                 :             :     std::vector&lt;std::pair&lt;const void*, size_t&gt;&gt; registered_buffers_;</span>
-<span id="L171"><span class="lineNum">     171</span>                 :             : </span>
-<span id="L172"><span class="lineNum">     172</span>                 :             :     bool running_ = false;</span>
-<span id="L173"><span class="lineNum">     173</span>                 :             : </span>
-<span id="L174"><span class="lineNum">     174</span>                 :             :     // Thread safety</span>
-<span id="L175"><span class="lineNum">     175</span>                 :             :     std::mutex mutex_;</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :     // Process a pending I/O operation for a socket event</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :     void process_pending_op(int fd, uint32_t events);</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             : </span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     // Dispatch a single epoll event to the appropriate handler</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     void dispatch_event(int fd, uint32_t events);</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             : </span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     // Sub-methods for process_pending_op — each handles one op type</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             :     void try_pending_accept(int fd, PendingOp&amp; op);</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :     bool try_pending_connect(int fd, PendingOp&amp; op, uint32_t events, int&amp; error);</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :     bool try_pending_send(int fd, PendingOp&amp; op, uint32_t events,</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             :                           ssize_t&amp; total, int&amp; error);</span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :     bool try_pending_recv(int fd, PendingOp&amp; op, uint32_t events,</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :                           ssize_t&amp; total, int&amp; error);</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             : </span>
+<span id="L161"><span class="lineNum">     161</span>                 :             :     // Enqueue an OpCompletion for a completed pending operation</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             :     void deliver_op_completion(const PendingOp&amp; op, OpType optype, int fd,</span>
+<span id="L163"><span class="lineNum">     163</span>                 :             :                                ssize_t total, int error);</span>
+<span id="L164"><span class="lineNum">     164</span>                 :             : </span>
+<span id="L165"><span class="lineNum">     165</span>                 :             :     int epoll_fd_ = -1;</span>
+<span id="L166"><span class="lineNum">     166</span>                 :             :     int timerfd_ = -1;</span>
+<span id="L167"><span class="lineNum">     167</span>                 :             : </span>
+<span id="L168"><span class="lineNum">     168</span>                 :             :     // EventLoop pointer for routing completions</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             :     net::EventLoop* loop_ = nullptr;</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             : </span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :     // Timer management</span>
+<span id="L172"><span class="lineNum">     172</span>                 :             :     std::vector&lt;TimerEntry&gt; timers_; // sorted by expires_at_ms</span>
+<span id="L173"><span class="lineNum">     173</span>                 :             :     std::unordered_set&lt;uint64_t&gt; cancelled_timers_;</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :     std::unordered_map&lt;uint64_t, size_t&gt; handle_to_timer_index_;</span>
+<span id="L175"><span class="lineNum">     175</span>                 :             :     std::atomic&lt;uint64_t&gt; next_timer_handle_{1};</span>
 <span id="L176"><span class="lineNum">     176</span>                 :             : </span>
-<span id="L177"><span class="lineNum">     177</span>                 :             :     // Pending completions from async_* calls (for process_completions)</span>
-<span id="L178"><span class="lineNum">     178</span>                 :             :     std::vector&lt;OpCompletion&gt; pending_completions_;</span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :     mutable std::mutex completions_mutex_;</span>
-<span id="L180"><span class="lineNum">     180</span>                 :             : </span>
-<span id="L181"><span class="lineNum">     181</span>                 :             :     // Read handler callbacks for PlainConnection-style consumers</span>
-<span id="L182"><span class="lineNum">     182</span>                 :             :     std::unordered_map&lt;int, read_callback&gt; read_handlers_;</span>
-<span id="L183"><span class="lineNum">     183</span>                 :             : </span>
-<span id="L184"><span class="lineNum">     184</span>                 :             :     // Read data from fd and dispatch to registered read handler</span>
-<span id="L185"><span class="lineNum">     185</span>                 :             :     void service_read_handler(int fd);</span>
-<span id="L186"><span class="lineNum">     186</span>                 :             : </span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :     // Write handler callbacks for non-blocking connect completion</span>
-<span id="L188"><span class="lineNum">     188</span>                 :             :     std::unordered_map&lt;int, write_callback&gt; write_handlers_;</span>
-<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
-<span id="L190"><span class="lineNum">     190</span>                 :             :     // Dispatch writable event to registered write handler</span>
-<span id="L191"><span class="lineNum">     191</span>                 :             :     void service_write_handler(int fd);</span>
-<span id="L192"><span class="lineNum">     192</span>                 :             : };</span>
-<span id="L193"><span class="lineNum">     193</span>                 :             : </span>
-<span id="L194"><span class="lineNum">     194</span>                 :             : } // namespace net</span>
-<span id="L195"><span class="lineNum">     195</span>                 :             : } // namespace hpactor</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :     // fd -&gt; registered events for update tracking</span>
+<span id="L178"><span class="lineNum">     178</span>                 :             :     std::unordered_map&lt;int, uint32_t&gt; fd_events_;</span>
+<span id="L179"><span class="lineNum">     179</span>                 :             : </span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :     // fd -&gt; pending I/O operation for true async I/O</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     std::unordered_map&lt;int, PendingOp&gt; pending_ops_;</span>
+<span id="L182"><span class="lineNum">     182</span>                 :             : </span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :     // Registered buffers (not supported in epoll - always empty)</span>
+<span id="L184"><span class="lineNum">     184</span>                 :             :     std::vector&lt;std::pair&lt;const void*, size_t&gt;&gt; registered_buffers_;</span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : </span>
+<span id="L186"><span class="lineNum">     186</span>                 :             :     bool running_ = false;</span>
+<span id="L187"><span class="lineNum">     187</span>                 :             : </span>
+<span id="L188"><span class="lineNum">     188</span>                 :             :     // Thread safety</span>
+<span id="L189"><span class="lineNum">     189</span>                 :             :     std::mutex mutex_;</span>
+<span id="L190"><span class="lineNum">     190</span>                 :             : </span>
+<span id="L191"><span class="lineNum">     191</span>                 :             :     // Pending completions from async_* calls (for process_completions)</span>
+<span id="L192"><span class="lineNum">     192</span>                 :             :     std::vector&lt;OpCompletion&gt; pending_completions_;</span>
+<span id="L193"><span class="lineNum">     193</span>                 :             :     mutable std::mutex completions_mutex_;</span>
+<span id="L194"><span class="lineNum">     194</span>                 :             : </span>
+<span id="L195"><span class="lineNum">     195</span>                 :             :     // Read handler callbacks for PlainConnection-style consumers</span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :     std::unordered_map&lt;int, read_callback&gt; read_handlers_;</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             : </span>
+<span id="L198"><span class="lineNum">     198</span>                 :             :     // Read data from fd and dispatch to registered read handler</span>
+<span id="L199"><span class="lineNum">     199</span>                 :             :     void service_read_handler(int fd);</span>
+<span id="L200"><span class="lineNum">     200</span>                 :             : </span>
+<span id="L201"><span class="lineNum">     201</span>                 :             :     // Write handler callbacks for non-blocking connect completion</span>
+<span id="L202"><span class="lineNum">     202</span>                 :             :     std::unordered_map&lt;int, write_callback&gt; write_handlers_;</span>
+<span id="L203"><span class="lineNum">     203</span>                 :             : </span>
+<span id="L204"><span class="lineNum">     204</span>                 :             :     // Dispatch writable event to registered write handler</span>
+<span id="L205"><span class="lineNum">     205</span>                 :             :     void service_write_handler(int fd);</span>
+<span id="L206"><span class="lineNum">     206</span>                 :             : };</span>
+<span id="L207"><span class="lineNum">     207</span>                 :             : </span>
+<span id="L208"><span class="lineNum">     208</span>                 :             : } // namespace net</span>
+<span id="L209"><span class="lineNum">     209</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>

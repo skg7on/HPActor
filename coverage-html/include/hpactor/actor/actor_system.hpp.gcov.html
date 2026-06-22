@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 04:35:37</td>
+            <td class="headerValue">2026-06-22 09:28:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">92.4&nbsp;%</td>
@@ -447,8 +447,8 @@
 <span id="L369"><span class="lineNum">     369</span>                 :             :     // ── Running state ─────────────────────────────────────────────────────</span>
 <span id="L370"><span class="lineNum">     370</span>                 :             : </span>
 <span id="L371"><span class="lineNum">     371</span>                 :             :     /// \brief Returns \c true while the system is accepting messages.</span>
-<span id="L372"><span class="lineNum">     372</span>                 :<span class="tlaGNC">         187 :     bool is_running() const {</span></span>
-<span id="L373"><span class="lineNum">     373</span>                 :<span class="tlaGNC">         187 :         return running_.load(std::memory_order_acquire);</span></span>
+<span id="L372"><span class="lineNum">     372</span>                 :<span class="tlaGNC">         180 :     bool is_running() const {</span></span>
+<span id="L373"><span class="lineNum">     373</span>                 :<span class="tlaGNC">         180 :         return running_.load(std::memory_order_acquire);</span></span>
 <span id="L374"><span class="lineNum">     374</span>                 :             :     }</span>
 <span id="L375"><span class="lineNum">     375</span>                 :             : </span>
 <span id="L376"><span class="lineNum">     376</span>                 :             :     /// \brief System uptime since construction.</span>
@@ -467,8 +467,8 @@
 <span id="L389"><span class="lineNum">     389</span>                 :             :     // ── Scheduler ─────────────────────────────────────────────────────────</span>
 <span id="L390"><span class="lineNum">     390</span>                 :             : </span>
 <span id="L391"><span class="lineNum">     391</span>                 :             :     /// \brief Pointer to the scheduler for direct scheduling operations.</span>
-<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC">         213 :     sched::IScheduler* scheduler() {</span></span>
-<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">         213 :         return scheduler_.get();</span></span>
+<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC">         209 :     sched::IScheduler* scheduler() {</span></span>
+<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">         209 :         return scheduler_.get();</span></span>
 <span id="L394"><span class="lineNum">     394</span>                 :             :     }</span>
 <span id="L395"><span class="lineNum">     395</span>                 :             : </span>
 <span id="L396"><span class="lineNum">     396</span>                 :             :     /// \brief Returns \c true if coroutine-based execution is configured.</span>
@@ -513,8 +513,8 @@
 <span id="L435"><span class="lineNum">     435</span>                 :             :     // ── Distributed tracing ───────────────────────────────────────────────</span>
 <span id="L436"><span class="lineNum">     436</span>                 :             : </span>
 <span id="L437"><span class="lineNum">     437</span>                 :             :     /// \brief Trace manager (nullptr if tracing is disabled).</span>
-<span id="L438"><span class="lineNum">     438</span>                 :<span class="tlaGNC tlaBgGNC">        1893 :     tracing::TraceManager* trace_manager() noexcept {</span></span>
-<span id="L439"><span class="lineNum">     439</span>                 :<span class="tlaGNC">        1893 :         return trace_manager_.get();</span></span>
+<span id="L438"><span class="lineNum">     438</span>                 :<span class="tlaGNC tlaBgGNC">        1880 :     tracing::TraceManager* trace_manager() noexcept {</span></span>
+<span id="L439"><span class="lineNum">     439</span>                 :<span class="tlaGNC">        1880 :         return trace_manager_.get();</span></span>
 <span id="L440"><span class="lineNum">     440</span>                 :             :     }</span>
 <span id="L441"><span class="lineNum">     441</span>                 :             :     const tracing::TraceManager* trace_manager() const noexcept {</span>
 <span id="L442"><span class="lineNum">     442</span>                 :             :         return trace_manager_.get();</span>

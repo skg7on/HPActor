@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 04:35:37</td>
+            <td class="headerValue">2026-06-22 09:28:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -122,9 +122,9 @@
 <span id="L44"><span class="lineNum">      44</span>                 :             :     /// \brief Globally-unique actor identifier.</span>
 <span id="L45"><span class="lineNum">      45</span>                 :             :     ///</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :     /// Returns \c ActorId{} when the handle is empty.</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">        3658 :     ActorId id() const {</span></span>
-<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 3647 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">        3658 :         if (actor_) {</span></span>
-<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">        3647 :             return actor_-&gt;id();</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">        3654 :     ActorId id() const {</span></span>
+<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 3643 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 11 times"> + </span>]:<span class="tlaGNC">        3654 :         if (actor_) {</span></span>
+<span id="L49"><span class="lineNum">      49</span>                 :<span class="tlaGNC">        3643 :             return actor_-&gt;id();</span></span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :         }</span>
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          11 :         return ActorId{};</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :     }</span>
@@ -138,9 +138,9 @@
 <span id="L60"><span class="lineNum">      60</span>                 :             :     }</span>
 <span id="L61"><span class="lineNum">      61</span>                 :             : </span>
 <span id="L62"><span class="lineNum">      62</span>                 :             :     /// \brief Full network-addressable identity.</span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">        2265 :     ActorAddress address() const {</span></span>
-<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 2251 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">        2265 :         if (actor_) {</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        2251 :             return actor_-&gt;address();</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">        2255 :     ActorAddress address() const {</span></span>
+<span id="L64"><span class="lineNum">      64</span>         [<span class="tlaGBC" title="Branch 0 was taken 2241 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">        2255 :         if (actor_) {</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">        2241 :             return actor_-&gt;address();</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :         }</span>
 <span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">          14 :         return ActorAddress{};</span></span>
 <span id="L68"><span class="lineNum">      68</span>                 :             :     }</span>
@@ -151,8 +151,8 @@
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
 <span id="L74"><span class="lineNum">      74</span>                 :             : </span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :     /// \brief Returns \c true if the handle is non-empty.</span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">        2357 :     explicit operator bool() const {</span></span>
-<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">        2357 :         return actor_ != nullptr;</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">        2348 :     explicit operator bool() const {</span></span>
+<span id="L77"><span class="lineNum">      77</span>                 :<span class="tlaGNC">        2348 :         return actor_ != nullptr;</span></span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     }</span>
 <span id="L79"><span class="lineNum">      79</span>                 :             : </span>
 <span id="L80"><span class="lineNum">      80</span>                 :<span class="tlaGNC">           1 :     void swap(Actor&amp; other) noexcept {</span></span>
@@ -160,8 +160,8 @@
 <span id="L82"><span class="lineNum">      82</span>                 :<span class="tlaGNC">           1 :     }</span></span>
 <span id="L83"><span class="lineNum">      83</span>                 :             : </span>
 <span id="L84"><span class="lineNum">      84</span>                 :             :     /// \brief Access the underlying \c AbstractActor pointer (internal use).</span>
-<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">        3083 :     std::shared_ptr&lt;AbstractActor&gt; get() const {</span></span>
-<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">        3083 :         return actor_;</span></span>
+<span id="L85"><span class="lineNum">      85</span>                 :<span class="tlaGNC">        3077 :     std::shared_ptr&lt;AbstractActor&gt; get() const {</span></span>
+<span id="L86"><span class="lineNum">      86</span>                 :<span class="tlaGNC">        3077 :         return actor_;</span></span>
 <span id="L87"><span class="lineNum">      87</span>                 :             :     }</span>
 <span id="L88"><span class="lineNum">      88</span>                 :             : </span>
 <span id="L89"><span class="lineNum">      89</span>                 :             :   private:</span>
@@ -187,23 +187,23 @@
 <span id="L109"><span class="lineNum">     109</span>                 :<span class="tlaGNC">          37 :     ActorRef(ActorProxy proxy) : ref_(std::move(proxy)) {}</span></span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : </span>
 <span id="L111"><span class="lineNum">     111</span>                 :             :     /// \brief Get the actor's address (local or remote).</span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">         835 :     ActorAddress address() const {</span></span>
-<span id="L113"><span class="lineNum">     113</span>         [<span class="tlaGBC" title="Branch 0 was taken 808 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 27 times"> + </span>]:<span class="tlaGNC">         835 :         if (is_local()) {</span></span>
-<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">         808 :             return std::get&lt;Actor&gt;(ref_).address();</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">         832 :     ActorAddress address() const {</span></span>
+<span id="L113"><span class="lineNum">     113</span>         [<span class="tlaGBC" title="Branch 0 was taken 805 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 27 times"> + </span>]:<span class="tlaGNC">         832 :         if (is_local()) {</span></span>
+<span id="L114"><span class="lineNum">     114</span>                 :<span class="tlaGNC">         805 :             return std::get&lt;Actor&gt;(ref_).address();</span></span>
 <span id="L115"><span class="lineNum">     115</span>                 :             :         } else {</span>
 <span id="L116"><span class="lineNum">     116</span>                 :<span class="tlaGNC">          27 :             return std::get&lt;ActorProxy&gt;(ref_).address();</span></span>
 <span id="L117"><span class="lineNum">     117</span>                 :             :         }</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             :     }</span>
 <span id="L119"><span class="lineNum">     119</span>                 :             : </span>
 <span id="L120"><span class="lineNum">     120</span>                 :             :     /// \brief Returns \c true if this reference is to a local actor.</span>
-<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">        3219 :     bool is_local() const {</span></span>
-<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">        3219 :         return std::holds_alternative&lt;Actor&gt;(ref_);</span></span>
+<span id="L121"><span class="lineNum">     121</span>                 :<span class="tlaGNC">        3207 :     bool is_local() const {</span></span>
+<span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">        3207 :         return std::holds_alternative&lt;Actor&gt;(ref_);</span></span>
 <span id="L123"><span class="lineNum">     123</span>                 :             :     }</span>
 <span id="L124"><span class="lineNum">     124</span>                 :             : </span>
 <span id="L125"><span class="lineNum">     125</span>                 :             :     /// \brief Returns \c true if the reference is valid (local or remote).</span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">         781 :     explicit operator bool() const {</span></span>
-<span id="L127"><span class="lineNum">     127</span>         [<span class="tlaGBC" title="Branch 0 was taken 776 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">         781 :         if (is_local()) {</span></span>
-<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">         776 :             return static_cast&lt;bool&gt;(std::get&lt;Actor&gt;(ref_));</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">         778 :     explicit operator bool() const {</span></span>
+<span id="L127"><span class="lineNum">     127</span>         [<span class="tlaGBC" title="Branch 0 was taken 773 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">         778 :         if (is_local()) {</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">         773 :             return static_cast&lt;bool&gt;(std::get&lt;Actor&gt;(ref_));</span></span>
 <span id="L129"><span class="lineNum">     129</span>                 :             :         } else {</span>
 <span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaGNC">           5 :             return static_cast&lt;bool&gt;(std::get&lt;ActorProxy&gt;(ref_));</span></span>
 <span id="L131"><span class="lineNum">     131</span>                 :             :         }</span>
@@ -238,9 +238,9 @@
 <span id="L160"><span class="lineNum">     160</span>                 :             :     /// \brief Access underlying \c Actor (internal use).</span>
 <span id="L161"><span class="lineNum">     161</span>                 :             :     ///</span>
 <span id="L162"><span class="lineNum">     162</span>                 :             :     /// Returns \c nullptr if this is a remote reference.</span>
-<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">         788 :     Actor* get_actor() {</span></span>
-<span id="L164"><span class="lineNum">     164</span>         [<span class="tlaGBC" title="Branch 0 was taken 787 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">         788 :         if (is_local()) {</span></span>
-<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">         787 :             return &amp;std::get&lt;Actor&gt;(ref_);</span></span>
+<span id="L163"><span class="lineNum">     163</span>                 :<span class="tlaGNC">         785 :     Actor* get_actor() {</span></span>
+<span id="L164"><span class="lineNum">     164</span>         [<span class="tlaGBC" title="Branch 0 was taken 784 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">         785 :         if (is_local()) {</span></span>
+<span id="L165"><span class="lineNum">     165</span>                 :<span class="tlaGNC">         784 :             return &amp;std::get&lt;Actor&gt;(ref_);</span></span>
 <span id="L166"><span class="lineNum">     166</span>                 :             :         }</span>
 <span id="L167"><span class="lineNum">     167</span>                 :<span class="tlaGNC">           1 :         return nullptr;</span></span>
 <span id="L168"><span class="lineNum">     168</span>                 :             :     }</span>

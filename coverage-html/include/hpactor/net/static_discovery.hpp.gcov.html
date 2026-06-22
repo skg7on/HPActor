@@ -32,12 +32,12 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">5</td>
-            <td class="headerCovTableEntry">5</td>
+            <td class="headerCovTableEntry">6</td>
+            <td class="headerCovTableEntry">6</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 04:35:37</td>
+            <td class="headerValue">2026-06-22 09:28:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -96,24 +96,49 @@
 <span id="L18"><span class="lineNum">      18</span>                 :             : </span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : namespace hpactor::net {</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : </span>
-<span id="L21"><span class="lineNum">      21</span>                 :             : class StaticDiscovery : public IServiceDiscovery {</span>
-<span id="L22"><span class="lineNum">      22</span>                 :             : public:</span>
-<span id="L23"><span class="lineNum">      23</span>                 :             :     explicit StaticDiscovery(std::vector&lt;Member&gt; members);</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC tlaBgGNC">          53 :     void start() override {}</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">          53 :     void stop() override {}</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :             :     std::vector&lt;Member&gt; discover_all() const override;</span>
-<span id="L28"><span class="lineNum">      28</span>                 :             :     const Member* discover(EndPoint) const override;</span>
-<span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">           1 :     void announce(Member) override {}</span></span>
-<span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          53 :     void on_member_change(MemberChangeCallback) override {}</span></span>
-<span id="L31"><span class="lineNum">      31</span>                 :<span class="tlaGNC">          18 :     std::string backend_name() const override { return &quot;static&quot;; }</span></span>
-<span id="L32"><span class="lineNum">      32</span>                 :             : </span>
-<span id="L33"><span class="lineNum">      33</span>                 :             : private:</span>
-<span id="L34"><span class="lineNum">      34</span>                 :             :     std::vector&lt;Member&gt; members_;</span>
-<span id="L35"><span class="lineNum">      35</span>                 :             :     std::unordered_map&lt;EndPoint, size_t&gt; index_;</span>
-<span id="L36"><span class="lineNum">      36</span>                 :             : };</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : /// \brief Static discovery backend — fixed topology from configuration.</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : ///</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : /// Uses a pre-configured member list with no runtime discovery.</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : /// \c start(), \c stop(), \c announce(), and \c on_member_change() are</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : /// no-ops — members never change after construction.</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : ///</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : /// \note Thread safety: \c discover_all() and \c discover() are safe to</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : ///       call from any thread. The member list is immutable after</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : ///       construction.</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : class StaticDiscovery : public IServiceDiscovery {</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             :   public:</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             :     /// \brief Construct with a fixed member list.</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             :     ///</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             :     /// \param[in] members Complete topology (does not change after</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             :     ///            construction).</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             :     explicit StaticDiscovery(std::vector&lt;Member&gt; members);</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             : </span>
-<span id="L38"><span class="lineNum">      38</span>                 :             : } // namespace hpactor::net</span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC tlaBgGNC">          53 :     void start() override {}</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">          53 :     void stop() override {}</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :             : </span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :     /// \brief Return the fixed member list.</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             :     ///</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             :     /// \return Copy of the configured member list.</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             :     std::vector&lt;Member&gt; discover_all() const override;</span>
+<span id="L45"><span class="lineNum">      45</span>                 :             : </span>
+<span id="L46"><span class="lineNum">      46</span>                 :             :     /// \brief Look up a member by endpoint.</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             :     ///</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             :     /// \param[in] ep Endpoint to search for.</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :     /// \return Pointer to the member, or \c nullptr if not found.</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             :     const Member* discover(EndPoint ep) const override;</span>
+<span id="L51"><span class="lineNum">      51</span>                 :             : </span>
+<span id="L52"><span class="lineNum">      52</span>                 :<span class="tlaGNC">           1 :     void announce(Member) override {}</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">          53 :     void on_member_change(MemberChangeCallback) override {}</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">           6 :     std::string backend_name() const override {</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">          12 :         return &quot;static&quot;;</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :             :     }</span>
+<span id="L57"><span class="lineNum">      57</span>                 :             : </span>
+<span id="L58"><span class="lineNum">      58</span>                 :             :   private:</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :     std::vector&lt;Member&gt; members_;</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     std::unordered_map&lt;EndPoint, size_t&gt; index_;</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             : };</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             : </span>
+<span id="L63"><span class="lineNum">      63</span>                 :             : } // namespace hpactor::net</span>
         </pre>
               </td>
             </tr>

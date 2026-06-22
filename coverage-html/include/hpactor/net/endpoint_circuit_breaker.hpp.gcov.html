@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 04:35:37</td>
+            <td class="headerValue">2026-06-22 09:28:29</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">-</td>
@@ -85,43 +85,85 @@
 <span id="L7"><span class="lineNum">       7</span>                 :             : </span>
 <span id="L8"><span class="lineNum">       8</span>                 :             : namespace hpactor::net {</span>
 <span id="L9"><span class="lineNum">       9</span>                 :             : </span>
-<span id="L10"><span class="lineNum">      10</span>                 :             : struct EndpointCircuitBreakerConfig {</span>
-<span id="L11"><span class="lineNum">      11</span>                 :             :     size_t failure_threshold = 5;</span>
-<span id="L12"><span class="lineNum">      12</span>                 :<span class="tlaGNC tlaBgGNC">          14 :     std::chrono::milliseconds cooldown{30'000};</span></span>
-<span id="L13"><span class="lineNum">      13</span>                 :             :     size_t half_open_probe_limit = 1;</span>
-<span id="L14"><span class="lineNum">      14</span>                 :             : };</span>
-<span id="L15"><span class="lineNum">      15</span>                 :             : </span>
-<span id="L16"><span class="lineNum">      16</span>                 :             : class EndpointCircuitBreaker {</span>
-<span id="L17"><span class="lineNum">      17</span>                 :             :   public:</span>
-<span id="L18"><span class="lineNum">      18</span>                 :             :     enum class State : uint8_t { Closed, Open, HalfOpen };</span>
+<span id="L10"><span class="lineNum">      10</span>                 :             : /// \brief Configuration for the endpoint-level circuit breaker.</span>
+<span id="L11"><span class="lineNum">      11</span>                 :             : struct EndpointCircuitBreakerConfig {</span>
+<span id="L12"><span class="lineNum">      12</span>                 :             :     /// \brief Number of consecutive failures before opening (default 5).</span>
+<span id="L13"><span class="lineNum">      13</span>                 :             :     size_t failure_threshold = 5;</span>
+<span id="L14"><span class="lineNum">      14</span>                 :             :     /// \brief Cooldown period before transitioning to HalfOpen (default 30 s).</span>
+<span id="L15"><span class="lineNum">      15</span>                 :<span class="tlaGNC tlaBgGNC">          14 :     std::chrono::milliseconds cooldown{30'000};</span></span>
+<span id="L16"><span class="lineNum">      16</span>                 :             :     /// \brief Max probe messages allowed in HalfOpen state (default 1).</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             :     size_t half_open_probe_limit = 1;</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : };</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
-<span id="L20"><span class="lineNum">      20</span>                 :             :     explicit EndpointCircuitBreaker(const EndpointCircuitBreakerConfig&amp; config);</span>
-<span id="L21"><span class="lineNum">      21</span>                 :             : </span>
-<span id="L22"><span class="lineNum">      22</span>                 :             :     /// Called by ConnectionPool::on_connection_error()</span>
-<span id="L23"><span class="lineNum">      23</span>                 :             :     void record_failure();</span>
-<span id="L24"><span class="lineNum">      24</span>                 :             : </span>
-<span id="L25"><span class="lineNum">      25</span>                 :             :     /// Called by ConnectionPool::on_connection_ready()</span>
-<span id="L26"><span class="lineNum">      26</span>                 :             :     void record_success();</span>
-<span id="L27"><span class="lineNum">      27</span>                 :             : </span>
-<span id="L28"><span class="lineNum">      28</span>                 :             :     /// Called before each try_enqueue(). Returns true if message may proceed.</span>
-<span id="L29"><span class="lineNum">      29</span>                 :             :     bool allow_send();</span>
-<span id="L30"><span class="lineNum">      30</span>                 :             : </span>
-<span id="L31"><span class="lineNum">      31</span>                 :             :     State state() const;</span>
-<span id="L32"><span class="lineNum">      32</span>                 :             :     size_t failure_count() const;</span>
-<span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :             :     /// Force-reset to Closed</span>
-<span id="L35"><span class="lineNum">      35</span>                 :             :     void reset();</span>
-<span id="L36"><span class="lineNum">      36</span>                 :             : </span>
-<span id="L37"><span class="lineNum">      37</span>                 :             :   private:</span>
-<span id="L38"><span class="lineNum">      38</span>                 :             :     EndpointCircuitBreakerConfig config_;</span>
-<span id="L39"><span class="lineNum">      39</span>                 :             :     std::atomic&lt;State&gt; state_{State::Closed};</span>
-<span id="L40"><span class="lineNum">      40</span>                 :             :     std::atomic&lt;size_t&gt; failure_count_{0};</span>
-<span id="L41"><span class="lineNum">      41</span>                 :             :     std::atomic&lt;size_t&gt; half_open_probes_{0};</span>
-<span id="L42"><span class="lineNum">      42</span>                 :             :     std::chrono::steady_clock::time_point opened_at_{};</span>
-<span id="L43"><span class="lineNum">      43</span>                 :             :     std::mutex mutex_;</span>
-<span id="L44"><span class="lineNum">      44</span>                 :             : };</span>
-<span id="L45"><span class="lineNum">      45</span>                 :             : </span>
-<span id="L46"><span class="lineNum">      46</span>                 :             : } // namespace hpactor::net</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : /// \brief Per-endpoint circuit breaker for outbound connection failure</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : /// protection.</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : ///</span>
+<span id="L23"><span class="lineNum">      23</span>                 :             : /// Tracks connection failures per remote endpoint and trips to \c Open</span>
+<span id="L24"><span class="lineNum">      24</span>                 :             : /// after \c failure_threshold consecutive failures. After \c cooldown,</span>
+<span id="L25"><span class="lineNum">      25</span>                 :             : /// transitions to \c HalfOpen and allows a limited number of probe</span>
+<span id="L26"><span class="lineNum">      26</span>                 :             : /// messages. On success, transitions back to \c Closed.</span>
+<span id="L27"><span class="lineNum">      27</span>                 :             : ///</span>
+<span id="L28"><span class="lineNum">      28</span>                 :             : /// \note Thread safety: \c record_failure(), \c record_success(), and</span>
+<span id="L29"><span class="lineNum">      29</span>                 :             : ///       \c allow_send() are safe to call from any thread. State</span>
+<span id="L30"><span class="lineNum">      30</span>                 :             : ///       transitions use atomics with a mutex-guarded cooldown clock.</span>
+<span id="L31"><span class="lineNum">      31</span>                 :             : class EndpointCircuitBreaker {</span>
+<span id="L32"><span class="lineNum">      32</span>                 :             :   public:</span>
+<span id="L33"><span class="lineNum">      33</span>                 :             :     /// \brief Circuit breaker state.</span>
+<span id="L34"><span class="lineNum">      34</span>                 :             :     enum class State : uint8_t {</span>
+<span id="L35"><span class="lineNum">      35</span>                 :             :         Closed,   ///&lt; Normal operation; all messages allowed.</span>
+<span id="L36"><span class="lineNum">      36</span>                 :             :         Open,     ///&lt; Circuit tripped; no messages allowed.</span>
+<span id="L37"><span class="lineNum">      37</span>                 :             :         HalfOpen, ///&lt; Probing; limited messages allowed.</span>
+<span id="L38"><span class="lineNum">      38</span>                 :             :     };</span>
+<span id="L39"><span class="lineNum">      39</span>                 :             : </span>
+<span id="L40"><span class="lineNum">      40</span>                 :             :     /// \brief Construct with the given configuration.</span>
+<span id="L41"><span class="lineNum">      41</span>                 :             :     ///</span>
+<span id="L42"><span class="lineNum">      42</span>                 :             :     /// \param[in] config Circuit breaker configuration.</span>
+<span id="L43"><span class="lineNum">      43</span>                 :             :     explicit EndpointCircuitBreaker(const EndpointCircuitBreakerConfig&amp; config);</span>
+<span id="L44"><span class="lineNum">      44</span>                 :             : </span>
+<span id="L45"><span class="lineNum">      45</span>                 :             :     /// \brief Record a connection failure.</span>
+<span id="L46"><span class="lineNum">      46</span>                 :             :     ///</span>
+<span id="L47"><span class="lineNum">      47</span>                 :             :     /// Called by \c ConnectionPool::on_connection_error().</span>
+<span id="L48"><span class="lineNum">      48</span>                 :             :     /// \note Thread safety: Safe to call from any thread.</span>
+<span id="L49"><span class="lineNum">      49</span>                 :             :     void record_failure();</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             : </span>
+<span id="L51"><span class="lineNum">      51</span>                 :             :     /// \brief Record a successful connection.</span>
+<span id="L52"><span class="lineNum">      52</span>                 :             :     ///</span>
+<span id="L53"><span class="lineNum">      53</span>                 :             :     /// Called by \c ConnectionPool::on_connection_ready().</span>
+<span id="L54"><span class="lineNum">      54</span>                 :             :     /// \note Thread safety: Safe to call from any thread.</span>
+<span id="L55"><span class="lineNum">      55</span>                 :             :     void record_success();</span>
+<span id="L56"><span class="lineNum">      56</span>                 :             : </span>
+<span id="L57"><span class="lineNum">      57</span>                 :             :     /// \brief Check whether a message may proceed.</span>
+<span id="L58"><span class="lineNum">      58</span>                 :             :     ///</span>
+<span id="L59"><span class="lineNum">      59</span>                 :             :     /// Called before each \c try_enqueue().</span>
+<span id="L60"><span class="lineNum">      60</span>                 :             :     /// \return \c true if the circuit allows sends.</span>
+<span id="L61"><span class="lineNum">      61</span>                 :             :     /// \note Thread safety: Safe to call from any thread.</span>
+<span id="L62"><span class="lineNum">      62</span>                 :             :     bool allow_send();</span>
+<span id="L63"><span class="lineNum">      63</span>                 :             : </span>
+<span id="L64"><span class="lineNum">      64</span>                 :             :     /// \brief Return the current circuit state.</span>
+<span id="L65"><span class="lineNum">      65</span>                 :             :     ///</span>
+<span id="L66"><span class="lineNum">      66</span>                 :             :     /// \return \c Closed, \c Open, or \c HalfOpen.</span>
+<span id="L67"><span class="lineNum">      67</span>                 :             :     State state() const;</span>
+<span id="L68"><span class="lineNum">      68</span>                 :             : </span>
+<span id="L69"><span class="lineNum">      69</span>                 :             :     /// \brief Return the current failure count.</span>
+<span id="L70"><span class="lineNum">      70</span>                 :             :     ///</span>
+<span id="L71"><span class="lineNum">      71</span>                 :             :     /// \return Number of consecutive failures recorded.</span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :     size_t failure_count() const;</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             : </span>
+<span id="L74"><span class="lineNum">      74</span>                 :             :     /// \brief Force-reset the circuit to \c Closed.</span>
+<span id="L75"><span class="lineNum">      75</span>                 :             :     ///</span>
+<span id="L76"><span class="lineNum">      76</span>                 :             :     /// \note Thread safety: Safe to call from any thread.</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             :     void reset();</span>
+<span id="L78"><span class="lineNum">      78</span>                 :             : </span>
+<span id="L79"><span class="lineNum">      79</span>                 :             :   private:</span>
+<span id="L80"><span class="lineNum">      80</span>                 :             :     EndpointCircuitBreakerConfig config_;</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             :     std::atomic&lt;State&gt; state_{State::Closed};</span>
+<span id="L82"><span class="lineNum">      82</span>                 :             :     std::atomic&lt;size_t&gt; failure_count_{0};</span>
+<span id="L83"><span class="lineNum">      83</span>                 :             :     std::atomic&lt;size_t&gt; half_open_probes_{0};</span>
+<span id="L84"><span class="lineNum">      84</span>                 :             :     std::chrono::steady_clock::time_point opened_at_{};</span>
+<span id="L85"><span class="lineNum">      85</span>                 :             :     std::mutex mutex_;</span>
+<span id="L86"><span class="lineNum">      86</span>                 :             : };</span>
+<span id="L87"><span class="lineNum">      87</span>                 :             : </span>
+<span id="L88"><span class="lineNum">      88</span>                 :             : } // namespace hpactor::net</span>
         </pre>
               </td>
             </tr>
