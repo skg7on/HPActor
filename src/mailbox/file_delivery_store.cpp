@@ -85,7 +85,11 @@ result<void> FileDeliveryStore::mark_outbox_complete(MessageId id) {
     while (std::getline(ifs, line)) {
         if (line.empty())
             continue;
-        uint64_t mid = std::stoull(line, nullptr, 16);
+        char* end = nullptr;
+        errno = 0;
+        uint64_t mid = std::strtoull(line.c_str(), &end, 16);
+        if (errno != 0 || end == line.c_str() || *end != '\0')
+            continue; // Skip malformed lines
         if (mid != id.value()) {
             ofs << line << "\n";
         }
@@ -107,8 +111,13 @@ result<std::vector<PendingSend>> FileDeliveryStore::load_pending_outbox() {
     while (std::getline(ifs, line)) {
         if (line.empty())
             continue;
+        char* end = nullptr;
+        errno = 0;
+        uint64_t mid = std::strtoull(line.c_str(), &end, 16);
+        if (errno != 0 || end == line.c_str() || *end != '\0')
+            continue; // Skip malformed lines
         PendingSend send;
-        send.message_id = MessageId{std::stoull(line, nullptr, 16)};
+        send.message_id = MessageId{mid};
         items.push_back(send);
     }
     return result<std::vector<PendingSend>>::make(std::move(items));
