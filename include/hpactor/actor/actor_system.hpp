@@ -89,6 +89,13 @@ namespace cli {
 class CliActor;
 } // namespace cli
 
+namespace cluster {
+class ClusterFailureModel;
+} // namespace cluster
+namespace cluster::singleton {
+class SingletonManagerActor;
+} // namespace cluster::singleton
+
 namespace metrics {
 class MetricsActor;
 } // namespace metrics
@@ -491,6 +498,33 @@ class ActorSystem {
     /// \return Pointer to the Receptionist, or \c nullptr if not yet
     ///         spawned.
     receptionist::Receptionist* receptionist() const;
+
+    // ── Cluster subsystem ──────────────────────────────────────────────────
+
+    /// \brief Enable the cluster subsystem for this node.
+    ///
+    /// Creates ClusterFailureModel, SingletonManagerActor, and registers
+    /// shard-coordinator as the first managed singleton. Wires observer
+    /// callback for node state change to election re-run.
+    /// \param[in] node_id This node's identifier in the cluster.
+    void enable_cluster(const std::string& node_id);
+
+    /// \brief Returns \c true when the cluster subsystem is enabled.
+    bool cluster_enabled() const {
+        return cluster_enabled_;
+    }
+
+    /// \brief Cluster failure model (nullptr when cluster is disabled).
+    cluster::ClusterFailureModel* cluster_failure_model() {
+        return static_cast<cluster::ClusterFailureModel*>(
+            cluster_failure_model_.get());
+    }
+
+    /// \brief Singleton manager actor wrapper (nullptr when cluster disabled).
+    cluster::singleton::SingletonManagerActor* singleton_manager() {
+        return static_cast<cluster::singleton::SingletonManagerActor*>(
+            singleton_manager_.get());
+    }
 
     // ── Mailbox ───────────────────────────────────────────────────────────
 
@@ -964,6 +998,15 @@ class ActorSystem {
 
     // Proto type registry for protobuf message serialization
     ProtoTypeRegistry proto_registry_;
+
+    // Cluster subsystem (type-erased to avoid link cycle between
+    // hpactor_lib ↔ hpactor_cluster).
+    using cluster_cleanup_fn = void (*)(void*);
+    bool cluster_enabled_ = false;
+    std::unique_ptr<void, cluster_cleanup_fn> cluster_failure_model_{
+        nullptr, +[](void*) {}};
+    std::unique_ptr<void, cluster_cleanup_fn> singleton_manager_{nullptr,
+                                                                 +[](void*) {}};
 };
 
 // -----------------------------------------------------------------------------
