@@ -20,6 +20,7 @@
 #include <optional>
 #include <string>
 #include <unordered_map>
+#include <vector>
 
 namespace hpactor::cluster::sharding {
 
@@ -42,6 +43,9 @@ class ShardTable {
 
     /// \brief Remove all entries.
     void clear();
+
+    /// \brief Return all entries as a snapshot.
+    std::vector<ShardEntry> entries() const;
 
     /// \brief Current highest epoch seen.
     uint64_t epoch() const;

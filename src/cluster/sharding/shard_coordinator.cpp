@@ -72,10 +72,8 @@ void ShardCoordinatorCore::rebalance(const std::vector<std::string>& alive_nodes
         all_shards[i] = i;
     }
 
-    // Collect current assignments
-    std::vector<ShardEntry> current;
-    // We don't expose iteration on ShardTable, so pass empty set.
-    // Future: add entries() method to ShardTable.
+    // Collect current assignments for movement-minimizing rebalancing
+    std::vector<ShardEntry> current = shard_table_.entries();
 
     auto plan = strategy_->plan(all_shards, alive_nodes, current);
 
