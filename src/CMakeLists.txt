@@ -37,6 +37,7 @@ add_library(hpactor_lib SHARED
     supervision/supervision.cpp
     mailbox/dead_letter_queue.cpp
     mailbox/delivery_result.cpp
+    mailbox/outbound_tracker.cpp
     adt/dedup_cache.cpp
     adt/json_helpers.cpp
     mailbox/backpressure_signal_serialization.cpp

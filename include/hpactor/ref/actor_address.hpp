@@ -60,6 +60,9 @@ struct ActorAddress {
     /// \brief Human-readable string representation of the endpoint.
     [[nodiscard]] std::string to_string() const;
 
+    /// \brief Returns a string identifier for the node hosting this actor.
+    [[nodiscard]] std::string node_id() const;
+
     /// \brief Returns \c true if the actor ID is non-zero.
     explicit operator bool() const {
         return id.value() != 0;
@@ -82,6 +85,10 @@ inline bool ActorAddress::is_local() const noexcept {
 }
 
 inline std::string ActorAddress::to_string() const {
+    return endpoint_ops::to_string(endpoint);
+}
+
+inline std::string ActorAddress::node_id() const {
     return endpoint_ops::to_string(endpoint);
 }
 
