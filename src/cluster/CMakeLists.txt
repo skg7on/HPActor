@@ -6,7 +6,6 @@
 add_library(hpactor_cluster STATIC
     cluster_system_bridge.cpp
     cluster_failure_model.cpp
-    partition_policy.cpp
     route_invalidation.cpp
     sharding/shard_resolver.cpp
     sharding/shard_table.cpp
