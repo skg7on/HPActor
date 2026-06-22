@@ -14,15 +14,23 @@
 
 #include <hpactor/actor/actor_context.hpp>
 #include <hpactor/actor/actor_system.hpp>
+#include <hpactor/process/health_check.hpp>
+#include <hpactor/process/process_config.hpp>
 #include <hpactor/process/process_manager.hpp>
 #include <hpactor/process/watchdog_actor.hpp>
 #include <hpactor/sched/scheduler.hpp>
 
+#include <string>
+
 namespace hpactor::process {
 
 WatchdogActor::WatchdogActor(ActorContext* ctx, ActorSystem& system,
-                             std::chrono::milliseconds interval)
-    : EventBasedActor(ctx, system), interval_(interval), system_(system) {}
+                             std::chrono::milliseconds interval,
+                             const HealthCheckConfig& health_config)
+    : EventBasedActor(ctx, system), interval_(interval), system_(system),
+      health_engine_(make_health_check_engine(health_config)),
+      health_state_(std::make_shared<HealthState>()),
+      health_config_(health_config) {}
 
 Behavior WatchdogActor::make_behavior() {
     // Schedule the first watchdog check via scheduler timer
@@ -47,6 +55,9 @@ void WatchdogActor::on_check() {
     if (is_system_healthy()) {
         ProcessManager::notify_watchdog();
     }
+    // When unhealthy the watchdog intentionally does NOT notify systemd.
+    // systemd will kill the process after WatchdogSec expires.
+
     // Reschedule for the next interval
     auto* sched = get_scheduler();
     if (sched) {
@@ -64,8 +75,36 @@ void WatchdogActor::on_check() {
     }
 }
 
-bool WatchdogActor::is_system_healthy() const {
-    (void)system_;
+bool WatchdogActor::is_system_healthy() {
+    auto now = std::chrono::steady_clock::now();
+    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
+        now - last_check_time_);
+
+    CheckContext ctx{system_, elapsed};
+    health_engine_->run_all(ctx, *health_state_);
+    last_check_time_ = now;
+
+    HealthStatus status = health_state_->overall_status();
+
+    if (status == HealthStatus::Unhealthy) {
+        // Build a status string for systemd's STATUS= notification.
+        std::string status_msg = "UNHEALTHY: ";
+        const auto& details = health_state_->details();
+        bool first = true;
+        for (const auto& d : details) {
+            if (d.status != HealthStatus::Healthy) {
+                if (!first)
+                    status_msg += "; ";
+                first = false;
+                status_msg += d.check_name;
+                status_msg += "=";
+                status_msg += d.reason;
+            }
+        }
+        ProcessManager::notify_status(status_msg);
+        return false;
+    }
+
     return true;
 }
 

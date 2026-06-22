@@ -16,6 +16,7 @@
 
 #include <chrono>
 #include <cstdint>
+#include <hpactor/process/process_config.hpp>
 #include <string>
 
 namespace hpactor {
@@ -29,6 +30,7 @@ struct DaemonConfig {
     uint16_t tcp_port = 0;
     uint16_t health_port = 8089;
     std::chrono::milliseconds watchdog_interval{0};
+    process::HealthCheckConfig health_check;
 };
 
 /// Run the actor system in daemon or systemd mode (Linux only).

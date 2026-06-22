@@ -16,6 +16,7 @@
 #include <hpactor/net/http_connection.hpp>
 #include <hpactor/net/http_gateway.hpp>
 #include <hpactor/net/http_types.hpp>
+#include <hpactor/process/health_check.hpp>
 #include <hpactor/process/health_http_server.hpp>
 
 #include <cstdio>
@@ -25,7 +26,10 @@ namespace hpactor::process {
 HealthHttpServer::HealthHttpServer(ActorContext* ctx, ActorSystem& system,
                                    const HealthHttpConfig& config)
     : DaemonActor(ctx, system), system_(system), config_(config),
-      gateway_(std::make_unique<net::HTTPGateway>()) {}
+      gateway_(std::make_unique<net::HTTPGateway>()) {
+    (void)system_; // may be unused when health_state_ is wired; kept for API
+                   // compat
+}
 
 HealthHttpServer::~HealthHttpServer() = default;
 
@@ -41,17 +45,50 @@ void HealthHttpServer::on_daemon_start() {
     }
     listen_ok_ = true;
 
-    // All paths return 200 OK.  HTTPConnection (via llhttp) has already
-    // parsed the request, so req.path is exactly the URL path.
+    // Serve health endpoints reflecting actual system state when
+    // a HealthState is attached; otherwise unconditionally return 200.
     gateway_->set_request_handler(
         [this](net::HTTPConnection* conn, net::HttpRequest&& req) {
             (void)req;
-            (void)system_;
-            std::string body = "OK";
+
+            HealthStatus status = HealthStatus::Healthy;
+            std::string content_type;
+            std::string body;
+
+            if (health_state_) {
+                status = health_state_->overall_status();
+
+                if (status != HealthStatus::Healthy) {
+                    body = format_health_json(*health_state_);
+                    content_type = "application/json";
+                } else {
+                    body = "OK";
+                }
+            } else {
+                body = "OK";
+            }
+
+            net::HttpStatusCode http_code;
+            switch (status) {
+                case HealthStatus::Healthy:
+                case HealthStatus::Degraded:
+                    http_code = net::HttpStatusCode::OK;
+                    break;
+                case HealthStatus::Unhealthy:
+                    http_code = net::HttpStatusCode::ServiceUnavailable;
+                    break;
+            }
+
             StreamBuffer body_buf(
                 reinterpret_cast<const uint8_t*>(body.data()),
                 reinterpret_cast<const uint8_t*>(body.data() + body.size()));
-            conn->send_response(net::HttpStatusCode::OK, {}, body_buf);
+
+            std::vector<net::HttpHeader> headers;
+            if (!content_type.empty()) {
+                headers.push_back({"content-type", content_type});
+            }
+
+            conn->send_response(http_code, headers, body_buf);
         });
 
     // Optionally cap connections (health checks are lightweight, but
@@ -73,6 +110,61 @@ bool HealthHttpServer::run_once() {
 
 void HealthHttpServer::on_daemon_stop() {
     gateway_->stop();
+}
+
+std::string HealthHttpServer::format_health_json(const HealthState& state) {
+    std::string json;
+    json.reserve(512);
+
+    const char* status_str = "healthy";
+    switch (state.overall_status()) {
+        case HealthStatus::Healthy:
+            status_str = "healthy";
+            break;
+        case HealthStatus::Degraded:
+            status_str = "degraded";
+            break;
+        case HealthStatus::Unhealthy:
+            status_str = "unhealthy";
+            break;
+    }
+
+    json += "{\"status\":\"";
+    json += status_str;
+    json += "\",\"checks\":[";
+
+    const auto& details = state.details();
+    bool first = true;
+    for (const auto& d : details) {
+        if (!first)
+            json += ",";
+        first = false;
+        json += "{\"name\":\"";
+        json += d.check_name;
+        json += "\",\"status\":\"";
+        switch (d.status) {
+            case HealthStatus::Healthy:
+                json += "healthy";
+                break;
+            case HealthStatus::Degraded:
+                json += "degraded";
+                break;
+            case HealthStatus::Unhealthy:
+                json += "unhealthy";
+                break;
+        }
+        json += "\",\"reason\":\"";
+        // Simple escaping: only escape backslash and double-quote.
+        for (char c : d.reason) {
+            if (c == '\\' || c == '"')
+                json += '\\';
+            json += c;
+        }
+        json += "\"}";
+    }
+
+    json += "]}";
+    return json;
 }
 
 } // namespace hpactor::process
