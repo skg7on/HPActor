@@ -22,6 +22,7 @@ add_library(hpactor_lib SHARED
     actor/blocking_actor.cpp
     actor/durable/in_memory_state_store.cpp
     actor/durable/file_state_store.cpp
+    actor/durable/passivation_manager.cpp
     actor/actor_route.cpp
     actor/routing/routing_logic.cpp
     actor/routing/pool_router.cpp
