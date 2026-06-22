@@ -91,6 +91,7 @@ class CliActor;
 
 namespace cluster {
 class ClusterFailureModel;
+class RouteInvalidation;
 } // namespace cluster
 namespace cluster::singleton {
 class SingletonManagerActor;
@@ -524,6 +525,11 @@ class ActorSystem {
     cluster::singleton::SingletonManagerActor* singleton_manager() {
         return static_cast<cluster::singleton::SingletonManagerActor*>(
             singleton_manager_.get());
+    }
+
+    /// \brief Route invalidation coordinator (nullptr when cluster disabled).
+    cluster::RouteInvalidation* route_invalidation() {
+        return static_cast<cluster::RouteInvalidation*>(route_invalidation_.get());
     }
 
     // ── Mailbox ───────────────────────────────────────────────────────────
@@ -1007,6 +1013,8 @@ class ActorSystem {
         nullptr, +[](void*) {}};
     std::unique_ptr<void, cluster_cleanup_fn> singleton_manager_{nullptr,
                                                                  +[](void*) {}};
+    std::unique_ptr<void, cluster_cleanup_fn> route_invalidation_{nullptr,
+                                                                  +[](void*) {}};
 };
 
 // -----------------------------------------------------------------------------
