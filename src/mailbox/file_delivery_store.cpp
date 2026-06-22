@@ -15,7 +15,9 @@
 #include <hpactor/mailbox/file_delivery_store.hpp>
 #include <hpactor/msg/failure_reason.hpp>
 
+#include <cerrno>
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -40,7 +42,25 @@ std::string FileDeliveryStore::inbox_path() const {
 
 result<void> FileDeliveryStore::put_outbox(const PendingSend& record) {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::string tmp = outbox_path() + ".tmp";
+    std::string path = outbox_path();
+    std::string tmp = path + ".tmp";
+
+    // Copy existing entries into temp file to preserve prior records,
+    // then append the new entry. Atomic rename guarantees consistency.
+    if (std::filesystem::exists(path)) {
+        std::ifstream ifs(path);
+        if (ifs) {
+            std::ofstream ofs(tmp);
+            if (!ofs) {
+                return result<void>::make(error(static_cast<uint32_t>(
+                    FailureReason::PassivationSnapshotFailed)));
+            }
+            ofs << ifs.rdbuf();
+            ofs.close();
+        }
+        ifs.close();
+    }
+
     std::ofstream ofs(tmp, std::ios::app);
     if (!ofs) {
         return result<void>::make(error(
@@ -48,7 +68,7 @@ result<void> FileDeliveryStore::put_outbox(const PendingSend& record) {
     }
     ofs << std::hex << record.message_id.value() << "\n";
     ofs.close();
-    std::filesystem::rename(tmp, outbox_path());
+    std::filesystem::rename(tmp, path);
     return result<void>::make();
 }
 
