@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 01:15:26</td>
+            <td class="headerValue">2026-06-22 04:35:37</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -180,131 +180,148 @@
 <span id="L102"><span class="lineNum">     102</span>                 :             :         /// When non-null and delivery_mode &gt;= AtLeastOnce with an enabled</span>
 <span id="L103"><span class="lineNum">     103</span>                 :             :         /// retry policy, accepted deliveries are also tracked for retry.</span>
 <span id="L104"><span class="lineNum">     104</span>                 :             :         msg::OutboundDeliveryTracker* outbound_tracker = nullptr;</span>
-<span id="L105"><span class="lineNum">     105</span>                 :             :     };</span>
-<span id="L106"><span class="lineNum">     106</span>                 :             : </span>
-<span id="L107"><span class="lineNum">     107</span>                 :             :     /// \brief Construct the delivery pipeline with injected dependencies.</span>
-<span id="L108"><span class="lineNum">     108</span>                 :             :     ///</span>
-<span id="L109"><span class="lineNum">     109</span>                 :             :     /// \param[in] config Injected configuration.  Pointed-to objects</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             :     ///                   (DLQ, metrics ring buffer, dedup cache) must</span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :     ///                   outlive the pipeline.  Callbacks are copied.</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             :     explicit DeliveryPipeline(Config config);</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             : </span>
-<span id="L114"><span class="lineNum">     114</span>                 :             :     /// \brief Destroy the pipeline.  No-op — all resources are owned by</span>
-<span id="L115"><span class="lineNum">     115</span>                 :             :     ///        the injected components.</span>
-<span id="L116"><span class="lineNum">     116</span>                 :             :     ~DeliveryPipeline();</span>
-<span id="L117"><span class="lineNum">     117</span>                 :             : </span>
-<span id="L118"><span class="lineNum">     118</span>                 :             :     DeliveryPipeline(const DeliveryPipeline&amp;) = delete;</span>
-<span id="L119"><span class="lineNum">     119</span>                 :             :     DeliveryPipeline&amp; operator=(const DeliveryPipeline&amp;) = delete;</span>
-<span id="L120"><span class="lineNum">     120</span>                 :             :     DeliveryPipeline(DeliveryPipeline&amp;&amp;) = delete;</span>
-<span id="L121"><span class="lineNum">     121</span>                 :             :     DeliveryPipeline&amp; operator=(DeliveryPipeline&amp;&amp;) = delete;</span>
-<span id="L122"><span class="lineNum">     122</span>                 :             : </span>
-<span id="L123"><span class="lineNum">     123</span>                 :             :     /// \brief Attempt to deliver a message to a local actor with full</span>
-<span id="L124"><span class="lineNum">     124</span>                 :             :     ///        admission control.</span>
+<span id="L105"><span class="lineNum">     105</span>                 :             : </span>
+<span id="L106"><span class="lineNum">     106</span>                 :             :         /// \brief Callback to emit a reliable ACK/NACK frame back to the</span>
+<span id="L107"><span class="lineNum">     107</span>                 :             :         ///        sender when \c AckRequested is set on the incoming frame.</span>
+<span id="L108"><span class="lineNum">     108</span>                 :             :         ///</span>
+<span id="L109"><span class="lineNum">     109</span>                 :             :         /// Called by the pipeline when dedup detects a duplicate (AcKStatus</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :         /// Duplicate) or when admission is rejected (AcKStatus Rejected).</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             :         /// The ACK(Accepted) path is emitted by \c EventBasedActor after</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :         /// successful handler dispatch, not by this callback.</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             :         ///</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             :         /// \param[in] sender   Original sender to route the ACK back to.</span>
+<span id="L115"><span class="lineNum">     115</span>                 :             :         /// \param[in] msg_id   Message ID being acknowledged.</span>
+<span id="L116"><span class="lineNum">     116</span>                 :             :         /// \param[in] status   AcK status code (\c 0=Accepted,</span>
+<span id="L117"><span class="lineNum">     117</span>                 :             :         ///                     \c 1=Rejected, \c 2=Duplicate).</span>
+<span id="L118"><span class="lineNum">     118</span>                 :             :         /// \param[in] retry_after_ms Suggested retry delay for NACK.</span>
+<span id="L119"><span class="lineNum">     119</span>                 :             :         std::function&lt;void(const ActorAddress&amp; sender, uint64_t msg_id,</span>
+<span id="L120"><span class="lineNum">     120</span>                 :             :                            uint8_t status, uint32_t retry_after_ms)&gt;</span>
+<span id="L121"><span class="lineNum">     121</span>                 :             :             emit_ack;</span>
+<span id="L122"><span class="lineNum">     122</span>                 :             :     };</span>
+<span id="L123"><span class="lineNum">     123</span>                 :             : </span>
+<span id="L124"><span class="lineNum">     124</span>                 :             :     /// \brief Construct the delivery pipeline with injected dependencies.</span>
 <span id="L125"><span class="lineNum">     125</span>                 :             :     ///</span>
-<span id="L126"><span class="lineNum">     126</span>                 :             :     /// Runs the complete pipeline: actor lookup → circuit breaker gate →</span>
-<span id="L127"><span class="lineNum">     127</span>                 :             :     /// TTL default application → dedup check → deadline check →</span>
-<span id="L128"><span class="lineNum">     128</span>                 :             :     /// mailbox enqueue → rejection observability → backpressure signal.</span>
-<span id="L129"><span class="lineNum">     129</span>                 :             :     ///</span>
-<span id="L130"><span class="lineNum">     130</span>                 :             :     /// \param[in] target      Actor ID to deliver to.</span>
-<span id="L131"><span class="lineNum">     131</span>                 :             :     /// \param[in] msg         Message to deliver (moved into the pipeline).</span>
-<span id="L132"><span class="lineNum">     132</span>                 :             :     /// \param[in] priority    0–3 (0 = highest priority).</span>
-<span id="L133"><span class="lineNum">     133</span>                 :             :     /// \param[in] deadline_ns Absolute delivery deadline in nanoseconds</span>
-<span id="L134"><span class="lineNum">     134</span>                 :             :     ///                       (\c INT64_MAX = no deadline).</span>
-<span id="L135"><span class="lineNum">     135</span>                 :             :     /// \param[in] options     Delivery options (mode, message_id, flags).</span>
-<span id="L136"><span class="lineNum">     136</span>                 :             :     /// \return \c EnqueueResult describing acceptance or rejection.</span>
-<span id="L137"><span class="lineNum">     137</span>                 :             :     /// \retval Accepted              Message was enqueued.</span>
-<span id="L138"><span class="lineNum">     138</span>                 :             :     /// \retval ActorNotFound         Target actor does not exist.</span>
-<span id="L139"><span class="lineNum">     139</span>                 :             :     /// \retval CircuitOpen           Target actor's circuit breaker is open.</span>
-<span id="L140"><span class="lineNum">     140</span>                 :             :     /// \retval Rejected              Mailbox at hard capacity.</span>
-<span id="L141"><span class="lineNum">     141</span>                 :             :     EnqueueResult</span>
-<span id="L142"><span class="lineNum">     142</span>                 :             :     try_deliver(ActorId target, TypedMessage msg, uint8_t priority = 0,</span>
-<span id="L143"><span class="lineNum">     143</span>                 :             :                 int64_t deadline_ns = INT64_MAX, DeliveryOptions options = {});</span>
-<span id="L144"><span class="lineNum">     144</span>                 :             : </span>
-<span id="L145"><span class="lineNum">     145</span>                 :             :     /// \brief Deliver with a user-facing \c DeliveryResult.</span>
+<span id="L126"><span class="lineNum">     126</span>                 :             :     /// \param[in] config Injected configuration.  Pointed-to objects</span>
+<span id="L127"><span class="lineNum">     127</span>                 :             :     ///                   (DLQ, metrics ring buffer, dedup cache) must</span>
+<span id="L128"><span class="lineNum">     128</span>                 :             :     ///                   outlive the pipeline.  Callbacks are copied.</span>
+<span id="L129"><span class="lineNum">     129</span>                 :             :     explicit DeliveryPipeline(Config config);</span>
+<span id="L130"><span class="lineNum">     130</span>                 :             : </span>
+<span id="L131"><span class="lineNum">     131</span>                 :             :     /// \brief Destroy the pipeline.  No-op — all resources are owned by</span>
+<span id="L132"><span class="lineNum">     132</span>                 :             :     ///        the injected components.</span>
+<span id="L133"><span class="lineNum">     133</span>                 :             :     ~DeliveryPipeline();</span>
+<span id="L134"><span class="lineNum">     134</span>                 :             : </span>
+<span id="L135"><span class="lineNum">     135</span>                 :             :     DeliveryPipeline(const DeliveryPipeline&amp;) = delete;</span>
+<span id="L136"><span class="lineNum">     136</span>                 :             :     DeliveryPipeline&amp; operator=(const DeliveryPipeline&amp;) = delete;</span>
+<span id="L137"><span class="lineNum">     137</span>                 :             :     DeliveryPipeline(DeliveryPipeline&amp;&amp;) = delete;</span>
+<span id="L138"><span class="lineNum">     138</span>                 :             :     DeliveryPipeline&amp; operator=(DeliveryPipeline&amp;&amp;) = delete;</span>
+<span id="L139"><span class="lineNum">     139</span>                 :             : </span>
+<span id="L140"><span class="lineNum">     140</span>                 :             :     /// \brief Attempt to deliver a message to a local actor with full</span>
+<span id="L141"><span class="lineNum">     141</span>                 :             :     ///        admission control.</span>
+<span id="L142"><span class="lineNum">     142</span>                 :             :     ///</span>
+<span id="L143"><span class="lineNum">     143</span>                 :             :     /// Runs the complete pipeline: actor lookup → circuit breaker gate →</span>
+<span id="L144"><span class="lineNum">     144</span>                 :             :     /// TTL default application → dedup check → deadline check →</span>
+<span id="L145"><span class="lineNum">     145</span>                 :             :     /// mailbox enqueue → rejection observability → backpressure signal.</span>
 <span id="L146"><span class="lineNum">     146</span>                 :             :     ///</span>
-<span id="L147"><span class="lineNum">     147</span>                 :             :     /// Wraps \c try_deliver() and converts the internal \c EnqueueResult</span>
-<span id="L148"><span class="lineNum">     148</span>                 :             :     /// to \c DeliveryResult.  Also records the delivery result on the</span>
-<span id="L149"><span class="lineNum">     149</span>                 :             :     /// mailbox and emits a \c kDeliveryResult metric event.</span>
-<span id="L150"><span class="lineNum">     150</span>                 :             :     ///</span>
-<span id="L151"><span class="lineNum">     151</span>                 :             :     /// \param[in] target      Actor ID to deliver to.</span>
-<span id="L152"><span class="lineNum">     152</span>                 :             :     /// \param[in] msg         Message to deliver (moved).</span>
-<span id="L153"><span class="lineNum">     153</span>                 :             :     /// \param[in] priority    0–3 (0 = highest).</span>
-<span id="L154"><span class="lineNum">     154</span>                 :             :     /// \param[in] deadline_ns Absolute delivery deadline.</span>
-<span id="L155"><span class="lineNum">     155</span>                 :             :     /// \param[in] options     Delivery options.</span>
-<span id="L156"><span class="lineNum">     156</span>                 :             :     /// \return \c DeliveryResult describing the delivery outcome.</span>
-<span id="L157"><span class="lineNum">     157</span>                 :             :     DeliveryResult</span>
-<span id="L158"><span class="lineNum">     158</span>                 :             :     deliver_with_result(ActorId target, TypedMessage msg, uint8_t priority = 0,</span>
-<span id="L159"><span class="lineNum">     159</span>                 :             :                         int64_t deadline_ns = INT64_MAX,</span>
-<span id="L160"><span class="lineNum">     160</span>                 :             :                         DeliveryOptions options = {});</span>
+<span id="L147"><span class="lineNum">     147</span>                 :             :     /// \param[in] target      Actor ID to deliver to.</span>
+<span id="L148"><span class="lineNum">     148</span>                 :             :     /// \param[in] msg         Message to deliver (moved into the pipeline).</span>
+<span id="L149"><span class="lineNum">     149</span>                 :             :     /// \param[in] priority    0–3 (0 = highest priority).</span>
+<span id="L150"><span class="lineNum">     150</span>                 :             :     /// \param[in] deadline_ns Absolute delivery deadline in nanoseconds</span>
+<span id="L151"><span class="lineNum">     151</span>                 :             :     ///                       (\c INT64_MAX = no deadline).</span>
+<span id="L152"><span class="lineNum">     152</span>                 :             :     /// \param[in] options     Delivery options (mode, message_id, flags).</span>
+<span id="L153"><span class="lineNum">     153</span>                 :             :     /// \return \c EnqueueResult describing acceptance or rejection.</span>
+<span id="L154"><span class="lineNum">     154</span>                 :             :     /// \retval Accepted              Message was enqueued.</span>
+<span id="L155"><span class="lineNum">     155</span>                 :             :     /// \retval ActorNotFound         Target actor does not exist.</span>
+<span id="L156"><span class="lineNum">     156</span>                 :             :     /// \retval CircuitOpen           Target actor's circuit breaker is open.</span>
+<span id="L157"><span class="lineNum">     157</span>                 :             :     /// \retval Rejected              Mailbox at hard capacity.</span>
+<span id="L158"><span class="lineNum">     158</span>                 :             :     EnqueueResult</span>
+<span id="L159"><span class="lineNum">     159</span>                 :             :     try_deliver(ActorId target, TypedMessage msg, uint8_t priority = 0,</span>
+<span id="L160"><span class="lineNum">     160</span>                 :             :                 int64_t deadline_ns = INT64_MAX, DeliveryOptions options = {});</span>
 <span id="L161"><span class="lineNum">     161</span>                 :             : </span>
-<span id="L162"><span class="lineNum">     162</span>                 :             :     /// \brief Read-only access to the injected configuration.</span>
+<span id="L162"><span class="lineNum">     162</span>                 :             :     /// \brief Deliver with a user-facing \c DeliveryResult.</span>
 <span id="L163"><span class="lineNum">     163</span>                 :             :     ///</span>
-<span id="L164"><span class="lineNum">     164</span>                 :             :     /// \return A const reference to the pipeline's \c Config.</span>
-<span id="L165"><span class="lineNum">     165</span>                 :             :     const Config&amp; config() const noexcept {</span>
-<span id="L166"><span class="lineNum">     166</span>                 :             :         return config_;</span>
-<span id="L167"><span class="lineNum">     167</span>                 :             :     }</span>
-<span id="L168"><span class="lineNum">     168</span>                 :             : </span>
-<span id="L169"><span class="lineNum">     169</span>                 :             :     /// \brief Update the metrics ring buffer pointer after construction.</span>
-<span id="L170"><span class="lineNum">     170</span>                 :             :     ///</span>
-<span id="L171"><span class="lineNum">     171</span>                 :             :     /// Used when the ring buffer is created after the pipeline (e.g.,</span>
-<span id="L172"><span class="lineNum">     172</span>                 :             :     /// during \c ActorSystem constructor ordering).</span>
-<span id="L173"><span class="lineNum">     173</span>                 :             :     ///</span>
-<span id="L174"><span class="lineNum">     174</span>                 :             :     /// \param[in] m Pointer to the metrics ring buffer, or \c nullptr.</span>
-<span id="L175"><span class="lineNum">     175</span>                 :<span class="tlaGNC tlaBgGNC">         715 :     void set_metrics(metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* m) {</span></span>
-<span id="L176"><span class="lineNum">     176</span>                 :<span class="tlaGNC">         715 :         config_.metrics = m;</span></span>
-<span id="L177"><span class="lineNum">     177</span>                 :<span class="tlaGNC">         715 :     }</span></span>
+<span id="L164"><span class="lineNum">     164</span>                 :             :     /// Wraps \c try_deliver() and converts the internal \c EnqueueResult</span>
+<span id="L165"><span class="lineNum">     165</span>                 :             :     /// to \c DeliveryResult.  Also records the delivery result on the</span>
+<span id="L166"><span class="lineNum">     166</span>                 :             :     /// mailbox and emits a \c kDeliveryResult metric event.</span>
+<span id="L167"><span class="lineNum">     167</span>                 :             :     ///</span>
+<span id="L168"><span class="lineNum">     168</span>                 :             :     /// \param[in] target      Actor ID to deliver to.</span>
+<span id="L169"><span class="lineNum">     169</span>                 :             :     /// \param[in] msg         Message to deliver (moved).</span>
+<span id="L170"><span class="lineNum">     170</span>                 :             :     /// \param[in] priority    0–3 (0 = highest).</span>
+<span id="L171"><span class="lineNum">     171</span>                 :             :     /// \param[in] deadline_ns Absolute delivery deadline.</span>
+<span id="L172"><span class="lineNum">     172</span>                 :             :     /// \param[in] options     Delivery options.</span>
+<span id="L173"><span class="lineNum">     173</span>                 :             :     /// \return \c DeliveryResult describing the delivery outcome.</span>
+<span id="L174"><span class="lineNum">     174</span>                 :             :     DeliveryResult</span>
+<span id="L175"><span class="lineNum">     175</span>                 :             :     deliver_with_result(ActorId target, TypedMessage msg, uint8_t priority = 0,</span>
+<span id="L176"><span class="lineNum">     176</span>                 :             :                         int64_t deadline_ns = INT64_MAX,</span>
+<span id="L177"><span class="lineNum">     177</span>                 :             :                         DeliveryOptions options = {});</span>
 <span id="L178"><span class="lineNum">     178</span>                 :             : </span>
-<span id="L179"><span class="lineNum">     179</span>                 :             :   private:</span>
-<span id="L180"><span class="lineNum">     180</span>                 :             :     EnqueueResult</span>
-<span id="L181"><span class="lineNum">     181</span>                 :             :     reject_missing_actor(ActorId target, const TypedMessage&amp; msg,</span>
-<span id="L182"><span class="lineNum">     182</span>                 :             :                          const DeliveryOptions&amp; options, uint8_t priority,</span>
-<span id="L183"><span class="lineNum">     183</span>                 :             :                          int64_t deadline_ns) noexcept;</span>
-<span id="L184"><span class="lineNum">     184</span>                 :             : </span>
-<span id="L185"><span class="lineNum">     185</span>                 :             :     std::optional&lt;EnqueueResult&gt;</span>
-<span id="L186"><span class="lineNum">     186</span>                 :             :     check_circuit_breaker(ActorId target, const TypedMessage&amp; msg,</span>
-<span id="L187"><span class="lineNum">     187</span>                 :             :                           const DeliveryOptions&amp; options, uint8_t priority,</span>
-<span id="L188"><span class="lineNum">     188</span>                 :             :                           int64_t deadline_ns);</span>
-<span id="L189"><span class="lineNum">     189</span>                 :             : </span>
-<span id="L190"><span class="lineNum">     190</span>                 :             :     int64_t apply_default_ttl(int64_t deadline_ns) const noexcept;</span>
-<span id="L191"><span class="lineNum">     191</span>                 :             : </span>
-<span id="L192"><span class="lineNum">     192</span>                 :             :     std::optional&lt;EnqueueResult&gt;</span>
-<span id="L193"><span class="lineNum">     193</span>                 :             :     check_duplicate(ActorId target, const TypedMessage&amp; msg,</span>
-<span id="L194"><span class="lineNum">     194</span>                 :             :                     const DeliveryOptions&amp; options);</span>
+<span id="L179"><span class="lineNum">     179</span>                 :             :     /// \brief Read-only access to the injected configuration.</span>
+<span id="L180"><span class="lineNum">     180</span>                 :             :     ///</span>
+<span id="L181"><span class="lineNum">     181</span>                 :             :     /// \return A const reference to the pipeline's \c Config.</span>
+<span id="L182"><span class="lineNum">     182</span>                 :             :     const Config&amp; config() const noexcept {</span>
+<span id="L183"><span class="lineNum">     183</span>                 :             :         return config_;</span>
+<span id="L184"><span class="lineNum">     184</span>                 :             :     }</span>
+<span id="L185"><span class="lineNum">     185</span>                 :             : </span>
+<span id="L186"><span class="lineNum">     186</span>                 :             :     /// \brief Update the metrics ring buffer pointer after construction.</span>
+<span id="L187"><span class="lineNum">     187</span>                 :             :     ///</span>
+<span id="L188"><span class="lineNum">     188</span>                 :             :     /// Used when the ring buffer is created after the pipeline (e.g.,</span>
+<span id="L189"><span class="lineNum">     189</span>                 :             :     /// during \c ActorSystem constructor ordering).</span>
+<span id="L190"><span class="lineNum">     190</span>                 :             :     ///</span>
+<span id="L191"><span class="lineNum">     191</span>                 :             :     /// \param[in] m Pointer to the metrics ring buffer, or \c nullptr.</span>
+<span id="L192"><span class="lineNum">     192</span>                 :<span class="tlaGNC tlaBgGNC">         715 :     void set_metrics(metrics::MpscRingBuffer&lt;metrics::MetricEvent&gt;* m) {</span></span>
+<span id="L193"><span class="lineNum">     193</span>                 :<span class="tlaGNC">         715 :         config_.metrics = m;</span></span>
+<span id="L194"><span class="lineNum">     194</span>                 :<span class="tlaGNC">         715 :     }</span></span>
 <span id="L195"><span class="lineNum">     195</span>                 :             : </span>
-<span id="L196"><span class="lineNum">     196</span>                 :             :     std::optional&lt;EnqueueResult&gt;</span>
-<span id="L197"><span class="lineNum">     197</span>                 :             :     check_expired(ActorId target, const TypedMessage&amp; msg,</span>
-<span id="L198"><span class="lineNum">     198</span>                 :             :                   const DeliveryOptions&amp; options, uint8_t priority,</span>
-<span id="L199"><span class="lineNum">     199</span>                 :             :                   int64_t deadline_ns);</span>
-<span id="L200"><span class="lineNum">     200</span>                 :             : </span>
-<span id="L201"><span class="lineNum">     201</span>                 :             :     void</span>
-<span id="L202"><span class="lineNum">     202</span>                 :             :     emit_rejection_observability(ActorId target, const StreamBuffer&amp; msg_payload,</span>
-<span id="L203"><span class="lineNum">     203</span>                 :             :                                  const TraceContext&amp; msg_trace, bool msg_has_trace,</span>
-<span id="L204"><span class="lineNum">     204</span>                 :             :                                  const MailboxEnvelopeMeta&amp; meta,</span>
-<span id="L205"><span class="lineNum">     205</span>                 :             :                                  const EnqueueResult&amp; result,</span>
-<span id="L206"><span class="lineNum">     206</span>                 :             :                                  const DeliveryOptions&amp; options,</span>
-<span id="L207"><span class="lineNum">     207</span>                 :             :                                  OverflowPolicy overflow_policy);</span>
+<span id="L196"><span class="lineNum">     196</span>                 :             :   private:</span>
+<span id="L197"><span class="lineNum">     197</span>                 :             :     EnqueueResult</span>
+<span id="L198"><span class="lineNum">     198</span>                 :             :     reject_missing_actor(ActorId target, const TypedMessage&amp; msg,</span>
+<span id="L199"><span class="lineNum">     199</span>                 :             :                          const DeliveryOptions&amp; options, uint8_t priority,</span>
+<span id="L200"><span class="lineNum">     200</span>                 :             :                          int64_t deadline_ns) noexcept;</span>
+<span id="L201"><span class="lineNum">     201</span>                 :             : </span>
+<span id="L202"><span class="lineNum">     202</span>                 :             :     std::optional&lt;EnqueueResult&gt;</span>
+<span id="L203"><span class="lineNum">     203</span>                 :             :     check_circuit_breaker(ActorId target, const TypedMessage&amp; msg,</span>
+<span id="L204"><span class="lineNum">     204</span>                 :             :                           const DeliveryOptions&amp; options, uint8_t priority,</span>
+<span id="L205"><span class="lineNum">     205</span>                 :             :                           int64_t deadline_ns);</span>
+<span id="L206"><span class="lineNum">     206</span>                 :             : </span>
+<span id="L207"><span class="lineNum">     207</span>                 :             :     int64_t apply_default_ttl(int64_t deadline_ns) const noexcept;</span>
 <span id="L208"><span class="lineNum">     208</span>                 :             : </span>
-<span id="L209"><span class="lineNum">     209</span>                 :             :     static void</span>
-<span id="L210"><span class="lineNum">     210</span>                 :             :     set_dlq_trace_fields(DeadLetterRecord&amp; dl, const TraceContext&amp; tc) noexcept;</span>
-<span id="L211"><span class="lineNum">     211</span>                 :             : </span>
-<span id="L212"><span class="lineNum">     212</span>                 :             :     static bool should_dead_letter(DeadLetterQueue* dlq, DeliveryMode mode) noexcept;</span>
-<span id="L213"><span class="lineNum">     213</span>                 :             : </span>
-<span id="L214"><span class="lineNum">     214</span>                 :             :     void</span>
-<span id="L215"><span class="lineNum">     215</span>                 :             :     maybe_emit_backpressure(MPSCActorMailbox&lt;TypedMessage&gt;* mailbox,</span>
-<span id="L216"><span class="lineNum">     216</span>                 :             :                             const EnqueueResult&amp; result,</span>
-<span id="L217"><span class="lineNum">     217</span>                 :             :                             const MailboxEnvelopeMeta&amp; meta, bool emit_requested,</span>
-<span id="L218"><span class="lineNum">     218</span>                 :             :                             BackpressureMode backpressure_mode,</span>
-<span id="L219"><span class="lineNum">     219</span>                 :             :                             bool sender_is_remote);</span>
-<span id="L220"><span class="lineNum">     220</span>                 :             : </span>
-<span id="L221"><span class="lineNum">     221</span>                 :             :     void push_circuit_open_dlq(ActorId target, const TypedMessage&amp; msg,</span>
-<span id="L222"><span class="lineNum">     222</span>                 :             :                                const DeliveryOptions&amp; options, uint8_t priority,</span>
-<span id="L223"><span class="lineNum">     223</span>                 :             :                                int64_t deadline_ns);</span>
-<span id="L224"><span class="lineNum">     224</span>                 :             : </span>
-<span id="L225"><span class="lineNum">     225</span>                 :             :     Config config_;</span>
-<span id="L226"><span class="lineNum">     226</span>                 :             : };</span>
-<span id="L227"><span class="lineNum">     227</span>                 :             : </span>
-<span id="L228"><span class="lineNum">     228</span>                 :             : } // namespace mailbox</span>
-<span id="L229"><span class="lineNum">     229</span>                 :             : } // namespace hpactor</span>
+<span id="L209"><span class="lineNum">     209</span>                 :             :     std::optional&lt;EnqueueResult&gt;</span>
+<span id="L210"><span class="lineNum">     210</span>                 :             :     check_duplicate(ActorId target, const TypedMessage&amp; msg,</span>
+<span id="L211"><span class="lineNum">     211</span>                 :             :                     const DeliveryOptions&amp; options);</span>
+<span id="L212"><span class="lineNum">     212</span>                 :             : </span>
+<span id="L213"><span class="lineNum">     213</span>                 :             :     std::optional&lt;EnqueueResult&gt;</span>
+<span id="L214"><span class="lineNum">     214</span>                 :             :     check_expired(ActorId target, const TypedMessage&amp; msg,</span>
+<span id="L215"><span class="lineNum">     215</span>                 :             :                   const DeliveryOptions&amp; options, uint8_t priority,</span>
+<span id="L216"><span class="lineNum">     216</span>                 :             :                   int64_t deadline_ns);</span>
+<span id="L217"><span class="lineNum">     217</span>                 :             : </span>
+<span id="L218"><span class="lineNum">     218</span>                 :             :     void</span>
+<span id="L219"><span class="lineNum">     219</span>                 :             :     emit_rejection_observability(ActorId target, const StreamBuffer&amp; msg_payload,</span>
+<span id="L220"><span class="lineNum">     220</span>                 :             :                                  const TraceContext&amp; msg_trace, bool msg_has_trace,</span>
+<span id="L221"><span class="lineNum">     221</span>                 :             :                                  const MailboxEnvelopeMeta&amp; meta,</span>
+<span id="L222"><span class="lineNum">     222</span>                 :             :                                  const EnqueueResult&amp; result,</span>
+<span id="L223"><span class="lineNum">     223</span>                 :             :                                  const DeliveryOptions&amp; options,</span>
+<span id="L224"><span class="lineNum">     224</span>                 :             :                                  OverflowPolicy overflow_policy);</span>
+<span id="L225"><span class="lineNum">     225</span>                 :             : </span>
+<span id="L226"><span class="lineNum">     226</span>                 :             :     static void</span>
+<span id="L227"><span class="lineNum">     227</span>                 :             :     set_dlq_trace_fields(DeadLetterRecord&amp; dl, const TraceContext&amp; tc) noexcept;</span>
+<span id="L228"><span class="lineNum">     228</span>                 :             : </span>
+<span id="L229"><span class="lineNum">     229</span>                 :             :     static bool should_dead_letter(DeadLetterQueue* dlq, DeliveryMode mode) noexcept;</span>
+<span id="L230"><span class="lineNum">     230</span>                 :             : </span>
+<span id="L231"><span class="lineNum">     231</span>                 :             :     void</span>
+<span id="L232"><span class="lineNum">     232</span>                 :             :     maybe_emit_backpressure(MPSCActorMailbox&lt;TypedMessage&gt;* mailbox,</span>
+<span id="L233"><span class="lineNum">     233</span>                 :             :                             const EnqueueResult&amp; result,</span>
+<span id="L234"><span class="lineNum">     234</span>                 :             :                             const MailboxEnvelopeMeta&amp; meta, bool emit_requested,</span>
+<span id="L235"><span class="lineNum">     235</span>                 :             :                             BackpressureMode backpressure_mode,</span>
+<span id="L236"><span class="lineNum">     236</span>                 :             :                             bool sender_is_remote);</span>
+<span id="L237"><span class="lineNum">     237</span>                 :             : </span>
+<span id="L238"><span class="lineNum">     238</span>                 :             :     void push_circuit_open_dlq(ActorId target, const TypedMessage&amp; msg,</span>
+<span id="L239"><span class="lineNum">     239</span>                 :             :                                const DeliveryOptions&amp; options, uint8_t priority,</span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :                                int64_t deadline_ns);</span>
+<span id="L241"><span class="lineNum">     241</span>                 :             : </span>
+<span id="L242"><span class="lineNum">     242</span>                 :             :     Config config_;</span>
+<span id="L243"><span class="lineNum">     243</span>                 :             : };</span>
+<span id="L244"><span class="lineNum">     244</span>                 :             : </span>
+<span id="L245"><span class="lineNum">     245</span>                 :             : } // namespace mailbox</span>
+<span id="L246"><span class="lineNum">     246</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
