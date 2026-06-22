@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-21 01:34:28</td>
+            <td class="headerValue">2026-06-22 01:15:26</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">93.8&nbsp;%</td>
@@ -432,8 +432,8 @@
 <span id="L354"><span class="lineNum">     354</span>                 :             :     // ── Running state ─────────────────────────────────────────────────────</span>
 <span id="L355"><span class="lineNum">     355</span>                 :             : </span>
 <span id="L356"><span class="lineNum">     356</span>                 :             :     /// \brief Returns \c true while the system is accepting messages.</span>
-<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">         177 :     bool is_running() const {</span></span>
-<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">         177 :         return running_.load(std::memory_order_acquire);</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">         179 :     bool is_running() const {</span></span>
+<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">         179 :         return running_.load(std::memory_order_acquire);</span></span>
 <span id="L359"><span class="lineNum">     359</span>                 :             :     }</span>
 <span id="L360"><span class="lineNum">     360</span>                 :             : </span>
 <span id="L361"><span class="lineNum">     361</span>                 :             :     /// \brief System uptime since construction.</span>
@@ -459,8 +459,8 @@
 <span id="L381"><span class="lineNum">     381</span>                 :             :     /// \brief Returns \c true if coroutine-based execution is configured.</span>
 <span id="L382"><span class="lineNum">     382</span>                 :             :     ///</span>
 <span id="L383"><span class="lineNum">     383</span>                 :             :     /// Requires \c HPACTOR_SUPPORT_COROUTINES=1 at compile time.</span>
-<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">        1445 :     bool use_coroutines() const {</span></span>
-<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaGNC">        1445 :         return config_.use_coroutines;</span></span>
+<span id="L384"><span class="lineNum">     384</span>                 :<span class="tlaGNC">        1447 :     bool use_coroutines() const {</span></span>
+<span id="L385"><span class="lineNum">     385</span>                 :<span class="tlaGNC">        1447 :         return config_.use_coroutines;</span></span>
 <span id="L386"><span class="lineNum">     386</span>                 :             :     }</span>
 <span id="L387"><span class="lineNum">     387</span>                 :             : </span>
 <span id="L388"><span class="lineNum">     388</span>                 :             :     // ── RPC ───────────────────────────────────────────────────────────────</span>

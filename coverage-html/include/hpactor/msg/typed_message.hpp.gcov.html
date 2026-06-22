@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-21 01:34:28</td>
+            <td class="headerValue">2026-06-22 01:15:26</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -126,7 +126,7 @@
 <span id="L48"><span class="lineNum">      48</span>                 :             : ///       mailbox.</span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : class TypedMessage {</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             :   public:</span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC tlaBgGNC">       20096 :     TypedMessage() = default;</span></span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC tlaBgGNC">       20098 :     TypedMessage() = default;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             : </span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     /// Copy is disabled — the \c mpsc_next atomic member deletes the</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     /// implicitly-generated copy constructor.</span>
@@ -137,21 +137,21 @@
 <span id="L59"><span class="lineNum">      59</span>                 :             :     ///</span>
 <span id="L60"><span class="lineNum">      60</span>                 :             :     /// Transfers all fields from \p other. The moved-from object's</span>
 <span id="L61"><span class="lineNum">      61</span>                 :             :     /// \c mpsc_next is left default-initialized.</span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">       84701 :     TypedMessage(TypedMessage&amp;&amp; other) noexcept</span></span>
-<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">       84701 :         : tag_(other.tag_), payload_(std::move(other.payload_)),</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">       84701 :           inline_size_(other.inline_size_), is_inline_(other.is_inline_),</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">       84701 :           parsed_(std::move(other.parsed_)),</span></span>
-<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">       84701 :           sender_address_(other.sender_address_),</span></span>
-<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">       84701 :           trace_context_(other.trace_context_),</span></span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">       84701 :           has_trace_context_(other.has_trace_context_),</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">       84701 :           deadline_ns_(other.deadline_ns_),</span></span>
-<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">      169402 :           ask_message_id_(other.ask_message_id_) {</span></span>
-<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 84697 times"> + </span>]:<span class="tlaGNC">       84701 :         if (other.is_inline_) {</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">       82931 :     TypedMessage(TypedMessage&amp;&amp; other) noexcept</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaGNC">       82931 :         : tag_(other.tag_), payload_(std::move(other.payload_)),</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">       82931 :           inline_size_(other.inline_size_), is_inline_(other.is_inline_),</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">       82931 :           parsed_(std::move(other.parsed_)),</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaGNC">       82931 :           sender_address_(other.sender_address_),</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaGNC">       82931 :           trace_context_(other.trace_context_),</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">       82931 :           has_trace_context_(other.has_trace_context_),</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">       82931 :           deadline_ns_(other.deadline_ns_),</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaGNC">      165862 :           ask_message_id_(other.ask_message_id_) {</span></span>
+<span id="L71"><span class="lineNum">      71</span>         [<span class="tlaGBC" title="Branch 0 was taken 4 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 82927 times"> + </span>]:<span class="tlaGNC">       82931 :         if (other.is_inline_) {</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">           4 :             std::memcpy(inline_payload_, other.inline_payload_, other.inline_size_);</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :<span class="tlaGNC">           4 :             other.is_inline_ = false;</span></span>
 <span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">           4 :             other.inline_size_ = 0;</span></span>
 <span id="L75"><span class="lineNum">      75</span>                 :             :         }</span>
-<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">       84701 :     }</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :<span class="tlaGNC">       82931 :     }</span></span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
 <span id="L78"><span class="lineNum">      78</span>                 :             :     /// \brief Move assignment.</span>
 <span id="L79"><span class="lineNum">      79</span>                 :             :     ///</span>
@@ -211,8 +211,8 @@
 <span id="L133"><span class="lineNum">     133</span>                 :             :     }</span>
 <span id="L134"><span class="lineNum">     134</span>                 :             : </span>
 <span id="L135"><span class="lineNum">     135</span>                 :             :     /// \brief Raw serialized payload for wire transfer.</span>
-<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">      303744 :     [[nodiscard]] const StreamBuffer&amp; payload() const noexcept {</span></span>
-<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">      303744 :         return payload_;</span></span>
+<span id="L136"><span class="lineNum">     136</span>                 :<span class="tlaGNC">      301974 :     [[nodiscard]] const StreamBuffer&amp; payload() const noexcept {</span></span>
+<span id="L137"><span class="lineNum">     137</span>                 :<span class="tlaGNC">      301974 :         return payload_;</span></span>
 <span id="L138"><span class="lineNum">     138</span>                 :             :     }</span>
 <span id="L139"><span class="lineNum">     139</span>                 :             : </span>
 <span id="L140"><span class="lineNum">     140</span>                 :             :     /// \brief Pre-parsed protobuf message, when available.</span>

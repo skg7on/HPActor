@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-21 01:34:28</td>
+            <td class="headerValue">2026-06-22 01:15:26</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">76.1&nbsp;%</td>
@@ -280,19 +280,19 @@
 <span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 96 times"> + </span><span class="tlaUNC" title="Branch 5 was not taken"> - </span>]
 <span id="L202"><span class="lineNum">     202</span>                 :<span class="tlaGNC">         192 :             retry_timer_ = network_loop_-&gt;run_every(</span></span>
 <span id="L203"><span class="lineNum">     203</span>                 :<span class="tlaGNC">         192 :                 [this]() {</span></span>
-<span id="L204"><span class="lineNum">     204</span>         [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          11 :                     if (outbound_tracker_) {</span></span>
+<span id="L204"><span class="lineNum">     204</span>         [<span class="tlaGBC" title="Branch 0 was taken 14 times"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">          14 :                     if (outbound_tracker_) {</span></span>
 <span id="L205"><span class="lineNum">     205</span>                 :             :                         uint64_t now_ns = static_cast&lt;uint64_t&gt;(</span>
-<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">          11 :                             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
-<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">          11 :                                 std::chrono::steady_clock::now().time_since_epoch())</span></span>
-<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">          11 :                                 .count());</span></span>
-<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">          11 :                         outbound_tracker_-&gt;process_retries(</span></span>
+<span id="L206"><span class="lineNum">     206</span>                 :<span class="tlaGNC">          14 :                             std::chrono::duration_cast&lt;std::chrono::nanoseconds&gt;(</span></span>
+<span id="L207"><span class="lineNum">     207</span>                 :<span class="tlaGNC">          14 :                                 std::chrono::steady_clock::now().time_since_epoch())</span></span>
+<span id="L208"><span class="lineNum">     208</span>                 :<span class="tlaGNC">          14 :                                 .count());</span></span>
+<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC">          14 :                         outbound_tracker_-&gt;process_retries(</span></span>
 <span id="L210"><span class="lineNum">     210</span>                 :             :                             now_ns,</span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">          11 :                             [](const msg::OutboundDeliveryTracker::PendingSend&amp;) {</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">          14 :                             [](const msg::OutboundDeliveryTracker::PendingSend&amp;) {</span></span>
 <span id="L212"><span class="lineNum">     212</span>                 :             :                                 // Resend via transport (implemented in</span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :                                 // follow-up).</span>
 <span id="L214"><span class="lineNum">     214</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                             });</span></span>
 <span id="L215"><span class="lineNum">     215</span>                 :             :                     }</span>
-<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC tlaBgGNC">          11 :                 },</span></span>
+<span id="L216"><span class="lineNum">     216</span>                 :<span class="tlaGNC tlaBgGNC">          14 :                 },</span></span>
 <span id="L217"><span class="lineNum">     217</span>                 :             :                 100); // poll every 100ms</span>
 <span id="L218"><span class="lineNum">     218</span>                 :             :         }</span>
 <span id="L219"><span class="lineNum">     219</span>                 :             : </span>
@@ -330,9 +330,9 @@
 <span id="L251"><span class="lineNum">     251</span>                 :             :         }</span>
 <span id="L252"><span class="lineNum">     252</span>                 :             : </span>
 <span id="L253"><span class="lineNum">     253</span>                 :<span class="tlaGNC">         192 :         network_thread_ = std::thread([this]() {</span></span>
-<span id="L254"><span class="lineNum">     254</span>         [<span class="tlaGBC" title="Branch 0 was taken 111 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">         116 :             while (network_loop_-&gt;wait(100) &gt;= 0) {</span></span>
-<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaGNC">         111 :                 network_loop_-&gt;process_completions();</span></span>
-<span id="L256"><span class="lineNum">     256</span>         [<span class="tlaGBC" title="Branch 0 was taken 91 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 20 times"> + </span>]:<span class="tlaGNC">         111 :                 if (!is_running())</span></span>
+<span id="L254"><span class="lineNum">     254</span>         [<span class="tlaGBC" title="Branch 0 was taken 113 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 5 times"> + </span>]:<span class="tlaGNC">         118 :             while (network_loop_-&gt;wait(100) &gt;= 0) {</span></span>
+<span id="L255"><span class="lineNum">     255</span>                 :<span class="tlaGNC">         113 :                 network_loop_-&gt;process_completions();</span></span>
+<span id="L256"><span class="lineNum">     256</span>         [<span class="tlaGBC" title="Branch 0 was taken 91 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 22 times"> + </span>]:<span class="tlaGNC">         113 :                 if (!is_running())</span></span>
 <span id="L257"><span class="lineNum">     257</span>                 :<span class="tlaGNC">          91 :                     break;</span></span>
 <span id="L258"><span class="lineNum">     258</span>                 :             :             }</span>
 <span id="L259"><span class="lineNum">     259</span>                 :<span class="tlaGNC">          96 :         });</span></span>
@@ -403,7 +403,7 @@
 <span id="L323"><span class="lineNum">     323</span>                 :             :                     }</span>
 <span id="L324"><span class="lineNum">     324</span>                 :<span class="tlaGNC">         358 :                     return ids;</span></span>
 <span id="L325"><span class="lineNum">     325</span>                 :<span class="tlaGNC">         358 :                 },</span></span>
-<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">        3631 :             .get_actor = [this](ActorId id) { return get_actor(id); },</span></span>
+<span id="L326"><span class="lineNum">     326</span>                 :<span class="tlaGNC">        3633 :             .get_actor = [this](ActorId id) { return get_actor(id); },</span></span>
 <span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         715 :             .get_mailbox_raw = [this](ActorId id) -&gt; void* {</span></span>
 <span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaUNC tlaBgUNC">           0 :                 auto mailbox = actor_directory_.find_mailbox(id);</span></span>
 <span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaUNC">           0 :                 return static_cast&lt;void*&gt;(mailbox.get());</span></span>
@@ -578,18 +578,18 @@
 <span id="L497"><span class="lineNum">     497</span>                 :<span class="tlaUNC">           0 :     return ActorTypeDef{};</span></span>
 <span id="L498"><span class="lineNum">     498</span>                 :             : }</span>
 <span id="L499"><span class="lineNum">     499</span>                 :             : </span>
-<span id="L500"><span class="lineNum">     500</span>                 :<span class="tlaGNC tlaBgGNC">        6354 : std::shared_ptr&lt;AbstractActor&gt; ActorSystem::get_actor(ActorId id) {</span></span>
-<span id="L501"><span class="lineNum">     501</span>                 :<span class="tlaGNC">        6354 :     auto entry = actor_directory_.find(id);</span></span>
-<span id="L502"><span class="lineNum">     502</span>         [<span class="tlaGBC" title="Branch 0 was taken 6339 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">        6354 :     if (entry.has_value()) {</span></span>
-<span id="L503"><span class="lineNum">     503</span>                 :<span class="tlaGNC">        6339 :         return entry-&gt;instance;</span></span>
+<span id="L500"><span class="lineNum">     500</span>                 :<span class="tlaGNC tlaBgGNC">        6359 : std::shared_ptr&lt;AbstractActor&gt; ActorSystem::get_actor(ActorId id) {</span></span>
+<span id="L501"><span class="lineNum">     501</span>                 :<span class="tlaGNC">        6359 :     auto entry = actor_directory_.find(id);</span></span>
+<span id="L502"><span class="lineNum">     502</span>         [<span class="tlaGBC" title="Branch 0 was taken 6344 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 15 times"> + </span>]:<span class="tlaGNC">        6359 :     if (entry.has_value()) {</span></span>
+<span id="L503"><span class="lineNum">     503</span>                 :<span class="tlaGNC">        6344 :         return entry-&gt;instance;</span></span>
 <span id="L504"><span class="lineNum">     504</span>                 :             :     }</span>
 <span id="L505"><span class="lineNum">     505</span>                 :<span class="tlaGNC">          15 :     return nullptr;</span></span>
-<span id="L506"><span class="lineNum">     506</span>                 :<span class="tlaGNC">        6354 : }</span></span>
+<span id="L506"><span class="lineNum">     506</span>                 :<span class="tlaGNC">        6359 : }</span></span>
 <span id="L507"><span class="lineNum">     507</span>                 :             : </span>
-<span id="L508"><span class="lineNum">     508</span>                 :<span class="tlaGNC">        1488 : mailbox::MPSCActorMailbox&lt;TypedMessage&gt;* ActorSystem::get_mailbox(ActorId id) {</span></span>
-<span id="L509"><span class="lineNum">     509</span>                 :<span class="tlaGNC">        1488 :     auto mailbox = actor_directory_.find_mailbox(id);</span></span>
-<span id="L510"><span class="lineNum">     510</span>                 :<span class="tlaGNC">        1488 :     return mailbox.get();</span></span>
-<span id="L511"><span class="lineNum">     511</span>                 :<span class="tlaGNC">        1488 : }</span></span>
+<span id="L508"><span class="lineNum">     508</span>                 :<span class="tlaGNC">        1490 : mailbox::MPSCActorMailbox&lt;TypedMessage&gt;* ActorSystem::get_mailbox(ActorId id) {</span></span>
+<span id="L509"><span class="lineNum">     509</span>                 :<span class="tlaGNC">        1490 :     auto mailbox = actor_directory_.find_mailbox(id);</span></span>
+<span id="L510"><span class="lineNum">     510</span>                 :<span class="tlaGNC">        1490 :     return mailbox.get();</span></span>
+<span id="L511"><span class="lineNum">     511</span>                 :<span class="tlaGNC">        1490 : }</span></span>
 <span id="L512"><span class="lineNum">     512</span>                 :             : </span>
 <span id="L513"><span class="lineNum">     513</span>                 :<span class="tlaGNC">          17 : size_t ActorSystem::actor_count() const {</span></span>
 <span id="L514"><span class="lineNum">     514</span>                 :<span class="tlaGNC">          17 :     return actor_directory_.size();</span></span>
