@@ -30,6 +30,8 @@
 #include <hpactor/mailbox/backpressure_coordinator.hpp>
 #include <hpactor/mailbox/delivery_pipeline.hpp>
 #include <hpactor/mailbox/local_delivery_engine.hpp>
+#include <hpactor/mailbox/outbound_tracker.hpp>
+#include <hpactor/mailbox/reliable_retry_policy.hpp>
 #include <hpactor/msg/outbound_delivery_tracker.hpp>
 #include <hpactor/process/process_manager.hpp>
 
@@ -93,6 +95,10 @@ ActorSystem::ActorSystem(const Config& config)
     // ── Outbound delivery tracker ─────────────────────────────────────
     outbound_tracker_ = std::make_unique<msg::OutboundDeliveryTracker>();
 
+    // ── Reliable messaging outbound tracker ───────────────────────────
+    reliable_tracker_ =
+        std::make_unique<mailbox::OutboundTracker>(mailbox::ReliableRetryPolicy{});
+
     // ── Delivery pipeline ──────────────────────────────────────────────
     // MUST be created before the scheduler starts so that early-boot
     // actor spawns can deliver messages through it.
@@ -123,6 +129,16 @@ ActorSystem::ActorSystem(const Config& config)
                    mailbox::MailboxPressureState state) {
                 emit_remote_backpressure_signal(signal, state);
             };
+
+        // ── Auto-ACK callback: delegate to send_reliable_ack ──
+        pipeline_cfg.emit_ack = [this](const ActorAddress& sender, uint64_t msg_id,
+                                       uint8_t status, uint32_t retry_after_ms) {
+            // The acker is the local endpoint (the pipeline doesn't know
+            // which specific actor).  For ACK/NACK, the endpoint + msg_id
+            // is sufficient identification.
+            ActorAddress acker{endpoint_, ActorType{0}, ActorId{0}, 0};
+            send_reliable_ack(sender, acker, msg_id, status, retry_after_ms);
+        };
 
         delivery_pipeline_ =
             std::make_unique<mailbox::DeliveryPipeline>(std::move(pipeline_cfg));
@@ -711,6 +727,11 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
             msg.set_trace_context(parsed.value());
         }
     }
+    // ── Preserve AckRequested flag for auto-ACK in downstream pipeline ──
+    if (flags & net::WireFrame::AckRequested) {
+        msg.set_ack_requested(true);
+    }
+    msg.set_message_id(frame.pb_frame.message_id());
     deliver_local(net::from_proto(frame.pb_frame.receiver()).id, std::move(msg));
 }
 
@@ -983,6 +1004,39 @@ void ActorSystem::set_drain_config(ActorId target, DrainConfig cfg) {
             lc->set_drain_config(cfg);
         }
     }
+}
+
+// ── Reliable ACK/NACK frame emission ────────────────────────────────────────
+
+void ActorSystem::send_reliable_ack(const ActorAddress& target,
+                                    const ActorAddress& acker, uint64_t msg_id,
+                                    uint8_t status, uint32_t retry_after_ms) {
+    if (!transport_) {
+        return;
+    }
+
+    net::WireFrame frame;
+    // For ACK (Accepted/Duplicate): use AckRequested flag (kControlAck on
+    // receiver side).  For NACK (Rejected): use AckResponse flag (kControlNack
+    // on receiver side).  This matches the convention in deliver_remote().
+    bool is_nack = (status == 1); // 1 = AckStatus::Rejected
+    frame.pb_frame.set_flags(is_nack ? net::WireFrame::AckResponse
+                                     : net::WireFrame::AckRequested);
+    frame.pb_frame.set_message_id(msg_id);
+    net::to_proto(frame.pb_frame.mutable_sender(), acker);
+    net::to_proto(frame.pb_frame.mutable_receiver(), target);
+
+    if (is_nack) {
+        // Encode reason code in type_tag (read as reason_code by receiver)
+        frame.pb_frame.set_type_tag(static_cast<uint32_t>(status));
+        // Encode retry_after_ms as 4-byte little-endian in payload
+        std::string payload_str(reinterpret_cast<const char*>(&retry_after_ms),
+                                sizeof(uint32_t));
+        frame.pb_frame.set_payload(payload_str);
+    }
+
+    auto encoded = frame.encode();
+    (void)transport_->try_send(target, encoded);
 }
 
 } // namespace hpactor

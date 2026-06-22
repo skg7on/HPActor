@@ -26,9 +26,9 @@
 #include <hpactor/adt/dedup_cache.hpp>
 #include <hpactor/cli/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
-#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 #if HPACTOR_ENABLE_AI_ACCELERATORS
 #    include <hpactor/ai/accelerator_config.hpp>
 #endif
@@ -75,6 +75,9 @@ class BackpressureCoordinator;
 class ShutdownCoordinator;
 namespace msg {
 class OutboundDeliveryTracker;
+}
+namespace mailbox {
+class OutboundTracker;
 }
 
 namespace log {
@@ -311,7 +314,8 @@ class ActorSystem {
 
     // ── Registry access ───────────────────────────────────────────────────
 
-    /// \brief Inline name→address registry (was a separate header; zero external consumers).
+    /// \brief Inline name→address registry (was a separate header; zero
+    /// external consumers).
     class ActorRegistry {
       public:
         explicit ActorRegistry(EndPoint endpoint) : endpoint_(endpoint) {}
@@ -320,10 +324,14 @@ class ActorSystem {
         }
         ActorAddress get(const std::string& name) const {
             auto it = actors_.find(name);
-            if (it != actors_.end()) return it->second;
+            if (it != actors_.end())
+                return it->second;
             return {};
         }
-        void erase(const std::string& name) { actors_.erase(name); }
+        void erase(const std::string& name) {
+            actors_.erase(name);
+        }
+
       private:
         [[maybe_unused]] EndPoint endpoint_;
         std::unordered_map<std::string, ActorAddress> actors_;
@@ -639,6 +647,34 @@ class ActorSystem {
         return outbound_tracker_.get();
     }
 
+    /// \brief Access the reliable messaging OutboundTracker.
+    ///
+    /// Tracks pending outbound messages with ACK/NACK/retry/expiry support.
+    /// \return Pointer to the \c mailbox::OutboundTracker, or \c nullptr
+    ///         if not yet initialized.
+    mailbox::OutboundTracker* reliable_tracker() noexcept {
+        return reliable_tracker_.get();
+    }
+    const mailbox::OutboundTracker* reliable_tracker() const noexcept {
+        return reliable_tracker_.get();
+    }
+
+    /// \brief Send a reliable ACK/NACK frame back to a message sender.
+    ///
+    /// Constructs a \c WireFrame with the appropriate flags (\c AckRequested
+    /// for ACK, \c AckResponse for NACK) and sends it via the transport.
+    /// No-op when networking is disabled or transport is unavailable.
+    ///
+    /// \param[in] target The original sender to route the ACK back to.
+    /// \param[in] acker  The local actor that is acknowledging.
+    /// \param[in] msg_id The message ID being acknowledged.
+    /// \param[in] status ACK status code (\c 0=Accepted, 1=Rejected,
+    ///                   \c 2=Duplicate).
+    /// \param[in] retry_after_ms Suggested retry delay for NACK (\c 0 for ACK).
+    void
+    send_reliable_ack(const ActorAddress& target, const ActorAddress& acker,
+                      uint64_t msg_id, uint8_t status, uint32_t retry_after_ms);
+
     // Receiver dedup cache for at-least-once delivery
     adt::DedupCache* dedup_cache() {
         return dedup_cache_.get();
@@ -912,6 +948,9 @@ class ActorSystem {
 
     // Outbound delivery tracker for at-least-once delivery
     std::unique_ptr<msg::OutboundDeliveryTracker> outbound_tracker_;
+
+    // Reliable messaging outbound tracker (ACK/NACK/retry/expiry)
+    std::unique_ptr<mailbox::OutboundTracker> reliable_tracker_;
 
     // Receiver dedup cache for at-least-once delivery
     std::unique_ptr<adt::DedupCache> dedup_cache_;
