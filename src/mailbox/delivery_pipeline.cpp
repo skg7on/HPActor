@@ -256,6 +256,13 @@ DeliveryPipeline::check_duplicate(ActorId target, const TypedMessage& msg,
                                            MessageId{options.message_id})) {
         return std::nullopt;
     }
+    // ── Auto-ACK: duplicate detected → emit ACK(Duplicate) ──
+    if (msg.ack_requested() && config_.emit_ack) {
+        config_.emit_ack(msg.sender_address(), msg.message_id(),
+                         static_cast<uint8_t>(2), // AckStatus::Duplicate
+                         0);
+    }
+
     if (config_.metrics) {
         uint64_t ts_ns = static_cast<uint64_t>(
             std::chrono::duration_cast<std::chrono::nanoseconds>(
@@ -468,9 +475,28 @@ DeliveryPipeline::try_deliver(ActorId target, TypedMessage msg, uint8_t priority
     if (msg_has_trace) {
         msg_trace = msg.trace_context();
     }
+
+    // ── Capture auto-ACK state before the message is moved into the mailbox ──
+    const bool needs_auto_ack = msg.ack_requested();
+    const uint64_t ack_msg_id = msg.message_id();
+    const ActorAddress ack_sender = msg.sender_address();
+
     auto result = mailbox->try_push(std::move(msg), meta);
 
     if (!result.accepted()) {
+        // ── Auto-ACK: admission rejected → emit NACK(Rejected) ──
+        if (needs_auto_ack && config_.emit_ack) {
+            uint32_t retry_after = static_cast<uint32_t>(
+                std::chrono::duration_cast<std::chrono::milliseconds>(result.retry_after)
+                    .count());
+            if (retry_after == 0) {
+                retry_after = 500; // default retry-after for NACK
+            }
+            config_.emit_ack(ack_sender, ack_msg_id,
+                             static_cast<uint8_t>(1), // AckStatus::Rejected
+                             retry_after);
+        }
+
         emit_rejection_observability(target, msg_payload, msg_trace,
                                      msg_has_trace, meta, result, options,
                                      mailbox->config().overflow_policy);
