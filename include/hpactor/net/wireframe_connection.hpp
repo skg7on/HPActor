@@ -27,93 +27,134 @@ namespace net {
 class WireFrameConnection;
 using WireFrameConnectionPtr = std::shared_ptr<WireFrameConnection>;
 
-// WireFrameConnection — TCP connection with WireFrame protocol framing.
-//
-// Reads from the socket accumulate into an internal buffer. When a complete
-// WireFrame is available (8-byte header: magic "HPAC" + 4-byte big-endian
-// payload length, followed by exactly length payload bytes), the payload is
-// delivered as a StreamBuffer to the frame_handler callback.
-//
-// Wire format expected on the wire:
-//   [4 bytes: magic "HPAC"]
-//   [4 bytes: remaining_length in network byte order]
-//   [N bytes: protobuf-serialized ActorMsgFrame]
+/// \brief TCP connection with WireFrame protocol framing.
+///
+/// Reads from the socket accumulate into an internal buffer. When a
+/// complete \c WireFrame is available (8-byte header: magic \c "HPAC" +
+/// 4-byte big-endian payload length, followed by exactly \c length
+/// payload bytes), the payload is delivered as a \c StreamBuffer to
+/// the \c frame_handler callback.
+///
+/// Wire format expected on the wire:
+/// \code
+///   [4 bytes: magic "HPAC"]
+///   [4 bytes: remaining_length in network byte order]
+///   [N bytes: protobuf-serialized ActorMsgFrame]
+/// \endcode
+///
+/// \note Thread safety: Called from the event loop thread.
 class WireFrameConnection
     : public Connection,
       public std::enable_shared_from_this<WireFrameConnection> {
   public:
-    // Create client-side connection with existing connected fd.
-    // Sets state to Connected and registers for Read events.
+    /// \brief Create a client-side connection with an existing connected fd.
+    ///
+    /// Sets state to \c Connected and registers for Read events.
+    /// \param[in] fd Connected socket file descriptor.
+    /// \param[in] local_endpoint Local address.
+    /// \param[in] remote_endpoint Remote address.
+    /// \param[in] loop Owning event loop.
+    /// \return Shared pointer to the new connection.
     static WireFrameConnectionPtr
     create_as_client(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                      EventLoop* loop);
 
-    // Create client-side connection for a non-blocking connect in progress.
-    // Sets state to Connecting and does NOT register with the event loop —
-    // the caller must complete the connect and then call setup_after_connect().
+    /// \brief Create a client-side connection for a non-blocking connect
+    /// in progress.
+    ///
+    /// Sets state to \c Connecting and does NOT register with the event
+    /// loop — the caller must complete the connect and then call
+    /// \c setup_after_connect().
+    /// \param[in] fd Connecting socket file descriptor.
+    /// \param[in] local_endpoint Local address.
+    /// \param[in] remote_endpoint Remote address.
+    /// \param[in] loop Owning event loop.
+    /// \return Shared pointer to the new connection.
     static WireFrameConnectionPtr
     create_connecting_client(int fd, EndPoint local_endpoint,
                              EndPoint remote_endpoint, EventLoop* loop);
 
-    // Create server-side connection (from accepted socket)
+    /// \brief Create a server-side connection from an accepted socket.
+    ///
+    /// \param[in] fd Accepted client file descriptor.
+    /// \param[in] local_endpoint Server address.
+    /// \param[in] remote_endpoint Client address.
+    /// \param[in] loop Owning event loop.
+    /// \return Shared pointer to the new connection.
     static WireFrameConnectionPtr
     create_as_server(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                      EventLoop* loop);
 
-    // Complete post-connect setup: transitions to Connected, registers for
-    // Read events, establishes the read handler, and fires the ready handler.
-    // Static to avoid shared_from_this issues with dual
-    // enable_shared_from_this.
+    /// \brief Complete post-connect setup.
+    ///
+    /// Transitions to \c Connected, registers for Read events,
+    /// establishes the read handler, and fires the ready handler.
+    /// Static to avoid \c shared_from_this issues with dual
+    /// \c enable_shared_from_this.
+    /// \param[in] conn The connection to set up.
     static void setup_after_connect(WireFrameConnectionPtr conn);
 
     ~WireFrameConnection();
 
-    // Non-copyable
+    /// \name Non-copyable
+    /// @{
     WireFrameConnection(const WireFrameConnection&) = delete;
     WireFrameConnection& operator=(const WireFrameConnection&) = delete;
+    /// @}
 
-    // Set callbacks
+    /// \brief Set the connection-ready callback.
+    ///
+    /// \param[in] handler Invoked after connect completes.
     void set_ready_handler(std::function<void(ConnectionPtr)> handler);
+
+    /// \brief Set the frame handler for incoming frames.
+    ///
+    /// \param[in] handler Invoked for each complete wire frame.
     void set_frame_handler(frame_handler handler);
+
+    /// \brief Set the error handler.
+    ///
+    /// \param[in] handler Invoked on connection errors.
     void
     set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
+
+    /// \brief Set the send-completion handler.
+    ///
+    /// \param[in] handler Invoked when an async send completes.
     void set_send_completion_handler(std::function<void(int result)> handler);
 
-    // Send raw frame data
+    /// \brief Send raw frame data.
+    ///
+    /// \param[in] frame_data Pre-framed data to send.
     void send(const StreamBuffer& frame_data) override;
 
-    // Close connection
+    /// \brief Close the connection.
     void close() override;
 
-    // Called by the event loop when fd is readable
+    /// \brief Event-loop callback when the fd is readable.
+    ///
+    /// \note Thread safety: Called from the event loop thread.
     void handle_read() override;
 
-    // Handle send completion (called by EventLoop)
+    /// \brief Handle async send completion.
+    ///
+    /// \param[in] result Byte count or negative errno.
+    /// \note Thread safety: Called from the event loop thread.
     void handle_send_completion(int result) override;
 
   private:
     WireFrameConnection(int fd, EndPoint local_endpoint,
                         EndPoint remote_endpoint, EventLoop* loop);
 
-    // Send raw bytes on socket
     void send_raw(const StreamBuffer& data);
-
-    // Flush write buffer
     void flush_write_buffer();
 
-    // Write buffer initial capacity
     static constexpr size_t kWriteChunkSize = 65536;
 
-    // Accumulation buffer for incoming bytes
     adt::StreamBuffer read_buffer_;
-
-    // Write buffer
     adt::StreamBuffer write_buffer_;
-
-    // True while async send is in progress
     bool is_sending_ = false;
 
-    // Callbacks
     std::function<void(ConnectionPtr)> ready_handler_;
     frame_handler frame_handler_;
     std::function<void(ConnectionPtr, const error&)> error_handler_;

@@ -34,57 +34,87 @@ namespace hpactor {
 
 namespace net {
 
-// -----------------------------------------------------------------------------
-// RegistrarConfig - configuration for registrar
-// -----------------------------------------------------------------------------
+/// \brief A single static route entry for registrar configuration.
 struct StaticRouteConfig {
+    /// \brief Logical endpoint of the target node.
     EndPoint endpoint;
-    std::string address; // IP or DNS hostname (used if endpoint is empty)
+    /// \brief IP address or DNS hostname (used if \c endpoint is empty).
+    std::string address;
+    /// \brief TCP port of the target node.
     uint16_t port = 0;
 };
 
+/// \brief Configuration for the UDP/TCP registrar subsystem.
 struct RegistrarConfig {
+    /// \brief UDP port for discovery queries (default 5353).
     uint16_t udp_port = 5353;
+    /// \brief TCP port for the registrar server (default 5353).
     uint16_t tcp_port = 5353;
+    /// \brief Heartbeat interval for connected clients (default 5 s).
     std::chrono::milliseconds heartbeat_interval{5000};
+    /// \brief Time before an unresponsive client is expired (default 15 s).
     std::chrono::milliseconds expiration_timeout{15000};
+    /// \brief Probe interval for liveness checks (default 30 s).
     std::chrono::milliseconds probe_interval{30000};
+    /// \brief Pre-configured static routes.
     std::vector<StaticRouteConfig> static_routes;
+    /// \brief Whether to disable the local registrar server.
     bool disable_server = false;
 };
 
-// -----------------------------------------------------------------------------
-// NodeEndpoint - information about a known node
-// -----------------------------------------------------------------------------
+/// \brief Information about a known node in the registry.
 struct NodeEndpoint {
+    /// \brief Node identity (endpoint, host, acceptors).
     NodeIdentity identity;
+    /// \brief TCP port for actor communication.
     uint16_t tcp_port = 0;
+    /// \brief Whether this entry comes from a static route.
     bool is_static_route = false;
+    /// \brief Timestamp of the last update from this node.
     std::chrono::steady_clock::time_point last_seen;
 };
 
-// -----------------------------------------------------------------------------
-// HostResolver - hostname to IP resolution with caching
-// -----------------------------------------------------------------------------
+/// \brief Hostname-to-IP resolution with in-memory caching.
+///
+/// Provides synchronous and asynchronous hostname resolution with
+/// TTL-based cache expiry.
+///
+/// \note Thread safety: All public methods are safe to call from any
+///       thread. Internal synchronization uses a mutex.
 class HostResolver {
   public:
     HostResolver() = default;
 
-    // Resolve hostname to IP address (blocking)
+    /// \brief Resolve a hostname to an IP address (blocking).
+    ///
+    /// \param[in] hostname DNS hostname to resolve.
+    /// \return IP address string, or empty string on failure.
     std::string resolve(const std::string& hostname);
 
-    // Async resolution - returns immediately, callback when done
+    /// \brief Asynchronously resolve a hostname.
+    ///
+    /// Returns immediately; the callback is invoked when resolution
+    /// completes.
+    /// \param[in] hostname DNS hostname to resolve.
+    /// \param[in] callback Invoked with the resolved IP (or empty string).
     void resolve_async(const std::string& hostname,
                        std::function<void(std::string ip)> callback);
 
-    // Get cached IP for hostname (empty if not cached)
+    /// \brief Look up a cached IP for a hostname.
+    ///
+    /// \param[in] hostname Hostname to search for.
+    /// \return Cached IP, or empty string if not found or expired.
     std::string get_cached(const std::string& hostname) const;
 
-    // Cache hostname -> IP mapping with TTL
+    /// \brief Cache a hostname-to-IP mapping.
+    ///
+    /// \param[in] hostname Hostname.
+    /// \param[in] ip Resolved IP address.
+    /// \param[in] ttl Cache time-to-live (default 300 s).
     void cache(const std::string& hostname, const std::string& ip,
                std::chrono::seconds ttl = std::chrono::seconds(300));
 
-    // Clear expired entries
+    /// \brief Remove all expired cache entries.
     void clear_expired();
 
   private:
@@ -97,29 +127,53 @@ class HostResolver {
     mutable std::mutex mutex_;
 };
 
-// -----------------------------------------------------------------------------
-// NodeRegistry - registry of known nodes
-// -----------------------------------------------------------------------------
+/// \brief Registry of known nodes with expiry and static-route support.
+///
+/// Stores \c NodeEndpoint entries keyed by \c EndPoint. Supports
+/// upsert, lookup, and automatic expiry of stale entries.
+///
+/// \note Thread safety: All public methods are safe to call from any
+///       thread. Internal synchronization uses a mutex.
 class NodeRegistry {
   public:
+    /// \brief Construct with registrar configuration.
+    ///
+    /// \param[in] config Registrar configuration (used for expiry).
     explicit NodeRegistry(const RegistrarConfig& config);
 
-    // Add or update an endpoint
+    /// \brief Add or update an endpoint in the registry.
+    ///
+    /// \param[in] endpoint Node endpoint to upsert.
     void upsert_endpoint(NodeEndpoint endpoint);
 
-    // Remove an endpoint
+    /// \brief Remove an endpoint from the registry.
+    ///
+    /// \param[in] endpoint Endpoint to remove.
+    /// \return \c true if the endpoint was found and removed.
     bool remove_endpoint(EndPoint endpoint);
 
-    // Get endpoint (nullptr if not found)
+    /// \brief Look up a node by endpoint.
+    ///
+    /// \param[in] endpoint Endpoint to search for.
+    /// \return Pointer to the node, or \c nullptr if not found.
+    /// \note The returned pointer is invalidated by the next write to
+    ///       the registry.
     NodeEndpoint* get(EndPoint endpoint);
 
-    // Check if endpoint exists
+    /// \brief Check whether an endpoint exists in the registry.
+    ///
+    /// \param[in] endpoint Endpoint to check.
+    /// \return \c true if the endpoint is registered.
     bool has(EndPoint endpoint) const;
 
-    // Get all endpoints
+    /// \brief Return all registered endpoints.
+    ///
+    /// \return Copy of the current endpoint list.
     std::vector<NodeEndpoint> all() const;
 
-    // Remove expired entries
+    /// \brief Remove all expired entries.
+    ///
+    /// \return Number of entries removed.
     size_t remove_expired();
 
   private:
@@ -128,119 +182,156 @@ class NodeRegistry {
     mutable std::mutex mutex_;
 };
 
-// -----------------------------------------------------------------------------
-// Registrar Protocol Messages
-// -----------------------------------------------------------------------------
+/// \brief UDP/TCP registrar protocol message types.
 enum class RegistrarMessageType : uint8_t {
-    // TCP messages (server/client registration)
-    Register = 0x01,
-    Heartbeat = 0x02,
-    NodeJoin = 0x03,
-    NodeLeave = 0x04,
-    Accept = 0x05,
-    Error = 0x06,
-    // UDP messages (resolution)
-    ResolveQuery = 0x10,
-    ResolveResponse = 0x11,
+    Register = 0x01,        ///< TCP: client registration request.
+    Heartbeat = 0x02,       ///< TCP: keepalive heartbeat.
+    NodeJoin = 0x03,        ///< TCP: broadcast that a node joined.
+    NodeLeave = 0x04,       ///< TCP: broadcast that a node left.
+    Accept = 0x05,          ///< TCP: server acceptance response.
+    Error = 0x06,           ///< TCP: error response.
+    ResolveQuery = 0x10,    ///< UDP: endpoint resolution query.
+    ResolveResponse = 0x11, ///< UDP: endpoint resolution response.
 };
 
-// Protocol constants
-constexpr uint32_t RegistrarMagic = 0x48504143; // "HPAC"
+/// \brief Magic number for the UDP registrar protocol ("HPAC").
+constexpr uint32_t RegistrarMagic = 0x48504143;
+/// \brief Registrar wire protocol version.
 constexpr uint8_t RegistrarVersion = 0x01;
+/// \brief Size of the UDP registrar message header.
 constexpr size_t RegistrarHeaderSize = 12;
 
-// Message payloads
+/// \brief Payload for node announce/join broadcast messages.
 struct NodeAnnouncePayload {
     uint16_t tcp_port;
     uint16_t actor_count;
 };
 
+/// \brief Payload for endpoint resolution queries.
 struct NodeQueryPayload {
     EndPoint target_endpoint;
 };
 
+/// \brief Payload for endpoint resolution responses.
 struct NodeResponsePayload {
     uint16_t tcp_port;
 };
 
+/// \brief Payload for liveness probe messages.
 struct NodeProbePayload {
     uint64_t probe_id;
     uint64_t timestamp;
 };
 
-// -----------------------------------------------------------------------------
-// TCP Message Framing for RegistrarServer
-// -----------------------------------------------------------------------------
-constexpr uint32_t TcpRegistrarMagic = 0x48505243; // "HPRC"
+/// \brief Magic number for the TCP registrar protocol ("HPRC").
+constexpr uint32_t TcpRegistrarMagic = 0x48505243;
+/// \brief TCP registrar wire protocol version.
 constexpr uint8_t TcpRegistrarVersion = 0x01;
+/// \brief Size of the TCP registrar message header.
 constexpr size_t TcpHeaderSize = 10;
 
-// TCP Message types (different from UDP types)
+/// \brief TCP registrar message types (separate from UDP types).
 enum class TcpMessageType : uint8_t {
-    Register = 0x01,
-    Heartbeat = 0x02,
-    NodeJoin = 0x03,
-    NodeLeave = 0x04,
-    Accept = 0x05,
-    Error = 0x06,
+    Register = 0x01,  ///< Client registration.
+    Heartbeat = 0x02, ///< Keepalive heartbeat.
+    NodeJoin = 0x03,  ///< Broadcast: node joined.
+    NodeLeave = 0x04, ///< Broadcast: node left.
+    Accept = 0x05,    ///< Server acceptance.
+    Error = 0x06,     ///< Error response.
 };
 
-// Error codes for TCP Error messages
+/// \brief Error codes for TCP registrar error messages.
 enum class RegistrarError : uint8_t {
-    None = 0,
-    NameTaken = 1,
-    InvalidMessage = 2,
+    None = 0,           ///< No error.
+    NameTaken = 1,      ///< Node identity already registered.
+    InvalidMessage = 2, ///< Malformed or unexpected message.
 };
 
-// -----------------------------------------------------------------------------
 // Forward declarations
-// -----------------------------------------------------------------------------
 class RegistrarServer;
 class RegistrarClient;
 class NodeRegistry;
 
-// Forward declaration
 class RegistrarConnection;
 using RegistrarConnectionPtr = std::shared_ptr<RegistrarConnection>;
 
-// RegistrarConnection - async TCP connection for registrar protocol
+/// \brief Async TCP connection for the registrar protocol.
+///
+/// Handles the binary registrar wire format over a TCP socket with
+/// edge-triggered read handling and write buffering. Can be created
+/// from an accepted server socket or as an outbound client connection.
+///
+/// \note Thread safety: Called from the event loop thread.
 class RegistrarConnection
     : public std::enable_shared_from_this<RegistrarConnection> {
     friend class RegistrarServer;
 
   public:
+    /// \brief Callback for received messages.
+    ///
+    /// \param[in] type TCP message type.
+    /// \param[in] data Message payload.
     using message_handler =
         std::function<void(TcpMessageType, const StreamBuffer&)>;
+
+    /// \brief Callback invoked when the connection is closed.
     using disconnect_handler = std::function<void()>;
+
+    /// \brief Callback invoked when an async send completes.
+    ///
+    /// \param[in] result Byte count or negative errno.
     using send_complete_handler = std::function<void(int result)>;
 
-    // Create from accepted server socket
+    /// \brief Create from an accepted server socket.
+    ///
+    /// \param[in] fd Accepted client file descriptor.
+    /// \param[in] remote_endpoint Remote address.
+    /// \param[in] loop Owning event loop.
+    /// \return Shared pointer to the new connection.
     static RegistrarConnectionPtr
     accepted(int fd, EndPoint remote_endpoint, EventLoop* loop);
 
-    // Create as client connection
+    /// \brief Create as an outbound client connection.
+    ///
+    /// \param[in] fd Connected client file descriptor.
+    /// \param[in] remote_endpoint Server address.
+    /// \param[in] loop Owning event loop.
+    /// \return Shared pointer to the new connection.
     static RegistrarConnectionPtr
     connecting(int fd, EndPoint remote_endpoint, EventLoop* loop);
 
     ~RegistrarConnection();
 
-    // Set handlers
+    /// \brief Set the message handler.
+    ///
+    /// \param[in] h Callback invoked for each complete message.
     void set_message_handler(message_handler h);
+
+    /// \brief Set the disconnect handler.
+    ///
+    /// \param[in] h Callback invoked on connection close.
     void set_disconnect_handler(disconnect_handler h);
+
+    /// \brief Set the send-completion handler.
+    ///
+    /// \param[in] h Callback invoked when an async send finishes.
     void set_send_complete_handler(send_complete_handler h);
 
-    // Send registrar message
+    /// \brief Send a registrar protocol message.
+    ///
+    /// \param[in] type TCP message type.
+    /// \param[in] payload Serialized message payload.
     void send_message(TcpMessageType type, const StreamBuffer& payload);
 
-    // Close connection
+    /// \brief Close the connection.
     void close();
 
-    // Get remote endpoint
+    /// \brief Return the remote endpoint.
     EndPoint remote_endpoint() const {
         return remote_endpoint_;
     }
 
-    // Get fd
+    /// \brief Return the file descriptor.
     int fd() const {
         return fd_;
     }
@@ -276,38 +367,66 @@ class RegistrarConnection
     send_complete_handler send_complete_handler_;
 };
 
-// -----------------------------------------------------------------------------
-// RegistrarServer - TCP-based authoritative registrar
-// -----------------------------------------------------------------------------
+/// \brief TCP-based authoritative registrar server.
+///
+/// Accepts TCP connections from registrar clients, maintains a
+/// \c NodeRegistry of all known nodes, and broadcasts join/leave
+/// events to all connected clients.
+///
+/// \note Thread safety: Called from the event loop thread.
 class RegistrarServer {
   public:
+    /// \brief Construct a registrar server.
+    ///
+    /// \param[in] config Registrar configuration.
+    /// \param[in] local_endpoint This server's endpoint.
+    /// \param[in] loop Event loop for async I/O (can be set later).
     RegistrarServer(const RegistrarConfig& config, EndPoint local_endpoint,
                     EventLoop* loop = nullptr);
     ~RegistrarServer();
 
-    // Non-copyable
+    /// \name Non-copyable
+    /// @{
     RegistrarServer(const RegistrarServer&) = delete;
     RegistrarServer& operator=(const RegistrarServer&) = delete;
+    /// @}
 
-    // Start TCP server and UDP listener
+    /// \brief Start the TCP server and begin accepting connections.
     void start();
+
+    /// \brief Stop the server and disconnect all clients.
     void stop();
 
-    // Get registry for reading
+    /// \brief Access the node registry.
+    ///
+    /// \return Pointer to the internal registry (lifetime matches the server).
     NodeRegistry* registry() {
         return &registry_;
     }
 
-    // Set event loop for async I/O (can be changed before start())
+    /// \brief Set the event loop (must be called before \c start()).
+    ///
+    /// \param[in] loop Event loop for async I/O.
     void set_event_loop(EventLoop* loop) {
         loop_ = loop;
     }
 
-    // Handle incoming TCP connection
+    /// \brief Handle an accepted TCP connection.
+    ///
+    /// Called by the acceptor on each new client.
+    /// \param[in] client_fd Accepted client file descriptor.
+    /// \param[in] remote_endpoint Remote client address.
     void handle_accept(int client_fd, EndPoint remote_endpoint);
 
-    // Broadcast event to all connected clients
+    /// \brief Broadcast a node-joined event to all clients.
+    ///
+    /// \param[in] endpoint Endpoint of the joined node.
+    /// \param[in] ep Node endpoint details.
     void broadcast_node_joined(EndPoint endpoint, const NodeEndpoint& ep);
+
+    /// \brief Broadcast a node-left event to all clients.
+    ///
+    /// \param[in] endpoint Endpoint of the departed node.
     void broadcast_node_left(EndPoint endpoint);
 
   private:
@@ -330,39 +449,71 @@ class RegistrarServer {
     std::mutex clients_mutex_;
 };
 
-// -----------------------------------------------------------------------------
-// UdpRegistrar - Dual-mode registrar (server or client)
-// -----------------------------------------------------------------------------
+/// \brief Dual-mode registrar implementing \c IServiceDiscovery.
+///
+/// Operates in either server mode (binds a UDP socket and runs a
+/// \c RegistrarServer for authoritative discovery) or client mode
+/// (connects to a registrar server for discovery). Mode is determined
+/// by bind success/failure.
+///
+/// \note Thread safety: Member access is synchronized internally.
 class UdpRegistrar : public IServiceDiscovery {
   public:
+    /// \brief Construct a UDP registrar.
+    ///
+    /// \param[in] config Registrar configuration.
+    /// \param[in] local_endpoint This node's endpoint.
+    /// \param[in] loop Event loop for async I/O (can be set later).
     UdpRegistrar(const RegistrarConfig& config, EndPoint local_endpoint,
                  EventLoop* loop = nullptr);
     ~UdpRegistrar();
 
-    // Non-copyable
+    /// \name Non-copyable
+    /// @{
     UdpRegistrar(const UdpRegistrar&) = delete;
     UdpRegistrar& operator=(const UdpRegistrar&) = delete;
+    /// @}
 
-    // Set event loop for async I/O (can be changed before start())
+    /// \brief Set the event loop (must be called before \c start()).
+    ///
+    /// \param[in] loop Event loop for async I/O.
     void set_event_loop(EventLoop* loop) {
         loop_ = loop;
     }
 
-    // Start listening - determines server vs client mode based on bind result
+    /// \brief Start discovery — determines server vs client mode.
     void start() override;
+
+    /// \brief Stop discovery and release resources.
     void stop() override;
 
-    // Query endpoint
+    /// \brief Look up a node endpoint in the registry.
+    ///
+    /// \param[in] endpoint Endpoint to search for.
+    /// \return Pointer to the node endpoint, or \c nullptr.
     NodeEndpoint* get_endpoint(EndPoint endpoint);
 
-    // Get all known endpoints
+    /// \brief Return all known endpoints.
+    ///
+    /// \return Copy of the current endpoint list.
     std::vector<NodeEndpoint> get_all_endpoints() const;
 
-    // Set callback for node online/offline events
+    /// \brief Callback for node online/offline events.
+    ///
+    /// \param[in] ep Endpoint of the node.
+    /// \param[in] online \c true if online, \c false if offline.
     using node_callback = std::function<void(EndPoint, bool online)>;
+
+    /// \brief Register a node status callback.
+    ///
+    /// \param[in] cb Callback invoked on node status changes.
     void set_node_callback(node_callback cb);
 
-    // Handle incoming UDP packet (for resolution)
+    /// \brief Handle an incoming UDP packet.
+    ///
+    /// \param[in] data Packet payload.
+    /// \param[in] from_host Source hostname/IP.
+    /// \param[in] from_port Source port.
     void handle_udp_packet(const StreamBuffer& data,
                            const std::string& from_host, uint16_t from_port);
 
@@ -427,40 +578,65 @@ class UdpRegistrar : public IServiceDiscovery {
     MemberChangeCallback member_change_cb_;
 };
 
-// -----------------------------------------------------------------------------
-// RegistrarClient - TCP client for connecting to RegistrarServer
-// -----------------------------------------------------------------------------
+/// \brief TCP client for connecting to a \c RegistrarServer.
+///
+/// Handles registration, heartbeat keepalive, and failover to alternate
+/// servers. Shares a \c NodeRegistry with the owning \c UdpRegistrar.
+///
+/// \note Thread safety: Called from the event loop thread.
 class RegistrarClient {
   public:
+    /// \brief Construct a registrar client.
+    ///
+    /// \param[in] config Registrar configuration.
+    /// \param[in] local_endpoint This client's endpoint.
+    /// \param[in] server_endpoint Target server endpoint.
+    /// \param[in] shared_registry Shared registry for endpoint updates
+    ///            (not owned).
+    /// \param[in] loop Event loop for async I/O (can be set later).
     RegistrarClient(const RegistrarConfig& config, EndPoint local_endpoint,
                     EndPoint server_endpoint, NodeRegistry* shared_registry,
                     EventLoop* loop = nullptr);
     ~RegistrarClient();
 
-    // Non-copyable
+    /// \name Non-copyable
+    /// @{
     RegistrarClient(const RegistrarClient&) = delete;
     RegistrarClient& operator=(const RegistrarClient&) = delete;
+    /// @}
 
+    /// \brief Start the client — connect and register.
     void start();
+
+    /// \brief Stop the client and disconnect.
     void stop();
 
-    // Set event loop for async I/O (can be changed before start())
+    /// \brief Set the event loop (must be called before \c start()).
+    ///
+    /// \param[in] loop Event loop for async I/O.
     void set_event_loop(EventLoop* loop) {
         loop_ = loop;
     }
 
-    // Set acceptors for registration announcement
+    /// \brief Set acceptors to announce during registration.
+    ///
+    /// \param[in] acceptors List of acceptor advertisements.
     void set_acceptors(std::vector<AcceptorInfo> acceptors);
 
-    // Set callback invoked after repeated reconnect failures (for failover)
+    /// \brief Set a callback for repeated reconnect failures.
+    ///
+    /// Invoked after \c kMaxReconnectAttempts consecutive failures.
+    /// \param[in] cb Callback for failover handling.
     void set_failover_callback(std::function<void()> cb) {
         failover_callback_ = std::move(cb);
     }
 
-    // Reconnect to server (used after disconnection)
+    /// \brief Reconnect to the server after a disconnect.
     void reconnect();
 
-    // Check if connected
+    /// \brief Check whether the client is connected.
+    ///
+    /// \return \c true if an active connection exists.
     bool is_connected() const {
         return connected_.load();
     }

@@ -27,46 +27,70 @@
 namespace hpactor {
 namespace net {
 
-enum class HTTPConnectionMode { Server, Client };
+/// \brief Whether the HTTP connection is server-side or client-side.
+enum class HTTPConnectionMode {
+    Server, ///< Parses incoming HTTP requests, fires request handlers.
+    Client, ///< Parses incoming HTTP responses, fires response handlers.
+};
 
 class HTTPConnection;
 using HTTPConnectionPtr = std::shared_ptr<HTTPConnection>;
 
-// HTTPConnection — TCP connection with HTTP/1.1 framing via llhttp.
-//
-// Mirrors the WireFrameConnection pattern: registers its fd with EventLoop,
-// uses a read handler to accumulate bytes and feed them to HttpParser.
-// Supports two modes:
-//   - Server: parses incoming HTTP requests, fires request_handler
-//   - Client: parses incoming HTTP responses, fires response_handler
-//
-// Send operations build HTTP/1.1 wire bytes and use async_send through
-// the EventLoop's backend, with write buffering and flush-on-completion.
+/// \brief TCP connection with HTTP/1.1 framing via llhttp.
+///
+/// Mirrors the \c WireFrameConnection pattern: registers its fd with
+/// \c EventLoop, uses a read handler to accumulate bytes and feed them to
+/// \c HttpParser. Supports two modes:
+/// - \c Server: parses incoming HTTP requests, fires \c request_handler.
+/// - \c Client: parses incoming HTTP responses, fires \c response_handler.
+///
+/// Send operations build HTTP/1.1 wire bytes and use \c async_send through
+/// the \c EventLoop's backend, with write buffering and flush-on-completion.
+///
+/// \note Thread safety: Called from the event loop thread.
 class HTTPConnection : public Connection,
                        public std::enable_shared_from_this<HTTPConnection> {
   public:
-    // Create a connection in the given mode.
-    // Registers fd with the EventLoop for read events.
+    /// \brief Create a connection in the given mode.
+    ///
+    /// Registers fd with the \c EventLoop for read events.
+    /// \param[in] fd Socket file descriptor (must be non-blocking).
+    /// \param[in] local_endpoint Local address.
+    /// \param[in] remote_endpoint Remote address.
+    /// \param[in] loop Owning \c EventLoop.
+    /// \param[in] mode \c Server or \c Client.
+    /// \return Shared pointer to the new connection.
     static HTTPConnectionPtr
     create(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
            EventLoop* loop, HTTPConnectionMode mode);
 
     ~HTTPConnection();
 
-    // Non-copyable
+    /// \name Non-copyable
+    /// @{
     HTTPConnection(const HTTPConnection&) = delete;
     HTTPConnection& operator=(const HTTPConnection&) = delete;
+    /// @}
 
-    // ---- Callbacks ----
+    // ── Callbacks ──────────────────────────────────────────────────────
 
-    // Server mode: called when a complete HTTP request is parsed.
-    // First argument is the connection itself (for send_response).
+    /// \brief Server-mode callback: invoked when a complete HTTP request is
+    /// parsed.
+    ///
+    /// \param[in] conn The connection (for sending the response).
+    /// \param[in] req Parsed HTTP request.
     using RequestHandler = std::function<void(HTTPConnection*, HttpRequest&&)>;
     void set_request_handler(RequestHandler handler) {
         request_handler_ = std::move(handler);
     }
 
-    // Client mode: called when a complete HTTP response is parsed.
+    /// \brief Client-mode callback: invoked when a complete HTTP response is
+    /// parsed.
+    ///
+    /// \param[in] conn The connection.
+    /// \param[in] status_code HTTP status code.
+    /// \param[in] headers Response headers.
+    /// \param[in] body Response body.
     using ResponseHandler =
         std::function<void(HTTPConnection*, int status_code,
                            std::vector<HttpHeader> headers, StreamBuffer body)>;
@@ -74,67 +98,82 @@ class HTTPConnection : public Connection,
         response_handler_ = std::move(handler);
     }
 
-    // Called on HTTP parse errors.
+    /// \brief Callback invoked on HTTP parse errors.
+    ///
+    /// \param[in] conn The connection.
+    /// \param[in] err Error details.
     using ErrorHandler = std::function<void(HTTPConnection*, const error&)>;
     void set_error_handler(ErrorHandler handler) {
         error_handler_ = std::move(handler);
     }
 
-    // ---- Send ----
+    // ── Send ───────────────────────────────────────────────────────────
 
-    // Build an HTTP/1.1 response and send it on the wire.
-    void send_response(HttpStatusCode code,
-                       std::vector<HttpHeader> headers = {},
+    /// \brief Build an HTTP/1.1 response and send it on the wire.
+    ///
+    /// \param[in] code HTTP status code.
+    /// \param[in] headers Response headers (empty by default).
+    /// \param[in] body Response body (empty by default).
+    void send_response(HttpStatusCode code, std::vector<HttpHeader> headers = {},
                        StreamBuffer body = {});
 
-    // Send raw bytes (appends to write buffer, flushes asynchronously).
+    /// \brief Send raw bytes.
+    ///
+    /// Appends to the write buffer and flushes asynchronously.
+    /// \param[in] data Raw bytes to send.
     void send_raw(const StreamBuffer& data);
 
-    // Send interface inherited from Connection.
+    /// \brief Send interface inherited from \c Connection.
+    ///
+    /// \param[in] data Data to transmit.
     void send(const StreamBuffer& data) override;
 
-    // ---- Connection lifecycle ----
+    // ── Connection lifecycle ───────────────────────────────────────────
 
+    /// \brief Close the connection.
+    ///
+    /// \post The fd is deregistered from the event loop.
     void close() override;
 
-    // Called by the event loop when fd is readable.
+    /// \brief Event-loop callback when the fd is readable.
+    ///
+    /// \note Thread safety: Called from the event loop thread.
     void handle_read() override;
 
-    // Handle send completion (called by EventLoop).
+    /// \brief Handle completion of an async send.
+    ///
+    /// \param[in] result Byte count or negative errno.
+    /// \note Thread safety: Called from the event loop thread.
     void handle_send_completion(int result) override;
 
-    // Delegate keep-alive decision to the parser.
+    /// \brief Delegate keep-alive decision to the parser.
+    ///
+    /// \return \c true if the connection should be kept alive for the next
+    ///         request/response.
     bool should_keep_alive() const;
 
-    // Return the connection mode.
-    HTTPConnectionMode mode() const { return mode_; }
+    /// \brief Return the connection mode.
+    ///
+    /// \return \c Server or \c Client.
+    HTTPConnectionMode mode() const {
+        return mode_;
+    }
 
   private:
     HTTPConnection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                    EventLoop* loop, HTTPConnectionMode mode);
 
-    // Flush the write buffer via async_send.
+    /// \brief Flush the write buffer via async_send.
     void flush_write_buffer();
 
-    // Write buffer initial capacity.
     static constexpr size_t kWriteChunkSize = 65536;
 
-    // HTTP/1.1 parser (owns llhttp instance).
     std::unique_ptr<HttpParser> parser_;
-
-    // Accumulation buffer for incoming bytes.
     adt::StreamBuffer read_buffer_;
-
-    // Write buffer.
     adt::StreamBuffer write_buffer_;
-
-    // True while async send is in progress.
     bool is_sending_ = false;
-
-    // Connection mode.
     HTTPConnectionMode mode_;
 
-    // Callbacks.
     RequestHandler request_handler_;
     ResponseHandler response_handler_;
     ErrorHandler error_handler_;

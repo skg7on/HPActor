@@ -24,73 +24,98 @@ namespace hpactor {
 
 namespace net {
 
-// Forward declarations
 struct TlsConfig;
 class TlsContext;
 
-// -----------------------------------------------------------------------------
-// TlsContext - TLS configuration and crypto operations
-// -----------------------------------------------------------------------------
-// Manages certificates, private keys, and provides crypto operations for
-// the TLS handshake. Supports both filesystem-based and in-memory
-// configuration.
-// -----------------------------------------------------------------------------
+/// \brief TLS configuration and cryptographic operations.
+///
+/// Manages certificates, private keys, and provides crypto operations for
+/// the TLS handshake. Supports both filesystem-based and in-memory
+/// configuration. Uses OpenSSL for RSA signing, verification, and
+/// encryption.
+///
+/// \note Moveable but non-copyable. Owns OpenSSL key material — ensure
+///       proper destruction ordering.
 class TlsContext {
   public:
-    // Certificate verification result
+    /// \brief Certificate verification results.
     enum class CertVerifyResult {
-        Ok,
-        Invalid,
-        Untrusted,
-        Expired,
-        UnknownError,
+        Ok,           ///< Certificate is valid and trusted.
+        Invalid,      ///< Certificate is malformed.
+        Untrusted,    ///< Certificate is not signed by a trusted CA.
+        Expired,      ///< Certificate has expired.
+        UnknownError, ///< Verification failed for an unknown reason.
     };
 
     ~TlsContext();
 
-    // Non-copyable
+    /// \name Non-copyable, moveable
+    /// @{
     TlsContext(const TlsContext&) = delete;
     TlsContext& operator=(const TlsContext&) = delete;
-
-    // Moveable
     TlsContext(TlsContext&&) noexcept;
     TlsContext& operator=(TlsContext&&) noexcept;
+    /// @}
 
-    // Create from filesystem paths
-    // Expected structure:
-    //   cert_dir/
-    //     node_<node_id>.pem       - own certificate
-    //     node_<node_id>_key.pem   - own private key
-    //     ca.pem                   - trusted CA certificate
-    //     remote/                  - trusted peer certificates
+    /// \brief Create from a filesystem certificate directory.
+    ///
+    /// Expected structure:
+    /// \code
+    ///   cert_dir/
+    ///     node_<node_id>.pem       - own certificate
+    ///     node_<node_id>_key.pem   - own private key
+    ///     ca.pem                   - trusted CA certificate
+    ///     remote/                  - trusted peer certificates
+    /// \endcode
+    /// \param[in] endpoint Local node endpoint.
+    /// \param[in] cert_dir Path to the certificate directory.
+    /// \return Configured \c TlsContext.
     static TlsContext
     from_filesystem(EndPoint endpoint, const std::string& cert_dir);
 
-    // Create from in-memory configuration
+    /// \brief Create from in-memory configuration.
+    ///
+    /// \param[in] config TLS configuration with certificate/key DER bytes.
+    /// \return Configured \c TlsContext.
     static TlsContext from_config(const TlsConfig& config);
 
-    // Verify peer certificate against trusted CAs
+    /// \brief Verify a peer certificate against trusted CAs.
+    ///
+    /// \param[in] cert_der Peer certificate in DER format.
+    /// \return Verification result code.
     CertVerifyResult verify_certificate(const StreamBuffer& cert_der) const;
 
-    // Sign data with own private key (for CertificateVerify)
+    /// \brief Sign data with own private key (for CertificateVerify).
+    ///
+    /// \param[in] data Data to sign (typically a nonce).
+    /// \return RSA signature bytes.
     StreamBuffer sign_data(const StreamBuffer& data) const;
 
-    // Decrypt pre_master_secret using own private key (RSA decryption)
-    // Returns true on success, false on failure
+    /// \brief Decrypt the pre-master secret using own private key.
+    ///
+    /// \param[in] encrypted RSA-encrypted pre-master secret.
+    /// \param[out] pre_master_secret Receives the decrypted secret.
+    /// \return \c true on success.
     bool decrypt_pre_master_secret(const StreamBuffer& encrypted,
                                    StreamBuffer& pre_master_secret) const;
 
-    // Get public key bytes from own certificate (for sending to peer)
+    /// \brief Return the public key extracted from own certificate.
+    ///
+    /// \return Reference to the public key bytes.
     const StreamBuffer& public_key() const {
         return public_key_;
     }
 
-    // Get own node ID
+    /// \brief Return the local endpoint this context is bound to.
+    ///
+    /// \return Local node endpoint.
     EndPoint endpoint() const {
         return endpoint_;
     }
 
-    // Get own certificate in DER format
+    /// \brief Return own certificate in DER format.
+    ///
+    /// \return Reference to the certificate bytes.
     const StreamBuffer& certificate() const {
         return certificate_;
     }
@@ -103,23 +128,23 @@ class TlsContext {
     StreamBuffer public_key_;
     StreamBuffer private_key_;
 
-    // RSA key handle (OpenSSL)
     struct RSAKey;
     std::unique_ptr<RSAKey> rsa_key_;
-
-    // Trusted CA certificates (for verification)
     std::vector<StreamBuffer> ca_certs_;
-
-    // Peer certificates (for verification)
     std::vector<StreamBuffer> peer_certs_;
 };
 
-// Configuration for in-memory TLS setup
+/// \brief In-memory TLS configuration for programmatic setup.
 struct TlsConfig {
+    /// \brief Own certificate in DER format.
     StreamBuffer own_cert_der;
+    /// \brief Own private key in DER format.
     StreamBuffer own_key_der;
+    /// \brief Trusted CA certificates in DER format.
     std::vector<StreamBuffer> ca_certs_der;
-    EndPoint endpoint; // local endpoint for this node
+    /// \brief Local endpoint for this node.
+    EndPoint endpoint;
+    /// \brief Whether to verify peer certificates (default true).
     bool verify_peer = true;
 };
 

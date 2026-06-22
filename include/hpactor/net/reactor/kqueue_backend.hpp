@@ -45,6 +45,16 @@ namespace net {
 // Forward declaration to avoid circular include
 class EventLoop;
 
+/// \brief BSD/macOS kqueue-based reactor backend.
+///
+/// Uses \c kqueue(2) / \c kevent(2) for edge-triggered I/O readiness
+/// notification and timer support. Performs synchronous I/O in the
+/// event loop thread. Supports both read/write handler dispatch
+/// (reactor mode) and simulated async I/O via \c async_send() etc.
+/// (proactor mode emulation).
+///
+/// \note Thread safety: All public methods are called from the event loop
+///       thread.
 class KqueueBackend : public IReactorBackend {
   public:
     KqueueBackend();
@@ -75,9 +85,9 @@ class KqueueBackend : public IReactorBackend {
     void async_accept(int fd, ActorId actor) override;
     void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
                        ActorId actor) override;
-    void async_sendto(int fd, const iovec* bufs, int buf_count,
-                       const sockaddr* addr, socklen_t addrlen, ActorId actor,
-                       uint32_t op_type) override;
+    void
+    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
+                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
     void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
                         uint32_t op_type) override;
 
@@ -85,13 +95,17 @@ class KqueueBackend : public IReactorBackend {
     void set_read_handler(int fd, read_callback handler) override;
     void clear_read_handler(int fd) override;
 
-    bool supports_read_handler() const override { return true; }
+    bool supports_read_handler() const override {
+        return true;
+    }
 
     // Write handler management — kqueue dispatches writable events via callback
     void set_write_handler(int fd, write_callback handler) override;
     void clear_write_handler(int fd) override;
 
-    bool supports_write_handler() const override { return true; }
+    bool supports_write_handler() const override {
+        return true;
+    }
 
     // Set the EventLoop pointer for routing completions
     void set_loop(net::EventLoop* loop) {

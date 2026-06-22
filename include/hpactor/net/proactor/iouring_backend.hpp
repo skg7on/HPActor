@@ -44,6 +44,18 @@ struct io_uring_params {
 namespace hpactor {
 namespace net {
 
+/// \brief Linux io_uring proactor backend.
+///
+/// Uses the \c io_uring submission/completion queue interface for true
+/// async I/O. Supports registered file descriptors and fixed buffers for
+/// zero-copy send/receive. This is the preferred Linux backend over epoll
+/// when \c liburing is available.
+///
+/// Read/write handler methods are no-ops — this backend uses true
+/// async I/O with completions instead of synchronous readiness dispatch.
+///
+/// \note Thread safety: All public methods are called from the event loop
+///       thread.
 class IoUringBackend : public IReactorBackend {
   public:
     IoUringBackend();

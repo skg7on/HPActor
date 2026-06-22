@@ -42,21 +42,27 @@ namespace net {
 
 struct WireFrame; // forward decl, full def in <hpactor/net/frame.hpp>
 
-// -----------------------------------------------------------------------------
-// PoolConfig - connection pool configuration
-// -----------------------------------------------------------------------------
+/// \brief Connection pool configuration.
 struct PoolConfig {
+    /// \brief Minimum number of connections to maintain (default 1).
     size_t min_connections = 1;
+    /// \brief Maximum number of connections allowed (default 4).
     size_t max_connections = 4;
+    /// \brief Maximum reconnect attempts before failing (default 5).
     size_t max_attempts = 5;
+    /// \brief Initial reconnect backoff (default 1 s).
     std::chrono::milliseconds initial_backoff{1000};
+    /// \brief Maximum reconnect backoff (default 16 s).
     std::chrono::milliseconds max_backoff{16000};
-    bool use_tls = false; // Default to plain text
+    /// \brief Whether to use TLS for connections (default false).
+    bool use_tls = false;
+    /// \brief Outbound queue limits for this pool.
     EndpointOutboundLimits outbound_limits{};
+    /// \brief Circuit breaker configuration for this pool.
     EndpointCircuitBreakerConfig circuit_breaker_cfg{};
 };
 
-// Connection pool statistics
+/// \brief Connection pool runtime statistics.
 struct PoolStats {
     size_t active_connections = 0;
     size_t pending_messages = 0;
@@ -69,66 +75,102 @@ struct PoolStats {
     uint8_t circuit_state = 0;
 };
 
-// -----------------------------------------------------------------------------
-// ConnectionPool - manages multiple connections to a remote node
-// -----------------------------------------------------------------------------
-// Owns a collection of PlainConnection/TlsConnection instances for load-
-// balanced communication with a single remote endpoint. Handles reconnection
-// with exponential backoff and pending message queuing.
-// -----------------------------------------------------------------------------
+/// \brief Manages multiple connections to a single remote node.
+///
+/// Owns a collection of \c PlainConnection / \c TlsConnection instances
+/// for load-balanced communication with a single remote endpoint.
+/// Handles reconnection with exponential backoff, pending message
+/// queuing, outbound admission control via \c EndpointOutboundQueue,
+/// and circuit breaking via \c EndpointCircuitBreaker.
+///
+/// \note Thread safety: \c try_send(), \c send(), \c stats(), and
+///       \c is_connected() may be called from any thread. Other methods
+///       are called from the event loop thread.
 class ConnectionPool {
   public:
+    /// \brief Construct a connection pool for a remote endpoint.
+    ///
+    /// \param[in] remote_endpoint Target node endpoint.
+    /// \param[in] config Pool configuration.
+    /// \param[in] loop Owning event loop.
     ConnectionPool(EndPoint remote_endpoint, const PoolConfig& config,
                    EventLoop* loop);
     ~ConnectionPool();
 
-    // Non-copyable
+    /// \name Non-copyable
+    /// @{
     ConnectionPool(const ConnectionPool&) = delete;
     ConnectionPool& operator=(const ConnectionPool&) = delete;
+    /// @}
 
-    // Send message to specific actor on remote node (uses pool)
+    /// \brief Send a message to a specific actor on the remote node.
+    ///
+    /// \param[in] target Destination actor address.
+    /// \param[in] encoded Serialized message payload.
     void send(const ActorAddress& target, const StreamBuffer& encoded);
 
-    // Try to send message — returns TransportSendResult describing whether
-    // the frame was queued or why it was rejected.
+    /// \brief Try to send a message — returns whether it was queued or
+    /// rejected.
+    ///
+    /// \param[in] target Destination actor address.
+    /// \param[in] encoded Serialized message payload.
+    /// \return Result describing whether the frame was queued or why it
+    ///         was rejected.
     TransportSendResult
     try_send(const ActorAddress& target, const StreamBuffer& encoded);
 
-    // Send raw bytes to the remote node (uses default target)
+    /// \brief Send raw bytes to the remote node (no actor routing).
+    ///
+    /// \param[in] data Raw bytes to send.
     void send(const StreamBuffer& data);
 
-    // Close all connections and clear pending
+    /// \brief Close all connections and clear pending messages.
     void close();
 
-    // Check if pool has active connections
+    /// \brief Check whether the pool has any active connections.
+    ///
+    /// \return \c true if at least one connection is established.
     bool is_connected() const;
 
-    // Get pool statistics
+    /// \brief Collect pool statistics for observability.
+    ///
+    /// \return Snapshot of current pool state.
     PoolStats stats() const;
 
-    // Graceful shutdown: drain pending messages
-    // Returns number of messages that could not be sent
+    /// \brief Graceful shutdown: drain pending messages.
+    ///
+    /// Waits for in-flight messages to complete.
+    /// \return Number of messages that could not be sent.
     size_t drain();
 
-    // Immediate shutdown
+    /// \brief Immediate shutdown without draining.
     void abort();
 
-    // Get remote node ID
+    /// \brief Return the remote node endpoint.
+    ///
+    /// \return Target endpoint for this pool.
     EndPoint remote_endpoint() const {
         return remote_endpoint_;
     }
 
-    // Set handler for RPC responses (called when RpcResponse frame is received)
+    /// \brief Handler for incoming RPC response frames.
+    ///
+    /// \param[in] frame The RPC response frame.
     using rpc_response_handler = std::function<void(const RpcResponseFrame&)>;
     void set_rpc_handler(rpc_response_handler handler);
 
-    // Set handler for spawn responses (called when SpawnResponse frame is
-    // received)
+    /// \brief Handler for incoming spawn response frames.
+    ///
+    /// \param[in] message_id Correlation message ID.
+    /// \param[in] response Spawn response.
     using spawn_response_handler =
         std::function<void(uint64_t message_id, const SpawnResponse&)>;
     void set_spawn_handler(spawn_response_handler handler);
 
-    // Set handler for actor messages (called for non-RPC, non-spawn frames)
+    /// \brief Handler for incoming actor messages (non-RPC, non-spawn
+    /// frames).
+    ///
+    /// \param[in] frame The wire frame.
     using actor_message_handler = std::function<void(const WireFrame& frame)>;
 
     void set_actor_message_handler(actor_message_handler handler) {
@@ -136,35 +178,47 @@ class ConnectionPool {
         actor_message_handler_ = std::move(handler);
     }
 
-    // Called by TcpTransport when connection becomes ready
+    /// \brief Called by \c TcpTransport when a connection becomes ready.
+    ///
+    /// \param[in] conn The newly-ready connection.
     void on_connection_ready(ConnectionPtr conn);
 
-    // Called by TcpTransport when connection has error
+    /// \brief Called by \c TcpTransport when a connection errors.
+    ///
+    /// \param[in] conn The failed connection.
+    /// \param[in] err Error details.
     void on_connection_error(ConnectionPtr conn, const error& err);
 
-    // Handle incoming frame (called by connection's frame handler).
+    /// \brief Handle an incoming frame from a connection.
+    ///
+    /// \param[in] frame_data Serialized wire frame payload.
     void on_frame_received(StreamBuffer frame_data);
 
-    // Add an externally-created connection to the pool
+    /// \brief Add an externally-created connection to the pool.
+    ///
+    /// \param[in] conn The connection to add.
     void add_connection(ConnectionPtr conn);
 
-    // Proactively ensure the pool structure exists for an endpoint.
-    // The actual connection is established asynchronously on first use.
-    // This just ensures the pool is ready so the first send() doesn't pay
-    // discovery cost.
+    /// \brief Proactively ensure the pool structure exists for an endpoint.
+    ///
+    /// The actual connection is established asynchronously on first use;
+    /// this just ensures the pool is ready so the first \c send() does not
+    /// pay discovery cost.
+    /// \param[in] ep Endpoint to prewarm for.
+    /// \param[in] acceptors Acceptor advertisements for this endpoint.
     void prewarm_pool(EndPoint ep, const std::vector<AcceptorInfo>& acceptors);
 
-    // Getter for outbound queue (read-only access)
+    /// \brief Read-only access to the outbound queue.
     const EndpointOutboundQueue& outbound_queue() const {
         return outbound_queue_;
     }
 
-    // Getter for circuit breaker (mutable access for reset)
+    /// \brief Mutable access to the circuit breaker (for reset).
     EndpointCircuitBreaker& circuit_breaker() {
         return circuit_breaker_;
     }
 
-    // Getter for circuit breaker (read-only access)
+    /// \brief Read-only access to the circuit breaker.
     const EndpointCircuitBreaker& circuit_breaker() const {
         return circuit_breaker_;
     }
@@ -178,22 +232,17 @@ class ConnectionPool {
     }
 
   private:
-    // Get connection via round-robin
     ConnectionPtr get_connection();
 
     /// \brief Pack the remote endpoint into an ActorId for metric event
     /// transport.
     ///
-    /// For IPv4: packs (addr << 16) | port_nw into the ActorId value.
+    /// For IPv4: packs \c (addr << 16) | port_nw into the ActorId value.
     /// For IPv6: uses a hash of the address combined with the port.
-    ///
     /// \return ActorId encoding the endpoint identity.
     [[nodiscard]] ActorId pack_endpoint_for_metrics() const;
 
-    // Schedule reconnect with backoff
     void schedule_reconnect();
-
-    // Flush pending messages
     void flush_pending();
 
     EndPoint remote_endpoint_;
@@ -215,10 +264,7 @@ class ConnectionPool {
     spawn_response_handler spawn_handler_;
     actor_message_handler actor_message_handler_;
 
-    // Acceptor info for future connection establishment (set via prewarm_pool).
     std::vector<AcceptorInfo> acceptors_;
-
-    // Metrics ring buffer (optional, set via set_metrics_ring_buffer).
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_ = nullptr;
 };
 

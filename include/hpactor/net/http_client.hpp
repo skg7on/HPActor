@@ -29,43 +29,88 @@ namespace net {
 
 class EventLoop;
 
-// ---------------------------------------------------------------------------
-// HttpClient — HTTP egress for actor-to-external communication
-// ---------------------------------------------------------------------------
+/// \brief HTTP egress client for actor-to-external communication.
+///
+/// Sends async HTTP requests and returns an \c RpcFuture<StreamBuffer> for
+/// the response body. Convenience methods wrap the common HTTP verbs.
+///
+/// \note This is a forward-looking stub — the event loop pointer is stored
+///       but not yet wired to actual HTTP connection management.
 class HttpClient {
   public:
+    /// \brief Construct an HTTP client.
+    ///
+    /// \param[in] loop Event loop for async I/O.
     explicit HttpClient(EventLoop* loop);
     ~HttpClient();
 
+    /// \name Non-copyable
+    /// @{
     HttpClient(const HttpClient&) = delete;
     HttpClient& operator=(const HttpClient&) = delete;
+    /// @}
 
-    // Core: async HTTP request with future response
-    RpcFuture<StreamBuffer> request(HttpMethod method,
-                                     const std::string& url,
-                                     std::vector<HttpHeader> headers = {},
-                                     StreamBuffer body = {});
+    /// \brief Send an async HTTP request.
+    ///
+    /// \param[in] method HTTP method.
+    /// \param[in] url Target URL (scheme + host + path).
+    /// \param[in] headers Optional request headers.
+    /// \param[in] body Optional request body.
+    /// \return Future that resolves to the response body.
+    RpcFuture<StreamBuffer>
+    request(HttpMethod method, const std::string& url,
+            std::vector<HttpHeader> headers = {}, StreamBuffer body = {});
 
-    // Convenience methods
-    RpcFuture<StreamBuffer> get(const std::string& url,
-                                 std::vector<HttpHeader> headers = {});
-    RpcFuture<StreamBuffer> post(const std::string& url,
-                                  StreamBuffer body,
-                                  std::vector<HttpHeader> headers = {});
-    RpcFuture<StreamBuffer> put(const std::string& url,
-                                 StreamBuffer body,
-                                 std::vector<HttpHeader> headers = {});
-    RpcFuture<StreamBuffer> del(const std::string& url,
+    /// \brief Send an HTTP GET request.
+    ///
+    /// \param[in] url Target URL.
+    /// \param[in] headers Optional request headers.
+    /// \return Future that resolves to the response body.
+    RpcFuture<StreamBuffer>
+    get(const std::string& url, std::vector<HttpHeader> headers = {});
+
+    /// \brief Send an HTTP POST request.
+    ///
+    /// \param[in] url Target URL.
+    /// \param[in] body Request body.
+    /// \param[in] headers Optional request headers.
+    /// \return Future that resolves to the response body.
+    RpcFuture<StreamBuffer> post(const std::string& url, StreamBuffer body,
                                  std::vector<HttpHeader> headers = {});
 
-    // Cancel all in-flight requests
+    /// \brief Send an HTTP PUT request.
+    ///
+    /// \param[in] url Target URL.
+    /// \param[in] body Request body.
+    /// \param[in] headers Optional request headers.
+    /// \return Future that resolves to the response body.
+    RpcFuture<StreamBuffer> put(const std::string& url, StreamBuffer body,
+                                std::vector<HttpHeader> headers = {});
+
+    /// \brief Send an HTTP DELETE request.
+    ///
+    /// \param[in] url Target URL.
+    /// \param[in] headers Optional request headers.
+    /// \return Future that resolves to the response body.
+    RpcFuture<StreamBuffer>
+    del(const std::string& url, std::vector<HttpHeader> headers = {});
+
+    /// \brief Cancel all in-flight requests.
     void abort();
 
-    // Configuration
+    /// \brief Set the default request timeout.
+    ///
+    /// \param[in] timeout Timeout duration (default 5000 ms).
     void set_default_timeout(std::chrono::milliseconds timeout) {
         default_timeout_ = timeout;
     }
-    void set_max_retries(int retries) { max_retries_ = retries; }
+
+    /// \brief Set the maximum number of retries for failed requests.
+    ///
+    /// \param[in] retries Maximum retry count (default 3).
+    void set_max_retries(int retries) {
+        max_retries_ = retries;
+    }
 
   private:
     [[maybe_unused]] EventLoop* loop_ = nullptr;

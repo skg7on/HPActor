@@ -30,130 +30,218 @@ namespace net {
 
 class ProactorDispatcher;
 
-// -----------------------------------------------------------------------------
-// EventLoop - async I/O backend wrapper
-// -----------------------------------------------------------------------------
-// Provides a unified interface over platform-specific async I/O backends:
-//   - io_uring on Linux (preferred), epoll fallback
-//   - libdispatch (GCD) on macOS (preferred), kqueue fallback
-//
-// Usage:
-//   EventLoop loop;  // Creates backend but doesn't start
-//   loop.run();       // Explicitly start processing
-//   // ... event loop runs ...
-//   loop.stop();      // Stop when done
-// -----------------------------------------------------------------------------
+/// \brief Unified async I/O event loop over platform-specific backends.
+///
+/// Provides a common interface over these platform-specific async I/O
+/// backends:
+/// - io_uring on Linux (preferred), epoll fallback
+/// - libdispatch (GCD) on macOS (preferred), kqueue fallback
+///
+/// Manages file descriptor registration, read/write handlers, timer
+/// scheduling, and completion dispatch. Must be explicitly started via
+/// \c run() after construction.
+///
+/// Usage:
+/// \code{.cpp}
+///   EventLoop loop;  // Creates backend but does not start
+///   loop.run();       // Explicitly start processing
+///   // ... event loop runs ...
+///   loop.stop();      // Stop when done
+/// \endcode
+///
+/// \note Thread safety: All public methods must be called from the event
+///       loop thread. The backend pointer is safe to access from any
+///       thread for async I/O submission only.
 class EventLoop {
   public:
     EventLoop();
     ~EventLoop();
 
-    // Non-copyable, non-movable
+    /// \name Non-copyable, non-movable
+    /// @{
     EventLoop(const EventLoop&) = delete;
     EventLoop& operator=(const EventLoop&) = delete;
     EventLoop(EventLoop&&) = delete;
     EventLoop& operator=(EventLoop&&) = delete;
+    /// @}
 
-    // Start the backend and begin processing events
-    // Call this explicitly after construction
+    /// \brief Start the backend and begin processing events.
+    ///
+    /// Must be called explicitly after construction.
+    /// \return \c true on success.
     bool run();
 
-    // Stop the backend
+    /// \brief Stop the backend and halt event processing.
     void stop();
 
-    // Check if the backend is running
+    /// \brief Check whether the backend is running.
+    ///
+    /// \return \c true if \c run() has been called and \c stop() has not.
     bool is_running() const {
         return running_.load();
     }
 
-    // Get the backend name for debugging
+    /// \brief Return the backend name for diagnostics.
+    ///
+    /// \return Platform-specific backend name (e.g., \c "iouring",
+    ///         \c "epoll", \c "kqueue", \c "gcd").
     const char* backend_name() const;
 
-    // File descriptor registration
+    // ── File descriptor registration ───────────────────────────────────
+
+    /// \brief I/O event interest flags for file descriptor registration.
     enum class Event : uint32_t {
-        Read = 1,
-        Write = 2,
-        EdgeTriggered = 4,
+        Read = 1,          ///< Interested in readability.
+        Write = 2,         ///< Interested in writability.
+        EdgeTriggered = 4, ///< Use edge-triggered notification.
     };
 
-    // Add or update a file descriptor interest
+    /// \brief Register a file descriptor with the given interest set.
+    ///
+    /// \param[in] fd File descriptor to monitor.
+    /// \param[in] events Bitmask of \c Event flags.
+    /// \return \c true on success.
     bool add_fd(int fd, Event events);
 
-    // Update an existing fd registration
+    /// \brief Update the interest set for a previously registered fd.
+    ///
+    /// \param[in] fd File descriptor to update.
+    /// \param[in] events New bitmask of \c Event flags.
+    /// \return \c true on success.
     bool update_fd(int fd, Event events);
 
-    // Remove an fd registration
+    /// \brief Remove a file descriptor from the interest set.
+    ///
+    /// \param[in] fd File descriptor to deregister.
+    /// \return \c true on success.
     bool remove_fd(int fd);
 
-    // Read handler callback type (re-exported from async_io_fwd.hpp)
+    // ── Read/write handler management ──────────────────────────────────
+
+    /// \brief Read handler callback type (re-exported from
+    /// \c async_io_fwd.hpp).
     using read_callback = net::read_callback;
 
-    // Set a read handler for an FD. When data arrives, it's delivered to this
-    // callback. The EventLoop will automatically issue async_recv for the FD
-    // when it becomes readable.
+    /// \brief Register a read handler for a file descriptor.
+    ///
+    /// When data arrives, it is delivered to this callback. The
+    /// \c EventLoop will automatically issue \c async_recv for the fd
+    /// when it becomes readable.
+    /// \param[in] fd File descriptor to watch.
+    /// \param[in] handler Callback invoked on readability.
     void set_read_handler(int fd, read_callback handler);
 
-    // Remove read handler for an FD
+    /// \brief Remove the read handler for a file descriptor.
+    ///
+    /// \param[in] fd File descriptor whose handler should be removed.
     void clear_read_handler(int fd);
 
-    // Returns true if the backend supports calling read handlers directly
-    // from wait(). Reactor backends return true, proactor return false.
+    /// \brief Query whether the backend supports read handler dispatch
+    /// from \c wait().
+    ///
+    /// \return \c true for reactor backends (epoll, kqueue),
+    ///         \c false for proactor backends (io_uring, GCD).
     bool supports_read_handler() const;
 
-    // Set a write handler for an FD. When the fd becomes writable, the
-    // callback is invoked. Used for non-blocking connect completion.
+    /// \brief Register a write handler for a file descriptor.
+    ///
+    /// When the fd becomes writable, the callback is invoked. Used for
+    /// non-blocking connect completion.
+    /// \param[in] fd File descriptor to watch for writability.
+    /// \param[in] handler Callback invoked on writability.
     void set_write_handler(int fd, write_callback handler);
 
-    // Remove write handler for an FD
+    /// \brief Remove the write handler for a file descriptor.
+    ///
+    /// \param[in] fd File descriptor whose handler should be removed.
     void clear_write_handler(int fd);
 
-    // Returns true if the backend supports write handler dispatch
+    /// \brief Query whether the backend supports write handler dispatch.
+    ///
+    /// \return \c true for reactor backends, \c false for proactor
+    ///         backends.
     bool supports_write_handler() const;
 
-    // Wait for events (blocking with timeout)
-    // Returns number of events triggered, 0 on timeout, -1 on error
+    // ── Event waiting ──────────────────────────────────────────────────
+
+    /// \brief Wait for events (blocking with timeout).
+    ///
+    /// \param[in] timeout_ms Maximum wait time in milliseconds.
+    /// \return Number of events triggered, 0 on timeout, -1 on error.
     int wait(int timeout_ms);
 
-    // Get triggered events for an fd
+    /// \brief Check whether a specific event was triggered for an fd.
+    ///
+    /// \param[in] fd File descriptor to check.
+    /// \param[in] event Event flag to test.
+    /// \return \c true if the event occurred.
     bool has_event(int fd, Event event) const;
 
-    // Timer callback type
+    // ── Timer management ───────────────────────────────────────────────
+
+    /// \brief Timer expiry callback.
     using timer_callback = std::function<void()>;
 
-    // Schedule a one-shot timer to fire after delay_ms milliseconds
-    // Returns a timer handle that can be used to cancel the timer
+    /// \brief Schedule a one-shot timer.
+    ///
+    /// \param[in] callback Callback invoked on expiry.
+    /// \param[in] delay_ms Delay in milliseconds.
+    /// \return Timer handle for cancellation.
     uint64_t run_after(timer_callback callback, int delay_ms);
 
-    // Schedule a repeating timer to fire every interval_ms milliseconds
-    // Returns a timer handle that can be used to cancel the timer
+    /// \brief Schedule a repeating timer.
+    ///
+    /// \param[in] callback Callback invoked on each expiry.
+    /// \param[in] interval_ms Interval in milliseconds.
+    /// \return Timer handle for cancellation.
     uint64_t run_every(timer_callback callback, int interval_ms);
 
-    // Cancel a scheduled timer
+    /// \brief Cancel a scheduled timer.
+    ///
+    /// \param[in] timer_handle Timer handle from \c run_after() or
+    ///            \c run_every().
     void cancel_timer(uint64_t timer_handle);
 
-    // Process completions from the backend (called by wait loop)
+    // ── Completion dispatch ────────────────────────────────────────────
+
+    /// \brief Process completions from the backend.
+    ///
+    /// Called by the wait loop after \c wait() returns a positive count.
     void process_completions();
 
-    // Enqueue a completion to be delivered to an actor
-    // Called by proactor backend via its deliver_completion
+    /// \brief Enqueue a completion for delivery to an actor.
+    ///
+    /// Called by proactor backends via \c deliver_completion.
+    /// \param[in] completion The completion record to deliver.
     void enqueue_completion(OpCompletion completion);
 
-    // Set the ActorSystem for delivering completions
+    /// \brief Set the ActorSystem for delivering completions to actors.
+    ///
+    /// \param[in] actor_system The owning \c ActorSystem.
     void set_actor_system(ActorSystem* actor_system);
 
-    // Set callback for test verification (test-only API)
+    // ── Test support ───────────────────────────────────────────────────
+
+    /// \brief Completion capture callback (test-only API).
     using completion_callback = std::function<void(OpCompletion)>;
+
+    /// \brief Set a callback to capture completions for test verification.
+    ///
+    /// When set, completions go to this callback instead of the
+    /// \c ActorSystem.
+    /// \param[in] cb Callback for test verification.
     void set_completion_callback(completion_callback cb) {
         completion_callback_ = std::move(cb);
     }
 
-    // Get the underlying backend for direct async operations
+    /// \brief Access the underlying backend for direct async operations.
+    ///
+    /// \return Pointer to the platform-specific \c IReactorBackend.
     IReactorBackend* backend() {
         return backend_.get();
     }
 
   private:
-    // Deliver a timer completion to the stored callback
     void deliver_timer_completion(OpCompletion completion);
 
     std::unique_ptr<IReactorBackend> backend_;
@@ -161,23 +249,12 @@ class EventLoop {
     std::atomic<bool> running_{false};
     const char* backend_name_ = "unknown";
 
-    // Map timer handles to callbacks (for bridging backend completions to
-    // callbacks)
     std::unordered_map<uint64_t, timer_callback> timer_callbacks_;
     std::atomic<uint64_t> next_timer_handle_{1};
-
-    // Map backend timer handles to our timer handles
     std::unordered_map<uint64_t, uint64_t> backend_handle_to_handle_;
-
-    // Set of timer handles that are repeating (run_every)
     std::unordered_set<uint64_t> repeating_timers_;
-
-    // For has_event tracking
     std::unordered_map<int, Event> fd_events_;
-
-    // Optional callback for test verification (disabled in production)
     completion_callback completion_callback_;
-
     ActorSystem* actor_system_ = nullptr;
 };
 
