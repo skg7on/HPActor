@@ -78,7 +78,8 @@ result<void> FileDeliveryStore::mark_outbox_complete(MessageId id) {
     std::string tmp = outbox_path() + ".tmp";
     std::ofstream ofs(tmp);
     if (!ifs || !ofs) {
-        return result<void>::make();
+        return result<void>::make(error(
+            static_cast<uint32_t>(FailureReason::PassivationSnapshotFailed)));
     }
     std::string line;
     while (std::getline(ifs, line)) {
