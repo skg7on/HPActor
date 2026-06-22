@@ -26,23 +26,32 @@ bool OutboundTracker::track(MessageId msg_id, ActorAddress target,
                             StreamBuffer payload,
                             MonotonicClock::time_point deadline) {
     std::lock_guard<std::mutex> lock(mutex_);
-    size_t dest_count = 0;
-    for (const auto& [id, entry] : entries_) {
-        (void)id;
-        if (entry.target.node_id() == target.node_id())
-            ++dest_count;
-    }
+    auto dest_it = per_dest_count_.find(target.node_id());
+    size_t dest_count = (dest_it != per_dest_count_.end()) ? dest_it->second : 0;
     if (dest_count >= kMaxPendingPerDestination)
         return false;
-    auto now = MonotonicClock::now();
-    entries_[msg_id.value()] = OutboundTrackerEntry{
-        msg_id, target, std::move(payload), 0, now, deadline};
+    per_dest_count_[target.node_id()] = dest_count + 1;
+    entries_[msg_id.value()] =
+        OutboundTrackerEntry{msg_id,
+                             target,
+                             std::move(payload),
+                             0,
+                             MonotonicClock::time_point::max(),
+                             deadline};
     return true;
 }
 
 void OutboundTracker::on_ack(MessageId msg_id) {
     std::lock_guard<std::mutex> lock(mutex_);
-    entries_.erase(msg_id.value());
+    auto it = entries_.find(msg_id.value());
+    if (it == entries_.end())
+        return;
+    auto dest_it = per_dest_count_.find(it->second.target.node_id());
+    if (dest_it != per_dest_count_.end() && dest_it->second > 0) {
+        if (--dest_it->second == 0)
+            per_dest_count_.erase(dest_it);
+    }
+    entries_.erase(it);
 }
 
 void OutboundTracker::on_nack(MessageId msg_id, Duration retry_after) {
@@ -51,6 +60,11 @@ void OutboundTracker::on_nack(MessageId msg_id, Duration retry_after) {
     if (it == entries_.end())
         return;
     if (!policy_.should_retry(it->second.retry_count)) {
+        auto dest_it = per_dest_count_.find(it->second.target.node_id());
+        if (dest_it != per_dest_count_.end() && dest_it->second > 0) {
+            if (--dest_it->second == 0)
+                per_dest_count_.erase(dest_it);
+        }
         expired_.push_back(std::move(it->second));
         entries_.erase(it);
         return;
@@ -61,21 +75,31 @@ void OutboundTracker::on_nack(MessageId msg_id, Duration retry_after) {
 
 void OutboundTracker::tick(MonotonicClock::time_point now) {
     std::lock_guard<std::mutex> lock(mutex_);
+    auto decr_dest = [this](const OutboundTrackerEntry& entry) {
+        auto dit = per_dest_count_.find(entry.target.node_id());
+        if (dit != per_dest_count_.end() && dit->second > 0) {
+            if (--dit->second == 0)
+                per_dest_count_.erase(dit);
+        }
+    };
+
     for (auto it = entries_.begin(); it != entries_.end();) {
         auto& entry = it->second;
         if (entry.deadline != MonotonicClock::time_point::max() &&
             now >= entry.deadline) {
+            decr_dest(entry);
             expired_.push_back(std::move(entry));
             it = entries_.erase(it);
             continue;
         }
         if (now >= entry.next_retry_at &&
-            entry.next_retry_at != MonotonicClock::time_point::min()) {
+            entry.next_retry_at != MonotonicClock::time_point::max()) {
             if (policy_.should_retry(entry.retry_count)) {
                 entry.retry_count++;
                 auto backoff = policy_.backoff_for_attempt(entry.retry_count);
                 entry.next_retry_at = now + backoff;
             } else {
+                decr_dest(entry);
                 expired_.push_back(std::move(entry));
                 it = entries_.erase(it);
                 continue;
@@ -95,6 +119,7 @@ void OutboundTracker::fail_pending_for_node(const std::string& node_id) {
             ++it;
         }
     }
+    per_dest_count_.erase(node_id);
 }
 
 size_t OutboundTracker::pending_count() const {

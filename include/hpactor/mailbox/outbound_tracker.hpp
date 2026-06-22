@@ -107,6 +107,7 @@ class OutboundTracker {
   private:
     ReliableRetryPolicy policy_;
     std::unordered_map<uint64_t, OutboundTrackerEntry> entries_;
+    std::unordered_map<std::string, size_t> per_dest_count_;
     std::vector<OutboundTrackerEntry> expired_;
     mutable std::mutex mutex_;
 };
