@@ -286,3 +286,7 @@ endif()
 # ---- alias -----------------------------------------------------------------
 
 add_library(hpactor ALIAS hpactor_lib)
+
+# ---- cluster subsystem (failure model, partitioning, route invalidation) ----
+
+add_subdirectory(cluster)
