@@ -15,6 +15,8 @@ add_library(hpactor_cluster STATIC
     sharding/shard_coordinator.cpp
     singleton/oldest_node_election.cpp
     singleton/singleton_manager.cpp
+    singleton/singleton_manager_actor.cpp
+    sharding/shard_coordinator_actor.cpp
 )
 target_link_libraries(hpactor_cluster PUBLIC hpactor)
 target_include_directories(hpactor_cluster PUBLIC
