@@ -40,73 +40,142 @@
 
 namespace hpactor::net {
 
-// ── Gossip message types ────────────────────────────────────────
+/// \brief SWIM gossip protocol message types.
 enum class GossipMessageType : uint8_t {
-    Ping = 0x01,
-    Ack = 0x02,
-    PingReq = 0x03,
-    IndirectAck = 0x04,
-    Join = 0x05,
-    SyncRsp = 0x06,
-    Leave = 0x07,
+    Ping = 0x01,        ///< Direct ping probe.
+    Ack = 0x02,         ///< Direct ack response.
+    PingReq = 0x03,     ///< Indirect ping request via a proxy.
+    IndirectAck = 0x04, ///< Indirect ack response via a proxy.
+    Join = 0x05,        ///< Join request to a seed node.
+    SyncRsp = 0x06,     ///< Full membership sync response.
+    Leave = 0x07,       ///< Graceful leave announcement.
 };
 
+/// \brief Piggyback entry types for membership dissemination.
 enum class PiggybackType : uint8_t {
-    Alive = 0x01,
-    Suspicious = 0x02,
-    Dead = 0x03,
-    Metadata = 0x04,
+    Alive = 0x01,      ///< Member is alive (or suspected resolved).
+    Suspicious = 0x02, ///< Member is suspected of failure.
+    Dead = 0x03,       ///< Member is confirmed dead.
+    Metadata = 0x04,   ///< Member metadata update (actor types, load).
 };
 
+/// \brief A piggyback entry carried in gossip messages.
+///
+/// Attached to Ping/Ack messages to disseminate membership state
+/// changes without additional round-trips.
 struct PiggybackEntry {
+    /// \brief Type of piggyback entry.
     PiggybackType type;
+    /// \brief Member identity.
     NodeIdentity identity;
+    /// \brief Incarnation number (higher wins).
     uint64_t incarnation;
-    // Metadata-only fields:
+    /// \brief Actor types this member hosts (\c Metadata only).
     std::vector<std::string> actor_types;
+    /// \brief Current load metric (\c Metadata only).
     uint32_t load = 0;
 };
 
-// ── Configuration ───────────────────────────────────────────────
+/// \brief SWIM gossip protocol configuration.
 struct GossipConfig {
+    /// \brief UDP port for gossip messages (default 5354).
     uint16_t gossip_port = 5354;
+    /// \brief Interval between protocol rounds (default 1 s).
     std::chrono::milliseconds protocol_period{1000};
+    /// \brief Timeout for direct ping responses (default 200 ms).
     std::chrono::milliseconds ping_timeout{200};
+    /// \brief Suspicion timeout before declaring dead (default 3 s).
     std::chrono::milliseconds suspicion_timeout{3000};
+    /// \brief Time before purging dead member tombstones (default 30 s).
     std::chrono::milliseconds dead_timeout{30000};
+    /// \brief Number of peers to ping per round (default 3).
     uint32_t fanout = 3;
+    /// \brief Number of indirect probes to request (default 3).
     uint32_t indirect_probes = 3;
+    /// \brief Seed endpoints for initial cluster join.
     std::vector<EndPoint> seeds;
-    // Only endpoint, host, tcp_port, uds_path, acceptors, actor_types are
-    // used as config. incarnation, status, last_seen are set at startup.
+    /// \brief Local member state.
+    ///
+    /// Only \c endpoint, \c host, \c tcp_port, \c uds_path,
+    /// \c acceptors, and \c actor_types are config. \c incarnation,
+    /// \c status, and \c last_seen are set at startup.
     Member local_state;
 };
 
-constexpr uint32_t GossipMagic = 0x48504743; // "HPGC"
+/// \brief Magic number for gossip wire protocol ("HPGC").
+constexpr uint32_t GossipMagic = 0x48504743;
+/// \brief Wire protocol version.
 constexpr uint8_t GossipVersion = 0x01;
+/// \brief Maximum UDP gossip message size (1400 bytes to avoid
+/// fragmentation).
 constexpr size_t kGossipMaxMsgSize = 1400;
 
+/// \brief Tracks an in-flight ping to a peer.
 struct PendingPing {
+    /// \brief When the direct ping expires.
     std::chrono::steady_clock::time_point expires_at;
+    /// \brief Whether an indirect ping was also requested.
     bool indirect_requested = false;
+    /// \brief When the indirect ping expires.
+    ///
+    /// Indirect timeout = direct timeout + ping_timeout (same timeout).
     std::chrono::steady_clock::time_point indirect_expires_at;
-    // Note: indirect timeout = direct timeout + ping_timeout (same timeout).
 };
 
-// ── GossipMembership ────────────────────────────────────────────
+/// \brief SWIM gossip-based cluster membership implementation.
+///
+/// Implements \c IServiceDiscovery using the SWIM (Scalable Weakly-consistent
+/// Infection-style process group Membership) protocol over UDP. Provides
+/// decentralized failure detection with configurable suspicion/dead
+/// timeouts, incarnation-based conflict resolution, piggyback
+/// dissemination, and tombstone purging.
+///
+/// \note Thread safety: Member access is protected by a shared mutex.
+///       \c discover_all() and \c discover() take a read lock.
+///       Modifications take a write lock.
 class GossipMembership : public IServiceDiscovery {
   public:
+    /// \brief Construct with an event loop (creates a \c RealUdpTransport).
+    ///
+    /// \param[in] cfg Gossip configuration.
+    /// \param[in] loop Event loop for async UDP I/O.
     GossipMembership(const GossipConfig& cfg, EventLoop* loop);
+
+    /// \brief Construct with a custom UDP transport (for testing).
+    ///
+    /// \param[in] cfg Gossip configuration.
+    /// \param[in] transport Custom transport (e.g., \c FakeUdpTransport).
     GossipMembership(const GossipConfig& cfg,
                      std::unique_ptr<IUdpTransport> transport);
     ~GossipMembership() override;
 
+    /// \brief Start the protocol timer and join the cluster.
     void start() override;
+
+    /// \brief Stop the protocol timer and leave the cluster.
     void stop() override;
+
+    /// \brief Return a snapshot of all known members.
+    ///
+    /// \return Copy of the current member list (read-locked).
     std::vector<Member> discover_all() const override;
-    const Member* discover(EndPoint) const override;
-    void announce(Member) override;
-    void on_member_change(MemberChangeCallback) override;
+
+    /// \brief Look up a member by endpoint.
+    ///
+    /// \param[in] ep Endpoint to search for.
+    /// \return Pointer to the member, or \c nullptr if not found.
+    const Member* discover(EndPoint ep) const override;
+
+    /// \brief Announce this node's presence (bumps incarnation).
+    ///
+    /// \param[in] m Local member state.
+    void announce(Member m) override;
+
+    /// \brief Register a membership change callback.
+    ///
+    /// \param[in] cb Callback invoked on join/leave.
+    void on_member_change(MemberChangeCallback cb) override;
+
     std::string backend_name() const override {
         return "gossip";
     }

@@ -24,29 +24,62 @@
 
 namespace hpactor::net {
 
-// IUdpTransport — abstract UDP I/O
-
+/// \brief Abstract UDP transport interface.
+///
+/// Decouples gossip membership from the concrete UDP I/O implementation,
+/// enabling test doubles and platform-specific transports.
+///
+/// \note Thread safety: Called from the event loop thread.
 class IUdpTransport {
   public:
     virtual ~IUdpTransport() = default;
 
+    /// \brief Bind to a local UDP port.
+    ///
+    /// \param[in] port Port number to bind.
+    /// \return \c true on success.
     virtual bool bind(uint16_t port) = 0;
+
+    /// \brief Send a datagram.
+    ///
+    /// \param[in] data Payload to send.
+    /// \param[in] dest Destination endpoint.
     virtual void send(const StreamBuffer& data, const EndPoint& dest) = 0;
+
+    /// \brief Close the socket and release resources.
     virtual void close() = 0;
 
+    /// \brief Callback for incoming datagrams.
+    ///
+    /// \param[in] data Received payload.
+    /// \param[in] host Source hostname/IP.
+    /// \param[in] port Source port.
     using ReceiveCallback =
         std::function<void(const StreamBuffer&, const std::string&, uint16_t)>;
-    virtual void set_receive_callback(ReceiveCallback) = 0;
+
+    /// \brief Register a callback for incoming datagrams.
+    ///
+    /// \param[in] cb Callback invoked on each received datagram.
+    /// \note Only one callback is stored; subsequent calls replace the
+    ///       previous registration.
+    virtual void set_receive_callback(ReceiveCallback cb) = 0;
 };
 
-// FakeUdpTransport — test double
-
+/// \brief Test double for \c IUdpTransport.
+///
+/// Records sent packets in \c sent_packets and allows injection of
+/// received packets via \c inject_packet(). Used in gossip membership
+/// unit tests.
 class FakeUdpTransport : public IUdpTransport {
   public:
+    /// \brief A recorded sent datagram.
     struct SentPacket {
         StreamBuffer data;
         EndPoint dest;
     };
+
+    /// \brief History of all sent packets (cleared on \c close() or
+    ///        \c clear_sent()).
     std::vector<SentPacket> sent_packets;
 
     bool bind(uint16_t /*port*/) override {
@@ -62,12 +95,20 @@ class FakeUdpTransport : public IUdpTransport {
         receive_cb_ = std::move(cb);
     }
 
+    /// \brief Simulate an incoming datagram.
+    ///
+    /// Invokes the registered \c ReceiveCallback synchronously.
+    /// \param[in] data Payload.
+    /// \param[in] src_host Source hostname.
+    /// \param[in] src_port Source port.
     void inject_packet(const StreamBuffer& data, const std::string& src_host,
                        uint16_t src_port) {
         if (receive_cb_) {
             receive_cb_(data, src_host, src_port);
         }
     }
+
+    /// \brief Clear the sent packet history.
     void clear_sent() {
         sent_packets.clear();
     }
@@ -76,10 +117,17 @@ class FakeUdpTransport : public IUdpTransport {
     ReceiveCallback receive_cb_;
 };
 
-// RealUdpTransport — production UDP I/O
-
+/// \brief Production UDP transport using kernel sockets.
+///
+/// Binds a UDP socket and performs async I/O via the provided
+/// \c EventLoop.
+///
+/// \note Thread safety: Called from the event loop thread.
 class RealUdpTransport : public IUdpTransport {
   public:
+    /// \brief Construct with an event loop for async I/O.
+    ///
+    /// \param[in] loop Owning \c EventLoop (must outlive this transport).
     explicit RealUdpTransport(EventLoop* loop);
     ~RealUdpTransport() override;
 

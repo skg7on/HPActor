@@ -27,101 +27,147 @@ namespace hpactor {
 
 namespace net {
 
-// -----------------------------------------------------------------------------
-// TlsConnection - TLS connection with handshake and encrypted session
-// -----------------------------------------------------------------------------
-// Implements the TLS-like handshake protocol with mutual certificate
-// authentication and RSA key transport for session encryption.
-// -----------------------------------------------------------------------------
-
-// TLS message types for the handshake protocol
+/// \brief TLS handshake protocol message types.
 enum class TlsMessageType : uint8_t {
-    ClientHello = 1,
-    ServerHello = 2,
-    Certificate = 3,
-    CertificateVerify = 4,
-    Finished = 5,
+    ClientHello = 1,       ///< Client initiates handshake with nonce.
+    ServerHello = 2,       ///< Server responds with nonce + encrypted PMS.
+    Certificate = 3,       ///< Certificate exchange.
+    CertificateVerify = 4, ///< Proof of private key possession.
+    Finished = 5,          ///< Handshake complete confirmation.
 };
 
-// Handshake state machine states
+/// \brief States of the TLS handshake state machine.
 enum class TlsHandshakeState : uint8_t {
-    Idle,
-    WaitingForServerHello,
-    WaitingForCertificate,
-    WaitingForCertificateVerify,
-    WaitingForFinished,
-    HandshakeComplete,
-    Error,
+    Idle,                        ///< Handshake not yet started.
+    WaitingForServerHello,       ///< Client: waiting for ServerHello.
+    WaitingForCertificate,       ///< Waiting for peer certificate.
+    WaitingForCertificateVerify, ///< Waiting for certificate verification.
+    WaitingForFinished,          ///< Waiting for Finished message.
+    HandshakeComplete,           ///< Handshake succeeded.
+    Error,                       ///< Handshake failed.
 };
 
-// Session state (post-handshake)
+/// \brief TLS session state (post-handshake).
 enum class TlsSessionState : uint8_t {
-    Handshake,
-    Encrypted,
-    Error,
+    Handshake, ///< Handshake in progress; data is not yet encrypted.
+    Encrypted, ///< Session key established; data is encrypted.
+    Error,     ///< Session error; connection should be closed.
 };
 
-// Fixed-size nonces
+/// \brief Fixed-size nonce used in the TLS handshake.
 constexpr size_t kNonceSize = 32;
 using Nonce = std::array<uint8_t, kNonceSize>;
 
-// Connection pointer
 class TlsConnection;
 using TlsConnectionPtr = std::shared_ptr<TlsConnection>;
 
+/// \brief TLS connection with handshake and AES-256-CBC encrypted session.
+///
+/// Implements a TLS-like handshake protocol with mutual certificate
+/// authentication and RSA key transport for session encryption.
+/// Inherits from both \c Connection (for I/O) and
+/// \c enable_shared_from_this (for safe callback capture).
+///
+/// \note Thread safety: Called from the event loop thread.
 class TlsConnection : public Connection,
                       public std::enable_shared_from_this<TlsConnection> {
   public:
-    // Create client-side connection
-    static TlsConnectionPtr create_client(EndPoint local_endpoint,
-                                          EndPoint remote_endpoint,
-                                          TlsContext* tls_context, EventLoop* loop);
+    /// \brief Create a client-side TLS connection (initiates handshake).
+    ///
+    /// \param[in] local_endpoint Local address.
+    /// \param[in] remote_endpoint Server address.
+    /// \param[in] tls_context TLS configuration and crypto.
+    /// \param[in] loop Owning event loop.
+    /// \return Shared pointer to the new connection.
+    static TlsConnectionPtr
+    create_client(EndPoint local_endpoint, EndPoint remote_endpoint,
+                  TlsContext* tls_context, EventLoop* loop);
 
-    // Create server-side connection (from accepted socket)
+    /// \brief Create a server-side TLS connection from an accepted socket.
+    ///
+    /// \param[in] fd Accepted client file descriptor.
+    /// \param[in] local_endpoint Server address.
+    /// \param[in] remote_endpoint Client address.
+    /// \param[in] tls_context TLS configuration and crypto.
+    /// \param[in] loop Owning event loop.
+    /// \return Shared pointer to the new connection.
     static TlsConnectionPtr
     create_server(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
                   TlsContext* tls_context, EventLoop* loop);
 
-    // Set file descriptor (for connected client sockets after TCP handshake)
+    /// \brief Set the file descriptor (for connected client sockets after
+    /// TCP handshake).
+    ///
+    /// \param[in] fd Connected socket file descriptor.
     void set_fd(int fd);
 
     ~TlsConnection();
 
-    // Non-copyable
+    /// \name Non-copyable
+    /// @{
     TlsConnection(const TlsConnection&) = delete;
     TlsConnection& operator=(const TlsConnection&) = delete;
+    /// @}
 
-    // Set callbacks
+    /// \brief Set the connection-ready callback.
+    ///
+    /// \param[in] handler Invoked after handshake completes.
     void set_ready_handler(std::function<void(ConnectionPtr)> handler);
+
+    /// \brief Set the frame handler for incoming decrypted frames.
+    ///
+    /// \param[in] handler Invoked for each complete decrypted frame.
     void set_frame_handler(frame_handler handler);
+
+    /// \brief Set the error handler.
+    ///
+    /// \param[in] handler Invoked on handshake or encryption errors.
     void
     set_error_handler(std::function<void(ConnectionPtr, const error&)> handler);
+
+    /// \brief Set the send-completion handler.
+    ///
+    /// \param[in] handler Invoked when an async send completes.
     void set_send_completion_handler(std::function<void(int result)> handler);
 
-    // Complete post-connect setup: registers for Read events and establishes
-    // the read handler. Static to avoid shared_from_this issues.
+    /// \brief Complete post-connect setup.
+    ///
+    /// Registers for Read events and establishes the read handler.
+    /// Static to avoid \c shared_from_this issues with dual
+    /// \c enable_shared_from_this inheritance.
+    /// \param[in] conn The connection to set up.
     static void setup_after_connect(TlsConnectionPtr conn);
 
-    // Initiate client handshake (called after connection established)
+    /// \brief Initiate the client-side TLS handshake.
+    ///
+    /// Called after TCP connection is established. Sends
+    /// \c ClientHello.
     void start_client_handshake();
 
-    // Handle incoming data from socket
+    /// \brief Handle incoming data from the socket.
+    ///
+    /// \note Thread safety: Called from the event loop thread.
     void handle_read() override;
 
-    // Send encrypted frame
+    /// \brief Send an encrypted frame.
+    ///
+    /// \param[in] frame_data Plaintext frame data to encrypt and send.
     void send(const StreamBuffer& frame_data) override;
 
-    // Close connection
+    /// \brief Close the connection.
     void close() override;
 
-    // Handle send completion (called by TcpTransport on async_send completion)
+    /// \brief Handle async send completion.
+    ///
+    /// \param[in] result Byte count or negative errno.
     void handle_send_completion(int result) override;
 
-    // Get session state
+    /// \brief Return the current session state.
+    ///
+    /// \return \c Handshake, \c Encrypted, or \c Error.
     TlsSessionState session_state() const {
         return session_state_;
     }
-
 
   private:
     TlsConnection(int fd, EndPoint local_endpoint, EndPoint remote_endpoint,
@@ -141,76 +187,43 @@ class TlsConnection : public Connection,
     void handle_certificate_verify(const StreamBuffer& data);
     void handle_finished(const StreamBuffer& data);
 
-    // Process buffered data (TLS record parsing and dispatch)
     void process_buffer();
-
-    // Helper: derive session key from pre_master_secret
     void derive_session_keys(const StreamBuffer& pre_master_secret,
                              const Nonce& client_nonce, const Nonce& server_nonce);
-
-    // Helper: encrypt data with session key (AES-256-CBC)
     StreamBuffer encrypt_aes(const StreamBuffer& plaintext);
-
-    // Helper: decrypt data with session key
     StreamBuffer decrypt_aes(const StreamBuffer& ciphertext);
+    StreamBuffer prf_sha256(const StreamBuffer& secret, const char* label,
+                            const StreamBuffer& data);
 
-    // Helper: compute TLS PRF (SHA-256 based)
-    StreamBuffer prf_sha256(const StreamBuffer& secret, const char* label, const StreamBuffer& data);
-
-    // Transition handshake/session state
     void set_handshake_state(TlsHandshakeState new_state);
     void set_session_state(TlsSessionState new_state);
-
-    // Send raw bytes on socket
     void send_raw(const StreamBuffer& data);
-
-    // Flush write buffer (called after async_send completion)
     void flush_write_buffer();
 
     TlsContext* tls_context_ = nullptr;
-
     TlsHandshakeState handshake_state_ = TlsHandshakeState::Idle;
     TlsSessionState session_state_ = TlsSessionState::Handshake;
 
-    // Handshake nonces
     Nonce client_nonce_;
     Nonce server_nonce_;
     StreamBuffer pre_master_secret_;
-
-    // Encrypted pre-master secret for transmission in ServerHello
     StreamBuffer encrypted_pms_;
-
-    // Session keys
     StreamBuffer master_secret_;
-    StreamBuffer session_key_; // AES-256 key
-    StreamBuffer session_iv_;  // AES IV
+    StreamBuffer session_key_;
+    StreamBuffer session_iv_;
 
-    // Read buffer
     adt::StreamBuffer read_buffer_;
-
-    // Write buffer
     adt::StreamBuffer write_buffer_;
-
-    // True while async send is in progress
     bool is_sending_ = false;
-
-    // Handshake message buffer (for Finished verify_data)
     StreamBuffer handshake_messages_;
-
-    // Weak self-reference to avoid shared_from_this issues with dual
-    // enable_shared_from_this inheritance (Connection also inherits from it).
     std::weak_ptr<TlsConnection> weak_self_;
 
-    // Callbacks
     std::function<void(ConnectionPtr)> ready_handler_;
     frame_handler frame_handler_;
     std::function<void(ConnectionPtr, const error&)> error_handler_;
     std::function<void(int result)> send_completion_handler_;
-
-    // Server-side flag
     bool is_server_ = false;
 
-    // Read chunk size
     static constexpr size_t kReadChunkSize = 65536;
 };
 

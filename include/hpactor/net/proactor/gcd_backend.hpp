@@ -50,6 +50,19 @@ namespace net {
 // Forward declaration to avoid circular include
 class EventLoop;
 
+/// \brief macOS Grand Central Dispatch proactor backend.
+///
+/// Uses \c dispatch_source_t for async I/O and \c dispatch_after_f()
+/// for timers. I/O completions are delivered asynchronously via GCD
+/// queues to the \c EventLoop. This is the preferred macOS backend
+/// over kqueue.
+///
+/// Read/write handler methods are no-ops — this backend uses true
+/// async I/O with completions instead of synchronous readiness dispatch.
+///
+/// \note Thread safety: \c deliver_completion() may be called from GCD
+///       dispatch threads; all other methods are called from the event
+///       loop thread.
 class GcdBackend : public IReactorBackend {
   public:
     GcdBackend();
@@ -80,9 +93,9 @@ class GcdBackend : public IReactorBackend {
     void async_accept(int fd, ActorId actor) override;
     void async_connect(int fd, const sockaddr* addr, socklen_t addrlen,
                        ActorId actor) override;
-    void async_sendto(int fd, const iovec* bufs, int buf_count,
-                       const sockaddr* addr, socklen_t addrlen, ActorId actor,
-                       uint32_t op_type) override;
+    void
+    async_sendto(int fd, const iovec* bufs, int buf_count, const sockaddr* addr,
+                 socklen_t addrlen, ActorId actor, uint32_t op_type) override;
     void async_recvfrom(int fd, const iovec* bufs, int buf_count, ActorId actor,
                         uint32_t op_type) override;
 
@@ -95,7 +108,9 @@ class GcdBackend : public IReactorBackend {
         (void)fd;
     }
 
-    bool supports_read_handler() const override { return false; }
+    bool supports_read_handler() const override {
+        return false;
+    }
 
     // Write handler management - no-op (proactor uses async_connect)
     void set_write_handler(int fd, write_callback handler) override {
@@ -106,7 +121,9 @@ class GcdBackend : public IReactorBackend {
         (void)fd;
     }
 
-    bool supports_write_handler() const override { return false; }
+    bool supports_write_handler() const override {
+        return false;
+    }
 
     // Deliver completion to actor (public for trampoline access)
     void deliver_completion(OpCompletion completion);

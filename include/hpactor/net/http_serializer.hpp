@@ -25,13 +25,11 @@
 namespace hpactor {
 namespace net {
 
-// ---------------------------------------------------------------------------
-// HttpSerializer — content negotiation for HTTP ↔ actor messaging
-// ---------------------------------------------------------------------------
-// Bridges between HTTP wire formats (JSON, protobuf, text) and TypedMessage.
-// Determines serialization format based on Content-Type (ingress) and
-// Accept (egress) headers.
-// ---------------------------------------------------------------------------
+/// \brief Content negotiation for HTTP ↔ actor messaging.
+///
+/// Bridges between HTTP wire formats (JSON, protobuf, text) and
+/// \c TypedMessage. Determines serialization format based on
+/// \c Content-Type (ingress) and \c Accept (egress) headers.
 class HttpSerializer {
   public:
     HttpSerializer() = default;

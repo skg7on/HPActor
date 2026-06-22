@@ -34,12 +34,18 @@ class ActorSystem;
 
 namespace net {
 
-// ReactorDispatcher - dispatches reactor (sync I/O) readiness events
-// to the appropriate actor mailbox.
-//
-// In reactor mode, the backend signals "fd is ready for I/O" and this
-// dispatcher performs the synchronous I/O operation and delivers a
-// completion event to the actor's mailbox.
+/// \brief Dispatches reactor (sync I/O) readiness events to actor
+/// mailboxes.
+///
+/// In reactor mode, the backend signals "fd is ready for I/O" and this
+/// dispatcher performs the synchronous I/O operation and delivers a
+/// completion event to the actor's mailbox. Tracks pending operations
+/// per file descriptor and performs the actual \c readv(), \c send(),
+/// \c accept(), or \c connect() calls synchronously from the event loop
+/// thread.
+///
+/// \note Thread safety: Called from the event loop thread only. Not
+///       internally synchronized.
 class ReactorDispatcher {
   public:
     // Completion handler callback - called when I/O completes

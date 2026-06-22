@@ -26,13 +26,19 @@ namespace hpactor {
 
 namespace net {
 
-// ProactorDispatcher - dispatches proactor (async I/O) completion events
-// to the appropriate actor mailbox or timer system.
-//
-// In proactor mode, async operations complete asynchronously and the
-// dispatcher routes the completion to the correct destination:
-//   - TimerFired events -> timer handler callback
-//   - I/O completions (Send/Recv/Accept/Connect/RecvFrom/SendTo) -> ActorSystem
+/// \brief Dispatches proactor (async I/O) completion events to actor
+/// mailboxes or the timer system.
+///
+/// In proactor mode, async operations complete asynchronously and the
+/// dispatcher routes the completion to the correct destination:
+/// - \c TimerFired events → timer handler callback.
+/// - I/O completions (\c Send, \c Recv, \c Accept, \c Connect,
+///   \c RecvFrom, \c SendTo) → \c ActorSystem for actor delivery.
+///
+/// Also tracks active I/O operations per file descriptor for
+/// bookkeeping and supports a test-only completion capture callback.
+///
+/// \note Thread safety: Called from the event loop thread only.
 class ProactorDispatcher {
   public:
     // Timer handler callback - called when a TimerFired completion arrives.
