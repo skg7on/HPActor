@@ -326,7 +326,7 @@ static uint8_t read_os_memory_pressure() {
     else
         used = 0;
     uint64_t pct = (used * 100ULL) / si.totalram;
-    pct = std::min(pct, 100ULL);
+    pct = std::min<uint64_t>(pct, 100ULL);
     return static_cast<uint8_t>(pct);
 #elif defined(__APPLE__)
     mach_port_t host = mach_host_self();
@@ -351,7 +351,7 @@ static uint8_t read_os_memory_pressure() {
     if (total_pages == 0)
         return 0;
     uint64_t pct = (used_pages * 100ULL) / total_pages;
-    pct = std::min(pct, 100ULL);
+    pct = std::min<uint64_t>(pct, 100ULL);
     return static_cast<uint8_t>(pct);
 #else
     return 0;
