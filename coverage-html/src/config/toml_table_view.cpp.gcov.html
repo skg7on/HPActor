@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 09:28:29</td>
+            <td class="headerValue">2026-06-23 00:34:35</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">96.2&nbsp;%</td>
@@ -186,8 +186,8 @@
 <span id="L108"><span class="lineNum">     108</span>                 :<span class="tlaGNC">          94 :     return TomlTableView{table};</span></span>
 <span id="L109"><span class="lineNum">     109</span>                 :             : }</span>
 <span id="L110"><span class="lineNum">     110</span>                 :             : </span>
-<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">        1704 : bool TomlTableView::valid() const noexcept {</span></span>
-<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">        1704 :     return table_ != nullptr;</span></span>
+<span id="L111"><span class="lineNum">     111</span>                 :<span class="tlaGNC">        1718 : bool TomlTableView::valid() const noexcept {</span></span>
+<span id="L112"><span class="lineNum">     112</span>                 :<span class="tlaGNC">        1718 :     return table_ != nullptr;</span></span>
 <span id="L113"><span class="lineNum">     113</span>                 :             : }</span>
 <span id="L114"><span class="lineNum">     114</span>                 :             : </span>
 <span id="L115"><span class="lineNum">     115</span>                 :<span class="tlaGNC">           4 : bool TomlTableView::contains(std::string_view key) const {</span></span>
@@ -203,13 +203,13 @@
 <span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">          20 :     return TomlValueView{node};</span></span>
 <span id="L126"><span class="lineNum">     126</span>                 :             : }</span>
 <span id="L127"><span class="lineNum">     127</span>                 :             : </span>
-<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">        1794 : TomlTableView TomlTableView::table(std::string_view key) const {</span></span>
-<span id="L129"><span class="lineNum">     129</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1794 times"> + </span>]:<span class="tlaGNC">        1794 :     if (!table_)</span></span>
+<span id="L128"><span class="lineNum">     128</span>                 :<span class="tlaGNC">        1808 : TomlTableView TomlTableView::table(std::string_view key) const {</span></span>
+<span id="L129"><span class="lineNum">     129</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 1808 times"> + </span>]:<span class="tlaGNC">        1808 :     if (!table_)</span></span>
 <span id="L130"><span class="lineNum">     130</span>                 :<span class="tlaUNC tlaBgUNC">           0 :         return TomlTableView{};</span></span>
-<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC tlaBgGNC">        1794 :     auto node = static_cast&lt;const toml::table*&gt;(table_)-&gt;get(key);</span></span>
-<span id="L132"><span class="lineNum">     132</span>   [<span class="tlaGBC" title="Branch 0 was taken 395 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1399 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 395 times"> + </span> :<span class="tlaGNC">        1794 :     if (!node || !node-&gt;is_table())</span></span>
-<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1399 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 395 times"> + </span>]
-<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">        1399 :         return TomlTableView{};</span></span>
+<span id="L131"><span class="lineNum">     131</span>                 :<span class="tlaGNC tlaBgGNC">        1808 :     auto node = static_cast&lt;const toml::table*&gt;(table_)-&gt;get(key);</span></span>
+<span id="L132"><span class="lineNum">     132</span>   [<span class="tlaGBC" title="Branch 0 was taken 395 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1413 times"> + </span><span class="tlaUNC" title="Branch 2 was not taken"> - </span><span class="tlaGBC" title="Branch 3 was taken 395 times"> + </span> :<span class="tlaGNC">        1808 :     if (!node || !node-&gt;is_table())</span></span>
+<span class="lineNum">        </span>          <span class="tlaGBC" title="Branch 4 was taken 1413 times"> + </span><span class="tlaGBC" title="Branch 5 was taken 395 times"> + </span>]
+<span id="L133"><span class="lineNum">     133</span>                 :<span class="tlaGNC">        1413 :         return TomlTableView{};</span></span>
 <span id="L134"><span class="lineNum">     134</span>                 :<span class="tlaGNC">         395 :     return TomlTableView{node-&gt;as_table()};</span></span>
 <span id="L135"><span class="lineNum">     135</span>                 :             : }</span>
 <span id="L136"><span class="lineNum">     136</span>                 :             : </span>

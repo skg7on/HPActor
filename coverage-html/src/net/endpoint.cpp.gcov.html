@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 09:28:29</td>
+            <td class="headerValue">2026-06-23 00:34:35</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -109,14 +109,14 @@
 <span id="L31"><span class="lineNum">      31</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">           2 :     return std::holds_alternative&lt;Ipv4Endpoint&gt;(ep) ? AF_INET : AF_INET6;</span></span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : }</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             : </span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">     1049626 : std::string to_string(const EndPoint&amp; ep) {</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC">        2098 : std::string to_string(const EndPoint&amp; ep) {</span></span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     char buf[64];</span>
-<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 1049625 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">     1049626 :     if (auto* ipv4 = std::get_if&lt;Ipv4Endpoint&gt;(&amp;ep)) {</span></span>
+<span id="L36"><span class="lineNum">      36</span>         [<span class="tlaGBC" title="Branch 0 was taken 2097 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 1 time"> + </span>]:<span class="tlaGNC">        2098 :     if (auto* ipv4 = std::get_if&lt;Ipv4Endpoint&gt;(&amp;ep)) {</span></span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :         // addr is in network byte order, pass directly to inet_ntoa</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :         struct in_addr addr;</span>
-<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">     1049625 :         addr.s_addr = ipv4-&gt;addr;</span></span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">     1049625 :         snprintf(buf, sizeof(buf), &quot;%s:%u&quot;, inet_ntoa(addr), ipv4-&gt;port());</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">     2099250 :         return std::string(buf);</span></span>
+<span id="L39"><span class="lineNum">      39</span>                 :<span class="tlaGNC">        2097 :         addr.s_addr = ipv4-&gt;addr;</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">        2097 :         snprintf(buf, sizeof(buf), &quot;%s:%u&quot;, inet_ntoa(addr), ipv4-&gt;port());</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">        4194 :         return std::string(buf);</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     }</span>
 <span id="L43"><span class="lineNum">      43</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaUNC" title="Branch 1 was not taken"> - </span>]:<span class="tlaGNC">           1 :     if (auto* ipv6 = std::get_if&lt;Ipv6Endpoint&gt;(&amp;ep)) {</span></span>
 <span id="L44"><span class="lineNum">      44</span>                 :             :         struct in6_addr addr;</span>

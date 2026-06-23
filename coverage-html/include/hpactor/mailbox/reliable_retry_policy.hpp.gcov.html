@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 09:28:29</td>
+            <td class="headerValue">2026-06-23 00:34:35</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -107,31 +107,31 @@
 <span id="L29"><span class="lineNum">      29</span>                 :             : /// and is capped at max_backoff.</span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : struct ReliableRetryPolicy {</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     uint32_t max_retries = 3;</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">         724 :     std::chrono::milliseconds initial_backoff{100};</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         724 :     std::chrono::milliseconds max_backoff{10000};</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">         742 :     std::chrono::milliseconds initial_backoff{100};</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         742 :     std::chrono::milliseconds max_backoff{10000};</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     double backoff_multiplier = 2.0;</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     /// \brief Compute the backoff delay for the given attempt number.</span>
 <span id="L37"><span class="lineNum">      37</span>                 :             :     ///</span>
 <span id="L38"><span class="lineNum">      38</span>                 :             :     /// \param attempt The retry attempt number (1-based).</span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     /// \return The backoff Duration, capped at max_backoff.</span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           4 :     Duration backoff_for_attempt(uint32_t attempt) const {</span></span>
-<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">           4 :         if (attempt == 0)</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">           3 :     Duration backoff_for_attempt(uint32_t attempt) const {</span></span>
+<span id="L41"><span class="lineNum">      41</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           3 :         if (attempt == 0)</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             return Duration::zero();</span></span>
-<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC tlaBgGNC">           4 :         double ms = static_cast&lt;double&gt;(initial_backoff.count());</span></span>
-<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          14 :         for (uint32_t i = 1; i &lt; attempt; ++i) {</span></span>
+<span id="L43"><span class="lineNum">      43</span>                 :<span class="tlaGNC tlaBgGNC">           3 :         double ms = static_cast&lt;double&gt;(initial_backoff.count());</span></span>
+<span id="L44"><span class="lineNum">      44</span>         [<span class="tlaGBC" title="Branch 0 was taken 10 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">          13 :         for (uint32_t i = 1; i &lt; attempt; ++i) {</span></span>
 <span id="L45"><span class="lineNum">      45</span>                 :<span class="tlaGNC">          10 :             ms *= backoff_multiplier;</span></span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :         }</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           4 :         auto dur = std::chrono::milliseconds(static_cast&lt;int64_t&gt;(ms));</span></span>
-<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 3 times"> + </span>]:<span class="tlaGNC">           4 :         return dur &gt; max_backoff ? max_backoff : dur;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">           3 :         auto dur = std::chrono::milliseconds(static_cast&lt;int64_t&gt;(ms));</span></span>
+<span id="L48"><span class="lineNum">      48</span>         [<span class="tlaGBC" title="Branch 0 was taken 1 time"> + </span><span class="tlaGBC" title="Branch 1 was taken 2 times"> + </span>]:<span class="tlaGNC">           3 :         return dur &gt; max_backoff ? max_backoff : dur;</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     }</span>
 <span id="L50"><span class="lineNum">      50</span>                 :             : </span>
 <span id="L51"><span class="lineNum">      51</span>                 :             :     /// \brief Check whether a retry should be attempted.</span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :     ///</span>
 <span id="L53"><span class="lineNum">      53</span>                 :             :     /// \param attempt The number of retries already attempted.</span>
 <span id="L54"><span class="lineNum">      54</span>                 :             :     /// \return true if attempt &lt; max_retries.</span>
-<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           9 :     bool should_retry(uint32_t attempt) const {</span></span>
-<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           9 :         return attempt &lt; max_retries;</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaGNC">           8 :     bool should_retry(uint32_t attempt) const {</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaGNC">           8 :         return attempt &lt; max_retries;</span></span>
 <span id="L57"><span class="lineNum">      57</span>                 :             :     }</span>
 <span id="L58"><span class="lineNum">      58</span>                 :             : };</span>
 <span id="L59"><span class="lineNum">      59</span>                 :             : </span>

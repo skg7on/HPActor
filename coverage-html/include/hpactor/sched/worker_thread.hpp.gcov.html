@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 09:28:29</td>
+            <td class="headerValue">2026-06-23 00:34:35</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -284,9 +284,9 @@
 <span id="L206"><span class="lineNum">     206</span>                 :             :     /// Must be set before `start()` is called.</span>
 <span id="L207"><span class="lineNum">     207</span>                 :             :     ///</span>
 <span id="L208"><span class="lineNum">     208</span>                 :             :     /// \param[in] proc Callback invoked for each dequeued work item.</span>
-<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC tlaBgGNC">         390 :     void set_work_processor(WorkProcessor proc) {</span></span>
-<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         390 :         processor_ = std::move(proc);</span></span>
-<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">         390 :     }</span></span>
+<span id="L209"><span class="lineNum">     209</span>                 :<span class="tlaGNC tlaBgGNC">         393 :     void set_work_processor(WorkProcessor proc) {</span></span>
+<span id="L210"><span class="lineNum">     210</span>                 :<span class="tlaGNC">         393 :         processor_ = std::move(proc);</span></span>
+<span id="L211"><span class="lineNum">     211</span>                 :<span class="tlaGNC">         393 :     }</span></span>
 <span id="L212"><span class="lineNum">     212</span>                 :             : </span>
 <span id="L213"><span class="lineNum">     213</span>                 :             :     /// \brief Callback invoked at the top of each loop iteration to pause</span>
 <span id="L214"><span class="lineNum">     214</span>                 :             :     ///        the worker.</span>
@@ -302,9 +302,9 @@
 <span id="L224"><span class="lineNum">     224</span>                 :             :     /// worker to proceed.</span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     ///</span>
 <span id="L226"><span class="lineNum">     226</span>                 :             :     /// \param[in] handler Callback that blocks until the worker may proceed.</span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         386 :     void set_pause_handler(PauseHandler handler) {</span></span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">         386 :         pause_handler_ = std::move(handler);</span></span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">         386 :     }</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">         389 :     void set_pause_handler(PauseHandler handler) {</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">         389 :         pause_handler_ = std::move(handler);</span></span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">         389 :     }</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : </span>
 <span id="L231"><span class="lineNum">     231</span>                 :             :     /// \brief Return this worker's index in the scheduler's worker array.</span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :     ///</span>
@@ -322,8 +322,8 @@
 <span id="L244"><span class="lineNum">     244</span>                 :             :     ///</span>
 <span id="L245"><span class="lineNum">     245</span>                 :             :     /// \return `true` if `start()` has been called and `stop()` has not</span>
 <span id="L246"><span class="lineNum">     246</span>                 :             :     ///         yet joined the thread.</span>
-<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">          18 :     bool is_running() const {</span></span>
-<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">          18 :         return running_.load(std::memory_order_acquire);</span></span>
+<span id="L247"><span class="lineNum">     247</span>                 :<span class="tlaGNC">          21 :     bool is_running() const {</span></span>
+<span id="L248"><span class="lineNum">     248</span>                 :<span class="tlaGNC">          21 :         return running_.load(std::memory_order_acquire);</span></span>
 <span id="L249"><span class="lineNum">     249</span>                 :             :     }</span>
 <span id="L250"><span class="lineNum">     250</span>                 :             : </span>
 <span id="L251"><span class="lineNum">     251</span>                 :             :     /// \brief Native OS thread identifier for CLI introspection.</span>
@@ -335,7 +335,7 @@
 <span id="L257"><span class="lineNum">     257</span>                 :             :     ///</span>
 <span id="L258"><span class="lineNum">     258</span>                 :             :     /// \return A platform-stable 64-bit thread identifier (0 if the worker</span>
 <span id="L259"><span class="lineNum">     259</span>                 :             :     ///         thread has not yet captured its TID).</span>
-<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC">          13 :     uint64_t thread_id() const {</span></span>
+<span id="L260"><span class="lineNum">     260</span>                 :<span class="tlaGNC">          16 :     uint64_t thread_id() const {</span></span>
 <span id="L261"><span class="lineNum">     261</span>                 :             : #ifdef __APPLE__</span>
 <span id="L262"><span class="lineNum">     262</span>                 :             :         uint64_t tid = 0;</span>
 <span id="L263"><span class="lineNum">     263</span>                 :             :         // const_cast: native_handle() is logically const but std::thread</span>
@@ -346,7 +346,7 @@
 <span id="L268"><span class="lineNum">     268</span>                 :             :         // glibc pthread_t from native_handle() is a struct pthread* cast to</span>
 <span id="L269"><span class="lineNum">     269</span>                 :             :         // unsigned long, not the kernel TID.  Use the real TID captured by the</span>
 <span id="L270"><span class="lineNum">     270</span>                 :             :         // worker thread at startup via syscall(SYS_gettid).</span>
-<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">          26 :         return native_tid_.load(std::memory_order_relaxed);</span></span>
+<span id="L271"><span class="lineNum">     271</span>                 :<span class="tlaGNC">          32 :         return native_tid_.load(std::memory_order_relaxed);</span></span>
 <span id="L272"><span class="lineNum">     272</span>                 :             : #else</span>
 <span id="L273"><span class="lineNum">     273</span>                 :             :         // Fallback for other Unix-like platforms where pthread_t may be the</span>
 <span id="L274"><span class="lineNum">     274</span>                 :             :         // native thread identifier.</span>
@@ -362,14 +362,14 @@
 <span id="L284"><span class="lineNum">     284</span>                 :             :     /// active thief.</span>
 <span id="L285"><span class="lineNum">     285</span>                 :             :     ///</span>
 <span id="L286"><span class="lineNum">     286</span>                 :             :     /// \return Snapshot of the donation counter.</span>
-<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">          16 :     uint64_t donation_count() const {</span></span>
-<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC">          32 :         return donation_count_.load(std::memory_order_relaxed);</span></span>
+<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">          19 :     uint64_t donation_count() const {</span></span>
+<span id="L288"><span class="lineNum">     288</span>                 :<span class="tlaGNC">          38 :         return donation_count_.load(std::memory_order_relaxed);</span></span>
 <span id="L289"><span class="lineNum">     289</span>                 :             :     }</span>
 <span id="L290"><span class="lineNum">     290</span>                 :             : </span>
 <span id="L291"><span class="lineNum">     291</span>                 :             :     /// \brief Increment the donation counter (called each idle iteration).</span>
-<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">        4894 :     void increment_donations() {</span></span>
-<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">        4894 :         donation_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
-<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">        4894 :     }</span></span>
+<span id="L292"><span class="lineNum">     292</span>                 :<span class="tlaGNC">        5123 :     void increment_donations() {</span></span>
+<span id="L293"><span class="lineNum">     293</span>                 :<span class="tlaGNC">        5123 :         donation_count_.fetch_add(1, std::memory_order_relaxed);</span></span>
+<span id="L294"><span class="lineNum">     294</span>                 :<span class="tlaGNC">        5123 :     }</span></span>
 <span id="L295"><span class="lineNum">     295</span>                 :             : </span>
 <span id="L296"><span class="lineNum">     296</span>                 :             :     /// \brief Acquire a coroutine frame from this worker's frame pool.</span>
 <span id="L297"><span class="lineNum">     297</span>                 :             :     ///</span>
@@ -393,18 +393,18 @@
 <span id="L315"><span class="lineNum">     315</span>                 :             :     /// Must be set before `start()`.</span>
 <span id="L316"><span class="lineNum">     316</span>                 :             :     ///</span>
 <span id="L317"><span class="lineNum">     317</span>                 :             :     /// \param[in] owner Pointer to the owning `HybridScheduler`.</span>
-<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">         386 :     void set_owner(HybridScheduler* owner) {</span></span>
-<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">         386 :         owner_ = owner;</span></span>
-<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">         386 :     }</span></span>
+<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">         389 :     void set_owner(HybridScheduler* owner) {</span></span>
+<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">         389 :         owner_ = owner;</span></span>
+<span id="L320"><span class="lineNum">     320</span>                 :<span class="tlaGNC">         389 :     }</span></span>
 <span id="L321"><span class="lineNum">     321</span>                 :             : </span>
 <span id="L322"><span class="lineNum">     322</span>                 :             :     /// \brief Set the fault controller for per-thread fault injection.</span>
 <span id="L323"><span class="lineNum">     323</span>                 :             :     ///</span>
 <span id="L324"><span class="lineNum">     324</span>                 :             :     /// May be `nullptr` to disable fault injection for this worker.</span>
 <span id="L325"><span class="lineNum">     325</span>                 :             :     ///</span>
 <span id="L326"><span class="lineNum">     326</span>                 :             :     /// \param[in] fc Opaque pointer to a `FaultController`, or `nullptr`.</span>
-<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         386 :     void set_fault_controller(void* fc) {</span></span>
-<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         386 :         fault_controller_ = fc;</span></span>
-<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">         386 :     }</span></span>
+<span id="L327"><span class="lineNum">     327</span>                 :<span class="tlaGNC">         389 :     void set_fault_controller(void* fc) {</span></span>
+<span id="L328"><span class="lineNum">     328</span>                 :<span class="tlaGNC">         389 :         fault_controller_ = fc;</span></span>
+<span id="L329"><span class="lineNum">     329</span>                 :<span class="tlaGNC">         389 :     }</span></span>
 <span id="L330"><span class="lineNum">     330</span>                 :             : </span>
 <span id="L331"><span class="lineNum">     331</span>                 :             :     /// \brief Access the per-thread memory allocator.</span>
 <span id="L332"><span class="lineNum">     332</span>                 :             :     ///</span>
@@ -427,24 +427,24 @@
 <span id="L349"><span class="lineNum">     349</span>                 :             :     // ── Diagnostic accessors ────────────────────────────────────────</span>
 <span id="L350"><span class="lineNum">     350</span>                 :             : </span>
 <span id="L351"><span class="lineNum">     351</span>                 :             :     /// \brief Total work items found (local pop + steal) by this worker.</span>
-<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">          11 :     uint64_t diag_work_found() const {</span></span>
-<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">          22 :         return diag_work_found_.load(std::memory_order_relaxed);</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">          14 :     uint64_t diag_work_found() const {</span></span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">          28 :         return diag_work_found_.load(std::memory_order_relaxed);</span></span>
 <span id="L354"><span class="lineNum">     354</span>                 :             :     }</span>
 <span id="L355"><span class="lineNum">     355</span>                 :             :     /// \brief Idle loop iterations (polling, before CV escalation).</span>
-<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">          12 :     uint64_t diag_idle_iters() const {</span></span>
-<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">          24 :         return diag_idle_iters_.load(std::memory_order_relaxed);</span></span>
+<span id="L356"><span class="lineNum">     356</span>                 :<span class="tlaGNC">          15 :     uint64_t diag_idle_iters() const {</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">          30 :         return diag_idle_iters_.load(std::memory_order_relaxed);</span></span>
 <span id="L358"><span class="lineNum">     358</span>                 :             :     }</span>
 <span id="L359"><span class="lineNum">     359</span>                 :             :     /// \brief Number of times the worker escalated to CV blocking.</span>
-<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">          12 :     uint64_t diag_cv_escalations() const {</span></span>
-<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC">          24 :         return diag_cv_escalations_.load(std::memory_order_relaxed);</span></span>
+<span id="L360"><span class="lineNum">     360</span>                 :<span class="tlaGNC">          15 :     uint64_t diag_cv_escalations() const {</span></span>
+<span id="L361"><span class="lineNum">     361</span>                 :<span class="tlaGNC">          30 :         return diag_cv_escalations_.load(std::memory_order_relaxed);</span></span>
 <span id="L362"><span class="lineNum">     362</span>                 :             :     }</span>
 <span id="L363"><span class="lineNum">     363</span>                 :             :     /// \brief CV wakeups triggered by enqueue-side notifications.</span>
-<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">          10 :     uint64_t diag_cv_notify_wakes() const {</span></span>
-<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">          20 :         return diag_cv_notify_wakes_.load(std::memory_order_relaxed);</span></span>
+<span id="L364"><span class="lineNum">     364</span>                 :<span class="tlaGNC">          13 :     uint64_t diag_cv_notify_wakes() const {</span></span>
+<span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">          26 :         return diag_cv_notify_wakes_.load(std::memory_order_relaxed);</span></span>
 <span id="L366"><span class="lineNum">     366</span>                 :             :     }</span>
 <span id="L367"><span class="lineNum">     367</span>                 :             :     /// \brief CV wakeups triggered by EDF-aware timeout expiry.</span>
-<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">          10 :     uint64_t diag_cv_timeout_wakes() const {</span></span>
-<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">          20 :         return diag_cv_timeout_wakes_.load(std::memory_order_relaxed);</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">          13 :     uint64_t diag_cv_timeout_wakes() const {</span></span>
+<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">          26 :         return diag_cv_timeout_wakes_.load(std::memory_order_relaxed);</span></span>
 <span id="L370"><span class="lineNum">     370</span>                 :             :     }</span>
 <span id="L371"><span class="lineNum">     371</span>                 :             :     // ── Calibration (test injection + runtime access) ───────────────</span>
 <span id="L372"><span class="lineNum">     372</span>                 :             : </span>
@@ -467,17 +467,17 @@
 <span id="L389"><span class="lineNum">     389</span>                 :             :     }</span>
 <span id="L390"><span class="lineNum">     390</span>                 :             : </span>
 <span id="L391"><span class="lineNum">     391</span>                 :             :     /// \brief Whether the OS yield operation actually deschedules the caller.</span>
-<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC">          10 :     bool diag_yield_is_effective() const {</span></span>
-<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">          10 :         return calibration_.yield_is_effective;</span></span>
+<span id="L392"><span class="lineNum">     392</span>                 :<span class="tlaGNC">          13 :     bool diag_yield_is_effective() const {</span></span>
+<span id="L393"><span class="lineNum">     393</span>                 :<span class="tlaGNC">          13 :         return calibration_.yield_is_effective;</span></span>
 <span id="L394"><span class="lineNum">     394</span>                 :             :     }</span>
 <span id="L395"><span class="lineNum">     395</span>                 :             :     /// \brief Measured kernel timer granularity in nanoseconds.</span>
-<span id="L396"><span class="lineNum">     396</span>                 :<span class="tlaGNC">          10 :     uint32_t diag_min_sleep_ns() const {</span></span>
-<span id="L397"><span class="lineNum">     397</span>                 :<span class="tlaGNC">          10 :         return calibration_.min_effective_sleep_ns;</span></span>
+<span id="L396"><span class="lineNum">     396</span>                 :<span class="tlaGNC">          13 :     uint32_t diag_min_sleep_ns() const {</span></span>
+<span id="L397"><span class="lineNum">     397</span>                 :<span class="tlaGNC">          13 :         return calibration_.min_effective_sleep_ns;</span></span>
 <span id="L398"><span class="lineNum">     398</span>                 :             :     }</span>
 <span id="L399"><span class="lineNum">     399</span>                 :             :     /// \brief Consecutive CV wakeups that found no work (exponential</span>
 <span id="L400"><span class="lineNum">     400</span>                 :             :     ///        timeout level).</span>
-<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">          12 :     uint32_t diag_consecutive_empty_wakes() const {</span></span>
-<span id="L402"><span class="lineNum">     402</span>                 :<span class="tlaGNC">          24 :         return consecutive_empty_wakes_.load(std::memory_order_relaxed);</span></span>
+<span id="L401"><span class="lineNum">     401</span>                 :<span class="tlaGNC">          15 :     uint32_t diag_consecutive_empty_wakes() const {</span></span>
+<span id="L402"><span class="lineNum">     402</span>                 :<span class="tlaGNC">          30 :         return consecutive_empty_wakes_.load(std::memory_order_relaxed);</span></span>
 <span id="L403"><span class="lineNum">     403</span>                 :             :     }</span>
 <span id="L404"><span class="lineNum">     404</span>                 :             : </span>
 <span id="L405"><span class="lineNum">     405</span>                 :             :   private:</span>

@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 09:28:29</td>
+            <td class="headerValue">2026-06-23 00:34:35</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
@@ -112,8 +112,8 @@
 <span id="L34"><span class="lineNum">      34</span>                 :             : struct MonotonicClock {</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             :     using time_point = std::chrono::steady_clock::time_point;</span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     using duration = std::chrono::milliseconds;</span>
-<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC tlaBgGNC">        1041 :     static time_point now() noexcept {</span></span>
-<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">        1041 :         return std::chrono::steady_clock::now();</span></span>
+<span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC tlaBgGNC">           7 :     static time_point now() noexcept {</span></span>
+<span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           7 :         return std::chrono::steady_clock::now();</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     }</span>
 <span id="L40"><span class="lineNum">      40</span>                 :             : };</span>
 <span id="L41"><span class="lineNum">      41</span>                 :             : </span>
@@ -185,11 +185,12 @@
 <span id="L107"><span class="lineNum">     107</span>                 :             :   private:</span>
 <span id="L108"><span class="lineNum">     108</span>                 :             :     ReliableRetryPolicy policy_;</span>
 <span id="L109"><span class="lineNum">     109</span>                 :             :     std::unordered_map&lt;uint64_t, OutboundTrackerEntry&gt; entries_;</span>
-<span id="L110"><span class="lineNum">     110</span>                 :             :     std::vector&lt;OutboundTrackerEntry&gt; expired_;</span>
-<span id="L111"><span class="lineNum">     111</span>                 :             :     mutable std::mutex mutex_;</span>
-<span id="L112"><span class="lineNum">     112</span>                 :             : };</span>
-<span id="L113"><span class="lineNum">     113</span>                 :             : </span>
-<span id="L114"><span class="lineNum">     114</span>                 :             : } // namespace hpactor::mailbox</span>
+<span id="L110"><span class="lineNum">     110</span>                 :             :     std::unordered_map&lt;std::string, size_t&gt; per_dest_count_;</span>
+<span id="L111"><span class="lineNum">     111</span>                 :             :     std::vector&lt;OutboundTrackerEntry&gt; expired_;</span>
+<span id="L112"><span class="lineNum">     112</span>                 :             :     mutable std::mutex mutex_;</span>
+<span id="L113"><span class="lineNum">     113</span>                 :             : };</span>
+<span id="L114"><span class="lineNum">     114</span>                 :             : </span>
+<span id="L115"><span class="lineNum">     115</span>                 :             : } // namespace hpactor::mailbox</span>
         </pre>
               </td>
             </tr>

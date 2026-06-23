@@ -31,13 +31,13 @@
             <td class="headerValue">HPActor Coverage</td>
             <td></td>
             <td class="headerItem">Lines:</td>
-            <td class="headerCovTableEntryMed">77.8&nbsp;%</td>
-            <td class="headerCovTableEntry">18</td>
-            <td class="headerCovTableEntry">14</td>
+            <td class="headerCovTableEntryLo">41.0&nbsp;%</td>
+            <td class="headerCovTableEntry">39</td>
+            <td class="headerCovTableEntry">16</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 09:28:29</td>
+            <td class="headerValue">2026-06-23 00:34:35</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">33.3&nbsp;%</td>
@@ -56,9 +56,9 @@
 </td>
             <td></td>
             <td class="headerItem">Branches:</td>
-            <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">2</td>
-            <td class="headerCovTableEntry">2</td>
+            <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
+            <td class="headerCovTableEntry">4</td>
+            <td class="headerCovTableEntry">3</td>
           </tr>
                   <tr><td><img src="../../../glass.png" width=3 height=3 alt=""></td></tr>
                 </table>
@@ -125,14 +125,38 @@
 <span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          28 :         out.process.watchdog_interval = std::chrono::milliseconds(</span></span>
 <span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          14 :             static_cast&lt;int64_t&gt;(pt.read_uint32(&quot;watchdog_interval_ms&quot;, 0)));</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             : </span>
-<span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          14 :         return result&lt;void&gt;::make();</span></span>
-<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          14 :     }</span></span>
-<span id="L52"><span class="lineNum">      52</span>                 :             : };</span>
-<span id="L53"><span class="lineNum">      53</span>                 :             : </span>
-<span id="L54"><span class="lineNum">      54</span>                 :             : const TomlSystemParserRegistration&lt;ProcessConfigParser&gt; kRegisterProcessConfigParser;</span>
-<span id="L55"><span class="lineNum">      55</span>                 :             : </span>
-<span id="L56"><span class="lineNum">      56</span>                 :             : } // anonymous namespace</span>
-<span id="L57"><span class="lineNum">      57</span>                 :             : } // namespace hpactor::config</span>
+<span id="L50"><span class="lineNum">      50</span>                 :             :         // [system.process.health] subsection</span>
+<span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          14 :         auto hc = pt.table(&quot;health&quot;);</span></span>
+<span id="L52"><span class="lineNum">      52</span>         [<span class="tlaUNC" title="Branch 0 was not taken"> - </span><span class="tlaGBC" title="Branch 1 was taken 14 times"> + </span>]:<span class="tlaGNC">          14 :         if (hc.valid()) {</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaUNC tlaBgUNC">           0 :             auto&amp; h = out.process.health_check;</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaUNC">           0 :             h.enabled = hc.read_bool(&quot;enabled&quot;, true);</span></span>
+<span id="L55"><span class="lineNum">      55</span>                 :<span class="tlaUNC">           0 :             h.scheduler_liveness_enabled =</span></span>
+<span id="L56"><span class="lineNum">      56</span>                 :<span class="tlaUNC">           0 :                 hc.read_bool(&quot;scheduler_liveness_enabled&quot;, true);</span></span>
+<span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaUNC">           0 :             h.system_actor_health_enabled =</span></span>
+<span id="L58"><span class="lineNum">      58</span>                 :<span class="tlaUNC">           0 :                 hc.read_bool(&quot;system_actor_health_enabled&quot;, true);</span></span>
+<span id="L59"><span class="lineNum">      59</span>                 :<span class="tlaUNC">           0 :             h.dlq_growth_enabled = hc.read_bool(&quot;dlq_growth_enabled&quot;, true);</span></span>
+<span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaUNC">           0 :             h.memory_pressure_enabled =</span></span>
+<span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaUNC">           0 :                 hc.read_bool(&quot;memory_pressure_enabled&quot;, true);</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaUNC">           0 :             h.scheduler_progress_deadline_sec =</span></span>
+<span id="L63"><span class="lineNum">      63</span>                 :<span class="tlaUNC">           0 :                 hc.read_uint32(&quot;scheduler_progress_deadline_sec&quot;, 30);</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaUNC">           0 :             h.dlq_depth_warning_pct = hc.read_uint32(&quot;dlq_depth_warning_pct&quot;, 80);</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaUNC">           0 :             h.dlq_depth_critical_pct = hc.read_uint32(&quot;dlq_depth_critical_pct&quot;, 95);</span></span>
+<span id="L66"><span class="lineNum">      66</span>                 :<span class="tlaUNC">           0 :             h.dlq_lost_rate_per_minute =</span></span>
+<span id="L67"><span class="lineNum">      67</span>                 :<span class="tlaUNC">           0 :                 hc.read_uint32(&quot;dlq_lost_rate_per_minute&quot;, 10);</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaUNC">           0 :             h.memory_warning_pct =</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaUNC">           0 :                 static_cast&lt;uint8_t&gt;(hc.read_uint32(&quot;memory_warning_pct&quot;, 85));</span></span>
+<span id="L70"><span class="lineNum">      70</span>                 :<span class="tlaUNC">           0 :             h.memory_critical_pct =</span></span>
+<span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaUNC">           0 :                 static_cast&lt;uint8_t&gt;(hc.read_uint32(&quot;memory_critical_pct&quot;, 95));</span></span>
+<span id="L72"><span class="lineNum">      72</span>                 :             :         }</span>
+<span id="L73"><span class="lineNum">      73</span>                 :             : </span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC tlaBgGNC">          14 :         return result&lt;void&gt;::make();</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">          14 :     }</span></span>
+<span id="L76"><span class="lineNum">      76</span>                 :             : };</span>
+<span id="L77"><span class="lineNum">      77</span>                 :             : </span>
+<span id="L78"><span class="lineNum">      78</span>                 :             : const TomlSystemParserRegistration&lt;ProcessConfigParser&gt; kRegisterProcessConfigParser;</span>
+<span id="L79"><span class="lineNum">      79</span>                 :             : </span>
+<span id="L80"><span class="lineNum">      80</span>                 :             : } // anonymous namespace</span>
+<span id="L81"><span class="lineNum">      81</span>                 :             : } // namespace hpactor::config</span>
         </pre>
               </td>
             </tr>

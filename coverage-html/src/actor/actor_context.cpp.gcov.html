@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-22 09:28:29</td>
+            <td class="headerValue">2026-06-23 00:34:35</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryLo">60.5&nbsp;%</td>
@@ -107,10 +107,10 @@
 <span id="L29"><span class="lineNum">      29</span>                 :             : </span>
 <span id="L30"><span class="lineNum">      30</span>                 :             : namespace hpactor {</span>
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">        2031 : ActorContext::ActorContext(Actor owner, ActorSystem* system)</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">        2031 :     : owner_(std::move(owner)), system_(system) {}</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC tlaBgGNC">        2067 : ActorContext::ActorContext(Actor owner, ActorSystem* system)</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">        2067 :     : owner_(std::move(owner)), system_(system) {}</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             : </span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        2031 : ActorContext::~ActorContext() = default;</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">        2067 : ActorContext::~ActorContext() = default;</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             : </span>
 <span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">           5 : ActorContext::TraceScope::TraceScope(ActorContext* ctx, const TraceContext&amp; next) noexcept</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">           5 :     : ctx_(ctx) {</span></span>
@@ -353,8 +353,8 @@
 <span id="L270"><span class="lineNum">     270</span>                 :             :     // Wrap in shared_ptr because TypedMessage is move-only and std::function</span>
 <span id="L271"><span class="lineNum">     271</span>                 :             :     // requires a copyable callable.</span>
 <span id="L272"><span class="lineNum">     272</span>                 :<span class="tlaGNC">          58 :     auto msg_ptr = std::make_shared&lt;TypedMessage&gt;(std::move(msg));</span></span>
-<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">          37 :     auto callback = [sys, self_id, msg_ptr]() {</span></span>
-<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">          37 :         sys-&gt;deliver_local(self_id, std::move(*msg_ptr));</span></span>
+<span id="L273"><span class="lineNum">     273</span>                 :<span class="tlaGNC">          38 :     auto callback = [sys, self_id, msg_ptr]() {</span></span>
+<span id="L274"><span class="lineNum">     274</span>                 :<span class="tlaGNC">          38 :         sys-&gt;deliver_local(self_id, std::move(*msg_ptr));</span></span>
 <span id="L275"><span class="lineNum">     275</span>                 :<span class="tlaGNC">          58 :     };</span></span>
 <span id="L276"><span class="lineNum">     276</span>                 :             : </span>
 <span id="L277"><span class="lineNum">     277</span>                 :             :     int64_t delay_ns =</span>
