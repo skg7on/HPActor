@@ -96,6 +96,7 @@ add_library(hpactor_lib SHARED
     net/endpoint_outbound_queue.cpp
     net/endpoint_circuit_breaker.cpp
     net/reliable_ack.cpp
+    net/admin/admin_api_actor.cpp
     sched/actor_ready_gate.cpp
     sched/actor_execution_engine.cpp
     sched/work_placement_scheduler.cpp
