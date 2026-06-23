@@ -16,6 +16,7 @@
 
 #include <hpactor/cluster/receptionist/cluster_receptionist_messages.hpp>
 
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -32,6 +33,12 @@ namespace hpactor::cluster::receptionist {
 /// \note All methods are thread-safe (protected by internal mutex).
 class ClusterReceptionistCore {
   public:
+    /// \brief Construct with the local node identity.
+    ///
+    /// \param[in] node_id The local node ID used for gossip origin tagging.
+    explicit ClusterReceptionistCore(const std::string& node_id = "")
+        : node_id_(node_id) {}
+
     /// \brief Apply local registration under a ServiceKey.
     ///
     /// Registers the given actor IDs under \p key on this node and
@@ -44,7 +51,8 @@ class ClusterReceptionistCore {
 
     /// \brief Merge a remote registration entry from gossip.
     ///
-    /// Adds or updates a registration in the remote table.
+    /// Adds or updates a registration in the remote table. Only
+    /// overwrites if \p reg.incarnation is higher than the existing entry.
     ///
     /// \param[in] reg The remote registration to merge.
     void merge_remote_registration(const ClusterRegistration& reg);
@@ -92,6 +100,8 @@ class ClusterReceptionistCore {
 
   private:
     mutable std::mutex mutex_;
+    std::string node_id_;
+    uint64_t incarnation_{0};
 
     // Local: key → set of actor_ids
     std::unordered_map<hpactor::receptionist::ServiceKey, std::vector<uint64_t>> local_regs_;

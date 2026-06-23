@@ -44,8 +44,9 @@ AdminResponse AdminApiActor::handle(const AdminRequest& request) const {
             return list_cluster_nodes();
         case AdminResource::Shutdown:
             return do_shutdown();
+        default:
+            return AdminResponse{404, R"({"error":"not_found"})"};
     }
-    return AdminResponse{404, R"({"error":"not_found"})"};
 }
 
 AdminResponse AdminApiActor::health_check() const {
@@ -99,4 +100,4 @@ AdminResponse AdminApiActor::do_shutdown() const {
     return AdminResponse{500, R"({"shutdown":"failed"})"};
 }
 
-} // namespace hpactor::net::admin
+} // namespace hpactor::cli::admin

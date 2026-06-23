@@ -45,7 +45,7 @@ template <typename T>
 void pipe_to(const result<T>& r, const ActorAddress& target,
              std::function<void(const ActorAddress&, T)> on_success,
              std::function<void(const ActorAddress&, error)> on_error) {
-    if (r.is_ok()) {
+    if (r.ok()) {
         on_success(target, r.value());
     } else {
         on_error(target, r.error());

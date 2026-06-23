@@ -40,4 +40,4 @@ struct AdminResponse {
     std::string body;           ///< JSON response body.
 };
 
-} // namespace hpactor::net::admin
+} // namespace hpactor::cli::admin

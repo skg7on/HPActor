@@ -16,6 +16,7 @@
 
 #include <hpactor/cluster/pubsub/pubsub_messages.hpp>
 
+#include <cstdint>
 #include <mutex>
 #include <string>
 #include <unordered_map>
@@ -33,6 +34,12 @@ namespace hpactor::cluster::pubsub {
 /// \note All methods are thread-safe (protected by internal mutex).
 class PubSubMediatorCore {
   public:
+    /// \brief Construct with the local node identity.
+    ///
+    /// \param[in] node_id The local node ID used for gossip origin tagging.
+    explicit PubSubMediatorCore(const std::string& node_id = "")
+        : node_id_(node_id) {}
+
     /// \brief Subscribe a local actor to a topic.
     ///
     /// \param[in] topic The topic to subscribe to.
@@ -53,6 +60,8 @@ class PubSubMediatorCore {
     /// \brief Merge a remote subscription entry from gossip.
     ///
     /// Adds or updates a remote subscription in the remote table.
+    /// Only overwrites if \p sub.incarnation is higher than the
+    /// existing entry.
     ///
     /// \param[in] sub The remote subscription to merge.
     void merge_remote_subscription(const TopicSubscription& sub);
@@ -60,6 +69,7 @@ class PubSubMediatorCore {
     /// \brief Remove all subscriptions from a node.
     ///
     /// Called when a node goes Down via ClusterFailureModel.
+    /// Also cleans up topics whose inner maps become empty.
     ///
     /// \param[in] node_id The node whose subscriptions are purged.
     void remove_node_subscriptions(const std::string& node_id);
@@ -74,6 +84,7 @@ class PubSubMediatorCore {
     ///
     /// \param[in] topic The topic to query.
     /// \return Combined vector of local and remote TopicSubscription entries.
+    ///         Local entries carry \c subscriber_node set to this node's ID.
     std::vector<TopicSubscription>
     all_subscribers_for(const PubSubTopic& topic) const;
 
@@ -98,6 +109,8 @@ class PubSubMediatorCore {
 
   private:
     mutable std::mutex mutex_;
+    std::string node_id_;
+    uint64_t incarnation_{0};
 
     // Local: topic → set of actor_ids
     std::unordered_map<PubSubTopic, std::unordered_set<uint64_t>> local_subs_;

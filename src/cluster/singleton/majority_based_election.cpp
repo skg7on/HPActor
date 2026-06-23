@@ -38,6 +38,10 @@ MajorityBasedElection::elect(const SingletonIdentity& id,
 
     const auto& singleton_votes = it->second;
 
+    // Pre-build alive set for O(1) candidate liveness check
+    std::unordered_set<std::string> alive_set(alive_nodes.begin(),
+                                              alive_nodes.end());
+
     // Count live votes per candidate (exclude dead voters)
     std::unordered_map<std::string, size_t> tally;
     for (const auto& alive : alive_nodes) {
@@ -45,16 +49,9 @@ MajorityBasedElection::elect(const SingletonIdentity& id,
         if (vit != singleton_votes.end()) {
             const auto& candidate = vit->second;
             // Only count if the candidate is still alive
-            bool candidate_alive = false;
-            for (const auto& a : alive_nodes) {
-                if (a == candidate) {
-                    candidate_alive = true;
-                    break;
-                }
-            }
-            if (candidate_alive) {
-                tally[candidate]++;
-            }
+            if (alive_set.find(candidate) == alive_set.end())
+                continue;
+            tally[candidate]++;
         }
     }
 

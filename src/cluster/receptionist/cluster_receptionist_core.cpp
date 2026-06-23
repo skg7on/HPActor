@@ -24,23 +24,30 @@ void ClusterReceptionistCore::apply_local_registration(
 
     ClusterRegistration dirty;
     dirty.key = key;
+    dirty.node_id = node_id_;
     dirty.actor_ids = actor_ids;
-    dirty.incarnation = 0;
+    dirty.incarnation = ++incarnation_;
     dirty_regs_.push_back(dirty);
 }
 
 void ClusterReceptionistCore::merge_remote_registration(const ClusterRegistration& reg) {
     std::lock_guard<std::mutex> lock(mutex_);
-    remote_regs_[reg.key][reg.node_id] = reg;
+
+    // Only overwrite if incoming incarnation is higher (or first entry)
+    auto& node_map = remote_regs_[reg.key];
+    auto existing = node_map.find(reg.node_id);
+    if (existing != node_map.end() &&
+        existing->second.incarnation >= reg.incarnation) {
+        return; // Stale or duplicate — ignore
+    }
+    node_map[reg.node_id] = reg;
 }
 
 void ClusterReceptionistCore::remove_node_registrations(const std::string& node_id) {
     std::lock_guard<std::mutex> lock(mutex_);
-    for (auto& [key, node_map] : remote_regs_) {
-        node_map.erase(node_id);
-    }
-    // Also clean up keys with no remaining registrations
+
     for (auto it = remote_regs_.begin(); it != remote_regs_.end();) {
+        it->second.erase(node_id);
         if (it->second.empty()) {
             it = remote_regs_.erase(it);
         } else {
@@ -64,7 +71,7 @@ std::vector<uint64_t> ClusterReceptionistCore::get_cluster_listing(
     // Then remote
     auto rit = remote_regs_.find(key);
     if (rit != remote_regs_.end()) {
-        for (const auto& [node_id, reg] : rit->second) {
+        for (const auto& [nid, reg] : rit->second) {
             result.insert(result.end(), reg.actor_ids.begin(), reg.actor_ids.end());
         }
     }

@@ -216,7 +216,12 @@ void SelfSupervisingActor::remove_remote_child(const ActorAddress& addr) {
 }
 
 SupervisionDirective
-SelfSupervisingActor::on_failure(ActorId /*child_id*/, const error& /*err*/) {
+SelfSupervisingActor::on_failure(ActorId /*child_id*/, const error& err) {
+    // Check per-exception directive map first
+    auto it = policy_.exception_map.find(err.code());
+    if (it != policy_.exception_map.end()) {
+        return it->second;
+    }
     // Default: allow subclasses to override; base returns Restart
     return SupervisionDirective::Restart;
 }

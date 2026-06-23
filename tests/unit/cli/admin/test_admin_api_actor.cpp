@@ -96,4 +96,4 @@ TEST(AdminApiActorTest, CustomHandlerOverridesBuiltIn) {
     EXPECT_NE(resp.body.find("custom"), std::string::npos);
 }
 
-} // namespace hpactor::net::admin
+} // namespace hpactor::cli::admin

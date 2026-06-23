@@ -37,8 +37,9 @@ bool PubSubMediatorCore::subscribe(const PubSubTopic& topic, uint64_t actor_id) 
         // New subscription — mark dirty for gossip
         TopicSubscription dirty;
         dirty.topic = topic;
+        dirty.subscriber_node = node_id_;
         dirty.subscriber_actor_id = actor_id;
-        dirty.incarnation = 0;
+        dirty.incarnation = ++incarnation_;
         dirty_subs_.push_back(dirty);
     }
     return true;
@@ -60,14 +61,26 @@ void PubSubMediatorCore::unsubscribe(const PubSubTopic& topic, uint64_t actor_id
 void PubSubMediatorCore::merge_remote_subscription(const TopicSubscription& sub) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    remote_subs_[sub.topic][sub.subscriber_node] = sub;
+    // Only overwrite if the incoming incarnation is higher (or first entry)
+    auto& node_map = remote_subs_[sub.topic];
+    auto existing = node_map.find(sub.subscriber_node);
+    if (existing != node_map.end() &&
+        existing->second.incarnation >= sub.incarnation) {
+        return; // Stale or duplicate — ignore
+    }
+    node_map[sub.subscriber_node] = sub;
 }
 
 void PubSubMediatorCore::remove_node_subscriptions(const std::string& node_id) {
     std::lock_guard<std::mutex> lock(mutex_);
 
-    for (auto& [topic, node_map] : remote_subs_) {
-        node_map.erase(node_id);
+    for (auto it = remote_subs_.begin(); it != remote_subs_.end();) {
+        it->second.erase(node_id);
+        if (it->second.empty()) {
+            it = remote_subs_.erase(it);
+        } else {
+            ++it;
+        }
     }
 }
 
@@ -89,12 +102,13 @@ PubSubMediatorCore::all_subscribers_for(const PubSubTopic& topic) const {
 
     std::vector<TopicSubscription> result;
 
-    // Local subscribers
+    // Local subscribers — include node_id
     auto lit = local_subs_.find(topic);
     if (lit != local_subs_.end()) {
         for (auto actor_id : lit->second) {
             TopicSubscription sub;
             sub.topic = topic;
+            sub.subscriber_node = node_id_;
             sub.subscriber_actor_id = actor_id;
             result.push_back(sub);
         }
@@ -103,7 +117,7 @@ PubSubMediatorCore::all_subscribers_for(const PubSubTopic& topic) const {
     // Remote subscribers
     auto rit = remote_subs_.find(topic);
     if (rit != remote_subs_.end()) {
-        for (const auto& [node_id, sub] : rit->second) {
+        for (const auto& [nid, sub] : rit->second) {
             result.push_back(sub);
         }
     }

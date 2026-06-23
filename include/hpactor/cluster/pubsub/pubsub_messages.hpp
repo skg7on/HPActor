@@ -42,7 +42,8 @@ struct TopicSubscription {
     /// \brief Equality comparison based on topic, node, and actor id.
     bool operator==(const TopicSubscription& other) const {
         return topic == other.topic && subscriber_node == other.subscriber_node &&
-               subscriber_actor_id == other.subscriber_actor_id;
+               subscriber_actor_id == other.subscriber_actor_id &&
+               incarnation == other.incarnation;
     }
 };
 

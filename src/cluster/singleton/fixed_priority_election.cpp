@@ -32,17 +32,16 @@ FixedPriorityElection::elect(const SingletonIdentity& /*id*/,
     std::optional<std::string> best_node;
 
     for (const auto& node : alive_nodes) {
-        std::string node_str(node);
-        auto it = priorities_.find(node_str);
+        auto it = priorities_.find(std::string(node));
         if (it == priorities_.end())
             continue; // Node has no priority — skip
 
         int priority = it->second;
         if (priority > best_priority ||
             (priority == best_priority && best_node.has_value() &&
-             node_str < *best_node)) {
+             node < *best_node)) {
             best_priority = priority;
-            best_node = node_str;
+            best_node = std::string(node);
         }
     }
 
