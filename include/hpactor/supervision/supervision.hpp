@@ -57,6 +57,20 @@ struct SupervisionPolicy {
     /// \c SupervisionDirective::Quarantine instead of \c Stop.
     /// Defaults to disabled — existing behavior is preserved.
     QuarantinePolicy quarantine;
+
+    /// \brief Per-failure-reason directive overrides (Akka-style).
+    ///
+    /// Maps a failure reason code to a specific \c SupervisionDirective.
+    /// When a child fails, the supervisor first checks this map. If the
+    /// failure's error code matches a key, the mapped directive is returned
+    /// instead of the default strategy-based decision.
+    ///
+    /// Example: Map MailboxFull to Restart, ActorDead to Stop, Timeout to
+    /// Escalate. Unmapped reasons fall through to the default strategy.
+    ///
+    /// \note Empty map preserves existing behavior — all failures use the
+    ///       default strategy-based decision.
+    std::unordered_map<uint32_t, SupervisionDirective> exception_map;
 };
 
 // Supervisor - interface for supervision strategy
