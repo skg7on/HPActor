@@ -30,8 +30,8 @@ enum class AdminResource : uint8_t {
 
 /// \brief Request to an admin endpoint.
 struct AdminRequest {
-    AdminResource resource;
-    std::string body; ///< Optional JSON body (for POST).
+    AdminResource resource; ///< Which endpoint is being requested.
+    std::string body;       ///< Optional JSON body (for POST).
 };
 
 /// \brief Response from an admin endpoint.

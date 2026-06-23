@@ -47,10 +47,26 @@ class MajorityBasedElection : public ISingletonElection {
     void record_vote(const std::string& singleton_name,
                      const std::string& voter, const std::string& voted_for);
 
+    /// \brief Elect the owner for the singleton from the alive node set.
+    ///
+    /// Tallies live votes per candidate, excluding votes from dead nodes
+    /// and candidates not in \p alive_nodes. Returns the candidate with
+    /// ≥ \c (alive_nodes.size() / 2) + 1 votes.
+    ///
+    /// \param[in] id The singleton identity (used for per-singleton vote
+    /// lookup).
+    /// \param[in] alive_nodes Currently alive node IDs.
+    /// \return The elected owner node ID, or \c std::nullopt if no
+    ///         candidate has a strict majority.
     std::optional<std::string>
     elect(const SingletonIdentity& id,
           std::span<const std::string> alive_nodes) override;
 
+    /// \brief Notify the election strategy that a peer node is down.
+    ///
+    /// Removes votes cast by the dead node from all singleton vote tallies.
+    ///
+    /// \param[in] node_id The node that went down.
     void on_peer_down(const std::string& node_id) override;
 
   private:

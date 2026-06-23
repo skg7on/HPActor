@@ -42,29 +42,52 @@ namespace net::admin {
 ///       standalone HTTP server.
 class AdminApiActor {
   public:
+    /// \brief Callback type for custom admin endpoint handlers.
     using Handler = std::function<AdminResponse(const AdminRequest&)>;
 
     /// \brief Construct with an optional pointer to the actor system.
-    /// Pass nullptr for testing without an ActorSystem.
+    ///
+    /// Pass \c nullptr for testing without an ActorSystem; built-in
+    /// handlers return error responses in that case.
+    ///
+    /// \param[in] system Pointer to the live ActorSystem, or \c nullptr.
     explicit AdminApiActor(ActorSystem* system = nullptr);
 
     /// \brief Register a custom handler for a specific resource.
+    ///
+    /// \param[in] resource The admin endpoint to handle.
+    /// \param[in] handler The callback invoked for requests to \p resource.
     void register_handler(AdminResource resource, Handler handler);
 
     /// \brief Handle an admin request by dispatching to the registered
     ///        handler or falling back to the built-in implementation.
+    ///
+    /// \param[in] request The admin request to process.
+    /// \return The admin response from the handler or built-in endpoint.
     AdminResponse handle(const AdminRequest& request) const;
 
     /// \brief Liveness + readiness check.
+    ///
+    /// \return 200 with \c {"status":"ok"} when running, 503 when not ready,
+    ///         500 when no ActorSystem is available.
     AdminResponse health_check() const;
 
     /// \brief Enumerate all actors in the system.
+    ///
+    /// \return JSON array of \c {id, type, address} per actor plus
+    ///         \c count field.
     AdminResponse list_actors() const;
 
     /// \brief List cluster nodes and their states.
+    ///
+    /// \return JSON array of \c {node_id, state} per alive node plus
+    ///         \c count field, or a stub when cluster is not enabled.
     AdminResponse list_cluster_nodes() const;
 
     /// \brief Initiate graceful shutdown.
+    ///
+    /// \return 200 with \c {"shutdown":"initiated"} on success,
+    ///         500 on failure or when no ActorSystem is available.
     AdminResponse do_shutdown() const;
 
   private:

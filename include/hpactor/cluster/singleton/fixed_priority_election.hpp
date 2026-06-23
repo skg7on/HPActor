@@ -39,10 +39,25 @@ class FixedPriorityElection : public ISingletonElection {
     /// \param[in] priorities Map of node_id → priority (higher = preferred).
     explicit FixedPriorityElection(std::unordered_map<std::string, int> priorities);
 
+    /// \brief Elect the owner for the singleton from the alive node set.
+    ///
+    /// Selects the alive node with the highest priority. Ties are broken
+    /// by lexicographically lowest \c node_id. Nodes without a priority
+    /// entry are skipped.
+    ///
+    /// \param[in] id The singleton identity (unused by this strategy).
+    /// \param[in] alive_nodes Currently alive node IDs.
+    /// \return The elected owner node ID, or \c std::nullopt if no
+    ///         alive node has a priority entry.
     std::optional<std::string>
     elect(const SingletonIdentity& id,
           std::span<const std::string> alive_nodes) override;
 
+    /// \brief Notify the election strategy that a peer node is down.
+    ///
+    /// Records the node in the known-dead set for future introspection.
+    ///
+    /// \param[in] node_id The node that went down.
     void on_peer_down(const std::string& node_id) override;
 
   private:

@@ -34,34 +34,66 @@ namespace hpactor::cluster::pubsub {
 class PubSubMediatorCore {
   public:
     /// \brief Subscribe a local actor to a topic.
-    /// \return false if capacity exceeded (topic or subscriber limit).
+    ///
+    /// \param[in] topic The topic to subscribe to.
+    /// \param[in] actor_id The local actor id to register.
+    /// \return \c false if capacity exceeded (kMaxTopics or
+    ///         kMaxSubscribersPerTopic).
     bool subscribe(const PubSubTopic& topic, uint64_t actor_id);
 
     /// \brief Unsubscribe a local actor from a topic.
+    ///
+    /// Removes the actor from the topic. If the topic becomes empty,
+    /// it is removed from the local table.
+    ///
+    /// \param[in] topic The topic to unsubscribe from.
+    /// \param[in] actor_id The local actor id to remove.
     void unsubscribe(const PubSubTopic& topic, uint64_t actor_id);
 
     /// \brief Merge a remote subscription entry from gossip.
+    ///
+    /// Adds or updates a remote subscription in the remote table.
+    ///
+    /// \param[in] sub The remote subscription to merge.
     void merge_remote_subscription(const TopicSubscription& sub);
 
-    /// \brief Remove all subscriptions from a node (called when node goes
-    /// Down).
+    /// \brief Remove all subscriptions from a node.
+    ///
+    /// Called when a node goes Down via ClusterFailureModel.
+    ///
+    /// \param[in] node_id The node whose subscriptions are purged.
     void remove_node_subscriptions(const std::string& node_id);
 
     /// \brief Get all local subscriber actor IDs for a topic.
+    ///
+    /// \param[in] topic The topic to query.
+    /// \return Vector of local subscriber actor IDs (empty if none).
     std::vector<uint64_t> local_subscribers_for(const PubSubTopic& topic) const;
 
-    /// \brief Get all subscriber actor IDs (local + remote) for a topic.
+    /// \brief Get all subscriber entries (local + remote) for a topic.
+    ///
+    /// \param[in] topic The topic to query.
+    /// \return Combined vector of local and remote TopicSubscription entries.
     std::vector<TopicSubscription>
     all_subscribers_for(const PubSubTopic& topic) const;
 
     /// \brief Number of local topics with at least one subscriber.
+    ///
+    /// \return Current local topic count.
     size_t topic_count() const;
 
     /// \brief Number of local subscribers for a topic.
+    ///
+    /// \param[in] topic The topic to query.
+    /// \return Number of local subscribers (0 if none).
     size_t subscriber_count(const PubSubTopic& topic) const;
 
-    /// \brief Get dirty subscriptions (added/removed since last gossip sync)
-    ///        that need to be gossiped to peers.
+    /// \brief Drain dirty subscriptions that need gossip dissemination.
+    ///
+    /// Returns subscriptions added since the last drain and clears the
+    /// internal dirty set.
+    ///
+    /// \return Vector of dirty TopicSubscription entries.
     std::vector<TopicSubscription> drain_dirty_subscriptions();
 
   private:

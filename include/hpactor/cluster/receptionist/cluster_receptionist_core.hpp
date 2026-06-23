@@ -33,29 +33,61 @@ namespace hpactor::cluster::receptionist {
 class ClusterReceptionistCore {
   public:
     /// \brief Apply local registration under a ServiceKey.
+    ///
+    /// Registers the given actor IDs under \p key on this node and
+    /// marks the registration as dirty for gossip dissemination.
+    ///
+    /// \param[in] key The ServiceKey to register under.
+    /// \param[in] actor_ids The local actor IDs to register.
     void apply_local_registration(const hpactor::receptionist::ServiceKey& key,
                                   const std::vector<uint64_t>& actor_ids);
 
     /// \brief Merge a remote registration entry from gossip.
+    ///
+    /// Adds or updates a registration in the remote table.
+    ///
+    /// \param[in] reg The remote registration to merge.
     void merge_remote_registration(const ClusterRegistration& reg);
 
-    /// \brief Remove all registrations from a node (node-down cleanup).
+    /// \brief Remove all registrations from a node.
+    ///
+    /// Called when a node goes Down via ClusterFailureModel. Also
+    /// cleans up keys that have no remaining registrations.
+    ///
+    /// \param[in] node_id The node whose registrations are purged.
     void remove_node_registrations(const std::string& node_id);
 
     /// \brief Get all actor IDs registered under a key cluster-wide.
+    ///
+    /// Combines local and remote registrations.
+    ///
+    /// \param[in] key The ServiceKey to query.
+    /// \return Combined vector of actor IDs (local first, then remote).
     std::vector<uint64_t>
     get_cluster_listing(const hpactor::receptionist::ServiceKey& key) const;
 
     /// \brief Check if a key has any registrations (local or remote).
+    ///
+    /// \param[in] key The ServiceKey to check.
+    /// \return \c true if the key exists in either the local or remote table.
     bool has_key(const hpactor::receptionist::ServiceKey& key) const;
 
     /// \brief Number of keys with remote registrations.
+    ///
+    /// \return Remote key count.
     size_t remote_key_count() const;
 
     /// \brief Number of local keys registered.
+    ///
+    /// \return Local key count.
     size_t local_key_count() const;
 
-    /// \brief Get local registrations that need gossip dissemination.
+    /// \brief Drain dirty registrations that need gossip dissemination.
+    ///
+    /// Returns registrations added since the last drain and clears the
+    /// internal dirty set.
+    ///
+    /// \return Vector of dirty ClusterRegistration entries.
     std::vector<ClusterRegistration> drain_dirty_registrations();
 
   private:

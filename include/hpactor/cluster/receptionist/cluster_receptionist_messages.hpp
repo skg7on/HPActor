@@ -29,6 +29,7 @@ struct ClusterRegistration {
     std::vector<uint64_t> actor_ids; ///< ActorIds registered under this key.
     uint64_t incarnation = 0;        ///< For conflict resolution.
 
+    /// \brief Equality comparison based on key, node_id, and incarnation.
     bool operator==(const ClusterRegistration& other) const {
         return key == other.key && node_id == other.node_id &&
                incarnation == other.incarnation;

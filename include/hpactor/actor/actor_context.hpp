@@ -273,6 +273,7 @@ class ActorContext {
     /// dies (receives a DownMsg). This implements the CAF-style "death pact"
     /// pattern where linked actors share fate.
     ///
+    /// \param[in] enabled \c true to enable death pact, \c false to disable.
     /// \note Defaults to \c false. Only applies to linked actors, not
     ///       monitored actors (monitoring is one-way).
     void set_death_pact(bool enabled) {
@@ -280,6 +281,8 @@ class ActorContext {
     }
 
     /// \brief Check whether death pact is enabled for this actor.
+    ///
+    /// \return \c true if death pact is enabled, \c false otherwise.
     bool has_death_pact() const {
         return death_pact_;
     }

@@ -16,7 +16,6 @@
 
 #include <cstdint>
 #include <string>
-#include <vector>
 
 namespace hpactor::cluster::pubsub {
 
@@ -27,6 +26,7 @@ namespace hpactor::cluster::pubsub {
 struct PubSubTopic {
     std::string name;
 
+    /// \brief Equality comparison based on the topic name.
     bool operator==(const PubSubTopic& other) const {
         return name == other.name;
     }
@@ -39,6 +39,7 @@ struct TopicSubscription {
     uint64_t subscriber_actor_id; ///< ActorId of the subscriber actor.
     uint64_t incarnation = 0;     ///< For conflict resolution.
 
+    /// \brief Equality comparison based on topic, node, and actor id.
     bool operator==(const TopicSubscription& other) const {
         return topic == other.topic && subscriber_node == other.subscriber_node &&
                subscriber_actor_id == other.subscriber_actor_id;
@@ -55,7 +56,12 @@ constexpr size_t kMaxSubscribersPerTopic = 1024;
 
 // Hash support for PubSubTopic in unordered containers.
 namespace std {
+/// \brief std::hash specialization for PubSubTopic.
 template <> struct hash<::hpactor::cluster::pubsub::PubSubTopic> {
+    /// \brief Hash a PubSubTopic by its name string.
+    ///
+    /// \param[in] t The topic to hash.
+    /// \return Hash of the topic name.
     size_t
     operator()(const ::hpactor::cluster::pubsub::PubSubTopic& t) const noexcept {
         return hash<string>()(t.name);
