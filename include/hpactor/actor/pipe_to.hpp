@@ -17,7 +17,6 @@
 #include <hpactor/ref/actor_address.hpp>
 #include <hpactor/types/types.hpp>
 
-#include <functional>
 #include <utility>
 
 namespace hpactor {
@@ -28,10 +27,16 @@ namespace hpactor {
 /// a target actor address. This is a combinatorial utility — no
 /// ActorSystem or actor context is required.
 ///
+/// For \c T=void, the success callback takes only \c (const ActorAddress&).
+/// For non-void \c T, it takes \c (const ActorAddress&, T).
+///
 /// \tparam T The result type.
-/// \param[in] r The resolved result to pipe.
+/// \tparam SuccessFn Callable \c void(const ActorAddress&, T) or
+///         \c void(const ActorAddress&) for void result.
+/// \tparam ErrorFn Callable \c void(const ActorAddress&, error).
+/// \param[in,out] r The resolved result to pipe.
 /// \param[in] target The actor address associated with this result.
-/// \param[in] on_success Called with (target, value) if the result is ok.
+/// \param[in] on_success Called with (target, [value]) if the result is ok.
 /// \param[in] on_error Called with (target, error) if the result is an error.
 ///
 /// Usage:
@@ -41,12 +46,15 @@ namespace hpactor {
 ///           [](const ActorAddress& t, MyResponse v) { ... },
 ///           [](const ActorAddress& t, error e) { ... });
 /// \endcode
-template <typename T>
-void pipe_to(const result<T>& r, const ActorAddress& target,
-             std::function<void(const ActorAddress&, T)> on_success,
-             std::function<void(const ActorAddress&, error)> on_error) {
+template <typename T, typename SuccessFn, typename ErrorFn>
+void pipe_to(result<T>& r, const ActorAddress& target, SuccessFn&& on_success,
+             ErrorFn&& on_error) {
     if (r.ok()) {
-        on_success(target, r.value());
+        if constexpr (std::is_void_v<T>) {
+            on_success(target);
+        } else {
+            on_success(target, r.value());
+        }
     } else {
         on_error(target, r.error());
     }
