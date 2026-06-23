@@ -29,6 +29,8 @@ class HTTPGateway;
 
 namespace process {
 
+class HealthState;
+
 struct HealthHttpConfig {
     uint16_t port = 8089;
     std::string bind_address = "127.0.0.1";
@@ -61,10 +63,23 @@ class HealthHttpServer : public DaemonActor {
         return true;
     }
 
+    /// \brief Attach a shared health state to read on each HTTP request.
+    ///
+    /// Must be called before \c on_daemon_start().  When set, responses
+    /// reflect the actual system health instead of unconditionally
+    /// returning \c 200\ OK.
+    void set_health_state(std::shared_ptr<HealthState> state) {
+        health_state_ = std::move(state);
+    }
+
   private:
+    /// \brief Build a minimal JSON body from the current health state.
+    static std::string format_health_json(const HealthState& state);
+
     ActorSystem& system_;
     HealthHttpConfig config_;
     std::unique_ptr<net::HTTPGateway> gateway_;
+    std::shared_ptr<HealthState> health_state_;
     bool listen_ok_ = false;
 };
 

@@ -47,6 +47,30 @@ class ProcessConfigParser final : public ITomlSystemConfigParser {
         out.process.watchdog_interval = std::chrono::milliseconds(
             static_cast<int64_t>(pt.read_uint32("watchdog_interval_ms", 0)));
 
+        // [system.process.health] subsection
+        auto hc = pt.table("health");
+        if (hc.valid()) {
+            auto& h = out.process.health_check;
+            h.enabled = hc.read_bool("enabled", true);
+            h.scheduler_liveness_enabled =
+                hc.read_bool("scheduler_liveness_enabled", true);
+            h.system_actor_health_enabled =
+                hc.read_bool("system_actor_health_enabled", true);
+            h.dlq_growth_enabled = hc.read_bool("dlq_growth_enabled", true);
+            h.memory_pressure_enabled =
+                hc.read_bool("memory_pressure_enabled", true);
+            h.scheduler_progress_deadline_sec =
+                hc.read_uint32("scheduler_progress_deadline_sec", 30);
+            h.dlq_depth_warning_pct = hc.read_uint32("dlq_depth_warning_pct", 80);
+            h.dlq_depth_critical_pct = hc.read_uint32("dlq_depth_critical_pct", 95);
+            h.dlq_lost_rate_per_minute =
+                hc.read_uint32("dlq_lost_rate_per_minute", 10);
+            h.memory_warning_pct =
+                static_cast<uint8_t>(hc.read_uint32("memory_warning_pct", 85));
+            h.memory_critical_pct =
+                static_cast<uint8_t>(hc.read_uint32("memory_critical_pct", 95));
+        }
+
         return result<void>::make();
     }
 };

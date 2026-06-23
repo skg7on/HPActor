@@ -17,6 +17,7 @@
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_proto_server_actor.hpp>
 #include <hpactor/cli/cli_proto_server_config.hpp>
+#include <hpactor/process/health_check.hpp>
 #include <hpactor/process/health_http_server.hpp>
 #include <hpactor/process/process_manager.hpp>
 #include <hpactor/process/watchdog_actor.hpp>
@@ -46,16 +47,32 @@ int run_daemon(ActorSystem& system, const DaemonConfig& cfg) {
     server_cfg.page_size = 50;
     system.spawn<cli::CliProtoServerActor>(server_cfg);
 
-    // Spawn WatchdogActor if configured
+    // Spawn WatchdogActor if configured.
+    // Store the handle so we can share its health state with the
+    // HealthHttpServer below.
+    Actor watchdog_actor;
     if (cfg.watchdog_interval.count() > 0) {
-        system.spawn<process::WatchdogActor>(cfg.watchdog_interval);
+        watchdog_actor = system.spawn<process::WatchdogActor>(
+            cfg.watchdog_interval, cfg.health_check);
     }
 
     // Spawn HealthHttpServer if configured
     if (cfg.health_port > 0) {
         process::HealthHttpConfig health_cfg;
         health_cfg.port = cfg.health_port;
-        system.spawn<process::HealthHttpServer>(health_cfg);
+        auto health_server = system.spawn<process::HealthHttpServer>(health_cfg);
+
+        // Wire the watchdog's health state into the HTTP server so
+        // endpoints reflect real system health.
+        if (watchdog_actor) {
+            auto* raw_wd = static_cast<process::WatchdogActor*>(
+                system.get_actor(watchdog_actor.id()).get());
+            auto* raw_hs = static_cast<process::HealthHttpServer*>(
+                system.get_actor(health_server.id()).get());
+            if (raw_wd && raw_hs) {
+                raw_hs->set_health_state(raw_wd->health_state());
+            }
+        }
     }
 
     // Yield briefly so DaemonActor threads start and bind sockets before
