@@ -14,6 +14,7 @@
 
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cluster/cluster_failure_model.hpp>
+#include <hpactor/cluster/route_invalidation.hpp>
 #include <hpactor/cluster/singleton/oldest_node_election.hpp>
 #include <hpactor/cluster/singleton/singleton_identity.hpp>
 #include <hpactor/cluster/singleton/singleton_manager_actor.hpp>
@@ -28,6 +29,10 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
         fm,
         +[](void* p) { delete static_cast<cluster::ClusterFailureModel*>(p); }};
 
+    auto* ri = new cluster::RouteInvalidation();
+    route_invalidation_ = {
+        ri, +[](void* p) { delete static_cast<cluster::RouteInvalidation*>(p); }};
+
     auto* sm = new cluster::singleton::SingletonManagerActor(
         node_id, std::make_unique<cluster::singleton::OldestNodeElection>());
     singleton_manager_ = {
@@ -41,7 +46,8 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
     sm_ptr->register_singleton(
         cluster::singleton::SingletonIdentity{"shard-coordinator", 0});
 
-    // Wire observer: node state changes trigger singleton election re-runs.
+    // Wire observer: node state changes trigger singleton election re-runs
+    // and route invalidation processing.
     auto* fm_ptr =
         static_cast<cluster::ClusterFailureModel*>(cluster_failure_model_.get());
     fm_ptr->register_observer([this](const std::vector<std::string>& alive) {
@@ -49,6 +55,21 @@ void ActorSystem::enable_cluster(const std::string& node_id) {
             singleton_manager_.get());
         if (mgr) {
             mgr->on_node_state_change(alive);
+        }
+
+        // Drain and process route invalidations for nodes that went
+        // Down, Quarantined, or Removed.
+        auto* ri_ptr =
+            static_cast<cluster::RouteInvalidation*>(route_invalidation_.get());
+        if (ri_ptr) {
+            auto* fm_ptr2 = static_cast<cluster::ClusterFailureModel*>(
+                cluster_failure_model_.get());
+            if (fm_ptr2) {
+                auto invalidated = fm_ptr2->drain_invalidation_queue();
+                if (!invalidated.empty()) {
+                    ri_ptr->process(invalidated);
+                }
+            }
         }
     });
 }

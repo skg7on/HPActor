@@ -81,8 +81,9 @@ class ClusterFailureModel {
 
     /// \brief Register an observer for node state change notifications.
     ///
-    /// Observers are called after every successful transition while the
-    /// internal mutex is held. Observers must not call back into the model.
+    /// Observers are called after every successful transition AFTER the
+    /// internal mutex has been released. Observers may safely acquire
+    /// other locks without risk of deadlock with the cluster failure model.
     void register_observer(StateChangeObserver observer);
 
   private:

@@ -58,4 +58,14 @@ uint64_t ShardTable::epoch() const {
     return current_epoch_;
 }
 
+std::vector<ShardEntry> ShardTable::entries() const {
+    std::lock_guard<std::mutex> lock(mutex_);
+    std::vector<ShardEntry> result;
+    result.reserve(entries_.size());
+    for (const auto& [id, entry] : entries_) {
+        result.push_back(entry);
+    }
+    return result;
+}
+
 } // namespace hpactor::cluster::sharding

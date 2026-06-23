@@ -34,42 +34,48 @@ bool ClusterFailureModel::register_node(const ClusterNodeIdentity& id) {
 TransitionResult
 ClusterFailureModel::transition(const std::string& node_id, ClusterNodeState to,
                                 const std::string& /*reason*/) {
-    std::lock_guard<std::mutex> lock(mutex_);
-
-    auto it = nodes_.find(node_id);
-    if (it == nodes_.end()) {
-        return {false, false, "node not found"};
-    }
-
-    ClusterNodeState from = it->second.state;
-
-    if (!can_transition(from, to)) {
-        return {false, false, "illegal transition"};
-    }
-
-    it->second.state = to;
-
-    bool invalidated =
-        (to == ClusterNodeState::Down || to == ClusterNodeState::Quarantined ||
-         to == ClusterNodeState::Removed);
-
-    if (invalidated) {
-        invalidation_queue_.push_back(node_id);
-    }
-
-    // Notify observers of the updated alive set.
-    // Observers must not call back into the model (lock held).
+    // Compute state transition, alive snapshot, and observer copy
+    // all under the lock, then release before invoking observers.
+    std::vector<std::string> alive;
+    std::vector<StateChangeObserver> observers_snapshot;
+    bool invalidated = false;
     {
-        std::vector<std::string> alive;
+        std::lock_guard<std::mutex> lock(mutex_);
+
+        auto it = nodes_.find(node_id);
+        if (it == nodes_.end()) {
+            return {false, false, "node not found"};
+        }
+
+        ClusterNodeState from = it->second.state;
+
+        if (!can_transition(from, to)) {
+            return {false, false, "illegal transition"};
+        }
+
+        it->second.state = to;
+
+        invalidated = (to == ClusterNodeState::Down ||
+                       to == ClusterNodeState::Quarantined ||
+                       to == ClusterNodeState::Removed);
+
+        if (invalidated) {
+            invalidation_queue_.push_back(node_id);
+        }
+
         for (const auto& [id, record] : nodes_) {
             if (record.state == ClusterNodeState::Alive) {
                 alive.push_back(id);
             }
         }
-        for (const auto& obs : observers_) {
-            if (obs)
-                obs(alive);
-        }
+        observers_snapshot = observers_;
+    } // mutex_ released here
+
+    // Invoke observers OUTSIDE the lock to prevent deadlocks
+    // when observers acquire other locks.
+    for (const auto& obs : observers_snapshot) {
+        if (obs)
+            obs(alive);
     }
 
     return {true, invalidated, ""};

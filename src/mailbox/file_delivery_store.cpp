@@ -15,7 +15,9 @@
 #include <hpactor/mailbox/file_delivery_store.hpp>
 #include <hpactor/msg/failure_reason.hpp>
 
+#include <cerrno>
 #include <chrono>
+#include <cstdlib>
 #include <filesystem>
 #include <fstream>
 #include <sstream>
@@ -40,7 +42,25 @@ std::string FileDeliveryStore::inbox_path() const {
 
 result<void> FileDeliveryStore::put_outbox(const PendingSend& record) {
     std::lock_guard<std::mutex> lock(mutex_);
-    std::string tmp = outbox_path() + ".tmp";
+    std::string path = outbox_path();
+    std::string tmp = path + ".tmp";
+
+    // Copy existing entries into temp file to preserve prior records,
+    // then append the new entry. Atomic rename guarantees consistency.
+    if (std::filesystem::exists(path)) {
+        std::ifstream ifs(path);
+        if (ifs) {
+            std::ofstream ofs(tmp);
+            if (!ofs) {
+                return result<void>::make(error(static_cast<uint32_t>(
+                    FailureReason::PassivationSnapshotFailed)));
+            }
+            ofs << ifs.rdbuf();
+            ofs.close();
+        }
+        ifs.close();
+    }
+
     std::ofstream ofs(tmp, std::ios::app);
     if (!ofs) {
         return result<void>::make(error(
@@ -48,7 +68,7 @@ result<void> FileDeliveryStore::put_outbox(const PendingSend& record) {
     }
     ofs << std::hex << record.message_id.value() << "\n";
     ofs.close();
-    std::filesystem::rename(tmp, outbox_path());
+    std::filesystem::rename(tmp, path);
     return result<void>::make();
 }
 
@@ -58,13 +78,18 @@ result<void> FileDeliveryStore::mark_outbox_complete(MessageId id) {
     std::string tmp = outbox_path() + ".tmp";
     std::ofstream ofs(tmp);
     if (!ifs || !ofs) {
-        return result<void>::make();
+        return result<void>::make(error(
+            static_cast<uint32_t>(FailureReason::PassivationSnapshotFailed)));
     }
     std::string line;
     while (std::getline(ifs, line)) {
         if (line.empty())
             continue;
-        uint64_t mid = std::stoull(line, nullptr, 16);
+        char* end = nullptr;
+        errno = 0;
+        uint64_t mid = std::strtoull(line.c_str(), &end, 16);
+        if (errno != 0 || end == line.c_str() || *end != '\0')
+            continue; // Skip malformed lines
         if (mid != id.value()) {
             ofs << line << "\n";
         }
@@ -86,8 +111,13 @@ result<std::vector<PendingSend>> FileDeliveryStore::load_pending_outbox() {
     while (std::getline(ifs, line)) {
         if (line.empty())
             continue;
+        char* end = nullptr;
+        errno = 0;
+        uint64_t mid = std::strtoull(line.c_str(), &end, 16);
+        if (errno != 0 || end == line.c_str() || *end != '\0')
+            continue; // Skip malformed lines
         PendingSend send;
-        send.message_id = MessageId{std::stoull(line, nullptr, 16)};
+        send.message_id = MessageId{mid};
         items.push_back(send);
     }
     return result<std::vector<PendingSend>>::make(std::move(items));
