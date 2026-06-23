@@ -20,6 +20,7 @@ add_executable(test_unit_net
     test_udp_transport_smoke.cpp
     test_net_unit_final.cpp
     test_reliable_ack.cpp
+    admin/test_admin_api_actor.cpp
 )
 target_link_libraries(test_unit_net hpactor hpactor_proto pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_net PROPERTIES TIMEOUT 30)

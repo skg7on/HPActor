@@ -19,7 +19,7 @@
 #include <functional>
 #include <mutex>
 #include <string>
-#include <vector>
+#include <unordered_map>
 
 namespace hpactor::net::admin {
 
@@ -43,27 +43,60 @@ class AdminApiActor {
     AdminApiActor() = default;
 
     /// \brief Register a handler for a specific resource.
-    void register_handler(AdminResource resource, Handler handler);
+    void register_handler(AdminResource resource, Handler handler) {
+        std::lock_guard<std::mutex> lock(mutex_);
+        handlers_[resource] = std::move(handler);
+    }
 
     /// \brief Handle an admin request by dispatching to the registered handler.
-    AdminResponse handle(const AdminRequest& request) const;
+    AdminResponse handle(const AdminRequest& request) const {
+        std::lock_guard<std::mutex> lock(mutex_);
+        auto it = handlers_.find(request.resource);
+        if (it != handlers_.end()) {
+            return it->second(request);
+        }
+        // Fall back to built-in handlers for common resources
+        switch (request.resource) {
+            case AdminResource::Health:
+                return health_check();
+            case AdminResource::Actors:
+                return list_actors();
+            case AdminResource::ClusterNodes:
+                return list_cluster_nodes();
+            case AdminResource::Shutdown:
+                return shutdown();
+        }
+        return AdminResponse{404, R"({"error":"not_found"})"};
+    }
 
     /// \brief Quick health check (liveness probe).
-    /// Returns {"status":"ok"} when the system is live.
-    static AdminResponse health_check();
+    static AdminResponse health_check() {
+        return AdminResponse{200, R"({"status":"ok"})"};
+    }
 
     /// \brief List actor placeholders (for testing).
-    static AdminResponse list_actors();
+    static AdminResponse list_actors() {
+        return AdminResponse{200, R"({"actors":[]})"};
+    }
 
     /// \brief List cluster node placeholders (for testing).
-    static AdminResponse list_cluster_nodes();
+    static AdminResponse list_cluster_nodes() {
+        return AdminResponse{200, R"({"nodes":[]})"};
+    }
 
     /// \brief Shutdown placeholder (for testing).
-    static AdminResponse shutdown();
+    static AdminResponse shutdown() {
+        return AdminResponse{200, R"({"shutdown":"initiated"})"};
+    }
 
   private:
+    struct ResourceHash {
+        size_t operator()(AdminResource r) const noexcept {
+            return std::hash<int>{}(static_cast<int>(r));
+        }
+    };
     mutable std::mutex mutex_;
-    std::unordered_map<AdminResource, Handler, std::hash<uint8_t>> handlers_;
+    std::unordered_map<AdminResource, Handler, ResourceHash> handlers_;
 };
 
 } // namespace hpactor::net::admin
