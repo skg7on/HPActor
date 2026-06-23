@@ -17,62 +17,83 @@
 
 namespace hpactor::net::admin {
 
+// ── Null-system error paths ────────────────────────────────────────────
+
 TEST(AdminApiActorTest, DefaultConstruction) {
     AdminApiActor actor;
     // Should not crash on construction
 }
 
-TEST(AdminApiActorTest, HealthCheckReturnsOk) {
-    auto resp = AdminApiActor::health_check();
-    EXPECT_EQ(resp.status_code, 200);
-    EXPECT_NE(resp.body.find("\"status\":\"ok\""), std::string::npos);
+TEST(AdminApiActorTest, HealthCheckWithoutSystemReturnsError) {
+    AdminApiActor actor;
+    auto resp = actor.health_check();
+    EXPECT_EQ(resp.status_code, 500);
+    EXPECT_NE(resp.body.find("no_system"), std::string::npos);
 }
 
-TEST(AdminApiActorTest, ListActorsReturnsEmptyArray) {
-    auto resp = AdminApiActor::list_actors();
-    EXPECT_EQ(resp.status_code, 200);
-    EXPECT_NE(resp.body.find("\"actors\":[]"), std::string::npos);
+TEST(AdminApiActorTest, ListActorsWithoutSystemReturnsError) {
+    AdminApiActor actor;
+    auto resp = actor.list_actors();
+    EXPECT_EQ(resp.status_code, 500);
+    EXPECT_NE(resp.body.find("no_system"), std::string::npos);
 }
 
-TEST(AdminApiActorTest, ListClusterNodesReturnsEmptyArray) {
-    auto resp = AdminApiActor::list_cluster_nodes();
-    EXPECT_EQ(resp.status_code, 200);
-    EXPECT_NE(resp.body.find("\"nodes\":[]"), std::string::npos);
+TEST(AdminApiActorTest, ListClusterNodesWithoutSystemReturnsError) {
+    AdminApiActor actor;
+    auto resp = actor.list_cluster_nodes();
+    EXPECT_EQ(resp.status_code, 500);
+    EXPECT_NE(resp.body.find("no_system"), std::string::npos);
 }
 
-TEST(AdminApiActorTest, ShutdownReturnsInitiated) {
-    auto resp = AdminApiActor::shutdown();
-    EXPECT_EQ(resp.status_code, 200);
-    EXPECT_NE(resp.body.find("\"shutdown\":\"initiated\""), std::string::npos);
+TEST(AdminApiActorTest, ShutdownWithoutSystemReturnsError) {
+    AdminApiActor actor;
+    auto resp = actor.do_shutdown();
+    EXPECT_EQ(resp.status_code, 500);
+    EXPECT_NE(resp.body.find("no_system"), std::string::npos);
 }
+
+// ── Handler registration and dispatch ──────────────────────────────────
 
 TEST(AdminApiActorTest, RegisterHandlerDispatchesCorrectly) {
-    AdminApiActor actor;
-    actor.register_handler(
-        AdminResource::Actors, [](const AdminRequest&) -> AdminResponse {
-            return {200, R"({"actors":[{"id":1,"name":"test"}]})"};
-        });
+    AdminApiActor actor; // no system — handler still works
+    actor.register_handler(AdminResource::Actors,
+                           [](const AdminRequest&) -> AdminResponse {
+                               return {200, R"({"actors":[{"id":1}]})"};
+                           });
 
     AdminRequest req{AdminResource::Actors, ""};
     auto resp = actor.handle(req);
     EXPECT_EQ(resp.status_code, 200);
-    EXPECT_NE(resp.body.find("\"actors\":"), std::string::npos);
+    EXPECT_NE(resp.body.find("\"actors\""), std::string::npos);
 }
 
 TEST(AdminApiActorTest, UnregisteredResourceReturns404) {
     AdminApiActor actor;
-    // Use an out-of-range resource value
     AdminRequest req{static_cast<AdminResource>(99), ""};
     auto resp = actor.handle(req);
     EXPECT_EQ(resp.status_code, 404);
 }
 
-TEST(AdminApiActorTest, BuiltInFallbackForHealth) {
+TEST(AdminApiActorTest, HandleFallsBackToBuiltInHealthCheck) {
     AdminApiActor actor;
     AdminRequest req{AdminResource::Health, ""};
     auto resp = actor.handle(req);
+    // No system → error response from health_check fallback
+    EXPECT_EQ(resp.status_code, 500);
+    EXPECT_NE(resp.body.find("no_system"), std::string::npos);
+}
+
+TEST(AdminApiActorTest, CustomHandlerOverridesBuiltIn) {
+    AdminApiActor actor;
+    actor.register_handler(AdminResource::Health,
+                           [](const AdminRequest&) -> AdminResponse {
+                               return {200, R"({"custom":"health"})"};
+                           });
+
+    AdminRequest req{AdminResource::Health, ""};
+    auto resp = actor.handle(req);
     EXPECT_EQ(resp.status_code, 200);
-    EXPECT_NE(resp.body.find("\"status\":\"ok\""), std::string::npos);
+    EXPECT_NE(resp.body.find("custom"), std::string::npos);
 }
 
 } // namespace hpactor::net::admin
