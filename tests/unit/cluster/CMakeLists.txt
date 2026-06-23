@@ -15,8 +15,14 @@ add_executable(test_unit_cluster
     sharding/test_shard_coordinator_actor.cpp
     singleton/test_singleton_identity.cpp
     singleton/test_singleton_election.cpp
+    singleton/test_majority_based_election.cpp
+    singleton/test_fixed_priority_election.cpp
     singleton/test_singleton_manager.cpp
     singleton/test_singleton_manager_actor.cpp
+    pubsub/test_pubsub_mediator_core.cpp
+    pubsub/test_pubsub_mediator_actor.cpp
+    receptionist/test_cluster_receptionist_core.cpp
+    receptionist/test_cluster_receptionist_actor.cpp
 )
 target_link_libraries(test_unit_cluster hpactor hpactor_proto hpactor_cluster pthread hpactor_test_support GTest::gtest_main)
 gtest_discover_tests(test_unit_cluster)
