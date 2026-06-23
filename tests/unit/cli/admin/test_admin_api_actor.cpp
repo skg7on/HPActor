@@ -13,9 +13,9 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/net/admin/admin_api_actor.hpp>
+#include <hpactor/cli/admin/admin_api_actor.hpp>
 
-namespace hpactor::net::admin {
+namespace hpactor::cli::admin {
 
 // ── Null-system error paths ────────────────────────────────────────────
 

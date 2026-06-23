@@ -18,7 +18,7 @@
 #include <string>
 #include <vector>
 
-namespace hpactor::net::admin {
+namespace hpactor::cli::admin {
 
 /// \brief Admin API resource path enumeration.
 enum class AdminResource : uint8_t {

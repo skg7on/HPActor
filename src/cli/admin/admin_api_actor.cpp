@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/net/admin/admin_api_actor.hpp>
+#include <hpactor/cli/admin/admin_api_actor.hpp>
 
 #include <hpactor/actor/actor_system.hpp>
 
 #include <sstream>
 
-namespace hpactor::net::admin {
+namespace hpactor::cli::admin {
 
 AdminApiActor::AdminApiActor(ActorSystem* system) : system_(system) {}
 

@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/net/admin/admin_messages.hpp>
+#include <hpactor/cli/admin/admin_messages.hpp>
 
 #include <functional>
 #include <mutex>
@@ -24,7 +24,7 @@ namespace hpactor {
 
 class ActorSystem;
 
-namespace net::admin {
+namespace cli::admin {
 
 /// \brief Admin API endpoint handler (OPS-002).
 ///
@@ -101,5 +101,5 @@ class AdminApiActor {
     ActorSystem* system_{nullptr};
 };
 
-} // namespace net::admin
+} // namespace cli::admin
 } // namespace hpactor
