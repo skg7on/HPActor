@@ -14,10 +14,12 @@
 
 // tests/unit/timer/test_calendar_queue.cpp
 
+#include <chrono>
 #include <functional>
 #include <gtest/gtest.h>
 #include <hpactor/adt/calendar_queue.hpp>
 #include <memory>
+#include <thread>
 
 using namespace hpactor::adt;
 
@@ -123,4 +125,46 @@ TEST_F(CalendarQueueTest, EmptyAndNextDeadline) {
     EXPECT_TRUE(queue_->empty());
     EXPECT_EQ(queue_->next_deadline(), INT64_MAX);
     EXPECT_EQ(queue_->size(), 0u);
+}
+
+// ---------------------------------------------------------------------------
+// TSAN stress: concurrent schedule() and advance() must not race on
+// last_advance_ns_ or timer_map_.
+// ---------------------------------------------------------------------------
+TEST_F(CalendarQueueTest, ScheduleReadsTimeUnderLock) {
+    std::atomic<bool> start{false};
+    std::atomic<int> fired{0};
+    std::atomic<int> scheduled{0};
+
+    std::thread scheduler([&]() {
+        while (!start.load()) { /* spin */
+        }
+        for (int i = 0; i < 1000; ++i) {
+            static_cast<void>(
+                queue_->schedule(1'000'000, [&fired]() { fired.fetch_add(1); }));
+            scheduled.fetch_add(1);
+        }
+    });
+
+    std::thread advancer([&]() {
+        while (!start.load()) { /* spin */
+        }
+        int64_t t = queue_->current_time() + 1'000'000;
+        for (int i = 0; i < 1000; ++i) {
+            queue_->advance(t);
+            t += 1'000'000;
+            std::this_thread::sleep_for(std::chrono::microseconds(10));
+        }
+    });
+
+    start.store(true);
+    scheduler.join();
+    advancer.join();
+
+    // Advance enough to fire all remaining timers
+    queue_->advance(queue_->current_time() + 5'000'000'000LL);
+
+    // Verify no timers were lost
+    EXPECT_EQ(static_cast<size_t>(fired.load()) + queue_->size(),
+              static_cast<size_t>(scheduled.load()));
 }

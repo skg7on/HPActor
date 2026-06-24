@@ -104,20 +104,26 @@ CalendarQueue::~CalendarQueue() {
 }
 
 uint64_t CalendarQueue::schedule(int64_t delay_ns, TimerCallback cb) {
+    std::lock_guard<std::mutex> lock(mutex_);
     int64_t now = last_advance_ns_;
     int64_t expire_ns = now + delay_ns;
     if (delay_ns <= 0) {
         expire_ns = now + fine_bucket_ns_;
     }
-    return schedule_at(expire_ns, std::move(cb));
+    return schedule_at_locked(expire_ns, std::move(cb));
 }
 
 uint64_t CalendarQueue::schedule_at(int64_t expire_ns, TimerCallback cb) {
     std::lock_guard<std::mutex> lock(mutex_);
+    return schedule_at_locked(expire_ns, std::move(cb));
+}
+
+uint64_t CalendarQueue::schedule_at_locked(int64_t expire_ns, TimerCallback cb) {
     auto* timer = make_timer(std::move(cb), expire_ns);
     timer_map_[timer->id] = timer;
     int64_t now = last_advance_ns_;
     insert_timer(timer, now);
+    size_.fetch_add(1, std::memory_order_relaxed);
     return timer->id;
 }
 
@@ -167,6 +173,7 @@ bool CalendarQueue::cancel(uint64_t timer_id) {
             break;
     }
     destroy_timer(timer);
+    size_.fetch_sub(1, std::memory_order_relaxed);
     return true;
 }
 
@@ -225,6 +232,7 @@ uint32_t CalendarQueue::advance(int64_t now_ns) {
                     timer_map_.erase(t->id);
                     pending.push_back(std::move(t->callback));
                     destroy_timer(t);
+                    size_.fetch_sub(1, std::memory_order_relaxed);
                 } else {
                     // Future timer in current bucket — re-insert.
                     insert_timer(t, now_ns);
