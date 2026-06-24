@@ -280,6 +280,29 @@ ActorContext::schedule(std::chrono::milliseconds delay, TypedMessage msg) {
     return AlarmHandle{handle.value()};
 }
 
+AlarmHandle
+ActorContext::schedule_to(const ActorAddress& target,
+                          std::chrono::milliseconds delay, TypedMessage msg) {
+    auto* sched = system_->scheduler();
+    if (!sched)
+        return AlarmHandle{};
+
+    msg.set_sender_address(owner_.address());
+
+    ActorId target_id = target.id;
+    ActorSystem* sys = system_;
+
+    auto msg_ptr = std::make_shared<TypedMessage>(std::move(msg));
+    auto callback = [sys, target_id, msg_ptr]() {
+        sys->deliver_local(target_id, std::move(*msg_ptr));
+    };
+
+    int64_t delay_ns =
+        std::chrono::duration_cast<std::chrono::nanoseconds>(delay).count();
+    auto handle = sched->schedule_after(std::move(callback), delay_ns);
+    return AlarmHandle{handle.value()};
+}
+
 void ActorContext::cancel_schedule(AlarmHandle handle) {
     if (handle.value() == 0)
         return;

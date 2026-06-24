@@ -227,6 +227,10 @@ void EventBasedActor::handle_down_msg(const TypedMessage& msg) {
     if (ctx != nullptr) {
         ctx->remove_linked(msg.sender_address());
         ctx->remove_monitored(msg.sender_address());
+        // Death pact: if enabled, passivate when a linked actor dies.
+        if (ctx->has_death_pact()) {
+            ctx->passivate();
+        }
     }
 }
 

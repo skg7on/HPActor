@@ -17,9 +17,9 @@
 #include <hpactor/actor/abstract_actor.hpp>
 #include <hpactor/actor/actor_ref_cache.hpp>
 #include <hpactor/actor/receptionist/service_key.hpp>
-#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/msg/delivery_receipt.hpp>
 #include <hpactor/msg/enqueue_result.hpp>
+#include <hpactor/msg/proto_type_registry.hpp>
 #include <hpactor/msg/request_handle.hpp>
 #include <hpactor/msg/request_timeout.hpp>
 #include <hpactor/msg/typed_message.hpp>
@@ -237,9 +237,23 @@ class ActorContext {
     /// \return An \c AlarmHandle that can be used to cancel the schedule.
     AlarmHandle schedule(std::chrono::milliseconds delay, TypedMessage msg);
 
+    /// \brief Schedule delivery of a message to any actor after a delay.
+    ///
+    /// Unlike \c schedule(), the target does not have to be the calling
+    /// actor. Reuses the existing scheduler infrastructure with a callback
+    /// that delivers to the specified \c target_id.
+    ///
+    /// \param[in] target The actor to deliver to.
+    /// \param[in] delay Time until delivery.
+    /// \param[in] msg Message to deliver.
+    /// \return An \c AlarmHandle that can be used with \c cancel_schedule().
+    AlarmHandle schedule_to(const ActorAddress& target,
+                            std::chrono::milliseconds delay, TypedMessage msg);
+
     /// \brief Cancel a previously scheduled message.
     ///
-    /// \param[in] handle The handle returned by \c schedule().
+    /// \param[in] handle The handle returned by \c schedule() or \c
+    /// schedule_to().
     void cancel_schedule(AlarmHandle handle);
 
     /// \brief Request self-passivation after the current message completes.
@@ -250,6 +264,28 @@ class ActorContext {
     ///
     /// \note Callable only from within an actor handler.
     void passivate();
+
+    // ── Death Pact ─────────────────────────────────────────────────────────
+
+    /// \brief Enable or disable the death pact for this actor.
+    ///
+    /// When enabled, this actor will passivate (stop) when a linked actor
+    /// dies (receives a DownMsg). This implements the CAF-style "death pact"
+    /// pattern where linked actors share fate.
+    ///
+    /// \param[in] enabled \c true to enable death pact, \c false to disable.
+    /// \note Defaults to \c false. Only applies to linked actors, not
+    ///       monitored actors (monitoring is one-way).
+    void set_death_pact(bool enabled) {
+        death_pact_ = enabled;
+    }
+
+    /// \brief Check whether death pact is enabled for this actor.
+    ///
+    /// \return \c true if death pact is enabled, \c false otherwise.
+    bool has_death_pact() const {
+        return death_pact_;
+    }
 
     // ── Receptionist ─────────────────────────────────────────────────────
 
@@ -496,6 +532,7 @@ class ActorContext {
     std::vector<ActorRef> remote_children_;
     std::vector<ActorAddress> linked_;
     std::vector<ActorAddress> monitored_;
+    bool death_pact_ = false;
 
     void set_current_trace_context(const TraceContext& context) noexcept {
         current_trace_context_ = context;
