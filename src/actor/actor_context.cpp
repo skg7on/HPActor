@@ -18,6 +18,7 @@
 #include <hpactor/actor/event_based_actor.hpp>
 #include <hpactor/actor/receptionist/receptionist.hpp>
 #include <hpactor/hpactor_config.hpp>
+#include <hpactor/mailbox/mpsc_actor_mailbox.hpp>
 #include <hpactor/metrics/metrics_event.hpp>
 #include <hpactor/ref/actor_proxy.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
@@ -204,6 +205,56 @@ void ActorContext::send_edf(ActorAddress target, TypedMessage msg,
 
     msg.set_sender_address(owner_.address());
     sys->deliver_local_edf(target.id, std::move(msg), deadline_ns, priority);
+}
+
+mailbox::DeliveryResult
+ActorContext::send_batch(ActorId target, std::vector<TypedMessage> msgs) {
+    if (msgs.empty()) {
+        ActorAddress addr;
+        addr.id = target;
+        return {mailbox::DeliveryStatus::Accepted, addr, MessageId{0}, 0};
+    }
+
+    // Stamp sender identity on each message
+    if (owner_) {
+        for (auto& msg : msgs) {
+            msg.set_sender_address(owner_.address());
+        }
+    }
+
+    auto* system = owner_ ? &owner_.get()->system() : system_;
+    if (system == nullptr) {
+        ActorAddress addr;
+        addr.id = target;
+        return {mailbox::DeliveryStatus::NoRoute, addr, MessageId{0}, 0};
+    }
+
+    // Inject trace context
+    if (system->trace_manager() != nullptr) {
+        for (auto& msg : msgs) {
+            system->trace_manager()->inject_message_context(
+                msg, this,
+                system->trace_manager()->config().create_roots_for_actor_context_sends);
+        }
+    }
+
+    // Check if target is local via mailbox lookup
+    auto* mailbox = system->get_mailbox(target);
+    if (mailbox != nullptr) {
+        // Local fast path: bypass DeliveryPipeline
+        mailbox::MailboxEnvelopeMeta meta;
+        if (owner_) {
+            meta.sender = owner_.address();
+        }
+        auto result = mailbox->try_push_batch(msgs.begin(), msgs.end(), meta);
+        ActorAddress target_addr(system->endpoint(), 0, target, 0);
+        return result.to_delivery_result(target_addr);
+    }
+
+    // Remote target: delegate to ActorProxy
+    ActorAddress target_addr(system->endpoint(), 0, target, 0);
+    ActorProxy proxy(target_addr, system);
+    return proxy.try_send_batch(target_addr, std::move(msgs));
 }
 
 void ActorContext::reply(TypedMessage msg) {
