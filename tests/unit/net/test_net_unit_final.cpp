@@ -223,43 +223,44 @@ TEST(NetUnitFinalTest, WireFrameEmptyPayloadRoundtrip) {
                           ActorId{2}, 0);
 
     WireFrame f;
-    to_proto(f.pb_frame.mutable_sender(), sender);
-    to_proto(f.pb_frame.mutable_receiver(), receiver);
-    f.pb_frame.set_flags(WireFrame::NoDrop);
-    f.pb_frame.set_message_id(42);
+    to_proto(f.pb_envelope.mutable_data_frame()->mutable_sender(), sender);
+    to_proto(f.pb_envelope.mutable_data_frame()->mutable_receiver(), receiver);
+    f.pb_envelope.mutable_data_frame()->set_flags(WireFrame::NoDrop);
+    f.pb_envelope.mutable_data_frame()->set_message_id(42);
 
     StreamBuffer encoded = f.encode();
     EXPECT_FALSE(encoded.empty());
 
     WireFrame decoded = WireFrame::decode(encoded);
-    EXPECT_EQ(decoded.pb_frame.message_id(), 42u);
-    EXPECT_EQ(decoded.pb_frame.flags(), WireFrame::NoDrop);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(), 42u);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().flags(), WireFrame::NoDrop);
 }
 
 TEST(NetUnitFinalTest, WireFrameRpcFlags) {
     WireFrame f;
-    f.pb_frame.set_flags(WireFrame::RpcRequest | WireFrame::RpcIdempotent);
-    f.pb_frame.set_message_id(12345);
+    f.pb_envelope.mutable_data_frame()->set_flags(WireFrame::RpcRequest |
+                                                  WireFrame::RpcIdempotent);
+    f.pb_envelope.mutable_data_frame()->set_message_id(12345);
 
     StreamBuffer encoded = f.encode();
     WireFrame decoded = WireFrame::decode(encoded);
 
-    EXPECT_TRUE(decoded.pb_frame.flags() & WireFrame::RpcRequest);
-    EXPECT_TRUE(decoded.pb_frame.flags() & WireFrame::RpcIdempotent);
-    EXPECT_EQ(decoded.pb_frame.message_id(), 12345u);
+    EXPECT_TRUE(decoded.pb_envelope.data_frame().flags() & WireFrame::RpcRequest);
+    EXPECT_TRUE(decoded.pb_envelope.data_frame().flags() & WireFrame::RpcIdempotent);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(), 12345u);
 }
 
 TEST(NetUnitFinalTest, WireFrameDecodeFromSpan) {
     WireFrame f;
-    f.pb_frame.set_message_id(999);
-    f.pb_frame.set_payload("data", 4u);
+    f.pb_envelope.mutable_data_frame()->set_message_id(999);
+    f.pb_envelope.mutable_data_frame()->set_payload("data", 4u);
 
     StreamBuffer encoded = f.encode();
     std::span<const uint8_t> span(encoded.data(), encoded.size());
 
     WireFrame decoded = WireFrame::decode(span);
-    EXPECT_EQ(decoded.pb_frame.message_id(), 999u);
-    EXPECT_EQ(decoded.pb_frame.payload(), "data");
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(), 999u);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().payload(), "data");
 }
 
 TEST(NetUnitFinalTest, WireFrameDecodeMalformedTruncated) {
@@ -267,7 +268,7 @@ TEST(NetUnitFinalTest, WireFrameDecodeMalformedTruncated) {
     StreamBuffer truncated = {0x48, 0x50, 0x41, 0x43}; // "HPAC" in LE
     WireFrame f = WireFrame::decode(truncated);
     // Should not crash; magic header should be populated
-    EXPECT_EQ(f.pb_frame.message_id(), 0u);
+    EXPECT_EQ(f.pb_envelope.data_frame().message_id(), 0u);
 }
 
 TEST(NetUnitFinalTest, WireFrameMagicHeaderConstant) {

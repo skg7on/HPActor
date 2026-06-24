@@ -211,19 +211,21 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
     WireFrame frame = WireFrame::decode(frame_data);
 
     // Check for RPC response
-    if (frame.pb_frame.flags() & WireFrame::RpcResponse) {
+    if (frame.pb_envelope.data_frame().flags() & WireFrame::RpcResponse) {
         // Try to decode as spawn response first
-        if (static_cast<TypeTag>(frame.pb_frame.type_tag()) ==
+        if (static_cast<TypeTag>(frame.pb_envelope.data_frame().type_tag()) ==
             TypeTag::SpawnResponseTag) {
             ::hpactor::SpawnResponseMessage pb_resp;
             if (pb_resp.ParseFromArray(
-                    frame.pb_frame.payload().data(),
-                    static_cast<int>(frame.pb_frame.payload().size()))) {
+                    frame.pb_envelope.data_frame().payload().data(),
+                    static_cast<int>(
+                        frame.pb_envelope.data_frame().payload().size()))) {
                 if (spawn_handler_) {
                     SpawnResponse resp;
                     resp.actor_addr = net::from_proto(pb_resp.actor_addr());
                     resp.error_code = pb_resp.error_code();
-                    spawn_handler_(frame.pb_frame.message_id(), resp);
+                    spawn_handler_(frame.pb_envelope.data_frame().message_id(),
+                                   resp);
                     return;
                 }
             }
@@ -232,12 +234,14 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
         // Fall through to RPC handler
         if (rpc_handler_) {
             RpcResponseFrame response;
-            response.msg_id = MessageId(frame.pb_frame.message_id());
-            response.payload = StreamBuffer(frame.pb_frame.payload().begin(),
-                                            frame.pb_frame.payload().end());
-            if (frame.pb_frame.has_trace_context()) {
+            response.msg_id =
+                MessageId(frame.pb_envelope.data_frame().message_id());
+            response.payload =
+                StreamBuffer(frame.pb_envelope.data_frame().payload().begin(),
+                             frame.pb_envelope.data_frame().payload().end());
+            if (frame.pb_envelope.data_frame().has_trace_context()) {
                 auto parsed = net::trace_context_from_proto(
-                    frame.pb_frame.trace_context(), 256);
+                    frame.pb_envelope.data_frame().trace_context(), 256);
                 if (parsed.has_value()) {
                     response.has_trace_context = true;
                     response.trace_context = parsed.value();

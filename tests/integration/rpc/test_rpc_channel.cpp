@@ -112,7 +112,8 @@ TEST_F(RpcChannelTest, Response) {
 
     // Decode frame to get the actual message ID
     net::WireFrame frame = net::WireFrame::decode(transport_.sent_frames_[0]);
-    MessageId actual_msg_id = MessageId(frame.pb_frame.message_id());
+    MessageId actual_msg_id =
+        MessageId(frame.pb_envelope.data_frame().message_id());
 
     // Simulate response with the correct message ID
     StreamBuffer response_data = {4, 5, 6};

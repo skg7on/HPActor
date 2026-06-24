@@ -95,16 +95,20 @@ ActorProxy::try_send(const ActorAddress& target, TypedMessage msg,
     // Use msg.sender_address() if present, fall back to the proxy address
     const auto& sender_addr =
         msg.sender_address().id != ActorId{0} ? msg.sender_address() : address_;
-    net::to_proto(frame.pb_frame.mutable_sender(), sender_addr);
-    net::to_proto(frame.pb_frame.mutable_receiver(), resolved_target);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(),
+                  sender_addr);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  resolved_target);
     auto msg_id = generate_message_id();
-    frame.pb_frame.set_message_id(msg_id.value());
-    frame.pb_frame.set_type_tag(static_cast<uint32_t>(msg.type_id()));
-    frame.pb_frame.set_payload(reinterpret_cast<const char*>(msg.payload().data()),
-                               msg.payload().size());
+    frame.pb_envelope.mutable_data_frame()->set_message_id(msg_id.value());
+    frame.pb_envelope.mutable_data_frame()->set_type_tag(
+        static_cast<uint32_t>(msg.type_id()));
+    frame.pb_envelope.mutable_data_frame()->set_payload(
+        reinterpret_cast<const char*>(msg.payload().data()), msg.payload().size());
 
     if (msg.has_trace_context()) {
-        net::to_proto(frame.pb_frame.mutable_trace_context(), msg.trace_context());
+        net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_trace_context(),
+                      msg.trace_context());
     }
 
     auto tsr = transport_->try_send(resolved_target, frame.encode());

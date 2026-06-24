@@ -23,14 +23,14 @@ TEST(FrameEdgeTest, DecodeEmptyBuffer) {
     StreamBuffer empty;
     WireFrame f = WireFrame::decode(empty);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
-    EXPECT_EQ(f.pb_frame.message_id(), 0u);
+    EXPECT_EQ(f.pb_envelope.data_frame().message_id(), 0u);
 }
 
 TEST(FrameEdgeTest, DecodeTruncatedHeader) {
     StreamBuffer short_data = {'H', 'P', 'A'};
     WireFrame f = WireFrame::decode(short_data);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
-    EXPECT_EQ(f.pb_frame.message_id(), 0u);
+    EXPECT_EQ(f.pb_envelope.data_frame().message_id(), 0u);
 }
 
 TEST(FrameEdgeTest, DecodeWrongMagic) {
@@ -38,7 +38,7 @@ TEST(FrameEdgeTest, DecodeWrongMagic) {
                               2,   3,   4,   5,   6, 7, 8, 9,  0};
     WireFrame f = WireFrame::decode(bad_magic);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
-    EXPECT_EQ(f.pb_frame.message_id(), 0u);
+    EXPECT_EQ(f.pb_envelope.data_frame().message_id(), 0u);
 }
 
 TEST(FrameEdgeTest, DecodeTruncatedPayload) {
@@ -52,7 +52,7 @@ TEST(FrameEdgeTest, DecodeTruncatedPayload) {
     truncated.append(reinterpret_cast<const uint8_t*>("abcd"), 4u);
     WireFrame f = WireFrame::decode(truncated);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
-    EXPECT_EQ(f.pb_frame.message_id(), 0u);
+    EXPECT_EQ(f.pb_envelope.data_frame().message_id(), 0u);
 }
 
 TEST(FrameEdgeTest, DecodeGarbageProtobuf) {
@@ -67,7 +67,7 @@ TEST(FrameEdgeTest, DecodeGarbageProtobuf) {
         garbage.push_back(static_cast<uint8_t>(0xFF));
     WireFrame f = WireFrame::decode(garbage);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
-    EXPECT_EQ(f.pb_frame.message_id(), 0u);
+    EXPECT_EQ(f.pb_envelope.data_frame().message_id(), 0u);
 }
 
 TEST(FrameEdgeTest, DecodeSpanOverload) {
@@ -78,17 +78,18 @@ TEST(FrameEdgeTest, DecodeSpanOverload) {
     ActorAddress receiver(endpoint_ops::parse_endpoint(""), 2, receiver_id, 1);
 
     WireFrame original;
-    to_proto(original.pb_frame.mutable_sender(), sender);
-    to_proto(original.pb_frame.mutable_receiver(), receiver);
-    original.pb_frame.set_payload("test", 4u);
-    original.pb_frame.set_message_id(42u);
+    to_proto(original.pb_envelope.mutable_data_frame()->mutable_sender(), sender);
+    to_proto(original.pb_envelope.mutable_data_frame()->mutable_receiver(),
+             receiver);
+    original.pb_envelope.mutable_data_frame()->set_payload("test", 4u);
+    original.pb_envelope.mutable_data_frame()->set_message_id(42u);
 
     StreamBuffer encoded = original.encode();
     // Decode via span overload
     std::span<const uint8_t> span(encoded.data(), encoded.size());
     WireFrame decoded = WireFrame::decode(span);
-    EXPECT_EQ(decoded.pb_frame.message_id(), 42u);
-    EXPECT_EQ(decoded.pb_frame.payload(), "test");
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(), 42u);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().payload(), "test");
 }
 
 TEST(FrameEdgeTest, DecodeExactBoundaryPayload) {
@@ -99,15 +100,16 @@ TEST(FrameEdgeTest, DecodeExactBoundaryPayload) {
     ActorAddress receiver(endpoint_ops::parse_endpoint(""), 2, receiver_id, 1);
 
     WireFrame original;
-    to_proto(original.pb_frame.mutable_sender(), sender);
-    to_proto(original.pb_frame.mutable_receiver(), receiver);
-    original.pb_frame.set_payload("exact", 5u);
-    original.pb_frame.set_message_id(99u);
+    to_proto(original.pb_envelope.mutable_data_frame()->mutable_sender(), sender);
+    to_proto(original.pb_envelope.mutable_data_frame()->mutable_receiver(),
+             receiver);
+    original.pb_envelope.mutable_data_frame()->set_payload("exact", 5u);
+    original.pb_envelope.mutable_data_frame()->set_message_id(99u);
 
     StreamBuffer encoded = original.encode();
     WireFrame decoded = WireFrame::decode(encoded);
-    EXPECT_EQ(decoded.pb_frame.message_id(), 99u);
-    EXPECT_EQ(decoded.pb_frame.payload(), "exact");
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(), 99u);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().payload(), "exact");
 }
 
 TEST(FrameEdgeTest, DecodeZeroLengthPayload) {
@@ -119,8 +121,8 @@ TEST(FrameEdgeTest, DecodeZeroLengthPayload) {
     zero_payload.append(reinterpret_cast<const uint8_t*>(&zero_len), 4u);
     WireFrame f = WireFrame::decode(zero_payload);
     EXPECT_EQ(f.magic_hdr, WireFrame::MagicHeader);
-    EXPECT_EQ(f.pb_frame.message_id(), 0u);
-    EXPECT_EQ(f.pb_frame.payload(), "");
+    EXPECT_EQ(f.pb_envelope.data_frame().message_id(), 0u);
+    EXPECT_EQ(f.pb_envelope.data_frame().payload(), "");
 }
 
 TEST(FrameEdgeTest, EncodeEmptyPbFrame) {
@@ -135,5 +137,5 @@ TEST(FrameEdgeTest, EncodeEmptyPbFrame) {
     EXPECT_EQ(encoded[3], 'C');
     // Should roundtrip
     WireFrame decoded = WireFrame::decode(encoded);
-    EXPECT_EQ(decoded.pb_frame.message_id(), 0u);
+    EXPECT_EQ(decoded.pb_envelope.data_frame().message_id(), 0u);
 }

@@ -51,13 +51,15 @@ void BackpressureCoordinator::emit_remote_signal(
     }
 
     net::WireFrame frame;
-    net::to_proto(frame.pb_frame.mutable_sender(), signal.target);
-    net::to_proto(frame.pb_frame.mutable_receiver(), signal.sender);
-    frame.pb_frame.set_type_tag(
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(),
+                  signal.target);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  signal.sender);
+    frame.pb_envelope.mutable_data_frame()->set_type_tag(
         static_cast<uint32_t>(TypeTag::BackpressureSignalTag));
-    frame.pb_frame.set_message_id(signal.sequence);
-    frame.pb_frame.set_payload(reinterpret_cast<const char*>(payload.data()),
-                               payload.size());
+    frame.pb_envelope.mutable_data_frame()->set_message_id(signal.sequence);
+    frame.pb_envelope.mutable_data_frame()->set_payload(
+        reinterpret_cast<const char*>(payload.data()), payload.size());
 
     auto encoded = frame.encode();
     if (wire_sink_for_test_) {
@@ -68,8 +70,8 @@ void BackpressureCoordinator::emit_remote_signal(
 }
 
 bool BackpressureCoordinator::handle_remote_signal(const net::WireFrame& frame) {
-    StreamBuffer payload(frame.pb_frame.payload().begin(),
-                         frame.pb_frame.payload().end());
+    StreamBuffer payload(frame.pb_envelope.data_frame().payload().begin(),
+                         frame.pb_envelope.data_frame().payload().end());
     auto decoded = mailbox::deserialize_backpressure_signal(payload);
     if (!decoded.has_value())
         return false;

@@ -170,7 +170,7 @@ TEST(NetEdgeCases, EventLoopZeroTimeout) {
 TEST(NetEdgeCases, WireFrameZeroLengthPayload) {
     WireFrame frame;
     frame.magic_hdr = WireFrame::MagicHeader;
-    frame.pb_frame.clear_payload();
+    frame.pb_envelope.mutable_data_frame()->clear_payload();
 
     // Encode should handle zero-length payload without error
     StreamBuffer encoded = frame.encode();
@@ -191,8 +191,8 @@ TEST(NetEdgeCases, WireFrameLargePayload) {
 
     // Create a 64KB payload
     StreamBuffer large_payload(65536, 0xBB);
-    frame.pb_frame.set_payload(reinterpret_cast<const char*>(large_payload.data()),
-                               large_payload.size());
+    frame.pb_envelope.mutable_data_frame()->set_payload(
+        reinterpret_cast<const char*>(large_payload.data()), large_payload.size());
 
     StreamBuffer encoded = frame.encode();
     EXPECT_GT(encoded.size(), 65536u);

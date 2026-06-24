@@ -686,53 +686,65 @@ void ActorSystem::deliver_local_edf(ActorId target, TypedMessage msg,
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
-    // ── ACK/NACK control frame dispatch ────────────────────────────────
+    auto pt = frame.payload_type();
+
+    // ACK/NACK control frame dispatch
     constexpr uint32_t kControlAck = 1 << 5;
     constexpr uint32_t kControlNack = 1 << 6;
-    uint32_t flags = frame.pb_frame.flags();
 
-    if ((flags & kControlAck) && outbound_tracker_) {
-        outbound_tracker_->on_ack(MessageId{frame.pb_frame.message_id()},
-                                  net::from_proto(frame.pb_frame.sender()).endpoint);
-        return;
-    }
-    if ((flags & kControlNack) && outbound_tracker_) {
-        uint32_t reason_code = frame.pb_frame.type_tag();
-        uint32_t retry_after_ms = 0;
-        if (frame.pb_frame.payload().size() >= sizeof(uint32_t)) {
-            std::memcpy(&retry_after_ms, frame.pb_frame.payload().data(),
-                        sizeof(uint32_t));
+    if (pt == net::WireFrame::PayloadType::Data) {
+        const auto& df = frame.pb_envelope.data_frame();
+        uint32_t flags = df.flags();
+
+        if ((flags & kControlAck) && outbound_tracker_) {
+            outbound_tracker_->on_ack(MessageId{df.message_id()},
+                                      net::from_proto(df.sender()).endpoint);
+            return;
         }
-        outbound_tracker_->on_nack(MessageId{frame.pb_frame.message_id()},
-                                   net::from_proto(frame.pb_frame.sender()).endpoint,
-                                   reason_code, retry_after_ms);
+        if ((flags & kControlNack) && outbound_tracker_) {
+            uint32_t reason_code = df.type_tag();
+            uint32_t retry_after_ms = 0;
+            if (df.payload().size() >= sizeof(uint32_t)) {
+                std::memcpy(&retry_after_ms, df.payload().data(), sizeof(uint32_t));
+            }
+            outbound_tracker_->on_nack(MessageId{df.message_id()},
+                                       net::from_proto(df.sender()).endpoint,
+                                       reason_code, retry_after_ms);
+            return;
+        }
+
+        // Backpressure signal dispatch
+        if (static_cast<TypeTag>(df.type_tag()) == TypeTag::BackpressureSignalTag) {
+            (void)backpressure_coordinator_->handle_remote_signal(frame);
+            return;
+        }
+
+        // Single-message data frame dispatch
+        StreamBuffer payload(df.payload().begin(), df.payload().end());
+        TypedMessage msg(static_cast<TypeTag>(df.type_tag()), std::move(payload));
+        msg.set_sender_address(net::from_proto(df.sender()));
+        if (df.has_trace_context()) {
+            uint16_t max_state = tracing_config_.max_tracestate_len;
+            auto parsed =
+                net::trace_context_from_proto(df.trace_context(), max_state);
+            if (parsed.has_value()) {
+                msg.set_trace_context(parsed.value());
+            }
+        }
+        // Preserve AckRequested flag for auto-ACK in downstream pipeline
+        if (flags & net::WireFrame::AckRequested) {
+            msg.set_ack_requested(true);
+        }
+        msg.set_message_id(df.message_id());
+        deliver_local(net::from_proto(df.receiver()).id, std::move(msg));
         return;
     }
 
-    if (static_cast<TypeTag>(frame.pb_frame.type_tag()) ==
-        TypeTag::BackpressureSignalTag) {
-        (void)backpressure_coordinator_->handle_remote_signal(frame);
+    // Batch frame dispatch (will be implemented in Task 7)
+    if (pt == net::WireFrame::PayloadType::Batch) {
+        // TODO: deliver_remote_batch(frame);
         return;
     }
-    StreamBuffer payload(frame.pb_frame.payload().begin(),
-                         frame.pb_frame.payload().end());
-    TypedMessage msg(static_cast<TypeTag>(frame.pb_frame.type_tag()),
-                     std::move(payload));
-    msg.set_sender_address(net::from_proto(frame.pb_frame.sender()));
-    if (frame.pb_frame.has_trace_context()) {
-        uint16_t max_state = tracing_config_.max_tracestate_len;
-        auto parsed = net::trace_context_from_proto(
-            frame.pb_frame.trace_context(), max_state);
-        if (parsed.has_value()) {
-            msg.set_trace_context(parsed.value());
-        }
-    }
-    // ── Preserve AckRequested flag for auto-ACK in downstream pipeline ──
-    if (flags & net::WireFrame::AckRequested) {
-        msg.set_ack_requested(true);
-    }
-    msg.set_message_id(frame.pb_frame.message_id());
-    deliver_local(net::from_proto(frame.pb_frame.receiver()).id, std::move(msg));
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
@@ -1020,19 +1032,21 @@ void ActorSystem::send_reliable_ack(const ActorAddress& target,
     // receiver side).  For NACK (Rejected): use AckResponse flag (kControlNack
     // on receiver side).  This matches the convention in deliver_remote().
     bool is_nack = (status == 1); // 1 = AckStatus::Rejected
-    frame.pb_frame.set_flags(is_nack ? net::WireFrame::AckResponse
-                                     : net::WireFrame::AckRequested);
-    frame.pb_frame.set_message_id(msg_id);
-    net::to_proto(frame.pb_frame.mutable_sender(), acker);
-    net::to_proto(frame.pb_frame.mutable_receiver(), target);
+    frame.pb_envelope.mutable_data_frame()->set_flags(
+        is_nack ? net::WireFrame::AckResponse : net::WireFrame::AckRequested);
+    frame.pb_envelope.mutable_data_frame()->set_message_id(msg_id);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_sender(), acker);
+    net::to_proto(frame.pb_envelope.mutable_data_frame()->mutable_receiver(),
+                  target);
 
     if (is_nack) {
         // Encode reason code in type_tag (read as reason_code by receiver)
-        frame.pb_frame.set_type_tag(static_cast<uint32_t>(status));
+        frame.pb_envelope.mutable_data_frame()->set_type_tag(
+            static_cast<uint32_t>(status));
         // Encode retry_after_ms as 4-byte little-endian in payload
         std::string payload_str(reinterpret_cast<const char*>(&retry_after_ms),
                                 sizeof(uint32_t));
-        frame.pb_frame.set_payload(payload_str);
+        frame.pb_envelope.mutable_data_frame()->set_payload(payload_str);
     }
 
     auto encoded = frame.encode();

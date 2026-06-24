@@ -116,7 +116,8 @@ TEST_F(RpcChannelBranchesTest, CallRawWithCustomMaxRetries) {
 
     // Decode frame to get the actual message ID
     net::WireFrame frame = net::WireFrame::decode(transport_.sent_frames_[0]);
-    MessageId actual_msg_id = MessageId(frame.pb_frame.message_id());
+    MessageId actual_msg_id =
+        MessageId(frame.pb_envelope.data_frame().message_id());
 
     // Simulate response
     StreamBuffer response_data = {10, 20, 30};
@@ -158,7 +159,8 @@ TEST_F(RpcChannelBranchesTest, FutureReadyAfterResponse) {
                                      std::chrono::milliseconds{5000});
 
     net::WireFrame frame = net::WireFrame::decode(transport_.sent_frames_[0]);
-    MessageId actual_msg_id = MessageId(frame.pb_frame.message_id());
+    MessageId actual_msg_id =
+        MessageId(frame.pb_envelope.data_frame().message_id());
 
     // Before response — not ready
     EXPECT_FALSE(future.ready());
@@ -179,7 +181,8 @@ TEST_F(RpcChannelBranchesTest, FutureGetAfterResponse) {
                                      std::chrono::milliseconds{5000});
 
     net::WireFrame frame = net::WireFrame::decode(transport_.sent_frames_[0]);
-    MessageId actual_msg_id = MessageId(frame.pb_frame.message_id());
+    MessageId actual_msg_id =
+        MessageId(frame.pb_envelope.data_frame().message_id());
 
     RpcResponseFrame response_frame;
     response_frame.msg_id = actual_msg_id;
@@ -261,7 +264,8 @@ TEST_F(RpcChannelBranchesTest, TraceAwareCallRaw) {
 
     // Verify the frame was sent (trace context is embedded in the wire frame)
     net::WireFrame frame = net::WireFrame::decode(transport_.sent_frames_[0]);
-    MessageId actual_msg_id = MessageId(frame.pb_frame.message_id());
+    MessageId actual_msg_id =
+        MessageId(frame.pb_envelope.data_frame().message_id());
 
     // Respond to complete the call
     RpcResponseFrame response_frame;
@@ -294,7 +298,7 @@ TEST_F(RpcChannelBranchesTest, ConcurrentWithPerCallResponses) {
     // Extract the actual MessageIds from the wire frames
     for (size_t i = 0; i < transport_.sent_frames_.size(); i++) {
         net::WireFrame frame = net::WireFrame::decode(transport_.sent_frames_[i]);
-        msg_ids.push_back(MessageId(frame.pb_frame.message_id()));
+        msg_ids.push_back(MessageId(frame.pb_envelope.data_frame().message_id()));
     }
 
     // Respond to each call with the correct msg_id
