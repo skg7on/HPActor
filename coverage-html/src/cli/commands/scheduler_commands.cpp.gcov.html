@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-24 00:36:20</td>
+            <td class="headerValue">2026-06-24 07:00:40</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">75.0&nbsp;%</td>
@@ -80,8 +80,8 @@
 <span id="L2"><span class="lineNum">       2</span>                 :             : // SPDX-License-Identifier: Apache-2.0</span>
 <span id="L3"><span class="lineNum">       3</span>                 :             : </span>
 <span id="L4"><span class="lineNum">       4</span>                 :             : #include &lt;hpactor/actor/actor_system.hpp&gt;</span>
-<span id="L5"><span class="lineNum">       5</span>                 :             : #include &lt;hpactor/cli/command_registry.hpp&gt;</span>
-<span id="L6"><span class="lineNum">       6</span>                 :             : #include &lt;hpactor/cli/output_formatter.hpp&gt;</span>
+<span id="L5"><span class="lineNum">       5</span>                 :             : #include &lt;hpactor/cli/command/command_registry.hpp&gt;</span>
+<span id="L6"><span class="lineNum">       6</span>                 :             : #include &lt;hpactor/cli/format/output_formatter.hpp&gt;</span>
 <span id="L7"><span class="lineNum">       7</span>                 :             : </span>
 <span id="L8"><span class="lineNum">       8</span>                 :             : #include &quot;command_utils.hpp&quot;</span>
 <span id="L9"><span class="lineNum">       9</span>                 :             : </span>
@@ -94,14 +94,14 @@
 <span id="L16"><span class="lineNum">      16</span>                 :             : </span>
 <span id="L17"><span class="lineNum">      17</span>                 :             : class SchedulerWorkersCommand final : public ICommand {</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             :   public:</span>
-<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">          39 :     std::string_view path() const noexcept override {</span></span>
-<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">          39 :         return &quot;scheduler/workers&quot;;</span></span>
+<span id="L19"><span class="lineNum">      19</span>                 :<span class="tlaGNC tlaBgGNC">          56 :     std::string_view path() const noexcept override {</span></span>
+<span id="L20"><span class="lineNum">      20</span>                 :<span class="tlaGNC">          56 :         return &quot;scheduler/workers&quot;;</span></span>
 <span id="L21"><span class="lineNum">      21</span>                 :             :     }</span>
 <span id="L22"><span class="lineNum">      22</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L23"><span class="lineNum">      23</span>                 :<span class="tlaGNC">          38 :         return &quot;Show per-worker thread statistics and idle model (polling / CV)&quot;;</span></span>
 <span id="L24"><span class="lineNum">      24</span>                 :             :     }</span>
-<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">         166 :     int order() const noexcept override {</span></span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         166 :         return 720;</span></span>
+<span id="L25"><span class="lineNum">      25</span>                 :<span class="tlaGNC">         474 :     int order() const noexcept override {</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC">         474 :         return 720;</span></span>
 <span id="L27"><span class="lineNum">      27</span>                 :             :     }</span>
 <span id="L28"><span class="lineNum">      28</span>                 :             : </span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>

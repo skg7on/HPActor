@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-24 00:36:20</td>
+            <td class="headerValue">2026-06-24 07:00:40</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">83.3&nbsp;%</td>
@@ -90,9 +90,9 @@
 <span id="L12"><span class="lineNum">      12</span>                 :             : // See the License for the specific language governing permissions and</span>
 <span id="L13"><span class="lineNum">      13</span>                 :             : // limitations under the License.</span>
 <span id="L14"><span class="lineNum">      14</span>                 :             : </span>
-<span id="L15"><span class="lineNum">      15</span>                 :             : #include &lt;hpactor/cli/command_context.hpp&gt;</span>
-<span id="L16"><span class="lineNum">      16</span>                 :             : #include &lt;hpactor/cli/command_registry.hpp&gt;</span>
-<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/cli/output_formatter.hpp&gt;</span>
+<span id="L15"><span class="lineNum">      15</span>                 :             : #include &lt;hpactor/cli/command/command_context.hpp&gt;</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : #include &lt;hpactor/cli/command/command_registry.hpp&gt;</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/cli/format/output_formatter.hpp&gt;</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;hpactor/types/types.hpp&gt;</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : </span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : namespace hpactor {</span>
@@ -101,14 +101,14 @@
 <span id="L23"><span class="lineNum">      23</span>                 :             : </span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : class AskPendingCommand final : public ICommand {</span>
 <span id="L25"><span class="lineNum">      25</span>                 :             :   public:</span>
-<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC tlaBgGNC">          89 :     std::string_view path() const noexcept override {</span></span>
-<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">          89 :         return &quot;ask/pending&quot;;</span></span>
+<span id="L26"><span class="lineNum">      26</span>                 :<span class="tlaGNC tlaBgGNC">         155 :     std::string_view path() const noexcept override {</span></span>
+<span id="L27"><span class="lineNum">      27</span>                 :<span class="tlaGNC">         155 :         return &quot;ask/pending&quot;;</span></span>
 <span id="L28"><span class="lineNum">      28</span>                 :             :     }</span>
 <span id="L29"><span class="lineNum">      29</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L30"><span class="lineNum">      30</span>                 :<span class="tlaGNC">          38 :         return &quot;List in-flight ask requests&quot;;</span></span>
 <span id="L31"><span class="lineNum">      31</span>                 :             :     }</span>
-<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         356 :     int order() const noexcept override {</span></span>
-<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         356 :         return 600;</span></span>
+<span id="L32"><span class="lineNum">      32</span>                 :<span class="tlaGNC">         562 :     int order() const noexcept override {</span></span>
+<span id="L33"><span class="lineNum">      33</span>                 :<span class="tlaGNC">         562 :         return 600;</span></span>
 <span id="L34"><span class="lineNum">      34</span>                 :             :     }</span>
 <span id="L35"><span class="lineNum">      35</span>                 :             : </span>
 <span id="L36"><span class="lineNum">      36</span>                 :<span class="tlaGNC">           1 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -122,14 +122,14 @@
 <span id="L44"><span class="lineNum">      44</span>                 :             : </span>
 <span id="L45"><span class="lineNum">      45</span>                 :             : class AskCancelCommand final : public ICommand {</span>
 <span id="L46"><span class="lineNum">      46</span>                 :             :   public:</span>
-<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">          39 :     std::string_view path() const noexcept override {</span></span>
-<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">          39 :         return &quot;ask/cancel&quot;;</span></span>
+<span id="L47"><span class="lineNum">      47</span>                 :<span class="tlaGNC">         109 :     std::string_view path() const noexcept override {</span></span>
+<span id="L48"><span class="lineNum">      48</span>                 :<span class="tlaGNC">         109 :         return &quot;ask/cancel&quot;;</span></span>
 <span id="L49"><span class="lineNum">      49</span>                 :             :     }</span>
 <span id="L50"><span class="lineNum">      50</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L51"><span class="lineNum">      51</span>                 :<span class="tlaGNC">          38 :         return &quot;Cancel an ask request by message ID&quot;;</span></span>
 <span id="L52"><span class="lineNum">      52</span>                 :             :     }</span>
-<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">         384 :     int order() const noexcept override {</span></span>
-<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">         384 :         return 601;</span></span>
+<span id="L53"><span class="lineNum">      53</span>                 :<span class="tlaGNC">         292 :     int order() const noexcept override {</span></span>
+<span id="L54"><span class="lineNum">      54</span>                 :<span class="tlaGNC">         292 :         return 601;</span></span>
 <span id="L55"><span class="lineNum">      55</span>                 :             :     }</span>
 <span id="L56"><span class="lineNum">      56</span>                 :             : </span>
 <span id="L57"><span class="lineNum">      57</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -143,14 +143,14 @@
 <span id="L65"><span class="lineNum">      65</span>                 :             : </span>
 <span id="L66"><span class="lineNum">      66</span>                 :             : class AskStatsCommand final : public ICommand {</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             :   public:</span>
-<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC tlaBgGNC">          39 :     std::string_view path() const noexcept override {</span></span>
-<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">          39 :         return &quot;ask/stats&quot;;</span></span>
+<span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC tlaBgGNC">         109 :     std::string_view path() const noexcept override {</span></span>
+<span id="L69"><span class="lineNum">      69</span>                 :<span class="tlaGNC">         109 :         return &quot;ask/stats&quot;;</span></span>
 <span id="L70"><span class="lineNum">      70</span>                 :             :     }</span>
 <span id="L71"><span class="lineNum">      71</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L72"><span class="lineNum">      72</span>                 :<span class="tlaGNC">          38 :         return &quot;Ask manager statistics&quot;;</span></span>
 <span id="L73"><span class="lineNum">      73</span>                 :             :     }</span>
-<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">         342 :     int order() const noexcept override {</span></span>
-<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">         342 :         return 602;</span></span>
+<span id="L74"><span class="lineNum">      74</span>                 :<span class="tlaGNC">         300 :     int order() const noexcept override {</span></span>
+<span id="L75"><span class="lineNum">      75</span>                 :<span class="tlaGNC">         300 :         return 602;</span></span>
 <span id="L76"><span class="lineNum">      76</span>                 :             :     }</span>
 <span id="L77"><span class="lineNum">      77</span>                 :             : </span>
 <span id="L78"><span class="lineNum">      78</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>

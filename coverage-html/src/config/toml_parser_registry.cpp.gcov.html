@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-24 00:36:20</td>
+            <td class="headerValue">2026-06-24 07:00:40</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryMed">85.7&nbsp;%</td>
@@ -137,10 +137,10 @@
 <span id="L59"><span class="lineNum">      59</span>                 :             : </span>
 <span id="L60"><span class="lineNum">      60</span>                 :<span class="tlaGNC">          93 :     auto entries = system_parsers_;</span></span>
 <span id="L61"><span class="lineNum">      61</span>                 :<span class="tlaGNC">          93 :     std::sort(entries.begin(), entries.end(),</span></span>
-<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">        7232 :               [](const SystemEntry&amp; a, const SystemEntry&amp; b) {</span></span>
-<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaGBC" title="Branch 0 was taken 6860 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 372 times"> + </span>]:<span class="tlaGNC">        7232 :                   if (a.order != b.order)</span></span>
-<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        6860 :                       return a.order &lt; b.order;</span></span>
-<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">         372 :                   return a.name &lt; b.name;</span></span>
+<span id="L62"><span class="lineNum">      62</span>                 :<span class="tlaGNC">        5744 :               [](const SystemEntry&amp; a, const SystemEntry&amp; b) {</span></span>
+<span id="L63"><span class="lineNum">      63</span>         [<span class="tlaGBC" title="Branch 0 was taken 5186 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 558 times"> + </span>]:<span class="tlaGNC">        5744 :                   if (a.order != b.order)</span></span>
+<span id="L64"><span class="lineNum">      64</span>                 :<span class="tlaGNC">        5186 :                       return a.order &lt; b.order;</span></span>
+<span id="L65"><span class="lineNum">      65</span>                 :<span class="tlaGNC">         558 :                   return a.name &lt; b.name;</span></span>
 <span id="L66"><span class="lineNum">      66</span>                 :             :               });</span>
 <span id="L67"><span class="lineNum">      67</span>                 :             : </span>
 <span id="L68"><span class="lineNum">      68</span>                 :<span class="tlaGNC">          93 :     std::vector&lt;std::unique_ptr&lt;ITomlSystemConfigParser&gt;&gt; parsers;</span></span>

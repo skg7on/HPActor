@@ -37,7 +37,7 @@
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-24 00:36:20</td>
+            <td class="headerValue">2026-06-24 07:00:40</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">93.8&nbsp;%</td>
@@ -91,10 +91,10 @@
 <span id="L13"><span class="lineNum">      13</span>                 :             : // limitations under the License.</span>
 <span id="L14"><span class="lineNum">      14</span>                 :             : </span>
 <span id="L15"><span class="lineNum">      15</span>                 :             : #include &lt;hpactor/actor/actor_system.hpp&gt;</span>
-<span id="L16"><span class="lineNum">      16</span>                 :             : #include &lt;hpactor/cli/cli_legacy_server_actor.hpp&gt;</span>
-<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/cli/cli_local_actor.hpp&gt;</span>
-<span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;hpactor/cli/command_registry.hpp&gt;</span>
-<span id="L19"><span class="lineNum">      19</span>                 :             : #include &lt;hpactor/cli/output_formatter.hpp&gt;</span>
+<span id="L16"><span class="lineNum">      16</span>                 :             : #include &lt;hpactor/cli/actor/cli_legacy_server_actor.hpp&gt;</span>
+<span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/cli/actor/cli_local_actor.hpp&gt;</span>
+<span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;hpactor/cli/command/command_registry.hpp&gt;</span>
+<span id="L19"><span class="lineNum">      19</span>                 :             : #include &lt;hpactor/cli/format/output_formatter.hpp&gt;</span>
 <span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/cli_messages.pb.h&gt;</span>
 <span id="L21"><span class="lineNum">      21</span>                 :             : </span>
 <span id="L22"><span class="lineNum">      22</span>                 :             : #include &quot;command_utils.hpp&quot;</span>
@@ -109,14 +109,14 @@
 <span id="L31"><span class="lineNum">      31</span>                 :             : </span>
 <span id="L32"><span class="lineNum">      32</span>                 :             : class ActorShowCommand final : public ICommand {</span>
 <span id="L33"><span class="lineNum">      33</span>                 :             :   public:</span>
-<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC tlaBgGNC">         164 :     std::string_view path() const noexcept override {</span></span>
-<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">         164 :         return &quot;actor/&lt;id&gt;/show&quot;;</span></span>
+<span id="L34"><span class="lineNum">      34</span>                 :<span class="tlaGNC tlaBgGNC">         176 :     std::string_view path() const noexcept override {</span></span>
+<span id="L35"><span class="lineNum">      35</span>                 :<span class="tlaGNC">         176 :         return &quot;actor/&lt;id&gt;/show&quot;;</span></span>
 <span id="L36"><span class="lineNum">      36</span>                 :             :     }</span>
 <span id="L37"><span class="lineNum">      37</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L38"><span class="lineNum">      38</span>                 :<span class="tlaGNC">          39 :         return &quot;Display actor metadata, state, mailbox, and children&quot;;</span></span>
 <span id="L39"><span class="lineNum">      39</span>                 :             :     }</span>
-<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         502 :     int order() const noexcept override {</span></span>
-<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         502 :         return 100;</span></span>
+<span id="L40"><span class="lineNum">      40</span>                 :<span class="tlaGNC">         702 :     int order() const noexcept override {</span></span>
+<span id="L41"><span class="lineNum">      41</span>                 :<span class="tlaGNC">         702 :         return 100;</span></span>
 <span id="L42"><span class="lineNum">      42</span>                 :             :     }</span>
 <span id="L43"><span class="lineNum">      43</span>                 :             : </span>
 <span id="L44"><span class="lineNum">      44</span>                 :<span class="tlaGNC">           7 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -194,14 +194,14 @@
 <span id="L116"><span class="lineNum">     116</span>                 :             : </span>
 <span id="L117"><span class="lineNum">     117</span>                 :             : class ActorKillCommand final : public ICommand {</span>
 <span id="L118"><span class="lineNum">     118</span>                 :             :   public:</span>
-<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">         153 :     std::string_view path() const noexcept override {</span></span>
-<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">         153 :         return &quot;actor/&lt;id&gt;/kill&quot;;</span></span>
+<span id="L119"><span class="lineNum">     119</span>                 :<span class="tlaGNC">         157 :     std::string_view path() const noexcept override {</span></span>
+<span id="L120"><span class="lineNum">     120</span>                 :<span class="tlaGNC">         157 :         return &quot;actor/&lt;id&gt;/kill&quot;;</span></span>
 <span id="L121"><span class="lineNum">     121</span>                 :             :     }</span>
 <span id="L122"><span class="lineNum">     122</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L123"><span class="lineNum">     123</span>                 :<span class="tlaGNC">          39 :         return &quot;Terminate actor (graceful shutdown)&quot;;</span></span>
 <span id="L124"><span class="lineNum">     124</span>                 :             :     }</span>
-<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         326 :     int order() const noexcept override {</span></span>
-<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">         326 :         return 200;</span></span>
+<span id="L125"><span class="lineNum">     125</span>                 :<span class="tlaGNC">         284 :     int order() const noexcept override {</span></span>
+<span id="L126"><span class="lineNum">     126</span>                 :<span class="tlaGNC">         284 :         return 200;</span></span>
 <span id="L127"><span class="lineNum">     127</span>                 :             :     }</span>
 <span id="L128"><span class="lineNum">     128</span>                 :             : </span>
 <span id="L129"><span class="lineNum">     129</span>                 :<span class="tlaGNC">           4 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -256,8 +256,8 @@
 <span id="L178"><span class="lineNum">     178</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L179"><span class="lineNum">     179</span>                 :<span class="tlaGNC">          39 :         return &quot;List all actors [--filter &lt;type&gt;]&quot;;</span></span>
 <span id="L180"><span class="lineNum">     180</span>                 :             :     }</span>
-<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">         409 :     int order() const noexcept override {</span></span>
-<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">         409 :         return 300;</span></span>
+<span id="L181"><span class="lineNum">     181</span>                 :<span class="tlaGNC">         505 :     int order() const noexcept override {</span></span>
+<span id="L182"><span class="lineNum">     182</span>                 :<span class="tlaGNC">         505 :         return 300;</span></span>
 <span id="L183"><span class="lineNum">     183</span>                 :             :     }</span>
 <span id="L184"><span class="lineNum">     184</span>                 :             : </span>
 <span id="L185"><span class="lineNum">     185</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -299,14 +299,14 @@
 <span id="L221"><span class="lineNum">     221</span>                 :             : </span>
 <span id="L222"><span class="lineNum">     222</span>                 :             : class ActorCircuitCommand final : public ICommand {</span>
 <span id="L223"><span class="lineNum">     223</span>                 :             :   public:</span>
-<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">         132 :     std::string_view path() const noexcept override {</span></span>
-<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">         132 :         return &quot;actor/&lt;id&gt;/circuit&quot;;</span></span>
+<span id="L224"><span class="lineNum">     224</span>                 :<span class="tlaGNC">         136 :     std::string_view path() const noexcept override {</span></span>
+<span id="L225"><span class="lineNum">     225</span>                 :<span class="tlaGNC">         136 :         return &quot;actor/&lt;id&gt;/circuit&quot;;</span></span>
 <span id="L226"><span class="lineNum">     226</span>                 :             :     }</span>
 <span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">          39 :         return &quot;Show circuit breaker state: state, trip count, failure EMA&quot;;</span></span>
 <span id="L229"><span class="lineNum">     229</span>                 :             :     }</span>
-<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">         501 :     int order() const noexcept override {</span></span>
-<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">         501 :         return 150;</span></span>
+<span id="L230"><span class="lineNum">     230</span>                 :<span class="tlaGNC">         427 :     int order() const noexcept override {</span></span>
+<span id="L231"><span class="lineNum">     231</span>                 :<span class="tlaGNC">         427 :         return 150;</span></span>
 <span id="L232"><span class="lineNum">     232</span>                 :             :     }</span>
 <span id="L233"><span class="lineNum">     233</span>                 :             : </span>
 <span id="L234"><span class="lineNum">     234</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -375,14 +375,14 @@
 <span id="L297"><span class="lineNum">     297</span>                 :             : </span>
 <span id="L298"><span class="lineNum">     298</span>                 :             : class ActorQuarantineCommand final : public ICommand {</span>
 <span id="L299"><span class="lineNum">     299</span>                 :             :   public:</span>
-<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">         124 :     std::string_view path() const noexcept override {</span></span>
-<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">         124 :         return &quot;actor/&lt;id&gt;/quarantine&quot;;</span></span>
+<span id="L300"><span class="lineNum">     300</span>                 :<span class="tlaGNC">         128 :     std::string_view path() const noexcept override {</span></span>
+<span id="L301"><span class="lineNum">     301</span>                 :<span class="tlaGNC">         128 :         return &quot;actor/&lt;id&gt;/quarantine&quot;;</span></span>
 <span id="L302"><span class="lineNum">     302</span>                 :             :     }</span>
 <span id="L303"><span class="lineNum">     303</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L304"><span class="lineNum">     304</span>                 :<span class="tlaGNC">          39 :         return &quot;Manually quarantine an actor [--reason &lt;text&gt;]&quot;;</span></span>
 <span id="L305"><span class="lineNum">     305</span>                 :             :     }</span>
-<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">         401 :     int order() const noexcept override {</span></span>
-<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">         401 :         return 250;</span></span>
+<span id="L306"><span class="lineNum">     306</span>                 :<span class="tlaGNC">         343 :     int order() const noexcept override {</span></span>
+<span id="L307"><span class="lineNum">     307</span>                 :<span class="tlaGNC">         343 :         return 250;</span></span>
 <span id="L308"><span class="lineNum">     308</span>                 :             :     }</span>
 <span id="L309"><span class="lineNum">     309</span>                 :             : </span>
 <span id="L310"><span class="lineNum">     310</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -437,14 +437,14 @@
 <span id="L359"><span class="lineNum">     359</span>                 :             : </span>
 <span id="L360"><span class="lineNum">     360</span>                 :             : class ActorUnquarantineCommand final : public ICommand {</span>
 <span id="L361"><span class="lineNum">     361</span>                 :             :   public:</span>
-<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">         120 :     std::string_view path() const noexcept override {</span></span>
-<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">         120 :         return &quot;actor/&lt;id&gt;/unquarantine&quot;;</span></span>
+<span id="L362"><span class="lineNum">     362</span>                 :<span class="tlaGNC">         124 :     std::string_view path() const noexcept override {</span></span>
+<span id="L363"><span class="lineNum">     363</span>                 :<span class="tlaGNC">         124 :         return &quot;actor/&lt;id&gt;/unquarantine&quot;;</span></span>
 <span id="L364"><span class="lineNum">     364</span>                 :             :     }</span>
 <span id="L365"><span class="lineNum">     365</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L366"><span class="lineNum">     366</span>                 :<span class="tlaGNC">          39 :         return &quot;Release an actor from quarantine&quot;;</span></span>
 <span id="L367"><span class="lineNum">     367</span>                 :             :     }</span>
-<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">         301 :     int order() const noexcept override {</span></span>
-<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">         301 :         return 260;</span></span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">         351 :     int order() const noexcept override {</span></span>
+<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">         351 :         return 260;</span></span>
 <span id="L370"><span class="lineNum">     370</span>                 :             :     }</span>
 <span id="L371"><span class="lineNum">     371</span>                 :             : </span>
 <span id="L372"><span class="lineNum">     372</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -495,14 +495,14 @@
 <span id="L417"><span class="lineNum">     417</span>                 :             : </span>
 <span id="L418"><span class="lineNum">     418</span>                 :             : class ActorRateCommand final : public ICommand {</span>
 <span id="L419"><span class="lineNum">     419</span>                 :             :   public:</span>
-<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">         113 :     std::string_view path() const noexcept override {</span></span>
-<span id="L421"><span class="lineNum">     421</span>                 :<span class="tlaGNC">         113 :         return &quot;actor/&lt;id&gt;/rate&quot;;</span></span>
+<span id="L420"><span class="lineNum">     420</span>                 :<span class="tlaGNC">         117 :     std::string_view path() const noexcept override {</span></span>
+<span id="L421"><span class="lineNum">     421</span>                 :<span class="tlaGNC">         117 :         return &quot;actor/&lt;id&gt;/rate&quot;;</span></span>
 <span id="L422"><span class="lineNum">     422</span>                 :             :     }</span>
 <span id="L423"><span class="lineNum">     423</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L424"><span class="lineNum">     424</span>                 :<span class="tlaGNC">          38 :         return &quot;Show actor rate limiter state&quot;;</span></span>
 <span id="L425"><span class="lineNum">     425</span>                 :             :     }</span>
-<span id="L426"><span class="lineNum">     426</span>                 :<span class="tlaGNC">         800 :     int order() const noexcept override {</span></span>
-<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">         800 :         return 270;</span></span>
+<span id="L426"><span class="lineNum">     426</span>                 :<span class="tlaGNC">         300 :     int order() const noexcept override {</span></span>
+<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">         300 :         return 270;</span></span>
 <span id="L428"><span class="lineNum">     428</span>                 :             :     }</span>
 <span id="L429"><span class="lineNum">     429</span>                 :             : </span>
 <span id="L430"><span class="lineNum">     430</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -562,14 +562,14 @@
 <span id="L484"><span class="lineNum">     484</span>                 :             : </span>
 <span id="L485"><span class="lineNum">     485</span>                 :             : class ActorAdmissionCommand final : public ICommand {</span>
 <span id="L486"><span class="lineNum">     486</span>                 :             :   public:</span>
-<span id="L487"><span class="lineNum">     487</span>                 :<span class="tlaGNC tlaBgGNC">         113 :     std::string_view path() const noexcept override {</span></span>
-<span id="L488"><span class="lineNum">     488</span>                 :<span class="tlaGNC">         113 :         return &quot;actor/&lt;id&gt;/admission&quot;;</span></span>
+<span id="L487"><span class="lineNum">     487</span>                 :<span class="tlaGNC tlaBgGNC">         117 :     std::string_view path() const noexcept override {</span></span>
+<span id="L488"><span class="lineNum">     488</span>                 :<span class="tlaGNC">         117 :         return &quot;actor/&lt;id&gt;/admission&quot;;</span></span>
 <span id="L489"><span class="lineNum">     489</span>                 :             :     }</span>
 <span id="L490"><span class="lineNum">     490</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L491"><span class="lineNum">     491</span>                 :<span class="tlaGNC">          38 :         return &quot;Show actor admission policy state&quot;;</span></span>
 <span id="L492"><span class="lineNum">     492</span>                 :             :     }</span>
-<span id="L493"><span class="lineNum">     493</span>                 :<span class="tlaGNC">         350 :     int order() const noexcept override {</span></span>
-<span id="L494"><span class="lineNum">     494</span>                 :<span class="tlaGNC">         350 :         return 280;</span></span>
+<span id="L493"><span class="lineNum">     493</span>                 :<span class="tlaGNC">         800 :     int order() const noexcept override {</span></span>
+<span id="L494"><span class="lineNum">     494</span>                 :<span class="tlaGNC">         800 :         return 280;</span></span>
 <span id="L495"><span class="lineNum">     495</span>                 :             :     }</span>
 <span id="L496"><span class="lineNum">     496</span>                 :             : </span>
 <span id="L497"><span class="lineNum">     497</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -623,14 +623,14 @@
 <span id="L545"><span class="lineNum">     545</span>                 :             : </span>
 <span id="L546"><span class="lineNum">     546</span>                 :             : class ActorDeliveryCommand final : public ICommand {</span>
 <span id="L547"><span class="lineNum">     547</span>                 :             :   public:</span>
-<span id="L548"><span class="lineNum">     548</span>                 :<span class="tlaGNC tlaBgGNC">         113 :     std::string_view path() const noexcept override {</span></span>
-<span id="L549"><span class="lineNum">     549</span>                 :<span class="tlaGNC">         113 :         return &quot;actor/&lt;id&gt;/delivery&quot;;</span></span>
+<span id="L548"><span class="lineNum">     548</span>                 :<span class="tlaGNC tlaBgGNC">         117 :     std::string_view path() const noexcept override {</span></span>
+<span id="L549"><span class="lineNum">     549</span>                 :<span class="tlaGNC">         117 :         return &quot;actor/&lt;id&gt;/delivery&quot;;</span></span>
 <span id="L550"><span class="lineNum">     550</span>                 :             :     }</span>
 <span id="L551"><span class="lineNum">     551</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L552"><span class="lineNum">     552</span>                 :<span class="tlaGNC">          39 :         return &quot;Show per-actor delivery result counters&quot;;</span></span>
 <span id="L553"><span class="lineNum">     553</span>                 :             :     }</span>
-<span id="L554"><span class="lineNum">     554</span>                 :<span class="tlaGNC">         351 :     int order() const noexcept override {</span></span>
-<span id="L555"><span class="lineNum">     555</span>                 :<span class="tlaGNC">         351 :         return 285;</span></span>
+<span id="L554"><span class="lineNum">     554</span>                 :<span class="tlaGNC">         301 :     int order() const noexcept override {</span></span>
+<span id="L555"><span class="lineNum">     555</span>                 :<span class="tlaGNC">         301 :         return 285;</span></span>
 <span id="L556"><span class="lineNum">     556</span>                 :             :     }</span>
 <span id="L557"><span class="lineNum">     557</span>                 :             : </span>
 <span id="L558"><span class="lineNum">     558</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -684,14 +684,14 @@
 <span id="L606"><span class="lineNum">     606</span>                 :             : </span>
 <span id="L607"><span class="lineNum">     607</span>                 :             : class ActorDeliveryStatsCommand final : public ICommand {</span>
 <span id="L608"><span class="lineNum">     608</span>                 :             :   public:</span>
-<span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">         109 :     std::string_view path() const noexcept override {</span></span>
-<span id="L610"><span class="lineNum">     610</span>                 :<span class="tlaGNC">         109 :         return &quot;actor/&lt;id&gt;/delivery-stats&quot;;</span></span>
+<span id="L609"><span class="lineNum">     609</span>                 :<span class="tlaGNC">         113 :     std::string_view path() const noexcept override {</span></span>
+<span id="L610"><span class="lineNum">     610</span>                 :<span class="tlaGNC">         113 :         return &quot;actor/&lt;id&gt;/delivery-stats&quot;;</span></span>
 <span id="L611"><span class="lineNum">     611</span>                 :             :     }</span>
 <span id="L612"><span class="lineNum">     612</span>                 :<span class="tlaGNC">          39 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L613"><span class="lineNum">     613</span>                 :<span class="tlaGNC">          39 :         return &quot;Show delivery statistics with accept/reject/retry ratios&quot;;</span></span>
 <span id="L614"><span class="lineNum">     614</span>                 :             :     }</span>
-<span id="L615"><span class="lineNum">     615</span>                 :<span class="tlaGNC">         351 :     int order() const noexcept override {</span></span>
-<span id="L616"><span class="lineNum">     616</span>                 :<span class="tlaGNC">         351 :         return 286;</span></span>
+<span id="L615"><span class="lineNum">     615</span>                 :<span class="tlaGNC">         301 :     int order() const noexcept override {</span></span>
+<span id="L616"><span class="lineNum">     616</span>                 :<span class="tlaGNC">         301 :         return 286;</span></span>
 <span id="L617"><span class="lineNum">     617</span>                 :             :     }</span>
 <span id="L618"><span class="lineNum">     618</span>                 :             : </span>
 <span id="L619"><span class="lineNum">     619</span>                 :<span class="tlaGNC">           3 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -774,14 +774,14 @@
 <span id="L696"><span class="lineNum">     696</span>                 :             : </span>
 <span id="L697"><span class="lineNum">     697</span>                 :             : class ActorLinksCommand final : public ICommand {</span>
 <span id="L698"><span class="lineNum">     698</span>                 :             :   public:</span>
-<span id="L699"><span class="lineNum">     699</span>                 :<span class="tlaGNC">         105 :     std::string_view path() const noexcept override {</span></span>
-<span id="L700"><span class="lineNum">     700</span>                 :<span class="tlaGNC">         105 :         return &quot;actor/&lt;id&gt;/links&quot;;</span></span>
+<span id="L699"><span class="lineNum">     699</span>                 :<span class="tlaGNC">         109 :     std::string_view path() const noexcept override {</span></span>
+<span id="L700"><span class="lineNum">     700</span>                 :<span class="tlaGNC">         109 :         return &quot;actor/&lt;id&gt;/links&quot;;</span></span>
 <span id="L701"><span class="lineNum">     701</span>                 :             :     }</span>
 <span id="L702"><span class="lineNum">     702</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L703"><span class="lineNum">     703</span>                 :<span class="tlaGNC">          38 :         return &quot;Show linked and monitored actors&quot;;</span></span>
 <span id="L704"><span class="lineNum">     704</span>                 :             :     }</span>
-<span id="L705"><span class="lineNum">     705</span>                 :<span class="tlaGNC">         350 :     int order() const noexcept override {</span></span>
-<span id="L706"><span class="lineNum">     706</span>                 :<span class="tlaGNC">         350 :         return 287;</span></span>
+<span id="L705"><span class="lineNum">     705</span>                 :<span class="tlaGNC">         300 :     int order() const noexcept override {</span></span>
+<span id="L706"><span class="lineNum">     706</span>                 :<span class="tlaGNC">         300 :         return 287;</span></span>
 <span id="L707"><span class="lineNum">     707</span>                 :             :     }</span>
 <span id="L708"><span class="lineNum">     708</span>                 :             : </span>
 <span id="L709"><span class="lineNum">     709</span>                 :<span class="tlaUNC tlaBgUNC">           0 :     result&lt;void&gt; execute(CommandContext&amp; ctx) const override {</span></span>
@@ -830,8 +830,8 @@
 <span id="L752"><span class="lineNum">     752</span>                 :             : </span>
 <span id="L753"><span class="lineNum">     753</span>                 :             : class ActorBackpressureCommand final : public ICommand {</span>
 <span id="L754"><span class="lineNum">     754</span>                 :             :   public:</span>
-<span id="L755"><span class="lineNum">     755</span>                 :<span class="tlaGNC tlaBgGNC">         105 :     std::string_view path() const noexcept override {</span></span>
-<span id="L756"><span class="lineNum">     756</span>                 :<span class="tlaGNC">         105 :         return &quot;actor/&lt;id&gt;/backpressure&quot;;</span></span>
+<span id="L755"><span class="lineNum">     755</span>                 :<span class="tlaGNC tlaBgGNC">         109 :     std::string_view path() const noexcept override {</span></span>
+<span id="L756"><span class="lineNum">     756</span>                 :<span class="tlaGNC">         109 :         return &quot;actor/&lt;id&gt;/backpressure&quot;;</span></span>
 <span id="L757"><span class="lineNum">     757</span>                 :             :     }</span>
 <span id="L758"><span class="lineNum">     758</span>                 :<span class="tlaGNC">          38 :     std::string_view help_text() const noexcept override {</span></span>
 <span id="L759"><span class="lineNum">     759</span>                 :<span class="tlaGNC">          38 :         return &quot;Show backpressure signal state and mailbox pressure&quot;;</span></span>
