@@ -14,8 +14,8 @@
 
 #include <gtest/gtest.h>
 #include <hpactor/actor/actor_system.hpp>
-#include <hpactor/cli/cli_http_server_actor.hpp>
-#include <hpactor/cli/cli_http_server_config.hpp>
+#include <hpactor/cli/actor/cli_http_server_actor.hpp>
+#include <hpactor/cli/config/cli_http_server_config.hpp>
 
 #include <chrono>
 #include <thread>

@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cli/json_formatter.hpp>
-#include <hpactor/cli/output_formatter.hpp>
-#include <hpactor/cli/pretty_formatter.hpp>
-#include <hpactor/cli/tabular_formatter.hpp>
+#include <hpactor/cli/format/json_formatter.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
+#include <hpactor/cli/format/pretty_formatter.hpp>
+#include <hpactor/cli/format/tabular_formatter.hpp>
 
 #include <gtest/gtest.h>
 

@@ -24,7 +24,7 @@
 #include <hpactor/actor/lifecycle/shutdown_options.hpp>
 #include <hpactor/actor/lifecycle/shutdown_phase.hpp>
 #include <hpactor/adt/dedup_cache.hpp>
-#include <hpactor/cli/cli_config.hpp>
+#include <hpactor/cli/config/cli_config.hpp>
 #include <hpactor/config/topology_model.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/hpactor_config.hpp>

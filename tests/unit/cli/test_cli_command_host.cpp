@@ -13,10 +13,10 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/cli/cli_command_host.hpp>
 #include <hpactor/cli/cli_types.hpp>
-#include <hpactor/cli/output_formatter.hpp>
-#include <hpactor/cli/pretty_formatter.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
+#include <hpactor/cli/format/pretty_formatter.hpp>
+#include <hpactor/cli/host/cli_command_host.hpp>
 #include <hpactor/cli_messages.pb.h>
 #include <hpactor/types/types.hpp>
 

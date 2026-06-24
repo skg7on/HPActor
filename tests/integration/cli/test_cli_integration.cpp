@@ -12,13 +12,13 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_node.hpp>
-#include <hpactor/cli/json_formatter.hpp>
-#include <hpactor/cli/lexer.hpp>
-#include <hpactor/cli/pager.hpp>
-#include <hpactor/cli/pretty_formatter.hpp>
-#include <hpactor/cli/tabular_formatter.hpp>
+#include <hpactor/cli/command/command_context.hpp>
+#include <hpactor/cli/command/command_node.hpp>
+#include <hpactor/cli/format/json_formatter.hpp>
+#include <hpactor/cli/format/pretty_formatter.hpp>
+#include <hpactor/cli/format/tabular_formatter.hpp>
+#include <hpactor/cli/io/lexer.hpp>
+#include <hpactor/cli/io/pager.hpp>
 
 #include <gtest/gtest.h>
 

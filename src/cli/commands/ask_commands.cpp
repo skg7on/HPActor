@@ -12,9 +12,9 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli/command/command_context.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
 #include <hpactor/types/types.hpp>
 
 namespace hpactor {

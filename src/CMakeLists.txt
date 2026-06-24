@@ -184,25 +184,25 @@ set_source_files_properties(
 # ---- CLI subsystem (runtime opt-in via cli.enabled) ------------------------
 
 target_sources(hpactor_lib PRIVATE
-    cli/command_registry.cpp
-    cli/lexer.cpp
-    cli/command_node.cpp
-    cli/command_tree_builder.cpp
-    cli/line_editor.cpp
-    cli/pretty_formatter.cpp
-    cli/json_formatter.cpp
-    cli/tabular_formatter.cpp
-    cli/pager.cpp
-    cli/interactive_cli_actor.cpp
-    cli/cli_connector.cpp
-    cli/cli_local_actor.cpp
-    cli/cli_session.cpp
-    cli/cli_legacy_server_actor.cpp
-    cli/local_server_cli_host.cpp
+    cli/command/command_registry.cpp
+    cli/io/lexer.cpp
+    cli/command/command_node.cpp
+    cli/command/command_tree_builder.cpp
+    cli/io/line_editor.cpp
+    cli/format/pretty_formatter.cpp
+    cli/format/json_formatter.cpp
+    cli/format/tabular_formatter.cpp
+    cli/io/pager.cpp
+    cli/actor/interactive_cli_actor.cpp
+    cli/io/cli_connector.cpp
+    cli/actor/cli_local_actor.cpp
+    cli/command/cli_session.cpp
+    cli/actor/cli_legacy_server_actor.cpp
+    cli/host/local_server_cli_host.cpp
     cli/http_handler.cpp
-    cli/cli_http_server_actor.cpp
-    cli/cli_client_actor.cpp
-    cli/cli_proto_server_actor.cpp
+    cli/actor/cli_http_server_actor.cpp
+    cli/actor/cli_client_actor.cpp
+    cli/actor/cli_proto_server_actor.cpp
     cli/commands/help_command.cpp
     cli/commands/quit_command.cpp
     cli/commands/actor_commands.cpp

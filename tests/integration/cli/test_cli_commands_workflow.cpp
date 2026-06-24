@@ -14,12 +14,12 @@
 
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/adt/stream_buffer.hpp>
-#include <hpactor/cli/cli_session.hpp>
-#include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_node.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/output_formatter.hpp>
-#include <hpactor/cli/pretty_formatter.hpp>
+#include <hpactor/cli/command/cli_session.hpp>
+#include <hpactor/cli/command/command_context.hpp>
+#include <hpactor/cli/command/command_node.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
+#include <hpactor/cli/format/pretty_formatter.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>
 #include <hpactor/types/types.hpp>
 

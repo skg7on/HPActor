@@ -15,7 +15,7 @@
 #pragma once
 
 #include <hpactor/actor/lifecycle/quarantine_policy.hpp>
-#include <hpactor/cli/cli_config.hpp>
+#include <hpactor/cli/config/cli_config.hpp>
 #include <hpactor/hpactor_config.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/msg/dead_letter_record.hpp>

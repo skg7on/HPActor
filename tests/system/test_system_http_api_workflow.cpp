@@ -7,8 +7,8 @@
 
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/actor/event_based_actor.hpp>
-#include <hpactor/cli/cli_http_server_actor.hpp>
-#include <hpactor/cli/cli_http_server_config.hpp>
+#include <hpactor/cli/actor/cli_http_server_actor.hpp>
+#include <hpactor/cli/config/cli_http_server_config.hpp>
 #include <hpactor/cli/http_handler.hpp>
 #include <hpactor/net/http_types.hpp>
 

@@ -12,8 +12,8 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cli/json_formatter.hpp>
-#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli/format/json_formatter.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
 
 #include <gtest/gtest.h>
 

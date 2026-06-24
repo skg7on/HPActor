@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/cli/command_node.hpp>
-#include <hpactor/cli/line_editor.hpp>
+#include <hpactor/cli/command/command_node.hpp>
+#include <hpactor/cli/io/line_editor.hpp>
 #include <sys/stat.h>
 
 using namespace hpactor::cli;

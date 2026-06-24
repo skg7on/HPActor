@@ -2,11 +2,11 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <hpactor/actor/actor_system.hpp>
-#include <hpactor/cli/cli_client_actor.hpp>
-#include <hpactor/cli/cli_legacy_server_actor.hpp>
-#include <hpactor/cli/cli_proto_server_actor.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli/actor/cli_client_actor.hpp>
+#include <hpactor/cli/actor/cli_legacy_server_actor.hpp>
+#include <hpactor/cli/actor/cli_proto_server_actor.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
 
 #include <charconv>
 #include <string>
