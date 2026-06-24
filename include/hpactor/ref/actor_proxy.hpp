@@ -90,6 +90,20 @@ class ActorProxy {
     mailbox::DeliveryResult try_send(const ActorAddress& target, TypedMessage msg,
                                      mailbox::DeliveryOptions options = {});
 
+    /// \brief Batch-send messages to a remote actor.
+    ///
+    /// Constructs a \c BatchMsgFrame with shared sender/receiver, wraps it
+    /// in a \c WireEnvelope, and dispatches via \c try_send_batch() on the
+    /// transport.
+    ///
+    /// \param[in] target Destination actor address.
+    /// \param[in] msgs   Messages to send (moved into the call).
+    /// \param[in] options Delivery options.
+    /// \return \c DeliveryResult describing the overall outcome.
+    mailbox::DeliveryResult
+    try_send_batch(const ActorAddress& target, std::vector<TypedMessage> msgs,
+                   mailbox::DeliveryOptions options = {});
+
     // Access the underlying transport (for internal use)
     net::Transport* transport() const {
         return transport_;
