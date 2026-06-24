@@ -3,6 +3,7 @@
 
 // tests/unit/timer/test_timer_plane.cpp
 
+#include <hpactor/sched/scheduler_interfaces.hpp>
 #include <hpactor/timer/timer_command_queue.hpp>
 
 #include <gtest/gtest.h>
@@ -82,6 +83,34 @@ TEST_F(TimerCommandQueueTest, PushFullQueueReturnsFalse) {
 
     // Should succeed again
     EXPECT_TRUE(queue_.try_push(cmd));
+}
+
+class TimerHandleEncodingTest : public ::testing::Test {};
+
+TEST_F(TimerHandleEncodingTest, EncodeDecodeRoundTrip) {
+    auto h = TimerHandle::make_encoded(5, 12345, 7, 0);
+    EXPECT_EQ(TimerHandle::shard_index(h), 5u);
+    EXPECT_EQ(TimerHandle::slot_index(h), 12345u);
+    EXPECT_EQ(TimerHandle::generation(h), 7u);
+    EXPECT_EQ(TimerHandle::type_tag(h), 0u);
+}
+
+TEST_F(TimerHandleEncodingTest, MaxValuesPreserve) {
+    auto h = TimerHandle::make_encoded(65535, 0xFFFFFF, 255, 65535);
+    EXPECT_EQ(TimerHandle::shard_index(h), 65535u);
+    EXPECT_EQ(TimerHandle::slot_index(h), 0xFFFFFFu);
+    EXPECT_EQ(TimerHandle::generation(h), 255u);
+    EXPECT_EQ(TimerHandle::type_tag(h), 65535u);
+}
+
+TEST_F(TimerHandleEncodingTest, DefaultHandleIsInvalid) {
+    TimerHandle h;
+    EXPECT_FALSE(h.valid());
+}
+
+TEST_F(TimerHandleEncodingTest, TypeTagZeroIsActorMessage) {
+    auto h = TimerHandle::make_encoded(0, 100, 1, 0);
+    EXPECT_EQ(TimerHandle::type_tag(h), 0u);
 }
 
 } // namespace

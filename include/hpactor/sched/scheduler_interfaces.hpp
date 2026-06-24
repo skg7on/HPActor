@@ -24,7 +24,38 @@
 namespace hpactor::sched {
 
 /// \brief Opaque handle for a scheduled timer.
-using TimerHandle = Id<TimerTag>;
+///
+/// Encodes shard index, slot index, generation, and type tag in 64 bits
+/// for O(1) slot-array lookup in TimerPlane.  Backward-compatible with
+/// the plain Id<TimerTag> interface for TimingWheel/CalendarQueue use.
+class TimerHandle : public Id<TimerTag> {
+  public:
+    using Id<TimerTag>::Id;
+
+    /// Construct from encoded fields.
+    static TimerHandle make_encoded(uint32_t shard_index, uint32_t slot_index,
+                                    uint8_t generation, uint16_t type_tag) {
+        uint64_t v = (static_cast<uint64_t>(type_tag) << 48) |
+                     (static_cast<uint64_t>(shard_index) << 32) |
+                     (static_cast<uint64_t>(generation) << 24) |
+                     static_cast<uint64_t>(slot_index);
+        return TimerHandle{v};
+    }
+
+    /// Decode helpers.
+    static uint32_t slot_index(TimerHandle h) {
+        return static_cast<uint32_t>(h.value() & 0xFFFFFFULL);
+    }
+    static uint8_t generation(TimerHandle h) {
+        return static_cast<uint8_t>((h.value() >> 24) & 0xFFULL);
+    }
+    static uint32_t shard_index(TimerHandle h) {
+        return static_cast<uint32_t>((h.value() >> 32) & 0xFFFFULL);
+    }
+    static uint16_t type_tag(TimerHandle h) {
+        return static_cast<uint16_t>((h.value() >> 48) & 0xFFFFULL);
+    }
+};
 
 /// \brief Callback invoked when a timer fires.
 using timer_callback = std::function<void()>;
