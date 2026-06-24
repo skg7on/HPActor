@@ -17,6 +17,8 @@ struct TimerNode {
     uint8_t generation{0};
     uint64_t group_handle{0}; ///< Owning TimerGroup handle, 0 = none
     uint8_t priority{0};
+    uint8_t wheel_level{0}; ///< Current wheel level (0 = finest)
+    uint32_t bucket_idx{0}; ///< Bucket index within that level
     TraceContext trace;
     timer_callback callback; ///< std::function<void()> callback on fire
 };

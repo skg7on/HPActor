@@ -5,6 +5,7 @@
 
 #include <hpactor/sched/scheduler_interfaces.hpp>
 #include <hpactor/timer/timer_command_queue.hpp>
+#include <hpactor/timer/timer_plane_shard.hpp>
 
 #include <gtest/gtest.h>
 #include <thread>
@@ -111,6 +112,64 @@ TEST_F(TimerHandleEncodingTest, DefaultHandleIsInvalid) {
 TEST_F(TimerHandleEncodingTest, TypeTagZeroIsActorMessage) {
     auto h = TimerHandle::make_encoded(0, 100, 1, 0);
     EXPECT_EQ(TimerHandle::type_tag(h), 0u);
+}
+
+// ============================================================================
+// TimerPlaneShard tests
+// ============================================================================
+
+class TimerPlaneShardTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+        shard_ = new TimerPlaneShard(0, 1'000'000);
+    }
+    void TearDown() override {
+        delete shard_;
+    }
+    TimerPlaneShard* shard_{nullptr};
+};
+
+TEST_F(TimerPlaneShardTest, ScheduleAndAdvanceFires) {
+    bool fired = false;
+    auto h = shard_->schedule(5'000'000, [&fired]() { fired = true; });
+    EXPECT_TRUE(h.valid());
+    int64_t now = 10'000'000;
+    shard_->advance(now);
+    EXPECT_TRUE(fired);
+    EXPECT_EQ(shard_->pending_count(), 0u);
+}
+
+TEST_F(TimerPlaneShardTest, CancelPreventsFire) {
+    bool fired = false;
+    auto h = shard_->schedule(5'000'000, [&fired]() { fired = true; });
+    EXPECT_TRUE(shard_->cancel(h));
+    shard_->advance(10'000'000);
+    EXPECT_FALSE(fired);
+    EXPECT_EQ(shard_->cancelled_count(), 1u);
+}
+
+TEST_F(TimerPlaneShardTest, DoubleCancelReturnsFalse) {
+    auto h = shard_->schedule(10'000'000, []() {});
+    EXPECT_TRUE(shard_->cancel(h));
+    EXPECT_FALSE(shard_->cancel(h)); // Already gone.
+}
+
+TEST_F(TimerPlaneShardTest, PendingCount) {
+    shard_->schedule(5'000'000, []() {});
+    shard_->schedule(10'000'000, []() {});
+    EXPECT_EQ(shard_->pending_count(), 2u);
+    shard_->advance(7'000'000);
+    EXPECT_EQ(shard_->pending_count(), 1u);
+    shard_->advance(12'000'000);
+    EXPECT_EQ(shard_->pending_count(), 0u);
+}
+
+TEST_F(TimerPlaneShardTest, MinDeadline) {
+    auto h1 = shard_->schedule(20'000'000, []() {}); // 20 ms
+    auto h2 = shard_->schedule(5'000'000, []() {});  // 5 ms
+    (void)h1;
+    (void)h2;
+    EXPECT_LT(shard_->min_deadline_ns(), 10'000'000LL);
 }
 
 } // namespace
