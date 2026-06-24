@@ -5,6 +5,7 @@
 
 #include <hpactor/sched/scheduler_interfaces.hpp>
 #include <hpactor/timer/timer_command_queue.hpp>
+#include <hpactor/timer/timer_group.hpp>
 #include <hpactor/timer/timer_plane.hpp>
 #include <hpactor/timer/timer_plane_shard.hpp>
 
@@ -244,6 +245,68 @@ TEST_F(TimerPlaneTest, NumShards) {
 
 TEST_F(TimerPlaneTest, CancelInvalidIdReturnsFalse) {
     EXPECT_FALSE(plane_->cancel(999999u));
+}
+
+// ============================================================================
+// TimerGroup tests
+// ============================================================================
+
+class TimerGroupTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+        plane_ = new TimerPlane(1, 1'000'000);
+    }
+    void TearDown() override {
+        delete plane_;
+    }
+    TimerPlane* plane_{nullptr};
+};
+
+TEST_F(TimerGroupTest, AddAndRemoveHandle) {
+    TimerGroup group;
+    EXPECT_TRUE(group.empty());
+    group.add(42);
+    EXPECT_EQ(group.size(), 1u);
+    group.add(99);
+    EXPECT_EQ(group.size(), 2u);
+    group.remove(42);
+    EXPECT_EQ(group.size(), 1u);
+}
+
+TEST_F(TimerGroupTest, CancelAllInvokesCancelForAll) {
+    TimerGroup group;
+
+    // Schedule timers through the plane
+    std::atomic<int> fired{0};
+    auto h1 = plane_->schedule(100'000'000, [&fired]() { fired.fetch_add(1); });
+    auto h2 = plane_->schedule(100'000'000, [&fired]() { fired.fetch_add(1); });
+    auto h3 = plane_->schedule(100'000'000, [&fired]() { fired.fetch_add(1); });
+
+    group.add(h1);
+    group.add(h2);
+    group.add(h3);
+    EXPECT_EQ(group.size(), 3u);
+
+    size_t cancelled = group.cancel_all(*plane_);
+    EXPECT_EQ(cancelled, 3u);
+    EXPECT_TRUE(group.empty());
+
+    plane_->advance(200'000'000);
+    EXPECT_EQ(fired.load(), 0);
+}
+
+TEST_F(TimerGroupTest, CancelAllOnEmptyGroupReturnsZero) {
+    TimerGroup group;
+    EXPECT_EQ(group.cancel_all(*plane_), 0u);
+}
+
+TEST_F(TimerGroupTest, RemoveNonexistentIsSafe) {
+    TimerGroup group;
+    group.add(100);
+    group.remove(999); // no-op
+    EXPECT_EQ(group.size(), 1u);
+    group.remove(100);
+    EXPECT_TRUE(group.empty());
 }
 
 } // namespace
