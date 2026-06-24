@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/cli/lexer.hpp>
+#include <hpactor/cli/io/lexer.hpp>
 #include <string>
 
 using namespace hpactor::cli;

@@ -14,8 +14,8 @@
 
 #include <hpactor/actor/actor_system.hpp>
 #include <hpactor/cli/cli_types.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
 #include <hpactor/metrics/metrics_actor.hpp>
 
 #include <cstdio>

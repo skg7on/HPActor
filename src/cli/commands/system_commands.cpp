@@ -13,10 +13,10 @@
 // limitations under the License.
 
 #include <hpactor/actor/actor_system.hpp>
-#include <hpactor/cli/cli_legacy_server_actor.hpp>
-#include <hpactor/cli/cli_local_actor.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli/actor/cli_legacy_server_actor.hpp>
+#include <hpactor/cli/actor/cli_local_actor.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
 #include <hpactor/mem/memory_config.hpp>
 #include <hpactor/mem/memory_region.hpp>
 #include <hpactor/mem/memory_tracker.hpp>

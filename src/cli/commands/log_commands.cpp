@@ -2,8 +2,8 @@
 // SPDX-License-Identifier: Apache-2.0
 
 #include <hpactor/actor/actor_system.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
 #include <hpactor/log/log_config.hpp>
 #include <hpactor/log/log_level.hpp>
 #include <hpactor/log/log_manager.hpp>

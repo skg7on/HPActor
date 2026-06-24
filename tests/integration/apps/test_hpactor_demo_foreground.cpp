@@ -20,10 +20,10 @@
 #include "apps/hpactor_demo/cli_demo_actor_factory.hpp"
 
 #if HPACTOR_ENABLE_CLI
-#    include <hpactor/cli/cli_config.hpp>
-#    include <hpactor/cli/cli_legacy_server_actor.hpp>
-#    include <hpactor/cli/cli_legacy_server_config.hpp>
-#    include <hpactor/cli/cli_local_actor.hpp>
+#    include <hpactor/cli/actor/cli_legacy_server_actor.hpp>
+#    include <hpactor/cli/actor/cli_local_actor.hpp>
+#    include <hpactor/cli/config/cli_config.hpp>
+#    include <hpactor/cli/config/cli_legacy_server_config.hpp>
 #endif
 
 #include <chrono>

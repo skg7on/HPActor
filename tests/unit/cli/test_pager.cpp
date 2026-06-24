@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/cli/pager.hpp>
-#include <hpactor/cli/pretty_formatter.hpp>
+#include <hpactor/cli/format/pretty_formatter.hpp>
+#include <hpactor/cli/io/pager.hpp>
 
 using namespace hpactor::cli;
 

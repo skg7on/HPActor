@@ -13,8 +13,8 @@
 // limitations under the License.
 
 #include <hpactor/actor/actor_system.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/output_formatter.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
 #include <hpactor/fault/fault_controller.hpp>
 #include <hpactor/fault/fault_point.hpp>
 

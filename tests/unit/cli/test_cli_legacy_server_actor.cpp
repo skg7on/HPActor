@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/cli/cli_legacy_server_config.hpp>
+#include <hpactor/cli/config/cli_legacy_server_config.hpp>
 
 using namespace hpactor::cli;
 

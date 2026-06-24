@@ -22,23 +22,23 @@
 //   4. Server actors
 
 #include <hpactor/actor/actor_system.hpp>
-#include <hpactor/cli/cli_config.hpp>
-#include <hpactor/cli/cli_local_actor.hpp>
-#include <hpactor/cli/cli_proto_server_actor.hpp>
-#include <hpactor/cli/cli_proto_server_config.hpp>
-#include <hpactor/cli/cli_session.hpp>
+#include <hpactor/cli/actor/cli_local_actor.hpp>
+#include <hpactor/cli/actor/cli_proto_server_actor.hpp>
 #include <hpactor/cli/cli_types.hpp>
-#include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_node.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/command_tree_builder.hpp>
-#include <hpactor/cli/json_formatter.hpp>
-#include <hpactor/cli/lexer.hpp>
-#include <hpactor/cli/local_server_cli_host.hpp>
-#include <hpactor/cli/output_formatter.hpp>
-#include <hpactor/cli/pager.hpp>
-#include <hpactor/cli/pretty_formatter.hpp>
-#include <hpactor/cli/tabular_formatter.hpp>
+#include <hpactor/cli/command/cli_session.hpp>
+#include <hpactor/cli/command/command_context.hpp>
+#include <hpactor/cli/command/command_node.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/command/command_tree_builder.hpp>
+#include <hpactor/cli/config/cli_config.hpp>
+#include <hpactor/cli/config/cli_proto_server_config.hpp>
+#include <hpactor/cli/format/json_formatter.hpp>
+#include <hpactor/cli/format/output_formatter.hpp>
+#include <hpactor/cli/format/pretty_formatter.hpp>
+#include <hpactor/cli/format/tabular_formatter.hpp>
+#include <hpactor/cli/host/local_server_cli_host.hpp>
+#include <hpactor/cli/io/lexer.hpp>
+#include <hpactor/cli/io/pager.hpp>
 #include <hpactor/cli/token.hpp>
 
 #include <gtest/gtest.h>

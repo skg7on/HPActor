@@ -41,7 +41,7 @@
 
 #include <hpactor/actor/receptionist/receptionist.hpp>
 #include <hpactor/actor/spawn.hpp>
-#include <hpactor/cli/cli_local_actor.hpp>
+#include <hpactor/cli/actor/cli_local_actor.hpp>
 #include <hpactor/log/log_manager.hpp>
 #include <hpactor/log/logger.hpp>
 #include <hpactor/mailbox/backpressure_signal_serialization.hpp>

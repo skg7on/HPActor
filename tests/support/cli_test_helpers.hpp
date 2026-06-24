@@ -14,7 +14,7 @@
 
 #pragma once
 
-#include <hpactor/cli/command_registry.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
 #include <string_view>
 
 namespace hpactor::test {

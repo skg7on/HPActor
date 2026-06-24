@@ -9,8 +9,8 @@
 /// CliCommand/CliResponse wire protocol.
 
 #include <hpactor/actor/actor_system.hpp>
-#include <hpactor/cli/cli_client_actor.hpp>
-#include <hpactor/cli/cli_client_config.hpp>
+#include <hpactor/cli/actor/cli_client_actor.hpp>
+#include <hpactor/cli/config/cli_client_config.hpp>
 
 #include <cstdio>
 #include <cstdlib>

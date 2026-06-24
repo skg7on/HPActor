@@ -12,10 +12,10 @@
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-#include <hpactor/cli/cli_local_actor.hpp>
-#include <hpactor/cli/command_context.hpp>
-#include <hpactor/cli/command_registry.hpp>
-#include <hpactor/cli/pretty_formatter.hpp>
+#include <hpactor/cli/actor/cli_local_actor.hpp>
+#include <hpactor/cli/command/command_context.hpp>
+#include <hpactor/cli/command/command_registry.hpp>
+#include <hpactor/cli/format/pretty_formatter.hpp>
 #include <hpactor/mem/memory_config.hpp>
 
 #include <gtest/gtest.h>

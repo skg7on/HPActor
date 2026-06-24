@@ -13,7 +13,7 @@
 // limitations under the License.
 
 #include <gtest/gtest.h>
-#include <hpactor/cli/command_node.hpp>
+#include <hpactor/cli/command/command_node.hpp>
 
 using namespace hpactor::cli;
 
