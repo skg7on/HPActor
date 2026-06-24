@@ -740,11 +740,70 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
         return;
     }
 
-    // Batch frame dispatch (will be implemented in Task 7)
+    // Batch frame dispatch
     if (pt == net::WireFrame::PayloadType::Batch) {
-        // TODO: deliver_remote_batch(frame);
+        deliver_remote_batch(frame);
         return;
     }
+}
+
+void ActorSystem::deliver_remote_batch(const net::WireFrame& frame) {
+    const auto& batch = frame.pb_envelope.batch_frame();
+    ActorAddress receiver_addr = net::from_proto(batch.receiver());
+    ActorId receiver_id = receiver_addr.id;
+    ActorAddress sender_addr = net::from_proto(batch.sender());
+
+    int entry_count = batch.entries_size();
+    if (entry_count == 0) {
+        return;
+    }
+
+    std::vector<TypedMessage> msgs;
+    msgs.reserve(static_cast<size_t>(entry_count));
+
+    for (int i = 0; i < entry_count; ++i) {
+        const auto& entry = batch.entries(i);
+        StreamBuffer payload = StreamBuffer::from_data(
+            reinterpret_cast<const uint8_t*>(entry.payload().data()),
+            entry.payload().size());
+        TypedMessage msg(static_cast<TypeTag>(entry.type_tag()), std::move(payload));
+        msg.set_sender_address(sender_addr);
+        msg.set_message_id(entry.message_id());
+
+        if (entry.has_trace_context()) {
+            uint16_t max_state = tracing_config_.max_tracestate_len;
+            auto parsed =
+                net::trace_context_from_proto(entry.trace_context(), max_state);
+            if (parsed.has_value()) {
+                msg.set_trace_context(parsed.value());
+            }
+        }
+        if (entry.flags() & net::WireFrame::AckRequested) {
+            msg.set_ack_requested(true);
+        }
+        msgs.push_back(std::move(msg));
+    }
+
+    auto* mailbox = get_mailbox(receiver_id);
+    if (!mailbox) {
+        // Target actor not found — dead-letter each message
+        for (auto& msg : msgs) {
+            mailbox::DeadLetterRecord dl;
+            dl.reason = mailbox::DeadLetterReason::ActorNotFound;
+            dl.source = mailbox::DeadLetterSource::RemoteDelivery;
+            dl.sender = sender_addr;
+            dl.target = receiver_addr;
+            dl.type_tag = msg.type_id();
+            dl.payload_sample = msg.payload();
+            dead_letter(std::move(dl));
+        }
+        return;
+    }
+
+    mailbox::MailboxEnvelopeMeta meta;
+    meta.sender = sender_addr;
+
+    (void)mailbox->try_push_batch(msgs.begin(), msgs.end(), meta);
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
