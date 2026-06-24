@@ -14,6 +14,7 @@
 
 // tests/unit/timer/test_timing_wheel.cpp
 
+#include <chrono>
 #include <functional>
 #include <gtest/gtest.h>
 #include <hpactor/timer/timing_wheel.hpp>
@@ -227,4 +228,44 @@ TEST_F(TimingWheelTest, NextDeadlineWithTimers) {
     int64_t nd = wheel_.next_deadline();
     EXPECT_GE(nd, now + 5'000'000);
     EXPECT_LE(nd, now + 5'000'000 + 2'000'000);
+}
+
+// ---------------------------------------------------------------------------
+// O(1) cancel via timer_map_
+// ---------------------------------------------------------------------------
+
+TEST_F(TimingWheelTest, CancelO1UsesMap) {
+    // Verify cancel uses map lookup — cancel, then verify second cancel
+    // returns false (timer no longer in map).
+    auto id = wheel_.schedule(5'000'000, []() {});
+    EXPECT_NE(id, 0u);
+
+    bool first = wheel_.cancel(id);
+    EXPECT_TRUE(first);
+
+    bool second = wheel_.cancel(id);
+    EXPECT_FALSE(second)
+        << "Second cancel should return false — timer removed from map";
+}
+
+TEST_F(TimingWheelTest, CancelIsConstantTime) {
+    // Schedule N timers, cancel the last one.  Time the cancel.
+    // With O(n) linear scan of all 256 buckets at a level, this is slow.
+    // With the map, it should be near-instant.
+
+    uint64_t last_id = 0;
+    constexpr int kN = 1000;
+
+    for (int i = 0; i < kN; ++i) {
+        last_id = wheel_.schedule(10'000'000 + i * 1000, []() {});
+    }
+    ASSERT_NE(last_id, 0u);
+
+    auto start = std::chrono::steady_clock::now();
+    bool ok = wheel_.cancel(last_id);
+    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
+        std::chrono::steady_clock::now() - start);
+
+    EXPECT_TRUE(ok);
+    EXPECT_LT(elapsed.count(), 50) << "Cancel should be O(1), not O(n)";
 }

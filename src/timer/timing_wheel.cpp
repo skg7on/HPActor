@@ -57,6 +57,7 @@ TimingWheel::~TimingWheel() {
             bucket.clear();
         }
     }
+    timer_map_.clear();
 }
 
 uint64_t TimingWheel::schedule(int64_t delay_ns, TimerCallback callback) {
@@ -78,6 +79,8 @@ TimingWheel::add_timer_internal(int64_t expire_ns, TimerCallback callback) {
     timer->expire_ns = expire_ns;
     timer->id = next_timer_id_++;
     timer->callback = std::move(callback);
+
+    timer_map_[timer->id] = timer;
 
     // Update the cached minimum deadline (mutex_ already held by caller).
     int64_t cur = min_deadline_.load(std::memory_order_relaxed);
@@ -131,31 +134,36 @@ void TimingWheel::insert_timer(Timer* timer) {
     }
     uint32_t bucket = static_cast<uint32_t>(level_offset) & levels_[level].mask;
 
+    timer->level = level;
+    timer->bucket = bucket;
     timer->id |= (static_cast<uint64_t>(level) << 48); // Store level in high
                                                        // bits
     levels_[level].buckets[bucket].push_back(timer);
 }
 
 TimingWheel::Timer* TimingWheel::remove_timer(uint64_t timer_id) {
-    uint32_t level = static_cast<uint32_t>(timer_id >> 48);
-    timer_id &= 0xFFFFFFFFFFFFULL; // Mask to get actual ID
+    // Strip level bits — map is keyed by base id only.
+    timer_id &= 0xFFFFFFFFFFFFULL;
 
-    if (level >= num_levels_) {
+    auto it = timer_map_.find(timer_id);
+    if (it == timer_map_.end()) {
         return nullptr;
     }
+    Timer* timer = it->second;
+    timer_map_.erase(it);
 
-    // Search all buckets at this level for the timer
-    // This is O(buckets) but timers at higher levels are fewer
-    for (auto& bucket : levels_[level].buckets) {
-        for (auto it = bucket.begin(); it != bucket.end(); ++it) {
-            if (((*it)->id & 0xFFFFFFFFFFFFULL) == timer_id) {
-                Timer* timer = *it;
-                bucket.erase(it);
-                return timer;
+    uint32_t level = timer->level;
+    uint32_t bucket_idx = timer->bucket;
+    if (level < num_levels_ && bucket_idx < levels_[level].buckets.size()) {
+        auto& bucket = levels_[level].buckets[bucket_idx];
+        for (auto vit = bucket.begin(); vit != bucket.end(); ++vit) {
+            if (*vit == timer) {
+                bucket.erase(vit);
+                break;
             }
         }
     }
-    return nullptr;
+    return timer;
 }
 
 uint32_t TimingWheel::advance(int64_t now_ns) {
@@ -220,6 +228,7 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
 
                     if (timer->expire_ns <= now_ns) {
                         // Collect for deferred fire outside the lock.
+                        timer_map_.erase(timer->id & 0xFFFFFFFFFFFFULL);
                         it = bucket.erase(it);
                         pending.push_back(std::move(timer->callback));
                         delete timer;
@@ -238,6 +247,8 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
                                 static_cast<uint32_t>(lower_offset) &
                                 levels_[lower_level].mask;
 
+                            timer->level = lower_level;
+                            timer->bucket = lower_bucket;
                             timer->id &= 0xFFFFFFFFFFFFULL;
                             timer->id |= (static_cast<uint64_t>(lower_level) << 48);
                             it = bucket.erase(it);
