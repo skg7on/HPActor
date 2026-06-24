@@ -474,6 +474,13 @@ void Aggregator::on_event(const MetricEvent& e) {
             // Reliable messaging metrics — counters incremented in
             // OutboundDeliveryTracker.
             break;
+        case MetricEventType::kBatchFrameReceived:
+        case MetricEventType::kBatchMessagesReceived:
+        case MetricEventType::kBatchFrameSent:
+        case MetricEventType::kBatchMessagesSent:
+            // Batch messaging metrics — counters incremented in
+            // BatchFrame codec / batch transport layer.
+            break;
     }
 }
 
