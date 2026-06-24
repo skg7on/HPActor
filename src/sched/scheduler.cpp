@@ -100,9 +100,11 @@ void HybridScheduler::start() {
                 int64_t sleep_ns = std::max(
                     std::min(next_ns - now, static_cast<int64_t>(100'000'000)),
                     static_cast<int64_t>(1'000'000));
-                std::this_thread::sleep_for(std::chrono::nanoseconds(sleep_ns));
+                std::unique_lock<std::mutex> lk(timer_wakeup_mutex_);
+                timer_wakeup_cv_.wait_for(lk, std::chrono::nanoseconds(sleep_ns));
             } else {
-                std::this_thread::sleep_for(std::chrono::milliseconds(1));
+                std::unique_lock<std::mutex> lk(timer_wakeup_mutex_);
+                timer_wakeup_cv_.wait_for(lk, std::chrono::milliseconds(1));
             }
         }
     });
@@ -117,6 +119,9 @@ void HybridScheduler::stop() {
     // Wake any workers parked in wait_if_paused so they see running_ == false
     // and exit their loop.
     resume_workers();
+
+    // Wake the timer thread so it sees running_ == false and exits.
+    timer_wakeup_cv_.notify_one();
 
     // Stop the timer thread first: workers may be blocked on
     // TimingWheel::schedule() waiting for the mutex held by advance().
@@ -324,6 +329,9 @@ TimerHandle HybridScheduler::schedule_after(timer_callback cb, int64_t delay_ns)
     auto id =
         std::visit([&](auto& backend) { return backend.schedule(delay_ns, cb); },
                    timer_backend_);
+    // Wake the timer thread so it re-evaluates next_deadline().
+    // A new short timer may have an earlier deadline than the current sleep.
+    timer_wakeup_cv_.notify_one();
     return TimerHandle{id};
 }
 

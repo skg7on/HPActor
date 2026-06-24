@@ -395,6 +395,12 @@ class HybridScheduler : public IScheduler {
     std::unordered_map<uint64_t, std::shared_ptr<std::atomic<bool>>> recurring_cancellations_;
     std::mutex cancellation_mutex_;
 
+    /// Wakeup mechanism for the timer thread.
+    /// schedule_after() notifies this when a new timer is registered so
+    /// the timer thread can re-evaluate next_deadline() immediately.
+    std::condition_variable timer_wakeup_cv_;
+    std::mutex timer_wakeup_mutex_;
+
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 
     log::Logger* logger_{nullptr};
