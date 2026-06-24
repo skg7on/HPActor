@@ -24,7 +24,7 @@ namespace hpactor {
 namespace net {
 
 StreamBuffer WireFrame::encode() const {
-    std::string serialized = pb_frame.SerializeAsString();
+    std::string serialized = pb_envelope.SerializeAsString();
 
     StreamBuffer result;
     result.reserve(HeaderSize + serialized.size());
@@ -67,11 +67,11 @@ WireFrame WireFrame::decode(const StreamBuffer& data) {
         return WireFrame{};
     }
 
-    // Parse protobuf payload directly into pb_frame
+    // Parse protobuf payload directly into pb_envelope
     WireFrame frame;
     std::string serialized(data.begin() + HeaderSize,
                            data.begin() + HeaderSize + payload_len);
-    if (!frame.pb_frame.ParseFromString(serialized)) {
+    if (!frame.pb_envelope.ParseFromString(serialized)) {
         HPACTOR_LOG_ERROR(log::LogCategory::kNetwork, ActorId{0}, 0,
                           "protobuf parse failure");
         return WireFrame{};
@@ -82,7 +82,8 @@ WireFrame WireFrame::decode(const StreamBuffer& data) {
         static_cast<uint32_t>(log::LogEventId::kNetworkFrameReceived),
         "network frame received",
         log::field("bytes", static_cast<uint64_t>(data.size())),
-        log::field("tag", static_cast<uint64_t>(frame.pb_frame.type_tag())));
+        log::field("payload_type",
+                   static_cast<uint64_t>(static_cast<int>(frame.payload_type()))));
     return frame;
 }
 

@@ -36,46 +36,63 @@ struct WireFrame {
     /// Total wire-format header size in bytes (4 magic + 4 length).
     static constexpr size_t HeaderSize = 8;
 
-    uint32_t magic_hdr = MagicHeader;       ///< Magic header value.
-    size_t length;                          ///< Valid after \c encode().
-    ::hpactor::net::ActorMsgFrame pb_frame; ///< Protobuf frame body.
+    uint32_t magic_hdr = MagicHeader;         ///< Magic header value.
+    size_t length = 0;                        ///< Valid after \c encode().
+    ::hpactor::net::WireEnvelope pb_envelope; ///< Protobuf envelope (oneof).
 
-    /// \brief Encode the frame to wire format.
-    ///
-    /// Produces: magic + length + protobuf payload.
-    ///
-    /// \return A \c StreamBuffer containing the complete wire representation.
+    /// \brief Encode the envelope to wire format.
     StreamBuffer encode() const;
 
     /// \brief Decode a frame from a \c StreamBuffer.
-    ///
-    /// \param[in] data Raw wire-format bytes.
-    /// \return A \c WireFrame populated from the decoded data.
     static WireFrame decode(const StreamBuffer& data);
 
-    /// \brief Decode a frame from a byte span (ownership-boundary copy).
-    ///
-    /// \param[in] data Raw wire-format bytes.
-    /// \return A \c WireFrame populated from the decoded data.
+    /// \brief Decode a frame from a byte span.
     static WireFrame decode(std::span<const uint8_t> data);
 
-    // ── Frame flags ─────────────────────────────────────────────────────
+    // ── Oneof discriminator ─────────────────────────────────────────────
 
-    static constexpr uint32_t Important = 1 << 0;  ///< Priority delivery hint.
-    static constexpr uint32_t NoDrop = 1 << 1;     ///< Guaranteed delivery;
-                                                   ///< must not be dropped on
-                                                   ///< congestion.
-    static constexpr uint32_t RpcRequest = 1 << 2; ///< Frame is an RPC request.
-    static constexpr uint32_t RpcResponse = 1 << 3;   ///< Frame is an RPC
-                                                      ///< response.
-    static constexpr uint32_t RpcIdempotent = 1 << 4; ///< Safe to retry;
-                                                      ///< receiver should
-                                                      ///< deduplicate by
-                                                      ///< \c MessageId.
-    static constexpr uint32_t AckRequested = 1 << 5;  ///< Sender requests
-                                                      ///< ACK/NACK.
-    static constexpr uint32_t AckResponse = 1 << 6; ///< This frame is an ACK or
-                                                    ///< NACK.
+    /// \brief Which oneof field is populated in the envelope.
+    enum class PayloadType { Data, Ack, Nack, Batch, Unknown };
+
+    /// \brief Return the payload type based on the oneof discriminator.
+    PayloadType payload_type() const {
+        switch (pb_envelope.payload_case()) {
+            case ::hpactor::net::WireEnvelope::kDataFrame:
+                return PayloadType::Data;
+            case ::hpactor::net::WireEnvelope::kAckFrame:
+                return PayloadType::Ack;
+            case ::hpactor::net::WireEnvelope::kNackFrame:
+                return PayloadType::Nack;
+            case ::hpactor::net::WireEnvelope::kBatchFrame:
+                return PayloadType::Batch;
+            default:
+                return PayloadType::Unknown;
+        }
+    }
+
+    // ── Convenience factories ──────────────────────────────────────────
+
+    static WireFrame from_data(::hpactor::net::ActorMsgFrame msg) {
+        WireFrame f;
+        *f.pb_envelope.mutable_data_frame() = std::move(msg);
+        return f;
+    }
+
+    static WireFrame from_batch(::hpactor::net::BatchMsgFrame batch) {
+        WireFrame f;
+        *f.pb_envelope.mutable_batch_frame() = std::move(batch);
+        return f;
+    }
+
+    // ── Frame flags ────────────────────────────────────────────────────
+
+    static constexpr uint32_t Important = 1 << 0;
+    static constexpr uint32_t NoDrop = 1 << 1;
+    static constexpr uint32_t RpcRequest = 1 << 2;
+    static constexpr uint32_t RpcResponse = 1 << 3;
+    static constexpr uint32_t RpcIdempotent = 1 << 4;
+    static constexpr uint32_t AckRequested = 1 << 5;
+    static constexpr uint32_t AckResponse = 1 << 6;
 };
 
 // ── Address conversion helpers ─────────────────────────────────────────────
