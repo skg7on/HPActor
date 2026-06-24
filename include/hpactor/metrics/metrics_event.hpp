@@ -82,6 +82,16 @@ enum class MetricEventType : uint8_t {
     kReliableExhausted = 50,    ///< Retries exhausted; code carries
                                 ///< total_attempts.
     kReliableCancelled = 51,    ///< DeliveryReceipt::cancel() called.
+
+    // TimerPlane metric events
+    kTimerScheduled = 52,     ///< Timer scheduled (per-shard, per-type_tag).
+    kTimerFired = 53,         ///< Timer fired on time.
+    kTimerCancelled = 54,     ///< Timer explicitly cancelled.
+    kTimerLate = 55,          ///< Timer fired >1 tick past expiry.
+    kTimerDropped = 56,       ///< Timer dropped (queue full, alloc failure).
+    kTimerFiringLatency = 57, ///< Firing lateness distribution in microseconds.
+    kTimerCallbackDuration = 58, ///< Callback wall-clock duration in
+                                 ///< microseconds.
 };
 
 /// \brief A single metric event in the lock-free ring buffer.
