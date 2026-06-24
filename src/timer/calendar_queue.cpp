@@ -221,11 +221,14 @@ uint32_t CalendarQueue::advance(int64_t now_ns) {
             while (t) {
                 Timer* next = t->next;
                 bucket.unlink(t);
-                timer_map_.erase(t->id);
                 if (t->expire_ns <= now_ns) {
+                    timer_map_.erase(t->id);
                     pending.push_back(std::move(t->callback));
+                    destroy_timer(t);
+                } else {
+                    // Future timer in current bucket — re-insert.
+                    insert_timer(t, now_ns);
                 }
-                destroy_timer(t);
                 t = next;
             }
 
