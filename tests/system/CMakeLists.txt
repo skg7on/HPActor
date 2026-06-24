@@ -32,6 +32,7 @@ set(TEST_SYSTEM_SOURCES
     test_system_edge_cases.cpp
     test_system_network_final.cpp
     test_system_actor_final.cpp
+    test_timer_plane_system.cpp
 )
 
 if(ENABLE_APPS)
