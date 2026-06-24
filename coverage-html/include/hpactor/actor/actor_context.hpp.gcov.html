@@ -32,17 +32,17 @@
             <td></td>
             <td class="headerItem">Lines:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">36</td>
-            <td class="headerCovTableEntry">36</td>
+            <td class="headerCovTableEntry">38</td>
+            <td class="headerCovTableEntry">38</td>
           </tr>
           <tr>
             <td class="headerItem">Test Date:</td>
-            <td class="headerValue">2026-06-23 00:34:35</td>
+            <td class="headerValue">2026-06-24 00:36:20</td>
             <td></td>
             <td class="headerItem">Functions:</td>
             <td class="headerCovTableEntryHi">100.0&nbsp;%</td>
-            <td class="headerCovTableEntry">11</td>
-            <td class="headerCovTableEntry">11</td>
+            <td class="headerCovTableEntry">12</td>
+            <td class="headerCovTableEntry">12</td>
           </tr>
           <tr>
             <td class="headerItem">Legend:</td>
@@ -95,9 +95,9 @@
 <span id="L17"><span class="lineNum">      17</span>                 :             : #include &lt;hpactor/actor/abstract_actor.hpp&gt;</span>
 <span id="L18"><span class="lineNum">      18</span>                 :             : #include &lt;hpactor/actor/actor_ref_cache.hpp&gt;</span>
 <span id="L19"><span class="lineNum">      19</span>                 :             : #include &lt;hpactor/actor/receptionist/service_key.hpp&gt;</span>
-<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/msg/proto_type_registry.hpp&gt;</span>
-<span id="L21"><span class="lineNum">      21</span>                 :             : #include &lt;hpactor/msg/delivery_receipt.hpp&gt;</span>
-<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/msg/enqueue_result.hpp&gt;</span>
+<span id="L20"><span class="lineNum">      20</span>                 :             : #include &lt;hpactor/msg/delivery_receipt.hpp&gt;</span>
+<span id="L21"><span class="lineNum">      21</span>                 :             : #include &lt;hpactor/msg/enqueue_result.hpp&gt;</span>
+<span id="L22"><span class="lineNum">      22</span>                 :             : #include &lt;hpactor/msg/proto_type_registry.hpp&gt;</span>
 <span id="L23"><span class="lineNum">      23</span>                 :             : #include &lt;hpactor/msg/request_handle.hpp&gt;</span>
 <span id="L24"><span class="lineNum">      24</span>                 :             : #include &lt;hpactor/msg/request_timeout.hpp&gt;</span>
 <span id="L25"><span class="lineNum">      25</span>                 :             : #include &lt;hpactor/msg/typed_message.hpp&gt;</span>
@@ -293,18 +293,18 @@
 <span id="L215"><span class="lineNum">     215</span>                 :             :         return current_sender_;</span>
 <span id="L216"><span class="lineNum">     216</span>                 :             :     }</span>
 <span id="L217"><span class="lineNum">     217</span>                 :             :     /// \brief Set the current sender address (called by message dispatch).</span>
-<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC tlaBgGNC">        1062 :     void set_current_sender(const ActorAddress&amp; sender) {</span></span>
-<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">        1062 :         current_sender_ = sender;</span></span>
-<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">        1062 :     }</span></span>
+<span id="L218"><span class="lineNum">     218</span>                 :<span class="tlaGNC tlaBgGNC">        1071 :     void set_current_sender(const ActorAddress&amp; sender) {</span></span>
+<span id="L219"><span class="lineNum">     219</span>                 :<span class="tlaGNC">        1071 :         current_sender_ = sender;</span></span>
+<span id="L220"><span class="lineNum">     220</span>                 :<span class="tlaGNC">        1071 :     }</span></span>
 <span id="L221"><span class="lineNum">     221</span>                 :             : </span>
 <span id="L222"><span class="lineNum">     222</span>                 :             :     /// \brief Current ask message ID for reply routing through AskManager.</span>
 <span id="L223"><span class="lineNum">     223</span>                 :             :     uint64_t current_ask_message_id() const {</span>
 <span id="L224"><span class="lineNum">     224</span>                 :             :         return current_ask_message_id_;</span>
 <span id="L225"><span class="lineNum">     225</span>                 :             :     }</span>
 <span id="L226"><span class="lineNum">     226</span>                 :             :     /// \brief Set the ask message ID (called by message dispatch).</span>
-<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">        2118 :     void set_current_ask_message_id(uint64_t id) {</span></span>
-<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">        2118 :         current_ask_message_id_ = id;</span></span>
-<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">        2118 :     }</span></span>
+<span id="L227"><span class="lineNum">     227</span>                 :<span class="tlaGNC">        2136 :     void set_current_ask_message_id(uint64_t id) {</span></span>
+<span id="L228"><span class="lineNum">     228</span>                 :<span class="tlaGNC">        2136 :         current_ask_message_id_ = id;</span></span>
+<span id="L229"><span class="lineNum">     229</span>                 :<span class="tlaGNC">        2136 :     }</span></span>
 <span id="L230"><span class="lineNum">     230</span>                 :             : </span>
 <span id="L231"><span class="lineNum">     231</span>                 :             :     // ── Scheduled delivery ────────────────────────────────────────────────</span>
 <span id="L232"><span class="lineNum">     232</span>                 :             : </span>
@@ -315,286 +315,323 @@
 <span id="L237"><span class="lineNum">     237</span>                 :             :     /// \return An \c AlarmHandle that can be used to cancel the schedule.</span>
 <span id="L238"><span class="lineNum">     238</span>                 :             :     AlarmHandle schedule(std::chrono::milliseconds delay, TypedMessage msg);</span>
 <span id="L239"><span class="lineNum">     239</span>                 :             : </span>
-<span id="L240"><span class="lineNum">     240</span>                 :             :     /// \brief Cancel a previously scheduled message.</span>
+<span id="L240"><span class="lineNum">     240</span>                 :             :     /// \brief Schedule delivery of a message to any actor after a delay.</span>
 <span id="L241"><span class="lineNum">     241</span>                 :             :     ///</span>
-<span id="L242"><span class="lineNum">     242</span>                 :             :     /// \param[in] handle The handle returned by \c schedule().</span>
-<span id="L243"><span class="lineNum">     243</span>                 :             :     void cancel_schedule(AlarmHandle handle);</span>
-<span id="L244"><span class="lineNum">     244</span>                 :             : </span>
-<span id="L245"><span class="lineNum">     245</span>                 :             :     /// \brief Request self-passivation after the current message completes.</span>
-<span id="L246"><span class="lineNum">     246</span>                 :             :     ///</span>
-<span id="L247"><span class="lineNum">     247</span>                 :             :     /// The passivation is deferred until the current handler returns,</span>
-<span id="L248"><span class="lineNum">     248</span>                 :             :     /// ensuring consistent state for snapshotting. If the actor is not</span>
-<span id="L249"><span class="lineNum">     249</span>                 :             :     /// in \c kActive state, this call is a no-op.</span>
-<span id="L250"><span class="lineNum">     250</span>                 :             :     ///</span>
-<span id="L251"><span class="lineNum">     251</span>                 :             :     /// \note Callable only from within an actor handler.</span>
-<span id="L252"><span class="lineNum">     252</span>                 :             :     void passivate();</span>
-<span id="L253"><span class="lineNum">     253</span>                 :             : </span>
-<span id="L254"><span class="lineNum">     254</span>                 :             :     // ── Receptionist ─────────────────────────────────────────────────────</span>
-<span id="L255"><span class="lineNum">     255</span>                 :             : </span>
-<span id="L256"><span class="lineNum">     256</span>                 :             :     /// \brief Register this actor under a ServiceKey with the Receptionist.</span>
-<span id="L257"><span class="lineNum">     257</span>                 :             :     void receptionist_register(receptionist::ServiceKey key);</span>
+<span id="L242"><span class="lineNum">     242</span>                 :             :     /// Unlike \c schedule(), the target does not have to be the calling</span>
+<span id="L243"><span class="lineNum">     243</span>                 :             :     /// actor. Reuses the existing scheduler infrastructure with a callback</span>
+<span id="L244"><span class="lineNum">     244</span>                 :             :     /// that delivers to the specified \c target_id.</span>
+<span id="L245"><span class="lineNum">     245</span>                 :             :     ///</span>
+<span id="L246"><span class="lineNum">     246</span>                 :             :     /// \param[in] target The actor to deliver to.</span>
+<span id="L247"><span class="lineNum">     247</span>                 :             :     /// \param[in] delay Time until delivery.</span>
+<span id="L248"><span class="lineNum">     248</span>                 :             :     /// \param[in] msg Message to deliver.</span>
+<span id="L249"><span class="lineNum">     249</span>                 :             :     /// \return An \c AlarmHandle that can be used with \c cancel_schedule().</span>
+<span id="L250"><span class="lineNum">     250</span>                 :             :     AlarmHandle schedule_to(const ActorAddress&amp; target,</span>
+<span id="L251"><span class="lineNum">     251</span>                 :             :                             std::chrono::milliseconds delay, TypedMessage msg);</span>
+<span id="L252"><span class="lineNum">     252</span>                 :             : </span>
+<span id="L253"><span class="lineNum">     253</span>                 :             :     /// \brief Cancel a previously scheduled message.</span>
+<span id="L254"><span class="lineNum">     254</span>                 :             :     ///</span>
+<span id="L255"><span class="lineNum">     255</span>                 :             :     /// \param[in] handle The handle returned by \c schedule() or \c</span>
+<span id="L256"><span class="lineNum">     256</span>                 :             :     /// schedule_to().</span>
+<span id="L257"><span class="lineNum">     257</span>                 :             :     void cancel_schedule(AlarmHandle handle);</span>
 <span id="L258"><span class="lineNum">     258</span>                 :             : </span>
-<span id="L259"><span class="lineNum">     259</span>                 :             :     /// \brief Unregister this actor from a ServiceKey.</span>
-<span id="L260"><span class="lineNum">     260</span>                 :             :     void receptionist_unregister(receptionist::ServiceKey key);</span>
-<span id="L261"><span class="lineNum">     261</span>                 :             : </span>
-<span id="L262"><span class="lineNum">     262</span>                 :             :     /// \brief Subscribe to membership changes for a ServiceKey.</span>
-<span id="L263"><span class="lineNum">     263</span>                 :             :     void receptionist_subscribe(receptionist::ServiceKey key);</span>
-<span id="L264"><span class="lineNum">     264</span>                 :             : </span>
-<span id="L265"><span class="lineNum">     265</span>                 :             :     /// \brief Unsubscribe from a ServiceKey.</span>
-<span id="L266"><span class="lineNum">     266</span>                 :             :     void receptionist_unsubscribe(receptionist::ServiceKey key);</span>
+<span id="L259"><span class="lineNum">     259</span>                 :             :     /// \brief Request self-passivation after the current message completes.</span>
+<span id="L260"><span class="lineNum">     260</span>                 :             :     ///</span>
+<span id="L261"><span class="lineNum">     261</span>                 :             :     /// The passivation is deferred until the current handler returns,</span>
+<span id="L262"><span class="lineNum">     262</span>                 :             :     /// ensuring consistent state for snapshotting. If the actor is not</span>
+<span id="L263"><span class="lineNum">     263</span>                 :             :     /// in \c kActive state, this call is a no-op.</span>
+<span id="L264"><span class="lineNum">     264</span>                 :             :     ///</span>
+<span id="L265"><span class="lineNum">     265</span>                 :             :     /// \note Callable only from within an actor handler.</span>
+<span id="L266"><span class="lineNum">     266</span>                 :             :     void passivate();</span>
 <span id="L267"><span class="lineNum">     267</span>                 :             : </span>
-<span id="L268"><span class="lineNum">     268</span>                 :             :     // ── Message adapter ─────────────────────────────────────────────────</span>
+<span id="L268"><span class="lineNum">     268</span>                 :             :     // ── Death Pact ─────────────────────────────────────────────────────────</span>
 <span id="L269"><span class="lineNum">     269</span>                 :             : </span>
-<span id="L270"><span class="lineNum">     270</span>                 :             :     /// \brief Create a message adapter that translates From→To and</span>
-<span id="L271"><span class="lineNum">     271</span>                 :             :     ///        self-delivers the translated message.</span>
-<span id="L272"><span class="lineNum">     272</span>                 :             :     ///</span>
-<span id="L273"><span class="lineNum">     273</span>                 :             :     /// Returns an ActorRef. Messages of type \c From sent to the</span>
-<span id="L274"><span class="lineNum">     274</span>                 :             :     /// returned ref are translated via \p adapter_fn and</span>
-<span id="L275"><span class="lineNum">     275</span>                 :             :     /// self-delivered as type \c To.</span>
-<span id="L276"><span class="lineNum">     276</span>                 :             :     ///</span>
-<span id="L277"><span class="lineNum">     277</span>                 :             :     /// The adapter is stored on the owning EventBasedActor and</span>
-<span id="L278"><span class="lineNum">     278</span>                 :             :     /// checked in \c receive() before normal dispatch.</span>
-<span id="L279"><span class="lineNum">     279</span>                 :             :     template &lt;typename From, typename To&gt;</span>
-<span id="L280"><span class="lineNum">     280</span>                 :             :     ActorRef message_adapter(std::function&lt;To(const From&amp;)&gt; adapter_fn) {</span>
-<span id="L281"><span class="lineNum">     281</span>                 :             :         auto fn = [afn = std::move(adapter_fn)](const TypedMessage&amp; msg) -&gt; TypedMessage {</span>
-<span id="L282"><span class="lineNum">     282</span>                 :             :             auto parsed = msg.as&lt;From&gt;();</span>
-<span id="L283"><span class="lineNum">     283</span>                 :             :             To to = afn(*parsed);</span>
-<span id="L284"><span class="lineNum">     284</span>                 :             :             return TypedMessage(MessageTraits&lt;To&gt;::tag(), to);</span>
-<span id="L285"><span class="lineNum">     285</span>                 :             :         };</span>
-<span id="L286"><span class="lineNum">     286</span>                 :             :         return register_message_adapter(std::move(fn), MessageTraits&lt;From&gt;::tag());</span>
-<span id="L287"><span class="lineNum">     287</span>                 :             :     }</span>
-<span id="L288"><span class="lineNum">     288</span>                 :             : </span>
-<span id="L289"><span class="lineNum">     289</span>                 :             :   private:</span>
-<span id="L290"><span class="lineNum">     290</span>                 :             :     /// Register a type-erased adapter function on the owning actor.</span>
-<span id="L291"><span class="lineNum">     291</span>                 :             :     /// Returns a self-ref; messages sent to it will be translated.</span>
-<span id="L292"><span class="lineNum">     292</span>                 :             :     ActorRef</span>
-<span id="L293"><span class="lineNum">     293</span>                 :             :     register_message_adapter(std::function&lt;TypedMessage(const TypedMessage&amp;)&gt; fn,</span>
-<span id="L294"><span class="lineNum">     294</span>                 :             :                              TypeTag from_tag);</span>
-<span id="L295"><span class="lineNum">     295</span>                 :             : </span>
-<span id="L296"><span class="lineNum">     296</span>                 :             :   public:</span>
-<span id="L297"><span class="lineNum">     297</span>                 :             :     // ── Children management ───────────────────────────────────────────────</span>
-<span id="L298"><span class="lineNum">     298</span>                 :             : </span>
-<span id="L299"><span class="lineNum">     299</span>                 :             :     /// \brief List of direct child actors.</span>
-<span id="L300"><span class="lineNum">     300</span>                 :             :     std::vector&lt;Actor&gt; children() const;</span>
-<span id="L301"><span class="lineNum">     301</span>                 :             :     /// \brief Register a direct child.</span>
-<span id="L302"><span class="lineNum">     302</span>                 :             :     void add_child(Actor child);</span>
-<span id="L303"><span class="lineNum">     303</span>                 :             :     /// \brief Unregister a direct child.</span>
-<span id="L304"><span class="lineNum">     304</span>                 :             :     void remove_child(Actor child);</span>
+<span id="L270"><span class="lineNum">     270</span>                 :             :     /// \brief Enable or disable the death pact for this actor.</span>
+<span id="L271"><span class="lineNum">     271</span>                 :             :     ///</span>
+<span id="L272"><span class="lineNum">     272</span>                 :             :     /// When enabled, this actor will passivate (stop) when a linked actor</span>
+<span id="L273"><span class="lineNum">     273</span>                 :             :     /// dies (receives a DownMsg). This implements the CAF-style &quot;death pact&quot;</span>
+<span id="L274"><span class="lineNum">     274</span>                 :             :     /// pattern where linked actors share fate.</span>
+<span id="L275"><span class="lineNum">     275</span>                 :             :     ///</span>
+<span id="L276"><span class="lineNum">     276</span>                 :             :     /// \param[in] enabled \c true to enable death pact, \c false to disable.</span>
+<span id="L277"><span class="lineNum">     277</span>                 :             :     /// \note Defaults to \c false. Only applies to linked actors, not</span>
+<span id="L278"><span class="lineNum">     278</span>                 :             :     ///       monitored actors (monitoring is one-way).</span>
+<span id="L279"><span class="lineNum">     279</span>                 :             :     void set_death_pact(bool enabled) {</span>
+<span id="L280"><span class="lineNum">     280</span>                 :             :         death_pact_ = enabled;</span>
+<span id="L281"><span class="lineNum">     281</span>                 :             :     }</span>
+<span id="L282"><span class="lineNum">     282</span>                 :             : </span>
+<span id="L283"><span class="lineNum">     283</span>                 :             :     /// \brief Check whether death pact is enabled for this actor.</span>
+<span id="L284"><span class="lineNum">     284</span>                 :             :     ///</span>
+<span id="L285"><span class="lineNum">     285</span>                 :             :     /// \return \c true if death pact is enabled, \c false otherwise.</span>
+<span id="L286"><span class="lineNum">     286</span>                 :<span class="tlaGNC">           8 :     bool has_death_pact() const {</span></span>
+<span id="L287"><span class="lineNum">     287</span>                 :<span class="tlaGNC">           8 :         return death_pact_;</span></span>
+<span id="L288"><span class="lineNum">     288</span>                 :             :     }</span>
+<span id="L289"><span class="lineNum">     289</span>                 :             : </span>
+<span id="L290"><span class="lineNum">     290</span>                 :             :     // ── Receptionist ─────────────────────────────────────────────────────</span>
+<span id="L291"><span class="lineNum">     291</span>                 :             : </span>
+<span id="L292"><span class="lineNum">     292</span>                 :             :     /// \brief Register this actor under a ServiceKey with the Receptionist.</span>
+<span id="L293"><span class="lineNum">     293</span>                 :             :     void receptionist_register(receptionist::ServiceKey key);</span>
+<span id="L294"><span class="lineNum">     294</span>                 :             : </span>
+<span id="L295"><span class="lineNum">     295</span>                 :             :     /// \brief Unregister this actor from a ServiceKey.</span>
+<span id="L296"><span class="lineNum">     296</span>                 :             :     void receptionist_unregister(receptionist::ServiceKey key);</span>
+<span id="L297"><span class="lineNum">     297</span>                 :             : </span>
+<span id="L298"><span class="lineNum">     298</span>                 :             :     /// \brief Subscribe to membership changes for a ServiceKey.</span>
+<span id="L299"><span class="lineNum">     299</span>                 :             :     void receptionist_subscribe(receptionist::ServiceKey key);</span>
+<span id="L300"><span class="lineNum">     300</span>                 :             : </span>
+<span id="L301"><span class="lineNum">     301</span>                 :             :     /// \brief Unsubscribe from a ServiceKey.</span>
+<span id="L302"><span class="lineNum">     302</span>                 :             :     void receptionist_unsubscribe(receptionist::ServiceKey key);</span>
+<span id="L303"><span class="lineNum">     303</span>                 :             : </span>
+<span id="L304"><span class="lineNum">     304</span>                 :             :     // ── Message adapter ─────────────────────────────────────────────────</span>
 <span id="L305"><span class="lineNum">     305</span>                 :             : </span>
-<span id="L306"><span class="lineNum">     306</span>                 :             :     /// \brief Register a remote child actor.</span>
-<span id="L307"><span class="lineNum">     307</span>                 :             :     void add_remote_child(ActorRef child);</span>
-<span id="L308"><span class="lineNum">     308</span>                 :             :     /// \brief List of remote children (spawned on other nodes).</span>
-<span id="L309"><span class="lineNum">     309</span>                 :             :     std::vector&lt;ActorRef&gt; remote_children() const;</span>
-<span id="L310"><span class="lineNum">     310</span>                 :             : </span>
-<span id="L311"><span class="lineNum">     311</span>                 :             :     // ── Link management ───────────────────────────────────────────────────</span>
-<span id="L312"><span class="lineNum">     312</span>                 :             : </span>
-<span id="L313"><span class="lineNum">     313</span>                 :             :     /// \brief Addresses of linked actors (bidirectional death sharing).</span>
-<span id="L314"><span class="lineNum">     314</span>                 :             :     std::vector&lt;ActorAddress&gt; linked_actors() const;</span>
-<span id="L315"><span class="lineNum">     315</span>                 :<span class="tlaGNC">          19 :     void add_linked(const ActorAddress&amp; addr) {</span></span>
-<span id="L316"><span class="lineNum">     316</span>                 :<span class="tlaGNC">          19 :         linked_.push_back(addr);</span></span>
-<span id="L317"><span class="lineNum">     317</span>                 :<span class="tlaGNC">          19 :     }</span></span>
-<span id="L318"><span class="lineNum">     318</span>                 :<span class="tlaGNC">          15 :     void remove_linked(const ActorAddress&amp; addr) {</span></span>
-<span id="L319"><span class="lineNum">     319</span>                 :<span class="tlaGNC">          15 :         auto it = std::find(linked_.begin(), linked_.end(), addr);</span></span>
-<span id="L320"><span class="lineNum">     320</span>         [<span class="tlaGBC" title="Branch 0 was taken 11 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          15 :         if (it != linked_.end())</span></span>
-<span id="L321"><span class="lineNum">     321</span>                 :<span class="tlaGNC">          11 :             linked_.erase(it);</span></span>
-<span id="L322"><span class="lineNum">     322</span>                 :<span class="tlaGNC">          15 :     }</span></span>
-<span id="L323"><span class="lineNum">     323</span>                 :             : </span>
-<span id="L324"><span class="lineNum">     324</span>                 :             :     // ── Monitoring ────────────────────────────────────────────────────────</span>
-<span id="L325"><span class="lineNum">     325</span>                 :             : </span>
-<span id="L326"><span class="lineNum">     326</span>                 :             :     /// \brief Register one-way monitoring of \p target.</span>
-<span id="L327"><span class="lineNum">     327</span>                 :             :     ///</span>
-<span id="L328"><span class="lineNum">     328</span>                 :             :     /// When \p target terminates this actor receives a \c DownMsg.</span>
-<span id="L329"><span class="lineNum">     329</span>                 :             :     /// \param[in] target Actor to monitor.</span>
-<span id="L330"><span class="lineNum">     330</span>                 :             :     void monitor(const ActorAddress&amp; target);</span>
+<span id="L306"><span class="lineNum">     306</span>                 :             :     /// \brief Create a message adapter that translates From→To and</span>
+<span id="L307"><span class="lineNum">     307</span>                 :             :     ///        self-delivers the translated message.</span>
+<span id="L308"><span class="lineNum">     308</span>                 :             :     ///</span>
+<span id="L309"><span class="lineNum">     309</span>                 :             :     /// Returns an ActorRef. Messages of type \c From sent to the</span>
+<span id="L310"><span class="lineNum">     310</span>                 :             :     /// returned ref are translated via \p adapter_fn and</span>
+<span id="L311"><span class="lineNum">     311</span>                 :             :     /// self-delivered as type \c To.</span>
+<span id="L312"><span class="lineNum">     312</span>                 :             :     ///</span>
+<span id="L313"><span class="lineNum">     313</span>                 :             :     /// The adapter is stored on the owning EventBasedActor and</span>
+<span id="L314"><span class="lineNum">     314</span>                 :             :     /// checked in \c receive() before normal dispatch.</span>
+<span id="L315"><span class="lineNum">     315</span>                 :             :     template &lt;typename From, typename To&gt;</span>
+<span id="L316"><span class="lineNum">     316</span>                 :             :     ActorRef message_adapter(std::function&lt;To(const From&amp;)&gt; adapter_fn) {</span>
+<span id="L317"><span class="lineNum">     317</span>                 :             :         auto fn = [afn = std::move(adapter_fn)](const TypedMessage&amp; msg) -&gt; TypedMessage {</span>
+<span id="L318"><span class="lineNum">     318</span>                 :             :             auto parsed = msg.as&lt;From&gt;();</span>
+<span id="L319"><span class="lineNum">     319</span>                 :             :             To to = afn(*parsed);</span>
+<span id="L320"><span class="lineNum">     320</span>                 :             :             return TypedMessage(MessageTraits&lt;To&gt;::tag(), to);</span>
+<span id="L321"><span class="lineNum">     321</span>                 :             :         };</span>
+<span id="L322"><span class="lineNum">     322</span>                 :             :         return register_message_adapter(std::move(fn), MessageTraits&lt;From&gt;::tag());</span>
+<span id="L323"><span class="lineNum">     323</span>                 :             :     }</span>
+<span id="L324"><span class="lineNum">     324</span>                 :             : </span>
+<span id="L325"><span class="lineNum">     325</span>                 :             :   private:</span>
+<span id="L326"><span class="lineNum">     326</span>                 :             :     /// Register a type-erased adapter function on the owning actor.</span>
+<span id="L327"><span class="lineNum">     327</span>                 :             :     /// Returns a self-ref; messages sent to it will be translated.</span>
+<span id="L328"><span class="lineNum">     328</span>                 :             :     ActorRef</span>
+<span id="L329"><span class="lineNum">     329</span>                 :             :     register_message_adapter(std::function&lt;TypedMessage(const TypedMessage&amp;)&gt; fn,</span>
+<span id="L330"><span class="lineNum">     330</span>                 :             :                              TypeTag from_tag);</span>
 <span id="L331"><span class="lineNum">     331</span>                 :             : </span>
-<span id="L332"><span class="lineNum">     332</span>                 :<span class="tlaGNC">           7 :     void add_monitored(const ActorAddress&amp; addr) {</span></span>
-<span id="L333"><span class="lineNum">     333</span>                 :<span class="tlaGNC">           7 :         monitored_.push_back(addr);</span></span>
-<span id="L334"><span class="lineNum">     334</span>                 :<span class="tlaGNC">           7 :     }</span></span>
-<span id="L335"><span class="lineNum">     335</span>                 :<span class="tlaGNC">          11 :     void remove_monitored(const ActorAddress&amp; addr) {</span></span>
-<span id="L336"><span class="lineNum">     336</span>                 :<span class="tlaGNC">          11 :         auto it = std::find(monitored_.begin(), monitored_.end(), addr);</span></span>
-<span id="L337"><span class="lineNum">     337</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 8 times"> + </span>]:<span class="tlaGNC">          11 :         if (it != monitored_.end())</span></span>
-<span id="L338"><span class="lineNum">     338</span>                 :<span class="tlaGNC">           3 :             monitored_.erase(it);</span></span>
-<span id="L339"><span class="lineNum">     339</span>                 :<span class="tlaGNC">          11 :     }</span></span>
-<span id="L340"><span class="lineNum">     340</span>                 :             :     /// \brief List of currently monitored actor addresses.</span>
-<span id="L341"><span class="lineNum">     341</span>                 :<span class="tlaGNC">         893 :     const std::vector&lt;ActorAddress&gt;&amp; monitored_actors() const {</span></span>
-<span id="L342"><span class="lineNum">     342</span>                 :<span class="tlaGNC">         893 :         return monitored_;</span></span>
-<span id="L343"><span class="lineNum">     343</span>                 :             :     }</span>
-<span id="L344"><span class="lineNum">     344</span>                 :             : </span>
-<span id="L345"><span class="lineNum">     345</span>                 :             :     // ── Actor resolution ──────────────────────────────────────────────────</span>
+<span id="L332"><span class="lineNum">     332</span>                 :             :   public:</span>
+<span id="L333"><span class="lineNum">     333</span>                 :             :     // ── Children management ───────────────────────────────────────────────</span>
+<span id="L334"><span class="lineNum">     334</span>                 :             : </span>
+<span id="L335"><span class="lineNum">     335</span>                 :             :     /// \brief List of direct child actors.</span>
+<span id="L336"><span class="lineNum">     336</span>                 :             :     std::vector&lt;Actor&gt; children() const;</span>
+<span id="L337"><span class="lineNum">     337</span>                 :             :     /// \brief Register a direct child.</span>
+<span id="L338"><span class="lineNum">     338</span>                 :             :     void add_child(Actor child);</span>
+<span id="L339"><span class="lineNum">     339</span>                 :             :     /// \brief Unregister a direct child.</span>
+<span id="L340"><span class="lineNum">     340</span>                 :             :     void remove_child(Actor child);</span>
+<span id="L341"><span class="lineNum">     341</span>                 :             : </span>
+<span id="L342"><span class="lineNum">     342</span>                 :             :     /// \brief Register a remote child actor.</span>
+<span id="L343"><span class="lineNum">     343</span>                 :             :     void add_remote_child(ActorRef child);</span>
+<span id="L344"><span class="lineNum">     344</span>                 :             :     /// \brief List of remote children (spawned on other nodes).</span>
+<span id="L345"><span class="lineNum">     345</span>                 :             :     std::vector&lt;ActorRef&gt; remote_children() const;</span>
 <span id="L346"><span class="lineNum">     346</span>                 :             : </span>
-<span id="L347"><span class="lineNum">     347</span>                 :             :     /// \brief Resolve an address to an \c ActorRef (lazy + cached).</span>
-<span id="L348"><span class="lineNum">     348</span>                 :             :     ///</span>
-<span id="L349"><span class="lineNum">     349</span>                 :             :     /// \param[in] target Actor address to resolve.</span>
-<span id="L350"><span class="lineNum">     350</span>                 :             :     /// \return A resolved \c ActorRef for local or remote dispatch.</span>
-<span id="L351"><span class="lineNum">     351</span>                 :             :     ActorRef resolve(const ActorAddress&amp; target);</span>
-<span id="L352"><span class="lineNum">     352</span>                 :             : </span>
-<span id="L353"><span class="lineNum">     353</span>                 :             :     // ── RPC ───────────────────────────────────────────────────────────────</span>
-<span id="L354"><span class="lineNum">     354</span>                 :             : </span>
-<span id="L355"><span class="lineNum">     355</span>                 :             :     /// \brief Issue an asynchronous RPC call.</span>
-<span id="L356"><span class="lineNum">     356</span>                 :             :     ///</span>
-<span id="L357"><span class="lineNum">     357</span>                 :             :     /// Safe from non-actor threads.</span>
-<span id="L358"><span class="lineNum">     358</span>                 :             :     ///</span>
-<span id="L359"><span class="lineNum">     359</span>                 :             :     /// \param[in] target Destination actor address.</span>
-<span id="L360"><span class="lineNum">     360</span>                 :             :     /// \param[in] encoded_request Pre-serialized request payload.</span>
-<span id="L361"><span class="lineNum">     361</span>                 :             :     /// \param[in] timeout_ms Maximum time to wait for a response (default 5 s).</span>
-<span id="L362"><span class="lineNum">     362</span>                 :             :     /// \return An \c RpcFuture that yields the response body.</span>
-<span id="L363"><span class="lineNum">     363</span>                 :             :     /// \note Thread safety: Safe from any thread.</span>
-<span id="L364"><span class="lineNum">     364</span>                 :             :     RpcFuture&lt;StreamBuffer&gt;</span>
-<span id="L365"><span class="lineNum">     365</span>                 :             :     rpc(const ActorAddress&amp; target, const StreamBuffer&amp; encoded_request,</span>
-<span id="L366"><span class="lineNum">     366</span>                 :             :         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));</span>
+<span id="L347"><span class="lineNum">     347</span>                 :             :     // ── Link management ───────────────────────────────────────────────────</span>
+<span id="L348"><span class="lineNum">     348</span>                 :             : </span>
+<span id="L349"><span class="lineNum">     349</span>                 :             :     /// \brief Addresses of linked actors (bidirectional death sharing).</span>
+<span id="L350"><span class="lineNum">     350</span>                 :             :     std::vector&lt;ActorAddress&gt; linked_actors() const;</span>
+<span id="L351"><span class="lineNum">     351</span>                 :<span class="tlaGNC">          19 :     void add_linked(const ActorAddress&amp; addr) {</span></span>
+<span id="L352"><span class="lineNum">     352</span>                 :<span class="tlaGNC">          19 :         linked_.push_back(addr);</span></span>
+<span id="L353"><span class="lineNum">     353</span>                 :<span class="tlaGNC">          19 :     }</span></span>
+<span id="L354"><span class="lineNum">     354</span>                 :<span class="tlaGNC">          16 :     void remove_linked(const ActorAddress&amp; addr) {</span></span>
+<span id="L355"><span class="lineNum">     355</span>                 :<span class="tlaGNC">          16 :         auto it = std::find(linked_.begin(), linked_.end(), addr);</span></span>
+<span id="L356"><span class="lineNum">     356</span>         [<span class="tlaGBC" title="Branch 0 was taken 12 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 4 times"> + </span>]:<span class="tlaGNC">          16 :         if (it != linked_.end())</span></span>
+<span id="L357"><span class="lineNum">     357</span>                 :<span class="tlaGNC">          12 :             linked_.erase(it);</span></span>
+<span id="L358"><span class="lineNum">     358</span>                 :<span class="tlaGNC">          16 :     }</span></span>
+<span id="L359"><span class="lineNum">     359</span>                 :             : </span>
+<span id="L360"><span class="lineNum">     360</span>                 :             :     // ── Monitoring ────────────────────────────────────────────────────────</span>
+<span id="L361"><span class="lineNum">     361</span>                 :             : </span>
+<span id="L362"><span class="lineNum">     362</span>                 :             :     /// \brief Register one-way monitoring of \p target.</span>
+<span id="L363"><span class="lineNum">     363</span>                 :             :     ///</span>
+<span id="L364"><span class="lineNum">     364</span>                 :             :     /// When \p target terminates this actor receives a \c DownMsg.</span>
+<span id="L365"><span class="lineNum">     365</span>                 :             :     /// \param[in] target Actor to monitor.</span>
+<span id="L366"><span class="lineNum">     366</span>                 :             :     void monitor(const ActorAddress&amp; target);</span>
 <span id="L367"><span class="lineNum">     367</span>                 :             : </span>
-<span id="L368"><span class="lineNum">     368</span>                 :             :     // ── Ask (request-response with timeout) ────────────────────────────────</span>
-<span id="L369"><span class="lineNum">     369</span>                 :             : </span>
-<span id="L370"><span class="lineNum">     370</span>                 :             :     /// \brief Send a request and get a handle for the response.</span>
-<span id="L371"><span class="lineNum">     371</span>                 :             :     ///</span>
-<span id="L372"><span class="lineNum">     372</span>                 :             :     /// Routes locally for same-process targets or via RpcChannel for</span>
-<span id="L373"><span class="lineNum">     373</span>                 :             :     /// remote targets.</span>
-<span id="L374"><span class="lineNum">     374</span>                 :             :     ///</span>
-<span id="L375"><span class="lineNum">     375</span>                 :             :     /// \param[in] target Destination actor address.</span>
-<span id="L376"><span class="lineNum">     376</span>                 :             :     /// \param[in] encoded_request Pre-serialized request payload.</span>
-<span id="L377"><span class="lineNum">     377</span>                 :             :     /// \param[in] timeout Per-request timeout (default: system config).</span>
-<span id="L378"><span class="lineNum">     378</span>                 :             :     /// \return RequestHandle that resolves with the response or error.</span>
-<span id="L379"><span class="lineNum">     379</span>                 :             :     RequestHandle&lt;StreamBuffer&gt;</span>
-<span id="L380"><span class="lineNum">     380</span>                 :             :     ask_raw(const ActorAddress&amp; target, const StreamBuffer&amp; encoded_request,</span>
-<span id="L381"><span class="lineNum">     381</span>                 :             :             RequestTimeout timeout = RequestTimeout::use_default());</span>
+<span id="L368"><span class="lineNum">     368</span>                 :<span class="tlaGNC">           7 :     void add_monitored(const ActorAddress&amp; addr) {</span></span>
+<span id="L369"><span class="lineNum">     369</span>                 :<span class="tlaGNC">           7 :         monitored_.push_back(addr);</span></span>
+<span id="L370"><span class="lineNum">     370</span>                 :<span class="tlaGNC">           7 :     }</span></span>
+<span id="L371"><span class="lineNum">     371</span>                 :<span class="tlaGNC">          12 :     void remove_monitored(const ActorAddress&amp; addr) {</span></span>
+<span id="L372"><span class="lineNum">     372</span>                 :<span class="tlaGNC">          12 :         auto it = std::find(monitored_.begin(), monitored_.end(), addr);</span></span>
+<span id="L373"><span class="lineNum">     373</span>         [<span class="tlaGBC" title="Branch 0 was taken 3 times"> + </span><span class="tlaGBC" title="Branch 1 was taken 9 times"> + </span>]:<span class="tlaGNC">          12 :         if (it != monitored_.end())</span></span>
+<span id="L374"><span class="lineNum">     374</span>                 :<span class="tlaGNC">           3 :             monitored_.erase(it);</span></span>
+<span id="L375"><span class="lineNum">     375</span>                 :<span class="tlaGNC">          12 :     }</span></span>
+<span id="L376"><span class="lineNum">     376</span>                 :             :     /// \brief List of currently monitored actor addresses.</span>
+<span id="L377"><span class="lineNum">     377</span>                 :<span class="tlaGNC">         895 :     const std::vector&lt;ActorAddress&gt;&amp; monitored_actors() const {</span></span>
+<span id="L378"><span class="lineNum">     378</span>                 :<span class="tlaGNC">         895 :         return monitored_;</span></span>
+<span id="L379"><span class="lineNum">     379</span>                 :             :     }</span>
+<span id="L380"><span class="lineNum">     380</span>                 :             : </span>
+<span id="L381"><span class="lineNum">     381</span>                 :             :     // ── Actor resolution ──────────────────────────────────────────────────</span>
 <span id="L382"><span class="lineNum">     382</span>                 :             : </span>
-<span id="L383"><span class="lineNum">     383</span>                 :             :     // ── HTTP egress ───────────────────────────────────────────────────────</span>
-<span id="L384"><span class="lineNum">     384</span>                 :             : </span>
-<span id="L385"><span class="lineNum">     385</span>                 :             :     /// \brief Async HTTP GET to an external service.</span>
-<span id="L386"><span class="lineNum">     386</span>                 :             :     ///</span>
-<span id="L387"><span class="lineNum">     387</span>                 :             :     /// \param[in] url Target URL.</span>
-<span id="L388"><span class="lineNum">     388</span>                 :             :     /// \param[in] headers Optional HTTP headers.</span>
-<span id="L389"><span class="lineNum">     389</span>                 :             :     /// \return An \c RpcFuture yielding the response body.</span>
-<span id="L390"><span class="lineNum">     390</span>                 :             :     /// \note Thread safety: Safe from any thread. Delegates to</span>
-<span id="L391"><span class="lineNum">     391</span>                 :             :     ///       \c ActorSystem's \c HttpClient.</span>
-<span id="L392"><span class="lineNum">     392</span>                 :             :     RpcFuture&lt;StreamBuffer&gt;</span>
-<span id="L393"><span class="lineNum">     393</span>                 :             :     http_get(const std::string&amp; url, std::vector&lt;net::HttpHeader&gt; headers = {});</span>
-<span id="L394"><span class="lineNum">     394</span>                 :             : </span>
-<span id="L395"><span class="lineNum">     395</span>                 :             :     /// \brief Async HTTP POST to an external service.</span>
-<span id="L396"><span class="lineNum">     396</span>                 :             :     ///</span>
-<span id="L397"><span class="lineNum">     397</span>                 :             :     /// \param[in] url Target URL.</span>
-<span id="L398"><span class="lineNum">     398</span>                 :             :     /// \param[in] body Request body.</span>
-<span id="L399"><span class="lineNum">     399</span>                 :             :     /// \param[in] headers Optional HTTP headers.</span>
-<span id="L400"><span class="lineNum">     400</span>                 :             :     /// \return An \c RpcFuture yielding the response body.</span>
-<span id="L401"><span class="lineNum">     401</span>                 :             :     RpcFuture&lt;StreamBuffer&gt; http_post(const std::string&amp; url, StreamBuffer body,</span>
-<span id="L402"><span class="lineNum">     402</span>                 :             :                                       std::vector&lt;net::HttpHeader&gt; headers = {});</span>
+<span id="L383"><span class="lineNum">     383</span>                 :             :     /// \brief Resolve an address to an \c ActorRef (lazy + cached).</span>
+<span id="L384"><span class="lineNum">     384</span>                 :             :     ///</span>
+<span id="L385"><span class="lineNum">     385</span>                 :             :     /// \param[in] target Actor address to resolve.</span>
+<span id="L386"><span class="lineNum">     386</span>                 :             :     /// \return A resolved \c ActorRef for local or remote dispatch.</span>
+<span id="L387"><span class="lineNum">     387</span>                 :             :     ActorRef resolve(const ActorAddress&amp; target);</span>
+<span id="L388"><span class="lineNum">     388</span>                 :             : </span>
+<span id="L389"><span class="lineNum">     389</span>                 :             :     // ── RPC ───────────────────────────────────────────────────────────────</span>
+<span id="L390"><span class="lineNum">     390</span>                 :             : </span>
+<span id="L391"><span class="lineNum">     391</span>                 :             :     /// \brief Issue an asynchronous RPC call.</span>
+<span id="L392"><span class="lineNum">     392</span>                 :             :     ///</span>
+<span id="L393"><span class="lineNum">     393</span>                 :             :     /// Safe from non-actor threads.</span>
+<span id="L394"><span class="lineNum">     394</span>                 :             :     ///</span>
+<span id="L395"><span class="lineNum">     395</span>                 :             :     /// \param[in] target Destination actor address.</span>
+<span id="L396"><span class="lineNum">     396</span>                 :             :     /// \param[in] encoded_request Pre-serialized request payload.</span>
+<span id="L397"><span class="lineNum">     397</span>                 :             :     /// \param[in] timeout_ms Maximum time to wait for a response (default 5 s).</span>
+<span id="L398"><span class="lineNum">     398</span>                 :             :     /// \return An \c RpcFuture that yields the response body.</span>
+<span id="L399"><span class="lineNum">     399</span>                 :             :     /// \note Thread safety: Safe from any thread.</span>
+<span id="L400"><span class="lineNum">     400</span>                 :             :     RpcFuture&lt;StreamBuffer&gt;</span>
+<span id="L401"><span class="lineNum">     401</span>                 :             :     rpc(const ActorAddress&amp; target, const StreamBuffer&amp; encoded_request,</span>
+<span id="L402"><span class="lineNum">     402</span>                 :             :         std::chrono::milliseconds timeout_ms = std::chrono::milliseconds(5000));</span>
 <span id="L403"><span class="lineNum">     403</span>                 :             : </span>
-<span id="L404"><span class="lineNum">     404</span>                 :             :     /// \brief Async HTTP PUT to an external service.</span>
-<span id="L405"><span class="lineNum">     405</span>                 :             :     RpcFuture&lt;StreamBuffer&gt; http_put(const std::string&amp; url, StreamBuffer body,</span>
-<span id="L406"><span class="lineNum">     406</span>                 :             :                                      std::vector&lt;net::HttpHeader&gt; headers = {});</span>
-<span id="L407"><span class="lineNum">     407</span>                 :             : </span>
-<span id="L408"><span class="lineNum">     408</span>                 :             :     /// \brief Async HTTP DELETE to an external service.</span>
-<span id="L409"><span class="lineNum">     409</span>                 :             :     RpcFuture&lt;StreamBuffer&gt;</span>
-<span id="L410"><span class="lineNum">     410</span>                 :             :     http_delete(const std::string&amp; url, std::vector&lt;net::HttpHeader&gt; headers = {});</span>
-<span id="L411"><span class="lineNum">     411</span>                 :             : </span>
-<span id="L412"><span class="lineNum">     412</span>                 :             :     /// \brief Generic async HTTP request.</span>
-<span id="L413"><span class="lineNum">     413</span>                 :             :     ///</span>
-<span id="L414"><span class="lineNum">     414</span>                 :             :     /// \param[in] method HTTP method (GET, POST, PUT, DELETE).</span>
-<span id="L415"><span class="lineNum">     415</span>                 :             :     /// \param[in] url Target URL.</span>
-<span id="L416"><span class="lineNum">     416</span>                 :             :     /// \param[in] headers Optional HTTP headers.</span>
-<span id="L417"><span class="lineNum">     417</span>                 :             :     /// \param[in] body Request body (ignored for GET/DELETE).</span>
-<span id="L418"><span class="lineNum">     418</span>                 :             :     /// \return An \c RpcFuture yielding the response body.</span>
-<span id="L419"><span class="lineNum">     419</span>                 :             :     RpcFuture&lt;StreamBuffer&gt;</span>
-<span id="L420"><span class="lineNum">     420</span>                 :             :     http_request(net::HttpMethod method, const std::string&amp; url,</span>
-<span id="L421"><span class="lineNum">     421</span>                 :             :                  std::vector&lt;net::HttpHeader&gt; headers = {}, StreamBuffer body = {});</span>
-<span id="L422"><span class="lineNum">     422</span>                 :             : </span>
-<span id="L423"><span class="lineNum">     423</span>                 :             :     // ── Distributed tracing ───────────────────────────────────────────────</span>
-<span id="L424"><span class="lineNum">     424</span>                 :             : </span>
-<span id="L425"><span class="lineNum">     425</span>                 :             :     /// \brief Returns \c true if a trace context is active for the current</span>
-<span id="L426"><span class="lineNum">     426</span>                 :             :     ///        message being processed.</span>
-<span id="L427"><span class="lineNum">     427</span>                 :<span class="tlaGNC">          12 :     bool has_current_trace_context() const noexcept {</span></span>
-<span id="L428"><span class="lineNum">     428</span>                 :<span class="tlaGNC">          12 :         return has_current_trace_context_;</span></span>
-<span id="L429"><span class="lineNum">     429</span>                 :             :     }</span>
+<span id="L404"><span class="lineNum">     404</span>                 :             :     // ── Ask (request-response with timeout) ────────────────────────────────</span>
+<span id="L405"><span class="lineNum">     405</span>                 :             : </span>
+<span id="L406"><span class="lineNum">     406</span>                 :             :     /// \brief Send a request and get a handle for the response.</span>
+<span id="L407"><span class="lineNum">     407</span>                 :             :     ///</span>
+<span id="L408"><span class="lineNum">     408</span>                 :             :     /// Routes locally for same-process targets or via RpcChannel for</span>
+<span id="L409"><span class="lineNum">     409</span>                 :             :     /// remote targets.</span>
+<span id="L410"><span class="lineNum">     410</span>                 :             :     ///</span>
+<span id="L411"><span class="lineNum">     411</span>                 :             :     /// \param[in] target Destination actor address.</span>
+<span id="L412"><span class="lineNum">     412</span>                 :             :     /// \param[in] encoded_request Pre-serialized request payload.</span>
+<span id="L413"><span class="lineNum">     413</span>                 :             :     /// \param[in] timeout Per-request timeout (default: system config).</span>
+<span id="L414"><span class="lineNum">     414</span>                 :             :     /// \return RequestHandle that resolves with the response or error.</span>
+<span id="L415"><span class="lineNum">     415</span>                 :             :     RequestHandle&lt;StreamBuffer&gt;</span>
+<span id="L416"><span class="lineNum">     416</span>                 :             :     ask_raw(const ActorAddress&amp; target, const StreamBuffer&amp; encoded_request,</span>
+<span id="L417"><span class="lineNum">     417</span>                 :             :             RequestTimeout timeout = RequestTimeout::use_default());</span>
+<span id="L418"><span class="lineNum">     418</span>                 :             : </span>
+<span id="L419"><span class="lineNum">     419</span>                 :             :     // ── HTTP egress ───────────────────────────────────────────────────────</span>
+<span id="L420"><span class="lineNum">     420</span>                 :             : </span>
+<span id="L421"><span class="lineNum">     421</span>                 :             :     /// \brief Async HTTP GET to an external service.</span>
+<span id="L422"><span class="lineNum">     422</span>                 :             :     ///</span>
+<span id="L423"><span class="lineNum">     423</span>                 :             :     /// \param[in] url Target URL.</span>
+<span id="L424"><span class="lineNum">     424</span>                 :             :     /// \param[in] headers Optional HTTP headers.</span>
+<span id="L425"><span class="lineNum">     425</span>                 :             :     /// \return An \c RpcFuture yielding the response body.</span>
+<span id="L426"><span class="lineNum">     426</span>                 :             :     /// \note Thread safety: Safe from any thread. Delegates to</span>
+<span id="L427"><span class="lineNum">     427</span>                 :             :     ///       \c ActorSystem's \c HttpClient.</span>
+<span id="L428"><span class="lineNum">     428</span>                 :             :     RpcFuture&lt;StreamBuffer&gt;</span>
+<span id="L429"><span class="lineNum">     429</span>                 :             :     http_get(const std::string&amp; url, std::vector&lt;net::HttpHeader&gt; headers = {});</span>
 <span id="L430"><span class="lineNum">     430</span>                 :             : </span>
-<span id="L431"><span class="lineNum">     431</span>                 :             :     /// \brief Active trace context for send/reply propagation.</span>
-<span id="L432"><span class="lineNum">     432</span>                 :<span class="tlaGNC">           6 :     const TraceContext&amp; current_trace_context() const noexcept {</span></span>
-<span id="L433"><span class="lineNum">     433</span>                 :<span class="tlaGNC">           6 :         return current_trace_context_;</span></span>
-<span id="L434"><span class="lineNum">     434</span>                 :             :     }</span>
-<span id="L435"><span class="lineNum">     435</span>                 :             : </span>
-<span id="L436"><span class="lineNum">     436</span>                 :             :     /// \brief RAII guard that pushes a trace context and restores the</span>
-<span id="L437"><span class="lineNum">     437</span>                 :             :     ///        previous one on destruction.</span>
-<span id="L438"><span class="lineNum">     438</span>                 :             :     ///</span>
-<span id="L439"><span class="lineNum">     439</span>                 :             :     /// Used by the receive path to set the incoming span as current.</span>
-<span id="L440"><span class="lineNum">     440</span>                 :             :     /// \note Thread safety: Scoped to a single actor thread.</span>
-<span id="L441"><span class="lineNum">     441</span>                 :             :     class TraceScope {</span>
-<span id="L442"><span class="lineNum">     442</span>                 :             :       public:</span>
-<span id="L443"><span class="lineNum">     443</span>                 :             :         /// \brief Push \p next as the current trace context.</span>
-<span id="L444"><span class="lineNum">     444</span>                 :             :         /// \param[in] ctx Owning \c ActorContext.</span>
-<span id="L445"><span class="lineNum">     445</span>                 :             :         /// \param[in] next Incoming trace context to activate.</span>
-<span id="L446"><span class="lineNum">     446</span>                 :             :         TraceScope(ActorContext* ctx, const TraceContext&amp; next) noexcept;</span>
-<span id="L447"><span class="lineNum">     447</span>                 :             :         /// \brief Restore the previous trace context.</span>
-<span id="L448"><span class="lineNum">     448</span>                 :             :         ~TraceScope();</span>
-<span id="L449"><span class="lineNum">     449</span>                 :             :         TraceScope(const TraceScope&amp;) = delete;</span>
-<span id="L450"><span class="lineNum">     450</span>                 :             :         TraceScope&amp; operator=(const TraceScope&amp;) = delete;</span>
-<span id="L451"><span class="lineNum">     451</span>                 :             : </span>
-<span id="L452"><span class="lineNum">     452</span>                 :             :       private:</span>
-<span id="L453"><span class="lineNum">     453</span>                 :             :         ActorContext* ctx_{nullptr};</span>
-<span id="L454"><span class="lineNum">     454</span>                 :             :         TraceContext previous_{};</span>
-<span id="L455"><span class="lineNum">     455</span>                 :             :         bool previous_valid_{false};</span>
-<span id="L456"><span class="lineNum">     456</span>                 :             :     };</span>
-<span id="L457"><span class="lineNum">     457</span>                 :             : </span>
-<span id="L458"><span class="lineNum">     458</span>                 :             :     // ── Backpressure ──────────────────────────────────────────────────────</span>
-<span id="L459"><span class="lineNum">     459</span>                 :             : </span>
-<span id="L460"><span class="lineNum">     460</span>                 :             :     /// \brief Callback invoked when a downstream mailbox emits a backpressure</span>
-<span id="L461"><span class="lineNum">     461</span>                 :             :     ///        signal.</span>
-<span id="L462"><span class="lineNum">     462</span>                 :             :     using BackpressureHandler =</span>
-<span id="L463"><span class="lineNum">     463</span>                 :             :         std::function&lt;void(const mailbox::BackpressureSignal&amp;)&gt;;</span>
-<span id="L464"><span class="lineNum">     464</span>                 :             : </span>
-<span id="L465"><span class="lineNum">     465</span>                 :             :     /// \brief Register a backpressure handler.</span>
-<span id="L466"><span class="lineNum">     466</span>                 :             :     void on_backpressure(BackpressureHandler handler);</span>
-<span id="L467"><span class="lineNum">     467</span>                 :             : </span>
-<span id="L468"><span class="lineNum">     468</span>                 :             :     /// \brief Deliver a backpressure signal from a downstream mailbox.</span>
-<span id="L469"><span class="lineNum">     469</span>                 :             :     ///</span>
-<span id="L470"><span class="lineNum">     470</span>                 :             :     /// Invokes the registered \c BackpressureHandler.</span>
-<span id="L471"><span class="lineNum">     471</span>                 :             :     /// \param[in] signal Backpressure signal from downstream.</span>
-<span id="L472"><span class="lineNum">     472</span>                 :             :     void handle_backpressure(const mailbox::BackpressureSignal&amp; signal);</span>
-<span id="L473"><span class="lineNum">     473</span>                 :             : </span>
-<span id="L474"><span class="lineNum">     474</span>                 :             :     // ── Graceful stop ─────────────────────────────────────────────────────</span>
-<span id="L475"><span class="lineNum">     475</span>                 :             : </span>
-<span id="L476"><span class="lineNum">     476</span>                 :             :     /// \brief Initiate graceful drain of \p target per its \c DrainPolicy.</span>
-<span id="L477"><span class="lineNum">     477</span>                 :             :     ///</span>
-<span id="L478"><span class="lineNum">     478</span>                 :             :     /// Returns immediately; the target drains on its scheduler thread.</span>
-<span id="L479"><span class="lineNum">     479</span>                 :             :     /// \param[in] target Actor ID to stop.</span>
-<span id="L480"><span class="lineNum">     480</span>                 :             :     void stop(ActorId target);</span>
-<span id="L481"><span class="lineNum">     481</span>                 :             : </span>
-<span id="L482"><span class="lineNum">     482</span>                 :             :     /// \brief Synchronous stop — blocks until \p target reaches \c kStopped</span>
-<span id="L483"><span class="lineNum">     483</span>                 :             :     ///        or \p timeout expires.</span>
-<span id="L484"><span class="lineNum">     484</span>                 :             :     ///</span>
-<span id="L485"><span class="lineNum">     485</span>                 :             :     /// \param[in] target Actor ID to stop.</span>
-<span id="L486"><span class="lineNum">     486</span>                 :             :     /// \param[in] timeout Maximum time to wait.</span>
-<span id="L487"><span class="lineNum">     487</span>                 :             :     /// \return \c result&lt;void&gt; with error on timeout.</span>
-<span id="L488"><span class="lineNum">     488</span>                 :             :     /// \note Thread safety: Safe from non-actor threads. Do not call from</span>
-<span id="L489"><span class="lineNum">     489</span>                 :             :     ///       actor scheduler threads.</span>
-<span id="L490"><span class="lineNum">     490</span>                 :             :     result&lt;void&gt; stop_sync(ActorId target, std::chrono::milliseconds timeout);</span>
-<span id="L491"><span class="lineNum">     491</span>                 :             : </span>
-<span id="L492"><span class="lineNum">     492</span>                 :             :   private:</span>
-<span id="L493"><span class="lineNum">     493</span>                 :             :     Actor owner_;</span>
-<span id="L494"><span class="lineNum">     494</span>                 :             :     ActorSystem* system_ = nullptr;</span>
-<span id="L495"><span class="lineNum">     495</span>                 :             :     std::vector&lt;Actor&gt; children_;</span>
-<span id="L496"><span class="lineNum">     496</span>                 :             :     std::vector&lt;ActorRef&gt; remote_children_;</span>
-<span id="L497"><span class="lineNum">     497</span>                 :             :     std::vector&lt;ActorAddress&gt; linked_;</span>
-<span id="L498"><span class="lineNum">     498</span>                 :             :     std::vector&lt;ActorAddress&gt; monitored_;</span>
-<span id="L499"><span class="lineNum">     499</span>                 :             : </span>
-<span id="L500"><span class="lineNum">     500</span>                 :<span class="tlaGNC">           6 :     void set_current_trace_context(const TraceContext&amp; context) noexcept {</span></span>
-<span id="L501"><span class="lineNum">     501</span>                 :<span class="tlaGNC">           6 :         current_trace_context_ = context;</span></span>
-<span id="L502"><span class="lineNum">     502</span>                 :<span class="tlaGNC">           6 :         has_current_trace_context_ = context.valid();</span></span>
-<span id="L503"><span class="lineNum">     503</span>                 :<span class="tlaGNC">           6 :     }</span></span>
-<span id="L504"><span class="lineNum">     504</span>                 :             : </span>
-<span id="L505"><span class="lineNum">     505</span>                 :<span class="tlaGNC">           4 :     void clear_current_trace_context() noexcept {</span></span>
-<span id="L506"><span class="lineNum">     506</span>                 :<span class="tlaGNC">           4 :         current_trace_context_.clear();</span></span>
-<span id="L507"><span class="lineNum">     507</span>                 :<span class="tlaGNC">           4 :         has_current_trace_context_ = false;</span></span>
-<span id="L508"><span class="lineNum">     508</span>                 :<span class="tlaGNC">           4 :     }</span></span>
+<span id="L431"><span class="lineNum">     431</span>                 :             :     /// \brief Async HTTP POST to an external service.</span>
+<span id="L432"><span class="lineNum">     432</span>                 :             :     ///</span>
+<span id="L433"><span class="lineNum">     433</span>                 :             :     /// \param[in] url Target URL.</span>
+<span id="L434"><span class="lineNum">     434</span>                 :             :     /// \param[in] body Request body.</span>
+<span id="L435"><span class="lineNum">     435</span>                 :             :     /// \param[in] headers Optional HTTP headers.</span>
+<span id="L436"><span class="lineNum">     436</span>                 :             :     /// \return An \c RpcFuture yielding the response body.</span>
+<span id="L437"><span class="lineNum">     437</span>                 :             :     RpcFuture&lt;StreamBuffer&gt; http_post(const std::string&amp; url, StreamBuffer body,</span>
+<span id="L438"><span class="lineNum">     438</span>                 :             :                                       std::vector&lt;net::HttpHeader&gt; headers = {});</span>
+<span id="L439"><span class="lineNum">     439</span>                 :             : </span>
+<span id="L440"><span class="lineNum">     440</span>                 :             :     /// \brief Async HTTP PUT to an external service.</span>
+<span id="L441"><span class="lineNum">     441</span>                 :             :     RpcFuture&lt;StreamBuffer&gt; http_put(const std::string&amp; url, StreamBuffer body,</span>
+<span id="L442"><span class="lineNum">     442</span>                 :             :                                      std::vector&lt;net::HttpHeader&gt; headers = {});</span>
+<span id="L443"><span class="lineNum">     443</span>                 :             : </span>
+<span id="L444"><span class="lineNum">     444</span>                 :             :     /// \brief Async HTTP DELETE to an external service.</span>
+<span id="L445"><span class="lineNum">     445</span>                 :             :     RpcFuture&lt;StreamBuffer&gt;</span>
+<span id="L446"><span class="lineNum">     446</span>                 :             :     http_delete(const std::string&amp; url, std::vector&lt;net::HttpHeader&gt; headers = {});</span>
+<span id="L447"><span class="lineNum">     447</span>                 :             : </span>
+<span id="L448"><span class="lineNum">     448</span>                 :             :     /// \brief Generic async HTTP request.</span>
+<span id="L449"><span class="lineNum">     449</span>                 :             :     ///</span>
+<span id="L450"><span class="lineNum">     450</span>                 :             :     /// \param[in] method HTTP method (GET, POST, PUT, DELETE).</span>
+<span id="L451"><span class="lineNum">     451</span>                 :             :     /// \param[in] url Target URL.</span>
+<span id="L452"><span class="lineNum">     452</span>                 :             :     /// \param[in] headers Optional HTTP headers.</span>
+<span id="L453"><span class="lineNum">     453</span>                 :             :     /// \param[in] body Request body (ignored for GET/DELETE).</span>
+<span id="L454"><span class="lineNum">     454</span>                 :             :     /// \return An \c RpcFuture yielding the response body.</span>
+<span id="L455"><span class="lineNum">     455</span>                 :             :     RpcFuture&lt;StreamBuffer&gt;</span>
+<span id="L456"><span class="lineNum">     456</span>                 :             :     http_request(net::HttpMethod method, const std::string&amp; url,</span>
+<span id="L457"><span class="lineNum">     457</span>                 :             :                  std::vector&lt;net::HttpHeader&gt; headers = {}, StreamBuffer body = {});</span>
+<span id="L458"><span class="lineNum">     458</span>                 :             : </span>
+<span id="L459"><span class="lineNum">     459</span>                 :             :     // ── Distributed tracing ───────────────────────────────────────────────</span>
+<span id="L460"><span class="lineNum">     460</span>                 :             : </span>
+<span id="L461"><span class="lineNum">     461</span>                 :             :     /// \brief Returns \c true if a trace context is active for the current</span>
+<span id="L462"><span class="lineNum">     462</span>                 :             :     ///        message being processed.</span>
+<span id="L463"><span class="lineNum">     463</span>                 :<span class="tlaGNC">          12 :     bool has_current_trace_context() const noexcept {</span></span>
+<span id="L464"><span class="lineNum">     464</span>                 :<span class="tlaGNC">          12 :         return has_current_trace_context_;</span></span>
+<span id="L465"><span class="lineNum">     465</span>                 :             :     }</span>
+<span id="L466"><span class="lineNum">     466</span>                 :             : </span>
+<span id="L467"><span class="lineNum">     467</span>                 :             :     /// \brief Active trace context for send/reply propagation.</span>
+<span id="L468"><span class="lineNum">     468</span>                 :<span class="tlaGNC">           6 :     const TraceContext&amp; current_trace_context() const noexcept {</span></span>
+<span id="L469"><span class="lineNum">     469</span>                 :<span class="tlaGNC">           6 :         return current_trace_context_;</span></span>
+<span id="L470"><span class="lineNum">     470</span>                 :             :     }</span>
+<span id="L471"><span class="lineNum">     471</span>                 :             : </span>
+<span id="L472"><span class="lineNum">     472</span>                 :             :     /// \brief RAII guard that pushes a trace context and restores the</span>
+<span id="L473"><span class="lineNum">     473</span>                 :             :     ///        previous one on destruction.</span>
+<span id="L474"><span class="lineNum">     474</span>                 :             :     ///</span>
+<span id="L475"><span class="lineNum">     475</span>                 :             :     /// Used by the receive path to set the incoming span as current.</span>
+<span id="L476"><span class="lineNum">     476</span>                 :             :     /// \note Thread safety: Scoped to a single actor thread.</span>
+<span id="L477"><span class="lineNum">     477</span>                 :             :     class TraceScope {</span>
+<span id="L478"><span class="lineNum">     478</span>                 :             :       public:</span>
+<span id="L479"><span class="lineNum">     479</span>                 :             :         /// \brief Push \p next as the current trace context.</span>
+<span id="L480"><span class="lineNum">     480</span>                 :             :         /// \param[in] ctx Owning \c ActorContext.</span>
+<span id="L481"><span class="lineNum">     481</span>                 :             :         /// \param[in] next Incoming trace context to activate.</span>
+<span id="L482"><span class="lineNum">     482</span>                 :             :         TraceScope(ActorContext* ctx, const TraceContext&amp; next) noexcept;</span>
+<span id="L483"><span class="lineNum">     483</span>                 :             :         /// \brief Restore the previous trace context.</span>
+<span id="L484"><span class="lineNum">     484</span>                 :             :         ~TraceScope();</span>
+<span id="L485"><span class="lineNum">     485</span>                 :             :         TraceScope(const TraceScope&amp;) = delete;</span>
+<span id="L486"><span class="lineNum">     486</span>                 :             :         TraceScope&amp; operator=(const TraceScope&amp;) = delete;</span>
+<span id="L487"><span class="lineNum">     487</span>                 :             : </span>
+<span id="L488"><span class="lineNum">     488</span>                 :             :       private:</span>
+<span id="L489"><span class="lineNum">     489</span>                 :             :         ActorContext* ctx_{nullptr};</span>
+<span id="L490"><span class="lineNum">     490</span>                 :             :         TraceContext previous_{};</span>
+<span id="L491"><span class="lineNum">     491</span>                 :             :         bool previous_valid_{false};</span>
+<span id="L492"><span class="lineNum">     492</span>                 :             :     };</span>
+<span id="L493"><span class="lineNum">     493</span>                 :             : </span>
+<span id="L494"><span class="lineNum">     494</span>                 :             :     // ── Backpressure ──────────────────────────────────────────────────────</span>
+<span id="L495"><span class="lineNum">     495</span>                 :             : </span>
+<span id="L496"><span class="lineNum">     496</span>                 :             :     /// \brief Callback invoked when a downstream mailbox emits a backpressure</span>
+<span id="L497"><span class="lineNum">     497</span>                 :             :     ///        signal.</span>
+<span id="L498"><span class="lineNum">     498</span>                 :             :     using BackpressureHandler =</span>
+<span id="L499"><span class="lineNum">     499</span>                 :             :         std::function&lt;void(const mailbox::BackpressureSignal&amp;)&gt;;</span>
+<span id="L500"><span class="lineNum">     500</span>                 :             : </span>
+<span id="L501"><span class="lineNum">     501</span>                 :             :     /// \brief Register a backpressure handler.</span>
+<span id="L502"><span class="lineNum">     502</span>                 :             :     void on_backpressure(BackpressureHandler handler);</span>
+<span id="L503"><span class="lineNum">     503</span>                 :             : </span>
+<span id="L504"><span class="lineNum">     504</span>                 :             :     /// \brief Deliver a backpressure signal from a downstream mailbox.</span>
+<span id="L505"><span class="lineNum">     505</span>                 :             :     ///</span>
+<span id="L506"><span class="lineNum">     506</span>                 :             :     /// Invokes the registered \c BackpressureHandler.</span>
+<span id="L507"><span class="lineNum">     507</span>                 :             :     /// \param[in] signal Backpressure signal from downstream.</span>
+<span id="L508"><span class="lineNum">     508</span>                 :             :     void handle_backpressure(const mailbox::BackpressureSignal&amp; signal);</span>
 <span id="L509"><span class="lineNum">     509</span>                 :             : </span>
-<span id="L510"><span class="lineNum">     510</span>                 :             :     ActorRefCache ref_cache_;</span>
-<span id="L511"><span class="lineNum">     511</span>                 :             :     ActorAddress current_sender_;</span>
-<span id="L512"><span class="lineNum">     512</span>                 :             :     uint64_t current_ask_message_id_ = 0;</span>
-<span id="L513"><span class="lineNum">     513</span>                 :             :     BackpressureHandler backpressure_handler_;</span>
-<span id="L514"><span class="lineNum">     514</span>                 :             :     TraceContext current_trace_context_;</span>
-<span id="L515"><span class="lineNum">     515</span>                 :             :     bool has_current_trace_context_{false};</span>
-<span id="L516"><span class="lineNum">     516</span>                 :             :     bool passivation_requested_{false};</span>
-<span id="L517"><span class="lineNum">     517</span>                 :             : };</span>
-<span id="L518"><span class="lineNum">     518</span>                 :             : </span>
-<span id="L519"><span class="lineNum">     519</span>                 :             : } // namespace hpactor</span>
+<span id="L510"><span class="lineNum">     510</span>                 :             :     // ── Graceful stop ─────────────────────────────────────────────────────</span>
+<span id="L511"><span class="lineNum">     511</span>                 :             : </span>
+<span id="L512"><span class="lineNum">     512</span>                 :             :     /// \brief Initiate graceful drain of \p target per its \c DrainPolicy.</span>
+<span id="L513"><span class="lineNum">     513</span>                 :             :     ///</span>
+<span id="L514"><span class="lineNum">     514</span>                 :             :     /// Returns immediately; the target drains on its scheduler thread.</span>
+<span id="L515"><span class="lineNum">     515</span>                 :             :     /// \param[in] target Actor ID to stop.</span>
+<span id="L516"><span class="lineNum">     516</span>                 :             :     void stop(ActorId target);</span>
+<span id="L517"><span class="lineNum">     517</span>                 :             : </span>
+<span id="L518"><span class="lineNum">     518</span>                 :             :     /// \brief Synchronous stop — blocks until \p target reaches \c kStopped</span>
+<span id="L519"><span class="lineNum">     519</span>                 :             :     ///        or \p timeout expires.</span>
+<span id="L520"><span class="lineNum">     520</span>                 :             :     ///</span>
+<span id="L521"><span class="lineNum">     521</span>                 :             :     /// \param[in] target Actor ID to stop.</span>
+<span id="L522"><span class="lineNum">     522</span>                 :             :     /// \param[in] timeout Maximum time to wait.</span>
+<span id="L523"><span class="lineNum">     523</span>                 :             :     /// \return \c result&lt;void&gt; with error on timeout.</span>
+<span id="L524"><span class="lineNum">     524</span>                 :             :     /// \note Thread safety: Safe from non-actor threads. Do not call from</span>
+<span id="L525"><span class="lineNum">     525</span>                 :             :     ///       actor scheduler threads.</span>
+<span id="L526"><span class="lineNum">     526</span>                 :             :     result&lt;void&gt; stop_sync(ActorId target, std::chrono::milliseconds timeout);</span>
+<span id="L527"><span class="lineNum">     527</span>                 :             : </span>
+<span id="L528"><span class="lineNum">     528</span>                 :             :   private:</span>
+<span id="L529"><span class="lineNum">     529</span>                 :             :     Actor owner_;</span>
+<span id="L530"><span class="lineNum">     530</span>                 :             :     ActorSystem* system_ = nullptr;</span>
+<span id="L531"><span class="lineNum">     531</span>                 :             :     std::vector&lt;Actor&gt; children_;</span>
+<span id="L532"><span class="lineNum">     532</span>                 :             :     std::vector&lt;ActorRef&gt; remote_children_;</span>
+<span id="L533"><span class="lineNum">     533</span>                 :             :     std::vector&lt;ActorAddress&gt; linked_;</span>
+<span id="L534"><span class="lineNum">     534</span>                 :             :     std::vector&lt;ActorAddress&gt; monitored_;</span>
+<span id="L535"><span class="lineNum">     535</span>                 :             :     bool death_pact_ = false;</span>
+<span id="L536"><span class="lineNum">     536</span>                 :             : </span>
+<span id="L537"><span class="lineNum">     537</span>                 :<span class="tlaGNC">           6 :     void set_current_trace_context(const TraceContext&amp; context) noexcept {</span></span>
+<span id="L538"><span class="lineNum">     538</span>                 :<span class="tlaGNC">           6 :         current_trace_context_ = context;</span></span>
+<span id="L539"><span class="lineNum">     539</span>                 :<span class="tlaGNC">           6 :         has_current_trace_context_ = context.valid();</span></span>
+<span id="L540"><span class="lineNum">     540</span>                 :<span class="tlaGNC">           6 :     }</span></span>
+<span id="L541"><span class="lineNum">     541</span>                 :             : </span>
+<span id="L542"><span class="lineNum">     542</span>                 :<span class="tlaGNC">           4 :     void clear_current_trace_context() noexcept {</span></span>
+<span id="L543"><span class="lineNum">     543</span>                 :<span class="tlaGNC">           4 :         current_trace_context_.clear();</span></span>
+<span id="L544"><span class="lineNum">     544</span>                 :<span class="tlaGNC">           4 :         has_current_trace_context_ = false;</span></span>
+<span id="L545"><span class="lineNum">     545</span>                 :<span class="tlaGNC">           4 :     }</span></span>
+<span id="L546"><span class="lineNum">     546</span>                 :             : </span>
+<span id="L547"><span class="lineNum">     547</span>                 :             :     ActorRefCache ref_cache_;</span>
+<span id="L548"><span class="lineNum">     548</span>                 :             :     ActorAddress current_sender_;</span>
+<span id="L549"><span class="lineNum">     549</span>                 :             :     uint64_t current_ask_message_id_ = 0;</span>
+<span id="L550"><span class="lineNum">     550</span>                 :             :     BackpressureHandler backpressure_handler_;</span>
+<span id="L551"><span class="lineNum">     551</span>                 :             :     TraceContext current_trace_context_;</span>
+<span id="L552"><span class="lineNum">     552</span>                 :             :     bool has_current_trace_context_{false};</span>
+<span id="L553"><span class="lineNum">     553</span>                 :             :     bool passivation_requested_{false};</span>
+<span id="L554"><span class="lineNum">     554</span>                 :             : };</span>
+<span id="L555"><span class="lineNum">     555</span>                 :             : </span>
+<span id="L556"><span class="lineNum">     556</span>                 :             : } // namespace hpactor</span>
         </pre>
               </td>
             </tr>
