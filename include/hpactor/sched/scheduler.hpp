@@ -25,6 +25,7 @@
 #include <hpactor/sched/work_placement_scheduler.hpp>
 #include <hpactor/sched/work_queue.hpp>
 #include <hpactor/timer/calendar_queue.hpp>
+#include <hpactor/timer/timer_plane.hpp>
 #include <hpactor/timer/timing_wheel.hpp>
 
 #include <atomic>
@@ -57,6 +58,7 @@ class WorkerThread;        // forward decl
 enum class TimerBackend : uint8_t {
     TimingWheel = 0,   ///< Hierarchical timing wheel (O(1) insert/cancel).
     CalendarQueue = 1, ///< Calendar queue (good for sparse timers).
+    TimerPlane = 2,    ///< Sharded timer plane (per-worker shards).
 };
 
 /// \brief Result of draining the ready queue.
@@ -381,7 +383,7 @@ class HybridScheduler : public IScheduler {
     std::atomic<bool> running_{false};
     std::vector<std::unique_ptr<WorkerThread>> worker_threads_;
 
-    std::variant<TimingWheel, CalendarQueue> timer_backend_;
+    std::variant<TimingWheel, CalendarQueue, TimerPlane> timer_backend_;
 
     void set_metrics_ring_buffer(void* buf) noexcept override {
         metrics_ring_buffer_ =

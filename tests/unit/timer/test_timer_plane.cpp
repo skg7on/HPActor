@@ -5,8 +5,10 @@
 
 #include <hpactor/sched/scheduler_interfaces.hpp>
 #include <hpactor/timer/timer_command_queue.hpp>
+#include <hpactor/timer/timer_plane.hpp>
 #include <hpactor/timer/timer_plane_shard.hpp>
 
+#include <atomic>
 #include <gtest/gtest.h>
 #include <thread>
 #include <vector>
@@ -170,6 +172,78 @@ TEST_F(TimerPlaneShardTest, MinDeadline) {
     (void)h1;
     (void)h2;
     EXPECT_LT(shard_->min_deadline_ns(), 10'000'000LL);
+}
+
+// ============================================================================
+// TimerPlane tests
+// ============================================================================
+
+class TimerPlaneTest : public ::testing::Test {
+  protected:
+    void SetUp() override {
+        plane_ = new TimerPlane(2, 1'000'000);
+    }
+    void TearDown() override {
+        delete plane_;
+    }
+    TimerPlane* plane_{nullptr};
+};
+
+TEST_F(TimerPlaneTest, ScheduleFiresCallback) {
+    bool fired = false;
+    auto id = plane_->schedule(5'000'000, [&fired]() { fired = true; });
+    EXPECT_NE(id, 0u);
+    plane_->advance(10'000'000);
+    EXPECT_TRUE(fired);
+}
+
+TEST_F(TimerPlaneTest, CancelPreventsCallback) {
+    bool fired = false;
+    auto id = plane_->schedule(5'000'000, [&fired]() { fired = true; });
+    EXPECT_TRUE(plane_->cancel(id));
+    plane_->advance(10'000'000);
+    EXPECT_FALSE(fired);
+}
+
+TEST_F(TimerPlaneTest, NextDeadline) {
+    plane_->schedule(20'000'000, []() {});
+    plane_->schedule(5'000'000, []() {});
+    int64_t dl = plane_->next_deadline();
+    EXPECT_GT(dl, 0);
+    EXPECT_LT(dl, 10'000'000LL); // ~5 ms from schedule time
+}
+
+TEST_F(TimerPlaneTest, Empty) {
+    EXPECT_TRUE(plane_->empty());
+    plane_->schedule(10'000'000, []() {});
+    EXPECT_FALSE(plane_->empty());
+}
+
+TEST_F(TimerPlaneTest, Size) {
+    EXPECT_EQ(plane_->size(), 0u);
+    plane_->schedule(10'000'000, []() {});
+    plane_->schedule(20'000'000, []() {});
+    EXPECT_EQ(plane_->size(), 2u);
+    plane_->advance(15'000'000);
+    EXPECT_EQ(plane_->size(), 1u);
+}
+
+TEST_F(TimerPlaneTest, MultipleShardsFire) {
+    std::atomic<int> count{0};
+    auto cb = [&count]() { count.fetch_add(1); };
+    plane_->schedule(3'000'000, cb);
+    plane_->schedule(5'000'000, cb);
+    plane_->schedule(7'000'000, cb);
+    plane_->advance(10'000'000);
+    EXPECT_EQ(count.load(), 3);
+}
+
+TEST_F(TimerPlaneTest, NumShards) {
+    EXPECT_EQ(plane_->num_shards(), 2u);
+}
+
+TEST_F(TimerPlaneTest, CancelInvalidIdReturnsFalse) {
+    EXPECT_FALSE(plane_->cancel(999999u));
 }
 
 } // namespace

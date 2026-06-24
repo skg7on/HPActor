@@ -52,6 +52,10 @@ HybridScheduler::HybridScheduler(ActorSystem& system, uint32_t num_workers,
                                                   make_storage, destroy_storage);
             break;
         }
+        case TimerBackend::TimerPlane:
+            timer_backend_.emplace<TimerPlane>(
+                num_workers_ > 0 ? num_workers_ : 1, 1'000'000);
+            break;
     }
 }
 
