@@ -377,6 +377,16 @@ TcpTransport::try_send(const ActorAddress& target, const StreamBuffer& encoded) 
     return pool->try_send(target, encoded);
 }
 
+TransportSendResult TcpTransport::try_send_batch(const ActorAddress& target,
+                                                 const StreamBuffer& encoded) {
+    FAULT_INJECT("hpactor.transport.batch_send") {}
+    auto pool = get_or_create_pool(target.endpoint);
+    if (!pool) {
+        return TransportSendResult::NotConnected;
+    }
+    return pool->try_send(target, encoded);
+}
+
 bool TcpTransport::is_connected(EndPoint remote_endpoint) const {
     auto it = pools_.find(remote_endpoint);
     if (it != pools_.end()) {
