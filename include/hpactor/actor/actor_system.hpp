@@ -55,6 +55,7 @@
 #include <hpactor/rpc/rpc_channel.hpp>
 #include <hpactor/sched/dispatch_policy.hpp>
 #include <hpactor/sched/scheduler.hpp>
+#include <hpactor/timer/timer_stats_snapshot.hpp>
 #include <hpactor/tracing/trace_config.hpp>
 #include <hpactor/tracing/trace_manager.hpp>
 #include <hpactor/types/types.hpp>
@@ -393,6 +394,12 @@ class ActorSystem {
     sched::IScheduler* scheduler() {
         return scheduler_.get();
     }
+
+    /// \brief Collect a snapshot of timer statistics from the active backend.
+    ///
+    /// Delegates to \c HybridScheduler::timer_snapshot().  Returns an
+    /// empty snapshot when the timer backend is not \c TimerPlane.
+    sched::TimerStatsSnapshot timer_stats() const;
 
     /// \brief Returns \c true if coroutine-based execution is configured.
     ///

@@ -539,4 +539,37 @@ int64_t HybridScheduler::edf_next_deadline() noexcept {
     return earliest;
 }
 
+TimerStatsSnapshot HybridScheduler::timer_snapshot() const {
+    TimerStatsSnapshot snap;
+    std::visit(
+        [&](const auto& backend) {
+            using T = std::decay_t<decltype(backend)>;
+            if constexpr (std::is_same_v<T, TimerPlane>) {
+                snap.num_shards = backend.num_shards();
+                snap.next_deadline = backend.next_deadline();
+
+                for (uint32_t i = 0; i < snap.num_shards; ++i) {
+                    const auto& shard = backend.shard(i);
+                    snap.total_pending += shard.pending_count();
+                    snap.total_scheduled += shard.scheduled_count();
+                    snap.total_fired += shard.fired_count();
+                    snap.total_cancelled += shard.cancelled_count();
+                    snap.total_late += shard.late_count();
+                    snap.total_dropped += shard.dropped_count();
+
+                    TimerStatsSnapshot::ShardStats ss;
+                    ss.pending = shard.pending_count();
+                    ss.cmd_queue_depth = shard.cmd_queue_depth();
+                    ss.fired = shard.fired_count();
+                    ss.late = shard.late_count();
+                    ss.dropped = shard.dropped_count();
+                    ss.min_deadline = shard.min_deadline_ns();
+                    snap.shards.push_back(ss);
+                }
+            }
+        },
+        timer_backend_);
+    return snap;
+}
+
 } // namespace hpactor::sched

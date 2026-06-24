@@ -26,6 +26,7 @@
 #include <hpactor/sched/work_queue.hpp>
 #include <hpactor/timer/calendar_queue.hpp>
 #include <hpactor/timer/timer_plane.hpp>
+#include <hpactor/timer/timer_stats_snapshot.hpp>
 #include <hpactor/timer/timing_wheel.hpp>
 
 #include <atomic>
@@ -296,6 +297,15 @@ class HybridScheduler : public IScheduler {
     void unregister_dedicated(ActorId actor) override;
 
     std::vector<WorkerSnapshot> worker_snapshots() const override;
+
+    /// \brief Collect a snapshot of timer statistics from the active backend.
+    ///
+    /// For \c TimerPlane, collects per-shard metrics including pending,
+    /// fired, late, and dropped counts.  For \c TimingWheel and
+    /// \c CalendarQueue, returns an empty snapshot with zero shards.
+    ///
+    /// \return A populated \c TimerStatsSnapshot.
+    TimerStatsSnapshot timer_snapshot() const;
 
     // Worker control (deterministic testing)
     void pause_workers() noexcept override;

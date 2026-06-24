@@ -31,6 +31,16 @@ class TimerCommandQueue {
         return true;
     }
 
+    /// Approximate number of commands currently in the queue.
+    /// Safe from any thread; may be stale by the time the caller acts on it.
+    size_t size() const {
+        size_t head = head_.load(std::memory_order_acquire);
+        size_t tail = tail_.load(std::memory_order_acquire);
+        if (tail >= head)
+            return tail - head;
+        return kCapacity - head + tail;
+    }
+
     /// Drain all pending commands into `out`.  Returns the number drained.
     /// Must only be called by the owning shard thread.
     size_t drain_all(std::vector<TimerCommand>& out) {

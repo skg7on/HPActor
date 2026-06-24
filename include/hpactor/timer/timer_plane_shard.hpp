@@ -87,6 +87,11 @@ class TimerPlaneShard {
         return dropped_.load(std::memory_order_relaxed);
     }
 
+    /// \brief Approximate count of commands waiting in the cross-thread queue.
+    size_t cmd_queue_depth() const {
+        return cmd_queue_.size();
+    }
+
     /// \brief Access the shard mutex for direct operations.
     std::mutex& mutex() {
         return mutex_;
