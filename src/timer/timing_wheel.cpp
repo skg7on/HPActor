@@ -125,7 +125,7 @@ void TimingWheel::insert_timer(Timer* timer) {
     }
 
     // Calculate bucket index for this level
-    int64_t level_offset = now / tick_ns_;
+    int64_t level_offset = expire / tick_ns_;
     for (uint32_t l = 0; l < level; ++l) {
         level_offset /= 256;
     }

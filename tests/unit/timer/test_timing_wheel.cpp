@@ -34,6 +34,35 @@ class TimingWheelTest : public ::testing::Test {
 // Basic smoke tests
 // ---------------------------------------------------------------------------
 
+// ---------------------------------------------------------------------------
+// Bug regression: near-term timer after advance lands in wrong bucket
+// ---------------------------------------------------------------------------
+
+TEST_F(TimingWheelTest, NearTermTimerFiresPromptly) {
+    // Bug: insert_timer() computes bucket index from (expire_ns -
+    // current_time_) instead of expire_ns directly. A near-term timer can land
+    // in the already-processed bucket and wait a full rotation.
+
+    int64_t now = wheel_.current_time();
+    // Advance time by 5ms to move past bucket 0
+    wheel_.advance(now + 5'000'000);
+
+    bool fired = false;
+    // Schedule 2ms from the new current time
+    int64_t schedule_at = now + 7'000'000; // 5ms advance + 2ms delay
+    auto id = wheel_.schedule_at(schedule_at, [&fired]() { fired = true; });
+    ASSERT_NE(id, 0u);
+
+    // Advance in 1ms steps past the expiry time
+    int64_t step = now + 5'000'000;
+    while (step <= schedule_at + 1'000'000 && !fired) {
+        wheel_.advance(step);
+        step += 1'000'000;
+    }
+
+    EXPECT_TRUE(fired) << "Timer scheduled 2ms after now should fire promptly";
+}
+
 TEST_F(TimingWheelTest, ScheduleAndFire) {
     int fired = 0;
     int64_t t0 = wheel_.current_time();
