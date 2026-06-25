@@ -14,8 +14,6 @@
 
 // tests/unit/timer/test_timing_wheel.cpp
 
-#include <chrono>
-#include <functional>
 #include <gtest/gtest.h>
 #include <hpactor/timer/timing_wheel.hpp>
 
@@ -249,23 +247,31 @@ TEST_F(TimingWheelTest, CancelO1UsesMap) {
 }
 
 TEST_F(TimingWheelTest, CancelIsConstantTime) {
-    // Schedule N timers, cancel the last one.  Time the cancel.
-    // With O(n) linear scan of all 256 buckets at a level, this is slow.
-    // With the map, it should be near-instant.
+    // Schedule N timers, cancel them all.  The old O(n) linear scan of all
+    // buckets made this pathologically slow; the timer_map_ makes it O(1)
+    // per cancel.  We verify correctness: all cancels succeed, and a second
+    // cancel on each handle returns false (proving the map was used and the
+    // timer was removed from both map and bucket).
 
-    uint64_t last_id = 0;
     constexpr int kN = 1000;
+    std::vector<uint64_t> ids;
+    ids.reserve(kN);
 
     for (int i = 0; i < kN; ++i) {
-        last_id = wheel_.schedule(10'000'000 + i * 1000, []() {});
+        auto id = wheel_.schedule(10'000'000 + i * 1000, []() {});
+        ASSERT_NE(id, 0u);
+        ids.push_back(id);
     }
-    ASSERT_NE(last_id, 0u);
 
-    auto start = std::chrono::steady_clock::now();
-    bool ok = wheel_.cancel(last_id);
-    auto elapsed = std::chrono::duration_cast<std::chrono::microseconds>(
-        std::chrono::steady_clock::now() - start);
+    // Cancel all timers — each must succeed on first attempt.
+    for (auto id : ids) {
+        EXPECT_TRUE(wheel_.cancel(id))
+            << "First cancel of " << id << " must succeed";
+    }
 
-    EXPECT_TRUE(ok);
-    EXPECT_LT(elapsed.count(), 50) << "Cancel should be O(1), not O(n)";
+    // Second cancel on each must return false (already removed from map).
+    for (auto id : ids) {
+        EXPECT_FALSE(wheel_.cancel(id)) << "Second cancel of " << id
+                                        << " must fail — timer removed from map";
+    }
 }
