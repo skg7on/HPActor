@@ -88,6 +88,7 @@ FileStateStore::write_snapshot(std::string_view persistence_id,
             ofs.write(reinterpret_cast<const char*>(data.data()),
                       static_cast<std::streamsize>(data.size()));
         }
+        ofs.close();
         if (!ofs) {
             fs::remove(tmp_path, ec);
             return result<SnapshotRecord>::make(error(
