@@ -44,7 +44,10 @@ TEST(TimerPlaneSystem, EndToEndScheduleAndFire) {
     [[maybe_unused]] auto h2 =
         system.scheduler()->schedule_after(cb, 2'000'000LL); // 2ms
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (count.load() < 2 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     EXPECT_GE(count.load(), 2);
 }
 
@@ -89,7 +92,10 @@ TEST(TimerPlaneSystem, SchedulerTimerApiAccessible) {
         sched->schedule_every([&tick_count]() { tick_count.fetch_add(1); },
                               5'000'000LL); // 5ms interval
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(200));
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (tick_count.load() < 1 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     sched->cancel_timer(handle);
 
     EXPECT_GE(tick_count.load(), 1);
@@ -114,7 +120,10 @@ TEST(TimerPlaneSystem, CancelPreventsDelivery) {
                                            5'000'000LL); // 5ms
     system.scheduler()->cancel_timer(handle);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!fired.load() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     EXPECT_FALSE(fired.load());
 }
 

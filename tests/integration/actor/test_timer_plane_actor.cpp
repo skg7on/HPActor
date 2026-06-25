@@ -43,7 +43,10 @@ TEST_F(TimerPlaneIntegrationTest, ScheduleDeliversMessage) {
         [&received]() { received.store(true); },
         1'000'000LL); // 1ms
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!received.load() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     EXPECT_TRUE(received.load());
 }
 
@@ -53,7 +56,11 @@ TEST_F(TimerPlaneIntegrationTest, CancelPreventsDelivery) {
         system_->scheduler()->schedule_after([&fired]() { fired.store(true); },
                                              5'000'000LL); // 5ms
     system_->scheduler()->cancel_timer(handle);
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!fired.load() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     EXPECT_FALSE(fired.load());
 }
 
@@ -68,7 +75,10 @@ TEST_F(TimerPlaneIntegrationTest, MultipleTimersFire) {
     [[maybe_unused]] auto h3 =
         system_->scheduler()->schedule_after(cb, 3'000'000LL);
 
-    std::this_thread::sleep_for(std::chrono::milliseconds(50));
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (count.load() < 3 && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     EXPECT_GE(count.load(), 3);
 }
 
@@ -83,7 +93,11 @@ TEST_F(TimerPlaneIntegrationTest, ScheduleZeroDelay) {
     std::atomic<bool> fired{false};
     [[maybe_unused]] auto handle = system_->scheduler()->schedule_after(
         [&fired]() { fired.store(true); }, 0LL);
-    std::this_thread::sleep_for(std::chrono::milliseconds(20));
+
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
+    while (!fired.load() && std::chrono::steady_clock::now() < deadline) {
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
+    }
     EXPECT_TRUE(fired.load());
 }
 

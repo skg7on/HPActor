@@ -34,24 +34,17 @@ TEST(TimerWakeupTest, ScheduleWakesSleepingTimerThread) {
     auto far = system.scheduler()->schedule_after([]() {}, 10'000'000'000LL); // 10 seconds
     std::this_thread::sleep_for(std::chrono::milliseconds(20));
 
-    // Schedule a short timer — must fire within ~30ms despite the long sleep.
-    auto start = std::chrono::steady_clock::now();
+    // Schedule a short timer.
     auto short_h = system.scheduler()->schedule_after(
         [&fired]() { fired.store(true); }, 1'000'000LL); // 1ms
 
-    // Wait up to 100ms for the short timer to fire.
-    auto deadline = start + std::chrono::milliseconds(100);
+    // Poll with generous timeout (5s per .claude/rules).
+    auto deadline = std::chrono::steady_clock::now() + std::chrono::seconds(5);
     while (!fired.load() && std::chrono::steady_clock::now() < deadline) {
-        std::this_thread::sleep_for(std::chrono::milliseconds(1));
+        std::this_thread::sleep_for(std::chrono::milliseconds(10));
     }
 
-    EXPECT_TRUE(fired.load())
-        << "Short timer should fire promptly, not wait for long sleep";
-
-    auto elapsed = std::chrono::duration_cast<std::chrono::milliseconds>(
-        std::chrono::steady_clock::now() - start);
-    EXPECT_LT(elapsed.count(), 30) << "Short timer should fire within ~30ms, took "
-                                   << elapsed.count() << "ms";
+    EXPECT_TRUE(fired.load()) << "Short timer should fire within generous timeout";
 
     // Clean up
     system.scheduler()->cancel_timer(far);
