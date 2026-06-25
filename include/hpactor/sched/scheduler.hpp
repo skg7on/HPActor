@@ -412,6 +412,7 @@ class HybridScheduler : public IScheduler {
     /// the timer thread can re-evaluate next_deadline() immediately.
     std::condition_variable timer_wakeup_cv_;
     std::mutex timer_wakeup_mutex_;
+    std::atomic<bool> timer_needs_recheck_{false};
 
     metrics::MpscRingBuffer<metrics::MetricEvent>* metrics_ring_buffer_{nullptr};
 

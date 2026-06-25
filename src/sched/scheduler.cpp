@@ -106,12 +106,17 @@ void HybridScheduler::start() {
                     static_cast<int64_t>(1'000'000));
                 std::unique_lock<std::mutex> lk(timer_wakeup_mutex_);
                 timer_wakeup_cv_.wait_for(
-                    lk, std::chrono::nanoseconds(sleep_ns),
-                    [this] { return !running_.load(std::memory_order_acquire); });
+                    lk, std::chrono::nanoseconds(sleep_ns), [this] {
+                        return !running_.load(std::memory_order_acquire) ||
+                               timer_needs_recheck_.exchange(
+                                   false, std::memory_order_acq_rel);
+                    });
             } else {
                 std::unique_lock<std::mutex> lk(timer_wakeup_mutex_);
                 timer_wakeup_cv_.wait_for(lk, std::chrono::milliseconds(1), [this] {
-                    return !running_.load(std::memory_order_acquire);
+                    return !running_.load(std::memory_order_acquire) ||
+                           timer_needs_recheck_.exchange(
+                               false, std::memory_order_acq_rel);
                 });
             }
         }
@@ -129,6 +134,7 @@ void HybridScheduler::stop() {
     resume_workers();
 
     // Wake the timer thread so it sees running_ == false and exits.
+    timer_needs_recheck_.store(true, std::memory_order_release);
     timer_wakeup_cv_.notify_one();
 
     // Stop the timer thread first: workers may be blocked on
@@ -339,6 +345,7 @@ TimerHandle HybridScheduler::schedule_after(timer_callback cb, int64_t delay_ns)
                    timer_backend_);
     // Wake the timer thread so it re-evaluates next_deadline().
     // A new short timer may have an earlier deadline than the current sleep.
+    timer_needs_recheck_.store(true, std::memory_order_release);
     timer_wakeup_cv_.notify_one();
     return TimerHandle{id};
 }
@@ -372,6 +379,7 @@ HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
     auto id = std::visit(
         [&](auto& backend) { return backend.schedule(*interval, *recurring); },
         timer_backend_);
+    timer_needs_recheck_.store(true, std::memory_order_release);
     timer_wakeup_cv_.notify_one();
     {
         std::lock_guard<std::mutex> lock(cancellation_mutex_);
