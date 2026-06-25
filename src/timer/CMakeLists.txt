@@ -4,7 +4,6 @@
 
 target_sources(hpactor_lib PRIVATE
     calendar_queue.cpp
-    timer_group.cpp
     timer_plane.cpp
     timer_plane_shard.cpp
     timing_wheel.cpp

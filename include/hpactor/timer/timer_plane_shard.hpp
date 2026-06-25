@@ -31,6 +31,7 @@ namespace hpactor::sched {
 class TimerPlaneShard {
   public:
     static constexpr uint32_t kMaxSlots = 65536;
+    static constexpr uint32_t kInvalidSlot = UINT32_MAX;
     static constexpr uint32_t kNumLevels = 4;
     static constexpr uint32_t kBucketsPerLevel = 256;
 

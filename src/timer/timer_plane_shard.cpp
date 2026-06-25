@@ -74,6 +74,17 @@ TimerPlaneShard::TimerPlaneShard(uint32_t shard_index, int64_t tick_ns)
 
 TimerPlaneShard::~TimerPlaneShard() {
     std::lock_guard<std::mutex> lock(mutex_);
+    // Drain the command queue to free any TimerNodes in pending Schedule
+    // commands.
+    {
+        std::vector<TimerCommand> cmds;
+        cmd_queue_.drain_all(cmds);
+        for (auto& cmd : cmds) {
+            if (cmd.type == TimerCommand::Type::Schedule && cmd.schedule.node) {
+                delete cmd.schedule.node;
+            }
+        }
+    }
     for (auto& level : levels_) {
         for (auto& bucket : level.buckets) {
             TimerNode* t = bucket.head;
@@ -95,7 +106,7 @@ TimerPlaneShard::~TimerPlaneShard() {
 
 uint32_t TimerPlaneShard::acquire_slot(TimerNode* node) {
     if (free_slots_.empty()) {
-        return kMaxSlots; // No free slots
+        return kInvalidSlot; // No free slots
     }
 
     uint32_t slot = free_slots_.back();
@@ -178,13 +189,17 @@ TimerHandle TimerPlaneShard::schedule(int64_t delay_ns, timer_callback cb,
     node->priority = priority;
 
     uint32_t slot = acquire_slot(node);
-    if (slot == kMaxSlots) {
+    if (slot == kInvalidSlot) {
         delete node;
         dropped_.fetch_add(1, std::memory_order_relaxed);
         return TimerHandle{}; // Invalid handle.
     }
 
     insert_into_wheel(node);
+
+    // Clamp node->expire_ns for accurate min_deadline_ tracking
+    // (insert_into_wheel already clamps for wheel placement).
+    node->expire_ns = std::max(node->expire_ns, current_time_ns_ + tick_ns_);
 
     // Update cached minimum deadline.
     int64_t cur = min_deadline_.load(std::memory_order_relaxed);
@@ -249,9 +264,11 @@ uint32_t TimerPlaneShard::advance(int64_t now_ns) {
         std::lock_guard<std::mutex> lock(mutex_);
 
         // ---- Drain cross-thread command queue first ----
+        bool drained_commands = false;
         {
             std::vector<TimerCommand> cmds;
             cmd_queue_.drain_all(cmds);
+            drained_commands = !cmds.empty();
             for (auto& cmd : cmds) {
                 switch (cmd.type) {
                     case TimerCommand::Type::Schedule: {
@@ -259,7 +276,7 @@ uint32_t TimerPlaneShard::advance(int64_t now_ns) {
                         node->expire_ns = cmd.schedule.expire_ns;
 
                         uint32_t slot = acquire_slot(node);
-                        if (slot == kMaxSlots) {
+                        if (slot == kInvalidSlot) {
                             delete node;
                             dropped_.fetch_add(1, std::memory_order_relaxed);
                             continue;
@@ -333,14 +350,19 @@ uint32_t TimerPlaneShard::advance(int64_t now_ns) {
                                 }
                             }
                         }
+                        recompute_min_deadline();
                         break;
                     }
                 }
             }
         }
 
-        if (now_ns <= current_time_ns_)
+        if (now_ns <= current_time_ns_) {
+            if (drained_commands) {
+                recompute_min_deadline();
+            }
             return 0;
+        }
 
         // Cap the advance step to prevent a positive feedback loop (same
         // rationale as TimingWheel::advance).

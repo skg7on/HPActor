@@ -305,16 +305,16 @@ ActorContext::schedule_to(const ActorAddress& target,
 
 AlarmHandle ActorContext::schedule(std::chrono::milliseconds delay,
                                    TypedMessage msg, sched::TimerOptions opts) {
-    // For now, TimerOptions fields are not yet wired to the scheduler.
-    // TimerPlane reads them when it's the active backend.
-    // Delegate to the existing implementation.
-    (void)opts; // unused until TimerPlane is the active backend
+    // TODO: Wire TimerOptions to the TimerPlane backend. Until then,
+    // delegate to the base schedule() which ignores options.
+    (void)opts;
     return schedule(delay, std::move(msg));
 }
 
 AlarmHandle ActorContext::schedule_to(const ActorAddress& target,
                                       std::chrono::milliseconds delay,
                                       TypedMessage msg, sched::TimerOptions opts) {
+    // TODO: Wire TimerOptions to the TimerPlane backend.
     (void)opts;
     return schedule_to(target, delay, std::move(msg));
 }
