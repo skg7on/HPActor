@@ -184,11 +184,13 @@ class ActorContext {
     /// mailbox (bypassing the \c DeliveryPipeline). For remote targets,
     /// delegates to \c ActorProxy::try_send_batch().
     ///
-    /// \param[in] target Destination actor ID.
-    /// \param[in] msgs   Messages to batch-send (moved into the call).
+    /// \param[in] target  Destination actor ID.
+    /// \param[in] msgs    Messages to batch-send (moved into the call).
+    /// \param[in] options Delivery options (mode, priority, retry policy).
     /// \return \c DeliveryResult describing the overall outcome.
     mailbox::DeliveryResult
-    send_batch(ActorId target, std::vector<TypedMessage> msgs);
+    send_batch(ActorId target, std::vector<TypedMessage> msgs,
+               mailbox::DeliveryOptions options = {});
 
     /// \brief Try-reply to the current sender, returning a \c DeliveryReceipt.
     ///

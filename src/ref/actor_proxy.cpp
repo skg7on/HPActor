@@ -194,20 +194,31 @@ ActorProxy::try_send_batch(const ActorAddress& target,
 
     // Build BatchMsgFrame
     ::hpactor::net::BatchMsgFrame batch;
-    const auto& sender_addr =
-        !msgs.empty() && msgs[0].sender_address().id != ActorId{0}
-            ? msgs[0].sender_address()
-            : address_;
+    const auto& sender_addr = msgs[0].sender_address().id != ActorId{0}
+                                  ? msgs[0].sender_address()
+                                  : address_;
     net::to_proto(batch.mutable_sender(), sender_addr);
     net::to_proto(batch.mutable_receiver(), resolved_target);
 
+    MessageId first_msg_id{0};
     for (auto& msg : msgs) {
         auto* entry = batch.add_entries();
         entry->set_type_tag(static_cast<uint32_t>(msg.type_id()));
         auto msg_id = generate_message_id();
+        if (first_msg_id.value() == 0) {
+            first_msg_id = msg_id;
+        }
         entry->set_message_id(msg_id.value());
         entry->set_payload(reinterpret_cast<const char*>(msg.payload().data()),
                            msg.payload().size());
+
+        // Propagate per-message flags (AckRequested, NoDrop, etc.)
+        uint32_t entry_flags = 0;
+        if (msg.ack_requested()) {
+            entry_flags |= net::WireFrame::AckRequested;
+        }
+        entry->set_flags(entry_flags);
+
         if (msg.has_trace_context()) {
             net::to_proto(entry->mutable_trace_context(), msg.trace_context());
         }
@@ -231,9 +242,9 @@ ActorProxy::try_send_batch(const ActorAddress& target,
                 (void)system_->dead_letter(std::move(dl));
             }
         }
-        return mailbox::DeliveryResult::from_transport(tsr, target, MessageId{0});
+        return mailbox::DeliveryResult::from_transport(tsr, target, first_msg_id);
     }
-    return mailbox::DeliveryResult::from_transport(tsr, target, MessageId{0});
+    return mailbox::DeliveryResult::from_transport(tsr, target, first_msg_id);
 }
 
 } // namespace hpactor

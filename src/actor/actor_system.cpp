@@ -745,6 +745,17 @@ void ActorSystem::deliver_remote(const net::WireFrame& frame) {
         deliver_remote_batch(frame);
         return;
     }
+
+    // Unknown / unsupported payload types: log and drop.
+    // Ack/Nack payload types exist in the WireEnvelope proto but are not
+    // yet produced on the wire (ACK/NACK currently travel as flags inside
+    // Data frames).  Unknown indicates a decode failure (truncated frame,
+    // magic mismatch, or protobuf parse error) already logged by decode().
+    HPACTOR_LOG_WARNING(
+        log::LogCategory::kNetwork, ActorId{0},
+        static_cast<uint32_t>(log::LogEventId::kNetworkFrameDecodeFailed),
+        "deliver_remote: unsupported payload type",
+        log::field("payload_type", static_cast<uint64_t>(static_cast<uint8_t>(pt))));
 }
 
 void ActorSystem::deliver_remote_batch(const net::WireFrame& frame) {
@@ -803,7 +814,47 @@ void ActorSystem::deliver_remote_batch(const net::WireFrame& frame) {
     mailbox::MailboxEnvelopeMeta meta;
     meta.sender = sender_addr;
 
-    (void)mailbox->try_push_batch(msgs.begin(), msgs.end(), meta);
+    // Calculate total estimated bytes for batch admission accounting
+    size_t total_bytes = 0;
+    for (const auto& msg : msgs) {
+        total_bytes += msg.payload().size();
+    }
+    meta.estimated_bytes = total_bytes;
+
+    // TODO(MSG-007): Batch delivery currently bypasses the DeliveryPipeline
+    // (circuit breaker, dedup, TTL expiry, backpressure).  A future
+    // DeliveryPipeline::try_deliver_batch() entry point should apply
+    // per-message admission controls.
+
+    // Emit batch metrics
+    if (metrics_ring_buffer_) {
+        uint64_t now_ns = static_cast<uint64_t>(
+            std::chrono::duration_cast<std::chrono::nanoseconds>(
+                std::chrono::steady_clock::now().time_since_epoch())
+                .count());
+
+        metrics::MetricEvent ev;
+        ev.timestamp_ns = now_ns;
+        ev.actor_id = receiver_id;
+
+        ev.event_type = metrics::MetricEventType::kBatchFrameReceived;
+        ev.value_hi = 0;
+        metrics_ring_buffer_->try_push(ev);
+
+        ev.event_type = metrics::MetricEventType::kBatchMessagesReceived;
+        ev.value_hi = static_cast<uint32_t>(entry_count);
+        metrics_ring_buffer_->try_push(ev);
+    }
+
+    auto result = mailbox->try_push_batch(msgs.begin(), msgs.end(), meta);
+    if (!result.accepted()) {
+        HPACTOR_LOG_WARNING(
+            log::LogCategory::kMailbox, receiver_id,
+            static_cast<uint32_t>(log::LogEventId::kMailboxMessageRejected),
+            "deliver_remote_batch: batch partially or fully rejected",
+            log::field("entry_count", static_cast<uint64_t>(entry_count)),
+            log::field("total_bytes", static_cast<uint64_t>(total_bytes)));
+    }
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {

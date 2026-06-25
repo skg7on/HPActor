@@ -210,49 +210,55 @@ void ConnectionPool::on_frame_received(StreamBuffer frame_data) {
     }
     WireFrame frame = WireFrame::decode(frame_data);
 
-    // Check for RPC response
-    if (frame.pb_envelope.data_frame().flags() & WireFrame::RpcResponse) {
-        // Try to decode as spawn response first
-        if (static_cast<TypeTag>(frame.pb_envelope.data_frame().type_tag()) ==
-            TypeTag::SpawnResponseTag) {
-            ::hpactor::SpawnResponseMessage pb_resp;
-            if (pb_resp.ParseFromArray(
-                    frame.pb_envelope.data_frame().payload().data(),
-                    static_cast<int>(
-                        frame.pb_envelope.data_frame().payload().size()))) {
-                if (spawn_handler_) {
-                    SpawnResponse resp;
-                    resp.actor_addr = net::from_proto(pb_resp.actor_addr());
-                    resp.error_code = pb_resp.error_code();
-                    spawn_handler_(frame.pb_envelope.data_frame().message_id(),
-                                   resp);
-                    return;
+    // Only Data frames carry RPC/spawn responses; Batch/Ack/Nack/Unknown
+    // frames fall through to actor_message_handler_ which has the correct
+    // payload_type() dispatch in deliver_remote().
+    if (frame.payload_type() == net::WireFrame::PayloadType::Data) {
+        // Check for RPC response
+        if (frame.pb_envelope.data_frame().flags() & WireFrame::RpcResponse) {
+            // Try to decode as spawn response first
+            if (static_cast<TypeTag>(frame.pb_envelope.data_frame().type_tag()) ==
+                TypeTag::SpawnResponseTag) {
+                ::hpactor::SpawnResponseMessage pb_resp;
+                if (pb_resp.ParseFromArray(
+                        frame.pb_envelope.data_frame().payload().data(),
+                        static_cast<int>(
+                            frame.pb_envelope.data_frame().payload().size()))) {
+                    if (spawn_handler_) {
+                        SpawnResponse resp;
+                        resp.actor_addr = net::from_proto(pb_resp.actor_addr());
+                        resp.error_code = pb_resp.error_code();
+                        spawn_handler_(
+                            frame.pb_envelope.data_frame().message_id(), resp);
+                        return;
+                    }
                 }
             }
-        }
 
-        // Fall through to RPC handler
-        if (rpc_handler_) {
-            RpcResponseFrame response;
-            response.msg_id =
-                MessageId(frame.pb_envelope.data_frame().message_id());
-            response.payload =
-                StreamBuffer(frame.pb_envelope.data_frame().payload().begin(),
-                             frame.pb_envelope.data_frame().payload().end());
-            if (frame.pb_envelope.data_frame().has_trace_context()) {
-                auto parsed = net::trace_context_from_proto(
-                    frame.pb_envelope.data_frame().trace_context(), 256);
-                if (parsed.has_value()) {
-                    response.has_trace_context = true;
-                    response.trace_context = parsed.value();
+            // Fall through to RPC handler
+            if (rpc_handler_) {
+                RpcResponseFrame response;
+                response.msg_id =
+                    MessageId(frame.pb_envelope.data_frame().message_id());
+                response.payload =
+                    StreamBuffer(frame.pb_envelope.data_frame().payload().begin(),
+                                 frame.pb_envelope.data_frame().payload().end());
+                if (frame.pb_envelope.data_frame().has_trace_context()) {
+                    auto parsed = net::trace_context_from_proto(
+                        frame.pb_envelope.data_frame().trace_context(), 256);
+                    if (parsed.has_value()) {
+                        response.has_trace_context = true;
+                        response.trace_context = parsed.value();
+                    }
                 }
+                rpc_handler_(response);
             }
-            rpc_handler_(response);
+            return;
         }
-        return;
-    }
+    } // end PayloadType::Data guard
 
-    // Route to actor message handler (deliver_remote)
+    // Route non-RPC Data frames and all other payload types
+    // (Batch/Ack/Nack/Unknown) to deliver_remote() for dispatch.
     if (actor_message_handler_) {
         actor_message_handler_(frame);
     }

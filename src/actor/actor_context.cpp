@@ -208,20 +208,15 @@ void ActorContext::send_edf(ActorAddress target, TypedMessage msg,
 }
 
 mailbox::DeliveryResult
-ActorContext::send_batch(ActorId target, std::vector<TypedMessage> msgs) {
+ActorContext::send_batch(ActorId target, std::vector<TypedMessage> msgs,
+                         mailbox::DeliveryOptions options) {
     if (msgs.empty()) {
         ActorAddress addr;
         addr.id = target;
         return {mailbox::DeliveryStatus::Accepted, addr, MessageId{0}, 0};
     }
 
-    // Stamp sender identity on each message
-    if (owner_) {
-        for (auto& msg : msgs) {
-            msg.set_sender_address(owner_.address());
-        }
-    }
-
+    // Validate system pointer before mutating messages
     auto* system = owner_ ? &owner_.get()->system() : system_;
     if (system == nullptr) {
         ActorAddress addr;
@@ -229,23 +224,37 @@ ActorContext::send_batch(ActorId target, std::vector<TypedMessage> msgs) {
         return {mailbox::DeliveryStatus::NoRoute, addr, MessageId{0}, 0};
     }
 
-    // Inject trace context
-    if (system->trace_manager() != nullptr) {
-        for (auto& msg : msgs) {
-            system->trace_manager()->inject_message_context(
-                msg, this,
-                system->trace_manager()->config().create_roots_for_actor_context_sends);
+    // Single-pass: stamp sender identity and inject trace context
+    bool do_trace = system->trace_manager() != nullptr;
+    bool create_roots =
+        do_trace &&
+        system->trace_manager()->config().create_roots_for_actor_context_sends;
+    for (auto& msg : msgs) {
+        if (owner_) {
+            msg.set_sender_address(owner_.address());
+        }
+        if (do_trace) {
+            system->trace_manager()->inject_message_context(msg, this, create_roots);
         }
     }
 
     // Check if target is local via mailbox lookup
     auto* mailbox = system->get_mailbox(target);
     if (mailbox != nullptr) {
-        // Local fast path: bypass DeliveryPipeline
+        // Local fast path: bypass DeliveryPipeline.
+        // TODO(MSG-007): should route through
+        // DeliveryPipeline::try_deliver_batch() when that entry point is
+        // implemented for circuit breaker / dedup / TTL.
         mailbox::MailboxEnvelopeMeta meta;
         if (owner_) {
             meta.sender = owner_.address();
         }
+        // Account for byte-capacity enforcement
+        size_t total_bytes = 0;
+        for (const auto& msg : msgs) {
+            total_bytes += msg.payload().size();
+        }
+        meta.estimated_bytes = total_bytes;
         auto result = mailbox->try_push_batch(msgs.begin(), msgs.end(), meta);
         ActorAddress target_addr(system->endpoint(), 0, target, 0);
         return result.to_delivery_result(target_addr);
@@ -254,7 +263,7 @@ ActorContext::send_batch(ActorId target, std::vector<TypedMessage> msgs) {
     // Remote target: delegate to ActorProxy
     ActorAddress target_addr(system->endpoint(), 0, target, 0);
     ActorProxy proxy(target_addr, system);
-    return proxy.try_send_batch(target_addr, std::move(msgs));
+    return proxy.try_send_batch(target_addr, std::move(msgs), options);
 }
 
 void ActorContext::reply(TypedMessage msg) {
