@@ -239,7 +239,7 @@ uint32_t TimingWheel::advance(int64_t now_ns) {
                             // Recalculate which bucket this timer should be in
                             // at this (lower) level
                             uint32_t lower_level = level - 1;
-                            int64_t lower_offset = now_ns / tick_ns_;
+                            int64_t lower_offset = timer->expire_ns / tick_ns_;
                             for (uint32_t l = 0; l < lower_level; ++l) {
                                 lower_offset /= 256;
                             }

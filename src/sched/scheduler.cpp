@@ -105,10 +105,14 @@ void HybridScheduler::start() {
                     std::min(next_ns - now, static_cast<int64_t>(100'000'000)),
                     static_cast<int64_t>(1'000'000));
                 std::unique_lock<std::mutex> lk(timer_wakeup_mutex_);
-                timer_wakeup_cv_.wait_for(lk, std::chrono::nanoseconds(sleep_ns));
+                timer_wakeup_cv_.wait_for(
+                    lk, std::chrono::nanoseconds(sleep_ns),
+                    [this] { return !running_.load(std::memory_order_acquire); });
             } else {
                 std::unique_lock<std::mutex> lk(timer_wakeup_mutex_);
-                timer_wakeup_cv_.wait_for(lk, std::chrono::milliseconds(1));
+                timer_wakeup_cv_.wait_for(lk, std::chrono::milliseconds(1), [this] {
+                    return !running_.load(std::memory_order_acquire);
+                });
             }
         }
     });
@@ -368,6 +372,7 @@ HybridScheduler::schedule_every(timer_callback cb, int64_t interval_ns) {
     auto id = std::visit(
         [&](auto& backend) { return backend.schedule(*interval, *recurring); },
         timer_backend_);
+    timer_wakeup_cv_.notify_one();
     {
         std::lock_guard<std::mutex> lock(cancellation_mutex_);
         recurring_cancellations_[id] = cancelled;
