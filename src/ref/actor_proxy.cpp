@@ -207,7 +207,7 @@ ActorProxy::try_send_batch(const ActorAddress& target,
         auto msg_id = generate_message_id();
         entry->set_message_id(msg_id.value());
         entry->set_payload(reinterpret_cast<const char*>(msg.payload().data()),
-                           static_cast<int>(msg.payload().size()));
+                           msg.payload().size());
         if (msg.has_trace_context()) {
             net::to_proto(entry->mutable_trace_context(), msg.trace_context());
         }
