@@ -403,6 +403,11 @@ void ActorSystem::apply_tracing_config(const tracing::TraceConfig& config) {
     trace_manager_->start();
 }
 
+sched::TimerStatsSnapshot ActorSystem::timer_stats() const {
+    auto* hs = static_cast<sched::HybridScheduler*>(scheduler_.get());
+    return hs->timer_snapshot();
+}
+
 void ActorSystem::on_node_dead(EndPoint dead_ep) {
     auto entries = actor_directory_.snapshot();
     for (const auto& entry : entries) {
