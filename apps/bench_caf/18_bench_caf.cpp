@@ -14,6 +14,7 @@
 
 #include "caf_bench_config.hpp"
 #include "caf_bench_output.hpp"
+#include "caf_bench_runner.hpp"
 
 #include <fstream>
 #include <iostream>
@@ -27,9 +28,7 @@ int run_caf_benchmark_main(int argc, const char* const* argv) {
         return 1;
     }
 
-    CafBenchReport report;
-    report.config = parsed.config;
-
+    auto report = run_caf_benchmark(parsed.config);
     std::string output = parsed.config.format == OutputFormat::Csv
                              ? write_csv_report(report)
                              : write_json_report(report);
