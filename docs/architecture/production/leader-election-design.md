@@ -5,7 +5,8 @@
 > other mutating cluster singletons should use
 > [Production Distributed Leadership Election Design](distributed-leadership-election-design.md),
 > where leadership is granted by an external coordinator first and by an
-> internal Raft-compatible backend later.
+> [internal Raft-compatible backend](internal-raft-leadership-backend-design.md)
+> later.
 
 ## 1. Executive Summary
 
@@ -122,6 +123,7 @@ election_strategy = "majority"
 ## 7. References
 - [Cluster Subsystem Architecture](../cluster/cluster-subsystem-architecture.md) — Section 4.3 Cluster Singleton
 - [Production Distributed Leadership Election Design](distributed-leadership-election-design.md)
+- [Internal Raft Leadership Backend Design](internal-raft-leadership-backend-design.md)
 - [Feature Gap Refined Requirement Backlog](feature-gap-refined-requirement-backlog.md) — CLU-003
 - [Akka Gap Analysis (Issue #329)](https://github.com/skg7on/HPActor/issues/329)
 - Sprint 2: CLU-003 types (PR #347)

@@ -357,17 +357,35 @@ Consul is acceptable for deployments already standardized on Consul. etcd remain
 the recommended first implementation because its revision model is simpler for
 fencing.
 
-## 10. Future Internal Raft Backend
+## 10. Internal Raft Backend
 
-The internal Raft backend implements the same `ILeadershipBackend` interface.
+The internal Raft backend is the future in-process implementation of the same
+`ILeadershipBackend` contract used by external coordinator adapters. It should
+not change `SingletonManagerActor`, `ShardCoordinatorActor`, or leadership token
+validation APIs.
+
+The backend owns a Raft group for cluster leadership metadata:
+
+- leader election and heartbeats use Raft terms, not gossip membership order;
+- quorum is calculated from the committed Raft voter configuration, never from a
+  node-local `alive_nodes` vector;
+- leadership grant, renew, release, and step-down decisions are committed log
+  entries;
+- fencing tokens are encoded from the committed `(term, log_index)` pair;
+- membership changes use joint consensus or an equivalent two-phase safe voter
+  transition;
+- snapshots compact committed leadership metadata without changing token
+  ordering.
 
 Raft log entries:
 
 ```text
 GrantLeadership(singleton, owner_identity, membership_epoch, ttl)
-RenewLeadership(singleton, owner_identity, previous_term, previous_index)
-ReleaseLeadership(singleton, owner_identity, term, index)
-StepDown(singleton, owner_identity, reason)
+RenewLeadership(singleton, owner_identity, previous_token, ttl)
+ReleaseLeadership(singleton, owner_identity, fencing_token)
+StepDown(singleton, owner_identity, fencing_token, reason)
+ChangeVotersBegin(old_voters, new_voters)
+ChangeVotersCommit(new_voters)
 ```
 
 Fencing token:
@@ -376,10 +394,12 @@ Fencing token:
 fencing_token = encode(term, log_index)
 ```
 
-The Raft backend must use a committed voter set for quorum. It must never compute
-majority from a node-local `alive_nodes` vector. During membership changes, joint
-consensus or an equivalent safe transition is required before the new voter set
-can issue leadership.
+Loss of Raft quorum is a leadership loss for production singletons. A node may
+continue serving best-effort user traffic according to partition policy, but it
+must reject singleton and shard-ownership mutations until a committed Raft
+leader grants a fresh lease.
+
+Detailed design: [Internal Raft Leadership Backend Design](internal-raft-leadership-backend-design.md).
 
 ## 11. State Machine
 

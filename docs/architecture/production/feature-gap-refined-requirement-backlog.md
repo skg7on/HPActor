@@ -850,6 +850,8 @@ Priority: `P1`
 Status: `Missing`
 Release lane: `Cluster`
 Design: [Production Distributed Leadership Election Design](distributed-leadership-election-design.md)
+Internal Raft backend details:
+[Internal Raft Leadership Backend Design](internal-raft-leadership-backend-design.md)
 
 Gap:
 

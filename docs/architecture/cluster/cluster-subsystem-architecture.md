@@ -575,7 +575,7 @@ Items designed but deferred to future sprints:
 |-----------|--------|------------|
 | Distributed Pub-Sub | Design complete | `docs/architecture/production/distributed-pub-sub-design.md` |
 | Cluster Receptionist | Design complete | `docs/architecture/production/cluster-receptionist-design.md` |
-| Leader Election (Raft/etcd) | Interface defined | `docs/architecture/production/leader-election-design.md` |
+| Leader Election (Raft/etcd) | Production design added | `docs/architecture/production/distributed-leadership-election-design.md`; `docs/architecture/production/internal-raft-leadership-backend-design.md` |
 | Load-Aware Placement | Interface slot exists | Placement strategy plug-in |
 | Multi-Zone Placement | Not started | CLU-004 |
 | External Coordinator (etcd/Consul) | Interface slot exists | `ISingletonElection` plug-in |
@@ -589,6 +589,8 @@ Items designed but deferred to future sprints:
 - [Production Reliability Plane](../production/production-reliability-plane.md) — top-level 24x7 roadmap
 - [Cluster Failure Model Design](../production/cluster-failure-model-design.md) — detailed CLU-001 design
 - [Cluster Sharding & Placement Design](../production/cluster-sharding-placement-design.md) — detailed CLU-002 design
+- [Production Distributed Leadership Election Design](../production/distributed-leadership-election-design.md) — production CLU-003 leadership and fencing design
+- [Internal Raft Leadership Backend Design](../production/internal-raft-leadership-backend-design.md) — future in-process Raft backend for CLU-003
 - [Feature Gap Refined Requirement Backlog](../production/feature-gap-refined-requirement-backlog.md) — CLU-003, MSG-003 cards
 - [Akka Gap Analysis (Issue #329)](https://github.com/skg7on/HPActor/issues/329) — HPActor vs. Akka Typed comparison
 - Sprint 2 Design Spec: `docs/superpowers/specs/2026-06-21-akka-gap-closure-sprint2-design.md`
