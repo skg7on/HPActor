@@ -32,7 +32,8 @@ namespace hpactor {
 /// the stream wire protocol.
 class StreamSenderActor : public EventBasedActor {
   public:
-    StreamSenderActor(ActorSystem& system, ActorId receiver_id, uint64_t stream_id,
+    StreamSenderActor(ActorContext* ctx, ActorSystem& system,
+                      ActorId receiver_id, uint64_t stream_id,
                       StreamConfig config, TraceContext trace_ctx);
 
     Behavior make_behavior() override;

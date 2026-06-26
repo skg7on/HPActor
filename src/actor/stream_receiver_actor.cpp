@@ -19,12 +19,12 @@
 
 namespace hpactor {
 
-StreamReceiverActor::StreamReceiverActor(ActorSystem& system,
+StreamReceiverActor::StreamReceiverActor(ActorContext* ctx, ActorSystem& system,
                                          ActorId target_actor_id, uint64_t stream_id,
                                          ActorAddress sender_addr,
                                          uint32_t initial_window_bytes,
                                          TraceContext trace_ctx)
-    : EventBasedActor(nullptr, system), target_actor_id_(target_actor_id),
+    : EventBasedActor(ctx, system), target_actor_id_(target_actor_id),
       stream_id_(stream_id), sender_addr_(std::move(sender_addr)),
       initial_window_bytes_(initial_window_bytes), trace_ctx_(trace_ctx) {}
 

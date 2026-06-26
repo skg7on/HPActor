@@ -18,10 +18,10 @@
 
 namespace hpactor {
 
-StreamSenderActor::StreamSenderActor(ActorSystem& system, ActorId receiver_id,
-                                     uint64_t stream_id, StreamConfig config,
-                                     TraceContext trace_ctx)
-    : EventBasedActor(nullptr, system), receiver_id_(receiver_id),
+StreamSenderActor::StreamSenderActor(ActorContext* ctx, ActorSystem& system,
+                                     ActorId receiver_id, uint64_t stream_id,
+                                     StreamConfig config, TraceContext trace_ctx)
+    : EventBasedActor(ctx, system), receiver_id_(receiver_id),
       stream_id_(stream_id), config_(std::move(config)), trace_ctx_(trace_ctx) {
     send_buffer_.reserve(config_.max_in_flight_frames);
 }

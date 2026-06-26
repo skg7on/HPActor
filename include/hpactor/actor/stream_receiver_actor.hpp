@@ -32,9 +32,10 @@ namespace hpactor {
 /// integrates with the target actor's mailbox pressure.
 class StreamReceiverActor : public EventBasedActor {
   public:
-    StreamReceiverActor(ActorSystem& system, ActorId target_actor_id,
-                        uint64_t stream_id, ActorAddress sender_addr,
-                        uint32_t initial_window_bytes, TraceContext trace_ctx);
+    StreamReceiverActor(ActorContext* ctx, ActorSystem& system,
+                        ActorId target_actor_id, uint64_t stream_id,
+                        ActorAddress sender_addr, uint32_t initial_window_bytes,
+                        TraceContext trace_ctx);
 
     Behavior make_behavior() override;
 

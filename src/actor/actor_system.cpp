@@ -23,6 +23,9 @@
 #include <hpactor/actor/lifecycle/shutdown_coordinator.hpp>
 #include <hpactor/actor/local_actor.hpp>
 #include <hpactor/actor/spawn_receiver.hpp>
+#include <hpactor/actor/stream_receiver_actor.hpp>
+#include <hpactor/actor/stream_sender_actor.hpp>
+#include <hpactor/actor/stream_types.hpp>
 #include <hpactor/config/actor_factory_registry.hpp>
 #include <hpactor/config/toml_parser.hpp>
 #include <hpactor/fault/fault_macros.hpp>
@@ -686,175 +689,78 @@ void ActorSystem::deliver_local_edf(ActorId target, TypedMessage msg,
 }
 
 void ActorSystem::deliver_remote(const net::WireFrame& frame) {
-    auto pt = frame.payload_type();
+    // ── Stream frame dispatch ─────────────────────────────────────────────
+    switch (frame.payload_type()) {
+        case net::WireFrame::PayloadType::StreamOpen:
+            deliver_remote_stream_open(frame);
+            return;
+        case net::WireFrame::PayloadType::StreamData:
+            deliver_remote_stream_data(frame);
+            return;
+        case net::WireFrame::PayloadType::StreamAck:
+            deliver_remote_stream_ack(frame);
+            return;
+        case net::WireFrame::PayloadType::StreamClose:
+            deliver_remote_stream_close(frame);
+            return;
+        case net::WireFrame::PayloadType::StreamError:
+            deliver_remote_stream_error(frame);
+            return;
+        default:
+            break; // fall through to existing dispatch
+    }
 
-    // ACK/NACK control frame dispatch
+    // ── ACK/NACK control frame dispatch ────────────────────────────────
     constexpr uint32_t kControlAck = 1 << 5;
     constexpr uint32_t kControlNack = 1 << 6;
+    uint32_t flags = frame.pb_envelope.data_frame().flags();
 
-    if (pt == net::WireFrame::PayloadType::Data) {
-        const auto& df = frame.pb_envelope.data_frame();
-        uint32_t flags = df.flags();
-
-        if ((flags & kControlAck) && outbound_tracker_) {
-            outbound_tracker_->on_ack(MessageId{df.message_id()},
-                                      net::from_proto(df.sender()).endpoint);
-            return;
+    if ((flags & kControlAck) && outbound_tracker_) {
+        outbound_tracker_->on_ack(
+            MessageId{frame.pb_envelope.data_frame().message_id()},
+            net::from_proto(frame.pb_envelope.data_frame().sender()).endpoint);
+        return;
+    }
+    if ((flags & kControlNack) && outbound_tracker_) {
+        uint32_t reason_code = frame.pb_envelope.data_frame().type_tag();
+        uint32_t retry_after_ms = 0;
+        if (frame.pb_envelope.data_frame().payload().size() >= sizeof(uint32_t)) {
+            std::memcpy(&retry_after_ms,
+                        frame.pb_envelope.data_frame().payload().data(),
+                        sizeof(uint32_t));
         }
-        if ((flags & kControlNack) && outbound_tracker_) {
-            uint32_t reason_code = df.type_tag();
-            uint32_t retry_after_ms = 0;
-            if (df.payload().size() >= sizeof(uint32_t)) {
-                std::memcpy(&retry_after_ms, df.payload().data(), sizeof(uint32_t));
-            }
-            outbound_tracker_->on_nack(MessageId{df.message_id()},
-                                       net::from_proto(df.sender()).endpoint,
-                                       reason_code, retry_after_ms);
-            return;
-        }
-
-        // Backpressure signal dispatch
-        if (static_cast<TypeTag>(df.type_tag()) == TypeTag::BackpressureSignalTag) {
-            (void)backpressure_coordinator_->handle_remote_signal(frame);
-            return;
-        }
-
-        // Single-message data frame dispatch
-        StreamBuffer payload(df.payload().begin(), df.payload().end());
-        TypedMessage msg(static_cast<TypeTag>(df.type_tag()), std::move(payload));
-        msg.set_sender_address(net::from_proto(df.sender()));
-        if (df.has_trace_context()) {
-            uint16_t max_state = tracing_config_.max_tracestate_len;
-            auto parsed =
-                net::trace_context_from_proto(df.trace_context(), max_state);
-            if (parsed.has_value()) {
-                msg.set_trace_context(parsed.value());
-            }
-        }
-        // Preserve AckRequested flag for auto-ACK in downstream pipeline
-        if (flags & net::WireFrame::AckRequested) {
-            msg.set_ack_requested(true);
-        }
-        msg.set_message_id(df.message_id());
-        deliver_local(net::from_proto(df.receiver()).id, std::move(msg));
+        outbound_tracker_->on_nack(
+            MessageId{frame.pb_envelope.data_frame().message_id()},
+            net::from_proto(frame.pb_envelope.data_frame().sender()).endpoint,
+            reason_code, retry_after_ms);
         return;
     }
 
-    // Batch frame dispatch
-    if (pt == net::WireFrame::PayloadType::Batch) {
-        deliver_remote_batch(frame);
+    if (static_cast<TypeTag>(frame.pb_envelope.data_frame().type_tag()) ==
+        TypeTag::BackpressureSignalTag) {
+        (void)backpressure_coordinator_->handle_remote_signal(frame);
         return;
     }
-
-    // Unknown / unsupported payload types: log and drop.
-    // Ack/Nack payload types exist in the WireEnvelope proto but are not
-    // yet produced on the wire (ACK/NACK currently travel as flags inside
-    // Data frames).  Unknown indicates a decode failure (truncated frame,
-    // magic mismatch, or protobuf parse error) already logged by decode().
-    HPACTOR_LOG_WARNING(
-        log::LogCategory::kNetwork, ActorId{0},
-        static_cast<uint32_t>(log::LogEventId::kNetworkFrameDecodeFailed),
-        "deliver_remote: unsupported payload type",
-        log::field("payload_type", static_cast<uint64_t>(static_cast<uint8_t>(pt))));
-}
-
-void ActorSystem::deliver_remote_batch(const net::WireFrame& frame) {
-    const auto& batch = frame.pb_envelope.batch_frame();
-    ActorAddress receiver_addr = net::from_proto(batch.receiver());
-    ActorId receiver_id = receiver_addr.id;
-    ActorAddress sender_addr = net::from_proto(batch.sender());
-
-    int entry_count = batch.entries_size();
-    if (entry_count == 0) {
-        return;
-    }
-
-    std::vector<TypedMessage> msgs;
-    msgs.reserve(static_cast<size_t>(entry_count));
-
-    for (int i = 0; i < entry_count; ++i) {
-        const auto& entry = batch.entries(i);
-        StreamBuffer payload = StreamBuffer::from_data(
-            reinterpret_cast<const uint8_t*>(entry.payload().data()),
-            entry.payload().size());
-        TypedMessage msg(static_cast<TypeTag>(entry.type_tag()), std::move(payload));
-        msg.set_sender_address(sender_addr);
-        msg.set_message_id(entry.message_id());
-
-        if (entry.has_trace_context()) {
-            uint16_t max_state = tracing_config_.max_tracestate_len;
-            auto parsed =
-                net::trace_context_from_proto(entry.trace_context(), max_state);
-            if (parsed.has_value()) {
-                msg.set_trace_context(parsed.value());
-            }
+    StreamBuffer payload(frame.pb_envelope.data_frame().payload().begin(),
+                         frame.pb_envelope.data_frame().payload().end());
+    TypedMessage msg(static_cast<TypeTag>(frame.pb_envelope.data_frame().type_tag()),
+                     std::move(payload));
+    msg.set_sender_address(net::from_proto(frame.pb_envelope.data_frame().sender()));
+    if (frame.pb_envelope.data_frame().has_trace_context()) {
+        uint16_t max_state = tracing_config_.max_tracestate_len;
+        auto parsed = net::trace_context_from_proto(
+            frame.pb_envelope.data_frame().trace_context(), max_state);
+        if (parsed.has_value()) {
+            msg.set_trace_context(parsed.value());
         }
-        if (entry.flags() & net::WireFrame::AckRequested) {
-            msg.set_ack_requested(true);
-        }
-        msgs.push_back(std::move(msg));
     }
-
-    auto* mailbox = get_mailbox(receiver_id);
-    if (!mailbox) {
-        // Target actor not found — dead-letter each message
-        for (auto& msg : msgs) {
-            mailbox::DeadLetterRecord dl;
-            dl.reason = mailbox::DeadLetterReason::ActorNotFound;
-            dl.source = mailbox::DeadLetterSource::RemoteDelivery;
-            dl.sender = sender_addr;
-            dl.target = receiver_addr;
-            dl.type_tag = msg.type_id();
-            dl.payload_sample = msg.payload();
-            dead_letter(std::move(dl));
-        }
-        return;
+    // ── Preserve AckRequested flag for auto-ACK in downstream pipeline ──
+    if (flags & net::WireFrame::AckRequested) {
+        msg.set_ack_requested(true);
     }
-
-    mailbox::MailboxEnvelopeMeta meta;
-    meta.sender = sender_addr;
-
-    // Calculate total estimated bytes for batch admission accounting
-    size_t total_bytes = 0;
-    for (const auto& msg : msgs) {
-        total_bytes += msg.payload().size();
-    }
-    meta.estimated_bytes = total_bytes;
-
-    // TODO(MSG-007): Batch delivery currently bypasses the DeliveryPipeline
-    // (circuit breaker, dedup, TTL expiry, backpressure).  A future
-    // DeliveryPipeline::try_deliver_batch() entry point should apply
-    // per-message admission controls.
-
-    // Emit batch metrics
-    if (metrics_ring_buffer_) {
-        uint64_t now_ns = static_cast<uint64_t>(
-            std::chrono::duration_cast<std::chrono::nanoseconds>(
-                std::chrono::steady_clock::now().time_since_epoch())
-                .count());
-
-        metrics::MetricEvent ev;
-        ev.timestamp_ns = now_ns;
-        ev.actor_id = receiver_id;
-
-        ev.event_type = metrics::MetricEventType::kBatchFrameReceived;
-        ev.value_hi = 0;
-        metrics_ring_buffer_->try_push(ev);
-
-        ev.event_type = metrics::MetricEventType::kBatchMessagesReceived;
-        ev.value_hi = static_cast<uint32_t>(entry_count);
-        metrics_ring_buffer_->try_push(ev);
-    }
-
-    auto result = mailbox->try_push_batch(msgs.begin(), msgs.end(), meta);
-    if (!result.accepted()) {
-        HPACTOR_LOG_WARNING(
-            log::LogCategory::kMailbox, receiver_id,
-            static_cast<uint32_t>(log::LogEventId::kMailboxMessageRejected),
-            "deliver_remote_batch: batch partially or fully rejected",
-            log::field("entry_count", static_cast<uint64_t>(entry_count)),
-            log::field("total_bytes", static_cast<uint64_t>(total_bytes)));
-    }
+    msg.set_message_id(frame.pb_envelope.data_frame().message_id());
+    deliver_local(net::from_proto(frame.pb_envelope.data_frame().receiver()).id,
+                  std::move(msg));
 }
 
 void ActorSystem::enqueue_completion(net::OpCompletion completion) {
@@ -1163,9 +1069,154 @@ void ActorSystem::send_reliable_ack(const ActorAddress& target,
     (void)transport_->try_send(target, encoded);
 }
 
-sched::TimerStatsSnapshot ActorSystem::timer_stats() const {
-    auto* hs = static_cast<sched::HybridScheduler*>(scheduler_.get());
-    return hs->timer_snapshot();
+// ── Stream protocol ─────────────────────────────────────────────────────────
+
+void ActorSystem::register_stream_sender(uint64_t stream_id, ActorId actor_id) {
+    stream_senders_[stream_id] = actor_id;
+}
+
+void ActorSystem::register_stream_receiver(uint64_t stream_id, ActorId actor_id) {
+    stream_receivers_[stream_id] = actor_id;
+}
+
+void ActorSystem::unregister_stream(uint64_t stream_id) {
+    stream_senders_.erase(stream_id);
+    stream_receivers_.erase(stream_id);
+}
+
+uint64_t ActorSystem::allocate_stream_id(ActorId sender_id) {
+    uint64_t seq = stream_counter_.fetch_add(1, std::memory_order_relaxed);
+    return (static_cast<uint64_t>(sender_id.value()) << 32) | seq;
+}
+
+void ActorSystem::deliver_remote_stream_open(const net::WireFrame& frame) {
+    const auto& open = frame.pb_envelope.stream_open();
+    ActorId receiver_id = net::from_proto(open.receiver()).id;
+    ActorAddress sender_addr = net::from_proto(open.sender());
+
+    TraceContext trace_ctx;
+    if (open.has_trace_context()) {
+        auto parsed = net::trace_context_from_proto(open.trace_context(), 256);
+        if (parsed.has_value())
+            trace_ctx = parsed.value();
+    }
+
+    auto receiver =
+        spawn<StreamReceiverActor>(receiver_id, open.stream_id(), sender_addr,
+                                   open.initial_window_bytes(), trace_ctx);
+
+    if (receiver) {
+        register_stream_receiver(open.stream_id(), receiver.id());
+    }
+}
+
+void ActorSystem::deliver_remote_stream_data(const net::WireFrame& frame) {
+    const auto& data = frame.pb_envelope.stream_data();
+    auto it = stream_receivers_.find(data.stream_id());
+    if (it == stream_receivers_.end())
+        return;
+
+    const auto& payload_str = data.payload();
+    auto payload = StreamBuffer::from_data(
+        reinterpret_cast<const uint8_t*>(payload_str.data()), payload_str.size());
+    TypedMessage msg(stream::StreamDataTag, std::move(payload));
+    (void)try_deliver_local_fast(it->second, std::move(msg));
+}
+
+void ActorSystem::deliver_remote_stream_ack(const net::WireFrame& frame) {
+    const auto& ack = frame.pb_envelope.stream_ack();
+    auto it = stream_senders_.find(ack.stream_id());
+    if (it == stream_senders_.end())
+        return;
+
+    auto ack_buf = StreamBuffer::from_data(reinterpret_cast<const uint8_t*>(&ack),
+                                           sizeof(ack));
+    TypedMessage msg(stream::StreamAckTag, std::move(ack_buf));
+    (void)try_deliver_local_fast(it->second, std::move(msg));
+}
+
+void ActorSystem::deliver_remote_stream_close(const net::WireFrame& frame) {
+    const auto& close = frame.pb_envelope.stream_close();
+
+    auto sit = stream_senders_.find(close.stream_id());
+    if (sit != stream_senders_.end()) {
+        TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
+        (void)try_deliver_local_fast(sit->second, std::move(msg));
+    }
+
+    auto rit = stream_receivers_.find(close.stream_id());
+    if (rit != stream_receivers_.end()) {
+        TypedMessage msg(stream::StreamClosedTag, StreamBuffer{});
+        (void)try_deliver_local_fast(rit->second, std::move(msg));
+    }
+
+    unregister_stream(close.stream_id());
+}
+
+void ActorSystem::deliver_remote_stream_error(const net::WireFrame& frame) {
+    const auto& error = frame.pb_envelope.stream_error();
+
+    auto sit = stream_senders_.find(error.stream_id());
+    if (sit != stream_senders_.end()) {
+        TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
+        (void)try_deliver_local_fast(sit->second, std::move(msg));
+    }
+
+    auto rit = stream_receivers_.find(error.stream_id());
+    if (rit != stream_receivers_.end()) {
+        TypedMessage msg(stream::StreamErrorTag, StreamBuffer{});
+        (void)try_deliver_local_fast(rit->second, std::move(msg));
+    }
+
+    unregister_stream(error.stream_id());
+}
+
+std::optional<StreamHandle>
+ActorSystem::open_stream(ActorId target, StreamConfig config) {
+    auto actor = get_actor(target);
+    if (!actor)
+        return std::nullopt;
+
+    uint64_t stream_id = allocate_stream_id(target);
+    TraceContext trace_ctx; // Default: no trace context
+
+    // Resolve target address
+    ActorAddress target_addr = actor->address();
+    bool is_local_target = target_addr.endpoint == endpoint_;
+
+    // Spawn StreamSenderActor
+    auto sender = spawn<StreamSenderActor>(target, stream_id, config, trace_ctx);
+    if (!sender)
+        return std::nullopt;
+    register_stream_sender(stream_id, sender.id());
+
+    if (is_local_target) {
+        // Local target: spawn StreamReceiverActor directly
+        auto receiver = spawn<StreamReceiverActor>(
+            target, stream_id, ActorAddress{endpoint_, ActorType{0}, ActorId{0}, 0},
+            config.initial_window_bytes, trace_ctx);
+        if (receiver) {
+            register_stream_receiver(stream_id, receiver.id());
+        }
+    } else {
+        // Remote target: send StreamOpenFrame via transport
+        auto* tp = transport();
+        if (tp) {
+            net::StreamOpenFrame open;
+            open.set_stream_id(stream_id);
+            net::to_proto(open.mutable_sender(),
+                          ActorAddress{endpoint_, ActorType{0}, ActorId{0}, 0});
+            net::to_proto(open.mutable_receiver(), target_addr);
+            open.set_initial_window_bytes(config.initial_window_bytes);
+            if (trace_ctx.valid()) {
+                net::to_proto(open.mutable_trace_context(), trace_ctx);
+            }
+            auto wire_frame = net::WireFrame::from_stream_open(std::move(open));
+            (void)tp->try_send(target_addr, wire_frame.encode());
+        }
+    }
+
+    return StreamHandle(sender.id(), stream_id);
 }
 
 } // namespace hpactor
